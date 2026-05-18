@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
@@ -60,6 +61,18 @@ class ExportSection extends ConsumerWidget {
             TextButton.icon(
               onPressed: () => _exportProgressCSV(context, tracker),
               icon: Icon(Icons.download, size: 16,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant),
+              label: Text(
+                l10n.exportProgressCsv,
+                style: TextStyle(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 16),
+            TextButton.icon(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.sessionHistory),
+              icon: Icon(Icons.history, size: 16,
                   color: Theme.of(context).colorScheme.onSurfaceVariant),
               label: Text(
                 l10n.sessionHistory,

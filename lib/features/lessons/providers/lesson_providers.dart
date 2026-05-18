@@ -1,16 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/providers/app_providers.dart' show databaseProvider;
-import '../../../features/sessions/data/repositories/session_repository.dart';
 import '../../../features/teaching/data/repositories/tutor_session_repository.dart';
 import '../../lessons/data/repositories/lesson_repository.dart';
 import '../services/lesson_service.dart';
 
 final lessonRepositoryProvider = Provider<LessonRepository>((ref) {
   return ref.watch(databaseProvider).lessonRepository;
-});
-
-final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
-  return ref.watch(databaseProvider).sessionRepository;
 });
 
 final tutorSessionRepositoryProvider = Provider<TutorSessionRepository>((ref) {

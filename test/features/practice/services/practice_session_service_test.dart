@@ -1,11 +1,15 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class _FakeStudentIdService extends StudentIdService {
   @override
@@ -17,10 +21,13 @@ class _FakeStudentIdService extends StudentIdService {
 class _FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
   bool saveCalled = false;
+  bool shouldThrowOnSave = false;
+  bool shouldThrowOnGetAll = false;
 
   @override
   @override
   Future<Result<void>> save(String key, Session session) async {
+    if (shouldThrowOnSave) return Result.failure('Session save error');
     sessions.add(session);
     saveCalled = true;
     return Result.success(null);
@@ -28,22 +35,64 @@ class _FakeSessionRepository extends SessionRepository {
 
   @override
   Future<Result<List<Session>>> getAll() async {
+    if (shouldThrowOnGetAll) return Result.failure('Session getAll error');
     return Result.success(sessions);
   }
 }
 
-class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
   final List<_UpdateCall> updateCalls = [];
+  bool shouldThrow = false;
 
-  @override
-  Future<void> init() async {}
+  _FakeSpacedRepetitionService()
+      : super(
+          questionRepo: _FakeQuestionRepo(),
+          attemptRepo: _FakeAttemptRepo(),
+        );
 
   @override
   Future<Result<void>> updateNextReviewDate(
       String questionId, double masteryLevel) async {
+    if (shouldThrow) return Result.failure('SR service error');
     updateCalls.add(_UpdateCall(questionId, masteryLevel));
     return Result.success(null);
   }
+}
+
+class _FakeQuestionRepo extends QuestionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Question>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<Question?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(String key, Question value) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+}
+
+class _FakeAttemptRepo extends AttemptRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
 }
 
 class _UpdateCall {
@@ -67,15 +116,15 @@ class _FakeClock implements Clock {
 void main() {
   group('PracticeSessionService', () {
     late _FakeSessionRepository sessionRepo;
-    late _FakeSpacedRepetitionRepository srRepo;
+    late _FakeSpacedRepetitionService srService;
     late PracticeSessionService service;
 
     setUp(() {
       sessionRepo = _FakeSessionRepository();
-      srRepo = _FakeSpacedRepetitionRepository();
+      srService = _FakeSpacedRepetitionService();
       service = PracticeSessionService(
         sessionRepo: sessionRepo,
-        srRepo: srRepo,
+        srService: srService,
         studentIdService: _FakeStudentIdService(),
         subjectId: 'subj-1',
       );
@@ -112,21 +161,22 @@ void main() {
       test('records correct answer with mastery 0.8', () async {
         await service.updateNextReview('q1', true);
 
-        expect(srRepo.updateCalls, hasLength(1));
-        expect(srRepo.updateCalls[0].questionId, 'q1');
-        expect(srRepo.updateCalls[0].masteryLevel, 0.8);
+        expect(srService.updateCalls, hasLength(1));
+        expect(srService.updateCalls[0].questionId, 'q1');
+        expect(srService.updateCalls[0].masteryLevel, 0.8);
       });
 
       test('records incorrect answer with mastery 0.2', () async {
         await service.updateNextReview('q1', false);
 
-        expect(srRepo.updateCalls, hasLength(1));
-        expect(srRepo.updateCalls[0].masteryLevel, 0.2);
+        expect(srService.updateCalls, hasLength(1));
+        expect(srService.updateCalls[0].masteryLevel, 0.2);
       });
 
-      test('handles errors gracefully', () async {
+      test('handles errors gracefully when SR service fails', () async {
+        srService.shouldThrow = true;
         await service.updateNextReview('q1', true);
-        expect(srRepo.updateCalls, hasLength(1));
+        expect(srService.updateCalls, isEmpty);
       });
     });
 
@@ -160,12 +210,13 @@ void main() {
         expect(sessionRepo.sessions[0].id, isNot(sessionRepo.sessions[1].id));
       });
 
-      test('handles errors gracefully', () async {
+      test('handles errors gracefully when session save fails', () async {
+        sessionRepo.shouldThrowOnSave = true;
         await service.autoSaveSession(
           questionsAnswered: 10,
           correctAnswers: 7,
         );
-        expect(sessionRepo.saveCalled, isTrue);
+        expect(sessionRepo.saveCalled, isFalse);
       });
     });
 
@@ -210,7 +261,7 @@ void main() {
         final clock = _FakeClock(DateTime(2024, 6, 15, 10, 0, 0));
         final customService = PracticeSessionService(
           sessionRepo: sessionRepo,
-          srRepo: srRepo,
+          srService: srService,
           studentIdService: _FakeStudentIdService(),
           clock: clock,
           subjectId: 'subj-1',
@@ -228,7 +279,7 @@ void main() {
         final repo = _FakeSessionRepository();
         final customService = PracticeSessionService(
           sessionRepo: repo,
-          srRepo: srRepo,
+          srService: srService,
           studentIdService: _FakeStudentIdService(),
           clock: clock,
           subjectId: 'subj-1',

@@ -14,7 +14,6 @@ import 'package:studyking/features/practice/data/models/question_mastery_state_m
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/services/difficulty_adapter.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
@@ -1431,13 +1430,13 @@ void main() {
   group('PracticeSessionService - coverage gaps', () {
     test('updateNextReview handles exception gracefully', () async {
       final sessionRepo = _FakeSessionRepo();
-      final srRepo = _FakeSrRepo();
+      final srService = _FakeSrService();
       final clock = _FakeClock(DateTime(2026, 5, 16));
-      srRepo.shouldThrow = true;
+      srService.shouldThrow = true;
 
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
-        srRepo: srRepo,
+        srService: srService,
         studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
@@ -1450,12 +1449,12 @@ void main() {
 
     test('dispose with active timer and no timer is safe', () async {
       final sessionRepo = _FakeSessionRepo();
-      final srRepo = _FakeSrRepo();
+      final srService = _FakeSrService();
       final clock = _FakeClock(DateTime(2026, 5, 16));
 
       final service1 = PracticeSessionService(
         sessionRepo: sessionRepo,
-        srRepo: srRepo,
+        srService: srService,
         studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
@@ -1465,7 +1464,7 @@ void main() {
 
       final service2 = PracticeSessionService(
         sessionRepo: sessionRepo,
-        srRepo: srRepo,
+        srService: srService,
         studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
@@ -1475,14 +1474,14 @@ void main() {
 
     test('autoSaveSession handles exception gracefully', () async {
       final sessionRepo = _FakeSessionRepo();
-      final srRepo = _FakeSrRepo();
+      final srService = _FakeSrService();
       final clock = _FakeClock(DateTime(2026, 5, 16));
 
       sessionRepo.shouldThrow = true;
 
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
-        srRepo: srRepo,
+        srService: srService,
         studentIdService: _FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
@@ -1652,6 +1651,19 @@ class _FakeAttemptRepo2 extends AttemptRepository {
   Future<void> init() async {}
 
   @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
   Future<Result<void>> create(StudentAttempt attempt) async {
     attempts.add(attempt);
     return Result.success(null);
@@ -1694,6 +1706,9 @@ class _FakeQuestionRepo2 extends QuestionRepository {
   Future<void> init() async {}
 
   @override
+  Future<Result<List<Question>>> getAll() async => Result.success([]);
+
+  @override
   Future<Result<Question?>> get(String id) async {
     return Result.success(_questions[id]);
   }
@@ -1703,6 +1718,9 @@ class _FakeQuestionRepo2 extends QuestionRepository {
     _questions[key] = item;
     return Result.success(null);
   }
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
 }
 
 // -- Exam session service fakes --
@@ -1834,13 +1852,14 @@ class _FakeMasteryGraphSvc2 extends MasteryGraphService {
 }
 
 // -- PracticeSessionService fakes --
-class _FakeSrRepo extends SpacedRepetitionRepository {
+class _FakeSrService extends SpacedRepetitionService {
   bool shouldThrow = false;
 
-  _FakeSrRepo();
-
-  @override
-  Future<void> init() async {}
+  _FakeSrService()
+      : super(
+          questionRepo: _FakeQuestionRepo2(),
+          attemptRepo: _FakeAttemptRepo2(),
+        );
 
   @override
   Future<Result<void>> updateNextReviewDate(
@@ -1849,3 +1868,5 @@ class _FakeSrRepo extends SpacedRepetitionRepository {
     return Result.success(null);
   }
 }
+
+

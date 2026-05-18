@@ -1,7 +1,7 @@
 import '../conversation_phase.dart';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/l10n/generated/app_localizations_en.dart';
+
 import 'package:studyking/core/constants/llm_defaults.dart' show evaluationPromptTemplate;
 
 class PromptEntry {
@@ -105,18 +105,5 @@ class ConversationPromptSet {
   }
 }
 
-
-
-/// English default system prompt for lesson planning.
-String get lessonPlanSystemPrompt =>
-    AppLocalizationsEn().lessonPlanSystemPrompt;
-
-/// English default system prompt for summaries.
-String get summarySystemPrompt =>
-    AppLocalizationsEn().summarySystemPrompt;
-
-/// English default system prompt for evaluation.
-String get evaluationSystemPrompt =>
-    AppLocalizationsEn().evaluationSystemPrompt;
 
 

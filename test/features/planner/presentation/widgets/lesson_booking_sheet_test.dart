@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -39,10 +37,6 @@ Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
 }
 
 void main() {
-  setUpAll(() {
-    Hive.init(Directory.systemTemp.createTempSync('lesson_booking_test_').path);
-  });
-
   group('LessonBookingSheet', () {
     testWidgets('renders title and topic title', (tester) async {
       await _showSheet(tester, const LessonBookingSheet(

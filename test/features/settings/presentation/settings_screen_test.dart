@@ -5,8 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart';
+import '../../../helpers/navigator_observer_helper.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
@@ -94,6 +99,34 @@ class FakeSettingsRepository implements SettingsRepository {
 
 final fakeRepo = FakeSettingsRepository();
 
+class FakeLlmTaskManager extends LlmTaskManager {
+  @override
+  Future<void> init() async {}
+
+  @override
+  List<LlmTask> get tasks => [];
+
+  @override
+  List<LlmTask> get activeTasks => [];
+}
+
+class FakeLlmUsageMeter extends LlmUsageMeter {
+  @override
+  Future<void> init() async {}
+
+  @override
+  List<LlmUsageRecord> getRecords({String? feature, int? limit}) => [];
+
+  @override
+  int getTotalTokens() => 0;
+
+  @override
+  double getTotalCost() => 0.0;
+
+  @override
+  Map<String, int> getTotalTokensPerFeature() => {};
+}
+
 class _TestSettingsNotifier extends SettingsController {
   _TestSettingsNotifier(SettingsBox initial, SettingsRepository repo) : super(repo) {
     state = initial;
@@ -104,6 +137,7 @@ Widget buildSettingsScreen({
   SettingsBox? initialSettings,
   String apiKey = '',
   String selectedModel = '',
+  TestNavigatorObserver? navigatorObserver,
 }) {
   if (initialSettings != null) {
     fakeRepo._settings = initialSettings;
@@ -113,11 +147,14 @@ Widget buildSettingsScreen({
       settingsProvider.overrideWith((ref) => _TestSettingsNotifier(fakeRepo._settings, fakeRepo)),
       apiKeyProvider.overrideWith((ref) => apiKey),
       selectedModelProvider.overrideWith((ref) => selectedModel),
+      llmTaskManagerProvider.overrideWith((ref) => FakeLlmTaskManager()),
+      llmUsageMeterProvider.overrideWith((ref) => FakeLlmUsageMeter()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const SettingsScreen(),
     ),
   );
@@ -127,6 +164,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
   SettingsBox? initialSettings,
   String apiKey = '',
   String selectedModel = '',
+  TestNavigatorObserver? navigatorObserver,
 }) async {
   // Increase viewport so all ListView children are rendered
   tester.view.devicePixelRatio = 1.0;
@@ -135,6 +173,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
     initialSettings: initialSettings,
     apiKey: apiKey,
     selectedModel: selectedModel,
+    navigatorObserver: navigatorObserver,
   ));
   await tester.pumpAndSettle();
 }
@@ -865,6 +904,19 @@ void main() {
 
         expect(find.byType(AboutDialog), findsOneWidget);
         expect(find.text('StudyKing'), findsWidgets);
+      });
+    });
+
+    group('Navigation', () {
+      testWidgets('tapping Current User navigates to profile route', (tester) async {
+        final navigatorObserver = TestNavigatorObserver();
+        await pumpWithSettings(tester, navigatorObserver: navigatorObserver);
+
+        await tester.tap(find.widgetWithText(ListTile, 'Current User'));
+        await tester.pumpAndSettle();
+
+        expect(navigatorObserver.pushedRoutes, isNotEmpty);
+        expect(navigatorObserver.pushedRoutes.first.settings.name, AppRoutes.profile);
       });
     });
   });

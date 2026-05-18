@@ -3508,7 +3508,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get dataStorageDescription =>
-      'StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Exportación en el Tablero.';
+      'StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Copia de Seguridad en Configuración (Configuración > Copia de Seguridad y Restauración).';
 
   @override
   String get toggleVisibility => 'Alternar visibilidad';
@@ -4305,4 +4305,114 @@ class AppLocalizationsEs extends AppLocalizations {
   String mentorScheduleTopic(String topicTitle) {
     return 'Tema: $topicTitle';
   }
+
+  @override
+  String get manualSessionTracker => 'Rastreador de Sesiones Manual';
+
+  @override
+  String get manualSessionTrackerDescription =>
+      'Seguimiento manual del tiempo de estudio';
+
+  @override
+  String get sessionHistoryDescription =>
+      'Revisar sesiones de estudio anteriores';
+
+  @override
+  String get sessionTracking => 'Seguimiento de Sesiones';
+
+  @override
+  String get exportProgressCsv => 'Exportar Progreso CSV';
+
+  @override
+  String get createQuestion => 'Crear Pregunta';
+
+  @override
+  String get questionTextHint => 'Ingrese el texto de la pregunta';
+
+  @override
+  String get answerOptions => 'Opciones de Respuesta';
+
+  @override
+  String get addOption => 'Agregar Opción';
+
+  @override
+  String get correctAnswerLabel => 'Respuesta Correcta';
+
+  @override
+  String get selectCorrectAnswer => 'Seleccionar respuesta correcta';
+
+  @override
+  String get questionCreated => 'Pregunta creada exitosamente';
+
+  @override
+  String get manageQuestions => 'Gestionar Preguntas';
+
+  @override
+  String get backupContainsSensitiveData =>
+      'Esta copia de seguridad contiene datos sensibles (clave API, configuración del modelo). Tenga cuidado al compartir este archivo.';
+
+  @override
+  String get excludeSensitiveData => 'Excluir datos sensibles';
+
+  @override
+  String get sensitiveDataWillBeExcluded =>
+      'Los datos sensibles serán excluidos. Necesitará reingresar su clave API después de la restauración.';
+
+  @override
+  String get selectBoxesToRestore =>
+      'Seleccionar secciones para restaurar';
+
+  @override
+  String get selectAll => 'Seleccionar Todo';
+
+  @override
+  String get deselectAll => 'Deseleccionar Todo';
+
+  @override
+  String get selectedBoxesWillBeOverwritten =>
+      'Las secciones seleccionadas serán completamente sobrescritas.';
+
+  @override
+  String get autoBackup => 'Copia de Seguridad Automática';
+
+  @override
+  String get autoBackupDescription =>
+      'Programar copias de seguridad automáticas';
+
+  @override
+  String get backupIntervalDaily => 'Diario';
+
+  @override
+  String get backupIntervalWeekly => 'Semanal';
+
+  @override
+  String get backupIntervalNever => 'Nunca';
+
+  @override
+  String get lastBackup => 'Última copia';
+
+  @override
+  String aiTaskFailedNotification(String feature) {
+    return 'Tarea de IA fallida: $feature';
+  }
+
+  @override
+  String aiTaskFailedBody(String feature, String error) {
+    return "La tarea '$feature' falló. $error";
+  }
+
+  @override
+  String get questionBankLink => 'Banco de Preguntas';
+
+  @override
+  String get overwriteRestore => 'Sobrescribir todo';
+
+  @override
+  String get mergeRestore => 'Combinar (omitir existentes)';
+
+  @override
+  String get backupCompleted => 'Copia de seguridad completada automáticamente';
+
+  @override
+  String get viewInSettings => 'Abrir Configuración';
 }

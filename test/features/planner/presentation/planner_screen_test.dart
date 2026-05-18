@@ -1,9 +1,7 @@
 import 'dart:async';
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -25,7 +23,6 @@ import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -322,11 +319,6 @@ Widget _buildTestApp({
 }
 
 void main() {
-  setUpAll(() {
-    Hive.init(Directory.systemTemp.createTempSync('planner_screen_test_').path);
-    registerPlannerAdapters();
-  });
-
   group('PlannerScreen', () {
     group('Study Plan tab', () {
       testWidgets('renders title and form fields', (tester) async {

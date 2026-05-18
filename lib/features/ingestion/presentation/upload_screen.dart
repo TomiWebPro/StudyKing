@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -305,7 +306,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_success!),
-            duration: const Duration(seconds: 6),
+            duration: Timeouts.snackbarSuccess,
             action: SnackBarAction(
               label: 'View Library',
               onPressed: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),

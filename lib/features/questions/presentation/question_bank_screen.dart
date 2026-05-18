@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -12,19 +13,26 @@ import 'package:studyking/features/subjects/data/repositories/subject_repository
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class QuestionBankScreen extends ConsumerStatefulWidget {
-  const QuestionBankScreen({super.key});
+  final String? initialQuestionId;
+
+  const QuestionBankScreen({
+    super.key,
+    this.initialQuestionId,
+  });
 
   @override
   ConsumerState<QuestionBankScreen> createState() => _QuestionBankScreenState();
 }
 
 class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
-  final _questionRepo = QuestionRepository();
-  final _subjectRepo = SubjectRepository();
-  final _topicRepo = TopicRepository();
-  final _sourceRepo = SourceRepository();
+  late final QuestionRepository _questionRepo;
+  late final SubjectRepository _subjectRepo;
+  late final TopicRepository _topicRepo;
+  late final SourceRepository _sourceRepo;
 
   List<Question> _allQuestions = [];
   List<Subject> _subjects = [];
@@ -42,9 +50,15 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   final Set<String> _selectedIds = {};
   bool _selectionMode = false;
 
+  final _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
+    _questionRepo = ref.read(questionRepositoryProvider);
+    _subjectRepo = ref.read(subjectRepositoryProvider);
+    _topicRepo = ref.read(topicRepositoryProvider);
+    _sourceRepo = ref.read(sourceRepositoryProvider);
     _load();
     _searchController.addListener(() {
       setState(() => _searchQuery = _searchController.text);
@@ -54,6 +68,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
@@ -81,6 +96,18 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
           _allSources = sourcesResult.data ?? [];
           _isLoading = false;
         });
+        if (widget.initialQuestionId != null) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            final idx = _allQuestions.indexWhere((q) => q.id == widget.initialQuestionId);
+            if (idx >= 0) {
+              _scrollController.animateTo(
+                idx * 100.0,
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeInOut,
+              );
+            }
+          });
+        }
       }
     } catch (e) {
       if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
@@ -241,6 +268,240 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     }
   }
 
+  Future<void> _showCreateQuestionDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+
+    final textController = TextEditingController();
+    final explanationController = TextEditingController();
+    final optionControllers = <TextEditingController>[];
+    String selectedSubjectId = '';
+    String selectedType = QuestionType.singleChoice.name;
+    String selectedDifficulty = 'easy';
+    int? selectedCorrectOption;
+
+    void addOptionField() {
+      optionControllers.add(TextEditingController());
+    }
+
+    addOptionField();
+    addOptionField();
+
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => AlertDialog(
+          title: Text(l10n.createQuestion),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: textController,
+                  decoration: InputDecoration(
+                    labelText: l10n.questionText,
+                    hintText: l10n.questionTextHint,
+                    border: const OutlineInputBorder(),
+                  ),
+                  maxLines: 3,
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedSubjectId.isEmpty ? null : selectedSubjectId,
+                  decoration: InputDecoration(
+                    labelText: l10n.subject,
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(value: '', child: Text('None')),
+                    ..._subjects.map((s) => DropdownMenuItem(
+                      value: s.id,
+                      child: Text(s.name),
+                    )),
+                  ],
+                  onChanged: (v) => selectedSubjectId = v ?? '',
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedType,
+                  decoration: InputDecoration(
+                    labelText: l10n.type,
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: QuestionType.values.map((t) => DropdownMenuItem(
+                    value: t.name,
+                    child: Text(_questionTypeLabel(t, l10n)),
+                  )).toList(),
+                  onChanged: (v) {
+                    selectedType = v ?? QuestionType.singleChoice.name;
+                    setInnerState(() {});
+                  },
+                ),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedDifficulty,
+                  decoration: InputDecoration(
+                    labelText: l10n.difficulty,
+                    border: const OutlineInputBorder(),
+                  ),
+                  items: ['easy', 'medium', 'hard'].map((d) => DropdownMenuItem(
+                    value: d,
+                    child: Text(d[0].toUpperCase() + d.substring(1)),
+                  )).toList(),
+                  onChanged: (v) => selectedDifficulty = v ?? 'easy',
+                ),
+                if (selectedType == QuestionType.singleChoice.name ||
+                    selectedType == QuestionType.multiChoice.name) ...[
+                  const SizedBox(height: 16),
+                  const Divider(),
+                  Text(l10n.answerOptions, style: Theme.of(ctx).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 8),
+                  RadioGroup<int?>(
+                    groupValue: selectedCorrectOption,
+                    onChanged: (v) => setInnerState(() => selectedCorrectOption = v),
+                    child: Column(
+                      children: List.generate(optionControllers.length, (i) {
+                        final controller = optionControllers[i];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              if (selectedType == QuestionType.singleChoice.name)
+                                Radio<int?>(value: i)
+                              else
+                                Checkbox(
+                                  value: false,
+                                  onChanged: null,
+                                ),
+                              Expanded(
+                                child: TextField(
+                                  controller: controller,
+                                  decoration: InputDecoration(
+                                    hintText: '${l10n.addOption} ${i + 1}',
+                                    border: const OutlineInputBorder(),
+                                    isDense: true,
+                                  ),
+                                ),
+                              ),
+                              if (optionControllers.length > 2)
+                                IconButton(
+                                  icon: Icon(Icons.remove_circle_outline, color: Theme.of(ctx).colorScheme.error, size: 20),
+                                  onPressed: () {
+                                    setInnerState(() {
+                                      controller.dispose();
+                                      optionControllers.removeAt(i);
+                                      if (selectedCorrectOption == i) {
+                                        selectedCorrectOption = null;
+                                      } else if (selectedCorrectOption != null && selectedCorrectOption! > i) {
+                                        selectedCorrectOption = selectedCorrectOption! - 1;
+                                      }
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                  TextButton.icon(
+                    onPressed: () => setInnerState(() {
+                      optionControllers.add(TextEditingController());
+                    }),
+                    icon: const Icon(Icons.add, size: 18),
+                    label: Text(l10n.addOption),
+                  ),
+                  const Divider(),
+                ],
+                const SizedBox(height: 12),
+                TextField(
+                  controller: explanationController,
+                  decoration: InputDecoration(
+                    labelText: l10n.explanation,
+                    border: const OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
+                ),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                if (textController.text.trim().isEmpty) return;
+                if ((selectedType == QuestionType.singleChoice.name ||
+                    selectedType == QuestionType.multiChoice.name) &&
+                    optionControllers.any((c) => c.text.trim().isEmpty)) {
+                  return;
+                }
+                Navigator.pop(ctx, {
+                  'text': textController.text.trim(),
+                  'subjectId': selectedSubjectId,
+                  'topicId': '',
+                  'type': selectedType,
+                  'difficulty': selectedDifficulty,
+                  'explanation': explanationController.text.trim(),
+                  'options': optionControllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList(),
+                  'correctOption': selectedCorrectOption,
+                });
+              },
+              child: Text(l10n.save),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    int difficultyValue;
+    switch (selectedDifficulty) {
+      case 'easy':
+        difficultyValue = 1;
+      case 'medium':
+        difficultyValue = 2;
+      case 'hard':
+        difficultyValue = 3;
+      default:
+        difficultyValue = 1;
+    }
+
+    final options = (result['options'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+    final correctOption = result['correctOption'] as int?;
+
+    final question = Question(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      text: result['text'] as String,
+      subjectId: result['subjectId'] as String,
+      topicId: result['topicId'] as String,
+      type: QuestionType.values.firstWhere(
+        (t) => t.name == result['type'],
+        orElse: () => QuestionType.singleChoice,
+      ),
+      difficulty: difficultyValue,
+      options: options,
+      markscheme: correctOption != null && correctOption < options.length
+          ? Markscheme(correctAnswer: options[correctOption])
+          : null,
+      explanation: (result['explanation'] as String?)?.isNotEmpty == true
+          ? result['explanation'] as String
+          : null,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+
+    final saveResult = await _questionRepo.create(question);
+    if (saveResult.isSuccess && mounted) {
+      setState(() => _allQuestions.add(question));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.questionCreated)),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
@@ -248,6 +509,11 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     final filtered = _filteredQuestions;
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: _showCreateQuestionDialog,
+        tooltip: l10n.createQuestion,
+        child: const Icon(Icons.add),
+      ),
       appBar: AppBar(
         title: Text(l10n.questionBank),
         actions: [
@@ -302,9 +568,10 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                 ],
                               ),
                             )
-                          : RefreshIndicator(
+                              : RefreshIndicator(
                               onRefresh: _load,
                               child: ListView.builder(
+                                controller: _scrollController,
                                 padding: ResponsiveUtils.listPadding(context),
                                 itemCount: filtered.length,
                                 itemBuilder: (context, index) {

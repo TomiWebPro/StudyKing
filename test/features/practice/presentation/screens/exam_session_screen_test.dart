@@ -5,6 +5,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
@@ -19,6 +20,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import '../../presentation/shared_test_helpers.dart' show FakeQuestionRepository, FakeSessionRepository;
+import '../../../../helpers/navigator_observer_helper.dart';
 
 // ---------------------------------------------------------------------------
 // Fake dependencies
@@ -122,6 +124,7 @@ class FakeExamSessionService extends ExamSessionService {
 Widget examSessionApp({
   required Result<List<Question>> result,
   FakeExamSessionService? examService,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
     overrides: [
@@ -136,6 +139,7 @@ Widget examSessionApp({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: ExamSessionScreen(
         subjectId: 'subject-a',
         subjectName: 'Test Subject',
@@ -848,6 +852,21 @@ void main() {
         await tester.pump();
 
         expect(find.text('Upload Materials'), findsAtLeastNWidgets(1));
+      });
+
+      testWidgets('navigates to upload on no-questions', (tester) async {
+        final navigatorObserver = TestNavigatorObserver();
+        await tester.pumpWidget(examSessionApp(
+          result: Result.success([]),
+          navigatorObserver: navigatorObserver,
+        ));
+        await tester.pump();
+
+        await tester.tap(find.text('Upload Materials').first);
+        await tester.pumpAndSettle();
+
+        expect(navigatorObserver.pushedRoutes, isNotEmpty);
+        expect(navigatorObserver.pushedRoutes.first.settings.name, AppRoutes.upload);
       });
     });
 

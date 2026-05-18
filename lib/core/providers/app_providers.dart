@@ -37,7 +37,15 @@ final databaseProvider = Provider<DatabaseService>((ref) {
   );
 });
 
-var settingsRepository = SettingsRepository();
+SettingsRepository? _settingsRepo;
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return _settingsRepo!;
+});
+
+void initSettingsRepository(SettingsRepository repo) {
+  _settingsRepo = repo;
+}
 
 class SettingsController extends StateNotifier<SettingsBox> {
   final Logger _logger = const Logger('SettingsController');
@@ -257,10 +265,8 @@ class SettingsController extends StateNotifier<SettingsBox> {
 }
 
 final settingsProvider = StateNotifierProvider<SettingsController, SettingsBox>((ref) {
-  return SettingsController(settingsRepository);
+  return SettingsController(ref.watch(settingsRepositoryProvider));
 });
-
-final settingsLoadingProvider = StateProvider<bool>((ref) => false);
 
 final themeModeProvider = StateProvider<ThemeMode>((ref) => ThemeMode.light);
 
@@ -292,19 +298,43 @@ final planAdapterProvider = Provider<PlanAdapter>((ref) {
   return PlanAdapter();
 });
 
+final engagementTrackerProvider = Provider<StudyProgressTracker>((ref) {
+  return StudyProgressTracker(
+    attemptRepo: ref.watch(engagementAttemptRepoProvider),
+    masteryService: ref.watch(engagementMasteryServiceProvider),
+    sessionRepo: ref.watch(databaseProvider).sessionRepository,
+  );
+});
+
+final engagementMasteryServiceProvider = Provider<MasteryGraphService>((ref) {
+  return MasteryGraphService();
+});
+
+final engagementAttemptRepoProvider = Provider<AttemptRepository>((ref) {
+  return AttemptRepository();
+});
+
+final engagementNudgeRepoProvider = Provider<EngagementNudgeRepository>((ref) {
+  return EngagementNudgeRepository();
+});
+
+final engagementAdherenceRepoProvider = Provider<PlanAdherenceRepository>((ref) {
+  return PlanAdherenceRepository();
+});
+
+final engagementPlannerServiceProvider = Provider<PlannerService>((ref) {
+  return PlannerService();
+});
+
 final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
   final scheduler = EngagementScheduler(
-    tracker: StudyProgressTracker(
-      attemptRepo: AttemptRepository(),
-      masteryService: MasteryGraphService(),
-      sessionRepo: SessionRepository(),
-    ),
-    masteryService: MasteryGraphService(),
-    nudgeRepository: EngagementNudgeRepository(),
-    adherenceRepository: PlanAdherenceRepository(),
-    planAdapter: PlanAdapter(),
-    sessionRepository: SessionRepository(),
-    plannerService: PlannerService(),
+    tracker: ref.watch(engagementTrackerProvider),
+    masteryService: ref.watch(engagementMasteryServiceProvider),
+    nudgeRepository: ref.watch(engagementNudgeRepoProvider),
+    adherenceRepository: ref.watch(engagementAdherenceRepoProvider),
+    planAdapter: ref.watch(planAdapterProvider),
+    sessionRepository: ref.watch(databaseProvider).sessionRepository,
+    plannerService: ref.watch(engagementPlannerServiceProvider),
   );
   ref.onDispose(() {
     scheduler.dispose();

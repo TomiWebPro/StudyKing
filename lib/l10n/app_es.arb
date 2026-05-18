@@ -4766,7 +4766,7 @@
   "@dataStorageNotice": {
     "description": "Data storage notice title"
   },
-  "dataStorageDescription": "StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Exportación en el Tablero.",
+  "dataStorageDescription": "StudyKing almacena todos tus datos localmente en este dispositivo. Para evitar la pérdida de datos, usa la función de Copia de Seguridad en Configuración (Configuración > Copia de Seguridad y Restauración).",
   "@dataStorageDescription": {
     "description": "Data storage explanation"
   },
@@ -5369,6 +5369,26 @@
   "@breakDuration": {
     "description": "Tile title for break duration setting"
   },
+  "sessionTracking": "Seguimiento de Sesiones",
+  "@sessionTracking": {
+    "description": "Section title for session tracking in settings"
+  },
+  "manualSessionTracker": "Rastreador Manual de Sesiones",
+  "@manualSessionTracker": {
+    "description": "Tile title for manual session tracker"
+  },
+  "manualSessionTrackerDescription": "Realice un seguimiento manual de sus sesiones de estudio",
+  "@manualSessionTrackerDescription": {
+    "description": "Subtitle for manual session tracker tile"
+  },
+  "sessionHistoryDescription": "Vea el historial de sus sesiones",
+  "@sessionHistoryDescription": {
+    "description": "Subtitle for session history navigation"
+  },
+  "exportProgressCsv": "Exportar Progreso CSV",
+  "@exportProgressCsv": {
+    "description": "Button label to export progress as CSV"
+  },
   "featureLabelIngestion": "Ingestión",
   "@featureLabelIngestion": {
     "description": "Feature label for ingestion in token usage dialog"
@@ -5783,5 +5803,150 @@
         "type": "String"
       }
     }
+  },
+  "manualSessionTracker": "Rastreador de Sesiones Manual",
+  "@manualSessionTracker": {
+    "description": "Title for manual session tracker"
+  },
+  "manualSessionTrackerDescription": "Seguimiento manual del tiempo de estudio",
+  "@manualSessionTrackerDescription": {
+    "description": "Description for manual session tracking"
+  },
+  "sessionHistoryDescription": "Revisar sesiones de estudio anteriores",
+  "@sessionHistoryDescription": {
+    "description": "Description for session history"
+  },
+  "sessionTracking": "Seguimiento de Sesiones",
+  "@sessionTracking": {
+    "description": "Title for session tracking section"
+  },
+  "exportProgressCsv": "Exportar Progreso CSV",
+  "@exportProgressCsv": {
+    "description": "Export progress as CSV"
+  },
+  "createQuestion": "Crear Pregunta",
+  "@createQuestion": {
+    "description": "Button to create a new question"
+  },
+  "questionTextHint": "Ingrese el texto de la pregunta",
+  "@questionTextHint": {
+    "description": "Hint text for question text field"
+  },
+  "answerOptions": "Opciones de Respuesta",
+  "@answerOptions": {
+    "description": "Label for answer options section"
+  },
+  "addOption": "Agregar Opción",
+  "@addOption": {
+    "description": "Button to add an option"
+  },
+  "correctAnswerLabel": "Respuesta Correcta",
+  "@correctAnswerLabel": {
+    "description": "Label for correct answer field"
+  },
+  "selectCorrectAnswer": "Seleccionar respuesta correcta",
+  "@selectCorrectAnswer": {
+    "description": "Hint to select correct answer"
+  },
+  "questionCreated": "Pregunta creada exitosamente",
+  "@questionCreated": {
+    "description": "Message shown when question is created"
+  },
+  "manageQuestions": "Gestionar Preguntas",
+  "@manageQuestions": {
+    "description": "Title for question management section"
+  },
+  "backupContainsSensitiveData": "Esta copia de seguridad contiene datos sensibles (clave API, configuración del modelo). Tenga cuidado al compartir este archivo.",
+  "@backupContainsSensitiveData": {
+    "description": "Warning about sensitive data in backup"
+  },
+  "excludeSensitiveData": "Excluir datos sensibles",
+  "@excludeSensitiveData": {
+    "description": "Option to exclude sensitive data from backup"
+  },
+  "sensitiveDataWillBeExcluded": "Los datos sensibles serán excluidos. Necesitará reingresar su clave API después de la restauración.",
+  "@sensitiveDataWillBeExcluded": {
+    "description": "Info about sensitive data exclusion"
+  },
+  "selectBoxesToRestore": "Seleccionar secciones para restaurar",
+  "@selectBoxesToRestore": {
+    "description": "Prompt to select restore sections"
+  },
+  "selectAll": "Seleccionar Todo",
+  "@selectAll": {
+    "description": "Button to select all items"
+  },
+  "deselectAll": "Deseleccionar Todo",
+  "@deselectAll": {
+    "description": "Button to deselect all items"
+  },
+  "selectedBoxesWillBeOverwritten": "Las secciones seleccionadas serán completamente sobrescritas.",
+  "@selectedBoxesWillBeOverwritten": {
+    "description": "Warning about selected sections being overwritten"
+  },
+  "autoBackup": "Copia de Seguridad Automática",
+  "@autoBackup": {
+    "description": "Title for automatic backup settings"
+  },
+  "autoBackupDescription": "Programar copias de seguridad automáticas",
+  "@autoBackupDescription": {
+    "description": "Description for automatic backup"
+  },
+  "backupIntervalDaily": "Diario",
+  "@backupIntervalDaily": {
+    "description": "Daily backup interval option"
+  },
+  "backupIntervalWeekly": "Semanal",
+  "@backupIntervalWeekly": {
+    "description": "Weekly backup interval option"
+  },
+  "backupIntervalNever": "Nunca",
+  "@backupIntervalNever": {
+    "description": "Never backup option"
+  },
+  "lastBackup": "Última copia",
+  "@lastBackup": {
+    "description": "Label for last backup timestamp"
+  },
+  "aiTaskFailedNotification": "Tarea de IA fallida: {feature}",
+  "@aiTaskFailedNotification": {
+    "description": "Notification title for AI task failure",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFailedBody": "La tarea '{feature}' falló. {error}",
+  "@aiTaskFailedBody": {
+    "description": "Notification body for AI task failure",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionBankLink": "Banco de Preguntas",
+  "@questionBankLink": {
+    "description": "Link label for question bank"
+  },
+  "overwriteRestore": "Sobrescribir todo",
+  "@overwriteRestore": {
+    "description": "Option to overwrite all data on restore"
+  },
+  "mergeRestore": "Combinar (omitir existentes)",
+  "@mergeRestore": {
+    "description": "Option to merge data, skipping existing records"
+  },
+  "backupCompleted": "Copia de seguridad completada automáticamente",
+  "@backupCompleted": {
+    "description": "Message shown when automatic backup completes"
+  },
+  "viewInSettings": "Abrir Configuración",
+  "@viewInSettings": {
+    "description": "Button to navigate to settings"
   }
 }

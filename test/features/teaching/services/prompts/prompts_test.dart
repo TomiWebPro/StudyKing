@@ -1,6 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/prompts/prompts.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 const _testSubjectId = 'IB Physics';
 const _testTopicTitle = 'Newton\'s Laws';
@@ -117,7 +119,8 @@ void main() {
           topicTitle: _testTopicTitle,
           durationMinutes: _testDurationMinutes,
         );
-        expect(entry.systemPrompt, lessonPlanSystemPrompt);
+        expect(entry.systemPrompt, contains('curriculum designer'));
+        expect(entry.systemPrompt, contains('JSON'));
       });
     });
 
@@ -432,7 +435,7 @@ void main() {
           confidenceRating: _testConfidenceRating,
           adaptivePace: 1.0,
         );
-        expect(entry.systemPrompt, summarySystemPrompt);
+        expect(entry.systemPrompt, contains('lesson notes'));
       });
     });
 
@@ -503,7 +506,8 @@ void main() {
           subjectId: 'S',
           topicTitle: 'T',
         );
-        expect(entry.systemPrompt, evaluationSystemPrompt);
+        expect(entry.systemPrompt, contains('academic evaluator'));
+        expect(entry.systemPrompt, contains('JSON'));
       });
     });
   });
@@ -553,20 +557,23 @@ void main() {
 
   group('system prompts', () {
     test('lessonPlan system prompt is a valid string', () {
-      expect(lessonPlanSystemPrompt, isNotEmpty);
-      expect(lessonPlanSystemPrompt, contains('curriculum designer'));
-      expect(lessonPlanSystemPrompt, contains('JSON'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(l10n.lessonPlanSystemPrompt, isNotEmpty);
+      expect(l10n.lessonPlanSystemPrompt, contains('curriculum designer'));
+      expect(l10n.lessonPlanSystemPrompt, contains('JSON'));
     });
 
     test('summarySystemPrompt is a valid string', () {
-      expect(summarySystemPrompt, isNotEmpty);
-      expect(summarySystemPrompt, contains('lesson notes'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(l10n.summarySystemPrompt, isNotEmpty);
+      expect(l10n.summarySystemPrompt, contains('lesson notes'));
     });
 
     test('evaluationSystemPrompt is a valid string', () {
-      expect(evaluationSystemPrompt, isNotEmpty);
-      expect(evaluationSystemPrompt, contains('academic evaluator'));
-      expect(evaluationSystemPrompt, contains('JSON'));
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(l10n.evaluationSystemPrompt, isNotEmpty);
+      expect(l10n.evaluationSystemPrompt, contains('academic evaluator'));
+      expect(l10n.evaluationSystemPrompt, contains('JSON'));
     });
   });
 }

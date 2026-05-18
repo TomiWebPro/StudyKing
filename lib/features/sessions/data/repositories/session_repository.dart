@@ -105,11 +105,9 @@ class SessionRepository extends Repository<Session>
 
   @override
   Future<Result<int>> getTodayDurationMs() async {
-    return Result.capture(() async {
-      final todayResult = await getByDate(DateTime.now());
-      if (todayResult.isFailure) throw Exception(todayResult.error);
-      return todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-    }, context: 'getTodayDurationMs');
+    final todayResult = await getByDate(DateTime.now());
+    if (todayResult.isFailure) return Result.failure(todayResult.error);
+    return Result.success(todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
   }
 
   @override
@@ -151,19 +149,15 @@ class SessionRepository extends Repository<Session>
   }
 
   Future<Result<int>> getTodaySessionCount() async {
-    return Result.capture(() async {
-      final todayResult = await getByDate(DateTime.now());
-      if (todayResult.isFailure) throw Exception(todayResult.error);
-      return todayResult.data!.length;
-    }, context: 'getTodaySessionCount');
+    final todayResult = await getByDate(DateTime.now());
+    if (todayResult.isFailure) return Result.failure(todayResult.error);
+    return Result.success(todayResult.data!.length);
   }
 
   Future<Result<int>> getTodayCompletedSessionCount() async {
-    return Result.capture(() async {
-      final todayResult = await getByDate(DateTime.now());
-      if (todayResult.isFailure) throw Exception(todayResult.error);
-      return todayResult.data!.where((s) => s.completed).length;
-    }, context: 'getTodayCompletedSessionCount');
+    final todayResult = await getByDate(DateTime.now());
+    if (todayResult.isFailure) return Result.failure(todayResult.error);
+    return Result.success(todayResult.data!.where((s) => s.completed).length);
   }
 
   Future<Result<int>> getWeeklyDurationMs() async {
@@ -178,42 +172,38 @@ class SessionRepository extends Repository<Session>
   }
 
   Future<Result<Map<String, dynamic>>> getTodayStats() async {
-    return Result.capture(() async {
-      final now = DateTime.now();
-      final sessionsResult = await getByDate(now);
-      if (sessionsResult.isFailure) throw Exception(sessionsResult.error);
-      final sessions = sessionsResult.data!;
-      final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-      final completed = sessions.where((s) => s.completed).length;
-      final plannedMinutes = sessions.fold<int>(0, (sum, s) =>
-          sum + (s.plannedDurationMinutes ?? 0));
+    final now = DateTime.now();
+    final sessionsResult = await getByDate(now);
+    if (sessionsResult.isFailure) return Result.failure(sessionsResult.error);
+    final sessions = sessionsResult.data!;
+    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+    final completed = sessions.where((s) => s.completed).length;
+    final plannedMinutes = sessions.fold<int>(0, (sum, s) =>
+        sum + (s.plannedDurationMinutes ?? 0));
 
-      return {
-        'totalMs': totalMs,
-        'totalSeconds': totalMs ~/ 1000,
-        'completedSessions': completed,
-        'totalSessions': sessions.length,
-        'plannedMinutes': plannedMinutes,
-      };
-    }, context: 'getTodayStats');
+    return Result.success({
+      'totalMs': totalMs,
+      'totalSeconds': totalMs ~/ 1000,
+      'completedSessions': completed,
+      'totalSessions': sessions.length,
+      'plannedMinutes': plannedMinutes,
+    });
   }
 
   Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
-    return Result.capture(() async {
-      final sessionsResult = await getBySubject(subjectId);
-      if (sessionsResult.isFailure) throw Exception(sessionsResult.error);
-      final sessions = sessionsResult.data!;
-      final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-      final totalQuestions = sessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
-      final totalCorrect = sessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
-      return {
-        'totalSessions': sessions.length,
-        'totalDurationMs': totalMs,
-        'totalQuestions': totalQuestions,
-        'totalCorrect': totalCorrect,
-        'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
-      };
-    }, context: 'getSubjectStats');
+    final sessionsResult = await getBySubject(subjectId);
+    if (sessionsResult.isFailure) return Result.failure(sessionsResult.error);
+    final sessions = sessionsResult.data!;
+    final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
+    final totalQuestions = sessions.fold<int>(0, (sum, s) => sum + s.questionsAnswered);
+    final totalCorrect = sessions.fold<int>(0, (sum, s) => sum + s.correctAnswers);
+    return Result.success({
+      'totalSessions': sessions.length,
+      'totalDurationMs': totalMs,
+      'totalQuestions': totalQuestions,
+      'totalCorrect': totalCorrect,
+      'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
+    });
   }
 
   Future<Result<void>> clearAll() async {

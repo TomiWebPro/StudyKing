@@ -11,17 +11,17 @@ import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/practice_session_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/services/difficulty_adapter.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/practice/data/models/practice_models.dart';
-import 'package:studyking/features/practice/services/practice_session_service.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
@@ -44,7 +44,7 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
-  late SpacedRepetitionRepository _srRepo;
+  late SpacedRepetitionService _srService;
   late PracticeSessionService _sessionService;
   late final AnswerValidationService _validationService;
   late final StudentIdService _studentIdService;
@@ -71,7 +71,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   void initState() {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
-    _srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    _srService = ref.read(spacedRepetitionServiceProvider);
     _studentIdService = ref.read(studentIdServiceProvider);
     _masteryRecorder = ref.read(masteryRecorderProvider);
     _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
@@ -79,7 +79,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
-      srRepo: _srRepo,
+      srService: _srService,
       studentIdService: _studentIdService,
       subjectId: widget.args.subjectId,
     );
@@ -176,7 +176,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   Future<void> _loadSrDueQuestions() async {
     try {
-      final result = await _srRepo.getPracticeQuestions(widget.args.subjectId);
+      final result = await _srService.getPracticeQuestions(widget.args.subjectId);
       if (result.isFailure || result.data == null || result.data!.isEmpty) {
         if (mounted) setState(() => _questions = []);
         _showNoQuestionsDialog();

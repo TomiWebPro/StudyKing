@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/not_found_screen.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
@@ -289,8 +290,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       }
       return _errorRoute(routeSettings);
     case AppRoutes.questionBank:
+      final initialQuestionId = routeSettings.arguments as String?;
       return _materialPageRoute(
-        const QuestionBankScreen(),
+        QuestionBankScreen(initialQuestionId: initialQuestionId),
         routeSettings,
       );
     default:
@@ -308,7 +310,7 @@ PageRouteBuilder<dynamic> _materialPageRoute(Widget page, RouteSettings settings
         child: child,
       );
     },
-    transitionDuration: const Duration(milliseconds: 200),
+    transitionDuration: Timeouts.routeTransition,
   );
 }
 
@@ -322,6 +324,6 @@ PageRouteBuilder<dynamic> _errorRoute(RouteSettings routeSettings) {
         child: child,
       );
     },
-    transitionDuration: const Duration(milliseconds: 200),
+    transitionDuration: Timeouts.routeTransition,
   );
 }

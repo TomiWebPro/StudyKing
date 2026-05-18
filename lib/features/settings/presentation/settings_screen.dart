@@ -6,16 +6,16 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/utils/logger.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/settings/services/data_backup_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -36,7 +36,8 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiKeyProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
-import 'package:studyking/core/providers/llm_providers.dart' show llmUsageMeterProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
+import 'package:studyking/features/settings/providers/settings_providers.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -49,9 +50,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   final TextEditingController _modelSearchController = TextEditingController();
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAutoBackup());
+  }
+
+  @override
   void dispose() {
     _modelSearchController.dispose();
     super.dispose();
+  }
+
+  Future<void> _checkAutoBackup() async {
+    try {
+      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return;
+      final box = Hive.box(HiveBoxNames.settings);
+      final intervalDays = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
+      if (intervalDays <= 0) return;
+      final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
+      if (lastBackupStr.isEmpty) {
+        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+        return;
+      }
+      final lastBackup = DateTime.tryParse(lastBackupStr);
+      if (lastBackup == null) return;
+      final nextBackup = lastBackup.add(Duration(days: intervalDays));
+      if (DateTime.now().isAfter(nextBackup)) {
+        _performAutoBackup();
+      }
+    } catch (e) {
+      const Logger('SettingsScreen').e('Auto-backup check failed', e);
+    }
+  }
+
+  Future<void> _performAutoBackup() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      var boxData = _collectAllBoxData();
+      // Exclude sensitive data from auto-backup
+      boxData.remove(HiveBoxNames.settings);
+      final backupService = ref.read(dataBackupServiceProvider);
+      final result = await backupService.exportAllData(boxData: boxData);
+      if (result.isSuccess) {
+        if (!mounted) return;
+        final box = Hive.box(HiveBoxNames.settings);
+        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.backupCompleted),
+            action: SnackBarAction(
+              label: l10n.viewInSettings,
+              onPressed: () {},
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      const Logger('SettingsScreen').e('Auto-backup failed', e);
+    }
   }
 
   @override
@@ -127,8 +183,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   () => _showAiModelSelection(settings.selectedModel, apiKey)),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
-              _tile(l10n.aiTaskMonitor, l10n.viewActiveAiTasks, Icons.monitor_heart,
-                  () => Navigator.pushNamed(context, AppRoutes.llmTasks)),
+              _AiTaskMonitorTile(),
             ]),
             _section(l10n.notificationPreferences, [
               SwitchListTile(
@@ -226,6 +281,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Icons.free_breakfast,
                   () => _showBreakDurationDialog(settings.breakDurationSeconds)),
             ]),
+            _section(l10n.sessionTracking, [
+              _tile(l10n.manualSessionTracker, l10n.manualSessionTrackerDescription, Icons.timer,
+                  () => Navigator.pushNamed(context, AppRoutes.sessionTracker)),
+              _tile(l10n.sessionHistory, l10n.sessionHistoryDescription, Icons.history,
+                  () => Navigator.pushNamed(context, AppRoutes.sessionHistory)),
+            ]),
             _section(l10n.studyAnalytics, [
               _tile(l10n.totalStudySessions, l10n.sessionsCount(settings.totalSessionCount),
                   Icons.show_chart, () => _showAnalytics(settings)),
@@ -252,6 +313,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   Icons.backup, _exportBackup),
               _tile(l10n.importBackup, l10n.importFromFileDescription,
                   Icons.restore_page, _importBackup),
+              _tile(l10n.autoBackup, l10n.autoBackupDescription,
+                  Icons.schedule, () => _showAutoBackupDialog()),
             ]),
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
@@ -539,6 +602,58 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
   }
 
+  void _showAutoBackupDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final options = [
+      {'label': l10n.backupIntervalNever, 'value': 0},
+      {'label': l10n.backupIntervalDaily, 'value': 1},
+      {'label': l10n.backupIntervalWeekly, 'value': 7},
+    ];
+
+    try {
+      final box = Hive.box(HiveBoxNames.settings);
+      final current = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
+      final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
+
+      showModalBottomSheet(
+        context: context,
+        builder: (_) => ListView(
+          children: [
+            if (lastBackupStr.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: Text(
+                  '${l10n.lastBackup}: ${DateFormat.yMd(l10n.localeName).format(DateTime.parse(lastBackupStr))}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+            ...options.map((opt) {
+              final days = opt['value'] as int;
+              return ListTile(
+                title: Text(opt['label'] as String),
+                trailing: current == days
+                    ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                    : null,
+                onTap: () {
+                  box.put('autoBackupIntervalDays', days);
+                  if (days > 0) {
+                    box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+                  }
+                  (context as Element).markNeedsBuild();
+                  Navigator.pop(context);
+                },
+              );
+            }),
+          ],
+        ),
+      );
+    } catch (e) {
+      const Logger('SettingsScreen').e('Failed to show auto backup dialog: $e');
+    }
+  }
+
   Future<void> _showDailyReminderTimePicker(SettingsBox settings) async {
     final l10n = AppLocalizations.of(context)!;
     final initial = TimeOfDay(hour: settings.dailyReminderHour, minute: settings.dailyReminderMinute);
@@ -620,9 +735,55 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _exportBackup() async {
     final l10n = AppLocalizations.of(context)!;
-    final backupService = DataBackupService();
+
+    if (!mounted) return;
+    final includeSensitive = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.exportBackup),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.backupContainsSensitiveData),
+            const SizedBox(height: 16),
+            Text(
+              l10n.sensitiveDataWillBeExcluded,
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.excludeSensitiveData),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text(l10n.exportBackup),
+          ),
+        ],
+      ),
+    );
+
+    if (includeSensitive == null || !mounted) return;
+
+    var boxData = _collectAllBoxData();
+
+    // If user chose to exclude sensitive data
+    if (includeSensitive == true) {
+      // Remove settings box from backup (it contains API key)
+      boxData.remove(HiveBoxNames.settings);
+    }
+
+    final backupService = ref.read(dataBackupServiceProvider);
     try {
-      final boxData = _collectAllBoxData();
       final result = await backupService.exportAllData(boxData: boxData);
       if (result.isSuccess) {
         final file = File(result.data!);
@@ -637,7 +798,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-                content:                     Text(l10n.backupExportFailedWithError(result.error!))),
+                content: Text(l10n.backupExportFailedWithError(result.error!))),
           );
         }
       }
@@ -647,6 +808,32 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           SnackBar(content: Text(l10n.backupExportFailedWithError(e.toString()))),
         );
       }
+    }
+  }
+
+  String _boxDisplayName(String boxName) {
+    switch (boxName) {
+      case HiveBoxNames.subjects: return 'Subjects';
+      case HiveBoxNames.topics: return 'Topics';
+      case HiveBoxNames.questions: return 'Questions';
+      case HiveBoxNames.sources: return 'Sources';
+      case HiveBoxNames.lessons: return 'Lessons';
+      case HiveBoxNames.lessonBlocks: return 'Lesson Blocks';
+      case HiveBoxNames.sessionsTyped: return 'Sessions';
+      case HiveBoxNames.sessions: return 'Sessions (old)';
+      case HiveBoxNames.masteryStates: return 'Mastery States';
+      case HiveBoxNames.questionMasteryStates: return 'Question Mastery';
+      case HiveBoxNames.questionEvaluations: return 'Question Evaluations';
+      case HiveBoxNames.learningPlans: return 'Learning Plans';
+      case HiveBoxNames.planAdherence: return 'Plan Adherence';
+      case HiveBoxNames.planAdherenceMetrics: return 'Plan Metrics';
+      case HiveBoxNames.masteryImprovementMetrics: return 'Mastery Metrics';
+      case HiveBoxNames.conversations: return 'Conversations';
+      case HiveBoxNames.tutorSessions: return 'Tutor Sessions';
+      case HiveBoxNames.topicDependencies: return 'Topic Dependencies';
+      case HiveBoxNames.settings: return 'Settings';
+      case HiveBoxNames.profile: return 'Profile';
+      default: return boxName;
     }
   }
 
@@ -662,45 +849,64 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final filePath = pickResult.files.single.path;
       if (filePath == null) return;
 
-      final backupService = DataBackupService();
+      final backupService = ref.read(dataBackupServiceProvider);
       final result = await backupService.restoreData(filePath);
       if (result.isFailure) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-                content:
-                    Text(l10n.invalidBackupFileWithError(result.error!))),
+            SnackBar(content: Text(l10n.invalidBackupFileWithError(result.error!))),
           );
         }
         return;
       }
 
       final data = result.data!;
-      final totalBoxes = data.length;
-      final totalRecords = data.values.fold(0, (int s, l) => s + l.length);
+      if (!mounted) return;
+
+      // Show selective restore dialog
+      final selectedBoxes = await _showSelectiveRestoreDialog(l10n, data);
+      if (selectedBoxes == null || selectedBoxes.isEmpty || !mounted) return;
+
+      // Filter data to only selected boxes
+      final filteredData = <String, List<Map<String, dynamic>>>{};
+      for (final box in selectedBoxes) {
+        if (data.containsKey(box)) {
+          filteredData[box] = data[box]!;
+        }
+      }
+
+      if (filteredData.isEmpty) return;
 
       if (!mounted) return;
-      final confirmed = await showDialog<bool>(
+      final restoreMethod = await showDialog<String>(
         context: context,
         builder: (ctx) => AlertDialog(
           title: Text(l10n.importConfirmTitle),
-          content: Text(l10n.importPreview(totalBoxes, totalRecords)),
+          content: Text(l10n.selectedBoxesWillBeOverwritten),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
+              onPressed: () => Navigator.pop(ctx),
               child: Text(l10n.cancel),
             ),
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'merge'),
+              child: Text(l10n.mergeRestore),
+            ),
             FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.importBackup),
+              onPressed: () => Navigator.pop(ctx, 'overwrite'),
+              child: Text(l10n.overwriteRestore),
             ),
           ],
         ),
       );
 
-      if (confirmed != true) return;
+      if (restoreMethod == null || !mounted) return;
 
-      await _writeBoxData(data);
+      if (restoreMethod == 'merge') {
+        await _writeBoxDataMerge(filteredData);
+      } else {
+        await _writeBoxData(filteredData);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.importSuccess)),
@@ -713,6 +919,69 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         );
       }
     }
+  }
+
+  Future<Set<String>?> _showSelectiveRestoreDialog(
+      AppLocalizations l10n, Map<String, List<Map<String, dynamic>>> data) async {
+    final allKeys = data.keys.toList();
+    final selected = Set<String>.from(allKeys);
+
+    return showDialog<Set<String>>(
+      context: context,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => AlertDialog(
+          title: Text(l10n.selectBoxesToRestore),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    TextButton(
+                      onPressed: () => setInnerState(() => selected.addAll(allKeys)),
+                      child: Text(l10n.selectAll),
+                    ),
+                    TextButton(
+                      onPressed: () => setInnerState(() => selected.clear()),
+                      child: Text(l10n.deselectAll),
+                    ),
+                  ],
+                ),
+                const Divider(),
+                ...allKeys.map((key) {
+                  final records = data[key]!;
+                  return CheckboxListTile(
+                    title: Text(_boxDisplayName(key)),
+                    subtitle: Text('${records.length} records'),
+                    value: selected.contains(key),
+                    onChanged: (v) {
+                      setInnerState(() {
+                        if (v == true) {
+                          selected.add(key);
+                        } else {
+                          selected.remove(key);
+                        }
+                      });
+                    },
+                  );
+                }),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: selected.isNotEmpty ? () => Navigator.pop(ctx, selected) : null,
+              child: Text(l10n.importBackup),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Map<String, List<Map<String, dynamic>>> _collectAllBoxData() {
@@ -786,6 +1055,23 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       for (final record in records) {
         final obj = _deserializeRecord(boxName, record);
         final key = record['id'] ?? DateTime.now().millisecondsSinceEpoch.toString();
+        await box.put(key, obj);
+      }
+    }
+  }
+
+  Future<void> _writeBoxDataMerge(
+      Map<String, List<Map<String, dynamic>>> data) async {
+    for (final entry in data.entries) {
+      final boxName = entry.key;
+      final records = entry.value;
+      if (!Hive.isBoxOpen(boxName)) continue;
+      final box = Hive.box(boxName);
+      for (final record in records) {
+        final key = record['id'] as String?;
+        if (key != null && box.containsKey(key)) continue;
+        if (key == null) continue;
+        final obj = _deserializeRecord(boxName, record);
         await box.put(key, obj);
       }
     }
@@ -1099,6 +1385,49 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
           : l10n.noFailedUploads),
       trailing: const Icon(Icons.arrow_forward_ios),
       onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
+    );
+  }
+}
+
+class _AiTaskMonitorTile extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_AiTaskMonitorTile> createState() => _AiTaskMonitorTileState();
+}
+
+class _AiTaskMonitorTileState extends ConsumerState<_AiTaskMonitorTile> {
+  int _activeCount = 0;
+  int _failedCount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _updateCounts();
+  }
+
+  void _updateCounts() {
+    final taskManager = ref.read(llmTaskManagerProvider);
+    _activeCount = taskManager.activeTasks.length;
+    _failedCount = taskManager.tasks.where((t) => t.status == LlmTaskStatus.failed).length;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final total = _activeCount + _failedCount;
+
+    return ListTile(
+      leading: total > 0
+          ? Badge(
+              label: Text('$total'),
+              child: const Icon(Icons.monitor_heart),
+            )
+          : const Icon(Icons.monitor_heart),
+      title: Text(l10n.aiTaskMonitor),
+      subtitle: Text(_activeCount > 0 || _failedCount > 0
+          ? l10n.viewActiveAiTasks
+          : l10n.viewActiveAiTasks),
+      trailing: const Icon(Icons.arrow_forward_ios),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.llmTasks),
     );
   }
 }

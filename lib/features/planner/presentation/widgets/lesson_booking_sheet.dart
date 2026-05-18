@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -123,7 +124,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
                   context: context,
                   initialDate: _selectedDate,
                   firstDate: DateTime.now(),
-                  lastDate: DateTime.now().add(const Duration(days: 90)),
+                  lastDate: DateTime.now().add(Timeouts.bookingHorizon),
                 );
                 if (picked != null) {
                   setState(() => _selectedDate = picked);

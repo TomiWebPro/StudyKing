@@ -14,9 +14,11 @@ import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.da
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionRepositoryProvider, questionRepositoryProvider;
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider, questionRepositoryProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
@@ -56,16 +58,38 @@ class _TestSubjectsNotifier extends SubjectsRepositoryNotifier {
   }
 }
 
-// ── Fake SpacedRepetitionRepository ────────────────────────────────────
+// ── Fake SpacedRepetitionService ────────────────────────────────────
 
-class _FakeSpacedRepetitionRepo extends SpacedRepetitionRepository {
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
   final List<Question> _dueQuestions;
-  _FakeSpacedRepetitionRepo(this._dueQuestions);
+  _FakeSpacedRepetitionService(this._dueQuestions)
+      : super(
+          questionRepo: _FakeQuestionRepository(_dueQuestions),
+          attemptRepo: _FakeAttemptRepo(),
+        );
 
   @override
   Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
     return Result.success(List.from(_dueQuestions));
   }
+}
+
+class _FakeAttemptRepo extends AttemptRepository {
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
+  Future<void> init() async {}
 }
 
 // ── Fake MasteryGraphService ───────────────────────────────────────────
@@ -278,7 +302,7 @@ MasteryState _makeWeakState({required String topicId}) {
 Widget _buildApp({
   required Widget child,
   required SubjectRepository subjectRepo,
-  SpacedRepetitionRepository? srRepo,
+  SpacedRepetitionService? srService,
   MasteryGraphService? masteryGraphService,
   QuestionRepository? questionRepo,
   PlanAdapter? planAdapter,
@@ -291,7 +315,7 @@ Widget _buildApp({
       sessionRepositoryProvider.overrideWithValue(_FakeSessionRepo()),
       studyTimerServiceProvider.overrideWithValue(timerService ?? _FakeStudyTimerService()),
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(subjectRepo)),
-      spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepo([])),
+      spacedRepetitionServiceProvider.overrideWithValue(srService ?? _FakeSpacedRepetitionService([])),
       questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
       studentIdValueProvider.overrideWithValue('test-student'),
       planAdapterProvider.overrideWithValue(planAdapter ?? _FakePlanAdapter()),
@@ -472,13 +496,13 @@ void main() {
 
     testWidgets('shows due question count total', (tester) async {
       final subjects = [Subject(id: 's1', name: 'Math')];
-      final srRepo = _FakeSpacedRepetitionRepo([
+      final srService = _FakeSpacedRepetitionService([
         _makeQuestion(id: 'q1', subjectId: 's1', topicId: 't1'),
       ]);
       await pumpScreen(tester, _buildApp(
         child: const FocusTimerScreen(),
         subjectRepo: _FakeSubjectRepository(subjects),
-        srRepo: srRepo,
+        srService: srService,
       ));
 
       expect(find.text('Due for Review'), findsOneWidget);
@@ -499,11 +523,11 @@ void main() {
 
     testWidgets('spaced repetition button is disabled when no subjects or due questions', (tester) async {
       final subjects = [Subject(id: 's1', name: 'Math')];
-      final srRepo = _FakeSpacedRepetitionRepo([]);
+      final srService = _FakeSpacedRepetitionService([]);
       await pumpScreen(tester, _buildApp(
         child: const FocusTimerScreen(),
         subjectRepo: _FakeSubjectRepository(subjects),
-        srRepo: srRepo,
+        srService: srService,
       ));
 
       final srButton = find.text('Spaced Repetition');

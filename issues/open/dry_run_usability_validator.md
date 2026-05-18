@@ -1,264 +1,205 @@
-# Dry-Run Usability Validation: Study History, Session Tracking, and AI Activity Monitoring
+# Dry-Run Usability Validator — Cumulative Issue Log
 
-## Scenario
-
-[`dry-run-test/scenario_study_history_ai_monitor.md`](../dry-run-test/scenario_study_history_ai_monitor.md)
-
-A returning student with weeks of study data wants to review their past sessions, manually track study time, browse the question bank, monitor AI token usage, and back up their data.
-
----
-
-## BLOCKER Findings
-
-### B1: SessionTrackerScreen is completely unreachable — orphaned route with zero entry points
-
-**Files:**
-- `lib/features/sessions/presentation/session_tracker_screen.dart` (entire file, 603 lines)
-- `lib/core/routes/app_router.dart:42` (route `'/session-tracker'` registered)
-- `lib/core/routes/app_router.dart:177-178` (route handler)
-
-**What's wrong:** The `SessionTrackerScreen` is a fully implemented, tested screen with:
-- Manual study timer (start/stop/record)
-- Session end dialog to capture questions answered and correct answers
-- Weekly analytics chart (`SessionAnalyticsWidget`)
-- Recent sessions list with "View All" button to Session History
-- Plan adherence tracking on session end
-- Mastery improvement tracking
-- WidgetsBindingObserver for lifecycle awareness
-
-All 603 lines of UI code plus 10 test files are completely wasted because **no code in the entire app navigates to it**. A grep for `pushNamed.*sessionTracker` or `AppRoutes.sessionTracker` in `lib/` returns zero results outside the route definition itself. The route exists, the screen works, but the user cannot reach it.
-
-**Acceptance criteria:**
-- Add a navigation entry point to `SessionTrackerScreen` in at least one visible place:
-  - Settings screen (e.g., under "Study Analytics" or a new "Session Tracking" section)
-  - Dashboard (e.g., a "Manual Session" card or button)
-  - Focus Mode screen (e.g., as an alternative to the pomodoro timer)
-- OR merge the manual timer functionality into a more accessible screen
-- Verify with a widget test that the entry point navigates to the correct route
-
-### B2: SessionHistoryScreen is unreachable — the only navigation path is through the orphaned SessionTrackerScreen
-
-**Files:**
-- `lib/features/sessions/presentation/session_history_screen.dart:410` (sole navigation call)
-- `lib/core/routes/app_router.dart:43` (route `'/session-history'` registered)
-- `lib/core/routes/app_router.dart:179-180` (route handler)
-
-**What's wrong:** The `SessionHistoryScreen` has comprehensive functionality:
-- Full session list sorted by date
-- Date and subject filters
-- Summary stats (count, total time, average time)
-- Swipe-to-delete with undo
-- 6 export formats (CSV, PDF, JSON + comprehensive CSV/PDF/JSON)
-- Proper empty states for "no sessions" vs "filtered nothing"
-
-But the only navigation call to `AppRoutes.sessionHistory` is at `session_tracker_screen.dart:410` — from the orphaned Session Tracker screen (B1). Since no user can reach Session Tracker, no user can reach Session History through normal navigation.
-
-The Dashboard's Export section has a button labeled "Session History" (`export_section.dart:65`) but this triggers a CSV export, not navigation.
-
-**Acceptance criteria:**
-- Add a direct navigation entry point to `SessionHistoryScreen` (not dependent on Session Tracker being reachable):
-  - Dashboard: either replace the "Session History" CSV export button with actual navigation, or add a separate "View All Sessions" navigation button
-  - Settings: under "Study Analytics" section
-  - Any other tab where session data is relevant
-- The existing CSV export in the Dashboard Export section should be relabeled to avoid confusion (it currently says "Session History" but exports CSV)
+> **Purpose:** This file tracks usability issues discovered through systematic dry-run validation of user scenarios against the actual source code. Each entry describes a real user journey, the expected behavior, the actual behavior found in code, and concrete acceptance criteria for resolution.
+>
+> **Severity levels:**
+> - **BLOCKER** — App crashes, user cannot proceed, core workflow impossible
+> - **MAJOR** — Feature is broken, misleading, or missing critical functionality
+> - **MINOR** — UX friction, cosmetic, edge case, or incomplete polish
 
 ---
 
-## MAJOR Findings
+## Scenario: Syllabus-Driven Curriculum Learning
 
-### M1: Dashboard "Session History" button is a CSV export, not navigation
+> "I'm a student who wants to systematically learn IB Chemistry following its official syllabus. I expect StudyKing to parse my syllabus PDF into topics, let me set up prerequisites, create a prerequisite-respecting study plan, track syllabus completion, and enforce prerequisites in practice."
 
-**Files:**
-- `lib/features/dashboard/presentation/widgets/export_section.dart:60-69`
-- Localization keys: `l10n.sessionHistory` used as button label
+### Summary
 
-**What's wrong:** The Dashboard's Export section has a `TextButton.icon` with label `l10n.sessionHistory` (Session History). The `onPressed` handler calls `_exportProgressCSV(context, tracker)` — which generates a CSV file and opens the system share sheet. A user who taps this expecting to see their session history will instead be presented with a file-sharing dialog. The button name and behavior are contradictory.
-
-This button is the ONLY mention of "Session History" visible on the main screens. A user who sees it and taps it expecting a list of sessions gets a file export instead. They may not realize they need to look elsewhere (and there is no elsewhere to look, per B2).
-
-**Acceptance criteria:**
-- Relabel the button to indicate its actual function: "Export Progress CSV" or "Download Report"
-- Add a separate, clearly labeled "Session History" button that navigates to the Session History screen
-- OR remove the misleading label entirely and keep only "CSV", "PDF", "JSON" export buttons
-
-### M2: AI Task Monitor data is in-memory only — all tracking lost on app restart
-
-**Files:**
-- `lib/core/services/llm_task_manager.dart:57-157` (entirely in-memory `_tasks` list)
-- `lib/core/services/llm_usage_meter.dart:27-90` (entirely in-memory `_records` list)
-- `lib/core/providers/llm_providers.dart:9-11` (`llmTaskManagerProvider` creates new instance with no persistence)
-- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` (consumes in-memory data)
-
-**What's wrong:** Both `LlmTaskManager` and `LlmUsageMeter` store all data in plain `List` fields with no persistence layer. When the app is closed and reopened:
-- All LLM task history (status, tokens, cost, timestamps) is erased
-- Token usage and cost totals reset to zero
-- Failed tasks that the user intended to retry are gone
-- Long-term cost tracking is impossible
-
-The Settings screen (`settings_screen.dart:240-248`) shows "Total Tokens" and "Total Cost" from `LlmUsageMeter` — these appear correct during a session but reset to zero on restart. A user checking their cumulative AI costs will see different values each session.
-
-**Acceptance criteria:**
-- Persist `LlmTask` and `LlmUsageRecord` data to Hive (a new box or an existing one)
-- On app start, load historical tasks and usage records from storage
-- The settings token/cost display must reflect cumulative totals across all sessions, not just the current one
-- Consider a retention limit (e.g., keep last 1000 records) to prevent unbounded growth
-- Unit tests must verify persistence round-trip (save → restart → load → same data)
-
-### M3: Backup export includes API key in settings box with no warning
-
-**Files:**
-- `lib/features/settings/presentation/settings_screen.dart:718-763` (`_collectAllBoxData` includes `HiveBoxNames.settings`)
-- `lib/features/settings/presentation/settings_screen.dart:621-651` (`_exportBackup` shares file without sanitization)
-
-**What's wrong:** The `_collectAllBoxData()` method includes `HiveBoxNames.settings` in its backup. The settings box stores the user's API key (`settingsBox.get('apiKey')`). The backup file is a plain JSON file shared via the system share sheet (`Share.shareXFiles`). The user receives no warning that their API key is included in the exported file. If the user shares this file via email, messaging, or cloud storage, their API key could be exposed.
-
-**Acceptance criteria:**
-- Before exporting, display a dialog warning the user that the backup contains sensitive data (API key, model configuration) and advise caution when sharing
-- Provide an option to exclude sensitive settings from the backup
-- OR strip the `apiKey` field from the backup JSON automatically and display a note that it will need to be re-entered on restore
-- Test that the warning dialog appears and that the option to exclude sensitive data functions correctly
-
-### M4: Backup restore is all-or-nothing — no selective restore
-
-**Files:**
-- `lib/features/settings/presentation/settings_screen.dart:778-792` (`_writeBoxData` clears boxes and writes all records)
-- `lib/features/settings/presentation/settings_screen.dart:683-698` (confirmation dialog only shows box/record counts)
-
-**What's wrong:** The `_writeBoxData()` method clears every Hive box (`await box.clear()`) before writing all records from the backup. There is no merge logic, no selective box restore, no per-record selection. The confirmation dialog only displays counts ("Importing 5 boxes with 150 records") but doesn't let the user choose what to restore.
-
-A user who accidentally imports an old backup loses all data created since that backup. A user who only wants to restore specific items (e.g., subjects but not sessions) cannot do so.
-
-**Acceptance criteria:**
-- The restore dialog must show a list of boxes found in the backup with checkboxes to select which boxes to restore
-- Provide "Select All" and "Deselect All" options
-- Display a warning that selected boxes will be completely overwritten
-- Consider an alternative merge strategy (skip duplicates by ID) instead of full clear-and-replace
-- Unit tests must verify selective box restore
-
-### M5: Question Bank has no "Add Question" button — read-only for review
-
-**Files:**
-- `lib/features/questions/presentation/question_bank_screen.dart` (entire screen)
-
-**What's wrong:** The `QuestionBankScreen` allows browsing, searching, filtering, editing (text/explanation), and deleting questions. It has no "Add Question" or "Create Question" button. Users who want to contribute their own questions to the system cannot do so through any UI path. The only question generation paths are:
-- Content pipeline (disabled by default — `generateQuestions: false` in upload screen)
-- Tutor lessons (generates low-quality stubs with generic titles)
-
-The product vision explicitly describes "expand questions through generated variants" but there's no way for users to add questions manually.
-
-**Acceptance criteria:**
-- Add a "Create Question" button (FAB or app bar action) on the Question Bank screen
-- The creation form must support: question text, answer options (for single/multi choice), correct answer, question type selection, difficulty, topic assignment, explanation
-- Consider also supporting an "Import Questions" option (CSV/JSON bulk import)
-- Widget tests must verify the creation form renders and saves correctly
-
-### M6: Source Detail question tap navigates to Question Bank without passing context
-
-**Files:**
-- `lib/features/ingestion/presentation/source_detail_screen.dart:434-436`
-
-**What's wrong:** When a user taps a question in the Source Detail screen's "Generated Questions" list, the code calls:
-```dart
-onTap: () {
-  Navigator.pushNamed(context, '/question-bank');
-},
-```
-This navigates to the Question Bank screen **without any arguments**. The question bank loads from scratch — it doesn't scroll to, highlight, or filter for the specific question the user tapped. The user has to manually search or browse to find the question they were just looking at.
-
-The `QuestionBankScreen` constructor (`question_bank_screen.dart:17`) accepts no arguments. The route registration (`app_router.dart:285-289`) passes no arguments.
-
-**Acceptance criteria:**
-- Add an optional `initialQuestionId` argument to `QuestionBankScreen`
-- The screen must scroll to and highlight the specified question on load
-- Update the route to pass the argument from `SourceDetailScreen`
-- Widget test must verify that when called with `initialQuestionId`, the correct item is scrolled into view
+StudyKing has a sophisticated syllabus infrastructure in the data layer (SyllabusGoal, TopicDependency, SyllabusResolver with topological sort) and a well-designed multi-syllabus planner UI. However, the user-facing flow is disconnected from the backend: topics cannot be created from uploaded syllabi, topic dependencies have no editor UI, the planner form produces SyllabusGoals with empty subjectId, prerequisites are never enforced, and syllabus completion percentage is not tracked. The engine is built but the ignition wire is unplugged.
 
 ---
 
-## MINOR Findings
+### BLOCKER Findings
 
-### m1: Question Bank is hard to discover — buried 2 levels deep in Settings
+#### B1. Syllabus upload does not create topics
 
-**Files:**
-- `lib/features/settings/presentation/settings_screen.dart:87-88` (only entry point)
-- `lib/features/questions/presentation/question_bank_screen.dart` (the screen)
+- **Affected files:**
+  - `lib/features/ingestion/presentation/upload_screen.dart:240` — passes `possibleTopics: []`
+  - `lib/features/ingestion/services/content_pipeline.dart:281-324` — `_classifyTopic()` returns `''` when possibleTopics is empty
+  - `lib/features/subjects/presentation/subject_detail_screen.dart` — no topic management tab, no "Manage Topics" option
+  - No production code calls `TopicRepository.create()` (zero grep hits for `Topic(id:` outside tests)
+- **Rationale:** A student uploading a syllabus PDF reasonably expects the app to extract topic structure and create Topics. The pipeline has a classification stage that calls the LLM to identify topics, but the upload screen disables it by passing an empty `possibleTopics` list. Even if the LLM identified "Atomic Structure", there is no code path that calls `TopicRepository.create()`.
+- **Acceptance criteria:**
+  1. Upload screen passes `possibleTopics` from the subject's existing topics (or a reasonable default) when uploading a syllabus-type document
+  2. When classification identifies a topic title that doesn't exist in the repository, a new `Topic` is auto-created under the subject
+  3. Post-upload, the subject detail screen shows the newly created topics
+  4. User receives feedback: "3 topics created from your syllabus: Atomic Structure, Bonding, Stoichiometry"
 
-**What's wrong:** The Question Bank is only accessible via Settings → Content Management → Question Bank (2 navigation steps from a non-obvious starting point). It has no entry point from:
-- The **Practice tab** (where users naturally interact with questions)
-- The **Subjects tab** (where users manage subject-related content)
-- The **Dashboard** (which already shows question-related metrics)
+#### B2. No topic creation/dependency editing UI
 
-Users who want to review, edit, or delete questions must know to look in Settings, which is not an intuitive location for question management.
+- **Affected files:**
+  - `lib/features/subjects/presentation/subject_detail_screen.dart` — no topic management in any tab or menu
+  - `lib/features/subjects/data/models/topic_dependency_model.dart` — full model with prerequisites, masteryThreshold, isRequired, syllabusWeight; zero presentation-layer usage
+  - `lib/features/subjects/presentation/subject_form_widgets.dart` — only has Name, Code, Teacher, Syllabus, Description fields; no topic sub-form
+  - `lib/features/subjects/data/repositories/topic_repository.dart` — `create()`, `update()`, `delete()` exist but are dead code for production
+  - `lib/features/subjects/data/repositories/subject_repository.dart:28` — `addTopicToSubject()` exists but is dead code
+- **Rationale:** A student cannot create topics, edit topics, set prerequisites, configure mastery thresholds, or define topic ordering through any UI. The TopicDependency model supports all of these but is only used internally by SyllabusResolver. The only way to have topics in the system is through data import or test fixtures — neither is accessible to a real user.
+- **Acceptance criteria:**
+  1. Subject Detail screen has a "Topics" tab (or "Manage Topics" option in the menu) showing all topics for the subject
+  2. "Add Topic" button/dialog with fields: title, description, syllabus text
+  3. Topic detail/edit screen with prerequisite selector (multi-select from subject's other topics)
+  4. Topic dependency editor with: prerequisite selection, mastery threshold slider, isRequired toggle, syllabus weight
+  5. Delete topic with confirmation and cascade handling (remove from dependent topics' prerequisite lists)
+  6. Topic reordering (drag handle or sort-order up/down buttons)
 
-**Acceptance criteria:**
-- Add a "Question Bank" link in the Practice tab (e.g., in the app bar or as a card)
-- OR add it to the subject detail screen's overflow menu
-- OR surface it on the Dashboard as a "Manage Questions" card
+#### B3. Multi-syllabus planner sets empty subjectId
 
-### m2: No backup automation — data loss risk for local-only storage
-
-**Files:**
-- `lib/features/settings/presentation/settings_screen.dart:250-254` (manual backup only)
-
-**What's wrong:** StudyKing stores all data locally in Hive boxes. There is no automatic backup mechanism, no scheduled backup, and no in-app reminder to perform backups. If the user's device is lost, damaged, or the app data is cleared, all study data is irrecoverable unless the user has manually exported a backup.
-
-The `LocalDataNotice` dialog shown on first launch does warn about local storage, but it says "use the Export feature in Dashboard" — referring to the Dashboard's export (which is a progress report CSV, not a full data backup). The actual backup is in Settings → Backup & Restore, which is not mentioned in the onboarding.
-
-**Acceptance criteria:**
-- Add a setting for automatic periodic backups (e.g., daily, weekly)
-- Add an in-app reminder at configurable intervals
-- Consider cloud backup option (at minimum, export to app-specific documents directory)
-- Update the `LocalDataNotice` to point to Settings → Backup & Restore, not Dashboard export
-
-### m3: No notification when an AI task fails
-
-**Files:**
-- `lib/core/services/llm_task_manager.dart:102-111` (`failTask` only updates in-memory state)
-- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` (screen only shows failures if user opens it)
-
-**What's wrong:** When an AI task fails (e.g., content processing error, LLM API timeout), the `LlmTaskManager.failTask()` method updates the in-memory task status but does not trigger any user-facing notification. The user must manually navigate to Settings → AI Configuration → AI Task Monitor to discover failures. If the app is restarted, the failure record is lost entirely (M2).
-
-**Acceptance criteria:**
-- When `failTask()` is called, show a notification via `NotificationService` or a SnackBar if the app is in the foreground
-- Add a badge or indicator to the Settings AI Task Monitor tile showing active/failed task counts
-- If the task was user-triggered (e.g., content upload), surface the error in the originating screen's UI
-
-### m4: Settings screen creates new DataBackupService and PlanAdapter instances each time
-
-**Files:**
-- `lib/features/settings/presentation/settings_screen.dart:623` (`final backupService = DataBackupService();`)
-- `lib/features/settings/presentation/settings_screen.dart:665` (same — new instance on import)
-
-**What's wrong:** The Settings screen creates new instances of `DataBackupService` on every export/import call. While this is functional (the service has no state), it bypasses dependency injection. The `DataBackupService` should be provided via a Riverpod provider or constructor injection for testability.
-
-**Acceptance criteria:**
-- Provide `DataBackupService` via a Riverpod provider
-- Inject the service into SettingsScreen via `ref.read()` or constructor
-- Update tests to use the provider override pattern
+- **Affected files:**
+  - `lib/features/planner/presentation/planner_screen.dart:143-148` — `SyllabusGoal(subjectId: '', ...)`
+  - `lib/features/planner/presentation/planner_screen.dart:456-537` — `_buildMultiSyllabusInput()` uses free-text subject name field with no subject picker
+  - `lib/core/services/personal_learning_plan_service.dart:146-153` — iterates syllabus goals and calls `getBySubject(goal.subjectId)` which returns empty for `''`
+  - `lib/core/services/personal_learning_plan_service.dart:175-176` — uses `syllabusGoals.first.subjectId` (empty) for `resolveSyllabus(subjectId: '')`
+- **Rationale:** The multi-syllabus planner form looks well-designed with cards for subject name, days, and hours. But the `subjectId` is hardcoded to empty string. The form should present a dropdown of existing subjects and pass the selected subject's real ID. Without this, the plan generation loads zero topics, the SyllabusResolver fails to resolve anything, and daily plans are empty.
+- **Acceptance criteria:**
+  1. Multi-syllabus entry cards replace free-text subject name with a dropdown selector showing actual subjects from the database
+  2. `SyllabusGoal.subjectId` is set to the real subject ID, not `''`
+  3. `SyllabusGoal.subjectTitle` is auto-populated from the selected subject's name
+  4. After plan generation, the syllabus goal cards show real topic counts from the resolved syllabus
+  5. The single-course mode (free-text course name) should also offer a subject picker or at least validate the text against existing subjects
 
 ---
 
-## Finding Count Summary
+### MAJOR Findings
 
-| Severity | Count |
-|----------|-------|
-| **BLOCKER** | 2 |
-| **MAJOR** | 6 |
-| **MINOR** | 4 |
-| **PASS** | 3 (Content Library, Source Detail, Source Detail search) |
+#### M1. No syllabus completion percentage anywhere
 
-## Files Summary
+- **Affected files:**
+  - `lib/features/dashboard/` — zero references to syllabus completion
+  - `lib/features/subjects/presentation/subject_detail_screen.dart` — Stats tab shows attempts/accuracy/time but no syllabus progress
+  - `lib/features/planner/presentation/planner_screen.dart:539-577` — `_buildSubjectProgressTabs()` shows syllabus goal cards with topic count but no completion percentage
+  - `lib/core/services/personal_learning_plan_service.dart:815-818` — `estimatedCoverage` is a crude `uniqueTopics / 10` heuristic, never displayed
+- **Rationale:** A student studying from a structured curriculum needs to know "how much of the syllabus have I covered." The app tracks per-topic mastery, plan adherence, and overall accuracy — but never combines these into a syllabus completeness metric. The crude `estimatedCoverage` heuristic (assuming 10 topics = full syllabus) is not exposed in any UI and is mathematically wrong for any syllabus with a different number of topics.
+- **Acceptance criteria:**
+  1. Dashboard shows a "Syllabus Progress" card per subject: colored progress ring/bar with "X of Y topics mastered (Z%)"
+  2. Topic counts come from the actual topic repository for that subject, not from a hardcoded divisor
+  3. Subject Detail screen's Stats tab shows syllabus completion with per-topic status (Not Started / In Progress / Mastered)
+  4. The `estimatedCoverage` calculation is replaced or supplemented with `masteredTopics / totalTopics`
+  5. Planner syllabus goal cards show progress: "12 of 34 topics mastered (35%)" instead of just topic count
 
-```
-lib/features/sessions/presentation/session_tracker_screen.dart     — B1 (orphaned route, 603 lines unreachable)
-lib/features/sessions/presentation/session_history_screen.dart     — B2 (unreachable, only entry is through B1)
-lib/features/dashboard/presentation/widgets/export_section.dart    — B2 (misleading "Session History" label), M1
-lib/core/services/llm_task_manager.dart                            — M2 (in-memory only), m3 (no failure notification)
-lib/core/services/llm_usage_meter.dart                             — M2 (in-memory only)
-lib/core/providers/llm_providers.dart                              — M2 (no persistence provider)
-lib/features/llm_tasks/presentation/llm_task_manager_screen.dart   — M2 (consumes in-memory data), m3
-lib/features/settings/presentation/settings_screen.dart            — M3 (API key in backup), M4 (no selective restore), m2 (no automation), m4 (new instances)
-lib/features/questions/presentation/question_bank_screen.dart       — M5 (no add button), M6 (no argument support)
-lib/features/ingestion/presentation/source_detail_screen.dart      — M6 (navigates to question-bank without context)
-lib/core/routes/app_router.dart                                    — B1, B2 (routes registered but no callers)
-```
+#### M2. Prerequisites never enforced in practice or tutor
+
+- **Affected files:**
+  - `lib/features/practice/presentation/screens/practice_session_screen.dart:106-145` — loads questions by subject/topic, no prerequisite check
+  - `lib/features/teaching/presentation/tutor_screen.dart` — starts tutor with topic/subject, no prerequisite check
+  - `lib/core/services/topic_readiness_service.dart` — `getReadyTopics()` and `getNextRecommendedTopics()` exist but are never called from any UI code (zero grep hits in `lib/features/`)
+  - `lib/features/planner/services/syllabus_resolver.dart:187-208` — `buildLearningLevels()` groups topics by readiness but has no UI consumer
+- **Rationale:** The product vision says prerequisites should ensure students build knowledge in the right order. The TopicDependency model and TopicReadinessService fully support this. But no practice mode, topic selector, or tutor entry point checks prerequisites. A student can study "Organic Chemistry" without mastering "Atomic Structure" — defeating the purpose of a structured curriculum.
+- **Acceptance criteria:**
+  1. Before starting a Topic Focus or Weak Areas practice session, check if the selected topic has unmet prerequisites
+  2. If prerequisites are unmet, show a dialog: "This topic requires mastery of [prerequisite topics]. Would you like to practice those first?"
+  3. Tutor entry points (daily plan card, topic chip) perform the same prerequisite check
+  4. Topic selection sheets (Topic Focus, Weak Areas) show lock icons on topics with unmet prerequisites
+  5. The prerequisite check uses the mastery threshold from TopicDependency (default 0.8)
+  6. TopicReadinessService is integrated into practice providers and tutor providers
+
+#### M3. Subject detail has no topic/syllabus overview
+
+- **Affected files:**
+  - `lib/features/subjects/presentation/subject_detail_screen.dart` — 5 tabs: Lessons, Practice, Sources, History, Stats; none show topics or syllabus structure
+  - `lib/features/lessons/presentation/widgets/` — shows Lesson objects, not Topics
+  - `lib/features/subjects/presentation/subject_form_widgets.dart` — only has basic subject fields
+- **Rationale:** A student needs to see their subject's topic structure. The data model supports hierarchy (Topic.parentId, childTopicIds, TopicDependency.parentTopicId, sortOrder), but no screen renders it as a tree, list, or learning path. The Lessons tab shows scheduled tutoring sessions (which may not exist yet), not the underlying topic hierarchy.
+- **Acceptance criteria:**
+  1. Subject Detail has a "Syllabus" tab (or replaces "Lessons" with "Topics" for subjects with no scheduled lessons)
+  2. Syllabus tab shows topics in hierarchical order respecting sortOrder and prerequisites
+  3. Each topic shows: mastery status (locked/unlocked/in-progress/mastered), accuracy %, next review date
+  4. Topics are grouped by learning levels (prerequisites-met groups)
+  5. Tapping a topic navigates to topic practice or topic detail
+
+#### M4. Multi-syllabus form lacks subject picker and topic preview
+
+- **Affected files:**
+  - `lib/features/planner/presentation/planner_screen.dart:456-537` — `_buildMultiSyllabusInput()` with free-text subject name
+  - `lib/features/planner/presentation/planner_screen.dart:143-148` — SyllabusGoal creation uses typed text
+- **Rationale:** The multi-syllabus planner is the primary UI for curriculum-driven planning. It should let users select actual subjects, show how many topics each subject has, preview the resolved topic order, and display topic count feedback after generation. Currently the form accepts arbitrary text with no validation, produces broken data (empty subjectId), and shows "0 topics" on result cards.
+- **Acceptance criteria:**
+  1. Subject name field is replaced with a searchable dropdown of existing subjects
+  2. When a subject is selected, show: "12 topics found in this subject"
+  3. Add a "Preview topic order" button that shows the topologically-sorted topic list before generating
+  4. After plan generation, syllabus goal cards show "12 topics planned in prerequisite order"
+  5. The single-course mode (free-text course name) also gets a subject picker option
+
+---
+
+### MINOR Findings
+
+#### m1. Single-course planner accepts course name that does nothing
+
+- **Affected files:**
+  - `lib/features/planner/presentation/planner_screen.dart:162-183` — creates a plan with free-text `course` but `course` is just a label, never linked to a real subject
+  - `lib/features/planner/providers/planner_providers.dart` — `generatePlan()` accepts `course` but only passes it as a label
+  - Confirms scenario 1's finding: course name is silently ignored by plan generation
+- **Rationale:** In single-course mode, the user types "IB Chemistry" expecting the plan to center on IB Chemistry content. But `course` is metadata only — the plan is built from mastery state (which is empty for a new user). The user sees a plan with "IB Chemistry" in the title but zero content tailored to it.
+- **Acceptance criteria:**
+  1. Single-course mode shows a note: "Select a subject to base your plan on its syllabus and topics"
+  2. Free-text course name is either validated against existing subjects or replaced with a subject picker
+  3. Error message if the typed course name doesn't match any subject: "No subject named 'IB Chemistry' found. Create it first in the Subjects tab."
+
+#### m2. Planner form doesn't validate that subjects have topics before generation
+
+- **Affected files:**
+  - `lib/features/planner/presentation/planner_screen.dart:127-158` — no check that the selected/typed subject has topics
+  - `lib/core/services/personal_learning_plan_service.dart:148-153` — silently returns empty if `getBySubject` returns nothing
+- **Rationale:** A student can happily fill in "IB Chemistry" with 90 days and get a plan generated. If the subject has no topics (which it won't, since there's no topic creation UI), the plan is 90 days of "General review" — no content. The app should validate upfront.
+- **Acceptance criteria:**
+  1. Before generating a plan, check that the subject has at least one topic
+  2. Show a clear message: "IB Chemistry has no topics. Upload a syllabus to auto-create topics, or add topics manually."
+
+#### m3. EN ARB file has duplicate "today" key
+
+- **Affected files:**
+  - `lib/l10n/app_en.arb` — duplicate `"today"` key at lines ~114 and ~3496
+- **Rationale:** The duplicate key doesn't cause a runtime error (the ARB parser takes the last value), but it indicates the ARB files may have maintenance issues. This could mask future translation gaps or cause localization tooling warnings.
+- **Acceptance criteria:**
+  1. Remove the duplicate `"today"` key from `app_en.arb`
+  2. Audit the ARB file for other potential duplicates
+
+#### m4. `LlmService.defaultSystemPrompt` always returns English
+
+- **Affected files:**
+  - `lib/core/services/llm/llm_chat_service.dart:29-30` — `AppLocalizationsEn().aiDefaultSystemPrompt`
+  - `lib/core/services/llm/llm_chat_service.dart:60,84` — `defaultSystemPrompt` used as fallback when no explicit systemPrompt is provided
+- **Rationale:** When QuickGuide or other features call `chat()` or `chatStream()` without providing a locale-aware `systemPrompt`, the default system prompt is hardcoded to English. An `es` locale user will see an English system prompt as context for the LLM, which may cause the LLM to respond in English even when the user writes in Spanish. Most call sites provide explicit system prompts, but the default fallback should be locale-aware.
+- **Acceptance criteria:**
+  1. `defaultSystemPrompt` uses the current app locale, not hardcoded English
+  2. Option A: Make `chat()`/`chatStream()` accept optional locale parameter and look up localized prompt
+  3. Option B: Remove the hardcoded fallback and require callers to always provide a locale-appropriate system prompt
+
+#### m5. `percentComplete` l10n method is dead code
+
+- **Affected files:**
+  - `lib/l10n/generated/app_localizations_en.dart` (ES equivalent too) — `percentComplete(int percent, int completed, int total)` defined but never called from production code (only from tests)
+- **Rationale:** The localization method exists and is translated, meaning effort was invested in it. But no UI code ever calls it. If a future feature wants to display "85% Complete: 17 of 20 topics", it should use this method rather than re-inventing the string formatting.
+- **Acceptance criteria:**
+  1. Either integrate `percentComplete` into the syllabus progress display (see M1), or remove the dead code
+  2. If kept, add documentation that this method is the canonical way to display "X% Complete: N of M" strings
+
+---
+
+## Historical Note: Previously Reported Issues — Re-verification
+
+The following findings from earlier scenarios were spot-checked during this code analysis. Some have been resolved or partially addressed since the original scenarios were written.
+
+### Re-verified: EngagementScheduler now reads notification preferences
+
+**Original finding (scenario_focus_mode_daily_habit, BLOCKER FAIL):** "EngagementScheduler never reads settings — notification preferences are cosmetic only."
+
+**Current status:** RESOLVED. `engagement_scheduler.dart:116-131` has `_isNotificationEnabled()` which checks `studyRemindersEnabled`, `revisionRemindersEnabled`, `lessonNotificationsEnabled`, `overworkAlertsEnabled`, `planAdjustmentNotificationsEnabled`. All five nudge types (overwork at line 154, revision at line 180, planAdjustment at line 210, weakTopics at line 236, lessonReminder at line 131) route through this check.
+
+### Re-verified: Onboarding exists and works
+
+**Original finding (scenario_first_launch_ib_chemistry, FAIL):** "App explains itself on first launch — No onboarding, dropped into 5-tab shell."
+
+**Current status:** RESOLVED. `main.dart:289-297` has `_handleFirstLaunch()` which shows a non-dismissible `OnboardingDialog` listing all 5 features and a `LocalDataNotice` dialog. The onboarding dialog offers two paths: "Get Started" (→ subject selection) and "Quick Guide" (→ quick guide).
+
+> **Note:** The first-launch scenario did correctly identify several issues that are still open (static checklist items, course name ignored by planner, no syllabus database, lesson content not pre-generated). Those are tracking in this issue file and the original scenarios respectively.

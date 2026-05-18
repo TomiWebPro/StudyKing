@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -102,6 +103,10 @@ class DashboardScreen extends ConsumerWidget {
             _buildPlannerCard(context),
             const SizedBox(height: 16),
             _buildSourcesCard(context, asyncSnapshot),
+            const SizedBox(height: 16),
+            _buildQuestionBankCard(context),
+            const SizedBox(height: 16),
+            _buildSessionHistoryCard(context),
             const SizedBox(height: 16),
             if (isFirstLoad)
               _buildSkeletonLoading(context)
@@ -269,6 +274,38 @@ class DashboardScreen extends ConsumerWidget {
     ref.invalidate(provider);
   };
 
+  Widget _buildSessionHistoryCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.sessionHistory),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: MergeSemantics(
+            child: Row(
+              children: [
+                Icon(Icons.history, color: Theme.of(context).colorScheme.primary, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.sessionHistory, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(l10n.sessionHistoryDescription, style: Theme.of(context).textTheme.bodySmall),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildSourcesCard(BuildContext context, AsyncValue<int> sourceCountAsync) {
     final l10n = AppLocalizations.of(context)!;
     final count = sourceCountAsync.valueOrNull ?? 0;
@@ -296,6 +333,38 @@ class DashboardScreen extends ConsumerWidget {
                             : l10n.sourcesCount(count),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
+                    ],
+                  ),
+                ),
+                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuestionBankCard(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      child: InkWell(
+        onTap: () => Navigator.pushNamed(context, AppRoutes.questionBank),
+        borderRadius: BorderRadius.circular(12),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: MergeSemantics(
+            child: Row(
+              children: [
+                Icon(Icons.quiz, color: Theme.of(context).colorScheme.primary, size: 32),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.questionBank, style: Theme.of(context).textTheme.titleMedium),
+                      const SizedBox(height: 4),
+                      Text(l10n.manageQuestions, style: Theme.of(context).textTheme.bodySmall),
                     ],
                   ),
                 ),
@@ -409,7 +478,7 @@ class _ShimmerWidgetState extends State<_ShimmerWidget> with SingleTickerProvide
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(milliseconds: 1500));
+    _controller = AnimationController(vsync: this, duration: Timeouts.dashboardAnimation);
     _animation = Tween<double>(begin: 0.3, end: 1.0).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );

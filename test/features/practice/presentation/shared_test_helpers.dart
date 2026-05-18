@@ -7,12 +7,13 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 
 class FakeQuestionRepository extends QuestionRepository {
   final Result<List<Question>> result;
@@ -30,19 +31,19 @@ class FakeSessionRepository extends SessionRepository {
   final List<Session> sessions = [];
 
   @override
-  @override
   Future<Result<void>> save(String key, Session session) async {
     sessions.add(session);
     return Result.success(null);
   }
 }
 
-class FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
-  FakeSpacedRepetitionRepository();
+class FakeSpacedRepetitionService extends SpacedRepetitionService {
+  FakeSpacedRepetitionService()
+      : super(
+          questionRepo: FakeQuestionRepository(Result.success([])),
+          attemptRepo: AttemptRepository(),
+        );
   final updateCalls = <UpdateNextReviewCall>[];
-
-  @override
-  Future<void> init() async {}
 
   @override
   Future<Result<void>> updateNextReviewDate(String questionId, double masteryLevel) async {
@@ -85,7 +86,7 @@ Widget sessionApp({
   int? questionCount,
   NavigatorObserver? observer,
   SessionRepository? sessionRepo,
-  SpacedRepetitionRepository? srRepo,
+  SpacedRepetitionService? srService,
   bool isSpacedRepetition = false,
 }) {
   return ProviderScope(
@@ -93,8 +94,8 @@ Widget sessionApp({
       questionRepositoryProvider.overrideWithValue(FakeQuestionRepository(result)),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),
-      if (srRepo != null)
-        spacedRepetitionRepositoryProvider.overrideWithValue(srRepo),
+      if (srService != null)
+        spacedRepetitionServiceProvider.overrideWithValue(srService),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

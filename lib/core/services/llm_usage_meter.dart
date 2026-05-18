@@ -1,3 +1,5 @@
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/settings/data/models/settings_model.dart';
 
 class LlmUsageRecord {
@@ -22,10 +24,54 @@ class LlmUsageRecord {
   });
 
   int get totalTokens => inputTokens + outputTokens;
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'feature': feature,
+    'modelId': modelId,
+    'inputTokens': inputTokens,
+    'outputTokens': outputTokens,
+    'cost': cost,
+    'timestamp': timestamp.toIso8601String(),
+    'success': success,
+  };
+
+  factory LlmUsageRecord.fromJson(Map<String, dynamic> json) => LlmUsageRecord(
+    id: json['id'] as String,
+    feature: json['feature'] as String,
+    modelId: json['modelId'] as String,
+    inputTokens: (json['inputTokens'] as num).toInt(),
+    outputTokens: (json['outputTokens'] as num).toInt(),
+    cost: (json['cost'] as num).toDouble(),
+    timestamp: DateTime.parse(json['timestamp'] as String),
+    success: json['success'] as bool? ?? true,
+  );
 }
 
 class LlmUsageMeter {
   final List<LlmUsageRecord> _records = [];
+  late Box _box;
+
+  Future<void> init() async {
+    _box = await Hive.openBox(HiveBoxNames.llmUsageRecords);
+    _loadFromBox();
+  }
+
+  void _loadFromBox() {
+    _records.clear();
+    for (final entry in _box.values) {
+      if (entry is Map) {
+        _records.add(LlmUsageRecord.fromJson(Map<String, dynamic>.from(entry)));
+      }
+    }
+  }
+
+  void _saveToBox() {
+    _box.clear();
+    for (final record in _records) {
+      _box.put(record.id, record.toJson());
+    }
+  }
 
   LlmUsageRecord recordUsage({
     required String id,
@@ -48,6 +94,10 @@ class LlmUsageMeter {
       success: success,
     );
     _records.add(record);
+    if (_records.length > 1000) {
+      _records.removeAt(0);
+    }
+    _saveToBox();
     return record;
   }
 

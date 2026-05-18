@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -12,7 +12,7 @@ import 'package:studyking/core/utils/logger.dart';
 class PracticeSessionService {
   final Logger _logger = const Logger('PracticeSessionService');
   final SessionRepository _sessionRepo;
-  final SpacedRepetitionRepository _srRepo;
+  final SpacedRepetitionService _srService;
   final StudentIdService _studentIdService;
   final Clock _clock;
   final String subjectId;
@@ -22,12 +22,12 @@ class PracticeSessionService {
 
   PracticeSessionService({
     required SessionRepository sessionRepo,
-    required SpacedRepetitionRepository srRepo,
+    required SpacedRepetitionService srService,
     required StudentIdService studentIdService,
     Clock? clock,
     required this.subjectId,
   })  : _sessionRepo = sessionRepo,
-        _srRepo = srRepo,
+        _srService = srService,
         _studentIdService = studentIdService,
         _clock = clock ?? SystemClock();
 
@@ -49,7 +49,7 @@ class PracticeSessionService {
   Future<void> updateNextReview(String questionId, bool isCorrect) async {
     try {
       final masteryLevel = isCorrect ? 0.8 : 0.2;
-      await _srRepo.updateNextReviewDate(questionId, masteryLevel);
+      await _srService.updateNextReviewDate(questionId, masteryLevel);
     } catch (e) {
       _logger.e('Error updating next review date', e);
     }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/responsive.dart';
 
 class AnimatedBarChart extends StatefulWidget {
@@ -65,7 +66,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
         begin: previousHeight,
         end: height,
       ),
-      duration: const Duration(milliseconds: 300),
+      duration: Timeouts.barChartAnimation,
       curve: Curves.easeOutCubic,
       builder: (context, value, child) {
         return Container(

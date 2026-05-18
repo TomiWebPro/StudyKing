@@ -257,6 +257,21 @@ void main() {
       expect(result.data![0].id, 'wired-1');
       expect(result.data![0].studentId, 'stu1');
     });
+
+    test('propagates failure when getAll throws', () async {
+      final fakeRepo = _FakeSessionRepository();
+      fakeRepo.throwOnGetAll = true;
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(allSessionsProvider.future);
+      expect(result.isFailure, true);
+      expect(result.error, 'getAll failed');
+    });
   });
 
   group('todayStatsProvider', () {
@@ -385,6 +400,21 @@ void main() {
       expect(result.isSuccess, true);
       expect(result.data!['totalSessions'], 1);
       expect(result.data!['totalMs'], 60000);
+    });
+
+    test('propagates failure when getTodayStats throws', () async {
+      final fakeRepo = _FakeSessionRepository();
+      fakeRepo.throwOnGetTodayStats = true;
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(todayStatsProvider.future);
+      expect(result.isFailure, true);
+      expect(result.error, 'getTodayStats failed');
     });
   });
 }

@@ -7204,6 +7204,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Topic: {topicTitle}'**
   String mentorScheduleTopic(String topicTitle);
+
+  /// Title for manual session tracker
+  ///
+  /// In en, this message translates to:
+  /// **'Manual Session Tracker'**
+  String get manualSessionTracker;
+
+  /// Description for manual session tracking
+  ///
+  /// In en, this message translates to:
+  /// **'Track study time manually'**
+  String get manualSessionTrackerDescription;
+
+  /// Description for session history
+  ///
+  /// In en, this message translates to:
+  /// **'Review past study sessions'**
+  String get sessionHistoryDescription;
+
+  /// Title for session tracking section
+  ///
+  /// In en, this message translates to:
+  /// **'Session Tracking'**
+  String get sessionTracking;
+
+  /// Export progress as CSV
+  ///
+  /// In en, this message translates to:
+  /// **'Export Progress CSV'**
+  String get exportProgressCsv;
+
+  /// Button to create a new question
+  ///
+  /// In en, this message translates to:
+  /// **'Create Question'**
+  String get createQuestion;
+
+  /// Hint text for question text field
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the question text'**
+  String get questionTextHint;
+
+  /// Label for answer options section
+  ///
+  /// In en, this message translates to:
+  /// **'Answer Options'**
+  String get answerOptions;
+
+  /// Button to add an option
+  ///
+  /// In en, this message translates to:
+  /// **'Add Option'**
+  String get addOption;
+
+  /// Label for correct answer field
+  ///
+  /// In en, this message translates to:
+  /// **'Correct Answer'**
+  String get correctAnswerLabel;
+
+  /// Hint to select correct answer
+  ///
+  /// In en, this message translates to:
+  /// **'Select correct answer'**
+  String get selectCorrectAnswer;
+
+  /// Message shown when question is created
+  ///
+  /// In en, this message translates to:
+  /// **'Question created successfully'**
+  String get questionCreated;
+
+  /// Title for question management section
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Questions'**
+  String get manageQuestions;
+
+  /// Warning about sensitive data in backup
+  ///
+  /// In en, this message translates to:
+  /// **'This backup contains sensitive data (API key, model configuration). Be cautious when sharing this file.'**
+  String get backupContainsSensitiveData;
+
+  /// Option to exclude sensitive data from backup
+  ///
+  /// In en, this message translates to:
+  /// **'Exclude sensitive data'**
+  String get excludeSensitiveData;
+
+  /// Info about sensitive data exclusion
+  ///
+  /// In en, this message translates to:
+  /// **'Sensitive data will be excluded. You will need to re-enter your API key after restore.'**
+  String get sensitiveDataWillBeExcluded;
+
+  /// Prompt to select restore sections
+  ///
+  /// In en, this message translates to:
+  /// **'Select sections to restore'**
+  String get selectBoxesToRestore;
+
+  /// Button to select all items
+  ///
+  /// In en, this message translates to:
+  /// **'Select All'**
+  String get selectAll;
+
+  /// Button to deselect all items
+  ///
+  /// In en, this message translates to:
+  /// **'Deselect All'**
+  String get deselectAll;
+
+  /// Warning about selected sections being overwritten
+  ///
+  /// In en, this message translates to:
+  /// **'Selected sections will be completely overwritten.'**
+  String get selectedBoxesWillBeOverwritten;
+
+  /// Title for automatic backup settings
+  ///
+  /// In en, this message translates to:
+  /// **'Automatic Backup'**
+  String get autoBackup;
+
+  /// Description for automatic backup
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule automatic backups'**
+  String get autoBackupDescription;
+
+  /// Daily backup interval option
+  ///
+  /// In en, this message translates to:
+  /// **'Daily'**
+  String get backupIntervalDaily;
+
+  /// Weekly backup interval option
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly'**
+  String get backupIntervalWeekly;
+
+  /// Never backup option
+  ///
+  /// In en, this message translates to:
+  /// **'Never'**
+  String get backupIntervalNever;
+
+  /// Label for last backup timestamp
+  ///
+  /// In en, this message translates to:
+  /// **'Last backup'**
+  String get lastBackup;
+
+  /// Notification title for AI task failure
+  ///
+  /// In en, this message translates to:
+  /// **'AI task failed: {feature}'**
+  String aiTaskFailedNotification(String feature);
+
+  /// Notification body for AI task failure
+  ///
+  /// In en, this message translates to:
+  /// **'Task \'{feature}\' failed. {error}'**
+  String aiTaskFailedBody(String feature, String error);
+
+  /// Link label for question bank
+  ///
+  /// In en, this message translates to:
+  /// **'Question Bank'**
+  String get questionBankLink;
+
+  /// Option to overwrite all data on restore
+  ///
+  /// In en, this message translates to:
+  /// **'Overwrite all'**
+  String get overwriteRestore;
+
+  /// Option to merge data, skipping existing records
+  ///
+  /// In en, this message translates to:
+  /// **'Merge (skip existing)'**
+  String get mergeRestore;
+
+  /// Message shown when automatic backup completes
+  ///
+  /// In en, this message translates to:
+  /// **'Backup completed automatically'**
+  String get backupCompleted;
+
+  /// Button to navigate to settings
+  ///
+  /// In en, this message translates to:
+  /// **'Open Settings'**
+  String get viewInSettings;
 }
 
 class _AppLocalizationsDelegate

@@ -31,4 +31,6 @@ class HiveBoxNames {
   static const String topics = 'topics';
   static const String tutorSessions = 'tutor_sessions';
   static const String studentAvailability = 'student_availability';
+  static const String llmTasks = 'llm_tasks';
+  static const String llmUsageRecords = 'llm_usage_records';
 }

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show VoidCallback;
+import 'package:hive_flutter/hive_flutter.dart';
+import '../data/hive_box_names.dart';
 import '../theme/llm_task_status.dart';
 export '../theme/llm_task_status.dart';
 
@@ -27,6 +29,33 @@ class LlmTask {
     this.error,
     this.cancelCompleter,
   });
+
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'feature': feature,
+    'modelId': modelId,
+    'status': status.name,
+    'startTime': startTime.toIso8601String(),
+    'endTime': endTime?.toIso8601String(),
+    'tokensUsed': tokensUsed,
+    'estimatedCost': estimatedCost,
+    'error': error,
+  };
+
+  factory LlmTask.fromJson(Map<String, dynamic> json) => LlmTask(
+    id: json['id'] as String,
+    feature: json['feature'] as String,
+    modelId: json['modelId'] as String,
+    status: LlmTaskStatus.values.firstWhere(
+      (s) => s.name == json['status'],
+      orElse: () => LlmTaskStatus.queued,
+    ),
+    startTime: DateTime.parse(json['startTime'] as String),
+    endTime: json['endTime'] != null ? DateTime.parse(json['endTime'] as String) : null,
+    tokensUsed: (json['tokensUsed'] as num?)?.toInt() ?? 0,
+    estimatedCost: (json['estimatedCost'] as num?)?.toDouble() ?? 0.0,
+    error: json['error'] as String?,
+  );
 
   LlmTask copyWith({
     String? id,
@@ -57,11 +86,40 @@ class LlmTask {
 class LlmTaskManager {
   final List<LlmTask> _tasks = [];
   int _counter = 0;
+  late Box _box;
 
   List<LlmTask> get tasks => List.unmodifiable(_tasks);
 
   List<LlmTask> get activeTasks =>
       _tasks.where((t) => t.status == LlmTaskStatus.running || t.status == LlmTaskStatus.queued).toList();
+
+  Future<void> init() async {
+    _box = await Hive.openBox(HiveBoxNames.llmTasks);
+    _loadFromBox();
+  }
+
+  void _loadFromBox() {
+    _tasks.clear();
+    for (final entry in _box.values) {
+      if (entry is Map) {
+        _tasks.add(LlmTask.fromJson(Map<String, dynamic>.from(entry)));
+      }
+    }
+    if (_tasks.isNotEmpty) {
+      final maxId = _tasks.map((t) {
+        final parts = t.id.split('_');
+        return parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+      }).fold(0, (a, b) => a > b ? a : b);
+      _counter = maxId;
+    }
+  }
+
+  void _saveToBox() {
+    _box.clear();
+    for (final task in _tasks) {
+      _box.put(task.id, task.toJson());
+    }
+  }
 
   String createTask({
     required String feature,
@@ -74,6 +132,10 @@ class LlmTaskManager {
       modelId: modelId,
       startTime: DateTime.now(),
     ));
+    if (_tasks.length > 1000) {
+      _tasks.removeRange(0, _tasks.length - 1000);
+    }
+    _saveToBox();
     _notify();
     return id;
   }
@@ -84,6 +146,7 @@ class LlmTaskManager {
     _tasks[idx] = _tasks[idx].copyWith(
       status: LlmTaskStatus.running,
     );
+    _saveToBox();
     _notify();
   }
 
@@ -96,6 +159,7 @@ class LlmTaskManager {
       tokensUsed: tokensUsed,
       estimatedCost: estimatedCost,
     );
+    _saveToBox();
     _notify();
   }
 
@@ -107,7 +171,9 @@ class LlmTaskManager {
       endTime: DateTime.now(),
       error: error,
     );
+    _saveToBox();
     _notify();
+    onTaskFailed?.call(_tasks[idx].feature, error);
   }
 
   void cancelTask(String taskId) {
@@ -120,6 +186,7 @@ class LlmTaskManager {
         status: LlmTaskStatus.cancelled,
         endTime: DateTime.now(),
       );
+      _saveToBox();
       _notify();
     }
   }
@@ -145,6 +212,8 @@ class LlmTaskManager {
     final oldTask = _tasks[idx];
     return createTask(feature: oldTask.feature, modelId: oldTask.modelId);
   }
+
+  void Function(String feature, String error)? onTaskFailed;
 
   final List<VoidCallback> _listeners = [];
   void addListener(VoidCallback listener) => _listeners.add(listener);

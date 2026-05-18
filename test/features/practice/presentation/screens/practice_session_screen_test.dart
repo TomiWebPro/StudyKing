@@ -7,8 +7,8 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -723,7 +723,7 @@ void main() {
 
     group('spaced repetition mode', () {
       testWidgets('calls _updateNextReview on correct answer', (tester) async {
-        final srRepo = FakeSpacedRepetitionRepository();
+        final srService = FakeSpacedRepetitionService();
         final questions = [
           question(id: 'q1', text: 'SR question', type: QuestionType.typedAnswer, markschemeText: 'answer'),
         ];
@@ -731,7 +731,7 @@ void main() {
         await tester.pumpWidget(sessionApp(
           result: Result.success(questions),
           isSpacedRepetition: true,
-          srRepo: srRepo,
+          srService: srService,
         ));
         await tester.tap(find.text('Open Session'));
         await tester.pumpAndSettle();
@@ -741,13 +741,13 @@ void main() {
         await tester.tap(find.text(_kSubmitAnswer));
         await tester.pumpAndSettle();
 
-        expect(srRepo.updateCalls.length, 1);
-        expect(srRepo.updateCalls.first.questionId, 'q1');
-        expect(srRepo.updateCalls.first.masteryLevel, 0.8);
+        expect(srService.updateCalls.length, 1);
+        expect(srService.updateCalls.first.questionId, 'q1');
+        expect(srService.updateCalls.first.masteryLevel, 0.8);
       });
 
       testWidgets('calls _updateNextReview on incorrect answer', (tester) async {
-        final srRepo = FakeSpacedRepetitionRepository();
+        final srService = FakeSpacedRepetitionService();
         final questions = [
           question(id: 'q1', text: 'SR question', type: QuestionType.typedAnswer, markschemeText: 'answer'),
         ];
@@ -755,7 +755,7 @@ void main() {
         await tester.pumpWidget(sessionApp(
           result: Result.success(questions),
           isSpacedRepetition: true,
-          srRepo: srRepo,
+          srService: srService,
         ));
         await tester.tap(find.text('Open Session'));
         await tester.pumpAndSettle();
@@ -765,13 +765,13 @@ void main() {
         await tester.tap(find.text(_kSubmitAnswer));
         await tester.pumpAndSettle();
 
-        expect(srRepo.updateCalls.length, 1);
-        expect(srRepo.updateCalls.first.questionId, 'q1');
-        expect(srRepo.updateCalls.first.masteryLevel, 0.2);
+        expect(srService.updateCalls.length, 1);
+        expect(srService.updateCalls.first.questionId, 'q1');
+        expect(srService.updateCalls.first.masteryLevel, 0.2);
       });
 
       testWidgets('does not call _updateNextReview when isSpacedRepetition is false', (tester) async {
-        final srRepo = FakeSpacedRepetitionRepository();
+        final srService = FakeSpacedRepetitionService();
         final questions = [
           question(id: 'q1', text: 'SR question', type: QuestionType.typedAnswer, markschemeText: 'answer'),
         ];
@@ -779,7 +779,7 @@ void main() {
         await tester.pumpWidget(sessionApp(
           result: Result.success(questions),
           isSpacedRepetition: false,
-          srRepo: srRepo,
+          srService: srService,
         ));
         await tester.tap(find.text('Open Session'));
         await tester.pumpAndSettle();
@@ -789,7 +789,7 @@ void main() {
         await tester.tap(find.text(_kSubmitAnswer));
         await tester.pumpAndSettle();
 
-        expect(srRepo.updateCalls, isEmpty);
+        expect(srService.updateCalls, isEmpty);
       });
     });
 
@@ -1216,7 +1216,7 @@ Widget sessionAppWithRepo({
   int? questionCount,
   NavigatorObserver? observer,
   SessionRepository? sessionRepo,
-  SpacedRepetitionRepository? srRepo,
+  SpacedRepetitionService? srService,
   bool isSpacedRepetition = false,
 }) {
   return ProviderScope(
@@ -1224,8 +1224,8 @@ Widget sessionAppWithRepo({
       questionRepositoryProvider.overrideWithValue(result),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),
-      if (srRepo != null)
-        spacedRepetitionRepositoryProvider.overrideWithValue(srRepo),
+      if (srService != null)
+        spacedRepetitionServiceProvider.overrideWithValue(srService),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

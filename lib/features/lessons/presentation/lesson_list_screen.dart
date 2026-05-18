@@ -9,6 +9,7 @@ import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/errors/handlers.dart';
 import '../../lessons/providers/lesson_providers.dart';
+import '../../sessions/providers/session_providers.dart';
 import 'widgets/lesson_list_item.dart';
 
 class LessonListScreen extends ConsumerStatefulWidget {

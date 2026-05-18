@@ -19,12 +19,6 @@ void main() {
   });
 
   group('app providers', () {
-    test('settingsLoadingProvider defaults to false', () {
-      final container = ProviderContainer();
-      addTearDown(() => container.dispose());
-      expect(container.read(settingsLoadingProvider), isFalse);
-    });
-
     test('themeModeProvider defaults to light', () {
       final container = ProviderContainer();
       addTearDown(() => container.dispose());

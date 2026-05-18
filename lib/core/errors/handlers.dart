@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
-import '../../l10n/generated/app_localizations_en.dart';
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
 
@@ -13,8 +12,6 @@ class AppErrorHandler {
     _logError(error, context);
   }
 
-  static AppLocalizations get _defaultL10n => AppLocalizationsEn();
-
   static Future<void> handleError(
     BuildContext context,
     Object error,
@@ -23,7 +20,8 @@ class AppErrorHandler {
     void Function()? retryCallback,
   }) async {
     _logError(error, contextName);
-    final exception = convertToAppException(error);
+    final l10n = AppLocalizations.of(context)!;
+    final exception = convertToAppException(error, l10n);
     _showErrorUI(context, exception, retry: retry, retryCallback: retryCallback);
   }
 
@@ -67,8 +65,7 @@ class AppErrorHandler {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  static String _getErrorMessage(AppException exception, [AppLocalizations? l10n]) {
-    l10n ??= _defaultL10n;
+  static String _getErrorMessage(AppException exception, AppLocalizations l10n) {
     return switch (exception.type) {
       ExceptionType.network => l10n.errorNetworkConnection,
       ExceptionType.apiKeyMissing => l10n.errorApiKeyMissing,
@@ -101,8 +98,7 @@ class AppErrorHandler {
     };
   }
 
-  static String getRetryText(AppException exception, [AppLocalizations? l10n]) {
-    l10n ??= _defaultL10n;
+  static String getRetryText(AppException exception, AppLocalizations l10n) {
     return switch (exception.type) {
       ExceptionType.network => l10n.retryConnection,
       ExceptionType.apiRateLimit => l10n.retryAfterWait,
@@ -144,8 +140,7 @@ class AppErrorHandler {
   }
 
   @visibleForTesting
-  static AppException convertToAppException(Object error, [AppLocalizations? l10n]) {
-    l10n ??= _defaultL10n;
+  static AppException convertToAppException(Object error, AppLocalizations l10n) {
     if (error is AppException) {
       return error;
     }

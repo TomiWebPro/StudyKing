@@ -7,7 +7,6 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -33,11 +32,9 @@ const _kNoReviewsScheduled = 'No reviews scheduled.';
 const _kNoTopicsAvailable = 'No topics available';
 const _kNoWeakAreasFound = 'No weak areas found. Keep up the great work!';
 const _kExamMode = 'Exam Mode';
-const _kSourcePractice = 'Source Practice';
 const _kAtRiskQuestions = 'At-Risk Questions';
 const _kQuestionsToday = 'Questions Today';
 const _kDueForReview = 'Due for Review';
-const _kSubjects = 'Subjects';
 const _kRetry = 'Retry';
 const _kNoQuestionsPracticeHint = 'Add questions to start practicing.';
 const _kUploadMaterials = 'Upload Materials';
@@ -104,24 +101,6 @@ class _FakeQuestionRepository extends QuestionRepository {
   }
 }
 
-class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
-  final Map<String, int> _dueCounts;
-
-  _FakeSpacedRepetitionRepository([this._dueCounts = const {}]) : super(
-    service: _FakeSpacedRepetitionService(_dueCounts),
-  );
-
-  @override
-  Future<Result<int>> getSubjectDueCount(String subjectId) async {
-    return Result.success(_dueCounts[subjectId] ?? 0);
-  }
-
-  @override
-  Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
-    return Result.success([]);
-  }
-}
-
 class _FakeSpacedRepetitionService extends SpacedRepetitionService {
   final Map<String, int> _dueCounts;
 
@@ -133,6 +112,11 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
   @override
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
     return Result.success(_dueCounts[subjectId] ?? 0);
+  }
+
+  @override
+  Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
+    return Result.success([]);
   }
 }
 
@@ -161,7 +145,7 @@ Subject _subject({required String id, required String name, String? code}) {
 Widget _buildTestApp({
   required SubjectRepository subjectRepo,
   QuestionRepository? questionRepo,
-  SpacedRepetitionRepository? srRepo,
+  SpacedRepetitionService? srService,
   MasteryGraphService? masteryService,
   NavigatorObserver? navigatorObserver,
   Map<String, int>? srDueCounts,
@@ -169,6 +153,7 @@ Widget _buildTestApp({
   bool showNoQuestionsBanner = false,
 }) {
   final dueCounts = srDueCounts ?? <String, int>{};
+  final effectiveSrService = srService ?? _FakeSpacedRepetitionService(dueCounts);
   return ProviderScope(
     overrides: [
       subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(subjectRepo)),
@@ -178,8 +163,7 @@ Widget _buildTestApp({
             ? _FakeQuestionRepository([])
             : _FakeQuestionRepository([_makeQuestion()])),
       ),
-      spacedRepetitionRepositoryProvider.overrideWithValue(srRepo ?? _FakeSpacedRepetitionRepository(dueCounts)),
-      spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService(dueCounts)),
+      spacedRepetitionServiceProvider.overrideWithValue(effectiveSrService),
       attemptRepositoryProvider.overrideWithValue(attemptRepo ?? _FakeAttemptRepository()),
       if (masteryService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryService),
@@ -720,6 +704,63 @@ void main() {
     });
   });
 
+  group('PracticeScreen - Question Bank entry', () {
+    testWidgets('shows Question Bank card in extra modes', (tester) async {
+      final box = _FakeSubjectBox();
+      box.addSubject(_subject(id: '1', name: 'Math'));
+      final repo = _FakeSubjectRepository(box);
+      final qRepo = _FakeQuestionRepository([
+        _makeQuestion(id: 'q1', subjectId: '1'),
+      ]);
+      final attemptRepo = _FakeAttemptRepository([]);
+      final masteryService = _FakeMasteryGraphService();
+      final navigatorObserver = TestNavigatorObserver();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsRepositoryNotifier(repo)),
+            subjectRepositoryProvider.overrideWithValue(repo),
+            questionRepositoryProvider.overrideWithValue(qRepo),
+            attemptRepositoryProvider.overrideWithValue(attemptRepo),
+            spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService({})),
+            masteryGraphServiceProvider.overrideWithValue(masteryService),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            navigatorObservers: [navigatorObserver],
+            home: const PracticeScreen(),
+            onGenerateRoute: (settings) {
+              if (settings.name == '/question-bank') {
+                return MaterialPageRoute(
+                  builder: (_) => const Scaffold(body: Text('Question Bank Screen')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.dragUntilVisible(
+        find.text('Question Bank'),
+        find.byType(Scrollable).first,
+        const Offset(0, -200),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Question Bank'), findsWidgets);
+
+      await tester.tap(find.text('Question Bank').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Question Bank Screen'), findsOneWidget);
+    });
+  });
+
   group('PracticeScreen - weak areas with attempts', () {
     testWidgets('weak areas navigates when sufficient attempts exist', (tester) async {
       final now = DateTime.now();
@@ -749,7 +790,6 @@ void main() {
             subjectRepositoryProvider.overrideWithValue(repo),
             questionRepositoryProvider.overrideWithValue(qRepo),
             attemptRepositoryProvider.overrideWithValue(attemptRepo),
-            spacedRepetitionRepositoryProvider.overrideWithValue(_FakeSpacedRepetitionRepository({})),
             spacedRepetitionServiceProvider.overrideWithValue(_FakeSpacedRepetitionService({})),
             masteryGraphServiceProvider.overrideWithValue(masteryService),
           ],

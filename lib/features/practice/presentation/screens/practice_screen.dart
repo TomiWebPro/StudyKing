@@ -12,9 +12,9 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_grid.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_sheet.dart';
@@ -39,7 +39,7 @@ class PracticeScreen extends ConsumerStatefulWidget {
 class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   final Logger _logger = const Logger('PracticeScreen');
   late final PracticeDataService _dataService;
-  late final SpacedRepetitionRepository _srRepo;
+  late final SpacedRepetitionService _srService;
   late final QuestionRepository _questionRepo;
   late final StudentIdService _studentIdService;
   List<Subject> _subjects = [];
@@ -53,12 +53,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   @override
   void initState() {
     super.initState();
-    final srService = ref.read(spacedRepetitionServiceProvider);
-    _srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    _srService = ref.read(spacedRepetitionServiceProvider);
     _questionRepo = ref.read(questionRepositoryProvider);
     _studentIdService = ref.read(studentIdServiceProvider);
     _dataService = PracticeDataService(
-      srService: srService,
+      srService: _srService,
       questionRepo: _questionRepo,
       subjectRepo: ref.read(subjectRepositoryProvider),
       studentIdService: _studentIdService,
@@ -272,7 +271,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   void _startSpacedRepetitionSession(Subject subject) async {
     try {
-      final result = await _srRepo.getPracticeQuestions(subject.id);
+      final result = await _srService.getPracticeQuestions(subject.id);
       if (result.isFailure || result.data == null || result.data!.isEmpty) {
         if (!mounted) return;
         SpacedRepetitionSheet.showAllCaughtUp(context);
@@ -709,6 +708,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         title: l10n.atRiskQuestions,
         description: l10n.atRiskQuestionsDescription,
         onTap: _startAtRiskPractice,
+      ),
+      _ExtraModeCard(
+        icon: Icons.quiz,
+        iconColor: Theme.of(context).colorScheme.tertiary,
+        title: l10n.questionBankLink,
+        description: l10n.browseAndManageQuestions,
+        onTap: () => Navigator.pushNamed(context, AppRoutes.questionBank),
       ),
     ];
     return Padding(

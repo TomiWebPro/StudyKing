@@ -1,15 +1,19 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider;
+import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, SettingsController;
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 
 class _FakeAttemptRepo extends AttemptRepository {
   final List<StudentAttempt> _attempts;
@@ -26,6 +30,41 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<Result<List<StudentAttempt>>> getAll() async => Result.success(_attempts);
   @override
   Future<Result<void>> delete(String key) async => Result.success(null);
+}
+
+class _FakeSettingsRepository extends SettingsRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<SettingsBox>> getSettings() async => Result.success(SettingsBox(selectedModel: 'custom-model'));
+
+  @override
+  Future<Result<void>> saveApiKey({required String service, required String key}) async => Result.success(null);
+
+  @override
+  Future<Result<void>> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    ThemeMode? themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
+  }) async => Result.success(null);
 }
 
 void main() {
@@ -148,6 +187,111 @@ void main() {
       expect(stats['totalAttempts'], 1);
       expect(stats['correctAttempts'], 1);
       expect(stats['accuracy'], 100);
+    });
+
+    test('mentorProgressTrackerProvider handles error when attempt repo is missing data', () async {
+      final emptyRepo = _FakeAttemptRepo([]);
+      final container = ProviderContainer(
+        overrides: [
+          mentorAttemptRepositoryProvider.overrideWithValue(emptyRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final tracker = container.read(mentorProgressTrackerProvider);
+      expect(tracker, isA<StudyProgressTracker>());
+
+      final stats = await tracker.getOverallStats('nonexistent');
+      expect(stats['totalAttempts'], 0);
+      expect(stats['correctAttempts'], 0);
+    });
+
+    test('mentorEngagementNudgeRepoProvider creates EngagementNudgeRepository', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(mentorEngagementNudgeRepoProvider);
+      expect(repo, isA<EngagementNudgeRepository>());
+    });
+
+    test('mentorEngagementNudgeRepoProvider is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final a = container.read(mentorEngagementNudgeRepoProvider);
+      final b = container.read(mentorEngagementNudgeRepoProvider);
+      expect(a, same(b));
+    });
+
+    test('mentorEngagementNudgeRepoProvider can be overridden', () {
+      final fakeRepo = EngagementNudgeRepository();
+      final container = ProviderContainer(
+        overrides: [
+          mentorEngagementNudgeRepoProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(mentorEngagementNudgeRepoProvider);
+      expect(repo, same(fakeRepo));
+    });
+
+    test('mentorSessionRepositoryProvider creates SessionRepository', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final repo = container.read(mentorSessionRepositoryProvider);
+      expect(repo, isA<SessionRepository>());
+    });
+
+    test('mentorSessionRepositoryProvider is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final a = container.read(mentorSessionRepositoryProvider);
+      final b = container.read(mentorSessionRepositoryProvider);
+      expect(a, same(b));
+    });
+
+    test('mentorSessionRepositoryProvider can be overridden', () {
+      final fakeRepo = SessionRepository();
+      final container = ProviderContainer(
+        overrides: [
+          mentorSessionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(mentorSessionRepositoryProvider);
+      expect(repo, same(fakeRepo));
+    });
+
+    test('mentorModelIdProvider uses saved model when selectedModel is non-empty', () async {
+      final fakeRepo = _FakeSettingsRepository();
+      final controller = SettingsController(fakeRepo);
+      await controller.saveApiKey('dummy');
+
+      final container = ProviderContainer(
+        overrides: [
+          settingsProvider.overrideWith((ref) => controller),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final modelId = container.read(mentorModelIdProvider);
+      expect(modelId, equals('custom-model'));
+    });
+
+    test('mentorModelIdProvider wired correctly with llmProviderProvider fallback', () {
+      final container = ProviderContainer(
+        overrides: [
+          llmProviderProvider.overrideWith((ref) => LlmProvider.ollama),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final modelId = container.read(mentorModelIdProvider);
+      expect(modelId, equals(defaultModelForProvider(LlmProvider.ollama)));
     });
   });
 }

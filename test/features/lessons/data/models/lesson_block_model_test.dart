@@ -53,6 +53,16 @@ void main() {
         expect(json['content'], 'Example');
         expect(json['order'], 2);
       });
+
+      test('serializes all LessonBlockType values correctly', () {
+        for (final type in LessonBlockType.values) {
+          final block = LessonBlock(
+            id: 'b1', subjectId: 's1', lessonId: 'l1',
+            type: type, content: 'c',
+          );
+          expect(block.toJson()['type'], type.index);
+        }
+      });
     });
 
     group('fromJson', () {
@@ -83,6 +93,17 @@ void main() {
         expect(block.type, LessonBlockType.text);
         expect(block.order, 0);
       });
+
+      test('deserializes all LessonBlockType enum indices', () {
+        for (final type in LessonBlockType.values) {
+          final json = {
+            'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+            'type': type.index, 'content': 'c',
+          };
+          final block = LessonBlock.fromJson(json);
+          expect(block.type, type);
+        }
+      });
     });
 
     group('serialization roundtrip', () {
@@ -101,6 +122,19 @@ void main() {
         expect(restored.type, original.type);
         expect(restored.order, original.order);
         expect(restored.content, original.content);
+        expect(restored.subjectId, original.subjectId);
+        expect(restored.lessonId, original.lessonId);
+      });
+
+      test('roundtrip preserves all LessonBlockType values', () {
+        for (final type in LessonBlockType.values) {
+          final original = LessonBlock(
+            id: 'b1', subjectId: 's1', lessonId: 'l1',
+            type: type, content: 'c', order: 1,
+          );
+          final restored = LessonBlock.fromJson(original.toJson());
+          expect(restored.type, type);
+        }
       });
     });
 
@@ -116,9 +150,11 @@ void main() {
         );
         final copy = block.copyWith();
         expect(copy.id, block.id);
+        expect(copy.subjectId, block.subjectId);
+        expect(copy.lessonId, block.lessonId);
         expect(copy.type, block.type);
-        expect(copy.order, block.order);
         expect(copy.content, block.content);
+        expect(copy.order, block.order);
       });
 
       test('updates specified fields', () {
@@ -139,6 +175,33 @@ void main() {
         expect(copy.content, 'New content');
         expect(copy.order, 5);
         expect(copy.id, block.id);
+        expect(copy.subjectId, block.subjectId);
+        expect(copy.lessonId, block.lessonId);
+      });
+
+      test('updates every field', () {
+        final block = LessonBlock(
+          id: 'block-1',
+          subjectId: 'subject-1',
+          lessonId: 'lesson-1',
+          type: LessonBlockType.text,
+          content: 'Content',
+          order: 0,
+        );
+        final copy = block.copyWith(
+          id: 'block-2',
+          subjectId: 'subject-2',
+          lessonId: 'lesson-2',
+          type: LessonBlockType.quiz,
+          content: 'Updated',
+          order: 10,
+        );
+        expect(copy.id, 'block-2');
+        expect(copy.subjectId, 'subject-2');
+        expect(copy.lessonId, 'lesson-2');
+        expect(copy.type, LessonBlockType.quiz);
+        expect(copy.content, 'Updated');
+        expect(copy.order, 10);
       });
     });
 
@@ -199,6 +262,27 @@ void main() {
         );
         final hash = obj.hashCode;
         expect(obj.hashCode, hash);
+      });
+
+      test('different instances with same values are not equal', () {
+        final a = LessonBlock(
+          id: 'same-id',
+          subjectId: 'same-subject',
+          lessonId: 'same-lesson',
+          type: LessonBlockType.text,
+          content: 'same',
+          order: 1,
+        );
+        final b = LessonBlock(
+          id: 'same-id',
+          subjectId: 'same-subject',
+          lessonId: 'same-lesson',
+          type: LessonBlockType.text,
+          content: 'same',
+          order: 1,
+        );
+        expect(a == b, isFalse);
+        expect(identical(a, b), isFalse);
       });
     });
 

@@ -2,11 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/providers/app_providers.dart' show localeProvider, settingsRepository;
+import 'package:studyking/core/providers/app_providers.dart' show localeProvider, settingsRepositoryProvider;
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/settings/presentation/profile_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSettingsRepository extends SettingsRepository {
   UserProfile? _currentProfile;
@@ -33,38 +34,35 @@ class _FakeSettingsRepository extends SettingsRepository {
   }
 }
 
-late SettingsRepository _originalRepo;
-
-Widget buildProfileScreen() {
+Widget buildProfileScreen({
+  TestNavigatorObserver? navigatorObserver,
+  SettingsRepository? repo,
+}) {
   return ProviderScope(
     overrides: [
       localeProvider.overrideWith((ref) => const Locale('en')),
+      if (repo != null) settingsRepositoryProvider.overrideWithValue(repo),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const ProfileScreen(),
     ),
   );
 }
 
 void main() {
-  setUpAll(() {
-    _originalRepo = settingsRepository;
-  });
+  late _FakeSettingsRepository fakeRepo;
 
   setUp(() {
-    settingsRepository = _FakeSettingsRepository();
-  });
-
-  tearDown(() {
-    settingsRepository = _originalRepo;
+    fakeRepo = _FakeSettingsRepository();
   });
 
   group('ProfileScreen', () {
     testWidgets('renders profile screen with app bar', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Profile'), findsOneWidget);
@@ -72,14 +70,14 @@ void main() {
     });
 
     testWidgets('shows save button in app bar', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.save), findsOneWidget);
     });
 
     testWidgets('shows avatar selection area', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final avatarContainer = find.byWidgetPredicate((w) =>
@@ -91,7 +89,7 @@ void main() {
     });
 
     testWidgets('shows name text field with correct label', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Full Name'), findsOneWidget);
@@ -100,14 +98,14 @@ void main() {
     });
 
     testWidgets('shows student ID field as optional', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Student ID (Optional)'), findsOneWidget);
     });
 
     testWidgets('shows learning goal text field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Learning Goal'), findsOneWidget);
@@ -115,7 +113,7 @@ void main() {
     });
 
     testWidgets('shows preferred study time text field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Preferred Study Time'), findsOneWidget);
@@ -123,7 +121,7 @@ void main() {
     });
 
     testWidgets('shows account information card', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Account Information'), findsOneWidget);
@@ -132,7 +130,7 @@ void main() {
     });
 
     testWidgets('shows language dropdown with English and Spanish', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final dropdown = find.byType(DropdownButton<String>);
@@ -142,7 +140,7 @@ void main() {
     });
 
     testWidgets('shows notifications switch', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final switchTile = find.widgetWithText(SwitchListTile, 'Notifications');
@@ -150,7 +148,7 @@ void main() {
     });
 
     testWidgets('shows delete account warning card', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Delete Account'), findsOneWidget);
@@ -159,7 +157,7 @@ void main() {
     });
 
     testWidgets('tapping avatar opens avatar picker bottom sheet', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.person).first);
@@ -177,7 +175,7 @@ void main() {
     });
 
     testWidgets('tapping cancel on avatar picker closes sheet', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.person).first);
@@ -190,7 +188,7 @@ void main() {
     });
 
     testWidgets('can select face avatar', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.person).first);
@@ -203,7 +201,7 @@ void main() {
     });
 
     testWidgets('can select school avatar', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.person).first);
@@ -216,7 +214,7 @@ void main() {
     });
 
     testWidgets('shows error snackbar when name is empty on save', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.save));
@@ -226,7 +224,7 @@ void main() {
     });
 
     testWidgets('shows error snackbar when student ID is non-numeric', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -242,7 +240,7 @@ void main() {
     });
 
     testWidgets('saving with valid name triggers save process', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -258,7 +256,7 @@ void main() {
     });
 
     testWidgets('can change language to Spanish', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(DropdownButton<String>));
@@ -271,7 +269,7 @@ void main() {
     });
 
     testWidgets('can toggle notifications switch', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final switchTile = find.widgetWithText(SwitchListTile, 'Notifications');
@@ -287,7 +285,7 @@ void main() {
     });
 
     testWidgets('tapping delete opens confirmation dialog', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Delete'));
@@ -299,7 +297,7 @@ void main() {
     });
 
     testWidgets('cancel delete closes dialog without action', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Delete'));
@@ -312,7 +310,7 @@ void main() {
     });
 
     testWidgets('loads existing profile data into fields', (tester) async {
-      await settingsRepository.saveProfileData(UserProfile(
+      await fakeRepo.saveProfileData(UserProfile(
         id: 'test-id',
         name: 'Jane Doe',
         studentId: '12345',
@@ -323,7 +321,7 @@ void main() {
         language: 'es',
       ));
 
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.text('Jane Doe'), findsOneWidget);
@@ -333,7 +331,7 @@ void main() {
     });
 
     testWidgets('handles profile load error gracefully', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsWidgets);
@@ -341,7 +339,7 @@ void main() {
     });
 
     testWidgets('shows required asterisk for name field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final nameLabel = find.text('Full Name');
@@ -351,7 +349,7 @@ void main() {
     });
 
     testWidgets('student ID field only accepts digits', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       final studentIdField = find.widgetWithText(TextField, 'Student ID (Optional)');
@@ -362,7 +360,7 @@ void main() {
     });
 
     testWidgets('avatar picker has proper semantic labels', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.person).first);
@@ -373,7 +371,7 @@ void main() {
     });
 
     testWidgets('enter text in name field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -386,7 +384,7 @@ void main() {
     });
 
     testWidgets('enter text in learning goal field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -399,7 +397,7 @@ void main() {
     });
 
     testWidgets('enter text in preferred study time field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen());
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
       await tester.pumpAndSettle();
 
       await tester.enterText(
@@ -413,7 +411,7 @@ void main() {
 
     group('Save Verification', () {
       testWidgets('save triggers repository call with correct data', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -425,14 +423,14 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data, isNotNull);
         expect(profileResult.data!.name, equals('Save Test User'));
       });
 
       testWidgets('save includes student ID when provided', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -448,13 +446,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.studentId, equals('12345'));
       });
 
       testWidgets('save includes learning goal when provided', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -470,13 +468,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.learningGoal, equals('Pass Final Exam'));
       });
 
       testWidgets('save includes preferred study time when provided', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -492,13 +490,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.preferredStudyTime, equals('Evening 7-10 PM'));
       });
 
       testWidgets('save shows loading indicator during save', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -516,7 +514,7 @@ void main() {
 
     group('Validation Implementation', () {
       testWidgets('empty name shows Name is required error', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byIcon(Icons.save));
@@ -526,7 +524,7 @@ void main() {
       });
 
       testWidgets('whitespace-only name shows error', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -542,7 +540,7 @@ void main() {
       });
 
       testWidgets('name field trims whitespace before save', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -554,13 +552,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.name, equals('Trimmed User'));
       });
 
       testWidgets('student ID accepts numeric values only', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -576,13 +574,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.studentId, equals('9876543210'));
       });
 
       testWidgets('empty student ID is stored as null', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -594,13 +592,13 @@ void main() {
         await tester.tap(find.byIcon(Icons.save));
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.studentId, isNull);
       });
 
       testWidgets('name field has 60 character limit', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         final nameField = find.widgetWithText(TextField, 'Full Name');
@@ -612,12 +610,12 @@ void main() {
 
     group('Delete Account Flow', () {
       testWidgets('delete confirmation calls clearProfile', (tester) async {
-        await settingsRepository.saveProfileData(UserProfile(
+        await fakeRepo.saveProfileData(UserProfile(
           id: 'delete-test',
           name: 'Delete Test',
         ));
 
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Delete'));
@@ -631,14 +629,14 @@ void main() {
         await tester.tap(deleteButtons.last);
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data, isNotNull);
         expect(profileResult.data!.id, equals('default_profile'));
       });
 
       testWidgets('delete confirmation shows warning message', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Delete'));
@@ -649,12 +647,12 @@ void main() {
       });
 
       testWidgets('cancel delete does not clear profile', (tester) async {
-        await settingsRepository.saveProfileData(UserProfile(
+        await fakeRepo.saveProfileData(UserProfile(
           id: 'cancel-delete-test',
           name: 'Cancel Delete Test',
         ));
 
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.text('Delete'));
@@ -663,14 +661,14 @@ void main() {
         await tester.tap(find.text('Cancel').first);
         await tester.pumpAndSettle();
 
-        final profileResult = await settingsRepository.getProfileData();
+        final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data, isNotNull);
         expect(profileResult.data!.name, equals('Cancel Delete Test'));
       });
 
       testWidgets('delete button has danger styling', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         final deleteButton = find.widgetWithText(TextButton, 'Delete');
@@ -683,26 +681,26 @@ void main() {
 
     group('Language Switch Side Effects', () {
       testWidgets('language dropdown shows current language', (tester) async {
-        await settingsRepository.saveProfileData(UserProfile(
+        await fakeRepo.saveProfileData(UserProfile(
           id: 'lang-test',
           name: 'Lang User',
           language: 'es',
         ));
 
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         expect(find.text('Spanish'), findsAtLeastNWidgets(1));
       });
 
       testWidgets('can switch from Spanish to English', (tester) async {
-        await settingsRepository.saveProfileData(UserProfile(
+        await fakeRepo.saveProfileData(UserProfile(
           id: 'lang-switch-test',
           name: 'Switch User',
           language: 'es',
         ));
 
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byType(DropdownButton<String>));
@@ -717,13 +715,13 @@ void main() {
 
     group('Notifications Toggle', () {
       testWidgets('notifications can be enabled', (tester) async {
-        await settingsRepository.saveProfileData(UserProfile(
+        await fakeRepo.saveProfileData(UserProfile(
           id: 'notif-test',
           name: 'Notif User',
           notificationsEnabled: false,
         ));
 
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         final switchTile = find.widgetWithText(SwitchListTile, 'Notifications');
@@ -740,7 +738,7 @@ void main() {
 
     group('Avatar Selection', () {
       testWidgets('selecting avatar updates state', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byIcon(Icons.person).first);
@@ -753,7 +751,7 @@ void main() {
       });
 
       testWidgets('all avatar options are selectable', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.tap(find.byIcon(Icons.person).first);
@@ -780,7 +778,7 @@ void main() {
 
     group('Error Handling', () {
       testWidgets('shows success snackbar on successful save', (tester) async {
-        await tester.pumpWidget(buildProfileScreen());
+        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
         await tester.enterText(
@@ -793,6 +791,27 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Profile saved successfully'), findsOneWidget);
+      });
+    });
+
+    group('Navigation', () {
+      testWidgets('save triggers back navigation via pop', (tester) async {
+        final navigatorObserver = TestNavigatorObserver();
+        await tester.pumpWidget(buildProfileScreen(
+          navigatorObserver: navigatorObserver,
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+          find.widgetWithText(TextField, 'Full Name'),
+          'Test User',
+        );
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.save));
+        await tester.pumpAndSettle();
+
+        expect(navigatorObserver.poppedRoutes, isNotEmpty);
       });
     });
   });

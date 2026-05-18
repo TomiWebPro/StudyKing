@@ -16,8 +16,8 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionRepositoryProvider, questionRepositoryProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, questionRepositoryProvider, masteryGraphServiceProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -48,9 +48,12 @@ class _FakeQuestionRepository extends QuestionRepository {
   }
 }
 
-class _FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
-  @override
-  Future<void> init() async {}
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  _FakeSpacedRepetitionService()
+      : super(
+          questionRepo: _FakeQuestionRepository(),
+          attemptRepo: _FakeAttemptRepository(),
+        );
 
   @override
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
@@ -150,8 +153,8 @@ Widget _buildTestApp() {
       subjectsRepositoryProvider.overrideWith(
         () => _FakeSubjectsRepositoryNotifier(_FakeSubjectRepository()),
       ),
-      spacedRepetitionRepositoryProvider.overrideWithValue(
-        _FakeSpacedRepetitionRepository(),
+      spacedRepetitionServiceProvider.overrideWithValue(
+        _FakeSpacedRepetitionService(),
       ),
       questionRepositoryProvider.overrideWithValue(
         _FakeQuestionRepository(),

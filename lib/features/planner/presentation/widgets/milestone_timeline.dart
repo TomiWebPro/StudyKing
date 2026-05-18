@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -33,7 +34,7 @@ class MilestoneTimeline extends StatelessWidget {
               final now = DateTime.now();
               final startDate = roadmap.createdAt;
               final endDate = roadmap.targetCompletionDate ??
-                  startDate.add(const Duration(days: 30));
+                  startDate.add(Timeouts.defaultPlanSpan);
               final totalDuration =
                   endDate.difference(startDate).inMilliseconds.toDouble();
               if (totalDuration <= 0) return const SizedBox.shrink();

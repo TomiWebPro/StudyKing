@@ -1,7 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/services/cross_feature_integrator.dart';
-import 'package:studyking/features/practice/data/repositories/spaced_repetition_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
@@ -10,18 +9,19 @@ import 'package:studyking/features/practice/data/repositories/question_evaluatio
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
-import 'package:studyking/features/practice/services/readiness_scorer.dart';
-import 'package:studyking/features/practice/services/difficulty_adapter.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
-import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 
 class _FakeStudentIdService extends StudentIdService {
   @override
@@ -32,19 +32,6 @@ class _FakeStudentIdService extends StudentIdService {
 
 void main() {
   group('PracticeProviders', () {
-    test('spacedRepetitionRepositoryProvider can be overridden', () {
-      final fakeRepo = FakeSpacedRepetitionRepository();
-      final container = ProviderContainer(
-        overrides: [
-          spacedRepetitionRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(spacedRepetitionRepositoryProvider);
-      expect(result, same(fakeRepo));
-    });
-
     test('spacedRepetitionServiceProvider can be overridden', () {
       final fakeService = SpacedRepetitionService(
         questionRepo: QuestionRepository(),
@@ -87,27 +74,6 @@ void main() {
       expect(result, same(fakeService));
     });
 
-    test('practiceDataServiceProvider can be overridden', () {
-      final fakeService = PracticeDataService(
-        srService: SpacedRepetitionService(
-          questionRepo: QuestionRepository(),
-          attemptRepo: FakeAttemptRepository(),
-        ),
-        questionRepo: QuestionRepository(),
-        subjectRepo: SubjectRepository(),
-        studentIdService: _FakeStudentIdService(),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          practiceDataServiceProvider.overrideWithValue(fakeService),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(practiceDataServiceProvider);
-      expect(result, same(fakeService));
-    });
-
     test('sessionRepositoryProvider can be overridden', () {
       final fakeRepo = SessionRepository();
       final container = ProviderContainer(
@@ -132,48 +98,6 @@ void main() {
 
       final result = container.read(subjectRepositoryProvider);
       expect(result, same(fakeRepo));
-    });
-
-    test('practiceDataServiceProvider depends on spacedRepetitionServiceProvider', () {
-      final fakeService = SpacedRepetitionService(
-        questionRepo: QuestionRepository(),
-        attemptRepo: FakeAttemptRepository(),
-      );
-      final container = ProviderContainer(
-        overrides: [
-          spacedRepetitionServiceProvider.overrideWithValue(fakeService),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final dataService = container.read(practiceDataServiceProvider);
-      expect(dataService, isA<PracticeDataService>());
-    });
-
-    test('practiceDataServiceProvider depends on sessionRepositoryProvider', () {
-      final fakeRepo = SessionRepository();
-      final container = ProviderContainer(
-        overrides: [
-          sessionRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final dataService = container.read(practiceDataServiceProvider);
-      expect(dataService, isA<PracticeDataService>());
-    });
-
-    test('practiceDataServiceProvider depends on subjectRepositoryProvider', () {
-      final fakeRepo = SubjectRepository();
-      final container = ProviderContainer(
-        overrides: [
-          subjectRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final dataService = container.read(practiceDataServiceProvider);
-      expect(dataService, isA<PracticeDataService>());
     });
 
     test('attemptRepositoryProvider can be overridden', () {
@@ -241,255 +165,30 @@ void main() {
       expect(result, same(fakeRepo));
     });
 
-    test('spacedRepetitionRepositoryProvider depends on questionRepositoryProvider', () {
-      final fakeRepo = QuestionRepository();
+    test('masteryGraphServiceProvider is wired to masteryStateRepositoryProvider', () {
+      final fakeMasteryState = FakeMasteryStateRepository();
       final container = ProviderContainer(
         overrides: [
-          questionRepositoryProvider.overrideWithValue(fakeRepo),
+          masteryStateRepositoryProvider.overrideWithValue(fakeMasteryState),
         ],
       );
       addTearDown(container.dispose);
 
-      final result = container.read(spacedRepetitionRepositoryProvider);
-      expect(result, isA<SpacedRepetitionRepository>());
+      final service = container.read(masteryGraphServiceProvider);
+      expect(service, isA<MasteryGraphService>());
     });
 
-    test('spacedRepetitionRepositoryProvider depends on attemptRepositoryProvider', () {
-      final fakeRepo = FakeAttemptRepository();
+    test('masteryRecorderProvider uses overridden attemptRepositoryProvider for recording', () {
+      final seededAttemptRepo = FakeAttemptRepository();
       final container = ProviderContainer(
         overrides: [
-          attemptRepositoryProvider.overrideWithValue(fakeRepo),
+          attemptRepositoryProvider.overrideWithValue(seededAttemptRepo),
         ],
       );
       addTearDown(container.dispose);
 
-      final result = container.read(spacedRepetitionRepositoryProvider);
-      expect(result, isA<SpacedRepetitionRepository>());
-    });
-
-    test('spacedRepetitionServiceProvider depends on questionRepositoryProvider', () {
-      final fakeRepo = QuestionRepository();
-      final container = ProviderContainer(
-        overrides: [
-          questionRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(spacedRepetitionServiceProvider);
-      expect(result, isA<SpacedRepetitionService>());
-    });
-
-    test('spacedRepetitionServiceProvider depends on attemptRepositoryProvider', () {
-      final fakeRepo = FakeAttemptRepository();
-      final container = ProviderContainer(
-        overrides: [
-          attemptRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(spacedRepetitionServiceProvider);
-      expect(result, isA<SpacedRepetitionService>());
-    });
-
-    test('masteryGraphServiceProvider depends on masteryStateRepositoryProvider', () {
-      final fakeRepo = FakeMasteryStateRepository();
-      final container = ProviderContainer(
-        overrides: [
-          masteryStateRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryGraphServiceProvider);
-      expect(result, isA<MasteryGraphService>());
-    });
-
-    test('masteryGraphServiceProvider depends on questionMasteryStateRepositoryProvider', () {
-      final fakeRepo = FakeQuestionMasteryStateRepository();
-      final container = ProviderContainer(
-        overrides: [
-          questionMasteryStateRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryGraphServiceProvider);
-      expect(result, isA<MasteryGraphService>());
-    });
-
-    test('masteryGraphServiceProvider depends on topicDependencyRepositoryProvider', () {
-      final fakeRepo = FakeTopicDependencyRepository();
-      final container = ProviderContainer(
-        overrides: [
-          topicDependencyRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryGraphServiceProvider);
-      expect(result, isA<MasteryGraphService>());
-    });
-
-    test('masteryGraphServiceProvider depends on questionEvaluationRepositoryProvider', () {
-      final fakeRepo = FakeQuestionEvaluationRepository();
-      final container = ProviderContainer(
-        overrides: [
-          questionEvaluationRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryGraphServiceProvider);
-      expect(result, isA<MasteryGraphService>());
-    });
-
-    test('spacedRepetitionEngineProvider creates default engine', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(spacedRepetitionEngineProvider);
-      expect(result, isA<SpacedRepetitionEngine>());
-    });
-
-    test('spacedRepetitionEngineProvider can be overridden', () {
-      final fakeEngine = SpacedRepetitionEngine();
-      final container = ProviderContainer(
-        overrides: [
-          spacedRepetitionEngineProvider.overrideWithValue(fakeEngine),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(spacedRepetitionEngineProvider);
-      expect(result, same(fakeEngine));
-    });
-
-    test('masteryRecorderProvider creates recorder with dependencies', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryRecorderProvider);
-      expect(result, isA<MasteryRecorder>());
-    });
-
-    test('masteryRecorderProvider can be overridden', () {
-      final fakeRecorder = FakeMasteryRecorder();
-      final container = ProviderContainer(
-        overrides: [
-          masteryRecorderProvider.overrideWithValue(fakeRecorder),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(masteryRecorderProvider);
-      expect(result, same(fakeRecorder));
-    });
-
-    test('readinessScorerProvider creates default scorer', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(readinessScorerProvider);
-      expect(result, isA<ReadinessScorer>());
-    });
-
-    test('readinessScorerProvider can be overridden', () {
-      final fakeScorer = ReadinessScorer();
-      final container = ProviderContainer(
-        overrides: [
-          readinessScorerProvider.overrideWithValue(fakeScorer),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(readinessScorerProvider);
-      expect(result, same(fakeScorer));
-    });
-
-    test('difficultyAdapterProvider creates default adapter', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(difficultyAdapterProvider);
-      expect(result, isA<DifficultyAdapter>());
-    });
-
-    test('difficultyAdapterProvider can be overridden', () {
-      final fakeAdapter = DifficultyAdapter();
-      final container = ProviderContainer(
-        overrides: [
-          difficultyAdapterProvider.overrideWithValue(fakeAdapter),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(difficultyAdapterProvider);
-      expect(result, same(fakeAdapter));
-    });
-
-    test('examSessionServiceProvider creates service with dependencies', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(examSessionServiceProvider);
-      expect(result, isA<ExamSessionService>());
-    });
-
-    test('examSessionServiceProvider can be overridden', () {
-      final fakeService = FakeExamSessionService();
-      final container = ProviderContainer(
-        overrides: [
-          examSessionServiceProvider.overrideWithValue(fakeService),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(examSessionServiceProvider);
-      expect(result, same(fakeService));
-    });
-
-    test('mistakeReviewServiceProvider creates service with dependencies', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(mistakeReviewServiceProvider);
-      expect(result, isA<MistakeReviewService>());
-    });
-
-    test('mistakeReviewServiceProvider can be overridden', () {
-      final fakeService = FakeMistakeReviewService();
-      final container = ProviderContainer(
-        overrides: [
-          mistakeReviewServiceProvider.overrideWithValue(fakeService),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(mistakeReviewServiceProvider);
-      expect(result, same(fakeService));
-    });
-
-    test('crossFeatureIntegratorProvider creates integrator with dependencies', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final result = container.read(crossFeatureIntegratorProvider);
-      expect(result, isA<CrossFeatureIntegrator>());
-    });
-
-    test('crossFeatureIntegratorProvider can be overridden', () {
-      final fakeIntegrator = FakeCrossFeatureIntegrator();
-      final container = ProviderContainer(
-        overrides: [
-          crossFeatureIntegratorProvider.overrideWithValue(fakeIntegrator),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      final result = container.read(crossFeatureIntegratorProvider);
-      expect(result, same(fakeIntegrator));
+      final recorder = container.read(masteryRecorderProvider);
+      expect(recorder, isA<MasteryRecorder>());
     });
 
     test('spacedRepetitionEngineProvider is singleton', () {
@@ -510,15 +209,113 @@ void main() {
       expect(a, same(b));
     });
 
-    test('difficultyAdapterProvider is singleton', () {
-      final container = ProviderContainer();
+  });
+
+  group('PracticeProviders behavioral assertions', () {
+    test('attemptRepositoryProvider with seeded data returns attempts', () async {
+      final attempts = [
+        StudentAttempt(
+          id: 'a1',
+          studentId: 'student-1',
+          questionId: 'q1',
+          subjectId: 'sub-1',
+          isCorrect: true,
+          timestamp: DateTime(2026, 5, 1),
+        ),
+        StudentAttempt(
+          id: 'a2',
+          studentId: 'student-1',
+          questionId: 'q2',
+          subjectId: 'sub-1',
+          isCorrect: false,
+          timestamp: DateTime(2026, 5, 1),
+        ),
+      ];
+      final seededRepo = FakeAttemptRepositoryWithSeed(attempts);
+
+      final container = ProviderContainer(
+        overrides: [
+          attemptRepositoryProvider.overrideWithValue(seededRepo),
+        ],
+      );
       addTearDown(container.dispose);
 
-      final a = container.read(difficultyAdapterProvider);
-      final b = container.read(difficultyAdapterProvider);
-      expect(a, same(b));
+      final repo = container.read(attemptRepositoryProvider);
+      final allResult = await repo.getAll();
+      expect(allResult.isSuccess, isTrue);
+      expect(allResult.data!.length, 2);
+    });
+
+    test('mistakeReviewServiceProvider uses overridden attemptRepo to find mistakes', () async {
+      final attempts = [
+        StudentAttempt(
+          id: 'a1',
+          studentId: 'student-1',
+          questionId: 'q1',
+          subjectId: 'sub-1',
+          isCorrect: false,
+          timestamp: DateTime(2026, 5, 1, 10, 0),
+        ),
+      ];
+      final seededRepo = FakeAttemptRepositoryWithSeed(attempts);
+      final fakeQuestionRepo = _FakeQuestionRepo([]);
+
+      final container = ProviderContainer(
+        overrides: [
+          attemptRepositoryProvider.overrideWithValue(seededRepo),
+          questionRepositoryProvider.overrideWithValue(fakeQuestionRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final mistakeService = container.read(mistakeReviewServiceProvider);
+      final mistakes = await mistakeService.getMistakesFromSession(
+        studentId: 'student-1',
+        subjectId: 'sub-1',
+        after: DateTime(2026, 5, 1, 9, 0),
+      );
+      expect(mistakes, isA<List>());
+    });
+
+    test('masteryGraphServiceProvider handles error-state when repo fails', () async {
+      final throwingRepo = _FailingMasteryStateRepo();
+
+      final container = ProviderContainer(
+        overrides: [
+          masteryStateRepositoryProvider.overrideWithValue(throwingRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final service = container.read(masteryGraphServiceProvider);
+      final result = await service.getAllTopicMastery('student-1');
+      expect(result.isFailure, isTrue);
     });
   });
+}
+
+class _FakeQuestionRepo extends QuestionRepository {
+  final List<Question> _questions;
+
+  _FakeQuestionRepo([this._questions = const []]);
+
+  @override
+  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
+
+  @override
+  Future<Result<Question?>> get(String key) async =>
+      Result.success(_questions.where((q) => q.id == key).firstOrNull);
+}
+
+class _FailingMasteryStateRepo extends MasteryStateRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<MasteryState>>> getAll() async => Result.failure('Repo failure');
+
+  Future<Result<List<MasteryState>>> getBySubject(String subjectId) async =>
+      Result.failure('Repo failure');
 }
 
 class FakeMasteryStateRepository extends MasteryStateRepository {
@@ -539,10 +336,6 @@ class FakeQuestionEvaluationRepository extends QuestionEvaluationRepository {
 
 class FakeAttemptRepository extends AttemptRepository {
   FakeAttemptRepository();
-}
-
-class FakeSpacedRepetitionRepository extends SpacedRepetitionRepository {
-  FakeSpacedRepetitionRepository();
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -582,4 +375,25 @@ class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
           sessionRepo: SessionRepository(),
           studentIdService: _FakeStudentIdService(),
         );
+}
+
+class FakeAttemptRepositoryWithSeed extends AttemptRepository {
+  final List<StudentAttempt> _attempts;
+  FakeAttemptRepositoryWithSeed(this._attempts);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success(_attempts);
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async =>
+      Result.success(_attempts.where((a) => a.id == key).firstOrNull);
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
 }

@@ -12,17 +12,17 @@ import 'package:studyking/features/practice/providers/practice_providers.dart'
 
 final dashboardInitProvider = FutureProvider<void>((ref) async {
   await Future.wait([
-    ref.read(masteryGraphServiceProvider).init(),
-    ref.read(dashboardInstrumentationServiceProvider).init(),
-    ref.read(dashboardTopicRepositoryProvider).init(),
-    ref.read(dashboardAdherenceRepositoryProvider).init(),
+    ref.watch(masteryGraphServiceProvider).init(),
+    ref.watch(dashboardInstrumentationServiceProvider).init(),
+    ref.watch(dashboardTopicRepositoryProvider).init(),
+    ref.watch(dashboardAdherenceRepositoryProvider).init(),
   ]);
 });
 
 final dashboardAllMasteryProvider =
     FutureProvider.family<List<MasteryState>, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final masteryService = ref.read(masteryGraphServiceProvider);
+  final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getAllTopicMastery(studentId);
   return result.isSuccess ? result.data! : [];
 });
@@ -30,7 +30,7 @@ final dashboardAllMasteryProvider =
 final dashboardMasterySnapshotProvider =
     FutureProvider.family<MasterySnapshot?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final masteryService = ref.read(masteryGraphServiceProvider);
+  final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getMasterySnapshot(studentId);
   return result.isSuccess ? MasterySnapshot.fromMap(result.data!) : null;
 });
@@ -38,7 +38,7 @@ final dashboardMasterySnapshotProvider =
 final dashboardOverallStatsProvider =
     FutureProvider.family<OverallStats?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final tracker = ref.read(dashboardStudyProgressTrackerProvider);
+  final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
   final stats = await tracker.getOverallStats(studentId);
   return OverallStats.fromMap(stats);
 });
@@ -47,7 +47,7 @@ final dashboardWeeklyTrendProvider =
     FutureProvider.family<List<WeeklyTrendEntry>, String>(
         (ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final tracker = ref.read(dashboardStudyProgressTrackerProvider);
+  final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
   final trend = await tracker.getWeeklyTrend(8, studentId: studentId);
   return trend.map((m) => WeeklyTrendEntry.fromMap(m)).toList();
 });
@@ -56,7 +56,7 @@ final dashboardFocusStatsProvider =
     FutureProvider.family<FocusTodayStats?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
   try {
-    final sessionRepo = ref.read(sessionRepositoryProvider);
+    final sessionRepo = ref.watch(sessionRepositoryProvider);
     final todayResult = await sessionRepo.getByDate(DateTime.now());
     final todaySessions = todayResult.data ?? [];
     final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
@@ -77,7 +77,7 @@ final dashboardFocusStatsProvider =
 final dashboardAdherenceDataProvider =
     FutureProvider.family<AdherenceData, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final adherenceRepo = ref.read(dashboardAdherenceRepositoryProvider);
+  final adherenceRepo = ref.watch(dashboardAdherenceRepositoryProvider);
   final averageAdherence = await adherenceRepo.getAverageAdherence(studentId);
   final weeklyRecords = await adherenceRepo.getWeekly(studentId);
   final weeklyAdherence = weeklyRecords.isEmpty
@@ -93,7 +93,7 @@ final dashboardAdherenceDataProvider =
 final dashboardTopicNamesProvider =
     FutureProvider.family<Map<String, String>, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final topicRepo = ref.read(dashboardTopicRepositoryProvider);
+  final topicRepo = ref.watch(dashboardTopicRepositoryProvider);
   final allMastery = await ref.watch(dashboardAllMasteryProvider(studentId).future);
   final allTopicsResult = await topicRepo.getAll();
   final allTopics = allTopicsResult.data ?? [];
@@ -110,7 +110,7 @@ final dashboardTopicNamesProvider =
 final dashboardBadgesProvider =
     FutureProvider.family<List<BadgeDisplay>, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final tracker = ref.read(dashboardStudyProgressTrackerProvider);
+  final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
   try {
     final badges = await tracker.getBadges(studentId);
     return badges.map((b) {
@@ -134,7 +134,7 @@ final dashboardWorkloadProvider =
         await ref.watch(dashboardAllMasteryProvider(studentId).future);
     final topicNames =
         await ref.watch(dashboardTopicNamesProvider(studentId).future);
-    final questionRepo = ref.read(questionRepositoryProvider);
+    final questionRepo = ref.watch(questionRepositoryProvider);
 
     final allQuestionsResult = await questionRepo.getAll();
     final allQuestions = allQuestionsResult.data ?? [];
@@ -167,8 +167,8 @@ final dashboardDueReviewsProvider =
     FutureProvider.family<DueReviewsData?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
   try {
-    final subjectRepo = ref.read(subjectRepositoryProvider);
-    final srService = ref.read(spacedRepetitionServiceProvider);
+    final subjectRepo = ref.watch(subjectRepositoryProvider);
+    final srService = ref.watch(spacedRepetitionServiceProvider);
     final subjectsResult = await subjectRepo.getAll();
     final subjects = subjectsResult.data ?? [];
 

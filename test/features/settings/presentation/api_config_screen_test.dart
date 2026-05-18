@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
@@ -153,6 +154,7 @@ Widget buildApiConfigScreen({
   String initialApiKey = '',
   String initialBaseUrl = 'https://openrouter.ai/api/v1',
   LlmProvider initialProvider = LlmProvider.openRouter,
+  TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
     overrides: [
@@ -165,6 +167,7 @@ Widget buildApiConfigScreen({
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const ApiConfigScreen(),
     ),
   );
@@ -802,6 +805,22 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.textContaining('endpoint URL for the AI service'), findsWidgets);
+      });
+    });
+
+    group('Navigation', () {
+      testWidgets('save triggers Navigator.pop', (tester) async {
+        final navigatorObserver = TestNavigatorObserver();
+        await tester.pumpWidget(buildApiConfigScreen(
+          initialApiKey: 'sk-test-key',
+          navigatorObserver: navigatorObserver,
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Save API Keys'));
+        await tester.pumpAndSettle();
+
+        expect(navigatorObserver.poppedRoutes, isNotEmpty);
       });
     });
   });

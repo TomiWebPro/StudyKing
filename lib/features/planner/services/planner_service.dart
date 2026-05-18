@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
@@ -405,6 +406,11 @@ class PlannerService implements ActionPlanner {
       }
     }
     return false;
+  }
+
+  Future<List<PlanAdherenceModel>> getAdherenceRecords() async {
+    await adherenceRepo.init();
+    return adherenceRepo.getByStudent(studentId);
   }
 
   Future<Map<String, int>> getAdherenceMetrics() async {

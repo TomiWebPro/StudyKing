@@ -1,17 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
-import 'package:studyking/features/planner/presentation/widgets/roadmap_card.dart';
 import 'package:studyking/features/planner/presentation/widgets/milestone_timeline.dart';
+import 'package:studyking/features/planner/presentation/widgets/roadmap_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
-  setUpAll(() {
-    Hive.init(Directory.systemTemp.createTempSync('roadmap_card_test_').path);
-  });
 
   Widget buildApp(Widget widget) {
     return MaterialApp(

@@ -8,3 +8,4 @@ export 'presentation/widgets/math_expression_widget.dart';
 export 'presentation/painters/drawing_painter.dart';
 export 'presentation/painters/grid_painter.dart';
 export 'data/models/drawing_models.dart';
+export 'providers/question_providers.dart';

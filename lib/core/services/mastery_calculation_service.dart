@@ -85,8 +85,10 @@ class MasteryCalculationService {
     return recentConfidence.reduce((a, b) => a + b) / recentConfidence.length / 5.0;
   }
 
+  static const Duration _expectedTimePerQuestion = Duration(minutes: 1);
+
   double _updateSpeedTrend(double averageTimeMs) {
-    const expectedTimeMs = 60000.0;
+    final expectedTimeMs = _expectedTimePerQuestion.inMilliseconds.toDouble();
     if (averageTimeMs > 0) {
       return (expectedTimeMs / averageTimeMs).clamp(0.0, 1.0);
     }

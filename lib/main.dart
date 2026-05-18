@@ -21,6 +21,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
@@ -83,7 +84,9 @@ void main() async {
     await mainDb.init();
     
     // Initialize settings repository
-    final initResult = await settingsRepository.init();
+    final initSettingsRepo = SettingsRepository();
+    initSettingsRepository(initSettingsRepo);
+    final initResult = await initSettingsRepo.init();
     if (initResult.isFailure) {
       _mainLogger.e('Failed to init settings: ${initResult.error}');
     }
@@ -114,7 +117,7 @@ void main() async {
     }
     
     // Load initial settings to sync with providers
-    final settingsResult = await settingsRepository.getSettings();
+    final settingsResult = await initSettingsRepo.getSettings();
     if (settingsResult.isSuccess) {
       _engagementScheduler?.updateSettings(settingsResult.data!);
     } else {
@@ -147,13 +150,13 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _engagementScheduler?.updateSettings(settings);
     });
-    final isLoading = ref.watch(settingsLoadingProvider);
     final locale = ref.watch(localeProvider);
 
     if (!_hasLoadedProfile) {
       _hasLoadedProfile = true;
       WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final profileResult = await settingsRepository.getProfileData();
+        final repo = ref.read(settingsRepositoryProvider);
+        final profileResult = await repo.getProfileData();
         if (profileResult.isSuccess) {
           final profile = profileResult.data;
           if (profile != null && profile.language.isNotEmpty && mounted) {
@@ -162,11 +165,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         } else {
           _mainLogger.e('Error loading profile: ${profileResult.error}');
         }
-      });
-    }
-    
-    if (isLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
+
         ref.read(apiKeyProvider.notifier).state = settings.apiKey;
         ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
         ref.read(selectedModelProvider.notifier).state = settings.selectedModel;

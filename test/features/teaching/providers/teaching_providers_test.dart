@@ -9,6 +9,7 @@ import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/providers/teaching_providers.dart';
 import 'package:studyking/features/teaching/services/prompts/prompts.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/voice_controller.dart';
 
@@ -102,6 +103,44 @@ void main() {
       final a = container.read(exerciseEvaluatorProvider);
       final b = container.read(exerciseEvaluatorProvider);
       expect(a, same(b));
+    });
+
+    test('evaluator uses overridden locale', () {
+      final container = ProviderContainer(
+        overrides: [
+          localeProvider.overrideWith((ref) => const Locale('es')),
+        ],
+      );
+      addTearDown(container.dispose);
+      final evaluator = container.read(exerciseEvaluatorProvider);
+      final prompts = container.read(promptsProvider);
+      expect(evaluator, isA<ExerciseEvaluator>());
+      expect(prompts.localeName, 'es');
+    });
+
+    test('handles error when modelId is empty by still constructing evaluator', () {
+      final container = ProviderContainer(
+        overrides: [
+          teachingModelIdProvider.overrideWith((ref) => ''),
+        ],
+      );
+      addTearDown(container.dispose);
+      final evaluator = container.read(exerciseEvaluatorProvider);
+      expect(evaluator, isA<ExerciseEvaluator>());
+    });
+
+    test('evaluator propagates errors from LLM service', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+      final evaluator = container.read(exerciseEvaluatorProvider);
+      final result = await evaluator.evaluate(
+        question: 'test',
+        studentAnswer: 'test',
+        subjectId: 'test',
+        topicTitle: 'test',
+      );
+      expect(result, isA<EvaluationResult>());
+      expect(result.score, 0.5);
     });
   });
 

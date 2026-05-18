@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/routes/tab_navigator.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../helpers/navigator_observer_helper.dart';
 
 Route<dynamic>? _testRouteGenerator(RouteSettings settings) {
@@ -24,6 +26,20 @@ Widget _buildTestApp({
       rootScreen: rootScreen,
       customOnGenerateRoute: _testRouteGenerator,
       observers: observer != null ? [observer] : [],
+    ),
+  );
+}
+
+Widget _buildTestAppNoCustomRoute({
+  required GlobalKey<NavigatorState> navigatorKey,
+  required Widget rootScreen,
+}) {
+  return MaterialApp(
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: TabNavigator(
+      navigatorKey: navigatorKey,
+      rootScreen: rootScreen,
     ),
   );
 }
@@ -143,6 +159,73 @@ void main() {
       expect(key.currentState?.canPop(), isFalse);
     });
 
+    testWidgets('falls back to default onGenerateRoute when custom is null',
+        (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        _buildTestAppNoCustomRoute(
+          navigatorKey: key,
+          rootScreen: const Scaffold(body: Text('Default Root')),
+        ),
+      );
+
+      expect(find.text('Default Root'), findsOneWidget);
+      expect(key.currentState, isNotNull);
+    });
+
+    testWidgets('works without observers (defaults to empty list)',
+        (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TabNavigator(
+            navigatorKey: key,
+            rootScreen: const Scaffold(body: Text('No Observers')),
+          ),
+        ),
+      );
+
+      expect(find.text('No Observers'), findsOneWidget);
+      expect(key.currentState, isNotNull);
+    });
+
+    testWidgets('pushing unknown route with default fallback shows NotFoundScreen',
+        (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        _buildTestAppNoCustomRoute(
+          navigatorKey: key,
+          rootScreen: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () =>
+                    Navigator.pushNamed(context, '/unknown-route'),
+                child: const Text('Push Unknown'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Push Unknown'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(key.currentState?.canPop(), isTrue);
+    });
+
+    testWidgets('initial route settings have name "/"', (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      await tester.pumpWidget(
+        _buildTestApp(
+          navigatorKey: key,
+          rootScreen: const Scaffold(body: Text('Root')),
+        ),
+      );
+
+      expect(find.text('Root'), findsOneWidget);
+    });
+
     testWidgets('sets navigator key correctly', (tester) async {
       final key = GlobalKey<NavigatorState>();
       await tester.pumpWidget(
@@ -154,6 +237,120 @@ void main() {
 
       expect(key.currentState, isNotNull);
       expect(key.currentState, isA<NavigatorState>());
+    });
+
+    testWidgets('accepts and notifies multiple observers', (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      final observer1 = TestNavigatorObserver();
+      final observer2 = TestNavigatorObserver();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: TabNavigator(
+            navigatorKey: key,
+            rootScreen: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, '/test-route'),
+                  child: const Text('Push'),
+                ),
+              ),
+            ),
+            customOnGenerateRoute: _testRouteGenerator,
+            observers: [observer1, observer2],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Push'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(observer1.pushedRoutes, hasLength(greaterThanOrEqualTo(1)));
+      expect(observer2.pushedRoutes, hasLength(greaterThanOrEqualTo(1)));
+      expect(
+        observer1.pushedRoutes.last.settings.name,
+        equals('/test-route'),
+      );
+      expect(
+        observer2.pushedRoutes.last.settings.name,
+        equals('/test-route'),
+      );
+    });
+
+    testWidgets('pushes route needing args without args via default generator',
+        (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      final observer = TestNavigatorObserver();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TabNavigator(
+            navigatorKey: key,
+            rootScreen: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.subjectDetail),
+                  child: const Text('Push Subject'),
+                ),
+              ),
+            ),
+            observers: [observer],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Push Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(observer.pushedRoutes, hasLength(greaterThanOrEqualTo(1)));
+      expect(
+        observer.pushedRoutes.last.settings.name,
+        AppRoutes.subjectDetail,
+      );
+      expect(key.currentState?.canPop(), isTrue);
+    });
+
+    testWidgets('pushes known route without args via default generator',
+        (tester) async {
+      final key = GlobalKey<NavigatorState>();
+      final observer = TestNavigatorObserver();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: TabNavigator(
+            navigatorKey: key,
+            rootScreen: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () =>
+                      Navigator.pushNamed(context, AppRoutes.settings),
+                  child: const Text('Settings'),
+                ),
+              ),
+            ),
+            observers: [observer],
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Settings'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(observer.pushedRoutes, hasLength(greaterThanOrEqualTo(1)));
+      expect(
+        observer.pushedRoutes.last.settings.name,
+        AppRoutes.settings,
+      );
+      expect(key.currentState?.canPop(), isTrue);
     });
 
     testWidgets('tab navigator isolation - two navigators dont interfere',

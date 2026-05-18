@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/widgets/not_found_screen.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
   group('AppRoutes', () {
@@ -22,6 +25,10 @@ void main() {
     test('lessonList', () => expect(AppRoutes.lessonList, '/lesson-list'));
     test('llmTasks', () => expect(AppRoutes.llmTasks, '/llm-tasks'));
     test('focusMode', () => expect(AppRoutes.focusMode, '/focus-mode'));
+    test('examSession', () => expect(AppRoutes.examSession, '/exam-session'));
+    test('contentLibrary', () => expect(AppRoutes.contentLibrary, '/content-library'));
+    test('sourceDetail', () => expect(AppRoutes.sourceDetail, '/source-detail'));
+    test('questionBank', () => expect(AppRoutes.questionBank, '/question-bank'));
   });
 
   group('SubjectDetailArgs', () {
@@ -149,6 +156,54 @@ void main() {
     });
   });
 
+  group('ExamSessionArgs', () {
+    test('creates with required fields only', () {
+      final args = const ExamSessionArgs(
+        subjectId: 's1',
+        subjectName: 'Math',
+      );
+      expect(args.subjectId, 's1');
+      expect(args.subjectName, 'Math');
+    });
+
+    test('creates with all fields', () {
+      final args = const ExamSessionArgs(
+        subjectId: 's1',
+        subjectName: 'Physics',
+      );
+      expect(args.subjectId, 's1');
+      expect(args.subjectName, 'Physics');
+    });
+
+    test('subjectId is preserved', () {
+      final args = const ExamSessionArgs(
+        subjectId: 'subject-42',
+        subjectName: 'Chemistry',
+      );
+      expect(args.subjectId, 'subject-42');
+    });
+
+    test('subjectName is preserved', () {
+      final args = const ExamSessionArgs(
+        subjectId: 's1',
+        subjectName: 'Biology',
+      );
+      expect(args.subjectName, 'Biology');
+    });
+  });
+
+  group('DashboardArgs', () {
+    test('creates with studentId', () {
+      final args = const DashboardArgs(studentId: 'student-123');
+      expect(args.studentId, 'student-123');
+    });
+
+    test('preserves studentId value', () {
+      final args = const DashboardArgs(studentId: 'custom-id');
+      expect(args.studentId, 'custom-id');
+    });
+  });
+
   group('TutorArgs', () {
     test('creates with required fields only', () {
       final args = const TutorArgs(
@@ -182,6 +237,26 @@ void main() {
         subjectId: 's1',
       );
       expect(args.durationMinutes, 45);
+    });
+
+    test('scheduledSessionId defaults to null', () {
+      final args = const TutorArgs(
+        topicId: 't1',
+        topicTitle: 'Algebra',
+        subjectId: 's1',
+      );
+      expect(args.scheduledSessionId, isNull);
+    });
+
+    test('scheduledSessionId can be set', () {
+      final args = const TutorArgs(
+        topicId: 't1',
+        topicTitle: 'Algebra',
+        subjectId: 's1',
+        durationMinutes: 60,
+        scheduledSessionId: 'session-123',
+      );
+      expect(args.scheduledSessionId, 'session-123');
     });
   });
 
@@ -265,6 +340,8 @@ void main() {
         AppRoutes.sessionTracker,
         AppRoutes.sessionHistory,
         AppRoutes.planner,
+        AppRoutes.contentLibrary,
+        AppRoutes.questionBank,
       ];
 
       for (final routeName in simpleRoutes) {
@@ -277,26 +354,103 @@ void main() {
       }
     });
 
-    group('unknown route', () {
-      test('returns null for unknown route name', () {
-        expect(
-          onGenerateRoute(const RouteSettings(name: '/unknown')),
-          isNull,
-        );
+    group('upload', () {
+      test('returns route with string arg', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.upload,
+          arguments: 'subject-1',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.upload);
+        expect(route, isA<PageRouteBuilder>());
       });
 
-      test('returns null for empty route name', () {
-        expect(
-          onGenerateRoute(const RouteSettings(name: '')),
-          isNull,
-        );
+      test('returns route with null arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.upload,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.upload);
+        expect(route, isA<PageRouteBuilder>());
       });
 
-      test('returns null for null route name', () {
-        expect(
-          onGenerateRoute(const RouteSettings(name: null)),
-          isNull,
+      test('returns route with no arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.upload,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.upload);
+        expect(route, isA<PageRouteBuilder>());
+      });
+    });
+
+    group('subjectSelection', () {
+      test('returns route with Subject arg', () {
+        final subject = Subject(
+          id: 's1',
+          name: 'Math',
         );
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.subjectSelection,
+          arguments: subject,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.subjectSelection);
+        expect(route, isA<PageRouteBuilder>());
+      });
+
+      test('returns route with null arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.subjectSelection,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.subjectSelection);
+        expect(route, isA<PageRouteBuilder>());
+      });
+
+      test('returns route with string arg (not Subject)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.subjectSelection,
+          arguments: 'not-a-subject',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.subjectSelection);
+        expect(route, isA<PageRouteBuilder>());
+      });
+
+      test('returns route with int arg (not Subject)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.subjectSelection,
+          arguments: 42,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.subjectSelection);
+        expect(route, isA<PageRouteBuilder>());
+      });
+    });
+
+    group('unknown route (default case)', () {
+      test('returns error route for unknown route name', () {
+        final route = onGenerateRoute(const RouteSettings(name: '/unknown'));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, '/unknown');
+      });
+
+      test('returns error route for empty route name', () {
+        final route = onGenerateRoute(const RouteSettings(name: ''));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, '');
+      });
+
+      test('returns error route for null route name', () {
+        final route = onGenerateRoute(const RouteSettings(name: null));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, null);
       });
     });
 
@@ -370,43 +524,53 @@ void main() {
         expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns null without args', () {
+      test('returns error route without args', () {
         final route = onGenerateRoute(const RouteSettings(
           name: AppRoutes.subjectDetail,
         ));
-        expect(route, isNull);
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns null with null args', () {
+      test('returns error route with null args', () {
         final route = onGenerateRoute(const RouteSettings(
           name: AppRoutes.subjectDetail,
           arguments: null,
         ));
-        expect(route, isNull);
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns null with string args', () {
+      test('returns error route with string args', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
           arguments: 'wrong type',
         ));
-        expect(route, isNull);
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns null with Map args instead of SubjectDetailArgs', () {
+      test('returns error route with Map args instead of SubjectDetailArgs', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
           arguments: <String, dynamic>{'subjectId': 's1'},
         ));
-        expect(route, isNull);
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns null with int args', () {
+      test('returns error route with int args', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
           arguments: 123,
         ));
-        expect(route, isNull);
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.subjectDetail);
       });
     });
 
@@ -434,41 +598,43 @@ void main() {
         expect(route!.settings.name, AppRoutes.practiceSession);
       });
 
-      test('returns null without args', () {
-        expect(
-          onGenerateRoute(const RouteSettings(name: AppRoutes.practiceSession)),
-          isNull,
-        );
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.practiceSession,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.practiceSession);
       });
 
-      test('returns null with null args', () {
-        expect(
-          onGenerateRoute(const RouteSettings(
-            name: AppRoutes.practiceSession,
-            arguments: null,
-          )),
-          isNull,
-        );
+      test('returns error route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.practiceSession,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.practiceSession);
       });
 
-      test('returns null with string args', () {
-        expect(
-          onGenerateRoute(RouteSettings(
-            name: AppRoutes.practiceSession,
-            arguments: 'wrong type',
-          )),
-          isNull,
-        );
+      test('returns error route with string args', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.practiceSession,
+          arguments: 'wrong type',
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.practiceSession);
       });
 
-      test('returns null with Map args instead of PracticeSessionArgs', () {
-        expect(
-          onGenerateRoute(RouteSettings(
-            name: AppRoutes.practiceSession,
-            arguments: <String, dynamic>{'subjectId': 's1'},
-          )),
-          isNull,
-        );
+      test('returns error route with Map args instead of PracticeSessionArgs', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.practiceSession,
+          arguments: <String, dynamic>{'subjectId': 's1'},
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.practiceSession);
       });
     });
 
@@ -500,41 +666,43 @@ void main() {
         expect(route!.settings.name, AppRoutes.tutor);
       });
 
-      test('returns null without args', () {
-        expect(
-          onGenerateRoute(const RouteSettings(name: AppRoutes.tutor)),
-          isNull,
-        );
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.tutor,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.tutor);
       });
 
-      test('returns null with null args', () {
-        expect(
-          onGenerateRoute(const RouteSettings(
-            name: AppRoutes.tutor,
-            arguments: null,
-          )),
-          isNull,
-        );
+      test('returns error route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.tutor,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.tutor);
       });
 
-      test('returns null with string args', () {
-        expect(
-          onGenerateRoute(RouteSettings(
-            name: AppRoutes.tutor,
-            arguments: 'wrong type',
-          )),
-          isNull,
-        );
+      test('returns error route with string args', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.tutor,
+          arguments: 'wrong type',
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.tutor);
       });
 
-      test('returns null with Map args instead of TutorArgs', () {
-        expect(
-          onGenerateRoute(RouteSettings(
-            name: AppRoutes.tutor,
-            arguments: <String, dynamic>{'topicId': 't1'},
-          )),
-          isNull,
-        );
+      test('returns error route with Map args instead of TutorArgs', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.tutor,
+          arguments: <String, dynamic>{'topicId': 't1'},
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.tutor);
       });
     });
 
@@ -565,160 +733,303 @@ void main() {
         expect(route!.settings.name, AppRoutes.llmTasks);
       });
     });
-  });
 
-  group('lessonList', () {
-    test('returns route with LessonListArgs (required only)', () {
-      final route = onGenerateRoute(RouteSettings(
-        name: AppRoutes.lessonList,
-        arguments: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.lessonList);
-    });
+    group('lessonList', () {
+      test('returns route with LessonListArgs (required only)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonList,
+          arguments: const LessonListArgs(topicId: 't1', topicTitle: 'Algebra'),
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
 
-    test('returns route with LessonListArgs (all fields)', () {
-      final route = onGenerateRoute(RouteSettings(
-        name: AppRoutes.lessonList,
-        arguments: const LessonListArgs(
-          topicId: 't1',
-          topicTitle: 'Algebra',
-          subjectId: 's1',
-        ),
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.lessonList);
-    });
+      test('returns route with LessonListArgs (all fields)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonList,
+          arguments: const LessonListArgs(
+            topicId: 't1',
+            topicTitle: 'Algebra',
+            subjectId: 's1',
+          ),
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
 
-    test('returns null without args', () {
-      expect(
-        onGenerateRoute(const RouteSettings(name: AppRoutes.lessonList)),
-        isNull,
-      );
-    });
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.lessonList,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
 
-    test('returns null with null args', () {
-      expect(
-        onGenerateRoute(const RouteSettings(
+      test('returns error route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
           name: AppRoutes.lessonList,
           arguments: null,
-        )),
-        isNull,
-      );
-    });
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
 
-    test('returns null with string args', () {
-      expect(
-        onGenerateRoute(RouteSettings(
+      test('returns error route with string args', () {
+        final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.lessonList,
           arguments: 'wrong type',
-        )),
-        isNull,
-      );
-    });
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
 
-    test('returns null with Map args instead of LessonListArgs', () {
-      expect(
-        onGenerateRoute(RouteSettings(
+      test('returns error route with Map args instead of LessonListArgs', () {
+        final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.lessonList,
           arguments: <String, dynamic>{'topicId': 't1'},
-        )),
-        isNull,
-      );
-    });
-  });
-
-  group('lessonDetail', () {
-    test('returns route with LessonDetailArgs (required only)', () {
-      final route = onGenerateRoute(RouteSettings(
-        name: AppRoutes.lessonDetail,
-        arguments: const LessonDetailArgs(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
-        ),
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.lessonDetail);
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonList);
+      });
     });
 
-    test('returns route with LessonDetailArgs (all fields)', () {
-      final route = onGenerateRoute(RouteSettings(
-        name: AppRoutes.lessonDetail,
-        arguments: const LessonDetailArgs(
-          lessonId: 'l1',
-          topicId: 't1',
-          topicTitle: 'Algebra',
-          subjectId: 's1',
-        ),
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.lessonDetail);
-    });
+    group('lessonDetail', () {
+      test('returns route with LessonDetailArgs (required only)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonDetail,
+          arguments: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+          ),
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
 
-    test('returns null without args', () {
-      expect(
-        onGenerateRoute(const RouteSettings(name: AppRoutes.lessonDetail)),
-        isNull,
-      );
-    });
+      test('returns route with LessonDetailArgs (all fields)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.lessonDetail,
+          arguments: const LessonDetailArgs(
+            lessonId: 'l1',
+            topicId: 't1',
+            topicTitle: 'Algebra',
+            subjectId: 's1',
+          ),
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
 
-    test('returns null with null args', () {
-      expect(
-        onGenerateRoute(const RouteSettings(
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.lessonDetail,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
+
+      test('returns error route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
           name: AppRoutes.lessonDetail,
           arguments: null,
-        )),
-        isNull,
-      );
-    });
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
 
-    test('returns null with string args', () {
-      expect(
-        onGenerateRoute(RouteSettings(
+      test('returns error route with string args', () {
+        final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.lessonDetail,
           arguments: 'wrong type',
-        )),
-        isNull,
-      );
-    });
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
 
-    test('returns null with Map args instead of LessonDetailArgs', () {
-      expect(
-        onGenerateRoute(RouteSettings(
+      test('returns error route with Map args instead of LessonDetailArgs', () {
+        final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.lessonDetail,
           arguments: <String, dynamic>{'lessonId': 'l1'},
-        )),
-        isNull,
-      );
-    });
-  });
-
-  group('focusMode', () {
-    test('returns route without args', () {
-      final route = onGenerateRoute(const RouteSettings(
-        name: AppRoutes.focusMode,
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.focusMode);
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.lessonDetail);
+      });
     });
 
-    test('returns route with args (ignored)', () {
-      final route = onGenerateRoute(RouteSettings(
-        name: AppRoutes.focusMode,
-        arguments: 'anything',
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.focusMode);
+    group('focusMode', () {
+      test('returns route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.focusMode,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.focusMode);
+      });
+
+      test('returns route with args (ignored)', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.focusMode,
+          arguments: 'anything',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.focusMode);
+      });
+
+      test('returns route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.focusMode,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.focusMode);
+      });
     });
 
-    test('returns route with null args', () {
-      final route = onGenerateRoute(const RouteSettings(
-        name: AppRoutes.focusMode,
-        arguments: null,
-      ));
-      expect(route, isNotNull);
-      expect(route!.settings.name, AppRoutes.focusMode);
+    group('examSession', () {
+      test('returns route with ExamSessionArgs', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.examSession,
+          arguments: const ExamSessionArgs(
+            subjectId: 's1',
+            subjectName: 'Math',
+          ),
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.examSession);
+      });
+
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.examSession,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.examSession);
+      });
+
+      test('returns error route with null args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.examSession,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.examSession);
+      });
+
+      test('returns error route with string args', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.examSession,
+          arguments: 'wrong type',
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.examSession);
+      });
+
+      test('returns error route with Map args', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.examSession,
+          arguments: <String, dynamic>{'subjectId': 's1'},
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.examSession);
+      });
+    });
+
+    group('contentLibrary', () {
+      test('returns route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.contentLibrary,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.contentLibrary);
+      });
+
+      test('returns route with string arg', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.contentLibrary,
+          arguments: 'subject-1',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.contentLibrary);
+      });
+
+      test('returns route with null arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.contentLibrary,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.contentLibrary);
+      });
+    });
+
+    group('sourceDetail', () {
+      test('returns route with sourceId arg', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.sourceDetail,
+          arguments: 'source-1',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.sourceDetail);
+      });
+
+      test('returns error route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.sourceDetail,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.sourceDetail);
+      });
+
+      test('returns error route with null arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.sourceDetail,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route, isA<PageRouteBuilder>());
+        expect(route!.settings.name, AppRoutes.sourceDetail);
+      });
+    });
+
+    group('questionBank', () {
+      test('returns route without args', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.questionBank,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.questionBank);
+      });
+
+      test('returns route with string arg', () {
+        final route = onGenerateRoute(RouteSettings(
+          name: AppRoutes.questionBank,
+          arguments: 'question-1',
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.questionBank);
+      });
+
+      test('returns route with null arg', () {
+        final route = onGenerateRoute(const RouteSettings(
+          name: AppRoutes.questionBank,
+          arguments: null,
+        ));
+        expect(route, isNotNull);
+        expect(route!.settings.name, AppRoutes.questionBank);
+      });
     });
   });
 
@@ -761,15 +1072,89 @@ void main() {
       final builder = route as PageRouteBuilder;
       expect(builder.transitionsBuilder, isNotNull);
     });
+
+    testWidgets('transitionsBuilder produces FadeTransition widget',
+        (tester) async {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.settings,
+      )) as PageRouteBuilder;
+
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.ltr,
+          child: Builder(
+            builder: (context) {
+              final animation = AnimationController(
+                vsync: tester,
+                value: 1,
+              );
+              final secondaryAnimation = AnimationController(
+                vsync: tester,
+                value: 1,
+              );
+              return route.transitionsBuilder(
+                context,
+                animation,
+                secondaryAnimation,
+                const Text('child'),
+              );
+            },
+          ),
+        ),
+      );
+
+      expect(find.byType(FadeTransition), findsOneWidget);
+    });
+
+    testWidgets('error route pageBuilder produces NotFoundScreen',
+        (tester) async {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.subjectDetail,
+      )) as PageRouteBuilder;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Builder(
+            builder: (context) {
+              final animation = AnimationController(
+                vsync: tester,
+                value: 0,
+              );
+              return route.pageBuilder(context, animation, animation);
+            },
+          ),
+        ),
+      );
+
+      expect(find.byType(NotFoundScreen), findsOneWidget);
+    });
+  });
+
+  group('_errorRoute (tested indirectly via onGenerateRoute)', () {
+    test('error route has 200ms transition duration', () {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.subjectDetail,
+      ));
+      final builder = route as PageRouteBuilder;
+      expect(builder.transitionDuration, const Duration(milliseconds: 200));
+    });
+
+    test('error route preserves settings name', () {
+      final route = onGenerateRoute(const RouteSettings(
+        name: AppRoutes.subjectDetail,
+      ));
+      expect(route?.settings.name, AppRoutes.subjectDetail);
+    });
   });
 
   group('route settings consistency', () {
     test('all generated routes have matching settings name', () {
       for (final routeName in appRoutesAll) {
         final route = onGenerateRoute(RouteSettings(name: routeName));
-        if (route != null) {
-          expect(route.settings.name, routeName);
-        }
+        expect(route, isNotNull);
+        expect(route!.settings.name, routeName);
       }
     });
   });
@@ -794,4 +1179,8 @@ final List<String> appRoutesAll = [
   AppRoutes.lessonList,
   AppRoutes.llmTasks,
   AppRoutes.focusMode,
+  AppRoutes.examSession,
+  AppRoutes.contentLibrary,
+  AppRoutes.sourceDetail,
+  AppRoutes.questionBank,
 ];

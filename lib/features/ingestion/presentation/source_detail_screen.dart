@@ -5,6 +5,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/ingestion/data/models/source_model.dart';
@@ -19,8 +20,19 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SourceDetailScreen extends ConsumerStatefulWidget {
   final String sourceId;
+  final SourceRepository? sourceRepo;
+  final SubjectRepository? subjectRepo;
+  final TopicRepository? topicRepo;
+  final QuestionRepository? questionRepo;
 
-  const SourceDetailScreen({super.key, required this.sourceId});
+  const SourceDetailScreen({
+    super.key,
+    required this.sourceId,
+    this.sourceRepo,
+    this.subjectRepo,
+    this.topicRepo,
+    this.questionRepo,
+  });
 
   @override
   ConsumerState<SourceDetailScreen> createState() => _SourceDetailScreenState();
@@ -28,10 +40,10 @@ class SourceDetailScreen extends ConsumerStatefulWidget {
 
 class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   final _logger = const Logger('SourceDetailScreen');
-  final _sourceRepo = SourceRepository();
-  final _subjectRepo = SubjectRepository();
-  final _topicRepo = TopicRepository();
-  final _questionRepo = QuestionRepository();
+  late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
+  late final SubjectRepository _subjectRepo = widget.subjectRepo ?? SubjectRepository();
+  late final TopicRepository _topicRepo = widget.topicRepo ?? TopicRepository();
+  late final QuestionRepository _questionRepo = widget.questionRepo ?? QuestionRepository();
 
   Source? _source;
   Subject? _subject;
@@ -437,7 +449,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                           subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
                           trailing: const Icon(Icons.chevron_right),
                           onTap: () {
-                            Navigator.pushNamed(context, '/question-bank');
+                            Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
                           },
                         ),
                       );

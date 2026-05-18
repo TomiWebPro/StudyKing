@@ -82,8 +82,7 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
       ? (actualMinutesToday / plannedMinutesToday).clamp(0.0, 1.5)
       : 0.0;
 
-  await service.adherenceRepo.init();
-  final adherenceRecords = await service.adherenceRepo.getByStudent(service.studentId);
+  final adherenceRecords = await service.getAdherenceRecords();
 
   final weeklyProgress = <DailyProgress>[];
   for (var i = 6; i >= 0; i--) {

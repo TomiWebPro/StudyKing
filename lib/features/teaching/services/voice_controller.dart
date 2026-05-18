@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
 
 class VoiceController {
@@ -92,8 +93,8 @@ class VoiceController {
             _transcriptionController.add(result.recognizedWords);
           }
         },
-        listenFor: const Duration(seconds: 60),
-        pauseFor: const Duration(seconds: 3),
+        listenFor: Timeouts.voiceListen,
+        pauseFor: Timeouts.voicePause,
         listenOptions: stt.SpeechListenOptions(
           partialResults: true,
         ),

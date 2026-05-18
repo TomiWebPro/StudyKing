@@ -5,11 +5,15 @@ import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 
 final llmTaskManagerProvider = Provider<LlmTaskManager>((ref) {
-  return LlmTaskManager();
+  final manager = LlmTaskManager();
+  manager.init();
+  return manager;
 });
 
 final llmUsageMeterProvider = Provider<LlmUsageMeter>((ref) {
-  return LlmUsageMeter();
+  final meter = LlmUsageMeter();
+  meter.init();
+  return meter;
 });
 
 final llmServiceProvider = Provider<LlmService>((ref) {

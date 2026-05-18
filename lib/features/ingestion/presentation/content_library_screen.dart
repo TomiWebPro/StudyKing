@@ -14,16 +14,25 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
+  final SourceRepository? sourceRepo;
+  final QuestionRepository? questionRepo;
+  final SubjectRepository? subjectRepo;
 
-  const ContentLibraryScreen({super.key, this.preselectedSubjectId});
+  const ContentLibraryScreen({
+    super.key,
+    this.preselectedSubjectId,
+    this.sourceRepo,
+    this.questionRepo,
+    this.subjectRepo,
+  });
 
   @override
   ConsumerState<ContentLibraryScreen> createState() => _ContentLibraryScreenState();
 }
 
 class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
-  final _sourceRepo = SourceRepository();
-  final _questionRepo = QuestionRepository();
+  late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
+  late final QuestionRepository _questionRepo = widget.questionRepo ?? QuestionRepository();
   List<Source> _sources = [];
   List<Subject> _subjects = [];
   bool _isLoading = true;
@@ -49,7 +58,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     try {
       await _sourceRepo.init();
       await _questionRepo.init();
-      final subjectsRepo = SubjectRepository();
+      final subjectsRepo = widget.subjectRepo ?? SubjectRepository();
       await subjectsRepo.init();
       final subjectsResult = await subjectsRepo.getAll();
       final sourcesResult = await _sourceRepo.getAll();

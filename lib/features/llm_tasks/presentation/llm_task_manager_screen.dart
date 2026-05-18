@@ -17,12 +17,14 @@ class LlmTaskManagerScreen extends ConsumerStatefulWidget {
 
 class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   LlmTaskManager? _taskManager;
+  final Set<String> _notifiedFailedTaskIds = {};
 
   @override
   void initState() {
     super.initState();
     _taskManager = ref.read(llmTaskManagerProvider);
     _taskManager!.addListener(_onTasksChanged);
+    _onTasksChanged();
   }
 
   @override
@@ -32,7 +34,28 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   }
 
   void _onTasksChanged() {
-    if (mounted) setState(() {});
+    if (!mounted) return;
+    setState(() {});
+    final taskManager = ref.read(llmTaskManagerProvider);
+    final l10n = AppLocalizations.of(context);
+    if (l10n == null) return;
+    for (final task in taskManager.tasks) {
+      if (task.status == LlmTaskStatus.failed &&
+          task.error != null &&
+          _notifiedFailedTaskIds.add(task.id)) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.aiTaskFailedNotification(task.feature)),
+            duration: const Duration(seconds: 4),
+            action: SnackBarAction(
+              label: l10n.retry,
+              onPressed: () => taskManager.retryTask(task.id),
+            ),
+          ),
+        );
+        break;
+      }
+    }
   }
 
   @override

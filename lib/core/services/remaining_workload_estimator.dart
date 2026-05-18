@@ -45,8 +45,11 @@ class SubjectWorkload {
 }
 
 class RemainingWorkloadEstimator {
+  // Minimum mastery level (70%) to consider a topic "mastered"
   static const double masteryThreshold = 0.7;
+  // Below this mastery level (50%), a topic is considered "at risk"
   static const double atRiskThreshold = 0.5;
+  // Assumed number of questions needed per lesson for workload estimation
   static const int questionsPerLesson = 8;
 
   double _computeTopicMasteryLevel({

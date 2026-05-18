@@ -138,10 +138,10 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Future<void> _loadDueCounts() async {
     if (_subjects.isEmpty) return;
     try {
-      final srRepo = ref.read(spacedRepetitionRepositoryProvider);
+      final srService = ref.read(spacedRepetitionServiceProvider);
       final dueCounts = <String, int>{};
       for (final subject in _subjects) {
-        final result = await srRepo.getPracticeQuestions(subject.id);
+        final result = await srService.getPracticeQuestions(subject.id);
         final questions = result.data ?? [];
         dueCounts[subject.id] = questions.length;
       }
@@ -338,9 +338,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   void _startSpacedRepetition(Subject subject) async {
     final l10n = AppLocalizations.of(context)!;
-    final srRepo = ref.read(spacedRepetitionRepositoryProvider);
+    final srService = ref.read(spacedRepetitionServiceProvider);
     try {
-      final result = await srRepo.getPracticeQuestions(subject.id);
+      final result = await srService.getPracticeQuestions(subject.id);
       if (result.isFailure || result.data == null || result.data!.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/config/locale_config.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsRepository, localeProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsRepositoryProvider, localeProvider;
 import '../data/models/user_profile_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/utils/logger.dart';
@@ -50,7 +50,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       _error = null;
     });
     try {
-      final repository = settingsRepository;
+      final repository = ref.read(settingsRepositoryProvider);
       final profileResult = await repository.getProfileData();
 
       if (profileResult.isFailure) {
@@ -129,7 +129,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       );
 
       // Save to repository
-      final saveResult = await settingsRepository.saveProfileData(profile);
+      final saveResult = await ref.read(settingsRepositoryProvider).saveProfileData(profile);
       if (saveResult.isFailure) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -567,7 +567,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           ),
           FilledButton(
             onPressed: () async {
-              final clearResult = await settingsRepository.clearProfile();
+              final clearResult = await ref.read(settingsRepositoryProvider).clearProfile();
               if (clearResult.isFailure) return;
               if (!context.mounted) return;
               Navigator.pop(context);

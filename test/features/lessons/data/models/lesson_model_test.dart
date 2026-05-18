@@ -58,6 +58,18 @@ void main() {
         expect(lesson.generatedBy, GeneratedBy.ai);
         expect(lesson.markscheme, 'answer key');
       });
+
+      test('creates with explicit empty markscheme', () {
+        final lesson = Lesson(
+          id: 'lesson-1',
+          subjectId: 's1',
+          title: 'Title',
+          topicId: 't1',
+          createdAt: now,
+          markscheme: '',
+        );
+        expect(lesson.markscheme, '');
+      });
     });
 
     group('toJson', () {
@@ -75,13 +87,43 @@ void main() {
         );
         final json = lesson.toJson();
         expect(json['id'], 'lesson-1');
+        expect(json['subjectId'], 'subject-1');
         expect(json['title'], 'Title');
+        expect(json['topicId'], 'topic-1');
         expect(json['difficulty'], 2);
         expect(json['generatedBy'], GeneratedBy.hybrid.index);
         expect(json['createdAt'], now.toIso8601String());
         expect(json['blocks'], isA<List>());
         expect((json['blocks'] as List).length, 1);
         expect(json['markscheme'], 'key');
+      });
+
+      test('serializes all GeneratedBy values correctly', () {
+        for (final gb in GeneratedBy.values) {
+          final lesson = Lesson(
+            id: 'l1', subjectId: 's1', title: 'T',
+            topicId: 't1', createdAt: now, generatedBy: gb,
+          );
+          expect(lesson.toJson()['generatedBy'], gb.index);
+        }
+      });
+
+      test('serializes empty blocks list', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final json = lesson.toJson();
+        expect(json['blocks'], isA<List>());
+        expect((json['blocks'] as List), isEmpty);
+      });
+
+      test('serializes null markscheme', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        expect(lesson.toJson()['markscheme'], isNull);
       });
     });
 
@@ -109,9 +151,13 @@ void main() {
         };
         final lesson = Lesson.fromJson(json);
         expect(lesson.id, 'lesson-1');
+        expect(lesson.subjectId, 'subject-1');
+        expect(lesson.title, 'Title');
+        expect(lesson.topicId, 'topic-1');
         expect(lesson.blocks.length, 1);
         expect(lesson.difficulty, 2);
         expect(lesson.generatedBy, GeneratedBy.manual);
+        expect(lesson.createdAt, now);
         expect(lesson.markscheme, isNull);
       });
 
@@ -126,7 +172,19 @@ void main() {
         final lesson = Lesson.fromJson(json);
         expect(lesson.blocks, isEmpty);
         expect(lesson.difficulty, 1);
-        expect(lesson.generatedBy, GeneratedBy.ai); // Default index 0
+        expect(lesson.generatedBy, GeneratedBy.ai);
+      });
+
+      test('deserializes all GeneratedBy enum indices', () {
+        for (final gb in GeneratedBy.values) {
+          final json = {
+            'id': 'l1', 'subjectId': 's1', 'title': 'T',
+            'topicId': 't1', 'generatedBy': gb.index,
+            'createdAt': now.toIso8601String(),
+          };
+          final lesson = Lesson.fromJson(json);
+          expect(lesson.generatedBy, gb);
+        }
       });
     });
 
@@ -146,10 +204,43 @@ void main() {
         final json = original.toJson();
         final restored = Lesson.fromJson(json);
         expect(restored.id, original.id);
+        expect(restored.subjectId, original.subjectId);
         expect(restored.title, original.title);
+        expect(restored.topicId, original.topicId);
         expect(restored.blocks.length, original.blocks.length);
         expect(restored.difficulty, original.difficulty);
         expect(restored.generatedBy, original.generatedBy);
+        expect(restored.createdAt, original.createdAt);
+        expect(restored.markscheme, original.markscheme);
+      });
+
+      test('roundtrip preserves all GeneratedBy values', () {
+        for (final gb in GeneratedBy.values) {
+          final original = Lesson(
+            id: 'l1', subjectId: 's1', title: 'T',
+            topicId: 't1', createdAt: now, generatedBy: gb,
+          );
+          final restored = Lesson.fromJson(original.toJson());
+          expect(restored.generatedBy, gb);
+        }
+      });
+
+      test('roundtrip preserves empty blocks', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.blocks, isEmpty);
+      });
+
+      test('roundtrip preserves no markscheme', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.markscheme, isNull);
       });
     });
 
@@ -167,10 +258,13 @@ void main() {
         );
         final copy = lesson.copyWith();
         expect(copy.id, lesson.id);
+        expect(copy.subjectId, lesson.subjectId);
         expect(copy.title, lesson.title);
-        expect(copy.blocks.length, lesson.blocks.length);
+        expect(copy.topicId, lesson.topicId);
+        expect(copy.blocks, lesson.blocks);
         expect(copy.difficulty, lesson.difficulty);
         expect(copy.generatedBy, lesson.generatedBy);
+        expect(copy.createdAt, lesson.createdAt);
       });
 
       test('updates specified fields', () {
@@ -190,6 +284,42 @@ void main() {
         expect(copy.title, 'New Title');
         expect(copy.difficulty, 5);
         expect(copy.generatedBy, GeneratedBy.hybrid);
+        expect(copy.markscheme, 'new key');
+        expect(copy.id, lesson.id);
+        expect(copy.subjectId, lesson.subjectId);
+        expect(copy.topicId, lesson.topicId);
+        expect(copy.createdAt, lesson.createdAt);
+      });
+
+      test('updates every field', () {
+        final lesson = Lesson(
+          id: 'lesson-1',
+          subjectId: 'subject-1',
+          title: 'Title',
+          topicId: 'topic-1',
+          createdAt: now,
+        );
+        final newBlocks = [sampleBlock];
+        final newDate = DateTime(2027, 1, 1);
+        final copy = lesson.copyWith(
+          id: 'lesson-2',
+          subjectId: 'subject-2',
+          title: 'New Title',
+          topicId: 'topic-2',
+          blocks: newBlocks,
+          difficulty: 5,
+          generatedBy: GeneratedBy.hybrid,
+          createdAt: newDate,
+          markscheme: 'new key',
+        );
+        expect(copy.id, 'lesson-2');
+        expect(copy.subjectId, 'subject-2');
+        expect(copy.title, 'New Title');
+        expect(copy.topicId, 'topic-2');
+        expect(copy.blocks, newBlocks);
+        expect(copy.difficulty, 5);
+        expect(copy.generatedBy, GeneratedBy.hybrid);
+        expect(copy.createdAt, newDate);
         expect(copy.markscheme, 'new key');
       });
     });
@@ -233,6 +363,18 @@ void main() {
         expect(lesson.difficulty, 1);
       });
 
+      test('handles missing difficulty key', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.difficulty, 1);
+      });
+
       test('handles null generatedBy falling back to ai (index 0)', () {
         final json = {
           'id': 'lesson-1',
@@ -240,6 +382,18 @@ void main() {
           'title': 'Title',
           'topicId': 't1',
           'generatedBy': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.generatedBy, GeneratedBy.ai);
+      });
+
+      test('handles missing generatedBy key', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
           'createdAt': now.toIso8601String(),
         };
         final lesson = Lesson.fromJson(json);
@@ -258,11 +412,22 @@ void main() {
         final lesson = Lesson.fromJson(json);
         expect(lesson.markscheme, isNull);
       });
+
+      test('handles missing markscheme key', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.markscheme, isNull);
+      });
     });
 
     group('equality', () {
       test('uses identity-based equality', () {
-        final now = DateTime(2026, 5, 12);
         final a = Lesson(
           id: 'lesson-1',
           subjectId: 'subject-1',
@@ -282,7 +447,6 @@ void main() {
       });
 
       test('hashCode is consistent', () {
-        final now = DateTime(2026, 5, 12);
         final obj = Lesson(
           id: 'lesson-1',
           subjectId: 'subject-1',
@@ -292,6 +456,25 @@ void main() {
         );
         final hash = obj.hashCode;
         expect(obj.hashCode, hash);
+      });
+
+      test('different instances with same values are not equal', () {
+        final a = Lesson(
+          id: 'same-id',
+          subjectId: 'same-subject',
+          title: 'Same',
+          topicId: 'same-topic',
+          createdAt: now,
+        );
+        final b = Lesson(
+          id: 'same-id',
+          subjectId: 'same-subject',
+          title: 'Same',
+          topicId: 'same-topic',
+          createdAt: now,
+        );
+        expect(a == b, isFalse);
+        expect(identical(a, b), isFalse);
       });
     });
 

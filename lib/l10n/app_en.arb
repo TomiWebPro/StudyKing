@@ -4767,7 +4767,7 @@
   "@dataStorageNotice": {
     "description": "Data storage notice title"
   },
-  "dataStorageDescription": "StudyKing stores all your data locally on this device. To avoid data loss, use the Export feature in Dashboard.",
+  "dataStorageDescription": "StudyKing stores all your data locally on this device. To avoid data loss, use the Backup & Restore feature in Settings (Settings > Backup & Restore).",
   "@dataStorageDescription": {
     "description": "Data storage explanation"
   },
@@ -5370,6 +5370,26 @@
   "@breakDuration": {
     "description": "Tile title for break duration setting"
   },
+  "sessionTracking": "Session Tracking",
+  "@sessionTracking": {
+    "description": "Section title for session tracking in settings"
+  },
+  "manualSessionTracker": "Manual Session Tracker",
+  "@manualSessionTracker": {
+    "description": "Tile title for manual session tracker"
+  },
+  "manualSessionTrackerDescription": "Track your study sessions manually",
+  "@manualSessionTrackerDescription": {
+    "description": "Subtitle for manual session tracker tile"
+  },
+  "sessionHistoryDescription": "View your session history",
+  "@sessionHistoryDescription": {
+    "description": "Subtitle for session history navigation"
+  },
+  "exportProgressCsv": "Export Progress CSV",
+  "@exportProgressCsv": {
+    "description": "Button label to export progress as CSV"
+  },
   "featureLabelIngestion": "Ingestion",
   "@featureLabelIngestion": {
     "description": "Feature label for ingestion in token usage dialog"
@@ -5784,5 +5804,150 @@
         "type": "String"
       }
     }
+  },
+  "manualSessionTracker": "Manual Session Tracker",
+  "@manualSessionTracker": {
+    "description": "Title for manual session tracker"
+  },
+  "manualSessionTrackerDescription": "Track study time manually",
+  "@manualSessionTrackerDescription": {
+    "description": "Description for manual session tracking"
+  },
+  "sessionHistoryDescription": "Review past study sessions",
+  "@sessionHistoryDescription": {
+    "description": "Description for session history"
+  },
+  "sessionTracking": "Session Tracking",
+  "@sessionTracking": {
+    "description": "Title for session tracking section"
+  },
+  "exportProgressCsv": "Export Progress CSV",
+  "@exportProgressCsv": {
+    "description": "Export progress as CSV"
+  },
+  "createQuestion": "Create Question",
+  "@createQuestion": {
+    "description": "Button to create a new question"
+  },
+  "questionTextHint": "Enter the question text",
+  "@questionTextHint": {
+    "description": "Hint text for question text field"
+  },
+  "answerOptions": "Answer Options",
+  "@answerOptions": {
+    "description": "Label for answer options section"
+  },
+  "addOption": "Add Option",
+  "@addOption": {
+    "description": "Button to add an option"
+  },
+  "correctAnswerLabel": "Correct Answer",
+  "@correctAnswerLabel": {
+    "description": "Label for correct answer field"
+  },
+  "selectCorrectAnswer": "Select correct answer",
+  "@selectCorrectAnswer": {
+    "description": "Hint to select correct answer"
+  },
+  "questionCreated": "Question created successfully",
+  "@questionCreated": {
+    "description": "Message shown when question is created"
+  },
+  "manageQuestions": "Manage Questions",
+  "@manageQuestions": {
+    "description": "Title for question management section"
+  },
+  "backupContainsSensitiveData": "This backup contains sensitive data (API key, model configuration). Be cautious when sharing this file.",
+  "@backupContainsSensitiveData": {
+    "description": "Warning about sensitive data in backup"
+  },
+  "excludeSensitiveData": "Exclude sensitive data",
+  "@excludeSensitiveData": {
+    "description": "Option to exclude sensitive data from backup"
+  },
+  "sensitiveDataWillBeExcluded": "Sensitive data will be excluded. You will need to re-enter your API key after restore.",
+  "@sensitiveDataWillBeExcluded": {
+    "description": "Info about sensitive data exclusion"
+  },
+  "selectBoxesToRestore": "Select sections to restore",
+  "@selectBoxesToRestore": {
+    "description": "Prompt to select restore sections"
+  },
+  "selectAll": "Select All",
+  "@selectAll": {
+    "description": "Button to select all items"
+  },
+  "deselectAll": "Deselect All",
+  "@deselectAll": {
+    "description": "Button to deselect all items"
+  },
+  "selectedBoxesWillBeOverwritten": "Selected sections will be completely overwritten.",
+  "@selectedBoxesWillBeOverwritten": {
+    "description": "Warning about selected sections being overwritten"
+  },
+  "autoBackup": "Automatic Backup",
+  "@autoBackup": {
+    "description": "Title for automatic backup settings"
+  },
+  "autoBackupDescription": "Schedule automatic backups",
+  "@autoBackupDescription": {
+    "description": "Description for automatic backup"
+  },
+  "backupIntervalDaily": "Daily",
+  "@backupIntervalDaily": {
+    "description": "Daily backup interval option"
+  },
+  "backupIntervalWeekly": "Weekly",
+  "@backupIntervalWeekly": {
+    "description": "Weekly backup interval option"
+  },
+  "backupIntervalNever": "Never",
+  "@backupIntervalNever": {
+    "description": "Never backup option"
+  },
+  "lastBackup": "Last backup",
+  "@lastBackup": {
+    "description": "Label for last backup timestamp"
+  },
+  "aiTaskFailedNotification": "AI task failed: {feature}",
+  "@aiTaskFailedNotification": {
+    "description": "Notification title for AI task failure",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      }
+    }
+  },
+  "aiTaskFailedBody": "Task '{feature}' failed. {error}",
+  "@aiTaskFailedBody": {
+    "description": "Notification body for AI task failure",
+    "placeholders": {
+      "feature": {
+        "type": "String"
+      },
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "questionBankLink": "Question Bank",
+  "@questionBankLink": {
+    "description": "Link label for question bank"
+  },
+  "overwriteRestore": "Overwrite all",
+  "@overwriteRestore": {
+    "description": "Option to overwrite all data on restore"
+  },
+  "mergeRestore": "Merge (skip existing)",
+  "@mergeRestore": {
+    "description": "Option to merge data, skipping existing records"
+  },
+  "backupCompleted": "Backup completed automatically",
+  "@backupCompleted": {
+    "description": "Message shown when automatic backup completes"
+  },
+  "viewInSettings": "Open Settings",
+  "@viewInSettings": {
+    "description": "Button to navigate to settings"
   }
 }
