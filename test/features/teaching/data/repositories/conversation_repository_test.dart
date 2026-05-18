@@ -8,7 +8,6 @@ import 'package:studyking/features/teaching/data/adapters/conversation_message_a
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 
-/// Fake Box of ConversationMessage with in-memory storage.
 class _FakeConversationBox implements Box<ConversationMessage> {
   final Map<dynamic, ConversationMessage> _storage = {};
 
@@ -71,10 +70,6 @@ class _FakeConversationBox implements Box<ConversationMessage> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-/// Test subclass that overrides only [deleteSessionMessages] because
-/// the real implementation relies on `HiveObject.key` which the fake box
-/// cannot set (it's internal to the `hive` library).
-/// All other methods use the real [ConversationRepository] implementation.
 class _TestConversationRepository extends ConversationRepository {
   final _FakeConversationBox _fakeBox;
 
@@ -89,6 +84,83 @@ class _TestConversationRepository extends ConversationRepository {
     await box.deleteAll(toDelete);
     return Result.success(null);
   }
+}
+
+class _ErrorFakeConversationBox implements Box<ConversationMessage> {
+  final Map<dynamic, ConversationMessage> _storage = {};
+  bool throwOnPut = false;
+  bool throwOnGet = false;
+  bool throwOnDelete = false;
+  bool throwOnValues = false;
+  bool throwOnClear = false;
+  bool throwOnDeleteAll = false;
+
+  @override
+  Iterable<ConversationMessage> get values {
+    if (throwOnValues) throw Exception('values error');
+    return _storage.values;
+  }
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'conversations_error';
+
+  @override
+  ConversationMessage? get(dynamic key, {ConversationMessage? defaultValue}) {
+    if (throwOnGet) throw Exception('get error');
+    return _storage[key] ?? defaultValue;
+  }
+
+  @override
+  Future<void> put(dynamic key, ConversationMessage value) async {
+    if (throwOnPut) throw Exception('put error');
+    _storage[key] = value;
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    if (throwOnDelete) throw Exception('delete error');
+    _storage.remove(key);
+  }
+
+  @override
+  Future<void> deleteAll(Iterable<dynamic> keys) async {
+    if (throwOnDeleteAll) throw Exception('deleteAll error');
+    for (final key in keys) {
+      _storage.remove(key);
+    }
+  }
+
+  @override
+  Future<int> clear() async {
+    if (throwOnClear) throw Exception('clear error');
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
+  bool containsKey(dynamic key) => _storage.containsKey(key);
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  Map<dynamic, ConversationMessage> toMap() => Map.from(_storage);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 void main() {
@@ -121,12 +193,29 @@ void main() {
       );
     }
 
+    group('create', () {
+      test('stores a message via create alias', () async {
+        final msg = createMessage();
+        final result = await repository.create(msg);
+        expect(result.isSuccess, true);
+        expect((await repository.getMessage('msg-1')).data?.content, 'Hello');
+      });
+
+      test('create is equivalent to saveMessage', () async {
+        final msg = createMessage();
+        final createResult = await repository.create(msg);
+        final saveResult = await repository.saveMessage(createMessage(id: 'msg-2'));
+        expect(createResult.isSuccess, true);
+        expect(saveResult.isSuccess, true);
+      });
+    });
+
     group('saveMessage', () {
       test('stores a message', () async {
         final msg = createMessage();
-        await repository.saveMessage(msg);
-        final stored = await repository.getMessage('msg-1');
-        expect(stored.data?.content, 'Hello');
+        final result = await repository.saveMessage(msg);
+        expect(result.isSuccess, true);
+        expect((await repository.getMessage('msg-1')).data?.content, 'Hello');
       });
 
       test('overwrites existing message with same id', () async {
@@ -134,20 +223,30 @@ void main() {
         final msg2 = createMessage(content: 'Second');
         await repository.saveMessage(msg1);
         await repository.saveMessage(msg2);
-        final stored = await repository.getMessage('msg-1');
-        expect(stored.data?.content, 'Second');
+        expect((await repository.getMessage('msg-1')).data?.content, 'Second');
+      });
+
+      test('returns Result<void> type', () async {
+        final msg = createMessage();
+        final result = await repository.saveMessage(msg);
+        expect(result, isA<SuccessResult<void>>());
       });
     });
 
     group('getMessage', () {
-      test('returns null for non-existent message', () async {
-        expect(await repository.getMessage('none'), isNull);
+      test('returns Result with null data for non-existent message', () async {
+        final result = await repository.getMessage('none');
+        expect(result, isA<SuccessResult<ConversationMessage?>>());
+        expect(result.data, isNull);
       });
 
-      test('returns stored message', () async {
+      test('returns stored message with Result type', () async {
         final msg = createMessage();
         await repository.saveMessage(msg);
-        expect(await repository.getMessage('msg-1'), isNotNull);
+        final result = await repository.getMessage('msg-1');
+        expect(result.isSuccess, true);
+        expect(result.data, isNotNull);
+        expect(result.data!.id, 'msg-1');
       });
     });
 
@@ -178,18 +277,31 @@ void main() {
       test('returns empty list for session with no messages', () async {
         expect((await repository.getSessionMessages('empty')).data, isEmpty);
       });
+
+      test('returns Result wrapping the list', () async {
+        final result = await repository.getSessionMessages('empty');
+        expect(result, isA<SuccessResult<List<ConversationMessage>>>());
+        expect(result.data, isEmpty);
+      });
     });
 
     group('deleteMessage', () {
       test('deletes a single message', () async {
         final msg = createMessage();
         await repository.saveMessage(msg);
-        await repository.deleteMessage('msg-1');
-        expect(await repository.getMessage('msg-1'), isNull);
+        final deleteResult = await repository.deleteMessage('msg-1');
+        expect(deleteResult.isSuccess, true);
+        expect((await repository.getMessage('msg-1')).data, isNull);
       });
 
       test('does nothing for non-existent message', () async {
-        await repository.deleteMessage('non-existent');
+        final result = await repository.deleteMessage('non-existent');
+        expect(result.isSuccess, true);
+      });
+
+      test('returns Result<void> type', () async {
+        final result = await repository.deleteMessage('non-existent');
+        expect(result, isA<SuccessResult<void>>());
       });
     });
 
@@ -259,19 +371,35 @@ void main() {
         expect(recent[0].content, 'New');
         expect(recent[1].content, 'Old');
       });
+
+      test('returns empty for limit of 0', () async {
+        await repository.saveMessage(createMessage(id: 'm1'));
+        final result = await repository.getRecentMessages(limit: 0);
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
+      });
+
+      test('returns empty for sessionId with no matches', () async {
+        await repository.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
+        final result = await repository.getRecentMessages(limit: 10, sessionId: 'nonexistent');
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('clearAll', () {
       test('removes all messages', () async {
         await repository.saveMessage(createMessage(id: 'm1'));
         await repository.saveMessage(createMessage(id: 'm2'));
-        await repository.clearAll();
-        expect(await repository.getMessage('m1'), isNull);
-        expect(await repository.getMessage('m2'), isNull);
+        final result = await repository.clearAll();
+        expect(result.isSuccess, true);
+        expect((await repository.getMessage('m1')).data, isNull);
+        expect((await repository.getMessage('m2')).data, isNull);
       });
 
       test('works on empty repository', () async {
-        await repository.clearAll();
+        final result = await repository.clearAll();
+        expect(result.isSuccess, true);
         expect((await repository.getRecentMessages()).data, isEmpty);
       });
     });
@@ -288,16 +416,18 @@ void main() {
         await testRepo.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
         await testRepo.saveMessage(createMessage(id: 'm2', sessionId: 's1'));
         await testRepo.saveMessage(createMessage(id: 'm3', sessionId: 's2'));
-        await testRepo.deleteSessionMessages('s1');
-        expect(await testRepo.getMessage('m1'), isNull);
-        expect(await testRepo.getMessage('m2'), isNull);
-        expect(await testRepo.getMessage('m3'), isNotNull);
+        final result = await testRepo.deleteSessionMessages('s1');
+        expect(result.isSuccess, true);
+        expect((await testRepo.getMessage('m1')).data, isNull);
+        expect((await testRepo.getMessage('m2')).data, isNull);
+        expect((await testRepo.getMessage('m3')).data, isNotNull);
       });
 
       test('does nothing for non-existent session', () async {
         await testRepo.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
-        await testRepo.deleteSessionMessages('non-existent');
-        expect(await testRepo.getMessage('m1'), isNotNull);
+        final result = await testRepo.deleteSessionMessages('non-existent');
+        expect(result.isSuccess, true);
+        expect((await testRepo.getMessage('m1')).data, isNotNull);
       });
     });
   });
@@ -356,7 +486,8 @@ void main() {
     group('CRUD operations', () {
       test('saves and retrieves a message', () async {
         final msg = hiveMsg();
-        await hiveRepo.saveMessage(msg);
+        final saveResult = await hiveRepo.saveMessage(msg);
+        expect(saveResult.isSuccess, true);
         final retrieved = await hiveRepo.getMessage('msg-1');
         expect(retrieved, isNotNull);
         expect(retrieved.data!.content, 'Hello');
@@ -364,8 +495,10 @@ void main() {
         expect(retrieved.data!.type, MessageType.text);
       });
 
-      test('getMessage returns null for non-existent id', () async {
-        expect(await hiveRepo.getMessage('non-existent'), isNull);
+      test('getMessage returns Result with null data for non-existent id', () async {
+        final result = await hiveRepo.getMessage('non-existent');
+        expect(result, isA<SuccessResult<ConversationMessage?>>());
+        expect(result.data, isNull);
       });
 
       test('saveMessage overwrites existing message with same id', () async {
@@ -373,8 +506,14 @@ void main() {
         final msg2 = hiveMsg(content: 'Second');
         await hiveRepo.saveMessage(msg1);
         await hiveRepo.saveMessage(msg2);
-        final stored = await hiveRepo.getMessage('msg-1');
-        expect(stored.data?.content, 'Second');
+        expect((await hiveRepo.getMessage('msg-1')).data?.content, 'Second');
+      });
+
+      test('create alias stores a message', () async {
+        final msg = hiveMsg(id: 'create-msg');
+        final result = await hiveRepo.create(msg);
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getMessage('create-msg')).data?.content, 'Hello');
       });
     });
 
@@ -413,28 +552,32 @@ void main() {
         await hiveRepo.saveMessage(hiveMsg(id: 'm1', sessionId: 's1'));
         await hiveRepo.saveMessage(hiveMsg(id: 'm2', sessionId: 's1'));
         await hiveRepo.saveMessage(hiveMsg(id: 'm3', sessionId: 's2'));
-        await hiveRepo.deleteSessionMessages('s1');
-        expect(await hiveRepo.getMessage('m1'), isNull);
-        expect(await hiveRepo.getMessage('m2'), isNull);
-        expect(await hiveRepo.getMessage('m3'), isNotNull);
+        final result = await hiveRepo.deleteSessionMessages('s1');
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getMessage('m1')).data, isNull);
+        expect((await hiveRepo.getMessage('m2')).data, isNull);
+        expect((await hiveRepo.getMessage('m3')).data, isNotNull);
       });
 
       test('does nothing for non-existent session', () async {
         await hiveRepo.saveMessage(hiveMsg(id: 'm1', sessionId: 's1'));
-        await hiveRepo.deleteSessionMessages('non-existent');
-        expect(await hiveRepo.getMessage('m1'), isNotNull);
+        final result = await hiveRepo.deleteSessionMessages('non-existent');
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getMessage('m1')).data, isNotNull);
       });
     });
 
     group('deleteMessage', () {
       test('deletes a single message', () async {
         await hiveRepo.saveMessage(hiveMsg());
-        await hiveRepo.deleteMessage('msg-1');
-        expect(await hiveRepo.getMessage('msg-1'), isNull);
+        final result = await hiveRepo.deleteMessage('msg-1');
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getMessage('msg-1')).data, isNull);
       });
 
       test('does nothing for non-existent message', () async {
-        await hiveRepo.deleteMessage('non-existent');
+        final result = await hiveRepo.deleteMessage('non-existent');
+        expect(result.isSuccess, true);
       });
     });
 
@@ -489,15 +632,130 @@ void main() {
       test('returns empty when no messages', () async {
         expect((await hiveRepo.getRecentMessages()).data, isEmpty);
       });
+
+      test('returns empty for limit of 0', () async {
+        await hiveRepo.saveMessage(hiveMsg(id: 'm1'));
+        final result = await hiveRepo.getRecentMessages(limit: 0);
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
+      });
     });
 
     group('clearAll', () {
       test('removes all messages', () async {
         await hiveRepo.saveMessage(hiveMsg(id: 'm1'));
         await hiveRepo.saveMessage(hiveMsg(id: 'm2'));
-        await hiveRepo.clearAll();
-        expect(await hiveRepo.getMessage('m1'), isNull);
-        expect(await hiveRepo.getMessage('m2'), isNull);
+        final result = await hiveRepo.clearAll();
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getMessage('m1')).data, isNull);
+        expect((await hiveRepo.getMessage('m2')).data, isNull);
+      });
+
+      test('works on empty repository', () async {
+        final result = await hiveRepo.clearAll();
+        expect(result.isSuccess, true);
+        expect((await hiveRepo.getRecentMessages()).data, isEmpty);
+      });
+    });
+  });
+
+  group('ConversationRepository error handling', () {
+    late _ErrorFakeConversationBox errorBox;
+    late ConversationRepository repository;
+
+    setUp(() {
+      errorBox = _ErrorFakeConversationBox();
+      repository = ConversationRepository();
+      repository.attachBox(errorBox);
+    });
+
+    group('saveMessage', () {
+      test('returns failure when box.put throws', () async {
+        errorBox.throwOnPut = true;
+        final msg = ConversationMessage(
+          id: 'msg-1',
+          sessionId: 's1',
+          role: MessageRole.tutor,
+          type: MessageType.text,
+          content: 'Hello',
+          timestamp: DateTime(2025, 1, 15),
+        );
+        final result = await repository.saveMessage(msg);
+        expect(result.isFailure, true);
+        expect(result.error, contains('Failed to put'));
+      });
+    });
+
+    group('create', () {
+      test('returns failure when box.put throws', () async {
+        errorBox.throwOnPut = true;
+        final msg = ConversationMessage(
+          id: 'msg-1',
+          sessionId: 's1',
+          role: MessageRole.tutor,
+          type: MessageType.text,
+          content: 'Hello',
+          timestamp: DateTime(2025, 1, 15),
+        );
+        final result = await repository.create(msg);
+        expect(result.isFailure, true);
+        expect(result.error, contains('Failed to put'));
+      });
+    });
+
+    group('getMessage', () {
+      test('returns failure when box.get throws', () async {
+        errorBox.throwOnGet = true;
+        final result = await repository.getMessage('any');
+        expect(result.isFailure, true);
+        expect(result.error, contains('Failed to get'));
+      });
+    });
+
+    group('deleteMessage', () {
+      test('returns failure when box.delete throws', () async {
+        errorBox.throwOnDelete = true;
+        final result = await repository.deleteMessage('any');
+        expect(result.isFailure, true);
+        expect(result.error, contains('Failed to delete'));
+      });
+    });
+
+    group('getSessionMessages', () {
+      test('returns failure when box.values throws', () async {
+        errorBox.throwOnValues = true;
+        final result = await repository.getSessionMessages('s1');
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('getRecentMessages', () {
+      test('returns failure when box.values throws', () async {
+        errorBox.throwOnValues = true;
+        final result = await repository.getRecentMessages();
+        expect(result.isFailure, true);
+      });
+
+      test('returns failure when box.values throws with sessionId filter', () async {
+        errorBox.throwOnValues = true;
+        final result = await repository.getRecentMessages(sessionId: 's1');
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('deleteSessionMessages', () {
+      test('returns failure when box.deleteAll throws', () async {
+        errorBox.throwOnDeleteAll = true;
+        final result = await repository.deleteSessionMessages('s1');
+        expect(result.isFailure, true);
+      });
+    });
+
+    group('clearAll', () {
+      test('returns failure when box.clear throws', () async {
+        errorBox.throwOnClear = true;
+        final result = await repository.clearAll();
+        expect(result.isFailure, true);
       });
     });
   });

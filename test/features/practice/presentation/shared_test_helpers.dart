@@ -14,6 +14,10 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
+import 'package:studyking/core/errors/result.dart' show Result;
+import 'package:studyking/features/settings/data/models/settings_box.dart' show SettingsBox;
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart' show SettingsRepository;
 
 class FakeQuestionRepository extends QuestionRepository {
   final Result<List<Question>> result;
@@ -25,6 +29,9 @@ class FakeQuestionRepository extends QuestionRepository {
 
   @override
   Future<Result<List<Question>>> getBySubject(String subjectId) async => result;
+
+  @override
+  Future<Result<List<Question>>> getAll() async => result;
 }
 
 class FakeSessionRepository extends SessionRepository {
@@ -50,6 +57,44 @@ class FakeSpacedRepetitionService extends SpacedRepetitionService {
     updateCalls.add(UpdateNextReviewCall(questionId, masteryLevel));
     return Result.success(null);
   }
+}
+
+class FakeSettingsRepository extends SettingsRepository {
+  @override
+  Future<Result<SettingsBox>> getSettings() async {
+    return Result.success(SettingsBox());
+  }
+
+  @override
+  Future<Result<void>> updateSettings({
+    String? apiKey,
+    String? apiBaseUrl,
+    String? selectedModel,
+    dynamic llmProvider,
+    dynamic themeMode,
+    double? fontSize,
+    bool? studyRemindersEnabled,
+    int? requestTimeoutSeconds,
+    int? sessionDurationMinutes,
+    bool? highContrastEnabled,
+    bool? largeTouchTargets,
+    bool? reduceMotion,
+    bool? revisionRemindersEnabled,
+    bool? lessonNotificationsEnabled,
+    bool? overworkAlertsEnabled,
+    bool? planAdjustmentNotificationsEnabled,
+    int? breakDurationSeconds,
+    int? dailyReminderHour,
+    int? dailyReminderMinute,
+    bool? firstFocusVisit,
+    bool? dailyReminderEnabled,
+  }) async {
+    return Result.success(null);
+  }
+}
+
+class FakeSettingsController extends SettingsController {
+  FakeSettingsController() : super(FakeSettingsRepository());
 }
 
 class UpdateNextReviewCall {
@@ -91,6 +136,7 @@ Widget sessionApp({
 }) {
   return ProviderScope(
     overrides: [
+      settingsProvider.overrideWith((ref) => FakeSettingsController()),
       questionRepositoryProvider.overrideWithValue(FakeQuestionRepository(result)),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),

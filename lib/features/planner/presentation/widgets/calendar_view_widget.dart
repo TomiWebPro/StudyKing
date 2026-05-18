@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -89,7 +89,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
           button: true,
           label: l10n.previous,
           child: IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
             tooltip: l10n.previous,
             onPressed: () {
               setState(() {
@@ -110,7 +110,7 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
           button: true,
           label: l10n.next,
           child: IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
             tooltip: l10n.next,
             onPressed: () {
               setState(() {

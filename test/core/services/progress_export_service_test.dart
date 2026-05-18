@@ -6,6 +6,7 @@ import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
@@ -164,6 +165,9 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
 
   @override
   Future<String> exportSessionHistoryCSV(String studentId) async => '';
+
+  @override
+  void updateLocalization(AppLocalizations l10n) {}
 }
 
 class _FakeL10n {

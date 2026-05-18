@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
 class _TestSourceAdapter extends TypeAdapter<Source> {

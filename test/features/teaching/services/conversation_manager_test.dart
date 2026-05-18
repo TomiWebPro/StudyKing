@@ -74,6 +74,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
       : super(
           llmService: FakeLlmService(),
           modelId: 'test-model',
+          localeName: 'en',
         );
 
   @override
@@ -100,6 +101,7 @@ class RichResultEvaluator extends ExerciseEvaluator {
       : super(
           llmService: FakeLlmService(),
           modelId: 'test-model',
+          localeName: 'en',
         );
 
   @override
@@ -146,6 +148,7 @@ void main() {
         subjectId: 'math',
         topicId: 'topic-1',
         exerciseEvaluator: exerciseEvaluator,
+        localeName: 'en',
       );
     });
 
@@ -485,6 +488,7 @@ void main() {
           topicId: 't1',
           exerciseEvaluator: exerciseEvaluator,
           clock: fixedClock,
+          localeName: 'en',
         );
 
         expect(m.sessionStartTime, equals(fixedNow));
@@ -652,6 +656,7 @@ void main() {
           topicId: 't1',
           exerciseEvaluator: exerciseEvaluator,
           persistenceRepo: persistRepo,
+          localeName: 'en',
         );
 
         await m.initialize();
@@ -674,6 +679,7 @@ void main() {
           subjectId: 'test',
           topicId: 't1',
           exerciseEvaluator: richEvaluator,
+          localeName: 'en',
         );
         await m.initialize();
         await m.sendMessage('Hello').toList();

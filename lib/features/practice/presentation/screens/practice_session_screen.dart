@@ -9,6 +9,7 @@ import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
@@ -480,6 +481,16 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _sessionService.startTimer();
   }
 
+  void _useVoiceInput() {
+    final voiceService = ref.read(voiceServiceProvider);
+    if (!voiceService.isAvailable) return;
+    final l10n = AppLocalizations.of(context)!;
+    voiceService.startListening(localeName: l10n.localeName);
+    voiceService.transcribedText.listen((text) {
+      _onAnswerSelected(text);
+    });
+  }
+
   @override
   void dispose() {
     _sessionService.elapsedNotifier.removeListener(_onElapsedChanged);
@@ -586,6 +597,20 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                             child: Text(l10n.submitAnswer),
                                           ),
                                         ),
+                                      ),
+                                      Consumer(
+                                        builder: (_, ref, __) {
+                                          final vs = ref.watch(voiceServiceProvider);
+                                          if (!vs.isAvailable) return const SizedBox.shrink();
+                                          return IconButton(
+                                            icon: Icon(
+                                              vs.isListening ? Icons.mic : Icons.mic_none,
+                                              color: vs.isListening ? Colors.red : null,
+                                            ),
+                                            tooltip: l10n.voiceInput,
+                                            onPressed: _useVoiceInput,
+                                          );
+                                        },
                                       ),
                                       if (_currentAnswer == null) ...[
                                         const SizedBox(width: 12),

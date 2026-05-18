@@ -2,17 +2,29 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_results_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
+
+TestNavigatorObserver? testNavigatorObserver;
 
 Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    navigatorObservers: testNavigatorObserver != null ? [testNavigatorObserver!] : [],
     home: child,
   );
 }
 
 void main() {
   group('PracticeResultsScreen', () {
+    setUp(() {
+      testNavigatorObserver = TestNavigatorObserver();
+    });
+
+    tearDown(() {
+      testNavigatorObserver = null;
+    });
+
     testWidgets('renders results with correct values', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         PracticeResultsScreen(

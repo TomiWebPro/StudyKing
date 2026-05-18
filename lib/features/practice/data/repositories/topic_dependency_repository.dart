@@ -9,12 +9,7 @@ class TopicDependencyRepository {
   late Box<TopicDependency> _box;
 
   Future<void> init() async {
-    try {
-      _box = await Hive.openBox<TopicDependency>(HiveBoxNames.topicDependencies);
-    } catch (e) {
-      _logger.e('Error initializing TopicDependencyRepository', e);
-      rethrow;
-    }
+    _box = await Hive.openBox<TopicDependency>(HiveBoxNames.topicDependencies);
   }
 
   void attachBox(Box<TopicDependency> box) {

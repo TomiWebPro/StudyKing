@@ -120,6 +120,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
       : super(
           llmService: FakeLlmService(),
           modelId: 'test-model',
+          localeName: 'en',
         );
 
   @override
@@ -266,6 +267,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Algebra',
           durationMinutes: 45,
+          localeName: 'en',
         );
 
         expect(tutorService.currentManager, equals(manager));
@@ -280,6 +282,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Algebra',
           durationMinutes: 30,
+          localeName: 'en',
         );
 
         expect(tutorSessionRepo._sessions.length, greaterThan(0));
@@ -298,6 +301,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         final sessions = tutorSessionRepo._sessions;
@@ -314,6 +318,7 @@ void main() {
             subjectId: 'math',
             topicId: 'topic-1',
             topicTitle: 'Algebra',
+            localeName: 'en',
           ),
           throwsA(isA<Exception>()),
         );
@@ -332,6 +337,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -346,6 +352,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -362,6 +369,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
         manager.recordCorrectAnswer();
@@ -382,6 +390,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
         manager.recordCorrectAnswer();
@@ -406,6 +415,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -420,6 +430,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -441,6 +452,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         final history = await tutorService.getLessonHistory('student-1');
@@ -463,6 +475,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         final stats = await tutorService.getStats('student-1');
@@ -501,6 +514,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         final session = await tutorService.getActiveSession();
@@ -516,6 +530,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -536,6 +551,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -559,6 +575,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 
@@ -573,6 +590,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         await tutorService.endLesson();
@@ -588,6 +606,7 @@ void main() {
           subjectId: 'math',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
         await manager.sendMessage('Hello').toList();
 

@@ -3,11 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
+
+TestNavigatorObserver? testNavigatorObserver;
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    navigatorObservers: testNavigatorObserver != null ? [testNavigatorObserver!] : [],
     home: Scaffold(
       body: widget,
     ),
@@ -16,6 +20,13 @@ Widget _buildTestApp(Widget widget) {
 
 void main() {
   group('FocusTimerWidget', () {
+    setUp(() {
+      testNavigatorObserver = TestNavigatorObserver();
+    });
+
+    tearDown(() {
+      testNavigatorObserver = null;
+    });
     testWidgets('renders timer with remaining time', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const FocusTimerWidget(

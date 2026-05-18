@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/providers/teaching_providers.dart';
-import 'package:studyking/features/teaching/services/prompts/prompts.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
@@ -18,6 +18,32 @@ class _FakeClock implements Clock {
   _FakeClock(this.fixed);
   @override
   DateTime now() => fixed;
+}
+
+class _FakeLlmService extends LlmService {
+  bool shouldThrow = false;
+
+  _FakeLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    if (shouldThrow) return Result.failure('Simulated LLM error');
+    return Result.success('{"score": 0.8, "explanation": "Good job"}');
+  }
 }
 
 void main() {
@@ -113,9 +139,7 @@ void main() {
       );
       addTearDown(container.dispose);
       final evaluator = container.read(exerciseEvaluatorProvider);
-      final prompts = container.read(promptsProvider);
       expect(evaluator, isA<ExerciseEvaluator>());
-      expect(prompts.localeName, 'es');
     });
 
     test('handles error when modelId is empty by still constructing evaluator', () {
@@ -141,6 +165,56 @@ void main() {
       );
       expect(result, isA<EvaluationResult>());
       expect(result.score, 0.5);
+    });
+
+    test('handles error from fake LLM service', () async {
+      final fakeService = _FakeLlmService();
+      fakeService.shouldThrow = true;
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+      final evaluator = container.read(exerciseEvaluatorProvider);
+      final result = await evaluator.evaluate(
+        question: 'test',
+        studentAnswer: 'test',
+        subjectId: 'test',
+        topicTitle: 'test',
+      );
+      expect(result, isA<EvaluationResult>());
+      expect(result.score, 0.5);
+      expect(result.explanation, contains('Could not evaluate answer'));
+    });
+
+    test('recovers after LLM service error', () async {
+      final fakeService = _FakeLlmService();
+      fakeService.shouldThrow = true;
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+      var evaluator = container.read(exerciseEvaluatorProvider);
+      var result = await evaluator.evaluate(
+        question: 'test',
+        studentAnswer: 'test',
+        subjectId: 'test',
+        topicTitle: 'test',
+      );
+      expect(result.score, 0.5);
+
+      fakeService.shouldThrow = false;
+      result = await evaluator.evaluate(
+        question: 'What is 2+2?',
+        studentAnswer: '4',
+        subjectId: 'math',
+        topicTitle: 'arithmetic',
+      );
+      expect(result, isA<EvaluationResult>());
+      expect(result.score, 0.8);
     });
   });
 
@@ -228,6 +302,7 @@ void main() {
           config: const LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'),
         ),
         modelId: 'test',
+        localeName: 'en',
       );
       final container = ProviderContainer(
         overrides: [
@@ -271,56 +346,4 @@ void main() {
     });
   });
 
-  group('promptsProvider', () {
-    test('returns a ConversationPromptSet', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final prompts = container.read(promptsProvider);
-      expect(prompts, isA<ConversationPromptSet>());
-    });
-
-    test('can be overridden', () {
-      final fakePrompts = const ConversationPromptSet();
-      final container = ProviderContainer(
-        overrides: [
-          promptsProvider.overrideWithValue(fakePrompts),
-        ],
-      );
-      addTearDown(container.dispose);
-      expect(container.read(promptsProvider), same(fakePrompts));
-    });
-
-    test('localeName defaults to en', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final prompts = container.read(promptsProvider);
-      expect(prompts.localeName, 'en');
-    });
-
-    test('localeName follows localeProvider', () {
-      final container = ProviderContainer(
-        overrides: [
-          localeProvider.overrideWith((ref) => const Locale('es')),
-        ],
-      );
-      addTearDown(container.dispose);
-      final prompts = container.read(promptsProvider);
-      expect(prompts.localeName, 'es');
-    });
-
-    test('version defaults to 1', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final prompts = container.read(promptsProvider);
-      expect(prompts.version, 1);
-    });
-
-    test('is singleton', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      final a = container.read(promptsProvider);
-      final b = container.read(promptsProvider);
-      expect(a, same(b));
-    });
-  });
 }

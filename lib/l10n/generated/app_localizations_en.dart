@@ -352,7 +352,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String dueQuestionsCount(int count) {
-    return '$count due';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count due',
+      one: '1 due',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -558,7 +564,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String secondsValue(int count) {
-    return '$count seconds';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seconds',
+      one: '1 second',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -575,7 +587,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String minutesValue(int count) {
-    return '$count minutes';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1488,7 +1506,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String attemptsCount(int count) {
-    return '$count attempts';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attempts',
+      one: '1 attempt',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1591,7 +1615,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String activeCount(int count) {
-    return '$count active';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count active',
+      one: '1 active',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2595,7 +2625,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String focusForMinutes(int minutes) {
-    return 'Focus for $minutes minutes';
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Focus for $minutes minutes',
+      one: 'Focus for 1 minute',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3007,7 +3043,15 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String recommendWeakTopics(int count) {
-    return 'You have $count topic(s) that need improvement. Focus on strengthening these areas.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You have $count topics that need improvement. Focus on strengthening these areas.',
+      one:
+          'You have 1 topic that needs improvement. Focus on strengthening this area.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3136,7 +3180,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String planBlocksDownstream(int count) {
-    return 'Blocks $count downstream topic(s)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Blocks $count downstream topics',
+      one: 'Blocks 1 downstream topic',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3573,12 +3623,28 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String nudgeLateNight(int count) {
-    return 'I noticed you had $count late-night study session(s). Remember that rest is important for effective learning!';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'I noticed you had $count late-night study sessions. Remember that rest is important for effective learning!',
+      one:
+          'I noticed you had 1 late-night study session. Remember that rest is important for effective learning!',
+    );
+    return '$_temp0';
   }
 
   @override
   String nudgeRevisionNeeded(int count) {
-    return 'You have $count question(s) approaching their review date. Time for a revision session!';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You have $count questions approaching their review date. Time for a revision session!',
+      one:
+          'You have 1 question approaching its review date. Time for a revision session!',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3862,6 +3928,66 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get backupBoxSubjects => 'Subjects';
+
+  @override
+  String get backupBoxTopics => 'Topics';
+
+  @override
+  String get backupBoxQuestions => 'Questions';
+
+  @override
+  String get backupBoxSources => 'Sources';
+
+  @override
+  String get backupBoxLessons => 'Lessons';
+
+  @override
+  String get backupBoxLessonBlocks => 'Lesson Blocks';
+
+  @override
+  String get backupBoxSessionsTyped => 'Sessions';
+
+  @override
+  String get backupBoxSessions => 'Sessions (old)';
+
+  @override
+  String get backupBoxMasteryStates => 'Mastery States';
+
+  @override
+  String get backupBoxQuestionMasteryStates => 'Question Mastery';
+
+  @override
+  String get backupBoxQuestionEvaluations => 'Question Evaluations';
+
+  @override
+  String get backupBoxLearningPlans => 'Learning Plans';
+
+  @override
+  String get backupBoxPlanAdherence => 'Plan Adherence';
+
+  @override
+  String get backupBoxPlanAdherenceMetrics => 'Plan Metrics';
+
+  @override
+  String get backupBoxMasteryImprovementMetrics => 'Mastery Metrics';
+
+  @override
+  String get backupBoxConversations => 'Conversations';
+
+  @override
+  String get backupBoxTutorSessions => 'Tutor Sessions';
+
+  @override
+  String get backupBoxTopicDependencies => 'Topic Dependencies';
+
+  @override
+  String get backupBoxSettings => 'Settings';
+
+  @override
+  String get backupBoxProfile => 'Profile';
+
+  @override
   String questionsCountPlural(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -3946,7 +4072,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String sourceCountFailed(int count) {
-    return '$count source(s) failed to process';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sources failed to process',
+      one: '1 source failed to process',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -4426,4 +4558,55 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get phaseClosing => 'Closing';
+
+  @override
+  String examSessionTitle(String mode, String subject) {
+    return '$mode – $subject';
+  }
+
+  @override
+  String get signOutComplete => 'Sign out – Done';
+
+  @override
+  String importFailedWithError(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String scheduleTimeLabel(String time) {
+    return 'Time: $time';
+  }
+
+  @override
+  String scheduleDurationLabel(String duration) {
+    return 'Duration: $duration';
+  }
+
+  @override
+  String recordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count records',
+      one: '1 record',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get couldNotEvaluateAnswer => 'Could not evaluate answer.';
+
+  @override
+  String couldNotEvaluateAnswerWithError(String error) {
+    return 'Could not evaluate answer: $error';
+  }
+
+  @override
+  String tutorImageAnalysisUserPrompt(String imageData) {
+    return 'The student submitted handwritten work / an image. Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n$imageData';
+  }
+
+  @override
+  String get tutorImageAnalysisSystemPrompt =>
+      'The student submitted this work. Analyze and provide feedback.';
 }

@@ -7,16 +7,10 @@ import 'package:studyking/features/planner/data/models/pending_action_model.dart
 import 'package:studyking/core/data/models/session_model.dart';
 import '../../../core/services/plan_adapter.dart';
 import '../services/planner_service.dart';
-import '../services/action_executor.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
 final plannerServiceProvider = Provider<PlannerService>((ref) {
   return PlannerService();
-});
-
-final actionExecutorProvider = Provider<ActionExecutor>((ref) {
-  final plannerService = ref.watch(plannerServiceProvider);
-  return ActionExecutor(actionPlanner: plannerService);
 });
 
 class PlanProgressData {

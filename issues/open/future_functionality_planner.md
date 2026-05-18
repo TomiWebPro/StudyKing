@@ -1,258 +1,295 @@
-# Future Functionality Planner — Vision Gap Analysis (Round 2)
+# Future Functionality Planner — Vision Gap Analysis (Round 3)
 
 **Generated:** 2026-05-18
-**Source:** Re-analysis of `agent_must_read.md` vision against current `lib/` implementation, validating/completing the previous analysis at `issues/completed/future_functionality_planner.md`
+**Source:** Re-validation of `agent_must_read.md` vision against `lib/` implementation, building on `issues/completed/future_functionality_planner.md` (Rounds 1 & 2).
 
-> **IMPORTANT**: The previous analysis (Round 1, completed) contained several inaccurate claims because the codebase had already been improved. This Round 2 reflects the *actual* current state after cross-checking every claimed gap against real file contents.
+---
+
+## Round 2 Resolutions (items now fixed)
+
+| Old Ref | Issue | Status | Evidence |
+|---------|-------|--------|----------|
+| B2 | Agent framework disconnected from codebase | ✅ Fixed | `llm_agent_providers.dart` wires 6 tools + `LlmAgent`. `MentorService` accepts `LlmAgent?` param (line 65) and uses it at line 141/149 when non-null. |
+| B1 partially | Lesson block rendering per type | ✅ Fixed | `lesson_block_card.dart` now has switch on `LessonBlockType` with interactive quiz, exercise, fullscreen slide, themed example/summary cards. |
+| M5 | `LlmTaskManagerScreen` reads core directly | ✅ Fixed | Screen reads `llmTaskServiceProvider` from feature layer (line 27, 66). |
+| m1 | Dashboard "Next Up" card missing | ✅ Fixed | `next_up_card.dart` shows upcoming lessons, due reviews, weak topics. |
+| m2 | `TutorService.startLesson()` doesn't create `Lesson` | ✅ Fixed | `tutor_service.dart` line 122-134 creates `Lesson` with blocks, and `endLesson()` updates it with session notes (line 217-242). |
+| M2 | Engagement scheduler hard-wired deps | ✅ Verified | All sub-providers inject through Riverpod `ref.watch()` — `engagementMasteryServiceProvider`, `engagementPlannerServiceProvider`, etc. |
+| M1 | Voice siloed in teaching | ✅ Major progress | `VoiceService` extracted to `core/services/voice_service.dart`. Used by mentor screen (line 402) and practice session screen (line 485). Legacy `VoiceController` in teaching is now a 28-line thin wrapper. |
 
 ---
 
 ## BLOCKER — App crashes or user cannot proceed
 
-### B1. Lesson system has no content creation pipeline — LLM must drive lesson materials
+### B1. `LlmAgent` provider exists but is NEVER passed to `MentorService` — agent framework is dead code in production
 
-**Context:** The vision describes lessons as "structured, visual, slide-like, or interactive" with LLM agents preparing materials. The current state:
+**Context:** The agent framework (6 production AgentTool implementations, `ToolRegistry`, `AgentMemoryStore`, `IdleExecutor`, `llmAgentProvider`) is fully wired at the provider level but never actually connected to any UI or service.
 
-| Aspect | Current Reality | Gap |
-|--------|----------------|-----|
-| **Lesson models** (`lesson_model.dart`, `lesson_block_model.dart`) | Full data models with 6 block types (text, example, exercise, slide, quiz, summary) | ✅ Complete |
-| **Lesson rendering** (`lesson_block_card.dart`) | Plain `Card` with icon + title + content text for ALL block types | ❌ Slides not full-screen, quizzes not interactive, exercises not runnable |
-| **Lesson creation** | No service creates `Lesson` objects with blocks | ❌ `TutorService.startLesson()` creates `TutorSession` + `Session` but not a `Lesson` |
-| **LessonSessionService** | Query-only (114 lines): getLessons, getCompletionRate, getProgressBySubject | ❌ No lesson content creation |
-| **Lesson ↔ Session decoupling** | `Lesson` model has blocks/content; `Session` has timing — but no code bridges them | ❌ `scheduleLesson()` creates Sessions only |
-| **Background lesson prep** | `IdleExecutor` exists (104 lines) but unused | ❌ No queued background generation |
-| **Calendar scheduling UI** | `calendar_view_widget.dart` (219 lines, month grid) + `lesson_booking_sheet.dart` (299 lines, date/time/conflict checks) exist | ✅ Calendar present but not on dashboard — only via planner nav |
+**Evidence:**
+- `llm_agent_providers.dart:41-55` defines `llmAgentProvider` that creates a fully configured `LlmAgent` with all 6 tools
+- `MentorService` constructor (line 65, 83) accepts optional `LlmAgent? agent` parameter
+- `MentorService.sendMessage()` (line 141) checks `if (_agent != null)` and uses agent loop when set
+- But `MentorScreen._initializeMentor()` (lines 73-84) creates `MentorService` **without passing `agent`** — the parameter is simply omitted
+
+```dart
+// mentor_screen.dart:73-84 — NO agent passed
+_mentorService = MentorService(
+  database: ..., llmService: ..., masteryService: ..., progressTracker: ...,
+  plannerService: ..., nudgeRepo: ..., sessionRepository: ..., modelId: ...,
+  studentId: studentId, localeName: l10n.localeName,
+  // agent: NOT PROVIDED
+);
+```
+
+**Impact:** `_agent` is always `null` at runtime. The `LlmAgent.chat()` path is dead code. The 6 tools (`ScheduleLessonTool`, `SearchQuestionsTool`, `GetStudentStatsTool`, `GenerateLessonBlocksTool`, `CreatePlanTool`, `GetWeakTopicsTool`) are never invoked. Cross-session memory (`AgentMemoryStore`) is never persisted. `IdleExecutor` queue is never populated. This is the single largest gap between architecture and reality.
 
 **Affected files:**
-- `lib/features/lessons/services/lesson_service.dart` — query-only, no creation
-- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` — renders all block types as plain text cards
-- `lib/features/lessons/presentation/lesson_detail_screen.dart` — static display, "AI Tutor" button navigates to TutorScreen without lesson plan continuity
-- `lib/features/teaching/services/tutor_service.dart` — creates `TutorSession` not `Lesson`
-- `lib/features/planner/services/planner_service.dart:scheduleLesson()` — creates Sessions, not Lessons
-- `lib/core/services/llm_agent/idle_executor.dart` — exists but no task ever enqueued
+- `lib/features/mentor/presentation/mentor_screen.dart:73-84` — must pass `agent` to `MentorService`
+- `lib/core/providers/llm_agent_providers.dart:41` — `llmAgentProvider` exists but is never read by any screen
+- `lib/features/mentor/services/mentor_service.dart:141-167` — dead agent path
 
 **Acceptance criteria:**
-1. New `LessonTemplateService` (or extend `PlannerService`) creates `Lesson` objects with LLM-generated `LessonBlock` content when requested
-2. Lesson blocks render differently per type: slide blocks show presentation-style full-screen, quiz blocks show interactive questions, exercise blocks show input area with LLM evaluation
-3. Background LLM task (via `IdleExecutor`) generates lesson materials ahead of scheduled time
-4. Dashboard shows upcoming scheduled lessons (from planner nav or inline mini-calendar)
-5. `TutorService.startLesson()` creates/links to a `Lesson` record; completed tutor sessions update `Lesson` blocks with session recording
+1. `MentorScreen._initializeMentor()` reads `ref.read(llmAgentProvider(studentId))` and passes the result as `agent:` to `MentorService`
+2. When `_agent != null`, mentor chat uses `_agent.chat()` which invokes tool calls via `AgentLoop.run()`
+3. Agent memory persists across sessions (test: conversation survives app restart via Hive-backed `AgentMemoryStore`)
+4. Tools execute and return results visible in mentor responses (test: `ScheduleLessonTool` called when student says "schedule a physics lesson")
+5. `IdleExecutor` has at least one enqueued background task (post-mentor adherence check)
 
 ---
 
-### B2. LLM Agent framework is architecturally complete but zero tools are implemented — agent system is dead code
+### B2. `LessonAgentService` provider exists but `generateLesson()` / `generateLessonFromSource()` are never called
 
-**Context:** The vision requires agents with tools, memory, and idle-time execution. The beta user explicitly demands "agents must have long term memory not each new session is fresh now and toolless."
+**Context:** The `LessonAgentService` (306 lines in `lesson_agent_service.dart`) is a complete LLM-powered lesson content generator. It creates `Lesson` objects with `LessonBlock` arrays from LLM responses, handles JSON and text parsing, and has both topic-based and source-material-based generation. The provider (`lessonAgentServiceProvider`) is registered in `lesson_providers.dart`. But no production code calls `generateLesson()` or `generateLessonFromSource()`.
 
-| Component | Location | Status |
-|-----------|----------|--------|
-| `LlmAgent` class | `lib/core/services/llm_agent/llm_agent.dart` (97 lines) | ✅ Implemented |
-| `AgentLoop` (ReAct loop) | `lib/core/services/llm_agent/agent_loop.dart` (181 lines) | ✅ Implemented — 10-iteration loop, parses `TOOL_CALL:` / `ARGUMENTS:` text protocol |
-| `ToolRegistry` | `lib/core/services/llm_agent/agent_tool.dart` (27 lines) | ✅ Implemented |
-| `AgentMemoryStore` | `lib/core/services/llm_agent/agent_memory.dart` (78 lines) | ✅ Hive-backed, cross-session facts, 100-summary cap |
-| `IdleExecutor` | `lib/core/services/llm_agent/idle_executor.dart` (104 lines) | ✅ Background task queue, idle monitoring (30s interval) |
-| `AgentFactory.create()` | `lib/core/services/llm_agent/llm_agent.dart` (61-97) | ✅ Assembles all sub-components |
-| **Concrete AgentTool implementations** | ANYWHERE in `lib/` | ❌ **ZERO** — only `_SearchTool` and `_TestTool` exist in `test/` |
-| **Feature using LlmAgent** | ANY `lib/` file | ❌ **ZERO** — `grep "LlmAgent\|AgentFactory" lib/` only matches the definition itself |
+**Evidence:**
+- `lesson_agent_service.dart:31-67` — `generateLesson()` implementation (complete, LLM-driven)
+- `lesson_agent_service.dart:267-305` — `generateLessonFromSource()` implementation (complete)
+- `lessonAgentServiceProvider` is only referenced in `llm_agent_providers.dart:23` (used as dependency for `GenerateLessonBlocksTool`)
+- Zero calls to `generateLesson()` or `generateLessonFromSource()` anywhere in `lib/`
 
-The framework is ready to go but completely disconnected from the rest of the codebase:
+**Impact:** The vision requires "AI-generated lesson materials prepared ahead of scheduled time." Currently:
+- `PlannerService.scheduleLesson()` creates `Session` objects (timing records) but not `Lesson` objects
+- `LessonAgentService.generateLesson()` is the only code path that creates LLM-powered `Lesson` with blocks
+- The `GenerateLessonBlocksTool` (in the agent framework) wraps `lessonAgentService.generateLesson()` — but since the agent is never connected (B1), the tool also never fires
+- Post-ingestion lesson generation from `ContentPipeline` is not implemented
 
-- `MentorService` (693 lines) builds its own context and does single-turn chat via raw `LlmService.chatStream()` — no agent loop, no tools, no cross-session memory (`ConversationMemory` is a turn buffer, not agent memory)
-- `ConversationManager` (374 lines) is a phase state machine for teaching — no tool use
-- `TutorService` (259 lines) orchestrates lessons directly — no agent abstraction
-- No feature registers tools, creates an agent, or calls `AgentFactory.create()`
-- The `IdleExecutor` queue is always empty because nobody calls `enqueueBackgroundTask()`
+**Affected files:**
+- `lib/features/lessons/services/lesson_agent_service.dart` — complete but unused
+- `lib/features/lessons/providers/lesson_providers.dart:21-29` — `lessonAgentServiceProvider` registered but never consumed by UI
+- `lib/features/planner/services/planner_service.dart` — `scheduleLesson()` only creates Sessions, not Lessons
+- `lib/features/ingestion/services/content_pipeline.dart` — no call to `generateLessonFromSource()` in `processFullPipeline()`
 
 **Acceptance criteria:**
-1. Implement 4-6 production `AgentTool` subclasses: `ScheduleLessonTool`, `SearchQuestionsTool`, `GetStudentStatsTool`, `GenerateLessonBlocksTool`, `CreatePlanTool`, `GetWeakTopicsTool`
-2. Register tools with `ToolRegistry` via a new `llmAgentProvider` in core providers
-3. Refactor `MentorService` to use `LlmAgent` internally (keep existing API surface for backward compatibility)
-4. Refactor `ConversationManager` to optionally use `LlmAgent` (teaching can skip tools but mentor cannot)
-5. Wire `IdleExecutor` to background tasks: post-lesson plan adherence update, next-lesson material pre-generation
-6. Integration test proves: user message → LLM → tool call → tool execution → follow-up LLM response
+1. When a lesson is scheduled via planner, `LessonAgentService.generateLesson()` is called and a `Lesson` record with blocks is created (or linked to the `Session`)
+2. User can manually trigger lesson generation from topic detail or subject topic list — lesson appears in lesson list
+3. Post-ingestion, `ContentPipeline.processFullPipeline()` optionally calls `generateLessonFromSource()` to create lesson materials from uploaded content
+4. `GenerateLessonBlocksTool` (agent tool) actually generates lessons when called through the agent loop (requires B1 fix first)
 
 ---
 
 ## MAJOR — Feature is broken or misleading
 
-### M1. Voice interaction is siloed in teaching — must be available in mentor and across the app
+### M1. Focus Mode still has no inline Q&A — all practice navigates away
 
-**Context:** Vision says "voice conversation, speech-to-text and text-to-speech" are core interaction modes. Verified: `VoiceController` (196 lines) + `VoiceBar` (154 lines widget + CustomPaint waveform) exist only in `teaching/`. Mentor screen, practice sessions, and question screens have no voice input.
+**Context:** The beta user complaint is only partially addressed. The `FocusTimerScreen` (829 lines) has a study-hub layout with subject practice cards, due counts, quick/weak/spaced practice buttons, and a timer. BUT every practice action calls `Navigator.push()` to `PracticeSessionScreen` — no inline Q&A within the focus screen itself.
+
+**Evidence:**
+- `focus_timer_screen.dart:286-288` — `_startQuickPractice()` calls `Navigator.pushNamed(context, AppRoutes.practiceSession)`
+- `focus_timer_screen.dart:293-323` — `_startWeakAreasPractice()` calls `Navigator.pushNamed(context, AppRoutes.practiceSession)`
+- `focus_timer_screen.dart:343-354` — spaced repetition practice also navigates away
+- No inline question widget exists in the focus mode codebase
+- `FocusPracticeService` (84 lines) provides due questions but only for count display — not for inline answering
+- Session continuity is broken: accuracy from `PracticeSessionScreen` doesn't flow back into the focus session
 
 **Affected files:**
-- `lib/features/teaching/services/voice_controller.dart` — teaching-only (196 lines, locale-aware STT/TTS)
-- `lib/features/teaching/presentation/widgets/voice_bar.dart` — only in tutor screen
-- `lib/features/mentor/presentation/mentor_screen.dart` — no voice button
-- `lib/features/practice/presentation/screens/practice_session_screen.dart` — no voice input for typed answers
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart` — all practice actions navigate away
+- `lib/features/focus_mode/services/focus_practice_service.dart` — provides questions but no inline answer tracking
+- `lib/features/focus_mode/data/focus_session_model.dart` — model exists but doesn't track per-question accuracy inline
 
 **Acceptance criteria:**
-1. Extract `VoiceController` to `lib/core/services/voice_service.dart` as a singleton provider
-2. Mentor screen gets a mic button for STT question input and TTS response reading
-3. Practice session screen gets optional voice answer input for typed/text questions
-4. Web: voice button shows with "not available" tooltip instead of crashing (already handled in VoiceController? check)
+1. Focus screen has an optional inline practice mode: when selected, questions appear directly in the focus screen (not navigation)
+2. During inline practice, the timer continues running and time is tracked per question
+3. After session ends, per-subject accuracy is calculated and stored (correct count, total count, accuracy %)
+4. Session summary card shows: questions answered, accuracy, time spent, mastery deltas
+5. Existing "navigate to PracticeSession" path remains as full-practice alternative
 
 ---
 
-### M2. Engagement scheduler has hard-wired dependencies that block test overrides
+### M2. No post-ingestion lesson generation — `ContentPipeline` generates questions but not lessons
 
-**Context:** `engagementSchedulerProvider` (`app_providers.dart:329-344`) injects most dependencies via `ref.watch(...)` but some sub-providers create instances via `new`:
+**Context:** The vision says: "The system should intelligently process, organize, classify, validate, and integrate this material into the broader learning system." `ContentPipeline.processFullPipeline()` (233 lines) extracts text, classifies topics, generates summaries, generates questions, validates them — but does NOT generate lesson materials from the ingested content.
 
-| Dependency | Provider | Pattern |
-|-----------|----------|---------|
-| `tracker` | `engagementTrackerProvider` | ✅ `ref.watch()` |
-| `masteryService` | `engagementMasteryServiceProvider` | ❌ `MasteryGraphService()` (new) |
-| `notificationService` | `notificationServiceProvider` | ✅ `ref.watch()` |
-| `nudgeRepository` | `engagementNudgeRepoProvider` | ❌ `EngagementNudgeRepository()` (new) |
-| `adherenceRepository` | `engagementAdherenceRepoProvider` | ❌ `PlanAdherenceRepository()` (new) |
-| `planAdapter` | `planAdapterProvider` | ❌ `PlanAdapter()` (new) |
-| `sessionRepository` | `databaseProvider.sessionRepository` | ✅ `ref.watch()` |
-| `plannerService` | `engagementPlannerServiceProvider` | ❌ `PlannerService()` (new) |
+**Evidence:**
+- `content_pipeline.dart:90-233` — `processFullPipeline()` has stages: extracting, classifying, summarizing, question generation, validation — no lesson generation stage
+- `content_pipeline.dart:179-212` — question generation block has no companion lesson generation block
+- `lesson_agent_service.dart:267-305` — `generateLessonFromSource()` exists and is specifically designed for this, but is never called
+- Upload screen (`upload_screen.dart`) has no "Generate lesson from this material" option
 
-Five sub-providers use `Type()` `new` constructors, making them un-overridable in `ProviderScope` tests. Also `engagementTrackerProvider`'s `StudyProgressTracker` has similar pattern.
-
-**Affected file:**
-- `lib/core/providers/app_providers.dart:301-344`
+**Affected files:**
+- `lib/features/ingestion/services/content_pipeline.dart` — no lesson generation stage
+- `lib/features/lessons/services/lesson_agent_service.dart:267-305` — `generateLessonFromSource()` method exists but no consumer calls it
+- `lib/features/ingestion/presentation/upload_screen.dart` — no lesson generation toggle
 
 **Acceptance criteria:**
-1. All 5 sub-providers inject their own dependencies through Riverpod providers instead of `new`
-2. A widget test overrides `engagementNudgeRepoProvider` with `FakeEngagementNudgeRepository` and proves `EngagementScheduler` uses it
-3. Similarly for `StudyProgressTracker` deps
+1. `ContentPipeline.processFullPipeline()` gets a new `generateLessons` parameter
+2. When `generateLessons = true`, after question generation, the pipeline calls `LessonAgentService.generateLessonFromSource()` to create `Lesson` with blocks
+3. Upload screen shows "Generate lesson from this material" toggle
+4. Generated lessons appear in the lesson list for the matched subject/topic
 
 ---
 
-### M3. Focus mode is a split timer/practice hub — practice integration is thin (navigates away, no inline Q&A)
+### M3. No topic dependency visualizer — prerequisite management is checkbox-list only
 
-**Context:** The beta user complained "current focus mode is fucking useless, wanted a place to practice questions from different subjects." This was **partially addressed** — the screen now has:
-- Subject practice cards with due question counts ✅
-- Quick Practice (navigates to `PracticeSessionScreen`) ✅  
-- Weak Areas Practice (fetches weak topics → navigates) ✅
-- Spaced Repetition practice ✅
-- Subject selection and due count display ✅
-- `FocusPracticeService` with `getDueQuestions()` ✅
-- `FocusSessionModel` ✅
+**Context:** Topic dependency management exists (`TopicDependency`, `TopicDependencyDialog`, `subject_topics_tab.dart` shows prereq counts) but there is NO graphical visualization of topic dependencies.
 
-BUT the core experience is still a **timer app that navigates away** for actual question practice. `PracticeSessionScreen` is a separate screen — focus mode doesn't provide inline Q&A. The timer persists during practice but the questions are answered in a different context. There's no continuity (questions answered/accuracy tracking doesn't flow back into focus session).
+**Evidence:**
+- `topic_dependency_dialog.dart` — uses `CheckboxListTile` for prereq selection (no graph/tree)
+- `subject_topics_tab.dart:330-335` — shows prereq count as label text only
+- `topic_repository.dart` has `getRootTopics()` and `addParent()` but no `getDependencyGraph()` or topological sort
+- No widget renders a directed graph, tree view, or dependency arrows
 
 **Affected files:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart` (829 lines) — practice hub UI exists but all practice actions `Navigator.push` away
-- `lib/features/focus_mode/services/focus_practice_service.dart` (84 lines) — basic due-question query but used only to show counts, not to drive inline Q&A
-- Focus session doesn't track per-question accuracy from PracticeSessionScreen
+- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart` — list-based, no visual graph
+- `lib/features/subjects/presentation/widgets/subject_topics_tab.dart` — shows prereq counts as text only
+- `lib/features/subjects/data/repositories/topic_repository.dart` — no graph/topological query methods
 
 **Acceptance criteria:**
-1. Focus Mode offers an optional **inline practice mode** where questions appear directly in the focus screen (not just navigating away)
-2. When a question is answered inline, the session timer continues, accuracy is tracked per-subject
-3. Session summary shows: questions answered, accuracy, time spent, mastery deltas per subject
-4. The existing "navigate to PracticeSession" remains as alternative for full practice experience
-
----
-
-### M4. No topic dependency visualizer — prerequisite management is hidden in dialog UI
-
-**Context:** `subject_topics_tab.dart` (405 lines) has full CRUD for topics including prerequisite selection. But there's no visual graph/flow showing how topics connect. Vision mentions "prerequisite enforcement" — currently you can set prerequisites in the edit dialog but there's no visualization of topic dependencies or topological ordering.
-
-**Affected files:**
-- `lib/features/subjects/presentation/widgets/subject_topics_tab.dart` — dependency management via dialog selectors only
-- `lib/features/subjects/presentation/dialogs/topic_edit_dialog.dart` — prerequisite picker (list, not graph)
-- `lib/features/subjects/data/repositories/topic_repository.dart` — has `getRootTopics()`, `addParent()` but no topological query
-
-**Acceptance criteria:**
-1. Topic list shows dependency arrows or indentation indicating prerequisite chains
-2. Simple directed-graph visualization (or tree view) accessible from subject detail
-3. When deleting a topic, warn if downstream topics depend on it
+1. Topics tab shows indentation or arrow indicators showing prerequisite chains
+2. Simple directed-graph or tree view widget accessible from subject detail
+3. When deleting a topic, app warns if downstream topics depend on it
 4. Topic ordering respects prerequisites for practice/lesson flows
+5. Add `getDependencyGraph()` / `getTopologicalOrder()` methods to repository
 
 ---
 
-### M5. `LlmTaskManagerScreen` bypasses feature-layer `llmTaskServiceProvider` — reads core directly
+### M4. `VoiceController` in teaching is a redundant thin wrapper — should be deprecated
 
-**Context:** The `llm_task_tasks/` feature has a proper `LlmTaskService` and `llm_task_providers.dart`, but the screen reads `llmTaskManagerProvider` directly from core (`lib/core/providers/llm_providers.dart`) instead of using `llmTaskServiceProvider`. Also `llm_tasks/data/` directory is empty (no feature-specific task model).
+**Context:** `VoiceService` in `core/services/voice_service.dart` now provides the complete STT/TTS API. The teaching feature's `VoiceController` (28 lines) is a pure wrapper with zero added logic. The `VoiceBar` widget imports `VoiceController`.
 
 **Affected files:**
-- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:25,39` — reads `llmTaskManagerProvider` directly
-- `lib/features/llm_tasks/data/` — empty directory
+- `lib/features/teaching/services/voice_controller.dart` — redundant (delegates everything to `VoiceService`)
+- `lib/features/teaching/presentation/widgets/voice_bar.dart` — imports `voice_controller.dart` instead of `voice_service.dart`
+- `lib/features/teaching/providers/teaching_providers.dart` — wires `VoiceController`
 
 **Acceptance criteria:**
-1. Screen reads from `llmTaskServiceProvider` instead of `llmTaskManagerProvider`
-2. Empty `data/` directory either populated or removed
+1. Deprecate `VoiceController` — all consumers use `VoiceService` directly
+2. `VoiceBar` accepts `VoiceService` instead of `VoiceController`
+3. Remove `VoiceController` entirely after migration
+
+---
+
+### M5. No background lesson prep — `IdleExecutor` queue is always empty
+
+**Context:** `IdleExecutor` (104 lines) exists and is part of the `LlmAgent` class (via `_idleExecutor`). It monitors idle periods (30s) and processes a task queue. But nothing ever calls `enqueueBackgroundTask()`.
+
+**Evidence:**
+- `llm_agent.dart:48-50` — `enqueueBackgroundTask()` method exists and calls `_idleExecutor.enqueue()`
+- No code in `lib/` calls `enqueueBackgroundTask()`
+- `IdleExecutor` is only instantiated inside `AgentFactory.create()` which is only called by `llmAgentProvider` — which is never consumed (B1)
+
+**Affected files:**
+- `lib/core/services/llm_agent/idle_executor.dart` — functional but never populated
+- `lib/core/services/llm_agent/llm_agent.dart:48-50` — `enqueueBackgroundTask()` never called
+
+**Acceptance criteria:**
+1. Wire background tasks:
+   - **Post-lesson**: after tutor session ends, enqueue plan adherence update
+   - **Pre-lesson**: evening before a scheduled lesson, enqueue lesson material pre-generation via `LessonAgentService.generateLesson()`
+   - **Post-practice**: after practice session, enqueue weak-topic reanalysis
+2. Tasks execute during idle periods (30s of inactivity)
+3. Task results (or failures) are visible in `LlmTaskManagerScreen`
 
 ---
 
 ## MINOR — Code quality, UX friction, incomplete polish
 
-### m1. Dashboard has no "Next Up" / recommended action card for returning users
+### m1. No handwriting/ink recognition — canvas is pure drawing with no interpretation
 
-The `empty_dashboard_checklist.dart` widget guides new users, but for returning users there's no "Recommended next action" card. The `ReadinessScorer` (148 lines) and `RemainingWorkloadEstimator` exist but aren't surfaced on the dashboard.
-
-**Affected files:**
-- `lib/features/dashboard/presentation/dashboard_screen.dart` (475 lines) — no "Next Up" card
-- `lib/features/practice/services/readiness_scorer.dart` — exists but not used on dashboard
+`canvas_drawing_widget.dart` (289 lines) exists for canvas-type questions. There is no handwriting recognition, ink-to-text, or LLM-based interpretation of drawn work (except the `TutorScreen.processImage()` method which sends base64 screenshots to LLM — not truly canvas-based).
 
 **Acceptance criteria:**
-1. Dashboard shows a "Next Up" card with: upcoming scheduled lesson, due reviews count, recommended weak-area topic
-2. Uses `ReadinessScorer` data when available
+1. Optional "Recognize handwriting" button on canvas question that sends drawn strokes to LLM for interpretation
+2. Recognized text is shown and can be confirmed/edited before submitting
 
-### m2. `TutorService.startLesson()` doesn't create a `Lesson` record
+### m2. No dedicated ASR — transcription relies entirely on LLM
 
-When `TutorService` starts a lesson, it creates `TutorSession` and `Session` but not a `Lesson` model. The `lessons/` feature remains disconnected from actual teaching. After completion, blocks aren't saved as `Lesson` content.
-
-**Acceptance criteria:**
-1. When `TutorService` starts a lesson, it creates/updates a `Lesson` record with the generated lesson plan blocks
-2. `lesson_detail_screen.dart` shows live tutor session link when lesson is in progress
-3. Completed tutor sessions update `Lesson` blocks from the lesson recording
-
-### m3. No post-ingestion lesson generation
-
-When a source document is ingested via `ContentPipeline`, no `Lesson` is created from the summarized/extracted content. The pipeline generates questions but not lesson blocks.
+`TranscriptionExtractor` wraps `LlmService` for audio/video transcription. No dedicated speech-to-text engine (Whisper, Google Speech, etc.) is available. Impact: high latency, cost, and no offline functionality for transcription.
 
 **Acceptance criteria:**
-1. Post-ingestion, `ContentPipeline` optionally calls a lesson generation service to create `Lesson` with blocks
-2. User sees "Generate lesson from this material" toggle in upload screen
+1. Option to use local ASR (e.g. whisper.cpp via FFI) for audio transcription
+2. When local ASR is configured, transcription runs offline without LLM cost
 
-### m4. No handwriting/ink recognition — canvas is pure input with no interpretation
+### m3. Engagement notifications are in-app only — no push notification support
 
-The canvas drawing widget (`canvas_drawing_widget.dart`, 289 lines) exists for typed-input questions only (drawing answers). There's no handwriting recognition, no ink-to-text, no LLM-based interpretation of handwritten work outside of the `TutorScreen.processImage()` method which sends base64 images to the LLM.
+`NotificationService` shows local notifications via FlutterLocalNotificationsPlugin. There is no remote push notification infrastructure (FCM, APNs). Proactive engagement only works when the app is open.
 
-### m5. No video/audio dedicated ASR — transcription relies on LLM capabilities
+**Acceptance criteria:**
+1. Evaluate if push notifications are needed for the target deployment model (local-first suggests not critical)
+2. If local-only is intentional, ensure notification display works reliably when app is backgrounded
 
-The ingestion pipeline accepts video/audio files and routes them through `TranscriptionExtractor` which wraps `LlmService`. There's no dedicated ASR engine (Whisper, Google Speech, etc.). Content is stored but real audio/video-to-text conversion depends entirely on the LLM's multimodal capabilities.
+### m4. `MentorService` is created without a Riverpod provider — not overridable in tests
+
+`MentorService` is instantiated directly in `MentorScreen._initializeMentor()` with `new`. There is no `mentorServiceProvider`. Test overrides must mock the entire screen or manually construct `MentorService` with fakes.
+
+**Acceptance criteria:**
+1. Create `mentorServiceProvider` in `mentor_providers.dart`
+2. `MentorScreen` reads `mentorServiceProvider` instead of constructing manually
+3. Existing mentor tests continue to pass (may need minor refactors)
 
 ---
 
 ## Beta User Issue Resolution Tracking
 
-The following files in `issues/further_issues/open/` represent real user complaints raised during beta testing. They must be **resolved and moved** to `issues/further_issues/completed/`:
-
 | File | Priority | Status | Notes |
 |------|----------|--------|-------|
-| `issues/further_issues/open/lessons.md` | P0 | Open | Addressed by B1 + B2 above — agents with tools + memory, lesson content pipeline, calendar scheduling, background prep |
-| `issues/further_issues/open/focus_mode.md` | P1 | Partially addressed | Addressed by M3 above — practice hub exists via navigation, but inline Q&A still missing |
+| `issues/further_issues/open/lessons.md` | P0 | **Addressed by B1 + B2** | LLM-driven lesson content creation pipeline + agent framework with tools + memory resolved after fixing B1 and B2 |
+| `issues/further_issues/open/focus_mode.md` | P1 | **Addressed by M1** | Focus Mode inline Q&A is the only remaining gap |
 
-**Process:**
-1. Implement the acceptance criteria in this document
-2. When `lessons.md` criteria are met → move to `issues/further_issues/completed/lessons.md`
-3. When `focus_mode.md` criteria are met → move to `issues/further_issues/completed/focus_mode.md`
+**Process for closing:**
+1. Fix B1 → agent powers tools + memory → addresses `lessons.md` tool-less/memory-less complaint
+2. Fix B2 → lesson generation pipeline → addresses `lessons.md` "lesson is fucking useless" complaint  
+3. Fix M1 → inline practice in focus mode → addresses `focus_mode.md` complaint
+4. When criteria for each are met → move `.md` to `issues/further_issues/completed/`
 
 ---
 
 ## Immediate Priority Order (Next Development Phase)
 
-| Priority | Issue | Effort | Impact |
-|----------|-------|--------|--------|
-| P0 | **B2: Implement 4-6 concrete AgentTool classes + wire LlmAgent into MentorService** — makes the existing agent framework actually useful | High | Transformative (unblocks everything) |
-| P1 | **B1: Lesson content creation pipeline** — generate Lesson objects with LLM blocks, proper per-type rendering, background prep via IdleExecutor | High | High (beta user demand) |
-| P2 | **M1: Voice everywhere** — extract VoiceController to core, add to mentor and practice | Medium | Medium |
-| P3 | **M3: Focus Mode inline Q&A** — add inline practice directly in focus screen, keep timer, track accuracy | Medium | High (beta user demand) |
-| P4 | **M2: Engagement scheduler dependency wiring** — make all sub-providers testable | Low | Medium |
-| P5 | **M4: Topic dependency visualizer** — prerequisite graph/view on subject detail | Low | Medium |
-| P6 | **m1-m3: Dashboard recommendations, Lesson↔Tutor integration, ingestion→lesson pipeline** | Low-Medium | Medium |
+| Priority | Issue | Effort | Impact | Dependencies |
+|----------|-------|--------|--------|-------------|
+| P0 | **B1: Pass `llmAgent` to `MentorService`** — the single line that unlocks the entire agent framework | Very Low (1 line of code change + testing) | Transformative — activates 6 tools, cross-session memory, idle executor | None — everything is already wired |
+| P1 | **B2: Wire `LessonAgentService.generateLesson()` into lesson scheduling and content pipeline** | Medium | High — creates actual LLM-driven lesson content | B1 (for agent-based generation via tool) |
+| P2 | **M1: Focus Mode inline Q&A** — add inline practice directly in focus screen | Medium | High — addresses beta user complaint | None |
+| P3 | **M5: Background lesson prep via IdleExecutor** | Medium | Medium — enables proactive content generation | B1 (IdleExecutor is part of LlmAgent) |
+| P4 | **M3: Topic dependency visualizer** — directed graph / dependency tree | Medium | Medium — prerequisite visualization | None |
+| P5 | **M2: Post-ingestion lesson generation** — `generateLessonFromSource()` in content pipeline | Low | Medium — ingestion produces lessons, not just questions | B2 (LessonAgentService already exists) |
+| P6 | **M4: Deprecate redundant `VoiceController`** | Low | Low — code cleanup | None |
+| P7 | **m4: Create `mentorServiceProvider`** for testability | Low | Low — test DX improvement | None |
+| P8 | **m1/m2: Handwriting recognition + dedicated ASR** | High | Low-Medium | None (platform-specific work) |
+
+---
+
+## Summary of Round 3 Changes
+
+| Category | Resolved (R2→R3) | New/Renamed | Still Open |
+|----------|------------------|-------------|------------|
+| BLOCKER | B2 (agent wired), B1 partially (lesson blocks) | **B1 (agent not passed to MentorService)** | 1 |
+| | | **B2 (LessonAgentService unused)** | 1 |
+| MAJOR | M5 (LLM task screen), M2 (scheduler deps) | M1 (no inline Q&A in focus — renamed from old M3) | 1 |
+| | | M2 (no post-ingestion lesson gen — refined from old m3) | 1 |
+| | | M3 (no topic visualizer — refined from old M4) | 1 |
+| | | M4 (redundant VoiceController — new) | 1 |
+| | | M5 (IdleExecutor empty — refined from old B2 sub-item) | 1 |
+| MINOR | m1 (NextUp card), m2 (Lesson create) | m1-m4 as listed above | 4 |
+| **Total** | **7 issues resolved** | **9 issues open** | **9** |
 
 ---
 
 ## Cross-References
 
-- `issues/further_issues/open/lessons.md` — beta user lesson complaint (P0-P1)
-- `issues/further_issues/open/focus_mode.md` — beta user focus mode complaint (P3)
-- `issues/open/code_refactor_master.md` — hard-wired scheduler (B2), session analytics
-- `issues/open/dry_run_usability_validator.md` — syllabus→topic pipeline, prerequisite enforcement
-- `issues/open/test_master.md` — missing behavioral assertions
-- `issues/open/ui_ux_master.md` — accessibility, error states
+- `issues/further_issues/open/lessons.md` — beta user lesson complaint (resolved by B1+B2)
+- `issues/further_issues/open/focus_mode.md` — beta user focus mode complaint (resolved by M1)
+- `issues/open/code_refactor_master.md` — redundant VoiceController (M4), mentor service provider (m4)
+- `issues/open/dry_run_usability_validator.md` — topic dependency visualizer (M3)
+- `issues/open/test_master.md` — missing behavioral assertions for provider tests
+- `issues/completed/future_functionality_planner.md` — Round 2 analysis (baseline for this round)

@@ -75,5 +75,26 @@ void main() {
       expect(storage['onboarding_completed'], isNull);
       expect(storage['onboarding_dont_show_again'], isTrue);
     });
+
+    test('handles storage errors gracefully', () async {
+      OnboardingService.setTestStorage(null);
+      await expectLater(
+        OnboardingService.markCompleted(),
+        throwsException,
+      );
+    });
+
+    test('recovers after storage error', () async {
+      OnboardingService.setTestStorage(null);
+      await expectLater(
+        OnboardingService.markCompleted(),
+        throwsException,
+      );
+
+      final recovered = <String, dynamic>{};
+      OnboardingService.setTestStorage(recovered);
+      await OnboardingService.markCompleted();
+      expect(recovered['onboarding_completed'], isTrue);
+    });
   });
 }

@@ -4,12 +4,16 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
 class SessionRepository extends Repository<Session>
     implements SessionQueryContract {
   final Logger _logger = const Logger('SessionRepository');
+  final Clock _clock;
+
+  SessionRepository({Clock? clock}) : _clock = clock ?? SystemClock();
 
   @override
   Future<void> init() async {
@@ -105,7 +109,7 @@ class SessionRepository extends Repository<Session>
 
   @override
   Future<Result<int>> getTodayDurationMs() async {
-    final todayResult = await getByDate(DateTime.now());
+    final todayResult = await getByDate(_clock.now());
     if (todayResult.isFailure) return Result.failure(todayResult.error);
     return Result.success(todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
   }
@@ -149,20 +153,20 @@ class SessionRepository extends Repository<Session>
   }
 
   Future<Result<int>> getTodaySessionCount() async {
-    final todayResult = await getByDate(DateTime.now());
+    final todayResult = await getByDate(_clock.now());
     if (todayResult.isFailure) return Result.failure(todayResult.error);
     return Result.success(todayResult.data!.length);
   }
 
   Future<Result<int>> getTodayCompletedSessionCount() async {
-    final todayResult = await getByDate(DateTime.now());
+    final todayResult = await getByDate(_clock.now());
     if (todayResult.isFailure) return Result.failure(todayResult.error);
     return Result.success(todayResult.data!.where((s) => s.completed).length);
   }
 
   Future<Result<int>> getWeeklyDurationMs() async {
     return Result.capture(() async {
-      final now = DateTime.now();
+      final now = _clock.now();
       final weekAgo = now.subtract(Timeouts.week);
       final all = box.values.toList();
       return all
@@ -172,7 +176,7 @@ class SessionRepository extends Repository<Session>
   }
 
   Future<Result<Map<String, dynamic>>> getTodayStats() async {
-    final now = DateTime.now();
+    final now = _clock.now();
     final sessionsResult = await getByDate(now);
     if (sessionsResult.isFailure) return Result.failure(sessionsResult.error);
     final sessions = sessionsResult.data!;

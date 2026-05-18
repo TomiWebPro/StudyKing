@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/database_service.dart';
@@ -27,6 +28,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
@@ -233,6 +235,7 @@ class FakeProgressTracker extends StudyProgressTracker {
     super.masteryService,
   }) : super(
           attemptRepo: attemptRepo ?? AttemptRepository(),
+          l10n: lookupAppLocalizations(const Locale('en')),
         );
 
   void setStats(Map<String, dynamic> stats) => _stats = stats;

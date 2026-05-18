@@ -6,6 +6,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider, mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
@@ -337,9 +338,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('${l10n.time}: $dateStr'),
+            Text(l10n.scheduleTimeLabel(dateStr)),
             const SizedBox(height: 8),
-            Text('${l10n.duration}: ${l10n.minutesValue(proposal.durationMinutes)}'),
+            Text(l10n.scheduleDurationLabel(l10n.minutesValue(proposal.durationMinutes))),
             const SizedBox(height: 8),
             Text(l10n.mentorScheduleTopic(proposal.topicTitle)),
           ],
@@ -395,6 +396,34 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         }
       }
     });
+  }
+
+  Widget? _buildVoiceButton() {
+    final voiceService = ref.read(voiceServiceProvider);
+    if (!voiceService.isAvailable) return null;
+    return IconButton(
+      icon: Icon(
+        voiceService.isListening ? Icons.mic : Icons.mic_none,
+        color: voiceService.isListening
+            ? Theme.of(context).colorScheme.error
+            : null,
+      ),
+      tooltip: AppLocalizations.of(context)!.voiceInput,
+      onPressed: () {
+        if (voiceService.isListening) {
+          voiceService.stopListening();
+        } else {
+          final l10n = AppLocalizations.of(context)!;
+          voiceService.startListening(localeName: l10n.localeName);
+          voiceService.transcribedText.listen((text) {
+            _textController.text = text;
+            _textController.selection = TextSelection.fromPosition(
+              TextPosition(offset: text.length),
+            );
+          });
+        }
+      },
+    );
   }
 
   @override
@@ -470,6 +499,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 hintText: _initError ? l10n.mentorInitFailedHint : l10n.askMentorAnything,
                 sendTooltip: l10n.send,
                 onSend: _sendMessage,
+                leading: _buildVoiceButton(),
               ),
             ),
           ],

@@ -8,12 +8,7 @@ class QuestionMasteryStateRepository extends Repository<QuestionMasteryState> {
   final Logger _logger = const Logger('QuestionMasteryStateRepository');
 
   Future<void> init() async {
-    try {
-      await openBox(HiveBoxNames.questionMasteryStates);
-    } catch (e) {
-      _logger.e('Error initializing QuestionMasteryStateRepository', e);
-      rethrow;
-    }
+    await openBox(HiveBoxNames.questionMasteryStates);
   }
 
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(

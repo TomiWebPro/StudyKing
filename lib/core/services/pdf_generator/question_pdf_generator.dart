@@ -1,4 +1,6 @@
 
+import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 /// PDF Question Generator Service
 /// 
@@ -9,6 +11,7 @@
 class QuestionPDFGenerator {
   final List<dynamic> _questions = [];
   Map<String, dynamic>? _metadata;
+  String _localeName = 'en';
 
   /// Add a question to the PDF
   void addQuestion(
@@ -22,6 +25,11 @@ class QuestionPDFGenerator {
       'text': text,
       'markscheme': showAnswers ? markscheme : null,
     });
+  }
+
+  /// Set the locale for localized output
+  void setLocaleName(String localeName) {
+    _localeName = localeName;
   }
 
   /// Set metadata for the PDF
@@ -78,10 +86,12 @@ class QuestionPDFGenerator {
   String _generatePlaceholderPDF() {
     // Placeholder - returns a simple text representation
     // In production, this would generate actual PDF bytes
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    final totalLabel = l10n.totalQuestions;
     StringBuffer sb = StringBuffer();
     sb.writeln('PDF QUESTION GENERATOR');
     sb.writeln('======================');
-    sb.writeln('Total Questions: ${_questions.length}');
+    sb.writeln('$totalLabel: ${_questions.length}');
     sb.writeln('Metadata: ${_metadata ?? "None"}');
     sb.writeln('');
     

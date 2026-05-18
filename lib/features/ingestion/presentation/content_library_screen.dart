@@ -6,7 +6,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -610,7 +610,7 @@ class _SourceListTile extends StatelessWidget {
                   },
                 ),
               const SizedBox(width: 4),
-              const Icon(Icons.chevron_right),
+              Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
             ],
           ),
           onTap: onTap,

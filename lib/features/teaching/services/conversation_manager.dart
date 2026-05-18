@@ -1,10 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
+import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/logger.dart';
@@ -41,7 +43,7 @@ class ConversationManager {
   EvaluationResult? lastEvaluationResult;
   String _lastExerciseQuestion = '';
   bool _pendingExerciseQuestionCapture = false;
-  String localeName = 'en';
+  String localeName;
   int totalTokensUsed = 0;
 
   ConversationManager({
@@ -56,7 +58,7 @@ class ConversationManager {
     ConversationRepository? persistenceRepo,
     ConversationPromptSet? prompts,
     Clock? clock,
-    this.localeName = 'en',
+    required this.localeName,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
@@ -152,7 +154,7 @@ class ConversationManager {
     } else if (phase == ConversationPhase.adaptiveReview) {
       _adaptiveReviewExchanges++;
       final lower = content.toLowerCase();
-      final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
+      final continueKeywords = _getContinueKeywords();
       if (continueKeywords.any((k) => lower.contains(k))) {
         _logTransition(phase, ConversationPhase.teaching, 'student indicates understanding');
         phase = ConversationPhase.teaching;
@@ -206,16 +208,15 @@ class ConversationManager {
     }
 
     final imageData = 'data:image/jpeg;base64,$base64Image';
-    final message = 'The student submitted handwritten work / an image. '
-        'Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n'
-        '$imageData';
+    final l10n = lookupAppLocalizations(Locale(localeName));
+    final message = l10n.tutorImageAnalysisUserPrompt(imageData);
 
     final buffer = StringBuffer();
     await for (final chunk in _llmService.chatStream(
       message: message,
       modelId: _modelId,
       memory: _memory,
-      systemPrompt: 'The student submitted this work. Analyze and provide feedback.',
+      systemPrompt: l10n.tutorImageAnalysisSystemPrompt,
     )) {
       buffer.write(chunk);
       if (buffer.length > 0) {
@@ -275,9 +276,23 @@ class ConversationManager {
     return result;
   }
 
+  static const Map<String, List<String>> _continueKeywordsByLocale = {
+    'en': ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'],
+    'es': ['entiendo', 'entendido', 'ya veo', 'siguiente', 'continúa', 'ok', 'sí', 'si'],
+  };
+
+  static const Map<String, List<String>> _exerciseKeywordsByLocale = {
+    'en': ['exercise', 'practice', 'quiz'],
+    'es': ['ejercicio', 'práctica', 'práct', 'examen', 'quiz'],
+  };
+
+  List<String> _getContinueKeywords() {
+    return _continueKeywordsByLocale[localeName] ?? _continueKeywordsByLocale['en']!;
+  }
+
   void _detectExerciseRequest(String content) {
     final lower = content.toLowerCase();
-    final exerciseKeywords = ['exercise', 'practice', 'quiz'];
+    final exerciseKeywords = _exerciseKeywordsByLocale[localeName] ?? _exerciseKeywordsByLocale['en']!;
     if (exerciseKeywords.any((k) => lower.contains(k))) {
       _logTransition(phase, ConversationPhase.exercise, 'keyword detected in student message');
       phase = ConversationPhase.exercise;

@@ -9,7 +9,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';

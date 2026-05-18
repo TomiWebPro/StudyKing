@@ -15,17 +15,21 @@ class StudyProgressTracker {
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
   final SessionRepository? _sessionRepo;
-  final AppLocalizations? _l10n;
+  AppLocalizations _l10n;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
     SessionRepository? sessionRepo,
-    AppLocalizations? l10n,
+    required AppLocalizations l10n,
   })  : _attemptRepo = attemptRepo,
         _masteryService = masteryService ?? MasteryGraphService(),
         _sessionRepo = sessionRepo,
         _l10n = l10n;
+
+  void updateLocalization(AppLocalizations l10n) {
+    _l10n = l10n;
+  }
 
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {
     final attemptsResult = await _attemptRepo.getByStudent(studentId);
@@ -176,15 +180,15 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'review',
         'priority': 'high',
-        'message': _l10n?.recommendAccuracyBelow60 ?? 'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.',
-        'action': _l10n?.recommendReviewBasics ?? 'Review basic topics before advancing',
+        'message': _l10n.recommendAccuracyBelow60,
+        'action': _l10n.recommendReviewBasics,
       });
     } else if ((stats['accuracy'] as int) > 85) {
       recommendations.add({
         'type': 'advanced',
         'priority': 'medium',
-        'message': _l10n?.recommendAccuracyExcellent ?? 'Excellent progress! Ready for advanced topics.',
-        'action': _l10n?.recommendChallengingQuestions ?? 'Try challenging practice questions',
+        'message': _l10n.recommendAccuracyExcellent,
+        'action': _l10n.recommendChallengingQuestions,
       });
     }
 
@@ -193,8 +197,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'engagement',
         'priority': 'medium',
-        'message': _l10n?.recommendConsistency ?? 'You studied less than 1 hour total. Consistency is key!',
-        'action': _l10n?.recommendSetDailyGoal ?? 'Set a daily study goal of 30 minutes',
+        'message': _l10n.recommendConsistency,
+        'action': _l10n.recommendSetDailyGoal,
       });
     }
 
@@ -202,8 +206,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'reminder',
         'priority': 'high',
-        'message': _l10n?.recommendNoActivity ?? 'No study activity this week. Get back on track!',
-        'action': _l10n?.recommendQuickReview ?? 'Start with a quick 15-minute review session',
+        'message': _l10n.recommendNoActivity,
+        'action': _l10n.recommendQuickReview,
       });
     }
 
@@ -212,9 +216,8 @@ class StudyProgressTracker {
       recommendations.add({
         'type': 'weakness',
         'priority': 'high',
-        'message': _l10n?.recommendWeakTopics(weakTopics.data!.length) ??
-            'You have ${weakTopics.data!.length} topic(s) that need improvement. Focus on strengthening these areas.',
-        'action': _l10n?.recommendAiTutor ?? 'Review weak topics with the AI tutor',
+        'message': _l10n.recommendWeakTopics(weakTopics.data!.length),
+        'action': _l10n.recommendAiTutor,
       });
     }
 
@@ -224,14 +227,13 @@ class StudyProgressTracker {
   Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
     final result = await Result.capture(() async {
       final badgeService = BadgeService(
-        tracker: this,
+        getStats: getOverallStats,
       );
       final badges = await badgeService.getBadges(studentId);
       final l10n = _l10n;
       return badges.map((b) => {
-        'id': b.id,
-        'name': l10n != null ? badgeName(b.id, l10n) : b.name,
-        'description': l10n != null ? badgeDescription(b.id, l10n) : b.description,
+        'name': badgeName(b.id, l10n),
+        'description': badgeDescription(b.id, l10n),
         'unlockedAt': b.unlockedAt.toIso8601String(),
       }).toList();
     }, context: 'getBadges');
@@ -264,11 +266,11 @@ class StudyProgressTracker {
 
   String _masteryLevelLabel(MasteryLevel level) {
     return switch (level) {
-      MasteryLevel.novice => _l10n?.masteryLevelNovice ?? 'Novice',
-      MasteryLevel.browsing => _l10n?.masteryLevelBrowsing ?? 'Browsing',
-      MasteryLevel.developing => _l10n?.masteryLevelDeveloping ?? 'Developing',
-      MasteryLevel.proficient => _l10n?.masteryLevelProficient ?? 'Proficient',
-      MasteryLevel.expert => _l10n?.masteryLevelExpert ?? 'Expert',
+      MasteryLevel.novice => _l10n.masteryLevelNovice,
+      MasteryLevel.browsing => _l10n.masteryLevelBrowsing,
+      MasteryLevel.developing => _l10n.masteryLevelDeveloping,
+      MasteryLevel.proficient => _l10n.masteryLevelProficient,
+      MasteryLevel.expert => _l10n.masteryLevelExpert,
     };
   }
 

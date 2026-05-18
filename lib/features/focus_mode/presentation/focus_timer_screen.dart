@@ -615,7 +615,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                   ],
                 ),
               ),
-              Icon(Icons.chevron_right, color: cs.onSurfaceVariant),
+              Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: cs.onSurfaceVariant),
             ],
           ),
         ),

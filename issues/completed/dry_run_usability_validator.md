@@ -1,205 +1,289 @@
-# Dry-Run Usability Validator — Cumulative Issue Log
+# Dry-Run Usability Validation: Non-English (Spanish) User Experience
 
-> **Purpose:** This file tracks usability issues discovered through systematic dry-run validation of user scenarios against the actual source code. Each entry describes a real user journey, the expected behavior, the actual behavior found in code, and concrete acceptance criteria for resolution.
->
-> **Severity levels:**
-> - **BLOCKER** — App crashes, user cannot proceed, core workflow impossible
-> - **MAJOR** — Feature is broken, misleading, or missing critical functionality
-> - **MINOR** — UX friction, cosmetic, edge case, or incomplete polish
+**Scenario:** `dry-run-test/scenario_non_english_spanish_user.md`
+**Persona:** María, a Spanish-speaking student in Mexico City learning IB Chemistry
+**Locale tested:** `es` (Spanish), device locale `es_MX`
+**Date:** 2026-05-18
 
 ---
 
-## Scenario: Syllabus-Driven Curriculum Learning
+## Executive Summary
 
-> "I'm a student who wants to systematically learn IB Chemistry following its official syllabus. I expect StudyKing to parse my syllabus PDF into topics, let me set up prerequisites, create a prerequisite-respecting study plan, track syllabus completion, and enforce prerequisites in practice."
+The StudyKing app has excellent localization infrastructure: 100% ARB key parity between English and Spanish, locale-aware number/date formatting throughout the UI, and fully translated onboarding/settings screens. However, **non-English users encounter English text in three critical areas**: (1) all engagement nudges and progress recommendations are always in English, (2) keyword-based state machines in the AI tutor ignore non-English input, and (3) several service-layer components (image analysis, PDF export, backup dialog, topic extraction branching) have hardcoded English. The root cause of the worst failures is architectural: `EngagementScheduler` and all `StudyProgressTracker` instances are created before `runApp()` (or in providers that never pass `l10n`), so `_l10n` is always null.
 
-### Summary
-
-StudyKing has a sophisticated syllabus infrastructure in the data layer (SyllabusGoal, TopicDependency, SyllabusResolver with topological sort) and a well-designed multi-syllabus planner UI. However, the user-facing flow is disconnected from the backend: topics cannot be created from uploaded syllabi, topic dependencies have no editor UI, the planner form produces SyllabusGoals with empty subjectId, prerequisites are never enforced, and syllabus completion percentage is not tracked. The engine is built but the ignition wire is unplugged.
+**Total findings: 7 BLOCKER, 5 MAJOR, 2 MINOR, 1 PARTIAL**
 
 ---
 
-### BLOCKER Findings
+## BLOCKER Findings
 
-#### B1. Syllabus upload does not create topics
+### B1. Engagement nudges are ALWAYS English (locale ignored)
 
-- **Affected files:**
-  - `lib/features/ingestion/presentation/upload_screen.dart:240` — passes `possibleTopics: []`
-  - `lib/features/ingestion/services/content_pipeline.dart:281-324` — `_classifyTopic()` returns `''` when possibleTopics is empty
-  - `lib/features/subjects/presentation/subject_detail_screen.dart` — no topic management tab, no "Manage Topics" option
-  - No production code calls `TopicRepository.create()` (zero grep hits for `Topic(id:` outside tests)
-- **Rationale:** A student uploading a syllabus PDF reasonably expects the app to extract topic structure and create Topics. The pipeline has a classification stage that calls the LLM to identify topics, but the upload screen disables it by passing an empty `possibleTopics` list. Even if the LLM identified "Atomic Structure", there is no code path that calls `TopicRepository.create()`.
-- **Acceptance criteria:**
-  1. Upload screen passes `possibleTopics` from the subject's existing topics (or a reasonable default) when uploading a syllabus-type document
-  2. When classification identifies a topic title that doesn't exist in the repository, a new `Topic` is auto-created under the subject
-  3. Post-upload, the subject detail screen shows the newly created topics
-  4. User receives feedback: "3 topics created from your syllabus: Atomic Structure, Bonding, Stoichiometry"
+**Files:** `lib/core/services/engagement_scheduler.dart:297-364`, `lib/main.dart:100-112`
 
-#### B2. No topic creation/dependency editing UI
+**Problem:** The `EngagementScheduler` is created in `main()` at line 100-112 **before** `runApp()` (line 127). The `l10n` parameter is never passed. The `_l10n` field (line 47: `AppLocalizations? _l10n`) is null for the entire lifetime of the app. All 4 nudge types fall through to English fallback strings:
 
-- **Affected files:**
-  - `lib/features/subjects/presentation/subject_detail_screen.dart` — no topic management in any tab or menu
-  - `lib/features/subjects/data/models/topic_dependency_model.dart` — full model with prerequisites, masteryThreshold, isRequired, syllabusWeight; zero presentation-layer usage
-  - `lib/features/subjects/presentation/subject_form_widgets.dart` — only has Name, Code, Teacher, Syllabus, Description fields; no topic sub-form
-  - `lib/features/subjects/data/repositories/topic_repository.dart` — `create()`, `update()`, `delete()` exist but are dead code for production
-  - `lib/features/subjects/data/repositories/subject_repository.dart:28` — `addTopicToSubject()` exists but is dead code
-- **Rationale:** A student cannot create topics, edit topics, set prerequisites, configure mastery thresholds, or define topic ordering through any UI. The TopicDependency model supports all of these but is only used internally by SyllabusResolver. The only way to have topics in the system is through data import or test fixtures — neither is accessible to a real user.
-- **Acceptance criteria:**
-  1. Subject Detail screen has a "Topics" tab (or "Manage Topics" option in the menu) showing all topics for the subject
-  2. "Add Topic" button/dialog with fields: title, description, syllabus text
-  3. Topic detail/edit screen with prerequisite selector (multi-select from subject's other topics)
-  4. Topic dependency editor with: prerequisite selection, mastery threshold slider, isRequired toggle, syllabus weight
-  5. Delete topic with confirmation and cascade handling (remove from dependent topics' prerequisite lists)
-  6. Topic reordering (drag handle or sort-order up/down buttons)
+| Nudge | Line | Fallback |
+|---|---|---|
+| Overwork warning | 301-304 | `"You have studied $hoursStr hours today..."` |
+| Revision reminder | 318-319 | `"It has been $daysSince days since you practiced..."` |
+| Plan adjustment | 336-337 | `"You have had $consecutiveLow days of low plan adherence..."` |
+| Weekly digest | 357-364 | `"Weekly Digest: $weeklyActivity questions answered..."` |
 
-#### B3. Multi-syllabus planner sets empty subjectId
+Additionally, `_l10n` is a `final` field with no setter — even after `runApp()` establishes the locale, there is no way to inject localized strings into the scheduler.
 
-- **Affected files:**
-  - `lib/features/planner/presentation/planner_screen.dart:143-148` — `SyllabusGoal(subjectId: '', ...)`
-  - `lib/features/planner/presentation/planner_screen.dart:456-537` — `_buildMultiSyllabusInput()` uses free-text subject name field with no subject picker
-  - `lib/core/services/personal_learning_plan_service.dart:146-153` — iterates syllabus goals and calls `getBySubject(goal.subjectId)` which returns empty for `''`
-  - `lib/core/services/personal_learning_plan_service.dart:175-176` — uses `syllabusGoals.first.subjectId` (empty) for `resolveSyllabus(subjectId: '')`
-- **Rationale:** The multi-syllabus planner form looks well-designed with cards for subject name, days, and hours. But the `subjectId` is hardcoded to empty string. The form should present a dropdown of existing subjects and pass the selected subject's real ID. Without this, the plan generation loads zero topics, the SyllabusResolver fails to resolve anything, and daily plans are empty.
-- **Acceptance criteria:**
-  1. Multi-syllabus entry cards replace free-text subject name with a dropdown selector showing actual subjects from the database
-  2. `SyllabusGoal.subjectId` is set to the real subject ID, not `''`
-  3. `SyllabusGoal.subjectTitle` is auto-populated from the selected subject's name
-  4. After plan generation, the syllabus goal cards show real topic counts from the resolved syllabus
-  5. The single-course mode (free-text course name) should also offer a subject picker or at least validate the text against existing subjects
+**Acceptance criteria:**
+- `EngagementScheduler` must receive `AppLocalizations` (or equivalent locale context) after `runApp()` establishes it
+- All 4 nudge types must display in the user's selected locale
+- The `_l10n` field should be updatable, or the scheduler should be created after locale is established
 
 ---
 
-### MAJOR Findings
+### B2. Progress recommendations and mastery labels are ALWAYS English
 
-#### M1. No syllabus completion percentage anywhere
+**Files:**
+- `lib/core/services/study_progress_tracker.dart:20-28` (constructor), `:170-222` (recommendations), `:265-272` (mastery labels)
+- `lib/main.dart:101` (first instance)
+- `lib/core/providers/app_providers.dart:302` (`engagementTrackerProvider`)
+- `lib/features/dashboard/providers/dashboard_providers.dart:22`
+- `lib/features/mentor/providers/mentor_providers.dart:17`
+- `lib/core/services/dashboard_service.dart:31`
+- `lib/core/services/progress_export_service.dart:28`
+- `lib/core/services/badge_service.dart:18`
 
-- **Affected files:**
-  - `lib/features/dashboard/` — zero references to syllabus completion
-  - `lib/features/subjects/presentation/subject_detail_screen.dart` — Stats tab shows attempts/accuracy/time but no syllabus progress
-  - `lib/features/planner/presentation/planner_screen.dart:539-577` — `_buildSubjectProgressTabs()` shows syllabus goal cards with topic count but no completion percentage
-  - `lib/core/services/personal_learning_plan_service.dart:815-818` — `estimatedCoverage` is a crude `uniqueTopics / 10` heuristic, never displayed
-- **Rationale:** A student studying from a structured curriculum needs to know "how much of the syllabus have I covered." The app tracks per-topic mastery, plan adherence, and overall accuracy — but never combines these into a syllabus completeness metric. The crude `estimatedCoverage` heuristic (assuming 10 topics = full syllabus) is not exposed in any UI and is mathematically wrong for any syllabus with a different number of topics.
-- **Acceptance criteria:**
-  1. Dashboard shows a "Syllabus Progress" card per subject: colored progress ring/bar with "X of Y topics mastered (Z%)"
-  2. Topic counts come from the actual topic repository for that subject, not from a hardcoded divisor
-  3. Subject Detail screen's Stats tab shows syllabus completion with per-topic status (Not Started / In Progress / Mastered)
-  4. The `estimatedCoverage` calculation is replaced or supplemented with `masteredTopics / totalTopics`
-  5. Planner syllabus goal cards show progress: "12 of 34 topics mastered (35%)" instead of just topic count
+**Problem:** `StudyProgressTracker` has an `AppLocalizations? _l10n` parameter (line 24) that is **never supplied by any of the 7 production callers**. Every instance has `_l10n = null`. Consequences:
 
-#### M2. Prerequisites never enforced in practice or tutor
+1. **All 8 recommendations are ALWAYS English** (lines 179, 180, 187, 196, 197, 205, 207, 215-216):
+   - `_l10n?.recommendAccuracyBelow60 ?? 'Your overall accuracy is below 60%...'`
+   - `_l10n?.recommendConsistency ?? 'You studied less than 1 hour total...'`
+   - `_l10n?.recommendWeakTopics(...) ?? 'You have ... topic(s) that need improvement...'`
 
-- **Affected files:**
-  - `lib/features/practice/presentation/screens/practice_session_screen.dart:106-145` — loads questions by subject/topic, no prerequisite check
-  - `lib/features/teaching/presentation/tutor_screen.dart` — starts tutor with topic/subject, no prerequisite check
-  - `lib/core/services/topic_readiness_service.dart` — `getReadyTopics()` and `getNextRecommendedTopics()` exist but are never called from any UI code (zero grep hits in `lib/features/`)
-  - `lib/features/planner/services/syllabus_resolver.dart:187-208` — `buildLearningLevels()` groups topics by readiness but has no UI consumer
-- **Rationale:** The product vision says prerequisites should ensure students build knowledge in the right order. The TopicDependency model and TopicReadinessService fully support this. But no practice mode, topic selector, or tutor entry point checks prerequisites. A student can study "Organic Chemistry" without mastering "Atomic Structure" — defeating the purpose of a structured curriculum.
-- **Acceptance criteria:**
-  1. Before starting a Topic Focus or Weak Areas practice session, check if the selected topic has unmet prerequisites
-  2. If prerequisites are unmet, show a dialog: "This topic requires mastery of [prerequisite topics]. Would you like to practice those first?"
-  3. Tutor entry points (daily plan card, topic chip) perform the same prerequisite check
-  4. Topic selection sheets (Topic Focus, Weak Areas) show lock icons on topics with unmet prerequisites
-  5. The prerequisite check uses the mastery threshold from TopicDependency (default 0.8)
-  6. TopicReadinessService is integrated into practice providers and tutor providers
+2. **All 5 mastery level labels are ALWAYS English** (lines 266-272):
+   - "Novice" instead of "Novato"
+   - "Browsing" instead of "Explorando"
+   - "Developing" instead of "En desarrollo"
+   - "Proficient" instead of "Competente"
+   - "Expert" instead of "Experto"
 
-#### M3. Subject detail has no topic/syllabus overview
+These labels appear in the Dashboard's Mastery Overview card, the Planner's subject progress tabs, and the Mentor's context prompt — the user's locale setting is ignored.
 
-- **Affected files:**
-  - `lib/features/subjects/presentation/subject_detail_screen.dart` — 5 tabs: Lessons, Practice, Sources, History, Stats; none show topics or syllabus structure
-  - `lib/features/lessons/presentation/widgets/` — shows Lesson objects, not Topics
-  - `lib/features/subjects/presentation/subject_form_widgets.dart` — only has basic subject fields
-- **Rationale:** A student needs to see their subject's topic structure. The data model supports hierarchy (Topic.parentId, childTopicIds, TopicDependency.parentTopicId, sortOrder), but no screen renders it as a tree, list, or learning path. The Lessons tab shows scheduled tutoring sessions (which may not exist yet), not the underlying topic hierarchy.
-- **Acceptance criteria:**
-  1. Subject Detail has a "Syllabus" tab (or replaces "Lessons" with "Topics" for subjects with no scheduled lessons)
-  2. Syllabus tab shows topics in hierarchical order respecting sortOrder and prerequisites
-  3. Each topic shows: mastery status (locked/unlocked/in-progress/mastered), accuracy %, next review date
-  4. Topics are grouped by learning levels (prerequisites-met groups)
-  5. Tapping a topic navigates to topic practice or topic detail
-
-#### M4. Multi-syllabus form lacks subject picker and topic preview
-
-- **Affected files:**
-  - `lib/features/planner/presentation/planner_screen.dart:456-537` — `_buildMultiSyllabusInput()` with free-text subject name
-  - `lib/features/planner/presentation/planner_screen.dart:143-148` — SyllabusGoal creation uses typed text
-- **Rationale:** The multi-syllabus planner is the primary UI for curriculum-driven planning. It should let users select actual subjects, show how many topics each subject has, preview the resolved topic order, and display topic count feedback after generation. Currently the form accepts arbitrary text with no validation, produces broken data (empty subjectId), and shows "0 topics" on result cards.
-- **Acceptance criteria:**
-  1. Subject name field is replaced with a searchable dropdown of existing subjects
-  2. When a subject is selected, show: "12 topics found in this subject"
-  3. Add a "Preview topic order" button that shows the topologically-sorted topic list before generating
-  4. After plan generation, syllabus goal cards show "12 topics planned in prerequisite order"
-  5. The single-course mode (free-text course name) also gets a subject picker option
+**Acceptance criteria:**
+- All 7 `StudyProgressTracker` callers must pass `l10n` from the current locale context
+- All 8 recommendations must display in the user's selected locale
+- All 5 mastery level labels must display localized strings from ARB keys
+- The Dashboard's Mastery Overview must show Spanish labels when locale is `es`
 
 ---
 
-### MINOR Findings
+### B3. AI Tutor keyword lists are English-only — no non-English input supported
 
-#### m1. Single-course planner accepts course name that does nothing
+**Files:**
+- `lib/features/teaching/services/conversation_manager.dart:154-156` (continue keywords)
+- `lib/features/teaching/services/conversation_manager.dart:280` (exercise keywords)
 
-- **Affected files:**
-  - `lib/features/planner/presentation/planner_screen.dart:162-183` — creates a plan with free-text `course` but `course` is just a label, never linked to a real subject
-  - `lib/features/planner/providers/planner_providers.dart` — `generatePlan()` accepts `course` but only passes it as a label
-  - Confirms scenario 1's finding: course name is silently ignored by plan generation
-- **Rationale:** In single-course mode, the user types "IB Chemistry" expecting the plan to center on IB Chemistry content. But `course` is metadata only — the plan is built from mastery state (which is empty for a new user). The user sees a plan with "IB Chemistry" in the title but zero content tailored to it.
-- **Acceptance criteria:**
-  1. Single-course mode shows a note: "Select a subject to base your plan on its syllabus and topics"
-  2. Free-text course name is either validated against existing subjects or replaced with a subject picker
-  3. Error message if the typed course name doesn't match any subject: "No subject named 'IB Chemistry' found. Create it first in the Subjects tab."
+**Problem:** Two hardcoded English-only keyword lists control phase transitions in the AI tutor:
 
-#### m2. Planner form doesn't validate that subjects have topics before generation
+```dart
+// Line 155 — adaptive review continue detection
+final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
 
-- **Affected files:**
-  - `lib/features/planner/presentation/planner_screen.dart:127-158` — no check that the selected/typed subject has topics
-  - `lib/core/services/personal_learning_plan_service.dart:148-153` — silently returns empty if `getBySubject` returns nothing
-- **Rationale:** A student can happily fill in "IB Chemistry" with 90 days and get a plan generated. If the subject has no topics (which it won't, since there's no topic creation UI), the plan is 90 days of "General review" — no content. The app should validate upfront.
-- **Acceptance criteria:**
-  1. Before generating a plan, check that the subject has at least one topic
-  2. Show a clear message: "IB Chemistry has no topics. Upload a syllabus to auto-create topics, or add topics manually."
+// Line 280 — exercise request detection
+final exerciseKeywords = ['exercise', 'practice', 'quiz'];
+```
 
-#### m3. EN ARB file has duplicate "today" key
+Spanish equivalents (Entiendo, Siguiente, Continúa, Sí, Ejercicio, Práctica, Examen) are never matched. The adaptive review phase must time out after 3 exchanges rather than responding to the student's Spanish comprehension signal. Students cannot naturally request exercises in Spanish.
 
-- **Affected files:**
-  - `lib/l10n/app_en.arb` — duplicate `"today"` key at lines ~114 and ~3496
-- **Rationale:** The duplicate key doesn't cause a runtime error (the ARB parser takes the last value), but it indicates the ARB files may have maintenance issues. This could mask future translation gaps or cause localization tooling warnings.
-- **Acceptance criteria:**
-  1. Remove the duplicate `"today"` key from `app_en.arb`
-  2. Audit the ARB file for other potential duplicates
+The `localeName` field is available on `ConversationManager` (line 44) but is never used to select locale-appropriate keyword lists.
 
-#### m4. `LlmService.defaultSystemPrompt` always returns English
-
-- **Affected files:**
-  - `lib/core/services/llm/llm_chat_service.dart:29-30` — `AppLocalizationsEn().aiDefaultSystemPrompt`
-  - `lib/core/services/llm/llm_chat_service.dart:60,84` — `defaultSystemPrompt` used as fallback when no explicit systemPrompt is provided
-- **Rationale:** When QuickGuide or other features call `chat()` or `chatStream()` without providing a locale-aware `systemPrompt`, the default system prompt is hardcoded to English. An `es` locale user will see an English system prompt as context for the LLM, which may cause the LLM to respond in English even when the user writes in Spanish. Most call sites provide explicit system prompts, but the default fallback should be locale-aware.
-- **Acceptance criteria:**
-  1. `defaultSystemPrompt` uses the current app locale, not hardcoded English
-  2. Option A: Make `chat()`/`chatStream()` accept optional locale parameter and look up localized prompt
-  3. Option B: Remove the hardcoded fallback and require callers to always provide a locale-appropriate system prompt
-
-#### m5. `percentComplete` l10n method is dead code
-
-- **Affected files:**
-  - `lib/l10n/generated/app_localizations_en.dart` (ES equivalent too) — `percentComplete(int percent, int completed, int total)` defined but never called from production code (only from tests)
-- **Rationale:** The localization method exists and is translated, meaning effort was invested in it. But no UI code ever calls it. If a future feature wants to display "85% Complete: 17 of 20 topics", it should use this method rather than re-inventing the string formatting.
-- **Acceptance criteria:**
-  1. Either integrate `percentComplete` into the syllabus progress display (see M1), or remove the dead code
-  2. If kept, add documentation that this method is the canonical way to display "X% Complete: N of M" strings
+**Acceptance criteria:**
+- Continue keywords must include Spanish equivalents when locale is `es`
+- Exercise keywords must include Spanish equivalents when locale is `es`
+- Approach should be extensible (not hardcoded if/else per language) — use a map of locale → keyword list
+- Unit tests must pass for Spanish keyword detection
 
 ---
 
-## Historical Note: Previously Reported Issues — Re-verification
+### B4. Image/handwriting analysis prompt is hardcoded English
 
-The following findings from earlier scenarios were spot-checked during this code analysis. Some have been resolved or partially addressed since the original scenarios were written.
+**File:** `lib/features/teaching/services/conversation_manager.dart:209-218`
 
-### Re-verified: EngagementScheduler now reads notification preferences
+**Problem:** The `processImage()` method sends hardcoded English prompts to the LLM:
+```dart
+final message = 'The student submitted handwritten work / an image. '
+    'Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n'
+    '$imageData';
+final systemPrompt = 'The student submitted this work. Analyze and provide feedback.';
+```
 
-**Original finding (scenario_focus_mode_daily_habit, BLOCKER FAIL):** "EngagementScheduler never reads settings — notification preferences are cosmetic only."
+The `localeName` field (line 44) is available but never used. Even though the LLM may respond in Spanish due to conversation history, the analysis instruction is always English.
 
-**Current status:** RESOLVED. `engagement_scheduler.dart:116-131` has `_isNotificationEnabled()` which checks `studyRemindersEnabled`, `revisionRemindersEnabled`, `lessonNotificationsEnabled`, `overworkAlertsEnabled`, `planAdjustmentNotificationsEnabled`. All five nudge types (overwork at line 154, revision at line 180, planAdjustment at line 210, weakTopics at line 236, lessonReminder at line 131) route through this check.
+**Acceptance criteria:**
+- `processImage()` must construct locale-appropriate prompts using `localeName`
+- The system prompt and user message should be in the user's language
+- ARB keys should be added for image analysis prompts
 
-### Re-verified: Onboarding exists and works
+---
 
-**Original finding (scenario_first_launch_ib_chemistry, FAIL):** "App explains itself on first launch — No onboarding, dropped into 5-tab shell."
+### B5. All nudge and recommendation English fallbacks are ALWAYS used
 
-**Current status:** RESOLVED. `main.dart:289-297` has `_handleFirstLaunch()` which shows a non-dismissible `OnboardingDialog` listing all 5 features and a `LocalDataNotice` dialog. The onboarding dialog offers two paths: "Get Started" (→ subject selection) and "Quick Guide" (→ quick guide).
+**Combined finding covering B1 and B2 above.** This pattern of `_l10n?.key ?? 'English fallback'` exists in multiple services and is always resolved to English because `_l10n` is always null:
 
-> **Note:** The first-launch scenario did correctly identify several issues that are still open (static checklist items, course name ignored by planner, no syllabus database, lesson content not pre-generated). Those are tracking in this issue file and the original scenarios respectively.
+- `EngagementScheduler._l10n` — null (4 fallback paths)
+- `StudyProgressTracker._l10n` — null across 7 instances (13 fallback paths: 8 recommendations + 5 mastery labels)
+- `BadgeService` — no l10n parameter at all
+- `ProgressExportService` — no l10n parameter
+
+**Root cause:** These "background" services are created during the `main()` initialization phase (before `runApp()`), when `AppLocalizations` is not yet available. Providers replicate this pattern.
+
+**Acceptance criteria (in addition to B1 and B2):**
+- Audit all services with nullable `_l10n` and ensure they receive localized strings
+- Consider a strategy: either defer service creation until after `runApp()`, or make `_l10n` settable post-construction
+- `BadgeService` and `ProgressExportService` should also support localization
+
+---
+
+## MAJOR Findings
+
+### M1. Backup dialog shows 20 hardcoded English Hive box names
+
+**File:** `lib/features/settings/presentation/settings_screen.dart:816-838`
+
+**Problem:** The `_boxDisplayName()` method returns hardcoded English names like `'Subjects'`, `'Topics'`, `'Questions'`, `'Lessons'`, etc. in the backup/restore confirmation dialog. A Spanish user sees "Subjects" instead of "Materias".
+
+**Acceptance criteria:**
+- Box display names should use localized strings from ARB keys instead of hardcoded English
+- Add ARB keys for each box display name (e.g., `backupBoxSubjects: "Materias"`)
+
+---
+
+### M2. PDF export header is hardcoded English
+
+**File:** `lib/core/services/question_pdf_generator.dart:84`
+
+**Problem:** `'Total Questions: ${_questions.length}'` is hardcoded English. Per AGENTS.md: "PDF exports should use the user's locale (they are user-facing documents)."
+
+**Acceptance criteria:**
+- PDF generator must accept a locale parameter or `AppLocalizations`
+- Header labels must use localized strings
+
+---
+
+### M3. ConversationManager continue/exercise keywords lack locale-awareness
+
+**File:** `lib/features/teaching/services/conversation_manager.dart:44, 154-156, 280`
+
+**Problem:** As described in B3, two critical keyword lists are English-only. While this is a BLOCKER for Spanish users specifically, the structural issue (no locale-based keyword selection) is a MAJOR architectural deficiency.
+
+**Acceptance criteria:** (same as B3)
+
+---
+
+### M4. MentorService topic extraction uses hardcoded `_localeName == 'es'` branch
+
+**File:** `lib/features/mentor/services/mentor_service.dart:265-267, 276-278`
+
+**Problem:** `_extractTopic()` uses:
+```dart
+final keywords = _localeName == 'es'
+    ? Spanish keywords
+    : English keywords;
+final topicKeywords = _localeName == 'es'
+    ? Spanish topic keywords
+    : English topic keywords;
+```
+
+This pattern requires a new `else if` branch for every added language. Does not scale. A `Map<String, List<String>>` keyed by locale would be extensible.
+
+**Acceptance criteria:**
+- Replace if/else with a map-based lookup: `Map<String, List<String>>` keyed by locale
+- Add French, German keyword lists (can be minimal initial implementation)
+- Unit tests should verify correct keywords are used for each locale
+
+---
+
+### M5. FormatCurrency hardcodes `$` symbol
+
+**File:** `lib/core/utils/number_format_utils.dart:52`
+
+**Problem:** `symbol: '\$'` is always the dollar sign. In Spanish-speaking regions (Mexico, Spain, etc.), users may expect different currency symbols (MX$, €) depending on configuration. The `NumberFormat.simpleCurrency` can infer symbol from locale.
+
+**Acceptance criteria:**
+- `formatCurrency` should infer the currency symbol from the locale, or accept a configurable symbol parameter
+- Default behavior should use locale-appropriate symbol
+
+---
+
+### M6. English fallback strings in NotificationService
+
+**File:** `lib/core/services/notification_service.dart:200-292`
+
+**Problem:** 22 hardcoded English fallback strings for notification content. While notifications primarily use nudge messages from `EngagementScheduler` (which has its own BLOCKER issue), direct notification calls also fall through to English.
+
+**Acceptance criteria:**
+- `NotificationService` should accept locale context or `AppLocalizations`
+- All 22 fallback strings should have corresponding ARB keys
+
+---
+
+## MINOR Findings
+
+### m1. `AnswerValidationService` and `QuestionAnswerValidator` default to English
+
+**Files:** 
+- `lib/core/services/answer_validation_service.dart:36, 286, 293, 318, 354, 381, etc.`
+
+**Problem:** Every constructor and static method defaults to `ValidationMessages.english` instead of checking the current locale. Currently this only affects the `validateWithMarkscheme()` static method (which is dead code), but any future code path that creates `AnswerValidationService` without passing localized messages will display English validation feedback.
+
+**Acceptance criteria:**
+- Consider removing the English default and making the `messages` parameter required
+- Or add a runtime locale check that falls back to an appropriate default
+
+---
+
+### m2. Locale flicker on startup when saved locale ≠ device locale
+
+**Files:** 
+- `lib/main.dart:153` (initial renders with device locale)
+- `lib/main.dart:163` (post-frame callback overrides with saved locale)
+
+**Problem:** On app launch, the first frame renders with the device locale. A `postFrameCallback` then loads the Hive profile and overrides to the saved locale. If these differ, there's a visible 1-frame flicker.
+
+**Acceptance criteria:**
+- Move locale initialization to be synchronous from Hive (Hive is already open by this point)
+- Or use a splash/loading screen that resolves the locale before rendering the main UI
+
+---
+
+### m3. `formatCurrency` locale-awareness gap
+
+**File:** `lib/core/utils/number_format_utils.dart:45-61`
+
+**Problem:** (repeated from M5 — kept here as minor since it's cosmetic)
+
+---
+
+## PARTIAL Findings
+
+### P1. Spanish locale startup detection works for same-locale persistence
+
+**Files:** `lib/core/providers/app_providers.dart:283-295`, `lib/main.dart:153-163`
+
+**Detail:** When the device locale is Spanish and no saved profile exists, the first launch correctly renders in Spanish. When the saved language matches the device locale, there is no flicker on subsequent launches. Only cross-locale persistence (saved language ≠ device locale) causes the flicker.
+
+---
+
+## Previously Reported but VERIFIED
+
+| Finding | Status |
+|---|---|
+| Onboarding dialog fully localized | VERIFIED PASS |
+| API Key banner localized | VERIFIED PASS |
+| Bottom navigation labels localized | VERIFIED PASS |
+| Number formatting locale-aware | VERIFIED PASS |
+| Language selector shows localized names | VERIFIED PASS |
+| Language switching is immediate | VERIFIED PASS |
+| Mentor Spanish intent detection works | VERIFIED PASS |
+| Mentor Spanish topic extraction works | VERIFIED PASS |
+| `ValidationMessages.fromLocalizations()` IS called (2 callers) | VERIFIED — corrected from earlier draft |
+| Practice/exam validation IS localized | VERIFIED PASS |
+| `EngagementScheduler.updateSettings()` never reads notification prefs | CONFIRMED from scenario_focus_mode_daily_habit |

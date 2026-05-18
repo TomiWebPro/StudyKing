@@ -19,6 +19,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.d
 import 'package:studyking/features/dashboard/presentation/widgets/due_reviews_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -89,6 +90,8 @@ class DashboardScreen extends ConsumerWidget {
           children: [
             const DashboardHeader(),
             const SizedBox(height: 24),
+            NextUpCard(studentId: studentId),
+            const SizedBox(height: 16),
             _buildPlannerCard(context),
             const SizedBox(height: 16),
             _buildSourcesCard(context, asyncSnapshot),
@@ -128,7 +131,7 @@ class DashboardScreen extends ConsumerWidget {
                           'hours': formatHours(focusStatsData.totalSeconds.toDouble(), l10n.localeName),
                         } : null),
                       ),
-                      Icon(Icons.chevron_right,
+                      Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right,
                           color: Theme.of(context).colorScheme.onSurfaceVariant),
                     ],
                   ),
@@ -269,7 +272,7 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ],
             ),
           ),
@@ -308,7 +311,7 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ],
             ),
           ),
@@ -340,7 +343,7 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ],
             ),
           ),
@@ -411,7 +414,7 @@ class DashboardScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                Icon(Icons.chevron_right,
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right,
                     color: Theme.of(context).colorScheme.onSurfaceVariant),
               ],
             ),

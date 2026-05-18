@@ -1,289 +1,267 @@
-# Dry-Run Usability Validation: Non-English (Spanish) User Experience
+# Dry-Run Usability Validator — Issue Log
 
-**Scenario:** `dry-run-test/scenario_non_english_spanish_user.md`
-**Persona:** María, a Spanish-speaking student in Mexico City learning IB Chemistry
-**Locale tested:** `es` (Spanish), device locale `es_MX`
+**Scenario:** Returning After a 2-Week Break — Plan Drift, Stale Sessions, and Re-Engagement
+**Scenario file:** `dry-run-test/scenario_returning_after_break.md`
 **Date:** 2026-05-18
 
 ---
 
-## Executive Summary
+## BLOCKER — App Crash or User Cannot Proceed
 
-The StudyKing app has excellent localization infrastructure: 100% ARB key parity between English and Spanish, locale-aware number/date formatting throughout the UI, and fully translated onboarding/settings screens. However, **non-English users encounter English text in three critical areas**: (1) all engagement nudges and progress recommendations are always in English, (2) keyword-based state machines in the AI tutor ignore non-English input, and (3) several service-layer components (image analysis, PDF export, backup dialog, topic extraction branching) have hardcoded English. The root cause of the worst failures is architectural: `EngagementScheduler` and all `StudyProgressTracker` instances are created before `runApp()` (or in providers that never pass `l10n`), so `_l10n` is always null.
+### B1. No absence/gap detection mechanism exists in the entire app
 
-**Total findings: 7 BLOCKER, 5 MAJOR, 2 MINOR, 1 PARTIAL**
+**Context:** The app has no concept of "last accessed" or "last activity" timestamp. `StudentIdService` (`lib/core/services/student_id_service.dart:27`) stores only a UUID. No profile model, settings box, or repository tracks when the user last opened the app or had any activity. A 2-week absence is indistinguishable from a 5-minute coffee break.
 
----
+**Affected files:**
+- `lib/core/services/student_id_service.dart:27` — UUID only, no timestamp
+- `lib/features/planner/data/repositories/plan_adherence_repository.dart:44-56` — `getConsecutiveLowAdherenceDays()` returns 0 when no records exist
+- `lib/core/services/plan_adapter.dart:48-91` — `checkAdherence()` cannot detect a clean-slate gap
 
-## BLOCKER Findings
+**Rationale:** Without a last-activity timestamp, the app cannot determine that the user has been away. All downstream features (adherence detection, planner banner, mentor context, re-engagement nudges) depend on this data and fail silently. The returning user receives zero acknowledgement or help.
 
-### B1. Engagement nudges are ALWAYS English (locale ignored)
+**Acceptance criteria (fixed):**
+- Add a `lastActivityAt` timestamp to `StudentIdService` (persisted to Hive), updated on every app foreground event and after any completed session.
+- Add a `daysSinceLastActivity` helper that computes the gap from today.
+- Use this timestamp in `PlanAdapter.checkAdherence()` to return a special `AbsenceDeviation` (extending `AdherenceDeviation`) when `daysSinceLastActivity >= 3`.
 
-**Files:** `lib/core/services/engagement_scheduler.dart:297-364`, `lib/main.dart:100-112`
+### B2. Adherence deviation banner never shows for clean-slate gaps
 
-**Problem:** The `EngagementScheduler` is created in `main()` at line 100-112 **before** `runApp()` (line 127). The `l10n` parameter is never passed. The `_l10n` field (line 47: `AppLocalizations? _l10n`) is null for the entire lifetime of the app. All 4 nudge types fall through to English fallback strings:
+**Context:** `PlanAdapter.checkAdherence()` (`lib/core/services/plan_adapter.dart:48-91`) calls `getConsecutiveLowAdherenceDays()` which returns 0 when no adherence records exist. With `consecutiveLowDays == 0`, `requiresRegeneration` is `false`, and no `AdherenceDeviation` object is returned. The planner screen at `planner_screen.dart:737-796` checks `state.adherenceDeviation != null` — it's null, so no banner renders. A 14-day absence with zero records produces zero deviation.
 
-| Nudge | Line | Fallback |
-|---|---|---|
-| Overwork warning | 301-304 | `"You have studied $hoursStr hours today..."` |
-| Revision reminder | 318-319 | `"It has been $daysSince days since you practiced..."` |
-| Plan adjustment | 336-337 | `"You have had $consecutiveLow days of low plan adherence..."` |
-| Weekly digest | 357-364 | `"Weekly Digest: $weeklyActivity questions answered..."` |
+**Affected files:**
+- `lib/features/planner/data/repositories/plan_adherence_repository.dart:44-56` — loop has no "no records" fallback
+- `lib/core/services/plan_adapter.dart:48-91` — `checkAdherence()` does not check for zero-record scenarios
+- `lib/features/planner/presentation/planner_screen.dart:737-796` — banner only renders for non-null deviation
 
-Additionally, `_l10n` is a `final` field with no setter — even after `runApp()` establishes the locale, there is no way to inject localized strings into the scheduler.
+**Rationale:** The user who most needs to see the adherence banner (returning from long absence with an outdated plan) is the one user who will never see it. The system treats "no data" as "no problem."
 
-**Acceptance criteria:**
-- `EngagementScheduler` must receive `AppLocalizations` (or equivalent locale context) after `runApp()` establishes it
-- All 4 nudge types must display in the user's selected locale
-- The `_l10n` field should be updatable, or the scheduler should be created after locale is established
+**Acceptance criteria (fixed):**
+- After fixing B1, modify `checkAdherence()` to return an `AbsenceDeviation` when `daysSinceLastActivity >= 3` with `requiresRegeneration: true`.
+- Add a new localized string for the absence banner: "You've been away for {days} days. Your study plan may need adjustment."
+- Ensure the planner banner renders for `AbsenceDeviation` with the same redistribute/regenerate buttons.
 
----
+### B3. No catch-up mechanism for multi-week absences
 
-### B2. Progress recommendations and mastery labels are ALWAYS English
+**Context:** `redistributeMissedWorkload()` (`lib/core/services/personal_learning_plan_service.dart:542-570`) only spreads missed minutes across the next 3 days. For a 14-day absence at 60 min/day, each of the next 3 days gets +280 min (4.7 hours extra per day) — an unreasonable workload. The method does not extend the plan end date, reduce scope, or offer the user a choice of catch-up strategy. There is no "Extend Plan" or "Catch Up" button anywhere in the UI. The regenerate path (`PlannerNotifier.regenerateFromAdherence()` at `planner_providers.dart:441-457`) is gated behind the invisible adherence banner.
 
-**Files:**
-- `lib/core/services/study_progress_tracker.dart:20-28` (constructor), `:170-222` (recommendations), `:265-272` (mastery labels)
-- `lib/main.dart:101` (first instance)
-- `lib/core/providers/app_providers.dart:302` (`engagementTrackerProvider`)
-- `lib/features/dashboard/providers/dashboard_providers.dart:22`
-- `lib/features/mentor/providers/mentor_providers.dart:17`
-- `lib/core/services/dashboard_service.dart:31`
-- `lib/core/services/progress_export_service.dart:28`
-- `lib/core/services/badge_service.dart:18`
+**Affected files:**
+- `lib/core/services/personal_learning_plan_service.dart:542-570` — 3-day redistribution only
+- `lib/features/planner/providers/planner_providers.dart:441-457` — regenerate path inaccessible without banner
+- `lib/features/planner/presentation/planner_screen.dart` — no "Extend Plan" or "Catch Up" button in the UI
 
-**Problem:** `StudyProgressTracker` has an `AppLocalizations? _l10n` parameter (line 24) that is **never supplied by any of the 7 production callers**. Every instance has `_l10n = null`. Consequences:
+**Rationale:** A student returning from a 2-week absence has no supported path to adjust their plan duration. The only redistribution mechanism unreasonably increases daily workload. Without ability to extend the schedule, the student either falls further behind or must delete and recreate their plan (losing continuity).
 
-1. **All 8 recommendations are ALWAYS English** (lines 179, 180, 187, 196, 197, 205, 207, 215-216):
-   - `_l10n?.recommendAccuracyBelow60 ?? 'Your overall accuracy is below 60%...'`
-   - `_l10n?.recommendConsistency ?? 'You studied less than 1 hour total...'`
-   - `_l10n?.recommendWeakTopics(...) ?? 'You have ... topic(s) that need improvement...'`
+**Acceptance criteria (fixed):**
+- Add an `extendPlan(days)` method to `PersonalLearningPlanService` that shifts all remaining plan days by `days`, moving the end date later.
+- Add a "Catch Up" bottom sheet (accessible from planner screen or the new absence banner) with options: "Redistribute missed workload" (spread across remaining days), "Extend plan duration" (shift end date), "Regenerate plan" (create new plan from current data).
+- Modify `redistributeMissedWorkload()` to accept a strategy parameter: `{days: 3, 7, all}` instead of hardcoding 3.
 
-2. **All 5 mastery level labels are ALWAYS English** (lines 266-272):
-   - "Novice" instead of "Novato"
-   - "Browsing" instead of "Explorando"
-   - "Developing" instead of "En desarrollo"
-   - "Proficient" instead of "Competente"
-   - "Expert" instead of "Experto"
+### B4. Engagement scheduler is entirely in-process — no background execution
 
-These labels appear in the Dashboard's Mastery Overview card, the Planner's subject progress tabs, and the Mentor's context prompt — the user's locale setting is ignored.
+**Context:** `EngagementScheduler` (`lib/core/services/engagement_scheduler.dart:107-108`) uses `Timer.periodic` for daily checks. This timer stops when the app process is killed. There is no `WorkManager`, `AlarmManager`, or `BGTaskScheduler` integration for platform-level background scheduling. Additionally, there is no missed-nudge accumulation — if the scheduler misses 14 daily checks, those nudges are lost forever with no catch-up on app restart.
 
-**Acceptance criteria:**
-- All 7 `StudyProgressTracker` callers must pass `l10n` from the current locale context
-- All 8 recommendations must display in the user's selected locale
-- All 5 mastery level labels must display localized strings from ARB keys
-- The Dashboard's Mastery Overview must show Spanish labels when locale is `es`
+**Affected files:**
+- `lib/core/services/engagement_scheduler.dart:107-108` — `Timer.periodic`, no platform background scheduling
+- `lib/main.dart:100-112` — scheduler created before `runApp()`, no background task registration
+- `pubspec.yaml` — check for `workmanager` or `flutter_background_service` dependency (likely absent)
 
----
+**Rationale:** Users who do not keep the app in memory receive zero engagement nudges during their absence. On return, no catch-up or summary nudge is generated. The entire proactive engagement system is non-functional for absent users.
 
-### B3. AI Tutor keyword lists are English-only — no non-English input supported
+**Acceptance criteria (fixed):**
+- Integrate `workmanager` (Android) and `BGTaskScheduler` (iOS) for daily background checks.
+- On app start, compare `lastActivityAt` (from B1) with current time. If gap > 48 hours, generate a single "Welcome back" summary nudge with key stats from the gap period.
+- Store the last scheduler run timestamp; on a gap, skip missed checks (don't try to backfill all 14).
 
-**Files:**
-- `lib/features/teaching/services/conversation_manager.dart:154-156` (continue keywords)
-- `lib/features/teaching/services/conversation_manager.dart:280` (exercise keywords)
+### B5. No mechanism to clear stale "scheduled" lessons from absence period
 
-**Problem:** Two hardcoded English-only keyword lists control phase transitions in the AI tutor:
+**Context:** `getScheduledLessons()` (`lib/features/planner/services/planner_service.dart:330-343`) filters sessions by `!completed && endTime == null`. A lesson scheduled 14 days ago that was never attended still appears as "upcoming" because it has no `endTime`. There is no time-based filter (e.g., `startTime.isAfter(DateTime.now().subtract(1.hour))`), no auto-expiry, no "missed" label, and no batch-dismiss UI.
 
-```dart
-// Line 155 — adaptive review continue detection
-final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
+**Affected files:**
+- `lib/features/planner/services/planner_service.dart:330-343` — no time-based filtering on `getScheduledLessons()`
+- `lib/features/planner/presentation/planner_screen.dart:798-897` — scheduled lessons section, no "missed" indicator
 
-// Line 280 — exercise request detection
-final exerciseKeywords = ['exercise', 'practice', 'quiz'];
-```
+**Rationale:** Returning users see old, irrelevant scheduled lessons alongside upcoming ones. This clutters the UI and creates confusion ("Did I miss this lesson or is it still upcoming?").
 
-Spanish equivalents (Entiendo, Siguiente, Continúa, Sí, Ejercicio, Práctica, Examen) are never matched. The adaptive review phase must time out after 3 exchanges rather than responding to the student's Spanish comprehension signal. Students cannot naturally request exercises in Spanish.
-
-The `localeName` field is available on `ConversationManager` (line 44) but is never used to select locale-appropriate keyword lists.
-
-**Acceptance criteria:**
-- Continue keywords must include Spanish equivalents when locale is `es`
-- Exercise keywords must include Spanish equivalents when locale is `es`
-- Approach should be extensible (not hardcoded if/else per language) — use a map of locale → keyword list
-- Unit tests must pass for Spanish keyword detection
+**Acceptance criteria (fixed):**
+- Add time-based filtering to `getScheduledLessons()`: exclude sessions where `startTime` is more than 1 hour in the past.
+- Add a `getMissedLessons()` method that returns past sessions with `endTime == null`.
+- In the planner screen, add a collapsed "Missed Lessons ({count})" section below scheduled lessons.
+- Add a "Dismiss All Missed" button that batch-sets `completed = true` for all missed lessons.
 
 ---
 
-### B4. Image/handwriting analysis prompt is hardcoded English
+## MAJOR — Feature Is Broken or Misleading
 
-**File:** `lib/features/teaching/services/conversation_manager.dart:209-218`
+### M1. Dashboard shows zeros for absent weeks with no explanation
 
-**Problem:** The `processImage()` method sends hardcoded English prompts to the LLM:
-```dart
-final message = 'The student submitted handwritten work / an image. '
-    'Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n'
-    '$imageData';
-final systemPrompt = 'The student submitted this work. Analyze and provide feedback.';
-```
+**Context:** `getWeeklyTrend()` (`lib/core/services/study_progress_tracker.dart:128-157`) iterates 8 weeks and produces entries for every week, including absent weeks where attempts = 0 and accuracy = 0.0. The `WeeklyChart` renders these as zero-height bars. There is no annotation, tooltip, or label explaining that the zero values are due to absence rather than poor performance.
 
-The `localeName` field (line 44) is available but never used. Even though the LLM may respond in Spanish due to conversation history, the analysis instruction is always English.
+**Affected files:**
+- `lib/core/services/study_progress_tracker.dart:128-157` — produces zero entries for absent weeks
+- `lib/features/dashboard/presentation/widgets/weekly_chart.dart` — no gap/absence annotation in chart rendering
+- `lib/features/dashboard/providers/dashboard_data_providers.dart:46-53` — passes weekly trend data unchanged
 
-**Acceptance criteria:**
-- `processImage()` must construct locale-appropriate prompts using `localeName`
-- The system prompt and user message should be in the user's language
-- ARB keys should be added for image analysis prompts
+**Rationale:** A user looking at their dashboard after returning sees a discouraging flatline of zeros. The chart is factually correct but psychologically misleading — it communicates failure rather than "you were on break."
 
----
+**Acceptance criteria (fixed):**
+- When a week has zero attempts AND the user has existing data before that week, mark the week as an "absence gap" in the trend data.
+- In `WeeklyChart`, render gap weeks with a distinct visual style (e.g., dashed outline, lighter fill, or a "no data" label instead of a zero-height bar).
+- Add a tooltip on hover/tap: "No activity — you were away this week."
 
-### B5. All nudge and recommendation English fallbacks are ALWAYS used
+### M2. Past daily plan cards are visually identical to future cards
 
-**Combined finding covering B1 and B2 above.** This pattern of `_l10n?.key ?? 'English fallback'` exists in multiple services and is always resolved to English because `_l10n` is always null:
+**Context:** `DailyPlanCard` (`lib/features/planner/presentation/widgets/daily_plan_card.dart:1-119`) renders every plan day identically regardless of whether it's in the past, present, or future. Past days show "Start Tutoring" buttons and priority topics as if the day is still active. There is no `isPast` check, no `completed` state, and no visual distinction.
 
-- `EngagementScheduler._l10n` — null (4 fallback paths)
-- `StudyProgressTracker._l10n` — null across 7 instances (13 fallback paths: 8 recommendations + 5 mastery labels)
-- `BadgeService` — no l10n parameter at all
-- `ProgressExportService` — no l10n parameter
+**Affected files:**
+- `lib/features/planner/presentation/widgets/daily_plan_card.dart` — no past/future awareness in rendering
+- `lib/features/planner/models/daily_plan.dart` — no `wasCompleted` or `wasAttended` field on the model
 
-**Root cause:** These "background" services are created during the `main()` initialization phase (before `runApp()`), when `AppLocalizations` is not yet available. Providers replicate this pattern.
+**Rationale:** Returning users cannot visually distinguish between days they completed, days they missed, and upcoming days. The plan appears as a flat wall of identical cards. Starting a tutoring session on a day 2 weeks in the past is contextually nonsensical.
 
-**Acceptance criteria (in addition to B1 and B2):**
-- Audit all services with nullable `_l10n` and ensure they receive localized strings
-- Consider a strategy: either defer service creation until after `runApp()`, or make `_l10n` settable post-construction
-- `BadgeService` and `ProgressExportService` should also support localization
+**Acceptance criteria (fixed):**
+- Add an `isCompleted` field to `DailyPlan` model, populated from adherence records.
+- In `DailyPlanCard`, check if the day is in the past. If so:
+  - If completed: show a green checkmark overlay, disable action buttons, reduce opacity slightly.
+  - If missed (not completed): show a red "MISSED" badge, disable action buttons, add "Catch Up" button that navigates to a catch-up flow.
+- If the day is today: add a subtle "Today" indicator (pill badge or accent border).
 
----
+### M3. Mentor LLM context has no "days since last session" metric
 
-## MAJOR Findings
+**Context:** `_buildContextPrompt()` (`lib/features/mentor/services/mentor_service.dart:155-256`) assembles a rich context string but does not include `daysSinceLastSession` or any gap-length metric. The `_getConsecutiveStudyDays()` method (`mentor_service.dart:351-374`) returns only the current streak (which is 0 after a break), not the gap length. The LLM cannot differentiate between "studied yesterday and took today off" vs. "last studied 14 days ago."
 
-### M1. Backup dialog shows 20 hardcoded English Hive box names
+**Affected files:**
+- `lib/features/mentor/services/mentor_service.dart:155-256` — context lacks gap metrics
+- `lib/features/mentor/services/mentor_service.dart:351-374` — `_getConsecutiveStudyDays()` only counts streak, not gap
 
-**File:** `lib/features/settings/presentation/settings_screen.dart:816-838`
+**Rationale:** The mentor is the most natural place for a returning user to ask for help ("I've been away, what do I do?"), but the LLM has no data to form a context-aware response. The conversation is generic.
 
-**Problem:** The `_boxDisplayName()` method returns hardcoded English names like `'Subjects'`, `'Topics'`, `'Questions'`, `'Lessons'`, etc. in the backup/restore confirmation dialog. A Spanish user sees "Subjects" instead of "Materias".
+**Acceptance criteria (fixed):**
+- After fixing B1, add `daysSinceLastActivity` to the LLM context string: "The student has not been active for {daysSinceLastActivity} days."
+- If `daysSinceLastActivity >= 3`, prepend a system instruction: "The student is returning after a {daysSinceLastActivity}-day absence. Provide a warm welcome-back and suggest specific catch-up steps."
 
-**Acceptance criteria:**
-- Box display names should use localized strings from ARB keys instead of hardcoded English
-- Add ARB keys for each box display name (e.g., `backupBoxSubjects: "Materias"`)
+### M4. CheckWellbeingAndGenerateNudges() has no differentiated messaging for long absences
 
----
+**Context:** `checkWellbeingAndGenerateNudges()` (`lib/features/mentor/services/mentor_service.dart:376-462`) has a single inactivity check at lines 433-450: if `consecutiveDays == 0` and the last session was >= 48 hours ago, it generates a `nudgeInactive48h`. There is no differentiated threshold for 7+, 14+, or 30+ day absences. All absences longer than 48 hours get the same "you've been inactive" message.
 
-### M2. PDF export header is hardcoded English
+**Affected files:**
+- `lib/features/mentor/services/mentor_service.dart:433-450` — single 48h threshold, no graduated messaging
 
-**File:** `lib/core/services/question_pdf_generator.dart:84`
+**Rationale:** "You haven't studied in 48 hours" is an appropriate nudge for a weekend gap but feels tone-deaf after a 2-week absence. The user needs a different message that acknowledges the longer gap and helps them plan re-engagement.
 
-**Problem:** `'Total Questions: ${_questions.length}'` is hardcoded English. Per AGENTS.md: "PDF exports should use the user's locale (they are user-facing documents)."
+**Acceptance criteria (fixed):**
+- Add graduated thresholds: 48h (>2 days), 7+ days, 14+ days, 30+ days.
+- Generate distinct nudge messages per threshold: "It's been {days} days. Let's ease back in..." (7+), "Welcome back! It's been {days} days..." (14+).
+- Add localized strings for each threshold in ARB files.
 
-**Acceptance criteria:**
-- PDF generator must accept a locale parameter or `AppLocalizations`
-- Header labels must use localized strings
+### M5. Stale in-progress sessions orphaned after absence
 
----
+**Context:** Sessions that were not properly ended (e.g., app killed during Focus Mode or Tutor lesson) have `endTime: null` and `completed: false`. These appear in `getScheduledLessons()` (because `endTime == null` filter) and in `SessionHistoryScreen` with `Duration.zero` and 0 questions. No stale/expired indicator exists.
 
-### M3. ConversationManager continue/exercise keywords lack locale-awareness
+**Affected files:**
+- `lib/features/sessions/presentation/session_history_screen.dart:513-611` — no "in progress" or "stale" badge for sessions with `endTime == null`
+- `lib/features/planner/services/planner_service.dart:330-343` — orphaned sessions appear in scheduled lessons
+- `lib/features/sessions/data/repositories/session_repository.dart` — no `getStaleOrphaned()` query
 
-**File:** `lib/features/teaching/services/conversation_manager.dart:44, 154-156, 280`
+**Rationale:** Returning users may see confusing sessions from before their break with zero duration and no context. A tutor session that was never ended looks like an upcoming lesson.
 
-**Problem:** As described in B3, two critical keyword lists are English-only. While this is a BLOCKER for Spanish users specifically, the structural issue (no locale-based keyword selection) is a MAJOR architectural deficiency.
-
-**Acceptance criteria:** (same as B3)
-
----
-
-### M4. MentorService topic extraction uses hardcoded `_localeName == 'es'` branch
-
-**File:** `lib/features/mentor/services/mentor_service.dart:265-267, 276-278`
-
-**Problem:** `_extractTopic()` uses:
-```dart
-final keywords = _localeName == 'es'
-    ? Spanish keywords
-    : English keywords;
-final topicKeywords = _localeName == 'es'
-    ? Spanish topic keywords
-    : English topic keywords;
-```
-
-This pattern requires a new `else if` branch for every added language. Does not scale. A `Map<String, List<String>>` keyed by locale would be extensible.
-
-**Acceptance criteria:**
-- Replace if/else with a map-based lookup: `Map<String, List<String>>` keyed by locale
-- Add French, German keyword lists (can be minimal initial implementation)
-- Unit tests should verify correct keywords are used for each locale
+**Acceptance criteria (fixed):**
+- In `SessionHistoryScreen`, sessions with `endTime == null` and `startTime` > 1 hour ago should show a "Stale" badge with an explanation tooltip.
+- Add a "Dismiss Stale Session" action (sets `completed = true`, `endTime = startTime`, `actualDuration = Duration.zero`).
+- Filter out stale sessions (no `endTime` and > 1 hour past) from `getScheduledLessons()`.
 
 ---
 
-### M5. FormatCurrency hardcodes `$` symbol
+### M6. Plan duration does not adjust for missed days after user returns
 
-**File:** `lib/core/utils/number_format_utils.dart:52`
+**Context:** After the user returns and begins studying again, the original plan end date remains unchanged. Days 1-14 of the plan are past days that now sit as "missed" (though the app doesn't mark them as such — see M2). The remaining plan days are unchanged. The user is effectively 14 days behind the schedule with no automated adjustment.
 
-**Problem:** `symbol: '\$'` is always the dollar sign. In Spanish-speaking regions (Mexico, Spain, etc.), users may expect different currency symbols (MX$, €) depending on configuration. The `NumberFormat.simpleCurrency` can infer symbol from locale.
+**Affected files:**
+- `lib/features/planner/services/personal_learning_plan_service.dart` — no `shiftPlanDates()` or `extendPlan()` method
+- `lib/features/planner/presentation/planner_screen.dart` — no "Extend Plan" or "Re-schedule Remaining" action
 
-**Acceptance criteria:**
-- `formatCurrency` should infer the currency symbol from the locale, or accept a configurable symbol parameter
-- Default behavior should use locale-appropriate symbol
+**Rationale:** Without duration extension, a returning student's plan becomes increasingly unrealistic. They fall further behind each day as the fixed end date approaches.
 
----
+**Acceptance criteria (fixed):**
+- Same as B3 acceptance criteria.
+- Additionally, on first return after absence (detected via B1's `lastActivityAt`), if `daysSinceLastActivity >= 3`, auto-show a dialog: "You were away for {days} days. Would you like to extend your study plan by {days} days?"
 
-### M6. English fallback strings in NotificationService
+### M7. `getAdherenceReport()` returns perfect adherence (1.0) for zero-record periods
 
-**File:** `lib/core/services/notification_service.dart:200-292`
+**Context:** `PlanAdapter.getAdherenceReport()` (`lib/core/services/plan_adapter.dart:125-152`) returns `averageAdherence: 1.0` when no records exist. Meanwhile `PlanAdherenceRepository.getAverageAdherence()` (`plan_adherence_repository.dart:37-42`) returns `0.0` for the same scenario. Two methods used by different parts of the app return contradictory results for the same data state.
 
-**Problem:** 22 hardcoded English fallback strings for notification content. While notifications primarily use nudge messages from `EngagementScheduler` (which has its own BLOCKER issue), direct notification calls also fall through to English.
+**Affected files:**
+- `lib/core/services/plan_adapter.dart:125-152` — returns 1.0 for empty data
+- `lib/features/planner/data/repositories/plan_adherence_repository.dart:37-42` — returns 0.0 for empty data
 
-**Acceptance criteria:**
-- `NotificationService` should accept locale context or `AppLocalizations`
-- All 22 fallback strings should have corresponding ARB keys
+**Rationale:** Depending on which component reads adherence data, the app may report perfect adherence (1.0) or zero adherence (0.0) for the same 14-day absence. This inconsistency could cause conflicting behavior in different parts of the app.
 
----
-
-## MINOR Findings
-
-### m1. `AnswerValidationService` and `QuestionAnswerValidator` default to English
-
-**Files:** 
-- `lib/core/services/answer_validation_service.dart:36, 286, 293, 318, 354, 381, etc.`
-
-**Problem:** Every constructor and static method defaults to `ValidationMessages.english` instead of checking the current locale. Currently this only affects the `validateWithMarkscheme()` static method (which is dead code), but any future code path that creates `AnswerValidationService` without passing localized messages will display English validation feedback.
-
-**Acceptance criteria:**
-- Consider removing the English default and making the `messages` parameter required
-- Or add a runtime locale check that falls back to an appropriate default
+**Acceptance criteria (fixed):**
+- Make both methods return `null` or a sentinel value (like `-1`) for "no data" instead of returning meaningful values.
+- Update all callers to handle `null` by displaying "No data / Not enough data" instead of treating it as a numeric value.
 
 ---
 
-### m2. Locale flicker on startup when saved locale ≠ device locale
+## MINOR — UX Friction
 
-**Files:** 
-- `lib/main.dart:153` (initial renders with device locale)
-- `lib/main.dart:163` (post-frame callback overrides with saved locale)
+### m1. No "Welcome back" or "re-engagement" localized strings in ARB files
 
-**Problem:** On app launch, the first frame renders with the device locale. A `postFrameCallback` then loads the Hive profile and overrides to the saved locale. If these differ, there's a visible 1-frame flicker.
+**Context:** Searching `lib/l10n/app_en.arb` and `lib/l10n/app_es.arb` for "welcome back," "returning," "away," "break" (absence sense), "holiday," or "vacation" returns zero results. The only re-engagement string is `recommendNoActivity` which is a code-level fallback in `StudyProgressTracker`, not a localized ARB string.
 
-**Acceptance criteria:**
-- Move locale initialization to be synchronous from Hive (Hive is already open by this point)
-- Or use a splash/loading screen that resolves the locale before rendering the main UI
+**Affected files:**
+- `lib/l10n/app_en.arb` — no re-engagement strings
+- `lib/l10n/app_es.arb` — no re-engagement strings
+
+**Acceptance criteria (fixed):**
+- Add the following localized strings (English shown; add all locales):
+  - `welcomeBackDays`: "Welcome back! You've been away for {days} days."
+  - `absenceDetectedTitle`: "Absence Detected"
+  - `absenceDetectedBody`: "You haven't used StudyKing in {days} days. How would you like to proceed?"
+  - `extendPlan`: "Extend study plan by {days} days"
+  - `missedLessonLabel`: "Missed"
+  - `staleSessionLabel`: "Not completed"
+
+### m2. Weekly chart zero bars could be misinterpreted
+
+**Context:** The `WeeklyChart` at `lib/features/dashboard/presentation/widgets/weekly_chart.dart` renders bars whose height corresponds to question count. A 0-question week renders as an invisible/flat bar. On a small screen, multiple consecutive flat bars could look like a chart rendering glitch.
+
+**Affected files:**
+- `lib/features/dashboard/presentation/widgets/weekly_chart.dart` — zero-height bars are invisible, not distinguishable from "no data"
+
+**Acceptance criteria (fixed):**
+- When a week has 0 questions and the user has existing data, render a subtle dashed outline bar at minimum height (2-4px) with a different color (e.g., grey instead of primary).
+- Add a label "No activity" or a tooltip on empty bars.
+
+### m3. Consecutive study days computation only considers completed sessions
+
+**Context:** `_getConsecutiveStudyDays()` (`mentor_service.dart:351-374`) only counts sessions where `session.completed == true`. Sessions that were orphaned (see M5) are not counted. This means a user who used the app but had sessions improperly ended will show a shorter streak than reality.
+
+**Affected files:**
+- `lib/features/mentor/services/mentor_service.dart:351-374`
+
+**Acceptance criteria (fixed):**
+- Count sessions with any `actualDurationMs > 0` as a study day, regardless of `completed` flag.
+- Or add a fallback: if a session has `startTime` on a given date but no `endTime`, count it as a study day with a "partial" qualifier.
+
+### m4. No loading/transition state when returning app processes stale data
+
+**Context:** After a long absence, the app loads all Hive data synchronously on init. There is no intermediate loading state that says "Loading your data...", "Checking for updates...", or "Welcome back! Restoring your session..." The first frame shows whatever data was cached.
+
+**Affected files:**
+- `lib/main.dart:127-131` — `runApp(StudyKingApp())` starts immediately
+- `lib/features/dashboard/presentation/dashboard_screen.dart` — no "restoring state" overlay
+
+**Acceptance criteria (fixed):**
+- After fixing B1, if `daysSinceLastActivity >= 1`, show a brief (1-2 second) "Welcome back" splash overlay while data loads.
+- This overlay could show: days since last visit, total progress summary, and a "Continue where you left off" button.
 
 ---
 
-### m3. `formatCurrency` locale-awareness gap
+## Cross-References to Related Issues
 
-**File:** `lib/core/utils/number_format_utils.dart:45-61`
-
-**Problem:** (repeated from M5 — kept here as minor since it's cosmetic)
-
----
-
-## PARTIAL Findings
-
-### P1. Spanish locale startup detection works for same-locale persistence
-
-**Files:** `lib/core/providers/app_providers.dart:283-295`, `lib/main.dart:153-163`
-
-**Detail:** When the device locale is Spanish and no saved profile exists, the first launch correctly renders in Spanish. When the saved language matches the device locale, there is no flicker on subsequent launches. Only cross-locale persistence (saved language ≠ device locale) causes the flicker.
-
----
-
-## Previously Reported but VERIFIED
-
-| Finding | Status |
+| Finding | Related Issue |
 |---|---|
-| Onboarding dialog fully localized | VERIFIED PASS |
-| API Key banner localized | VERIFIED PASS |
-| Bottom navigation labels localized | VERIFIED PASS |
-| Number formatting locale-aware | VERIFIED PASS |
-| Language selector shows localized names | VERIFIED PASS |
-| Language switching is immediate | VERIFIED PASS |
-| Mentor Spanish intent detection works | VERIFIED PASS |
-| Mentor Spanish topic extraction works | VERIFIED PASS |
-| `ValidationMessages.fromLocalizations()` IS called (2 callers) | VERIFIED — corrected from earlier draft |
-| Practice/exam validation IS localized | VERIFIED PASS |
-| `EngagementScheduler.updateSettings()` never reads notification prefs | CONFIRMED from scenario_focus_mode_daily_habit |
+| B1 (no last-activity timestamp) | Related to `scenario_first_launch_ib_chemistry` finding about no profile prompt |
+| B4 (in-process scheduler) | Related to scenario 9's `EngagementScheduler` findings |
+| B5 (stale scheduled lessons) | Cross-refs `scenario_existing_user_pace_subjects_provider` B1 (no cancel lesson UI) |
+| M1 (dashboard zeros) | Related to `ui_ux_master.md` M1 (dashboard skeleton/loading) |
+| M3 (mentor LLM context) | Cross-refs `scenario_mentor_study_companion` findings about missing context |

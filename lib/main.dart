@@ -81,7 +81,10 @@ void main() async {
       conversationRepository: ConversationRepository(),
       tutorSessionRepository: TutorSessionRepository(),
     );
-    await mainDb.init();
+    final dbInitResult = await mainDb.init();
+    if (dbInitResult.isFailure) {
+      _mainLogger.e('Failed to init database: ${dbInitResult.error}');
+    }
     
     // Initialize settings repository
     final initSettingsRepo = SettingsRepository();
@@ -90,18 +93,35 @@ void main() async {
     if (initResult.isFailure) {
       _mainLogger.e('Failed to init settings: ${initResult.error}');
     }
-    
+
+    // Load saved locale before runApp to prevent locale flicker
+    try {
+      final initProfileResult = await initSettingsRepo.getProfileData();
+      if (initProfileResult.isSuccess) {
+        final profile = initProfileResult.data;
+        if (profile != null && profile.language.isNotEmpty) {
+          setInitialLanguageCode(profile.language);
+        }
+      } else {
+        _mainLogger.e('Error loading profile: ${initProfileResult.error}');
+      }
+    } catch (e, stackTrace) {
+      _mainLogger.e('Error loading profile locale', e, stackTrace);
+    }
+
     // Initialize student ID service (generates UUID on first launch)
     StudentIdService(); // ensure singleton is initialized
     await StudentIdService().init();
 
     try {
       final masteryService = MasteryGraphService();
+      final defaultL10n = lookupAppLocalizations(const Locale('en'));
       final schedulerRef = EngagementScheduler(
         tracker: StudyProgressTracker(
           attemptRepo: mainDb.attemptRepository,
           masteryService: masteryService,
           sessionRepo: mainDb.sessionRepository,
+          l10n: defaultL10n,
         ),
         masteryService: masteryService,
         nudgeRepository: EngagementNudgeRepository(),
@@ -109,6 +129,7 @@ void main() async {
         planAdapter: PlanAdapter(),
         sessionRepository: mainDb.sessionRepository,
         plannerService: PlannerService(),
+        l10n: defaultL10n,
       );
       await schedulerRef.init();
       _engagementScheduler = schedulerRef;
@@ -142,8 +163,6 @@ class StudyKingApp extends ConsumerStatefulWidget {
 }
 
 class _StudyKingAppState extends ConsumerState<StudyKingApp> {
-  bool _hasLoadedProfile = false;
-
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
@@ -151,26 +170,6 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
       _engagementScheduler?.updateSettings(settings);
     });
     final locale = ref.watch(localeProvider);
-
-    if (!_hasLoadedProfile) {
-      _hasLoadedProfile = true;
-      WidgetsBinding.instance.addPostFrameCallback((_) async {
-        final repo = ref.read(settingsRepositoryProvider);
-        final profileResult = await repo.getProfileData();
-        if (profileResult.isSuccess) {
-          final profile = profileResult.data;
-          if (profile != null && profile.language.isNotEmpty && mounted) {
-            ref.read(localeProvider.notifier).state = Locale(profile.language);
-          }
-        } else {
-          _mainLogger.e('Error loading profile: ${profileResult.error}');
-        }
-
-        ref.read(apiKeyProvider.notifier).state = settings.apiKey;
-        ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
-        ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
-      });
-    }
     
     final systemBoldText = MediaQuery.boldTextOf(context);
     final systemHighContrast = MediaQuery.highContrastOf(context);
@@ -261,16 +260,16 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
       };
 }
 
-class MainScreen extends StatefulWidget {
+class MainScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;
 
   const MainScreen({super.key, this.fixedStudentId});
 
   @override
-  State<MainScreen> createState() => _MainScreenState();
+  ConsumerState<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends ConsumerState<MainScreen> {
   int _selectedIndex = 0;
   bool _showApiKeyBanner = false;
   bool _apiKeyBannerDismissed = false;
@@ -354,6 +353,11 @@ class _MainScreenState extends State<MainScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isWideScreen = ResponsiveUtils.breakpointOf(context).isTablet;
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _engagementScheduler?.updateLocalization(l10n);
+      ref.read(l10nProvider.notifier).state = l10n;
+    });
 
     final bodyContent = Stack(
       children: [

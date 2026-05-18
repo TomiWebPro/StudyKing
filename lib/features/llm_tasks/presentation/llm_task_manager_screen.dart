@@ -3,10 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/providers/llm_providers.dart';
 import '../../../core/services/llm_task_manager.dart';
+import '../../../features/llm_tasks/services/llm_task_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../l10n/generated/app_localizations.dart';
+import '../providers/llm_task_providers.dart';
 
 class LlmTaskManagerScreen extends ConsumerStatefulWidget {
   const LlmTaskManagerScreen({super.key});
@@ -16,30 +18,30 @@ class LlmTaskManagerScreen extends ConsumerStatefulWidget {
 }
 
 class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
-  LlmTaskManager? _taskManager;
+  LlmTaskService? _taskService;
   final Set<String> _notifiedFailedTaskIds = {};
 
   @override
   void initState() {
     super.initState();
-    _taskManager = ref.read(llmTaskManagerProvider);
-    _taskManager!.addListener(_onTasksChanged);
+    _taskService = ref.read(llmTaskServiceProvider);
+    _taskService!.addListener(_onTasksChanged);
     _onTasksChanged();
   }
 
   @override
   void dispose() {
-    _taskManager?.removeListener(_onTasksChanged);
+    _taskService?.removeListener(_onTasksChanged);
     super.dispose();
   }
 
   void _onTasksChanged() {
     if (!mounted) return;
     setState(() {});
-    final taskManager = ref.read(llmTaskManagerProvider);
+    final taskService = ref.read(llmTaskServiceProvider);
     final l10n = AppLocalizations.of(context);
     if (l10n == null) return;
-    for (final task in taskManager.tasks) {
+    for (final task in taskService.getAllTasks()) {
       if (task.status == LlmTaskStatus.failed &&
           task.error != null &&
           _notifiedFailedTaskIds.add(task.id)) {
@@ -49,7 +51,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             duration: const Duration(seconds: 4),
             action: SnackBarAction(
               label: l10n.retry,
-              onPressed: () => taskManager.retryTask(task.id),
+              onPressed: () => taskService.retryTask(task.id),
             ),
           ),
         );
@@ -61,10 +63,11 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final taskManager = ref.watch(llmTaskManagerProvider);
-    final tasks = taskManager.tasks;
-    final activeTasks = taskManager.activeTasks;
+    final taskService = ref.watch(llmTaskServiceProvider);
+    final tasks = taskService.getAllTasks();
+    final activeTasks = taskService.getActiveTasks();
     final hasTokenData = tasks.any((t) => t.tokensUsed > 0);
+    final taskManager = ref.watch(llmTaskManagerProvider);
 
     return Scaffold(
       appBar: AppBar(

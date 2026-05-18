@@ -160,8 +160,40 @@ void main() {
           isEmpty,
         );
       });
-    });
 
+      test('empty string cardId does not corrupt state', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container
+            .read(dashboardLayoutPreferencesProvider.notifier);
+        notifier.toggleCollapsed('');
+        expect(
+          container.read(dashboardLayoutPreferencesProvider)
+              .isCollapsed(''),
+          isTrue,
+        );
+        notifier.toggleCollapsed('');
+        expect(
+          container.read(dashboardLayoutPreferencesProvider)
+              .collapsedCards,
+          isEmpty,
+        );
+      });
+
+      test('works without Hive initialization', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        final notifier = container
+            .read(dashboardLayoutPreferencesProvider.notifier);
+        expect(notifier, isA<DashboardLayoutNotifier>());
+        notifier.toggleCollapsed('card-a');
+        expect(
+          container.read(dashboardLayoutPreferencesProvider)
+              .isCollapsed('card-a'),
+          isTrue,
+        );
+      });
+    });
 
   });
 

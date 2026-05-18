@@ -5,6 +5,9 @@ import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
+
+TestNavigatorObserver? testNavigatorObserver;
 
 Widget _buildTestApp(LlmTaskManager manager) {
   return ProviderScope(
@@ -14,12 +17,20 @@ Widget _buildTestApp(LlmTaskManager manager) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
+      navigatorObservers: testNavigatorObserver != null ? [testNavigatorObserver!] : [],
       home: const LlmTaskManagerScreen(),
     ),
   );
 }
 void main() {
   group('LlmTaskManagerScreen', () {
+    setUp(() {
+      testNavigatorObserver = TestNavigatorObserver();
+    });
+
+    tearDown(() {
+      testNavigatorObserver = null;
+    });
     testWidgets('renders app bar with correct title', (tester) async {
       await tester.pumpWidget(_buildTestApp(LlmTaskManager()));
       await tester.pump();

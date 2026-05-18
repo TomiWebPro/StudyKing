@@ -549,7 +549,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
                     ],
                   ],
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                 onTap: () => Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: item.id),
               );
             },

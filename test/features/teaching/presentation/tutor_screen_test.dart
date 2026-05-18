@@ -64,6 +64,7 @@ class _FakeExerciseEvaluator extends ExerciseEvaluator {
       : super(
           llmService: _FakeLlmService(),
           modelId: 'test-model',
+          localeName: 'en',
         );
 
   @override
@@ -155,6 +156,7 @@ class _FakeTutorService extends TutorService {
       subjectId: subjectId,
       topicId: topicId,
       exerciseEvaluator: _FakeExerciseEvaluator(),
+      localeName: localeName,
     );
     await manager.initialize();
     return manager;

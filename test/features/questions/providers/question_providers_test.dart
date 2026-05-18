@@ -8,30 +8,43 @@ import 'package:studyking/features/questions/providers/question_providers.dart';
 
 class _FakeQuestionRepo extends QuestionRepository {
   final List<Question> _questions;
+  bool shouldThrow = false;
 
   _FakeQuestionRepo(this._questions);
 
   @override
-  Future<void> init() async {}
+  Future<void> init() async {
+    if (shouldThrow) throw Exception('init error');
+  }
 
   @override
-  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
+  Future<Result<List<Question>>> getAll() async {
+    if (shouldThrow) return Result.failure('storage error');
+    return Result.success(_questions);
+  }
 
   @override
-  Future<Result<Question?>> get(String key) async =>
-      Result.success(_questions.where((q) => q.id == key).firstOrNull);
+  Future<Result<Question?>> get(String key) async {
+    if (shouldThrow) return Result.failure('storage error');
+    return Result.success(_questions.where((q) => q.id == key).firstOrNull);
+  }
 
   @override
-  Future<Result<void>> save(String key, Question item) async => Result.success(null);
+  Future<Result<void>> save(String key, Question item) async {
+    if (shouldThrow) return Result.failure('storage error');
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> delete(String key) async {
+    if (shouldThrow) return Result.failure('storage error');
     _questions.removeWhere((q) => q.id == key);
     return Result.success(null);
   }
 
   @override
   Future<Result<void>> create(Question question) async {
+    if (shouldThrow) return Result.failure('storage error');
     _questions.add(question);
     return Result.success(null);
   }
@@ -116,6 +129,55 @@ void main() {
       final a = container.read(questionRepositoryProvider);
       final b = container.read(questionRepositoryProvider);
       expect(a, same(b));
+    });
+
+    test('handles error from repo getAll', () async {
+      final fakeRepo = _FakeQuestionRepo([]);
+      fakeRepo.shouldThrow = true;
+
+      final container = ProviderContainer(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final repo = container.read(questionRepositoryProvider);
+      final result = await repo.getAll();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('recovers after error', () async {
+      final questions = [
+        Question(
+          id: 'q1',
+          text: 'Recovered question?',
+          type: QuestionType.singleChoice,
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        ),
+      ];
+      final fakeRepo = _FakeQuestionRepo(questions);
+
+      fakeRepo.shouldThrow = true;
+      final container1 = ProviderContainer(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(fakeRepo),
+        ],
+      );
+      addTearDown(container1.dispose);
+
+      var repo = container1.read(questionRepositoryProvider);
+      var result = await repo.getAll();
+      expect(result.isFailure, isTrue);
+
+      fakeRepo.shouldThrow = false;
+      result = await repo.getAll();
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.length, 1);
+      expect(result.data![0].text, 'Recovered question?');
     });
   });
 }

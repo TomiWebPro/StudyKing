@@ -6,22 +6,22 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
-import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, questionRepositoryProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
-import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart' show MainScreen;
 
@@ -130,6 +130,7 @@ class _FakeStudyProgressTracker extends StudyProgressTracker {
       : super(
           attemptRepo: _FakeAttemptRepository(),
           masteryService: _FakeMasteryGraphService(),
+          l10n: lookupAppLocalizations(const Locale('en')),
         );
 
   @override

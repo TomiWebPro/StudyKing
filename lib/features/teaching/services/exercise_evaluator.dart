@@ -16,7 +16,7 @@ class ExerciseEvaluator {
   ExerciseEvaluator({
     required LlmService llmService,
     required String modelId,
-    String localeName = 'en',
+    required String localeName,
   })  : _llmService = llmService,
       _modelId = modelId,
       _localeName = localeName;
@@ -64,17 +64,19 @@ class ExerciseEvaluator {
       feature: 'teaching_evaluation',
     );
     if (result.isFailure) {
+      final l10n = lookupAppLocalizations(Locale(_localeName));
       return EvaluationResult(
         score: 0.5,
-        explanation: 'Could not evaluate answer: ${result.error}',
+        explanation: l10n.couldNotEvaluateAnswerWithError(result.error!),
       );
     }
     final response = result.data!;
 
     if (response.isEmpty) {
+      final l10n = lookupAppLocalizations(Locale(_localeName));
       return EvaluationResult(
         score: 0.5,
-        explanation: 'Could not evaluate answer.',
+        explanation: l10n.couldNotEvaluateAnswer,
       );
     }
 

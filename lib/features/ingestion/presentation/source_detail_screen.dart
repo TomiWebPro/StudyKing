@@ -8,7 +8,7 @@ import 'package:studyking/core/providers/app_providers.dart' show selectedModelP
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -450,7 +450,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                           ),
                           title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
                           subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
-                          trailing: const Icon(Icons.chevron_right),
+                          trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                           onTap: () {
                             Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
                           },

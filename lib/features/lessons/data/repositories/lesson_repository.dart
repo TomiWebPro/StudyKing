@@ -9,12 +9,7 @@ class LessonRepository extends Repository<Lesson> {
   final Logger _logger = const Logger('LessonRepository');
 
   Future<void> init() async {
-    try {
-      await openBox(HiveBoxNames.lessons);
-    } catch (e) {
-      _logger.e('Error initializing lesson repository', e);
-      rethrow;
-    }
+    await openBox(HiveBoxNames.lessons);
   }
 
   Future<Result<void>> create(Lesson lesson) async {

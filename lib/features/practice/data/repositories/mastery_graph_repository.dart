@@ -10,12 +10,10 @@ import 'package:studyking/features/practice/data/repositories/topic_dependency_r
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/utils/logger.dart';
 
 /// Facade that delegates to four individual repositories.
 /// New code should depend on the specific repositories directly.
 class MasteryGraphRepository extends Repository<MasteryState> {
-  final Logger _logger = const Logger('MasteryGraphRepository');
   final MasteryStateRepository masteryStateRepo;
   final QuestionMasteryStateRepository questionMasteryRepo;
   final TopicDependencyRepository topicDependencyRepo;
@@ -57,16 +55,11 @@ class MasteryGraphRepository extends Repository<MasteryState> {
   }
 
   Future<void> init() async {
-    try {
-      await masteryStateRepo.init();
-      await questionMasteryRepo.init();
-      await topicDependencyRepo.init();
-      await questionEvaluationRepo.init();
-      attachBox(Hive.box<MasteryState>(HiveBoxNames.masteryStates));
-    } catch (e) {
-      _logger.e('Error initializing MasteryGraphRepository', e);
-      rethrow;
-    }
+    await masteryStateRepo.init();
+    await questionMasteryRepo.init();
+    await topicDependencyRepo.init();
+    await questionEvaluationRepo.init();
+    attachBox(Hive.box<MasteryState>(HiveBoxNames.masteryStates));
   }
 
   // --- MasteryState delegation ---

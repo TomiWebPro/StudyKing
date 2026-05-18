@@ -97,7 +97,7 @@ class SubjectLessonsTab extends ConsumerWidget {
                   l10n.blocksCount(lesson.blocks.length),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
-                trailing: const Icon(Icons.chevron_right),
+                trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                 onTap: () => Navigator.pushNamed(
                   context,
                   AppRoutes.lessonDetail,

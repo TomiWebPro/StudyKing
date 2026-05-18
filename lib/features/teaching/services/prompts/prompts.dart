@@ -18,9 +18,9 @@ class ConversationPromptSet {
   final int version;
   final String localeName;
 
-  const ConversationPromptSet({this.version = 1, this.localeName = 'en'});
+  const ConversationPromptSet({this.version = 1, required this.localeName});
 
-  static const ConversationPromptSet defaultTemplates = ConversationPromptSet();
+  static const ConversationPromptSet defaultTemplates = ConversationPromptSet(localeName: 'en');
 
   String get _languageInstruction {
     if (localeName == 'en') return '';

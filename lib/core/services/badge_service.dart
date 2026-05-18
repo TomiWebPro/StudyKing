@@ -1,21 +1,19 @@
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'study_progress_tracker.dart';
 import 'notification_service.dart';
 
 class BadgeService {
   final BadgeRepository _repository;
-  final StudyProgressTracker _tracker;
+  final Future<Map<String, dynamic>> Function(String)? _getStats;
   final NotificationService _notificationService;
 
   BadgeService({
     BadgeRepository? repository,
-    StudyProgressTracker? tracker,
+    Future<Map<String, dynamic>> Function(String)? getStats,
     NotificationService? notificationService,
   })  : _repository = repository ?? BadgeRepository(),
-        _tracker = tracker ?? StudyProgressTracker(attemptRepo: AttemptRepository()),
+        _getStats = getStats,
         _notificationService = notificationService ?? NotificationService();
 
   Future<List<BadgeModel>> getBadges(String studentId) async {
@@ -26,7 +24,7 @@ class BadgeService {
 
   Future<List<BadgeModel>> checkAndUnlockBadges(String studentId) async {
     await _repository.init();
-    final stats = await _tracker.getOverallStats(studentId);
+    final stats = _getStats != null ? await _getStats(studentId) : <String, dynamic>{};
     final existing = await _repository.getBadgeMap(studentId);
     final newlyUnlocked = <BadgeModel>[];
 

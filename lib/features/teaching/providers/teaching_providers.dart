@@ -7,7 +7,6 @@ import 'package:studyking/features/practice/providers/practice_providers.dart' s
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/voice_controller.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
-import '../services/prompts/prompts.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
   final savedModel = ref.watch(selectedModelProvider);
@@ -42,9 +41,4 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     conversationRepository: database.conversationRepository,
     clock: ref.watch(clockProvider),
   );
-});
-
-final promptsProvider = Provider<ConversationPromptSet>((ref) {
-  final locale = ref.watch(localeProvider);
-  return ConversationPromptSet(localeName: locale.languageCode);
 });

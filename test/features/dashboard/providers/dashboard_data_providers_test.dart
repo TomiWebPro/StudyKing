@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -21,6 +22,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
@@ -86,7 +88,7 @@ class _FakeProgressTracker extends StudyProgressTracker {
         _weeklyTrend = weeklyTrend,
         _badges = badges,
         _failGetBadges = failGetBadges,
-        super(attemptRepo: _FakeAttemptRepo());
+        super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {

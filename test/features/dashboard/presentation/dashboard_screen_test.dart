@@ -4,36 +4,36 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
+import 'package:studyking/core/widgets/metric_card.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/navigator_observer_helper.dart';
 
 MasteryState _masteryState({
   required String topicId,
@@ -118,7 +118,10 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
     this.statsCompleter,
     this.exportProgressCompleter,
     this.exportSessionCompleter,
-  }) : super(attemptRepo: _FakeAttemptRepository());
+  }) : super(
+    attemptRepo: _FakeAttemptRepository(),
+    l10n: lookupAppLocalizations(const Locale('en')),
+  );
 
   @override
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {

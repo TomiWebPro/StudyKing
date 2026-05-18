@@ -1,12 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/services/badge_service.dart';
-import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 
 class _FakeBadgeRepository implements BadgeRepository {
   final List<BadgeModel> _badges = [];
@@ -64,46 +61,6 @@ class _FakeBadgeRepository implements BadgeRepository {
   Box<BadgeModel>? _box;
 }
 
-class _FakeAttemptRepository extends AttemptRepository {
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-  @override
-  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
-  @override
-  Future<Result<StudentAttempt?>> get(String id) async => Result.success(null);
-  @override
-  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
-  @override
-  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async => Result.success([]);
-  @override
-  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async => Result.success([]);
-  @override
-  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async => Result.success([]);
-  @override
-  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
-  @override
-  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async => Result.success({});
-  @override
-  Future<Result<void>> delete(String id) async => Result.success(null);
-}
-
-class _FakeBadgeTracker extends StudyProgressTracker {
-  _FakeBadgeTracker() : super(attemptRepo: _FakeAttemptRepository());
-
-  @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
-    return {
-      'totalAttempts': 0,
-      'correctAttempts': 0,
-      'accuracy': 0,
-      'totalStudyTimeHours': 0.0,
-      'weeklyActivity': 0,
-      'dailyActivity': 0,
-      'topicsStudied': 0,
-    };
-  }
-}
-
 void main() {
   group('BadgeService', () {
     late _FakeBadgeRepository mockRepo;
@@ -113,7 +70,15 @@ void main() {
       mockRepo = _FakeBadgeRepository();
       service = BadgeService(
         repository: mockRepo,
-        tracker: _FakeBadgeTracker(),
+        getStats: (studentId) async => const {
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'totalStudyTimeHours': 0.0,
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        },
         notificationService: null,
       );
     });

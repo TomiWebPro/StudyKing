@@ -47,10 +47,11 @@ String formatCurrency(
   String localeName, {
   int minFractionDigits = 2,
   int maxFractionDigits = 4,
+  String? symbol,
 }) {
   final fmt = NumberFormat.currency(
     locale: localeName,
-    symbol: '\$',
+    symbol: symbol,
     decimalDigits: maxFractionDigits,
   );
   if (minFractionDigits == maxFractionDigits) {

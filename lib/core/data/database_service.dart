@@ -1,3 +1,4 @@
+import '../errors/result.dart';
 import '../utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -30,8 +31,8 @@ class DatabaseService {
     required this.tutorSessionRepository,
   });
 
-  Future<void> init() async {
-    try {
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
       await topicRepository.init();
       await questionRepository.init();
       await attemptRepository.init();
@@ -41,9 +42,6 @@ class DatabaseService {
       await conversationRepository.init();
       await tutorSessionRepository.init();
       _logger.i('All repositories initialized successfully');
-    } catch (e) {
-      _logger.e('Error initializing database service', e);
-      rethrow;
-    }
+    }, context: 'DatabaseService.init');
   }
 }

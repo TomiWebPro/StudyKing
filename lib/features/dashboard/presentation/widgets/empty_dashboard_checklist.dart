@@ -111,7 +111,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
                             ],
                           ),
                         ),
-                        Icon(Icons.chevron_right,
+                        Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right,
                             color: theme.colorScheme.onSurfaceVariant),
                       ],
                     ),

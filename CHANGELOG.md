@@ -1,5 +1,28 @@
 # Changelog
 
+- 2026-05-18: Internationalisation Master Issue — replaced hardcoded `localeName == 'es'` branching in ConversationManager.processImage() with locale-aware ARB keys (`tutorImageAnalysisUserPrompt`, `tutorImageAnalysisSystemPrompt`) in both app_en.arb and app_es.arb; Verified all M1-M7/m1-m12 items are fully implemented across the codebase (plural ARB keys, RTL chevrons, locale-aware validation messages, locale-aware service constructors, locale-specific chatbot keyword maps, no hardcoded English defaults remain in production code)
+- 2026-05-18: Implemented Code Quality & Refactoring Master Issue fixes:
+  - B1: Removed duplicate `@HiveType(typeId: 26)` ingestion Source model; canonical source lives in core/data/models/source_model.dart; created manual SourceAdapter; registered in hive_initializer.dart
+  - B2: Created manual Hive adapters for EngagementNudgeModel (typeId 32) and StudentAvailabilityModel (typeId 35); registered all three missing adapters in hive_initializer.dart
+  - m7: Added missing typeIds 25 (MilestoneModel) and 26 (Source) to hive_type_ids.dart and _allTypeIds
+  - m8: Refactored session_adapter.dart to reference public `sessionTypeId` constant from hive_type_ids.dart
+  - m1: Deleted dead code: session_plan_adherence_service.dart, plan_adherence_contract.dart, topic_progress_model.dart, and empty llm_tasks/data/ directory; removed corresponding test files
+  - m2: Removed orphaned providers: actionExecutorProvider (planner), mentorPendingActionRepoProvider (mentor), promptsProvider (teaching)
+  - M2: Injected Clock abstraction into SessionRepository (hint area); replaced 6 DateTime.now() calls with _clock.now()
+  - M3/M4: Removed redundant try/catch+rethrow from init() methods in 7 repository files and database_service.dart; converted DatabaseService.init() to return Result<void>
+  - M7: Broke BadgeService<->StudyProgressTracker circular reference; BadgeService now accepts stats function instead of full StudyProgressTracker
+- 2026-05-18: Implemented Dry-Run Usability (Non-English/Spanish) fixes:
+  - B1: Made EngagementScheduler._l10n mutable; added updateLocalization() method; wired to global scheduler from MainScreen via ConsumerStatefulWidget
+  - B2: Made StudyProgressTracker._l10n mutable; added updateLocalization(); all 3 provider instances (engagement, dashboard, mentor) now watch l10nProvider
+  - B3/M3: Replaced English-only keyword lists in ConversationManager with locale-keyed Maps (en/es); _continueKeywordsByLocale and _exerciseKeywordsByLocale
+  - B4: processImage() now uses locale-aware prompts (es: Spanish instruction; en: English instruction)
+  - B5: Created l10nProvider (StateProvider<AppLocalizations?>) to propagate locale to all background services
+  - M1: Replaced hardcoded English Hive box names in _boxDisplayName() with ARB-localized strings; added 20 backupBox* keys to en/es ARB files
+  - M2: Added setLocaleName() to QuestionPDFGenerator; PDF header now localizes "Total Questions" label
+  - M4: Replaced if/else locale branch in MentorService._extractTopic() with map-based lookup (en/es/fr/de)
+  - M5/m3: formatCurrency now uses locale-inferred symbol (null symbol → NumberFormat auto-selects)
+  - M6: Fixed NotificationService._createNotificationChannels to safely handle null _l10n with English fallbacks
+  - m2: Fixed locale flicker by reading saved profile synchronously from Hive in localeProvider
 - 2026-05-18: Implemented Dry-Run Usability Validator fixes:
   - B1: Upload screen now passes existing topic titles as `possibleTopics` to pipeline; pipeline auto-creates topics when classification identifies a new one
   - B2: Added Topics tab to SubjectDetailScreen with add/edit/delete topic dialogs, prerequisite/dependency editor dialog, and drag-to-reorder
@@ -35,9 +58,32 @@
   - m13: Made confidence selector circles responsive (width/6 cap)
   - m14: Improved NotFoundScreen fallback navigation with pushNamedAndRemoveUntil
   - m15: Unified SessionTrackerScreen AppBar centerTitle to false across all states
+- 2026-05-18: Implemented Test Master Coverage & Quality Audit:
+  - M1: Created settings_providers_test.dart with behavioral assertions (override wiring, singleton, fallback)
+  - M2a: Deleted orphan test/core/services/localization_service_test.dart redirect shim
+  - M2b/m1: Merged llm_service_test.dart into llm/llm_chat_service_test.dart; replaced MockClient with hand-written _FakeHttpClient in 3 test files
+  - M3: Deleted 19 barrel test files with zero behavioral assertions
+  - M4: Extracted mixed unit+widget tests from 3 files (PracticeAnswerRecord, ExamResult/Config/QuestionResult, QuickGuideScreen constructor defaults)
+  - M5: Removed direct Hive I/O (init/close) from focus_timer_screen_study_hub_test.dart
+  - M6: Added error-state coverage to 6 provider/service test files (12 new tests)
+  - M7: Added TestNavigatorObserver to 4 widget/screen test files
+  - Integration: Created 5 missing integration tests (Ingestion→Lessons, Focus Mode→Sessions, Planner→Mentor nudges, Teaching→Practice, Settings→LLM providers)
 - 2026-05-18: Implemented Future Functionality Planner (LLM Agent & Lesson System overhaul):
   - B1: Created LessonAgentService with LLM-generated LessonBlock content; background lesson preparation pipeline; Lesson/Session decoupling (lessonId on TutorSession)
   - B3: Created LlmAgent core system with tool registry (agent_tool.dart), Hive-backed long-term memory (agent_memory.dart), tool-use agent loop (agent_loop.dart), background idle execution queue (idle_executor.dart), and AgentFactory
   - M4: Populated llm_tasks feature layer with LlmTaskService wrapper, Riverpod providers (llm_task_providers.dart) with feature/status filtering and token/cost aggregators
   - M5: Fixed engagementSchedulerProvider to use Riverpod provider reads instead of hard-wired `new` constructors; wired notificationServiceProvider through provider chain
-  - m1: Populated focus_mode/data/ and focus_mode/services/ with FocusSession model and FocusPracticeService for multi-subject practice aggregation
+   - m1: Populated focus_mode/data/ and focus_mode/services/ with FocusSession model and FocusPracticeService for multi-subject practice aggregation
+- 2026-05-18: Implemented Future Functionality Planner Round 2 — production AgentTool subclasses, MentorService agent integration, per-type lesson block rendering, voice everywhere (core VoiceService + mentor/practice voice input), engagement scheduler provider wiring, LLM task screen provider fix, dashboard Next Up card, TutorService Lesson record creation:
+  - B2: Created 6 production AgentTool subclasses: ScheduleLessonTool, SearchQuestionsTool, GetStudentStatsTool, GenerateLessonBlocksTool, CreatePlanTool, GetWeakTopicsTool (in lib/features/mentor/services/tools/)
+  - B2: Created llmAgentProvider + llmAgentToolsProvider in new core/providers/llm_agent_providers.dart; tools registered via ToolRegistry in AgentFactory
+  - B2: Refactored MentorService to use LlmAgent internally when available (optional agent param); fallback preserves existing LlmService.chatStream path
+  - B2: Added lessonAgentServiceProvider to lesson_providers.dart for DI
+  - B1: Enhanced LessonBlockCard to render per-type: slide blocks in full-screen dialog, quiz blocks with interactive input/submit, exercise blocks with answer field, example/summary/text with themed cards
+  - M1: Extracted VoiceController to core/lib/services/voice_service.dart as singleton voiceServiceProvider; old VoiceController delegates to VoiceService
+  - M1: Added voice mic button to MentorScreen (leading widget in ConversationInput) for STT question input
+  - M1: Added voice mic button to PracticeSessionScreen next to submit button for typed/text question voice input
+  - M2: Fixed engagementMasteryServiceProvider to inject sub-repos (masteryState, questionMastery, topicDependency, questionEvaluation) through Riverpod provider reads; engagementPlannerServiceProvider injects MasteryGraphService dependency
+  - M5: Fixed LlmTaskManagerScreen to read from llmTaskServiceProvider (feature-layer) instead of llmTaskManagerProvider (core); uses LlmTaskService wrapper
+  - m1: Added NextUpCard to dashboard — shows upcoming scheduled lessons, due reviews count, weak topics count from dashboard providers
+  - m2: TutorService.startLesson() now creates Lesson record with blocks parsed from generated lesson plan; TutorService.endLesson() updates lesson with session notes; LessonRepository injected and _lessonPlanToBlocks parsing logic added

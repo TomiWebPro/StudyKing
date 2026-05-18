@@ -641,7 +641,7 @@ abstract class AppLocalizations {
   /// Badge showing number of due questions
   ///
   /// In en, this message translates to:
-  /// **'{count} due'**
+  /// **'{count,plural,=1{1 due} other{{count} due}}'**
   String dueQuestionsCount(int count);
 
   /// Button to start reviewing due questions
@@ -1037,7 +1037,7 @@ abstract class AppLocalizations {
   /// Duration in seconds
   ///
   /// In en, this message translates to:
-  /// **'{count} seconds'**
+  /// **'{count,plural,=1{1 second} other{{count} seconds}}'**
   String secondsValue(int count);
 
   /// Section title for study preferences
@@ -1067,7 +1067,7 @@ abstract class AppLocalizations {
   /// Duration in minutes
   ///
   /// In en, this message translates to:
-  /// **'{count} minutes'**
+  /// **'{count,plural,=1{1 minute} other{{count} minutes}}'**
   String minutesValue(int count);
 
   /// Section title for study analytics
@@ -2699,7 +2699,7 @@ abstract class AppLocalizations {
   /// Label showing number of attempts
   ///
   /// In en, this message translates to:
-  /// **'{count} attempts'**
+  /// **'{count,plural,=1{1 attempt} other{{count} attempts}}'**
   String attemptsCount(int count);
 
   /// Section title for weak areas with accuracy threshold
@@ -2885,7 +2885,7 @@ abstract class AppLocalizations {
   /// Label showing active task count
   ///
   /// In en, this message translates to:
-  /// **'{count} active'**
+  /// **'{count,plural,=1{1 active} other{{count} active}}'**
   String activeCount(int count);
 
   /// Empty state for task manager
@@ -4481,7 +4481,7 @@ abstract class AppLocalizations {
   /// Button label to start a focus session with specified minutes
   ///
   /// In en, this message translates to:
-  /// **'Focus for {minutes} minutes'**
+  /// **'{minutes,plural,=1{Focus for 1 minute} other{Focus for {minutes} minutes}}'**
   String focusForMinutes(int minutes);
 
   /// Section title for focus time statistics
@@ -5219,7 +5219,7 @@ abstract class AppLocalizations {
   /// Recommendation when weak topics exist
   ///
   /// In en, this message translates to:
-  /// **'You have {count} topic(s) that need improvement. Focus on strengthening these areas.'**
+  /// **'{count,plural,=1{You have 1 topic that needs improvement. Focus on strengthening this area.} other{You have {count} topics that need improvement. Focus on strengthening these areas.}}'**
   String recommendWeakTopics(int count);
 
   /// Action recommendation for AI tutor review
@@ -5423,7 +5423,7 @@ abstract class AppLocalizations {
   /// Explanation when topic blocks downstream topics
   ///
   /// In en, this message translates to:
-  /// **'Blocks {count} downstream topic(s)'**
+  /// **'{count,plural,=1{Blocks 1 downstream topic} other{Blocks {count} downstream topics}}'**
   String planBlocksDownstream(int count);
 
   /// Reason label for prerequisite topics
@@ -6149,13 +6149,13 @@ abstract class AppLocalizations {
   /// Late-night study warning nudge
   ///
   /// In en, this message translates to:
-  /// **'I noticed you had {count} late-night study session(s). Remember that rest is important for effective learning!'**
+  /// **'{count,plural,=1{I noticed you had 1 late-night study session. Remember that rest is important for effective learning!} other{I noticed you had {count} late-night study sessions. Remember that rest is important for effective learning!}}'**
   String nudgeLateNight(int count);
 
   /// Revision reminder nudge
   ///
   /// In en, this message translates to:
-  /// **'You have {count} question(s) approaching their review date. Time for a revision session!'**
+  /// **'{count,plural,=1{You have 1 question approaching its review date. Time for a revision session!} other{You have {count} questions approaching their review date. Time for a revision session!}}'**
   String nudgeRevisionNeeded(int count);
 
   /// Study streak celebration message
@@ -6576,6 +6576,126 @@ abstract class AppLocalizations {
   /// **'Invalid backup file: {error}'**
   String invalidBackupFileWithError(String error);
 
+  /// Backup box display name for subjects
+  ///
+  /// In en, this message translates to:
+  /// **'Subjects'**
+  String get backupBoxSubjects;
+
+  /// Backup box display name for topics
+  ///
+  /// In en, this message translates to:
+  /// **'Topics'**
+  String get backupBoxTopics;
+
+  /// Backup box display name for questions
+  ///
+  /// In en, this message translates to:
+  /// **'Questions'**
+  String get backupBoxQuestions;
+
+  /// Backup box display name for sources
+  ///
+  /// In en, this message translates to:
+  /// **'Sources'**
+  String get backupBoxSources;
+
+  /// Backup box display name for lessons
+  ///
+  /// In en, this message translates to:
+  /// **'Lessons'**
+  String get backupBoxLessons;
+
+  /// Backup box display name for lesson blocks
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Blocks'**
+  String get backupBoxLessonBlocks;
+
+  /// Backup box display name for typed sessions
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions'**
+  String get backupBoxSessionsTyped;
+
+  /// Backup box display name for old sessions
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions (old)'**
+  String get backupBoxSessions;
+
+  /// Backup box display name for mastery states
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery States'**
+  String get backupBoxMasteryStates;
+
+  /// Backup box display name for question mastery
+  ///
+  /// In en, this message translates to:
+  /// **'Question Mastery'**
+  String get backupBoxQuestionMasteryStates;
+
+  /// Backup box display name for question evaluations
+  ///
+  /// In en, this message translates to:
+  /// **'Question Evaluations'**
+  String get backupBoxQuestionEvaluations;
+
+  /// Backup box display name for learning plans
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Plans'**
+  String get backupBoxLearningPlans;
+
+  /// Backup box display name for plan adherence
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Adherence'**
+  String get backupBoxPlanAdherence;
+
+  /// Backup box display name for plan metrics
+  ///
+  /// In en, this message translates to:
+  /// **'Plan Metrics'**
+  String get backupBoxPlanAdherenceMetrics;
+
+  /// Backup box display name for mastery metrics
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Metrics'**
+  String get backupBoxMasteryImprovementMetrics;
+
+  /// Backup box display name for conversations
+  ///
+  /// In en, this message translates to:
+  /// **'Conversations'**
+  String get backupBoxConversations;
+
+  /// Backup box display name for tutor sessions
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor Sessions'**
+  String get backupBoxTutorSessions;
+
+  /// Backup box display name for topic dependencies
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Dependencies'**
+  String get backupBoxTopicDependencies;
+
+  /// Backup box display name for settings
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get backupBoxSettings;
+
+  /// Backup box display name for profile
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get backupBoxProfile;
+
   /// Plural count of available questions
   ///
   /// In en, this message translates to:
@@ -6717,7 +6837,7 @@ abstract class AppLocalizations {
   /// Failed upload count message
   ///
   /// In en, this message translates to:
-  /// **'{count} source(s) failed to process'**
+  /// **'{count,plural,=1{1 source failed to process} other{{count} sources failed to process}}'**
   String sourceCountFailed(int count);
 
   /// Message when no failed uploads exist
@@ -7528,6 +7648,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Closing'**
   String get phaseClosing;
+
+  /// Title for the exam session screen combining mode and subject
+  ///
+  /// In en, this message translates to:
+  /// **'{mode} – {subject}'**
+  String examSessionTitle(String mode, String subject);
+
+  /// Message shown after sign out is complete
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out – Done'**
+  String get signOutComplete;
+
+  /// Error message for import failure with error detail
+  ///
+  /// In en, this message translates to:
+  /// **'Import failed: {error}'**
+  String importFailedWithError(String error);
+
+  /// Label for scheduled time
+  ///
+  /// In en, this message translates to:
+  /// **'Time: {time}'**
+  String scheduleTimeLabel(String time);
+
+  /// Label for scheduled duration
+  ///
+  /// In en, this message translates to:
+  /// **'Duration: {duration}'**
+  String scheduleDurationLabel(String duration);
+
+  /// Count of records with pluralization
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural,=1{1 record} other{{count} records}}'**
+  String recordCount(int count);
+
+  /// Error message when evaluation fails without an error detail
+  ///
+  /// In en, this message translates to:
+  /// **'Could not evaluate answer.'**
+  String get couldNotEvaluateAnswer;
+
+  /// Error message when evaluation fails with an error detail
+  ///
+  /// In en, this message translates to:
+  /// **'Could not evaluate answer: {error}'**
+  String couldNotEvaluateAnswerWithError(String error);
+
+  /// Prompt sent to LLM when student submits an image for analysis
+  ///
+  /// In en, this message translates to:
+  /// **'The student submitted handwritten work / an image. Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n{imageData}'**
+  String tutorImageAnalysisUserPrompt(String imageData);
+
+  /// System prompt for image analysis by the tutor LLM
+  ///
+  /// In en, this message translates to:
+  /// **'The student submitted this work. Analyze and provide feedback.'**
+  String get tutorImageAnalysisSystemPrompt;
 }
 
 class _AppLocalizationsDelegate

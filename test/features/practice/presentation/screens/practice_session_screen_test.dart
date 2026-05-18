@@ -9,7 +9,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/practice/data/models/practice_models.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -1047,23 +1048,6 @@ void main() {
     });
   });
 
-  group('PracticeAnswerRecord', () {
-    test('stores session answer details', () {
-      final record = PracticeAnswerRecord(
-        questionId: 'q-1',
-        questionType: QuestionType.typedAnswer,
-        isCorrect: true,
-        timeSpent: const Duration(seconds: 15),
-        userAnswer: 'Paris',
-      );
-
-      expect(record.questionId, 'q-1');
-      expect(record.questionType, QuestionType.typedAnswer);
-      expect(record.isCorrect, isTrue);
-      expect(record.timeSpent, const Duration(seconds: 15));
-      expect(record.userAnswer, 'Paris');
-    });
-  });
 
   group('confidence selector', () {
     testWidgets('shows confidence selector after submission', (tester) async {
@@ -1221,6 +1205,7 @@ Widget sessionAppWithRepo({
 }) {
   return ProviderScope(
     overrides: [
+      settingsProvider.overrideWith((ref) => FakeSettingsController()),
       questionRepositoryProvider.overrideWithValue(result),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),

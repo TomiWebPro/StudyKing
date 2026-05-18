@@ -20,7 +20,7 @@ class _FakeAttemptRepo extends AttemptRepository {
 }
 
 class _FakeTracker extends StudyProgressTracker {
-  _FakeTracker() : super(attemptRepo: _FakeAttemptRepo());
+  _FakeTracker() : super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
   Future<String> exportProgressCSV(String studentId) async => 'progress,csv,data';

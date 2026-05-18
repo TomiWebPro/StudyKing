@@ -259,7 +259,7 @@ class FakeProgressTracker extends StudyProgressTracker {
   void setBadges(List<Map<String, dynamic>> badges) => _badges = badges;
   void setThrowOnReport(bool v) => _throwOnReport = v;
 
-  FakeProgressTracker() : super(attemptRepo: _FakeAttemptRepo());
+  FakeProgressTracker() : super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
   Future<Map<String, dynamic>> getOverallStats(String studentId) async {

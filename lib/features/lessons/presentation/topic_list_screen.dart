@@ -73,7 +73,7 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
               leading: Icon(Icons.folder, color: Theme.of(context).colorScheme.primary),
               title: Text(t.title),
               subtitle: Text(t.description),
-              trailing: const Icon(Icons.chevron_right),
+              trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
               onTap: () => Navigator.pushNamed(
                 context,
                 AppRoutes.lessonList,

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -8,6 +9,7 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -366,6 +368,7 @@ void main() {
       final progressTracker = StudyProgressTracker(
         attemptRepo: attemptRepo,
         sessionRepo: sessionRepo,
+        l10n: lookupAppLocalizations(const Locale('en')),
       );
 
       final nudgeRepo = _FakeNudgeRepo();
@@ -455,6 +458,7 @@ void main() {
       final progressTracker = StudyProgressTracker(
         attemptRepo: attemptRepo,
         sessionRepo: sessionRepo,
+        l10n: lookupAppLocalizations(const Locale('en')),
       );
 
       final nudgeRepo = _FakeNudgeRepo();

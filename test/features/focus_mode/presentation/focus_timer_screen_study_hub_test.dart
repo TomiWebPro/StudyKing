@@ -29,7 +29,6 @@ import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/notification_service.dart';
-import 'package:hive/hive.dart';
 import 'package:path_provider_platform_interface/path_provider_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -363,11 +362,6 @@ void main() {
   setUp(() async {
     _now;
     PathProviderPlatform.instance = _FakePathProvider();
-    Hive.init('/tmp/test_hive');
-  });
-
-  tearDown(() async {
-    Hive.close();
   });
 
   group('FocusTimerScreen - Study Hub & Mode Toggle', () {

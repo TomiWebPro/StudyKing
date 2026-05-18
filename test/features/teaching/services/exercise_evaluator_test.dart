@@ -38,6 +38,7 @@ void main() {
       evaluator = ExerciseEvaluator(
         llmService: llmService,
         modelId: 'test-model',
+        localeName: 'en',
       );
     });
 

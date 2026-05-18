@@ -8,12 +8,7 @@ class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
   final Logger _logger = const Logger('QuestionEvaluationRepository');
 
   Future<void> init() async {
-    try {
-      await openBox(HiveBoxNames.questionEvaluations);
-    } catch (e) {
-      _logger.e('Error initializing QuestionEvaluationRepository', e);
-      rethrow;
-    }
+    await openBox(HiveBoxNames.questionEvaluations);
   }
 
   Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {

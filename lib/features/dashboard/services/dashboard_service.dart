@@ -1,3 +1,5 @@
+import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/errors/result.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/utils/logger.dart';
@@ -26,12 +28,14 @@ class DashboardService {
     SessionRepository? sessionRepo,
     PlanAdherenceRepository? adherenceRepo,
     TopicRepository? topicRepo,
+    AppLocalizations? l10n,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _progressTracker = progressTracker ??
             StudyProgressTracker(
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
               sessionRepo: sessionRepo,
+              l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
             ),
         _planAdapter = planAdapter ?? PlanAdapter(),
         _sessionRepo = sessionRepo ?? SessionRepository(),

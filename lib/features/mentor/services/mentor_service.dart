@@ -6,7 +6,9 @@ import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/services/plan_adapter.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -60,6 +62,7 @@ class MentorService {
   final EngagementNudgeRepository _nudgeRepo;
   final SessionRepository _sessionRepository;
   final String _localeName;
+  final LlmAgent? _agent;
 
   ScheduleProposal? _pendingSchedule;
   PlanProposal? _pendingPlan;
@@ -76,7 +79,8 @@ class MentorService {
     EngagementNudgeRepository? nudgeRepo,
     SessionRepository? sessionRepository,
     ConversationRepository? conversationRepo,
-    String localeName = 'en',
+    required String localeName,
+    LlmAgent? agent,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
@@ -88,6 +92,7 @@ class MentorService {
         _nudgeRepo = nudgeRepo ?? EngagementNudgeRepository(),
         _sessionRepository = sessionRepository ?? SessionRepository(),
         _localeName = localeName,
+        _agent = agent,
         _memory = ConversationMemory(
           maxTurns: 50,
           sessionId: 'mentor_$studentId',
@@ -132,6 +137,34 @@ class MentorService {
     }
 
     _memory.addUserMessage(message);
+
+    if (_agent != null) {
+      final context = await _buildContextPrompt();
+      final systemPrompt = '${_mentorSystemPrompt()}\n\n$context';
+      final history = _memory.getHistory().map((m) => {
+        'role': m.role == MessageRole.student ? 'user' : 'assistant',
+        'content': m.content,
+      }).toList();
+
+      final response = await _agent.chat(
+        message: message,
+        systemPrompt: systemPrompt,
+        feature: 'mentor',
+        history: history,
+      );
+
+      final content = response.content;
+      _memory.addAssistantMessage(content);
+      yield content;
+      if (response.toolCalls.isNotEmpty) {
+        for (final call in response.toolCalls) {
+          final toolMsg = '[${call.toolName}] ${call.result ?? 'executed'}';
+          _memory.addSystemMessage(toolMsg);
+        }
+      }
+      _checkAndHandlePlanningIntent(message);
+      return;
+    }
 
     final context = await _buildContextPrompt();
     final fullPrompt = '$context\n\nStudent: $message';
@@ -213,7 +246,7 @@ class MentorService {
     if (upcomingLessons.isNotEmpty) {
       buffer.writeln('${bullet}Upcoming lessons (next ${upcomingLessons.length > 3 ? 3 : upcomingLessons.length}):');
       for (final lesson in upcomingLessons.take(3)) {
-        final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Unknown';
+        final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? l10n.unknown;
         buffer.writeln('  $bullet"$title" at ${DateFormat.yMd(_localeName).add_Hm().format(lesson.startTime.toLocal())} (${lesson.plannedDurationMinutes ?? 30}min)');
       }
     }
@@ -260,11 +293,23 @@ class MentorService {
     return l10n.mentorSystemPrompt;
   }
 
+  static const Map<String, List<String>> _extractKeywordsByLocale = {
+    'en': ['about ', 'for ', 'on ', 'study ', 'learn ', 'review ', 'practice '],
+    'es': ['sobre ', 'para ', 'de ', 'estudiar ', 'aprender ', 'repasar ', 'practicar ', 'acerca de ', 'acerca '],
+    'fr': ['à propos de ', 'pour ', 'sur ', 'étudier ', 'apprendre ', 'réviser ', 'pratiquer '],
+    'de': ['über ', 'für ', 'zu ', 'studieren ', 'lernen ', 'wiederholen ', 'üben '],
+  };
+
+  static const Map<String, List<String>> _extractTopicKeywordsByLocale = {
+    'en': ['topic ', 'subject ', 'lesson '],
+    'es': ['tema ', 'materia ', 'lección ', 'asignatura '],
+    'fr': ['sujet ', 'matière ', 'leçon '],
+    'de': ['thema ', 'fach ', 'lektion '],
+  };
+
   String _extractTopic(String message) {
     final lower = message.toLowerCase();
-    final keywords = _localeName == 'es'
-        ? ['sobre ', 'para ', 'de ', 'estudiar ', 'aprender ', 'repasar ', 'practicar ', 'acerca de ', 'acerca ']
-        : ['about ', 'for ', 'on ', 'study ', 'learn ', 'review ', 'practice '];
+    final keywords = _extractKeywordsByLocale[_localeName] ?? _extractKeywordsByLocale['en']!;
     for (final kw in keywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
@@ -273,9 +318,7 @@ class MentorService {
         return end != -1 ? after.substring(0, end).trim() : after;
       }
     }
-    final topicKeywords = _localeName == 'es'
-        ? ['tema ', 'materia ', 'lección ', 'asignatura ']
-        : ['topic ', 'subject ', 'lesson '];
+    final topicKeywords = _extractTopicKeywordsByLocale[_localeName] ?? _extractTopicKeywordsByLocale['en']!;
     for (final kw in topicKeywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
@@ -451,21 +494,22 @@ class MentorService {
     return messages;
   }
 
+  static const Map<String, List<String>> _scheduleKeywordsByLocale = {
+    'en': ['schedule', 'reschedule'],
+    'es': ['programar', 'reprogramar', 'agendar', 'reagendar', 'citar'],
+  };
+
+  static const Map<String, List<String>> _planKeywordsByLocale = {
+    'en': ['plan', 'roadmap'],
+    'es': ['plan', 'planificar', 'hoja de ruta'],
+  };
+
   void _checkAndHandlePlanningIntent(String originalMessage) {
     final lower = originalMessage.toLowerCase();
-    final hasScheduleIntent = lower.contains('schedule') ||
-        lower.contains('reschedule') ||
-        lower.contains('programar') ||
-        lower.contains('reprogramar') ||
-        lower.contains('agendar') ||
-        lower.contains('reagendar') ||
-        lower.contains('citar');
-    final hasPlanIntent = lower.contains('plan') ||
-        lower.contains('roadmap') ||
-        lower.contains('planificar') ||
-        (_localeName == 'es' && (lower.contains('plan') ||
-            lower.contains('hoja de ruta') ||
-            lower.contains('planificar')));
+    final scheduleKeywords = _scheduleKeywordsByLocale[_localeName] ?? _scheduleKeywordsByLocale['en']!;
+    final planKeywords = _planKeywordsByLocale[_localeName] ?? _planKeywordsByLocale['en']!;
+    final hasScheduleIntent = scheduleKeywords.any((kw) => lower.contains(kw));
+    final hasPlanIntent = planKeywords.any((kw) => lower.contains(kw));
 
     if (!hasScheduleIntent && !hasPlanIntent) return;
 

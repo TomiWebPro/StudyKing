@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/session_adapter.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 
 Session createSession({
@@ -50,6 +51,14 @@ Session createSession({
     status: status,
     tutorMetadata: tutorMetadata,
   );
+}
+
+class _FakeClock extends Clock {
+  final DateTime _fixed;
+  _FakeClock(this._fixed);
+
+  @override
+  DateTime now() => _fixed;
 }
 
 void main() {
@@ -382,6 +391,16 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
       });
+
+      test('handles sessions with null subjectId', () async {
+        final sess = createSession(
+          id: 'null-sub', subjectId: null, startTime: DateTime(2025, 1, 15),
+        );
+        await repository.save(sess.id, sess);
+        final results = await repository.getBySubject('sub-1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data, isEmpty);
+      });
     });
 
     group('getByStudentAndSubject', () {
@@ -417,6 +436,17 @@ void main() {
         final result = await repository.getByStudentAndSubject('stu-1', 'sub-99');
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
+      });
+
+      test('handles session with null subjectId', () async {
+        final sess1 = createSession(
+          id: 's1', studentId: 'stu-1', subjectId: null,
+          startTime: DateTime(2025, 1, 15),
+        );
+        await repository.save(sess1.id, sess1);
+        final results = await repository.getByStudentAndSubject('stu-1', 'sub-1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data, isEmpty);
       });
     });
 
@@ -1246,6 +1276,49 @@ void main() {
         );
         expect(conflict, isFalse);
       });
+
+      test('returns false when excludeSessionId does not match any session', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          plannedDurationMinutes: 60,
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 14, 0),
+          durationMinutes: 60,
+          excludeSessionId: 'phantom',
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('returns false when proposed session starts exactly at existing endTime', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          endTime: DateTime(2025, 1, 15, 11, 0),
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 11, 0),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
+
+      test('returns false when proposed session ends exactly at existing startTime', () async {
+        final sess = createSession(
+          id: 'existing',
+          startTime: DateTime(2025, 1, 15, 11, 0),
+          endTime: DateTime(2025, 1, 15, 12, 0),
+        );
+        await repository.save(sess.id, sess);
+        final conflict = await repository.hasSchedulingConflict(
+          startTime: DateTime(2025, 1, 15, 10, 0),
+          durationMinutes: 60,
+        );
+        expect(conflict, isFalse);
+      });
     });
 
     group('getScheduledLessons', () {
@@ -1308,6 +1381,105 @@ void main() {
         await Hive.close();
         final lessons = await repository.getScheduledLessons();
         expect(lessons, isEmpty);
+      });
+    });
+
+    group('clock injection', () {
+      test('getTodayDurationMs uses injected clock', () async {
+        final clock = _FakeClock(DateTime(2025, 6, 15));
+        final repo = SessionRepository(clock: clock);
+        await repo.init();
+
+        await repo.save('today', createSession(
+          id: 'today', startTime: DateTime(2025, 6, 15, 10, 0),
+          actualDurationMs: 5000,
+        ));
+        await repo.save('other', createSession(
+          id: 'other', startTime: DateTime(2025, 6, 16, 10, 0),
+          actualDurationMs: 3000,
+        ));
+
+        final result = await repo.getTodayDurationMs();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 5000);
+      });
+
+      test('getTodaySessionCount uses injected clock', () async {
+        final clock = _FakeClock(DateTime(2025, 6, 15));
+        final repo = SessionRepository(clock: clock);
+        await repo.init();
+
+        await repo.save('s1', createSession(
+          id: 's1', startTime: DateTime(2025, 6, 15, 10, 0),
+        ));
+        await repo.save('s2', createSession(
+          id: 's2', startTime: DateTime(2025, 6, 15, 14, 0),
+        ));
+
+        final result = await repo.getTodaySessionCount();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 2);
+      });
+
+      test('getTodayCompletedSessionCount uses injected clock', () async {
+        final clock = _FakeClock(DateTime(2025, 6, 15));
+        final repo = SessionRepository(clock: clock);
+        await repo.init();
+
+        await repo.save('s1', createSession(
+          id: 's1', startTime: DateTime(2025, 6, 15, 10, 0),
+          completed: true,
+        ));
+        await repo.save('s2', createSession(
+          id: 's2', startTime: DateTime(2025, 6, 15, 14, 0),
+          completed: false,
+        ));
+
+        final result = await repo.getTodayCompletedSessionCount();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 1);
+      });
+
+      test('getWeeklyDurationMs uses injected clock', () async {
+        final clock = _FakeClock(DateTime(2025, 6, 15));
+        final repo = SessionRepository(clock: clock);
+        await repo.init();
+
+        await repo.save('recent', createSession(
+          id: 'recent', startTime: DateTime(2025, 6, 10, 10, 0),
+          actualDurationMs: 1000,
+        ));
+        await repo.save('old', createSession(
+          id: 'old', startTime: DateTime(2025, 6, 1, 10, 0),
+          actualDurationMs: 5000,
+        ));
+
+        final result = await repo.getWeeklyDurationMs();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 1000);
+      });
+
+      test('getTodayStats uses injected clock', () async {
+        final clock = _FakeClock(DateTime(2025, 6, 15));
+        final repo = SessionRepository(clock: clock);
+        await repo.init();
+
+        await repo.save('s1', createSession(
+          id: 's1', startTime: DateTime(2025, 6, 15, 10, 0),
+          completed: true, actualDurationMs: 3600000,
+          plannedDurationMinutes: 60,
+        ));
+        await repo.save('s2', createSession(
+          id: 's2', startTime: DateTime(2025, 6, 15, 14, 0),
+          completed: false, actualDurationMs: 1800000,
+          plannedDurationMinutes: null,
+        ));
+
+        final stats = await repo.getTodayStats();
+        expect(stats.isSuccess, isTrue);
+        expect(stats.data!['totalMs'], 5400000);
+        expect(stats.data!['totalSessions'], 2);
+        expect(stats.data!['completedSessions'], 1);
       });
     });
   });

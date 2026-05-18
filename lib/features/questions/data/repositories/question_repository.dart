@@ -10,12 +10,7 @@ class QuestionRepository extends Repository<Question> {
   final Logger _logger = const Logger('QuestionRepository');
 
   Future<void> init() async {
-    try {
-      await openBox(HiveBoxNames.questions);
-    } catch (e) {
-      _logger.e('Error initializing question repository', e);
-      rethrow;
-    }
+    await openBox(HiveBoxNames.questions);
   }
 
   Future<Result<void>> create(Question question) async {

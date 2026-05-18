@@ -32,8 +32,8 @@ class AnswerValidationService {
 
   final ValidationMessages _messages;
 
-  AnswerValidationService({ValidationMessages? messages})
-      : _messages = messages ?? ValidationMessages.english;
+  AnswerValidationService({required ValidationMessages messages})
+      : _messages = messages;
 
   QuestionAnswerValidator _getValidator(String questionId, Markscheme markscheme) {
     final signature = _signatureFor(markscheme);
@@ -55,7 +55,7 @@ class AnswerValidationService {
   }
 
   ValidationResult validateWithMarkscheme(String answer, QuestionType questionType, Markscheme? markscheme, {ValidationMessages? messages}) {
-    return QuestionAnswerValidator.validateStatic(answer, questionType, markscheme, messages: messages);
+    return QuestionAnswerValidator.validateStatic(answer, questionType, markscheme, messages: messages ?? _messages);
   }
 
   ValidationResult validateAnswerForQuestion(Question question, String answer, {String? noMarkschemeMessage}) {
@@ -282,15 +282,15 @@ class QuestionAnswerValidator {
   final Markscheme? _markscheme;
   final ValidationMessages _messages;
 
-  QuestionAnswerValidator(this._markscheme, {ValidationMessages? messages})
-      : _messages = messages ?? ValidationMessages.english;
+  QuestionAnswerValidator(this._markscheme, {required ValidationMessages messages})
+      : _messages = messages;
 
   ValidationResult validate(String answer, QuestionType questionType) {
     return validateStatic(answer, questionType, _markscheme, messages: _messages);
   }
 
-  static ValidationResult validateStatic(String answer, QuestionType questionType, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateStatic(String answer, QuestionType questionType, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     switch (questionType) {
       case QuestionType.singleChoice:
       case QuestionType.multiChoice:
@@ -314,8 +314,8 @@ class QuestionAnswerValidator {
     }
   }
 
-  static ValidationResult validateTypedAnswer(String userAnswer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateTypedAnswer(String userAnswer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (markscheme == null) {
       return ValidationResult(
         isCorrect: false,
@@ -350,8 +350,8 @@ class QuestionAnswerValidator {
     );
   }
 
-  static ValidationResult validateMCQAnswer(String userAnswer, QuestionType type, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateMCQAnswer(String userAnswer, QuestionType type, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (markscheme == null) {
       return ValidationResult(isCorrect: false, explanation: msgs.markschemeUnavailable);
     }
@@ -377,8 +377,8 @@ class QuestionAnswerValidator {
     }
   }
 
-  static ValidationResult validateMathExpression(String userAnswer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateMathExpression(String userAnswer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (markscheme == null) {
       return ValidationResult(isCorrect: false, explanation: msgs.markschemeUnavailable);
     }
@@ -394,8 +394,8 @@ class QuestionAnswerValidator {
     return expr.replaceAll(' ', '').toLowerCase().replaceAll(r'x', '*');
   }
 
-  static ValidationResult validateEssayAnswer(String userAnswer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateEssayAnswer(String userAnswer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (userAnswer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }
@@ -410,8 +410,8 @@ class QuestionAnswerValidator {
     );
   }
 
-  static ValidationResult validateCanvasDrawing(List<Map<String, dynamic>> canvasData, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateCanvasDrawing(List<Map<String, dynamic>> canvasData, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (canvasData.isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
     }
@@ -423,8 +423,8 @@ class QuestionAnswerValidator {
     return ValidationResult(isCorrect: true, explanation: msgs.drawingDetected);
   }
 
-  static ValidationResult validateStepByStep(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateStepByStep(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (markscheme == null) {
       return ValidationResult(
         isCorrect: false,
@@ -440,8 +440,8 @@ class QuestionAnswerValidator {
     );
   }
 
-  static ValidationResult validateGraphDrawing(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateGraphDrawing(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (answer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
     }
@@ -462,16 +462,16 @@ class QuestionAnswerValidator {
     }
   }
 
-  static ValidationResult validateFileUpload(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateFileUpload(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (answer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }
     return ValidationResult(isCorrect: true, explanation: msgs.correct);
   }
 
-  static ValidationResult validateAudioRecording(String answer, Markscheme? markscheme, {ValidationMessages? messages}) {
-    final msgs = messages ?? ValidationMessages.english;
+  static ValidationResult validateAudioRecording(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
     if (answer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }

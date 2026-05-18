@@ -44,7 +44,7 @@ class EngagementScheduler {
   final PlanAdapter? _planAdapter;
   final SessionRepository? _sessionRepository;
   final EngagementSchedulerConfig _config;
-  final AppLocalizations? _l10n;
+  AppLocalizations _l10n;
   SettingsBox? _settingsBox;
   final PlannerService? _plannerService;
 
@@ -62,7 +62,7 @@ class EngagementScheduler {
     PlanAdapter? planAdapter,
     SessionRepository? sessionRepository,
     EngagementSchedulerConfig? config,
-    AppLocalizations? l10n,
+    required AppLocalizations l10n,
     SettingsBox? settingsBox,
     PlannerService? plannerService,
   })  :         _tracker = tracker,
@@ -79,6 +79,11 @@ class EngagementScheduler {
 
   void updateSettings(SettingsBox settingsBox) {
     _settingsBox = settingsBox;
+  }
+
+  void updateLocalization(AppLocalizations l10n) {
+    _l10n = l10n;
+    _notificationService.setAppLocalizations(l10n);
   }
 
   Future<void> init() async {
@@ -294,12 +299,11 @@ class EngagementScheduler {
     }
 
     if (totalHours > 4) {
-      final localeName = _l10n?.localeName ?? 'en';
+      final localeName = _l10n.localeName;
       final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
       return [EngagementNudge(
         type: NudgeType.overwork,
-        message: _l10n?.nudgeOverwork(hoursStr)
-            ?? 'You have studied $hoursStr hours today. Consider taking a break!',
+        message: _l10n.nudgeOverwork(hoursStr),
         severity: NudgeSeverity.medium,
       )];
     }
@@ -315,8 +319,7 @@ class EngagementScheduler {
         if (daysSince >= 3) {
           nudges.add(EngagementNudge(
             type: NudgeType.revision,
-            message: _l10n?.nudgeRevision(daysSince, state.topicId)
-                ?? 'It has been $daysSince days since you practiced "${state.topicId}". Time for a review!',
+            message: _l10n.nudgeRevision(daysSince, state.topicId),
             severity: daysSince >= 7 ? NudgeSeverity.high : NudgeSeverity.low,
             topicId: state.topicId,
           ));
@@ -333,8 +336,7 @@ class EngagementScheduler {
       if (consecutiveLow >= 3) {
         nudges.add(EngagementNudge(
           type: NudgeType.planAdjustment,
-          message: _l10n?.nudgePlanAdjustment(consecutiveLow)
-              ?? 'You have had $consecutiveLow days of low plan adherence. Would you like to adjust your study plan?',
+          message: _l10n.nudgePlanAdjustment(consecutiveLow),
           severity: NudgeSeverity.medium,
         ));
       }
@@ -348,20 +350,19 @@ class EngagementScheduler {
     final stats = await _tracker.getOverallStats(studentId);
     final accuracy = stats['accuracy'] as int? ?? 0;
     final rawHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0.0;
-    final localeName = _l10n?.localeName ?? 'en';
+    final localeName = _l10n.localeName;
     final totalHours = formatDecimal(rawHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
     final weeklyActivity = stats['weeklyActivity'] as int? ?? 0;
     final badges = await _tracker.getBadges(studentId);
     final weakResult = await _masteryService.getWeakTopics(studentId);
     final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
-    return _l10n?.nudgeWeeklyDigest(
+    return _l10n.nudgeWeeklyDigest(
           weeklyActivity,
           accuracy,
           totalHours,
           weakCount,
           badges.length,
-        ) ??
-        'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, ${badges.length} badges earned.';
+        );
   }
 
   Future<List<EngagementNudgeModel>> getNudgeHistory(String studentId) async {

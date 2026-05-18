@@ -7,7 +7,7 @@ import 'package:studyking/core/data/enums.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';

@@ -2,8 +2,26 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
+
+class _FakeHttpClient extends http.BaseClient {
+  Future<http.Response> Function(http.Request)? handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final req = request is http.Request
+        ? request
+        : http.Request(request.method, request.url)
+          ..headers.addAll(request.headers);
+    final response = await handler!(req);
+    return http.StreamedResponse(
+      Stream.fromIterable([utf8.encode(response.body)]),
+      response.statusCode,
+      contentLength: response.contentLength,
+      headers: response.headers,
+    );
+  }
+}
 
 void main() {
   group('AiModel', () {
@@ -166,7 +184,8 @@ void main() {
   group('ModelListingService', () {
     group('fetchAvailableModels', () {
       test('returns list of models on success', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.method, 'GET');
           return http.Response(
             jsonEncode({
@@ -178,9 +197,9 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
-        final service = ModelListingService(apiKey: 'test_key', httpClient: mockClient);
+        final service = ModelListingService(apiKey: 'test_key', httpClient: client);
         final models = await service.fetchAvailableModels();
         expect(models.length, 2);
         expect(models[0].id, 'model-a');
@@ -188,17 +207,19 @@ void main() {
       });
 
       test('returns empty list on API error', () async {
-        final mockClient = MockClient((_) async => http.Response('Not Found', 404));
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Not Found', 404);
 
-        final service = ModelListingService(apiKey: 'key', httpClient: mockClient);
+        final service = ModelListingService(apiKey: 'key', httpClient: client);
         final models = await service.fetchAvailableModels();
         expect(models, isEmpty);
       });
 
       test('returns empty list on network error', () async {
-        final mockClient = MockClient((_) async => throw Exception('Connection failed'));
+        final client = _FakeHttpClient();
+        client.handler = (_) async => throw Exception('Connection failed');
 
-        final service = ModelListingService(apiKey: 'key', httpClient: mockClient);
+        final service = ModelListingService(apiKey: 'key', httpClient: client);
         final models = await service.fetchAvailableModels();
         expect(models, isEmpty);
       });

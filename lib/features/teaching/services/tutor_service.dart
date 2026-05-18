@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import '../../../core/data/database_service.dart';
 import '../../../core/data/enums.dart';
@@ -9,6 +10,10 @@ import '../../../core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adapter.dart';
@@ -25,8 +30,10 @@ class TutorService {
   final ExerciseEvaluator _exerciseEvaluator;
   final Clock _clock;
   final ConversationRepository _conversationRepository;
+  final LessonRepository _lessonRepository;
   ConversationManager? _currentManager;
   String? _scheduledSessionId;
+  String? _currentLessonId;
 
   TutorService({
     required DatabaseService database,
@@ -35,6 +42,7 @@ class TutorService {
     required String modelId,
     required ExerciseEvaluator exerciseEvaluator,
     required ConversationRepository conversationRepository,
+    LessonRepository? lessonRepository,
     PlanAdapter? planAdapter,
     Clock? clock,
   })  : _database = database,
@@ -43,6 +51,7 @@ class TutorService {
         _modelId = modelId,
         _exerciseEvaluator = exerciseEvaluator,
         _conversationRepository = conversationRepository,
+        _lessonRepository = lessonRepository ?? LessonRepository(),
         _planAdapter = planAdapter ?? PlanAdapter(),
         _clock = clock ?? SystemClock();
 
@@ -55,7 +64,7 @@ class TutorService {
     required String topicTitle,
     int durationMinutes = 45,
     String? scheduledSessionId,
-    String localeName = 'en',
+    required String localeName,
   }) async {
     _scheduledSessionId = scheduledSessionId;
     final sessionId = 'tutor_${_clock.now().millisecondsSinceEpoch}';
@@ -109,6 +118,20 @@ class TutorService {
     await _database.tutorSessionRepository.saveSession(
       session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
     );
+
+    await _lessonRepository.init();
+    final lesson = Lesson(
+      id: const Uuid().v4(),
+      subjectId: subjectId,
+      title: topicTitle,
+      topicId: topicId,
+      blocks: _lessonPlanToBlocks(lessonPlan, subjectId, topicId),
+      difficulty: 3,
+      generatedBy: GeneratedBy.ai,
+      createdAt: _clock.now(),
+    );
+    await _lessonRepository.create(lesson);
+    _currentLessonId = lesson.id;
 
     _currentManager = manager;
     return manager;
@@ -191,8 +214,98 @@ class TutorService {
       }
     }
 
+    if (_currentLessonId != null) {
+      try {
+        final lessonResult = await _lessonRepository.get(_currentLessonId!);
+        if (lessonResult.isSuccess && lessonResult.data != null) {
+          final existing = lessonResult.data!;
+          final notesBlock = LessonBlock(
+            id: const Uuid().v4(),
+            subjectId: session.subjectId,
+            lessonId: _currentLessonId!,
+            type: LessonBlockType.text,
+            content: 'Session completed: ${session.topicTitle}\n'
+                'Duration: ${_elapsedMinutes(session)} min\n'
+                'Questions: ${session.questionsAsked}\n'
+                'Correct: ${session.questionsCorrect}\n'
+                'Tutor notes: ${session.tutorNotes ?? "N/A"}',
+            order: existing.blocks.length,
+          );
+          final updated = existing.copyWith(
+            blocks: [...existing.blocks, notesBlock],
+          );
+          await _lessonRepository.create(updated);
+        }
+      } catch (e) {
+        _logger.w('Failed to update lesson record after tutor session', e);
+      }
+    }
+
     _currentManager = null;
     _scheduledSessionId = null;
+    _currentLessonId = null;
+  }
+
+  List<LessonBlock> _lessonPlanToBlocks(LessonPlan lessonPlan, String subjectId, String topicId) {
+    try {
+      final planJson = lessonPlan.toJsonString();
+      if (planJson.isEmpty) return _fallbackBlocks(subjectId, topicId);
+      return _parseBlocks(planJson, subjectId, topicId);
+    } catch (e) {
+      _logger.w('Failed to convert lesson plan to blocks', e);
+      return _fallbackBlocks(subjectId, topicId);
+    }
+  }
+
+  List<LessonBlock> _parseBlocks(String json, String subjectId, String topicId) {
+    try {
+      final data = jsonDecode(json);
+      if (data is List) {
+        return data.asMap().entries.map((entry) {
+          final map = entry.value as Map<String, dynamic>;
+          return _blockFromJson(map, entry.key, subjectId, topicId);
+        }).toList();
+      }
+      if (data is Map && data.containsKey('blocks')) {
+        final blocks = data['blocks'] as List;
+        return blocks.asMap().entries.map((entry) {
+          final map = entry.value as Map<String, dynamic>;
+          return _blockFromJson(map, entry.key, subjectId, topicId);
+        }).toList();
+      }
+    } catch (e) {
+      _logger.w('Failed to parse lesson plan JSON', e);
+    }
+    return _fallbackBlocks(subjectId, topicId);
+  }
+
+  LessonBlock _blockFromJson(Map<String, dynamic> map, int index, String subjectId, String topicId) {
+    final typeStr = map['type'] as String? ?? 'text';
+    final type = LessonBlockType.values.firstWhere(
+      (t) => t.name == typeStr,
+      orElse: () => LessonBlockType.text,
+    );
+    return LessonBlock(
+      id: const Uuid().v4(),
+      subjectId: subjectId,
+      lessonId: topicId,
+      type: type,
+      content: map['content'] as String? ?? '',
+      order: index,
+    );
+  }
+
+  List<LessonBlock> _fallbackBlocks(String subjectId, String topicId) {
+    return [
+      LessonBlock(
+        id: const Uuid().v4(),
+        subjectId: subjectId,
+        lessonId: topicId,
+        type: LessonBlockType.text,
+        content: 'Lesson plan for this session',
+        order: 0,
+      ),
+    ];
   }
 
   int _elapsedMinutes(TutorSession session) {

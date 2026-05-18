@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -16,6 +17,8 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../data/database_service.dart';
 import '../services/engagement_scheduler.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart'
+    show masteryStateRepositoryProvider, questionMasteryStateRepositoryProvider, topicDependencyRepositoryProvider, questionEvaluationRepositoryProvider;
 import '../services/notification_service.dart';
 import '../services/plan_adapter.dart';
 import '../services/study_progress_tracker.dart';
@@ -280,8 +283,24 @@ final selectedModelProvider = StateProvider<String>((ref) => '');
 
 final llmProviderProvider = StateProvider<LlmProvider>((ref) => LlmProvider.openRouter);
 
+String? _initialLanguageCode;
+
+void setInitialLanguageCode(String code) {
+  _initialLanguageCode = code;
+}
+
 final localeProvider = StateProvider<Locale>((ref) {
   try {
+    if (_initialLanguageCode != null && _initialLanguageCode!.isNotEmpty) {
+      return Locale(_initialLanguageCode!);
+    }
+    if (Hive.isBoxOpen('profile')) {
+      final box = Hive.box('profile');
+      final lang = box.get('language', defaultValue: '') as String;
+      if (lang.isNotEmpty) {
+        return Locale(lang);
+      }
+    }
     final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
     for (final supported in AppLocalizations.supportedLocales) {
       if (supported.languageCode == deviceLocale.languageCode) {
@@ -299,15 +318,32 @@ final planAdapterProvider = Provider<PlanAdapter>((ref) {
 });
 
 final engagementTrackerProvider = Provider<StudyProgressTracker>((ref) {
-  return StudyProgressTracker(
+  final l10n = ref.watch(l10nProvider);
+  final defaultL10n = lookupAppLocalizations(const Locale('en'));
+  final tracker = StudyProgressTracker(
     attemptRepo: ref.watch(engagementAttemptRepoProvider),
     masteryService: ref.watch(engagementMasteryServiceProvider),
     sessionRepo: ref.watch(databaseProvider).sessionRepository,
+    l10n: l10n ?? defaultL10n,
   );
+  if (l10n != null) {
+    tracker.updateLocalization(l10n);
+  }
+  ref.listen(l10nProvider, (_, next) {
+    if (next != null) {
+      tracker.updateLocalization(next);
+    }
+  });
+  return tracker;
 });
 
 final engagementMasteryServiceProvider = Provider<MasteryGraphService>((ref) {
-  return MasteryGraphService();
+  return MasteryGraphService(
+    masteryStateRepo: ref.watch(masteryStateRepositoryProvider),
+    questionMasteryRepo: ref.watch(questionMasteryStateRepositoryProvider),
+    topicDependencyRepo: ref.watch(topicDependencyRepositoryProvider),
+    questionEvaluationRepo: ref.watch(questionEvaluationRepositoryProvider),
+  );
 });
 
 final engagementAttemptRepoProvider = Provider<AttemptRepository>((ref) {
@@ -323,10 +359,14 @@ final engagementAdherenceRepoProvider = Provider<PlanAdherenceRepository>((ref) 
 });
 
 final engagementPlannerServiceProvider = Provider<PlannerService>((ref) {
-  return PlannerService();
+  return PlannerService(
+    masteryService: ref.watch(engagementMasteryServiceProvider),
+  );
 });
 
 final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
+  final l10n = ref.watch(l10nProvider);
+  final defaultL10n = lookupAppLocalizations(const Locale('en'));
   final scheduler = EngagementScheduler(
     tracker: ref.watch(engagementTrackerProvider),
     masteryService: ref.watch(engagementMasteryServiceProvider),
@@ -336,7 +376,12 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
     planAdapter: ref.watch(planAdapterProvider),
     sessionRepository: ref.watch(databaseProvider).sessionRepository,
     plannerService: ref.watch(engagementPlannerServiceProvider),
+    l10n: l10n ?? defaultL10n,
   );
+  if (l10n != null) scheduler.updateLocalization(l10n);
+  ref.listen(l10nProvider, (_, next) {
+    if (next != null) scheduler.updateLocalization(next);
+  });
   ref.onDispose(() {
     scheduler.dispose();
   });
@@ -346,5 +391,7 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
 });
+
+final l10nProvider = StateProvider<AppLocalizations?>((ref) => null);
 
 

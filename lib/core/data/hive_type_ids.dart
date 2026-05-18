@@ -34,7 +34,9 @@ const int _typeIdEngagementNudgeModel = 32;
 const int _typeIdPlanAdherenceModel = 33;
 const int _typeIdAccessibilityPreferences = 34;
 const int _typeIdStudentAvailability = 35;
-const int _typeIdSession = 36;
+const int _typeIdMilestoneModel = 25;
+const int _typeIdSource = 26;
+const int sessionTypeId = 36;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -60,6 +62,8 @@ const List<int> _allTypeIds = [
   _typeIdPlanSummary,
   _typeIdPlanRecommendation,
   _typeIdStudentAttempt,
+  _typeIdMilestoneModel,
+  _typeIdSource,
   _typeIdConversationMessage,
   _typeIdTutorSession,
   _typeIdRoadmapModel,
@@ -69,7 +73,7 @@ const List<int> _allTypeIds = [
   _typeIdPlanAdherenceModel,
   _typeIdAccessibilityPreferences,
   _typeIdStudentAvailability,
-  _typeIdSession,
+  sessionTypeId,
 ];
 
 bool _checkUniqueIds() {

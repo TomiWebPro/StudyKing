@@ -44,8 +44,8 @@ class NotificationService {
   }
 
   Future<void> _createNotificationChannels() async {
-    assert(_l10n != null, 'setAppLocalizations must be called before init');
-    final l10n = _l10n!;
+    final l10n = _l10n;
+    if (l10n == null) return;
     final androidPlugin = plugin.resolvePlatformSpecificImplementation<
         AndroidFlutterLocalNotificationsPlugin>();
     if (androidPlugin == null) return;
@@ -119,10 +119,11 @@ class NotificationService {
     String? channelName,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     final androidDetails = AndroidNotificationDetails(
       channelId ?? NotificationChannelIds.general,
-      channelName ?? l10n?.notifChannelGeneral ?? 'StudyKing Notifications',
-      channelDescription: l10n?.notifChannelGeneralDesc ?? 'General StudyKing notifications',
+      channelName ?? l10n.notifChannelGeneral,
+      channelDescription: l10n.notifChannelGeneralDesc,
       importance: Importance.high,
       priority: Priority.high,
       showWhen: true,
@@ -150,10 +151,11 @@ class NotificationService {
     String? payload,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     final androidDetails = AndroidNotificationDetails(
       NotificationChannelIds.dailyReminder,
-      l10n?.notifChannelDailyReminder ?? 'Daily Study Reminders',
-      channelDescription: l10n?.notifChannelDailyReminderDesc ?? 'Daily reminders to study',
+      l10n.notifChannelDailyReminder,
+      channelDescription: l10n.notifChannelDailyReminderDesc,
       importance: Importance.high,
       priority: Priority.high,
     );
@@ -195,14 +197,14 @@ class NotificationService {
     required int daysSinceLastPractice,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     await showNotification(
       id: id,
-      title: l10n?.notifTitleTimeToReview ?? 'Time to Review!',
-      body: l10n?.notificationTimeToReviewBody(daysSinceLastPractice, topicName)
-          ?? 'It\'s been $daysSinceLastPractice days since you practiced "$topicName".',
+      title: l10n.notifTitleTimeToReview,
+      body: l10n.notificationTimeToReviewBody(daysSinceLastPractice, topicName),
       payload: 'topic_$topicName',
       channelId: NotificationChannelIds.revision,
-      channelName: l10n?.notifChannelRevision ?? 'Revision Reminders',
+      channelName: l10n.notifChannelRevision,
     );
   }
 
@@ -211,14 +213,14 @@ class NotificationService {
     required double hoursStudied,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     await showNotification(
       id: id,
-      title: l10n?.notifTitleTakeBreak ?? 'Take a Break',
-      body: l10n?.notifBodyOverwork(hoursStudied.toInt())
-          ?? 'You\'ve studied ${hoursStudied.toInt()} hours today. Remember to rest!',
+      title: l10n.notifTitleTakeBreak,
+      body: l10n.notifBodyOverwork(hoursStudied.toInt()),
       payload: 'overwork_warning',
       channelId: NotificationChannelIds.wellbeing,
-      channelName: l10n?.notifChannelWellbeing ?? 'Wellbeing Alerts',
+      channelName: l10n.notifChannelWellbeing,
     );
   }
 
@@ -227,14 +229,14 @@ class NotificationService {
     required int consecutiveLowDays,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     await showNotification(
       id: id,
-      title: l10n?.notifTitlePlanAdjustment ?? 'Plan Adjustment',
-      body: l10n?.notifBodyPlanAdjustment(consecutiveLowDays)
-          ?? 'You\'ve had $consecutiveLowDays days of low adherence. Shall we adjust your plan?',
+      title: l10n.notifTitlePlanAdjustment,
+      body: l10n.notifBodyPlanAdjustment(consecutiveLowDays),
       payload: 'plan_adjustment',
       channelId: NotificationChannelIds.planning,
-      channelName: l10n?.notifChannelPlanning ?? 'Planning Suggestions',
+      channelName: l10n.notifChannelPlanning,
     );
   }
 
@@ -244,16 +246,16 @@ class NotificationService {
     required DateTime startTime,
   }) async {
     final l10n = _l10n;
-    final localeName = l10n?.localeName ?? 'en';
+    if (l10n == null) return;
+    final localeName = l10n.localeName;
     final timeStr = DateFormat.jm(localeName).format(startTime);
     await showNotification(
       id: id,
-      title: l10n?.notifTitleUpcomingLesson ?? 'Upcoming Lesson',
-      body: l10n?.notificationUpcomingLessonBody(lessonTitle, timeStr)
-          ?? 'Your lesson "$lessonTitle" starts at $timeStr',
+      title: l10n.notifTitleUpcomingLesson,
+      body: l10n.notificationUpcomingLessonBody(lessonTitle, timeStr),
       payload: 'lesson_${startTime.millisecondsSinceEpoch}',
       channelId: NotificationChannelIds.lessons,
-      channelName: l10n?.notifChannelLessons ?? 'Lesson Notifications',
+      channelName: l10n.notifChannelLessons,
     );
   }
 
@@ -263,16 +265,16 @@ class NotificationService {
   }) async {
     if (weakTopics.isEmpty) return;
     final l10n = _l10n;
+    if (l10n == null) return;
     final topicList = weakTopics.take(3).join(', ');
     final suffix = weakTopics.length > 3 ? ' and ${weakTopics.length - 3} more' : '';
     await showNotification(
       id: id,
-      title: l10n?.notifTitleTopicsNeedAttention ?? 'Topics Need Attention',
-      body: l10n?.notifBodyLowMastery('$topicList$suffix')
-          ?? 'Low mastery detected in: $topicList$suffix',
+      title: l10n.notifTitleTopicsNeedAttention,
+      body: l10n.notifBodyLowMastery('$topicList$suffix'),
       payload: 'weak_topics',
       channelId: NotificationChannelIds.mastery,
-      channelName: l10n?.notifChannelMastery ?? 'Mastery Alerts',
+      channelName: l10n.notifChannelMastery,
     );
   }
 
@@ -282,14 +284,14 @@ class NotificationService {
     required String badgeDescription,
   }) async {
     final l10n = _l10n;
+    if (l10n == null) return;
     await showNotification(
       id: id,
-      title: l10n?.notifTitleBadgeUnlocked ?? 'Badge Unlocked!',
-      body: l10n?.notificationBadgeUnlockedBody(badgeName, badgeDescription)
-          ?? 'You earned the "$badgeName" badge: $badgeDescription',
+      title: l10n.notifTitleBadgeUnlocked,
+      body: l10n.notificationBadgeUnlockedBody(badgeName, badgeDescription),
       payload: 'badge_$badgeName',
       channelId: NotificationChannelIds.badges,
-      channelName: l10n?.notifChannelBadges ?? 'Badge Notifications',
+      channelName: l10n.notifChannelBadges,
     );
   }
 

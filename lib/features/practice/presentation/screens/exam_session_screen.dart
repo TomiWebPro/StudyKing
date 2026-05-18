@@ -478,7 +478,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       );
     }
     return Scaffold(
-      appBar: AppBar(title: Text('${l10n.practiceMode} - ${widget.subjectName}')),
+      appBar: AppBar(title: Text(l10n.practiceModeWithSubject(l10n.practiceMode, widget.subjectName))),
       body: Stack(
         children: [
           SingleChildScrollView(

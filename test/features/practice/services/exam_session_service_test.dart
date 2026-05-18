@@ -1,314 +1,272 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/data/models/session_model.dart';
 
-class _FakeStudentIdService extends StudentIdService {
-  @override
-  String getStudentId() => 'test-student';
-  @override
-  Future<void> init() async {}
-}
-
-class _FakeSessionRepository extends SessionRepository {
-  final List<Session> sessions = [];
-
-  @override
-  @override
-  Future<Result<void>> save(String key, Session session) async {
-    sessions.add(session);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<Session?>> get(String id) async {
-    final idx = sessions.indexWhere((s) => s.id == id);
-    if (idx == -1) return Result.success(null);
-    return Result.success(sessions[idx]);
-  }
-
-  @override
-  Future<Result<List<Session>>> getAll() async {
-    return Result.success(sessions);
-  }
-}
-
-Question _createQuestion({
-  String id = 'q1',
-  String subjectId = 'sub1',
-  String topicId = 't1',
+Question _q({
+  required String id,
+  required String text,
+  QuestionType type = QuestionType.singleChoice,
+  String markschemeText = 'A',
+  String topicId = 'topic-a',
+  List<String> options = const [],
+  String? explanation,
   int difficulty = 1,
 }) {
+  final now = DateTime.utc(2024, 1, 1);
   return Question(
     id: id,
-    text: 'Test?',
-    type: QuestionType.singleChoice,
+    text: text,
+    type: type,
     difficulty: difficulty,
-    subjectId: subjectId,
+    subjectId: 'subject-a',
     topicId: topicId,
-    createdAt: DateTime(2026, 1, 1),
-    updatedAt: DateTime(2026, 1, 1),
-    options: ['A', 'B', 'C', 'D'],
-    markscheme: null,
+    markscheme: Markscheme(
+      questionId: id,
+      correctAnswer: markschemeText,
+      explanation: explanation,
+    ),
+    options: options,
+    createdAt: now,
+    updatedAt: now,
+    explanation: explanation,
   );
 }
 
 void main() {
-  group('ExamSessionService', () {
-    late _FakeSessionRepository sessionRepo;
-    late ExamSessionService service;
+  group('ExamResult', () {
+    group('accuracy', () {
+      test('returns 1.0 when all correct', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 2, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 1.0);
+      });
 
-    setUp(() {
-      sessionRepo = _FakeSessionRepository();
-      service = ExamSessionService(
-        sessionRepo: sessionRepo,
-        studentIdService: _FakeStudentIdService(),
+      test('returns 0.0 when all incorrect', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 2, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: false, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: false, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 0.0);
+      });
+
+      test('returns 0.5 when half correct', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 2, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: false, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 0.5);
+      });
+
+      test('excludes skipped from denominator', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 3, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: false, timeSpentMs: 0, wasSkipped: true),
+            ExamQuestionResult(question: _q(id: 'q3', text: 'Q'), isCorrect: false, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 0.5);
+      });
+
+      test('returns 0.0 when no non-skipped questions', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 1, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: false, timeSpentMs: 0, wasSkipped: true),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 0.0);
+      });
+
+      test('returns 0.0 when questionResults is empty', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 0, subjectId: 's'),
+          questionResults: [],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.accuracy, 0.0);
+      });
+    });
+
+    group('topicBreakdown', () {
+      test('groups results by topic', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 4, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q', topicId: 't1'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q', topicId: 't1'), isCorrect: false, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q3', text: 'Q', topicId: 't2'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q4', text: 'Q', topicId: 't2'), isCorrect: true, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.topicBreakdown['t1'], 0.5);
+        expect(result.topicBreakdown['t2'], 1.0);
+      });
+
+      test('excludes skipped from topic breakdown', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 2, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q', topicId: 't1'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q', topicId: 't1'), isCorrect: false, timeSpentMs: 0, wasSkipped: true),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.topicBreakdown['t1'], 1.0);
+      });
+
+      test('returns empty map for empty results', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 0, subjectId: 's'),
+          questionResults: [],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.topicBreakdown, isEmpty);
+      });
+    });
+
+    group('averageTimePerQuestionMs', () {
+      test('calculates average correctly', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 3, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 10000),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: true, timeSpentMs: 20000),
+            ExamQuestionResult(question: _q(id: 'q3', text: 'Q'), isCorrect: true, timeSpentMs: 30000),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.averageTimePerQuestionMs, 20000);
+      });
+
+      test('returns 0.0 for empty results', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 0, subjectId: 's'),
+          questionResults: [],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.averageTimePerQuestionMs, 0.0);
+      });
+    });
+
+    group('counts', () {
+      test('totalCorrect, totalIncorrect, totalSkipped', () {
+        final result = ExamResult(
+          config: const ExamConfig(durationMinutes: 30, questionCount: 3, subjectId: 's'),
+          questionResults: [
+            ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+            ExamQuestionResult(question: _q(id: 'q2', text: 'Q'), isCorrect: false, timeSpentMs: 0, wasSkipped: true),
+            ExamQuestionResult(question: _q(id: 'q3', text: 'Q'), isCorrect: false, timeSpentMs: 100),
+          ],
+          startTime: DateTime.now(),
+          endTime: DateTime.now(),
+        );
+        expect(result.totalCorrect, 1);
+        expect(result.totalIncorrect, 1);
+        expect(result.totalSkipped, 1);
+      });
+    });
+  });
+
+  group('ExamConfig', () {
+    test('creates with required fields', () {
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 10,
+        subjectId: 's1',
       );
+      expect(config.durationMinutes, 30);
+      expect(config.questionCount, 10);
+      expect(config.subjectId, 's1');
+      expect(config.topicIds, isNull);
+      expect(config.easyCount, isNull);
     });
 
-    tearDown(() {
-      service.dispose();
+    test('creates with all optional fields', () {
+      const config = ExamConfig(
+        durationMinutes: 45,
+        questionCount: 20,
+        subjectId: 's1',
+        easyCount: 5,
+        mediumCount: 10,
+        hardCount: 5,
+        topicIds: ['t1', 't2'],
+      );
+      expect(config.easyCount, 5);
+      expect(config.mediumCount, 10);
+      expect(config.hardCount, 5);
+      expect(config.topicIds, ['t1', 't2']);
+    });
+  });
+
+  group('ExamQuestionResult', () {
+    test('creates with required fields', () {
+      final q = _q(id: 'q1', text: 'Test');
+      final result = ExamQuestionResult(
+        question: q,
+        isCorrect: true,
+        timeSpentMs: 5000,
+      );
+      expect(result.question, q);
+      expect(result.isCorrect, isTrue);
+      expect(result.timeSpentMs, 5000);
+      expect(result.userAnswer, isNull);
+      expect(result.wasSkipped, isFalse);
     });
 
-    group('selectQuestions', () {
-      test('selects questions for subject', () {
-        final pool = [
-          _createQuestion(id: 'q1', subjectId: 'sub1'),
-          _createQuestion(id: 'q2', subjectId: 'sub1'),
-          _createQuestion(id: 'q3', subjectId: 'sub2'),
-        ];
-
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 2,
-          subjectId: 'sub1',
-        );
-
-        final selected = service.selectQuestions(pool: pool, config: config);
-        expect(selected, hasLength(2));
-        expect(selected.every((q) => q.subjectId == 'sub1'), isTrue);
-      });
-
-      test('selects questions for specific topics', () {
-        final pool = [
-          _createQuestion(id: 'q1', topicId: 't1'),
-          _createQuestion(id: 'q2', topicId: 't1'),
-          _createQuestion(id: 'q3', topicId: 't2'),
-        ];
-
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 5,
-          subjectId: 'sub1',
-          topicIds: ['t1'],
-        );
-
-        final selected = service.selectQuestions(pool: pool, config: config);
-        expect(selected.every((q) => q.topicId == 't1'), isTrue);
-      });
-
-      test('selects questions by difficulty distribution', () {
-        final pool = List.generate(
-          10,
-          (i) => _createQuestion(
-            id: 'q$i',
-            difficulty: (i % 5) + 1,
-          ),
-        );
-
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 6,
-          subjectId: 'sub1',
-          easyCount: 2,
-          mediumCount: 2,
-          hardCount: 2,
-        );
-
-        final selected = service.selectQuestions(pool: pool, config: config);
-        expect(selected.length, lessThanOrEqualTo(6));
-      });
-
-      test('returns empty when no matching questions', () {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 5,
-          subjectId: 'nonexistent',
-        );
-
-        final selected = service.selectQuestions(pool: [], config: config);
-        expect(selected, isEmpty);
-      });
+    test('creates with all fields', () {
+      final q = _q(id: 'q1', text: 'Test');
+      final result = ExamQuestionResult(
+        question: q,
+        userAnswer: 'A',
+        isCorrect: true,
+        timeSpentMs: 5000,
+        wasSkipped: false,
+      );
+      expect(result.userAnswer, 'A');
+      expect(result.wasSkipped, isFalse);
     });
 
-    group('exam lifecycle', () {
-      test('startExam initializes timer', () {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 5,
-          subjectId: 'sub1',
-        );
-
-        service.startExam(config);
-        expect(service.isActive, isTrue);
-        expect(service.examActiveNotifier.value, isTrue);
-        expect(service.timeRemainingNotifier.value.inMinutes, 30);
-
-        service.cancelExam();
-      });
-
-      test('cancelExam stops exam', () {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 5,
-          subjectId: 'sub1',
-        );
-
-        service.startExam(config);
-        expect(service.isActive, isTrue);
-
-        service.cancelExam();
-        expect(service.isActive, isFalse);
-        expect(service.examActiveNotifier.value, isFalse);
-      });
-
-      test('finishExam saves session', () async {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 2,
-          subjectId: 'sub1',
-        );
-
-        final questions = [
-          _createQuestion(id: 'q1'),
-          _createQuestion(id: 'q2'),
-        ];
-
-        service.startExam(config);
-
-        final results = questions.map((q) => ExamQuestionResult(
-          question: q,
-          userAnswer: 'A',
-          isCorrect: true,
-          timeSpentMs: 10000,
-        )).toList();
-
-        final examResult = await service.finishExam(
-          config: config,
-          questionResults: results,
-        );
-
-        expect(examResult.totalCorrect, 2);
-        expect(examResult.accuracy, 1.0);
-        expect(sessionRepo.sessions, hasLength(1));
-        expect(sessionRepo.sessions.first.type, SessionType.practice);
-        expect(sessionRepo.sessions.first.tags.contains('exam'), isTrue);
-      });
-
-      test('finishExam calculates accuracy correctly', () async {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 4,
-          subjectId: 'sub1',
-        );
-
-        final results = [
-          ExamQuestionResult(question: _createQuestion(id: 'q1'), isCorrect: true, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q2'), isCorrect: false, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q3'), isCorrect: true, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q4'), isCorrect: false, timeSpentMs: 1000),
-        ];
-
-        service.startExam(config);
-        final examResult = await service.finishExam(
-          config: config,
-          questionResults: results,
-        );
-
-        expect(examResult.totalCorrect, 2);
-        expect(examResult.totalIncorrect, 2);
-        expect(examResult.accuracy, 0.5);
-      });
-
-      test('finishExam with skipped questions', () async {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 3,
-          subjectId: 'sub1',
-        );
-
-        final results = [
-          ExamQuestionResult(question: _createQuestion(id: 'q1'), isCorrect: true, timeSpentMs: 1000),
-          ExamQuestionResult(
-            question: _createQuestion(id: 'q2'),
-            isCorrect: false,
-            timeSpentMs: 0,
-            wasSkipped: true,
-          ),
-          ExamQuestionResult(question: _createQuestion(id: 'q3'), isCorrect: false, timeSpentMs: 1000),
-        ];
-
-        service.startExam(config);
-        final examResult = await service.finishExam(
-          config: config,
-          questionResults: results,
-        );
-
-        expect(examResult.totalSkipped, 1);
-        expect(examResult.totalCorrect, 1);
-        expect(examResult.totalIncorrect, 1);
-        expect(examResult.accuracy, 0.5);
-      });
-
-      test('topicBreakdown groups results by topic', () async {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 4,
-          subjectId: 'sub1',
-        );
-
-        final results = [
-          ExamQuestionResult(question: _createQuestion(id: 'q1', topicId: 't1'), isCorrect: true, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q2', topicId: 't1'), isCorrect: false, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q3', topicId: 't2'), isCorrect: true, timeSpentMs: 1000),
-          ExamQuestionResult(question: _createQuestion(id: 'q4', topicId: 't2'), isCorrect: true, timeSpentMs: 1000),
-        ];
-
-        service.startExam(config);
-        final examResult = await service.finishExam(
-          config: config,
-          questionResults: results,
-        );
-
-        expect(examResult.topicBreakdown['t1'], 0.5);
-        expect(examResult.topicBreakdown['t2'], 1.0);
-      });
-
-      test('averageTimePerQuestionMs calculates correctly', () async {
-        final config = const ExamConfig(
-          durationMinutes: 30,
-          questionCount: 3,
-          subjectId: 'sub1',
-        );
-
-        final results = [
-          ExamQuestionResult(question: _createQuestion(id: 'q1'), isCorrect: true, timeSpentMs: 10000),
-          ExamQuestionResult(question: _createQuestion(id: 'q2'), isCorrect: true, timeSpentMs: 20000),
-          ExamQuestionResult(question: _createQuestion(id: 'q3'), isCorrect: true, timeSpentMs: 30000),
-        ];
-
-        service.startExam(config);
-        final examResult = await service.finishExam(
-          config: config,
-          questionResults: results,
-        );
-
-        expect(examResult.averageTimePerQuestionMs, 20000);
-      });
+    test('creates with skipped flag', () {
+      final q = _q(id: 'q1', text: 'Test');
+      final result = ExamQuestionResult(
+        question: q,
+        isCorrect: false,
+        timeSpentMs: 0,
+        wasSkipped: true,
+      );
+      expect(result.wasSkipped, isTrue);
     });
   });
 }

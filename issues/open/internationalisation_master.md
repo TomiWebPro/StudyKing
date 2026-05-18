@@ -1,428 +1,279 @@
-# Internationalisation Master Issue
+# Internationalisation Master — Full Codebase Audit
 
-## Summary
-
-Comprehensive audit of i18n readiness for Spanish (`es`) locale, with guidance for future locales. Two locales are configured (`en`, `es`) with 100% key parity across ~900 keys. The foundation is solid, but multiple gaps exist in UI strings, plural handling, service defaults, RTL readiness, and test coverage.
+**Target:** Spanish (`es`) as primary target locale; findings apply to all future locales.
+**Audit date:** 2026-05-18
+**Scope:** All `.dart` source files, `.arb` files, and l10n config.
 
 ---
 
 ## BLOCKER — App crashes or user cannot proceed
 
-*(None found. All critical paths are localised. However, the issues below are MAJOR in-practice.)*
+*(None identified. The l10n infrastructure is sound: `AppLocalizations` is wired via `MaterialApp`, `locale_config.dart` resolves variants, and all generated methods compile. No crash-causing gaps found.)*
 
 ---
 
-## MAJOR — Feature broken or misleading for Spanish users
+## MAJOR — Feature is broken or misleading for Spanish users
 
-### M1. Validation messages default to English
+### M1. Hardcoded English strings in subject dependency & topic dialogs
 
 **Files:**
-- `lib/core/services/answer_validation_service.dart:36` — `AnswerValidationService` defaults to `ValidationMessages.english`
-- `lib/core/services/answer_validation_service.dart:186-199` — `ValidationMessages.english` static constant
-- `lib/core/services/answer_validation_service.dart:250-278` — Fallback strings in `someAnswersIncorrect()`, `correctAnswerIs()`, `allStepsFormat()` etc.
-- `lib/features/teaching/services/exercise_evaluator.dart:68-77` — Hardcoded `'Could not evaluate answer: ...'` / `'Could not evaluate answer.'`
+- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart`
+- `lib/features/subjects/presentation/dialogs/topic_edit_dialog.dart`
+- `lib/features/subjects/presentation/widgets/subject_topics_tab.dart`
 
-**Problem:** `ValidationMessages.english` is the default everywhere. Wile `ValidationMessages.fromLocalizations(l10n)` exists, it is not wired as the default. `ExerciseEvaluator` never calls `lookupAppLocalizations`. A Spanish user gets English feedback on every answer evaluation.
+**Instances (all will render English regardless of locale):**
 
-**Fix:** Inject `AppLocalizations` or `localeName` into `AnswerValidationService` constructor; remove the `ValidationMessages.english` default; make `ExerciseEvaluator` use `lookupAppLocalizations(Locale(_localeName))` for its error messages.
+| File | Line | String |
+|------|------|--------|
+| `topic_dependency_dialog.dart` | 59 | `'${widget.topic.title} — Dependencies'` |
+| `topic_dependency_dialog.dart` | 67 | `'Prerequisites'` |
+| `topic_dependency_dialog.dart` | 73 | `'No other topics available for prerequisites.'` |
+| `topic_dependency_dialog.dart` | 80 | `'No description'` |
+| `topic_dependency_dialog.dart` | 94 | `'Mastery Threshold: ${...}%'` |
+| `topic_dependency_dialog.dart` | 107 | `'Required Topic'` |
+| `topic_dependency_dialog.dart` | 108-110 | `'Student must master this topic'` / `'Optional topic — can be skipped'` |
+| `topic_dependency_dialog.dart` | 119 | `'Syllabus Weight: ${...}'` |
+| `topic_edit_dialog.dart` | 113 | `'Parent Topic'` |
+| `topic_edit_dialog.dart` | 117 | `'None (Root Topic)'` |
+| `topic_edit_dialog.dart` | 130 | `'Sort Order: $_sortOrder'` |
+| `subject_topics_tab.dart` | 85 | `'Topic "${result.title}" created'` |
+| `subject_topics_tab.dart` | 91 | `'Failed to create topic: $e'` |
+| `subject_topics_tab.dart` | 101 | `'Edit Topic'` |
+| `subject_topics_tab.dart` | 115 | `'Topic "${result.title}" updated'` |
+| `subject_topics_tab.dart` | 121 | `'Failed to update topic: $e'` |
+| `subject_topics_tab.dart` | 146 | `'Dependencies updated'` |
+| `subject_topics_tab.dart` | 152 | `'Failed to update dependencies: $e'` |
+| `subject_topics_tab.dart` | 188-189 | `'Delete Topic'` / `'Delete "${topic.title}"?\n...'` |
+| `subject_topics_tab.dart` | 232 | `'Topic deleted'` |
+| `subject_topics_tab.dart` | 238 | `'Failed to delete topic: $e'` |
+| `subject_topics_tab.dart` | 372 | `'Edit Topic'` (second site) |
+| `subject_topics_tab.dart` | 380 | `'Dependencies'` |
+| `subject_topics_tab.dart` | 389 | `'Delete'` |
 
-**AC:**
-- [ ] `AnswerValidationService` defaults to locale-aware messages when constructed with a locale
-- [ ] `ExerciseEvaluator` shows Spanish error messages when locale is `es`
-- [ ] All UI paths that call validators pass locale context
+**Rationale:** The topic dependency dialog is an internal modeling tool primarily used during content authoring, but it appears as a full-screen dialog. Every string above bypasses `AppLocalizations.of(context)!` and will display in English for es users.
 
----
-
-### M2. Hardcoded English display names for Hive boxes (backup/restore)
-
-**File:** `lib/features/settings/presentation/settings_screen.dart:816-838`
-
-**Problem:** `_boxDisplayName()` returns 20 hardcoded English names (`'Subjects'`, `'Topics'`, `'Questions'`, `'Sessions (old)'`, `'Mastery States'` etc.) for the selective-restore dialog. A Spanish user sees English-only labels for backup sections.
-
-**Fix:** Move to `AppLocalizations` keys. E.g., `l10n.boxSubjects`, `l10n.boxTopics`, `l10n.boxQuestions` etc.
-
-**AC:**
-- [ ] Each Hive box has a corresponding ARB key in both `app_en.arb` and `app_es.arb`
-- [ ] `_boxDisplayName` is replaced with `l10n.boxSubjects`, `l10n.boxTopics`, etc.
-- [ ] Backup restore dialog shows Spanish labels when locale is `es`
-
----
-
-### M3. ICU plural gaps — keys that will display "1 seconds" / "1 minutes"
-
-**File:** `lib/l10n/app_en.arb`
-- `secondsValue` (~line 708): `"{count} seconds"` → needs `"{count,plural,=1{1 second} other{{count} seconds}}"`
-- `minutesValue` (~line 733): `"{count} minutes"` → needs `"{count,plural,=1{1 minute} other{{count} minutes}}"`
-- `dueQuestionsCount` (~line 429): `"{count} due"` → needs pluralisation
-- `activeCount` (~line 2116): `"{count} active"` → needs pluralisation
-- `attemptsCount` (~line 1961): `"{count} attempts"` → needs `"{count,plural,=1{1 attempt} other{{count} attempts}}"`
-- `focusForMinutes` (~line 3514): `"Focus for {minutes} minutes"` → needs `"{minutes,plural,=1{Focus for 1 minute} other{Focus for {minutes} minutes}}"`
-
-**Problem:** These 6 keys use a simple `{count}` placeholder without ICU plural syntax. In English `1 minutes`, `1 seconds` etc. are grammatically incorrect. In Spanish, the word for "minute" changes (`minuto`/`minutos`) but the template can't express that.
-
-**Fix:** Convert each to ICU plural syntax in both `app_en.arb` and `app_es.arb`; run `flutter gen-l10n`.
-
-**AC:**
-- [ ] `secondsValue(1)` returns `"1 second"` / `"1 segundo"` not `"1 seconds"` / `"1 segundos"`
-- [ ] `minutesValue(1)` returns `"1 minute"` / `"1 minuto"` not `"1 minutes"`
-- [ ] `attemptsCount(1)` returns `"1 attempt"` / `"1 intento"`
-- [ ] `focusForMinutes(1)` returns `"Focus for 1 minute"` / `"Enfócate por 1 minuto"`
-- [ ] All 6 keys updated in both ARB files
+**Acceptance criteria:**
+- Every hardcoded string above is migrated to an `app_en.arb` / `app_es.arb` key pair and accessed via `l10n.keyName`.
+- All `Text(...)`, `SnackBar(content: Text(...))`, `title: Text(...)`, and dialog `content` strings in these three files are localised.
 
 ---
 
-### M4. `(s)` hack in ARB keys — asymmetric between English and Spanish
-
-**File:** `lib/l10n/app_en.arb`
-- `sourceCountFailed` (~line 5405): `"{count} source(s) failed to process"` — English uses `(s)` hack; Spanish uses proper ICU plural
-- `recommendWeakTopics` (~line 4086): `"You have {count} topic(s) that need improvement."`
-- `planBlocksDownstream` (~line 4282): `"Blocks {count} downstream topic(s)"`
-- `nudgeRevisionNeeded` (~line 4912): `"You have {count} question(s) approaching their review date."`
-- `nudgeLateNight` (~line 4905): `"...had {count} late-night study session(s)."`
-
-**Problem:** The `(s)` suffix hack never localises correctly. `sourceCountFailed` is asymmetric: English uses the hack while Spanish uses proper plural syntax. The other 4 keys use the hack in both locales.
-
-**Fix:** Convert all 5 keys to proper ICU plural syntax in both ARB files. For `sourceCountFailed`, ensure both files use the same plural pattern.
-
-**AC:**
-- [ ] `sourceCountFailed` uses ICU plural in both `app_en.arb` and `app_es.arb`
-- [ ] `recommendWeakTopics` shows `"You have 1 topic that needs improvement."` for count=1
-- [ ] `planBlocksDownstream` shows `"Blocks 1 downstream topic"` for count=1
-- [ ] `nudgeRevisionNeeded` handles singular/plural correctly
-- [ ] `nudgeLateNight` handles singular/plural correctly
-
----
-
-### M5. Hardcoded English string concatenation instead of localised templates
-
-**Files and lines:**
-1. `lib/features/practice/presentation/screens/exam_session_screen.dart:481` — `Text('${l10n.practiceMode} - ${widget.subjectName}')`
-2. `lib/features/settings/presentation/settings_screen.dart:1214` — `Text('${l10n.signOut} - ${l10n.done}')`
-3. `lib/features/settings/presentation/settings_screen.dart:918` — `Text('${l10n.importFailed}: $e')`
-4. `lib/features/mentor/presentation/mentor_screen.dart:312-314` — `'${l10n.time}: $dateStr'` and `'${l10n.duration}: ...'`
-5. `lib/features/settings/presentation/settings_screen.dart:956` — `'${records.length} records'`
-
-**Problem:** English word order (`X - Y`, `X: Y`) does not work for all locales. E.g., Spanish might want `"Cerrar sesión — Hecho"` but the hardcoded ` - ` prevents proper reordering. The `'${records.length} records'` pattern is entirely hardcoded English.
-
-**Fix:** Add localised ARB keys:
-- `examSessionTitle(subjectName)` = `"{mode} – {subject}"` / `"{mode} – {subject}"`
-- `signOutComplete` = `"Sign out – Done"` / `"Cerrar sesión – Hecho"`
-- `importFailedWithError(error)` = `"Import failed: {error}"` / `"Importación fallida: {error}"`
-- `scheduleTimeLabel(time)` = `"Time: {time}"` / `"Hora: {time}"`
-- `scheduleDurationLabel(duration)` = `"Duration: {duration}"` / `"Duración: {duration}"`
-- `recordCount(count)` = `"{count} records"` / `"{count} registros"` (with ICU plural)
-
-**AC:**
-- [ ] Exam session screen uses `l10n.examSessionTitle(widget.subjectName)` instead of string concatenation
-- [ ] Settings screen sign-out shows localised `signOutComplete`
-- [ ] Settings screen import error shows localised `importFailedWithError`
-- [ ] Mentor screen schedule uses localised labels
-- [ ] Restore dialog shows `l10n.recordCount(length)` instead of `${length} records`
-
----
-
-### M6. Locale-unaware English defaults in service constructors
+### M2. `toStringAsFixed()` used for user-facing numeric display
 
 **Files:**
-- `lib/features/mentor/services/mentor_service.dart:79` — `String localeName = 'en'`
-- `lib/features/teaching/services/tutor_service.dart:58` — `String localeName = 'en'`
-- `lib/features/teaching/services/conversation_manager.dart:44,59` — `String localeName = 'en'`
-- `lib/features/teaching/services/exercise_evaluator.dart:19` — `String localeName = 'en'`
-- `lib/features/teaching/services/prompts/prompts.dart:21` — `String localeName = 'en'`
+- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart:119` — `Text('Syllabus Weight: ${_syllabusWeight.toStringAsFixed(1)}')`
+- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart:129` — `label: _syllabusWeight.toStringAsFixed(1)`
 
-**Problem:** If any service is instantiated without explicitly passing the locale (e.g., via Riverpod provider without locale override), it silently operates in English even when the app is in Spanish. There is no compile-time guard or runtime warning.
+**Rationale:** `toStringAsFixed()` always produces a period decimal separator (`"1.5"`). Spanish locale requires comma (`"1,5"`). Project convenion in `AGENTS.md` and `lib/core/utils/number_format_utils.dart` mandates using `formatDecimal()` for all user-facing decimals.
 
-**Fix:** Remove the default value `= 'en'` from all 5 constructors, making `localeName` a required parameter. Update all instantiation sites (providers, tests) to pass `l10n.localeName` or `ref.watch(localeProvider).languageCode`.
-
-**AC:**
-- [ ] `MentorService` constructor requires `localeName`
-- [ ] `TutorService` constructor requires `localeName`
-- [ ] `ConversationManager` constructor requires `localeName`
-- [ ] `ExerciseEvaluator` constructor requires `localeName`
-- [ ] `Prompts` constructor requires `localeName`
-- [ ] All Riverpod providers that create these services pass the current locale from `localeProvider`
-- [ ] All tests pass an explicit locale
+**Acceptance criteria:**
+- `formatDecimal(value, localeName)` replaces `toStringAsFixed()` in both instances.
+- The locale name is obtained from `AppLocalizations.of(context)!.localeName`.
+- The Syllabus Weight label is localised via an `.arb` key (see M1).
 
 ---
 
-### M7. Hardcoded ESL chatbot/default responses for ExerciseEvaluator
+### M3. `question_bank_screen.dart` hardcoded "None" filter item
 
-**File:** `lib/features/teaching/services/conversation_manager.dart`
-- Lines 155 — phase-detection keywords: `['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes']`
-- Lines 280 — exercise-detection keywords: `['exercise', 'practice', 'quiz']`
-- Lines 201-218 — Image analysis prompts hardcoded English
+**File:** `lib/features/questions/presentation/question_bank_screen.dart:315`
 
-**File:** `lib/features/mentor/services/mentor_service.dart`
-- Lines 265-267 — Topic keyword extraction: `['about ','for ','on ','study ','learn ','review ','practice ']`
-- Lines 456-468 — Intent detection: `'schedule'`, `'reschedule'`, `'plan'`, `'roadmap'`
+```dart
+const DropdownMenuItem(value: '', child: Text('None')),
+```
 
-**Problem:** These keyword lists are used to detect student intent from their typed messages. A Spanish-speaking student typing `"entiendo"`, `"siguiente"`, `"ejercicio"`, `"estudiar"`, `"planificar"` would fail to match any keyword, causing the conversation manager to misinterpret their intent. The image analysis prompt is always in English regardless of locale.
+**Rationale:** The "None" option in the question bank filter dropdown is always English.
 
-**Fix:** Make keyword detection locale-aware. Pass the detected student language to the matching logic, and provide locale-specific keyword arrays.
-
-**AC:**
-- [ ] `ConversationManager` uses locale-specific continue/understanding keywords for `es` (e.g., `['entiendo', 'comprendo', 'siguiente', 'continuar', 'ok', 'sí']`)
-- [ ] `ConversationManager` uses locale-specific exercise keywords for `es` (e.g., `['ejercicio', 'práctica', 'examen']`)
-- [ ] Image analysis prompt varies by locale, e.g., via `lookupAppLocalizations`
-- [ ] `MentorService` topic keywords support `es` without hardcoded `_localeName == 'es'` branching (scales to future locales)
-- [ ] Mentor intent detection has `es` equivalents
+**Acceptance criteria:**
+- `Text('None')` replaced with `Text(l10n.none)` (key `"none"` exists in both `.arb` files as `"None"` / `"Ninguno"`).
 
 ---
 
-## MINOR — Code quality / UX friction
+### M4. Translation quality issues in `app_es.arb`
 
-### m1. Non-directional chevron icons (RTL readiness)
+#### M4a. Mismatched/clipped Spanish badge-unlock notification
 
-**Files (14 occurrences):**
-- `lib/features/planner/presentation/widgets/calendar_view_widget.dart:92,113` — `Icons.chevron_left` / `Icons.chevron_right`
-- `lib/features/ingestion/presentation/content_library_screen.dart:613` — `Icons.chevron_right`
-- `lib/features/ingestion/presentation/source_detail_screen.dart:453` — `Icons.chevron_right`
-- `lib/features/subjects/presentation/subject_detail_screen.dart:548` — `Icons.chevron_right`
-- `lib/features/subjects/presentation/widgets/subject_lessons_tab.dart:100` — `Icons.chevron_right`
-- `lib/features/lessons/presentation/topic_list_screen.dart:76` — `Icons.chevron_right`
-- `lib/features/dashboard/presentation/dashboard_screen.dart:132,273,312,344,415` — `Icons.chevron_right`
-- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:114` — `Icons.chevron_right`
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart:618` — `Icons.chevron_right`
+**File:** `lib/l10n/app_es.arb`
 
-**Problem:** `Icons.chevron_right` / `Icons.chevron_left` do NOT auto-flip in RTL mode. `Icons.arrow_back_ios` / `Icons.arrow_forward_ios` DO auto-flip — but the codebase uses `chevron_*` instead. Adding an RTL locale (e.g., Arabic `ar`) would show wrong-direction chevrons in 14 places.
+**Key:** `notifBodyBadgeUnlocked`
+- English: `You earned the "{badgeName}" badge: {badgeDescription}`
+- Spanish: `¡Obtuvo la insignia "{badgeName}": {badgeDescription}`
 
-**Fix:** Replace with `Icons.chevron_right` → `Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right` (ternary), or create a helper widget. Alternatively migrate to `Icons.arrow_back_ios`/`arrow_forward_ios` which auto-flip, or use `Transform.flip` wrapper.
+**Issue:** The `!` is only at the beginning (opening `¡` but no closing `!`). The English has a period. The Spanish should end with matching punctuation.
 
-**AC:**
-- [ ] All 14 chevron icon usages are RTL-aware
-- [ ] In an RTL locale, calendar navigation chevrons point right for "next" and left for "previous"
-- [ ] In an RTL locale, list item expansion chevrons point left (expansion cue)
-- [ ] No regressions in LTR rendering
+**Suggested fix:** `¡Obtuvo la insignia "{badgeName}": {badgeDescription}!`
 
----
+#### M4b. Hardcoded Spanish comma syntax in `allStepsFormat`
 
-### m2. Hardcoded English fallbacks in notification service
+**File:** `lib/l10n/app_es.arb`
 
-**File:** `lib/core/services/notification_service.dart:200-292`
+**Key:** `allStepsFormat`
+- English: `All {count} steps identified correctly!`
+- Spanish: `¡Los {count} pasos identificados correctamente!`
 
-**Problem:** 22 fallback notification strings (e.g., `'Time to Review!'`, `'Take a Break'`, `'Plan Adjustment'`, `'Badge Unlocked!'`) are hardcoded in English. These are used only when `_l10n` is null, but localised alternatives exist. If `setAppLocalizations()` is never called or called late, users get English.
+**Issue:** Missing verb — `"han sido"` — makes it read like a newspaper headline. More natural: `"¡Los {count} pasos se han identificado correctamente!"`
 
-**Fix:** Remove hardcoded fallbacks; throw if `_l10n` is null (enforce the existing assertion at lines 47-48). Alternatively, guard every notification path so `_l10n` is guaranteed before scheduling.
+#### M4c. Verbosity mismatches in Spanish vs English
 
-**AC:**
-- [ ] All 22 notification title/body strings have no English fallback
-- [ ] `NotificationService` throws or logs warning if `_l10n` is null when a notification is created
-- [ ] Riverpod provider ensures `setAppLocalizations` is called early enough in app startup
+Several Spanish translations are significantly longer than their English counterparts. While not a bug per se, this can cause UI truncation in fixed-width layouts (buttons, chips, tab labels). Key examples:
 
----
+| Key | EN | ES | Ratio |
+|-----|----|----|-------|
+| `focusForMinutes(=plural)` | `Focus for {count} minutes` | `Enfóquese por {count} minutos` | ~1.5x |
+| `scheduledLessons` | `Scheduled Lessons` | `Lecciones Programadas` | ~1.4x |
+| `deleteAccountConfirmation` | `Are you sure...?` | `¿Está seguro de que...?` | ~1.3x |
+| `planAdjustmentSuggested` | `You've had {count} days...` | `Ha tenido {count} días...` | ~1.2x |
 
-### m3. Hardcoded English fallbacks in engagement scheduler
-
-**File:** `lib/core/services/engagement_scheduler.dart:301-364`
-
-**Problem:** 4 English fallback nudge strings (overwork, revision, plan adjustment, weekly digest) used when localised version returns null. Same issue as m2 but smaller scope.
-
-**Fix:** Same treatment — remove English fallbacks, ensure `_l10n` is always set.
-
-**AC:**
-- [ ] `EngagementScheduler` never falls back to English hardcoded strings
-- [ ] All nudge messages respect current locale
+**Acceptance criteria:**
+- Check all UI containers that display these strings (buttons, card titles, snackbars) for `overflow: TextOverflow.ellipsis` or text clipping.
+- Add `flexible` / `Expanded` / `FittedBox` / `overflow` handling where needed.
 
 ---
 
-### m4. Hardcoded English fallbacks in study_progress_tracker
+### M5. Mixed register (formal vs informal) in Spanish translations
 
-**File:** `lib/core/services/study_progress_tracker.dart:179-271`
+**File:** `lib/l10n/app_es.arb`
 
-**Problem:** 15 English fallback recommendation strings (accuracy, consistency, weak topics, mastery levels) are hardcoded. Localised versions exist but `_l10n` parameter is optional and defaults to null.
+The project targets neutral Latin American Spanish with formal `usted` register per `l10n.yaml` line 10:
+> `'es' targets neutral Latin American Spanish (formal "usted" register).`
 
-**Fix:** Make `_l10n` required in the constructor; update all callers.
+However, several strings use informal `tú`:
 
-**AC:**
-- [ ] `StudyProgressTracker` constructor requires `AppLocalizations` instance
-- [ ] All recommendation strings are locale-aware
+| Key | Spanish text | Register |
+|-----|-------------|----------|
+| `noQuestionsPracticeHint` | `Aún no tienes preguntas...` | informal (`tienes`) |
+| `confirmExitPracticeBody` | `Tu progreso ... se guardará, pero saldrás` | informal (`tu`, `saldrás`) |
+| `confirmExitFocusBody` | `Tienes una sesión ... Al finalizarla temprano se guardará tu progreso` | informal (`Tienes`, `tu`) |
+| `deleteQuestionConfirm` | `¿Estás seguro de que quieres eliminar...` | informal (`Estás`, `quieres`) |
+| `deleteQuestionsConfirm` | `¿Estás seguro de que quieres eliminar...` | informal |
+| `questionsDeleted` | `...pregunta eliminada` | acceptable (impersonal) |
+| `onboardingFocusDesc` | `Mantén el enfoque...` | informal imperative (`Mantén`) |
 
----
+Contrast with formal-`usted` strings:
+- `deleteAccountConfirmation`: `¿Está seguro de que desea eliminar su cuenta?` — formal ✓
+- `fillAllFieldsCorrectly`: `Por favor, complete todos los campos correctamente` — formal ✓
 
-### m5. Hardcoded `'Unknown'` fallback in mentor service
-
-**File:** `lib/features/mentor/services/mentor_service.dart:216`
-
-**Problem:** `final title = ... ?? 'Unknown';` — hardcoded English fallback for unlabeled lessons in LLM context prompt.
-
-**Fix:** Use localised `l10n.unknown` or handle the null case differently.
-
-**AC:**
-- [ ] Mentor context prompt never includes English `'Unknown'` for Spanish users
-
----
-
-### m6. Hardcoded English in question PDF generator
-
-**File:** `lib/core/services/pdf_generator/question_pdf_generator.dart:84`
-
-**Problem:** `'Total Questions: ${_questions.length}'` is hardcoded English in a user-facing PDF header. Per AGENTS.md, PDFs should use the user's locale.
-
-**Fix:** Accept an `AppLocalizations` parameter or locale string; use localised template.
-
-**AC:**
-- [ ] `QuestionPDFGenerator` accepts locale parameter
-- [ ] Generated PDF shows localised header text
+**Acceptance criteria:**
+- All Spanish translations in `app_es.arb` use consistent formal voice (`usted`, `su`, `complete`, `desea`).
+- Fix the 7+ informal strings above to match the project's stated register.
 
 ---
 
-### m7. Hardcoded `'en'` locale in tests — only 5 test files test `es`
+## MINOR — Code quality / UX friction / maintainability
 
-**Finding:** 194+ test files hardcode `Locale('en')`. Only 5 test files ever test with `es` locale:
-- `test/features/teaching/providers/teaching_providers_test.dart`
-- `test/features/settings/presentation/profile_screen_test.dart`
-- `test/features/sessions/presentation/widgets/session_analytics_test.dart`
-- `test/features/planner/presentation/widgets/plan_summary_card_test.dart`
-- `test/l10n/app_localizations_comprehensive_test.dart`
+### m1. Fallback locale-aware strings with English defaults in `time_utils.dart`
 
-**Fix:** Add a CI check that runs the test suite with `es` locale injected. Add locale-aware widget tests that verify Spanish string rendering for critical screens (settings, backup/restore, practice session, mentor).
+**File:** `lib/core/utils/time_utils.dart`
 
-**AC:**
-- [ ] CI pipeline includes a locale-switching test run
-- [ ] At least 3 widget tests assert Spanish string rendering
-- [ ] All services that accept a `localeName` parameter are tested with `'es'`
+The functions `formatDate()` and `_durationPart()` have hardcoded English fallback strings:
 
----
+```dart
+// line 62
+final unknown = l10n?.unknown ?? 'Unknown';
+// line 68
+return l10n?.today ?? 'Today';
+// line 72
+return l10n?.yesterday ?? 'Yesterday';
+// line 58
+return '$count$fallback';  // fallback like '5d'
+```
 
-### m8. `EdgeInsets.only(left:)` pattern (none found — confirm clean)
+**Rationale:** These fallbacks are only reached when `l10n` is null, which should never happen in production since `AppLocalizations.of(context)` is called upstream. However, it's a maintenance hazard — if a caller fails to pass `l10n`, English silently appears.
 
-The codebase is clean on directional padding — zero uses of `EdgeInsets.only(left:)` or `EdgeInsets.only(right:)`. This pattern must not be re-introduced.
+**Acceptance criteria:**
+- Either remove the null fallbacks and make `l10n` required (breaking change), or leave with a `// covariant: l10n is always non-null in production` comment.
 
----
+### m2. Notification strings with duplicate/triplicate keys
 
-### m9. `TextAlign.left` / `TextAlign.right` (none found — confirm clean)
+**File:** `lib/l10n/app_en.arb`
 
-The codebase is clean on non-directional text alignment — zero uses of `TextAlign.left` or `TextAlign.right`. This pattern must not be re-introduced.
+Duplicate/redundant keys covering the same semantic content:
 
----
+- `notifBodyRevision` (line 3971) and `notificationTimeToReviewBody` (line 4206) — same body text, different key names
+- `notifBodyLessonReminder` (line 4013) and `notificationUpcomingLessonBody` (line 4218) — same concept
+- `notifBodyBadgeUnlocked` (line 4042) and `notificationBadgeUnlockedBody` (line 4230)
 
-### m10. Locale flicker on startup (race condition)
+**Rationale:** Two keys for the same notification body means double translation work, potential drift, and confusion about which to use. One should delegate to the other or be removed.
 
-**File:** `lib/main.dart:153-167`
+**Acceptance criteria:**
+- Consolidate each pair into a single key; the duplicate becomes an alias or is removed.
 
-**Problem:** `localeProvider` initialises with device locale via `postFrameCallback`. The saved user locale overrides one frame later, causing a visible locale flicker. If profile load fails, the user's saved language is silently lost.
+### m3. No RTL locale support in infrastructure
 
-**Fix:** Make `localeProvider` async-first: wait for profile load before providing the initial locale value. Use `FutureProvider` or an async initialisation step.
+**Current state:** The codebase has 20+ `Directionality.of(context)` usages for chevron flipping (left/right arrows), which is good. But `AppLocale` enum (`locale_config.dart`) only has `en` and `es`. No RTL locales (Arabic `ar`, Hebrew `he`, Urdu `ur`, Persian `fa`) are supported.
 
-**AC:**
-- [ ] Startup locale is set before first frame render when profile data is available
-- [ ] Profile load failure falls back gracefully without flicker
-- [ ] No visible locale change after initial app render
+RTL layout issues that would surface if RTL were added:
+- `chat_bubble.dart:27` checks `TextDirection.rtl` — but no RTL locale exists to trigger it
+- `canvas_drawing_widget.dart:94` and `practice_mode_card.dart:78` pass `Directionality.of(context)` for text direction in `TextPainter` — correct but untested
+- All `MainAxisAlignment.start` / `MainAxisAlignment.end` usages rely on `Directionality` resolving correctly (they do in Flutter)
 
----
+**Acceptance criteria:**
+- Not an actionable fix for this sprint, but document that before adding an RTL locale (`ar`, `he`):
+  1. Add the locale to `AppLocale` in `locale_config.dart`
+  2. Create `app_ar.arb` (right-to-left marker `"@@locale": "ar"`)
+  3. Run `scripts/check_i18n_coverage.sh` to validate 100% key parity
+  4. Test all screens with `Directionality` — especially `chat_bubble.dart`, `canvas_drawing_widget.dart`, and all chevron-flipping logic
 
-### m11. Hardcoded `Locale('en')` fallback in locale config
+### m4. `questionTypeDefault` inconsistency
 
-**File:** `lib/core/providers/app_providers.dart:293`
+**File:** `lib/l10n/app_en.arb`
+- Key: `questionTypeDefault` — value: `"Question"`
+- File: `lib/l10n/app_es.arb`
+- Key: `questionTypeDefault` — value: `"Pregunta"`
 
-**Problem:** `return const Locale('en');` — if device locale is unsupported, fallback is always English. This is reasonable for now but should be configurable as more locales are added.
+But `lib/features/mentor/services/mentor_service.dart` imports `question_type_localizer.dart` which likely uses a different mechanism for question type display names.
 
-**Fix:** Extract fallback locale to a constant or config file. No functional change needed now, but mark for future.
+**Acceptance criteria:**
+- Audit all usages of question type display names. Ensure they funnel through a single localisation path (either `question_type_localizer.dart` or `.arb` keys, not both).
 
----
+### m5. `lib/features/questions/presentation/question_bank_screen.dart:315` — `Text('None')`
 
-### m12. `secondsValue` / `minutesValue` test coverage
-
-**File:** `test/l10n/app_localizations_test.dart`
-
-**Problem:** Tests for `secondsValue(1)` and `minutesValue(1)` exist (`expect(l10n.secondsValue(1), '1 seconds')`) which asserts the *wrong* current behaviour. After fixing M3, these tests must be updated to expect `'1 second'` / `'1 segundo'`.
-
-**Fix:** Update test expectations after ARB change.
-
----
-
-## Appendix A: Files verified as correctly localised (no action needed)
-
-- `lib/features/onboarding/presentation/onboarding_dialog.dart` — all strings via l10n
-- `lib/features/quickguide/presentation/quick_guide_screen.dart` — all strings via l10n
-- `lib/core/utils/number_format_utils.dart` — correct locale-aware API
-- `lib/core/utils/localization_helpers.dart` — correct localisation pattern
-- `lib/core/utils/time_utils.dart` — locale-aware via `l10n.localeName`
-- `lib/core/config/locale_config.dart` — correct setup
-- `lib/l10n/app_es.arb` — all ~900 keys present, no missing translations
-- All `SnackBar`, `AlertDialog`, `tooltip`, `AppBar` (`title:`) usages checked — all use l10n
-- All `DateFormat` usages — all use `l10n.localeName`
-- All `toStringAsFixed` usages — only in CSV exports and LLM-facing strings (intentional per AGENTS.md)
-
-## Appendix B: LLM-facing strings (intentionally English, no action needed)
-
-- `lib/features/teaching/services/prompts/prompts.dart` — all via l10n, `_languageInstruction` uses student locale
-- `lib/features/mentor/services/mentor_service.dart:155-256` — context prompt labels, clearly documented as invariant English for LLM data formatting
-- `lib/core/constants/llm_defaults.dart` — JSON schema instruction, not user-facing
-- `lib/core/services/progress_export_service.dart` — CSV headers are data format, invariant
-
-## Appendix C: Key tables
-
-### Affected ARB keys to update (plural gaps)
-
-| Key | Current (en) | Must become |
-|---|---|---|
-| `secondsValue` | `"{count} seconds"` | `"{count,plural,=1{1 second} other{{count} seconds}}"` |
-| `minutesValue` | `"{count} minutes"` | `"{count,plural,=1{1 minute} other{{count} minutes}}"` |
-| `dueQuestionsCount` | `"{count} due"` | `"{count,plural,=1{1 due} other{{count} due}}"` |
-| `activeCount` | `"{count} active"` | `"{count,plural,=1{1 active} other{{count} active}}"` |
-| `attemptsCount` | `"{count} attempts"` | `"{count,plural,=1{1 attempt} other{{count} attempts}}"` |
-| `focusForMinutes` | `"Focus for {minutes} minutes"` | `"{minutes,plural,=1{Focus for 1 minute} other{Focus for {minutes} minutes}}"` |
-
-### `(s)` hack keys to convert to plural
-
-| Key | Current (en) | Must become |
-|---|---|---|
-| `sourceCountFailed` | `"{count} source(s) failed..."` | `"{count,plural,=1{{count} source failed...} other{{count} sources failed...}}"` |
-| `recommendWeakTopics` | `"You have {count} topic(s)..."` | `"{count,plural,=1{You have 1 topic that needs...} other{You have {count} topics that need...}}"` |
-| `planBlocksDownstream` | `"Blocks {count} downstream topic(s)"` | proper plural |
-| `nudgeRevisionNeeded` | `"You have {count} question(s)..."` | proper plural |
-| `nudgeLateNight` | `"...had {count} late-night study session(s)"` | proper plural |
-
-### New ARB keys to add
-
-| Proposed key | en template | es template |
-|---|---|---|
-| `boxSubjects` | `Subjects` | `Materias` |
-| `boxTopics` | `Topics` | `Temas` |
-| `boxQuestions` | `Questions` | `Preguntas` |
-| `boxSources` | `Sources` | `Fuentes` |
-| `boxLessons` | `Lessons` | `Lecciones` |
-| `boxLessonBlocks` | `Lesson Blocks` | `Bloques de Lecciones` |
-| `boxSessions` | `Sessions` | `Sesiones` |
-| `boxSessionsOld` | `Sessions (old)` | `Sesiones (antiguas)` |
-| `boxMasteryStates` | `Mastery States` | `Estados de Dominio` |
-| `boxQuestionMastery` | `Question Mastery` | `Dominio de Preguntas` |
-| `boxQuestionEvals` | `Question Evaluations` | `Evaluaciones de Preguntas` |
-| `boxLearningPlans` | `Learning Plans` | `Planes de Aprendizaje` |
-| `boxPlanAdherence` | `Plan Adherence` | `Adherencia al Plan` |
-| `boxPlanMetrics` | `Plan Metrics` | `Métricas del Plan` |
-| `boxMasteryMetrics` | `Mastery Metrics` | `Métricas de Dominio` |
-| `boxConversations` | `Conversations` | `Conversaciones` |
-| `boxTutorSessions` | `Tutor Sessions` | `Sesiones de Tutoría` |
-| `boxTopicDeps` | `Topic Dependencies` | `Dependencias de Temas` |
-| `boxSettings` | `Settings` | `Configuración` |
-| `boxProfile` | `Profile` | `Perfil` |
-| `recordCount` | `{count,plural,=1{1 record} other{{count} records}}` | `{count,plural,=1{1 registro} other{{count} registros}}` |
-| `signOutComplete` | `Sign out – Done` | `Cerrar sesión – Hecho` |
-| `importFailedWithError` | `Import failed: {error}` | `Importación fallida: {error}` |
-| `scheduleTimeLabel` | `Time: {time}` | `Hora: {time}` |
-| `scheduleDurationLabel` | `Duration: {duration}` | `Duración: {duration}` |
-| `examSessionTitle` | `{mode} – {subject}` | `{mode} – {subject}` |
-
-### Services requiring mandatory `localeName` parameter
-
-| Service | File | Line | Current default | Action |
-|---|---|---|---|---|
-| `MentorService` | `lib/features/mentor/services/mentor_service.dart` | 79 | `= 'en'` | Remove default, make required |
-| `TutorService` | `lib/features/teaching/services/tutor_service.dart` | 58 | `= 'en'` | Remove default, make required |
-| `ConversationManager` | `lib/features/teaching/services/conversation_manager.dart` | 44,59 | `= 'en'` | Remove default, make required |
-| `ExerciseEvaluator` | `lib/features/teaching/services/exercise_evaluator.dart` | 19 | `= 'en'` | Remove default, make required |
-| `Prompts` | `lib/features/teaching/services/prompts/prompts.dart` | 21 | `= 'en'` | Remove default, make required |
+Already listed in M3. This is a minor quick-fix item but categorised as MAJOR because it appears in a filter dropdown the user interacts with.
 
 ---
 
-## Implementation order (recommended)
+## Summary of required `.arb` key additions
 
-1. **Phase 1** — Fix MAJOR M3 and M4 (plural ARB keys). Run `flutter gen-l10n`. Update tests.
-2. **Phase 2** — Fix MAJOR M1 (validation messages), M2 (box names), M5 (string concatenation).
-3. **Phase 3** — Fix MAJOR M6 (service defaults). Remove `= 'en'` from constructors.
-4. **Phase 4** — Fix MAJOR M7 (chatbot keywords). Add Spanish keyword arrays.
-5. **Phase 5** — Fix MINOR items m1-m12.
-6. **Phase 6** — Add test infrastructure for locale switching. Write `es`-locale widget tests.
-7. **Phase 7** — Fix MINOR m10 (locale flicker on startup).
+To fix M1, the following new keys are needed in both `app_en.arb` and `app_es.arb`:
+
+| Key | EN value | ES value |
+|-----|----------|----------|
+| `dependenciesTitle` | `"{topic} — Dependencies"` | `"{topic} — Dependencias"` |
+| `prerequisites` | `Prerequisites` | `Requisitos previos` |
+| `noTopicsForPrerequisites` | `No other topics available for prerequisites.` | `No hay otros temas disponibles como requisitos previos.` |
+| `noDescription` | `No description` | `Sin descripción` |
+| `masteryThreshold` | `Mastery Threshold: {percent}%` | `Umbral de Dominio: {percent}%` |
+| `requiredTopic` | `Required Topic` | `Tema Requerido` |
+| `requiredTopicOn` | `Student must master this topic` | `El estudiante debe dominar este tema` |
+| `requiredTopicOff` | `Optional topic — can be skipped` | `Tema opcional — puede omitirse` |
+| `syllabusWeight` | `Syllabus Weight: {weight}` | `Peso del Temario: {weight}` |
+| `parentTopic` | `Parent Topic` | `Tema Padre` |
+| `rootTopic` | `None (Root Topic)` | `Ninguno (Tema Raíz)` |
+| `sortOrderValue` | `Sort Order: {order}` | `Orden: {order}` |
+| `topicCreated` | `Topic "{title}" created` | `Tema "{title}" creado` |
+| `topicCreateFailed` | `Failed to create topic: {error}` | `Error al crear tema: {error}` |
+| `editTopicTitle` | `Edit Topic` | `Editar Tema` |
+| `topicUpdated` | `Topic "{title}" updated` | `Tema "{title}" actualizado` |
+| `topicUpdateFailed` | `Failed to update topic: {error}` | `Error al actualizar tema: {error}` |
+| `dependenciesUpdated` | `Dependencies updated` | `Dependencias actualizadas` |
+| `dependenciesUpdateFailed` | `Failed to update dependencies: {error}` | `Error al actualizar dependencias: {error}` |
+| `deleteTopicTitle` | `Delete Topic` | `Eliminar Tema` |
+| `deleteTopicConfirm` | `Delete "{topic}"? This will remove it from all dependency lists.` | `¿Eliminar "{topic}"? Esto lo eliminará de todas las listas de dependencias.` |
+| `topicDeleted` | `Topic deleted` | `Tema eliminado` |
+| `topicDeleteFailed` | `Failed to delete topic: {error}` | `Error al eliminar tema: {error}` |
+
+**Total: 24 new key pairs required for M1 fix.**
+
+---
+
+## Actionable Fix Plan
+
+1. **Create 24 new `.arb` key pairs** (EN + ES) in `app_en.arb` and `app_es.arb`.
+2. **Replace hardcoded strings** in `topic_dependency_dialog.dart`, `topic_edit_dialog.dart`, `subject_topics_tab.dart`, and `question_bank_screen.dart` with `l10n.keyName` calls.
+3. **Fix `toStringAsFixed`** → `formatDecimal` + locale name in `topic_dependency_dialog.dart:119,129`.
+4. **Fix Spanish register** — change informal `tú` forms to formal `usted` in `app_es.arb`.
+5. **Fix `notifBodyBadgeUnlocked`** punctuation in `app_es.arb`.
+6. **Consolidate duplicate notification keys** in `app_en.arb`.
+7. **Run `scripts/check_i18n_coverage.sh`** to validate no keys are missed.
+8. **Run `scripts/validate_arb_no_duplicates.dart`** to catch any key conflicts.
+9. **Run `flutter gen-l10n`** to regenerate `AppLocalizations`.
+10. **Verify** `flutter analyze` passes with no new i18n-related warnings.

@@ -3,11 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
+
+TestNavigatorObserver? testNavigatorObserver;
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
+    navigatorObservers: testNavigatorObserver != null ? [testNavigatorObserver!] : [],
     home: Scaffold(
       body: widget,
     ),
@@ -35,6 +39,13 @@ Session _session({
 
 void main() {
   group('SessionSummaryCard', () {
+    setUp(() {
+      testNavigatorObserver = TestNavigatorObserver();
+    });
+
+    tearDown(() {
+      testNavigatorObserver = null;
+    });
     testWidgets('renders Focus Time title', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const SessionSummaryCard(),

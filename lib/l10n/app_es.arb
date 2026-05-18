@@ -426,7 +426,7 @@
   "@noReviewsScheduled": {
     "description": "Subtitle when no questions are due for review"
   },
-  "dueQuestionsCount": "{count} pendientes",
+  "dueQuestionsCount": "{count,plural,=1{1 pendiente} other{{count} pendientes}}",
   "@dueQuestionsCount": {
     "description": "Badge showing number of due questions",
     "placeholders": {
@@ -705,7 +705,7 @@
   "@requestTimeout": {
     "description": "Tile title for request timeout setting"
   },
-  "secondsValue": "{count} segundos",
+  "secondsValue": "{count,plural,=1{1 segundo} other{{count} segundos}}",
   "@secondsValue": {
     "description": "Duration in seconds",
     "placeholders": {
@@ -730,7 +730,7 @@
   "@sessionDuration": {
     "description": "Tile title for session duration setting"
   },
-  "minutesValue": "{count} minutos",
+  "minutesValue": "{count,plural,=1{1 minuto} other{{count} minutos}}",
   "@minutesValue": {
     "description": "Duration in minutes",
     "placeholders": {
@@ -1958,7 +1958,7 @@
   "@instrumentationDataExported": {
     "description": "Snackbar for instrumentation export"
   },
-  "attemptsCount": "{count} intentos",
+  "attemptsCount": "{count,plural,=1{1 intento} other{{count} intentos}}",
   "@attemptsCount": {
     "description": "Label showing number of attempts",
     "placeholders": {
@@ -2113,7 +2113,7 @@
   "@llmTaskManager": {
     "description": "Title for LLM task manager screen"
   },
-  "activeCount": "{count} activas",
+  "activeCount": "{count,plural,=1{1 activa} other{{count} activas}}",
   "@activeCount": {
     "description": "Label showing active task count",
     "placeholders": {
@@ -3490,7 +3490,7 @@
   "@focus": {
     "description": "Bottom navigation label for study tab"
   },
-  "focusForMinutes": "Enfóquese por {minutes} minutos",
+  "focusForMinutes": "{minutes,plural,=1{Enfócate por 1 minuto} other{Enfóquese por {minutes} minutos}}",
   "@focusForMinutes": {
     "description": "Button label to start a focus session with specified minutes",
     "placeholders": {
@@ -4083,7 +4083,7 @@
   "@recommendQuickReview": {
     "description": "Action recommendation for quick review"
   },
-  "recommendWeakTopics": "Tiene {count} tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.",
+  "recommendWeakTopics": "{count,plural,=1{Tiene 1 tema que necesita mejorar. Concéntrese en fortalecer esta área.} other{Tiene {count} temas que necesitan mejorar. Concéntrese en fortalecer estas áreas.}}",
   "@recommendWeakTopics": {
     "description": "Recommendation when weak topics exist",
     "placeholders": {
@@ -4279,7 +4279,7 @@
   "@planPrerequisite": {
     "description": "Explanation when the topic is a prerequisite for other topics"
   },
-  "planBlocksDownstream": "Bloquea {count} tema(s) dependiente(s)",
+  "planBlocksDownstream": "{count,plural,=1{Bloquea 1 tema dependiente} other{Bloquea {count} temas dependientes}}",
   "@planBlocksDownstream": {
     "description": "Explanation when the topic blocks dependent topics",
     "placeholders": {
@@ -4902,14 +4902,14 @@
       "cap": { "type": "int" }
     }
   },
-  "nudgeLateNight": "Noté que tuvo {count} sesión(es) de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!",
+  "nudgeLateNight": "{count,plural,=1{Noté que tuvo 1 sesión de estudio nocturna. ¡Recuerde que descansar es importante para aprender efectivamente!} other{Noté que tuvo {count} sesiones de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!}}",
   "@nudgeLateNight": {
     "description": "Late-night study warning nudge",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "nudgeRevisionNeeded": "Tiene {count} pregunta(s) próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!",
+  "nudgeRevisionNeeded": "{count,plural,=1{Tiene 1 pregunta próxima a su fecha de revisión. ¡Es hora de una sesión de repaso!} other{Tiene {count} preguntas próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!}}",
   "@nudgeRevisionNeeded": {
     "description": "Revision reminder nudge",
     "placeholders": {
@@ -5292,6 +5292,86 @@
         "type": "String"
       }
     }
+  },
+  "backupBoxSubjects": "Materias",
+  "@backupBoxSubjects": {
+    "description": "Backup box display name for subjects"
+  },
+  "backupBoxTopics": "Temas",
+  "@backupBoxTopics": {
+    "description": "Backup box display name for topics"
+  },
+  "backupBoxQuestions": "Preguntas",
+  "@backupBoxQuestions": {
+    "description": "Backup box display name for questions"
+  },
+  "backupBoxSources": "Fuentes",
+  "@backupBoxSources": {
+    "description": "Backup box display name for sources"
+  },
+  "backupBoxLessons": "Lecciones",
+  "@backupBoxLessons": {
+    "description": "Backup box display name for lessons"
+  },
+  "backupBoxLessonBlocks": "Bloques de Lecciones",
+  "@backupBoxLessonBlocks": {
+    "description": "Backup box display name for lesson blocks"
+  },
+  "backupBoxSessionsTyped": "Sesiones",
+  "@backupBoxSessionsTyped": {
+    "description": "Backup box display name for typed sessions"
+  },
+  "backupBoxSessions": "Sesiones (antiguas)",
+  "@backupBoxSessions": {
+    "description": "Backup box display name for old sessions"
+  },
+  "backupBoxMasteryStates": "Estados de Dominio",
+  "@backupBoxMasteryStates": {
+    "description": "Backup box display name for mastery states"
+  },
+  "backupBoxQuestionMasteryStates": "Dominio de Preguntas",
+  "@backupBoxQuestionMasteryStates": {
+    "description": "Backup box display name for question mastery"
+  },
+  "backupBoxQuestionEvaluations": "Evaluaciones de Preguntas",
+  "@backupBoxQuestionEvaluations": {
+    "description": "Backup box display name for question evaluations"
+  },
+  "backupBoxLearningPlans": "Planes de Estudio",
+  "@backupBoxLearningPlans": {
+    "description": "Backup box display name for learning plans"
+  },
+  "backupBoxPlanAdherence": "Adhesión al Plan",
+  "@backupBoxPlanAdherence": {
+    "description": "Backup box display name for plan adherence"
+  },
+  "backupBoxPlanAdherenceMetrics": "Métricas del Plan",
+  "@backupBoxPlanAdherenceMetrics": {
+    "description": "Backup box display name for plan metrics"
+  },
+  "backupBoxMasteryImprovementMetrics": "Métricas de Dominio",
+  "@backupBoxMasteryImprovementMetrics": {
+    "description": "Backup box display name for mastery metrics"
+  },
+  "backupBoxConversations": "Conversaciones",
+  "@backupBoxConversations": {
+    "description": "Backup box display name for conversations"
+  },
+  "backupBoxTutorSessions": "Sesiones de Tutoría",
+  "@backupBoxTutorSessions": {
+    "description": "Backup box display name for tutor sessions"
+  },
+  "backupBoxTopicDependencies": "Dependencias de Temas",
+  "@backupBoxTopicDependencies": {
+    "description": "Backup box display name for topic dependencies"
+  },
+  "backupBoxSettings": "Ajustes",
+  "@backupBoxSettings": {
+    "description": "Backup box display name for settings"
+  },
+  "backupBoxProfile": "Perfil",
+  "@backupBoxProfile": {
+    "description": "Backup box display name for profile"
   },
   "questionsCountPlural": "{count,plural, =0{No hay preguntas disponibles} =1{1 pregunta disponible} other{{count} preguntas disponibles}}",
   "@questionsCountPlural": {
@@ -6024,5 +6104,71 @@
   "phaseClosing": "Cierre",
   "@phaseClosing": {
     "description": "Label for the closing phase in tutor screen"
+  },
+  "examSessionTitle": "{mode} – {subject}",
+  "@examSessionTitle": {
+    "description": "Title for the exam session screen combining mode and subject",
+    "placeholders": {
+      "mode": { "type": "String" },
+      "subject": { "type": "String" }
+    }
+  },
+  "signOutComplete": "Cerrar sesión – Hecho",
+  "@signOutComplete": {
+    "description": "Message shown after sign out is complete"
+  },
+  "importFailedWithError": "Importación fallida: {error}",
+  "@importFailedWithError": {
+    "description": "Error message for import failure with error detail",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "scheduleTimeLabel": "Hora: {time}",
+  "@scheduleTimeLabel": {
+    "description": "Label for scheduled time",
+    "placeholders": {
+      "time": { "type": "String" }
+    }
+  },
+  "scheduleDurationLabel": "Duración: {duration}",
+  "@scheduleDurationLabel": {
+    "description": "Label for scheduled duration",
+    "placeholders": {
+      "duration": { "type": "String" }
+    }
+  },
+  "recordCount": "{count,plural,=1{1 registro} other{{count} registros}}",
+  "@recordCount": {
+    "description": "Count of records with pluralization",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "couldNotEvaluateAnswer": "No se pudo evaluar la respuesta.",
+  "@couldNotEvaluateAnswer": {
+    "description": "Error message when evaluation fails without an error detail"
+  },
+  "couldNotEvaluateAnswerWithError": "No se pudo evaluar la respuesta: {error}",
+  "@couldNotEvaluateAnswerWithError": {
+    "description": "Error message when evaluation fails with an error detail",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorImageAnalysisUserPrompt": "El estudiante ha enviado trabajo escrito a mano / una imagen. Analiza y proporciona retroalimentación, identificando errores y sugiriendo mejoras.\n\n{imageData}",
+  "@tutorImageAnalysisUserPrompt": {
+    "description": "Prompt sent to LLM when student submits an image for analysis",
+    "placeholders": {
+      "imageData": {
+        "type": "String"
+      }
+    }
+  },
+  "tutorImageAnalysisSystemPrompt": "El estudiante ha enviado este trabajo. Analiza y proporciona retroalimentación.",
+  "@tutorImageAnalysisSystemPrompt": {
+    "description": "System prompt for image analysis by the tutor LLM"
   }
 }

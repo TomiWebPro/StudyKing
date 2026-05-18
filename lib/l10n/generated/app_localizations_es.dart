@@ -356,7 +356,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String dueQuestionsCount(int count) {
-    return '$count pendientes';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pendientes',
+      one: '1 pendiente',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -562,7 +568,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String secondsValue(int count) {
-    return '$count segundos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count segundos',
+      one: '1 segundo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -579,7 +591,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String minutesValue(int count) {
-    return '$count minutos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutos',
+      one: '1 minuto',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1505,7 +1523,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String attemptsCount(int count) {
-    return '$count intentos';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count intentos',
+      one: '1 intento',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1610,7 +1634,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String activeCount(int count) {
-    return '$count activas';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count activas',
+      one: '1 activa',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -2627,7 +2657,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String focusForMinutes(int minutes) {
-    return 'Enfóquese por $minutes minutos';
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Enfóquese por $minutes minutos',
+      one: 'Enfócate por 1 minuto',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3041,7 +3077,15 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String recommendWeakTopics(int count) {
-    return 'Tiene $count tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tiene $count temas que necesitan mejorar. Concéntrese en fortalecer estas áreas.',
+      one:
+          'Tiene 1 tema que necesita mejorar. Concéntrese en fortalecer esta área.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3172,7 +3216,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String planBlocksDownstream(int count) {
-    return 'Bloquea $count tema(s) dependiente(s)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Bloquea $count temas dependientes',
+      one: 'Bloquea 1 tema dependiente',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3612,12 +3662,28 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String nudgeLateNight(int count) {
-    return 'Noté que tuvo $count sesión(es) de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Noté que tuvo $count sesiones de estudio nocturnas. ¡Recuerde que descansar es importante para aprender efectivamente!',
+      one:
+          'Noté que tuvo 1 sesión de estudio nocturna. ¡Recuerde que descansar es importante para aprender efectivamente!',
+    );
+    return '$_temp0';
   }
 
   @override
   String nudgeRevisionNeeded(int count) {
-    return 'Tiene $count pregunta(s) próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'Tiene $count preguntas próximas a su fecha de revisión. ¡Es hora de una sesión de repaso!',
+      one:
+          'Tiene 1 pregunta próxima a su fecha de revisión. ¡Es hora de una sesión de repaso!',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3900,6 +3966,66 @@ class AppLocalizationsEs extends AppLocalizations {
   String invalidBackupFileWithError(String error) {
     return 'Archivo de copia no válido: $error';
   }
+
+  @override
+  String get backupBoxSubjects => 'Materias';
+
+  @override
+  String get backupBoxTopics => 'Temas';
+
+  @override
+  String get backupBoxQuestions => 'Preguntas';
+
+  @override
+  String get backupBoxSources => 'Fuentes';
+
+  @override
+  String get backupBoxLessons => 'Lecciones';
+
+  @override
+  String get backupBoxLessonBlocks => 'Bloques de Lecciones';
+
+  @override
+  String get backupBoxSessionsTyped => 'Sesiones';
+
+  @override
+  String get backupBoxSessions => 'Sesiones (antiguas)';
+
+  @override
+  String get backupBoxMasteryStates => 'Estados de Dominio';
+
+  @override
+  String get backupBoxQuestionMasteryStates => 'Dominio de Preguntas';
+
+  @override
+  String get backupBoxQuestionEvaluations => 'Evaluaciones de Preguntas';
+
+  @override
+  String get backupBoxLearningPlans => 'Planes de Estudio';
+
+  @override
+  String get backupBoxPlanAdherence => 'Adhesión al Plan';
+
+  @override
+  String get backupBoxPlanAdherenceMetrics => 'Métricas del Plan';
+
+  @override
+  String get backupBoxMasteryImprovementMetrics => 'Métricas de Dominio';
+
+  @override
+  String get backupBoxConversations => 'Conversaciones';
+
+  @override
+  String get backupBoxTutorSessions => 'Sesiones de Tutoría';
+
+  @override
+  String get backupBoxTopicDependencies => 'Dependencias de Temas';
+
+  @override
+  String get backupBoxSettings => 'Ajustes';
+
+  @override
+  String get backupBoxProfile => 'Perfil';
 
   @override
   String questionsCountPlural(int count) {
@@ -4478,4 +4604,55 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get phaseClosing => 'Cierre';
+
+  @override
+  String examSessionTitle(String mode, String subject) {
+    return '$mode – $subject';
+  }
+
+  @override
+  String get signOutComplete => 'Cerrar sesión – Hecho';
+
+  @override
+  String importFailedWithError(String error) {
+    return 'Importación fallida: $error';
+  }
+
+  @override
+  String scheduleTimeLabel(String time) {
+    return 'Hora: $time';
+  }
+
+  @override
+  String scheduleDurationLabel(String duration) {
+    return 'Duración: $duration';
+  }
+
+  @override
+  String recordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count registros',
+      one: '1 registro',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get couldNotEvaluateAnswer => 'No se pudo evaluar la respuesta.';
+
+  @override
+  String couldNotEvaluateAnswerWithError(String error) {
+    return 'No se pudo evaluar la respuesta: $error';
+  }
+
+  @override
+  String tutorImageAnalysisUserPrompt(String imageData) {
+    return 'El estudiante ha enviado trabajo escrito a mano / una imagen. Analiza y proporciona retroalimentación, identificando errores y sugiriendo mejoras.\n\n$imageData';
+  }
+
+  @override
+  String get tutorImageAnalysisSystemPrompt =>
+      'El estudiante ha enviado este trabajo. Analiza y proporciona retroalimentación.';
 }

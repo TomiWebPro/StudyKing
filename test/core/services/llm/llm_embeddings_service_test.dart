@@ -2,9 +2,27 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/services/llm/llm_embeddings_service.dart';
+
+class _FakeHttpClient extends http.BaseClient {
+  Future<http.Response> Function(http.Request)? handler;
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    final req = request is http.Request
+        ? request
+        : http.Request(request.method, request.url)
+          ..headers.addAll(request.headers);
+    final response = await handler!(req);
+    return http.StreamedResponse(
+      Stream.fromIterable([utf8.encode(response.body)]),
+      response.statusCode,
+      contentLength: response.contentLength,
+      headers: response.headers,
+    );
+  }
+}
 
 void main() {
   group('EmbeddingService', () {
@@ -17,7 +35,8 @@ void main() {
 
     group('embed', () {
       test('returns embedding on successful response', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.method, 'POST');
           expect(request.url.path, '/api/v1/embeddings');
           final body = jsonDecode(request.body) as Map<String, dynamic>;
@@ -32,11 +51,11 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: 'test-key',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(
           text: 'Hello world',
@@ -47,20 +66,20 @@ void main() {
       });
 
       test('returns failure on API error', () async {
-        final mockClient = MockClient((_) async {
-          return http.Response('Server Error', 500);
-        });
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Server Error', 500);
 
         final service = EmbeddingService(
           apiKey: 'key',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'Hi', modelId: 'm');
         expect(result.isFailure, isTrue);
       });
 
       test('handles empty embedding', () async {
-        final mockClient = MockClient((_) async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async {
           return http.Response(
             jsonEncode({
               'data': [
@@ -70,11 +89,11 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: 'key',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'Hi', modelId: 'm');
         expect(result.isSuccess, isTrue);
@@ -84,7 +103,8 @@ void main() {
 
     group('Ollama provider', () {
       test('sends request to localhost Ollama', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.url.host, 'localhost');
           expect(request.url.port, 11434);
           expect(request.url.path, '/api/embeddings');
@@ -100,12 +120,12 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: '',
           provider: LlmProvider.ollama,
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'Test', modelId: 'nomic-embed-text');
         expect(result.isSuccess, isTrue);
@@ -113,7 +133,8 @@ void main() {
       });
 
       test('uses custom baseUrl for Ollama', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.url.host, 'my-ollama.local');
           expect(request.url.path, '/api/embeddings');
           return http.Response(
@@ -125,13 +146,13 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: '',
           provider: LlmProvider.ollama,
           baseUrl: 'http://my-ollama.local',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'T', modelId: 'm');
         expect(result.isSuccess, isTrue);
@@ -141,7 +162,8 @@ void main() {
 
     group('OpenAI provider', () {
       test('sends request to OpenAI API', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.url.host, 'api.openai.com');
           expect(request.url.path, '/v1/embeddings');
           expect(request.headers['Authorization'], 'Bearer test-openai-key');
@@ -156,12 +178,12 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: 'test-openai-key',
           provider: LlmProvider.openAI,
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'Hello', modelId: 'text-embedding-ada-002');
         expect(result.isSuccess, isTrue);
@@ -169,7 +191,8 @@ void main() {
       });
 
       test('uses custom baseUrl for OpenAI', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.url.host, 'my-openai.local');
           expect(request.url.path, '/v1/embeddings');
           return http.Response(
@@ -181,13 +204,13 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: 'key',
           provider: LlmProvider.openAI,
           baseUrl: 'https://my-openai.local/v1',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'T', modelId: 'm');
         expect(result.isSuccess, isTrue);
@@ -197,7 +220,8 @@ void main() {
 
     group('OpenRouter with custom baseUrl', () {
       test('uses custom baseUrl for OpenRouter', () async {
-        final mockClient = MockClient((request) async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
           expect(request.url.host, 'custom-openrouter.local');
           expect(request.url.path, '/api/v1/embeddings');
           expect(request.headers['HTTP-Referer'], 'StudyKing');
@@ -210,13 +234,13 @@ void main() {
             200,
             headers: {'Content-Type': 'application/json'},
           );
-        });
+        };
 
         final service = EmbeddingService(
           apiKey: 'key',
           provider: LlmProvider.openRouter,
           baseUrl: 'https://custom-openrouter.local/api/v1',
-          httpClient: mockClient,
+          httpClient: client,
         );
         final result = await service.embed(text: 'Hi', modelId: 'm');
         expect(result.isSuccess, isTrue);

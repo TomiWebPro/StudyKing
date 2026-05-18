@@ -13,7 +13,7 @@ const _testConfidenceRating = 0.75;
 
 void main() {
   group('ConversationPromptSet', () {
-    final promptSet = const ConversationPromptSet();
+    final promptSet = const ConversationPromptSet(localeName: 'en');
 
     test('provides all prompt builders', () {
       expect(promptSet.lessonPlan, isNotNull);
@@ -27,13 +27,13 @@ void main() {
     });
 
     test('defaultTemplates is const and equal to default constructor', () {
-      const defaultSet = ConversationPromptSet();
+      const defaultSet = ConversationPromptSet(localeName: 'en');
       expect(identical(ConversationPromptSet.defaultTemplates, defaultSet), isTrue);
     });
 
     test('accepts custom version', () {
-      const customSet = ConversationPromptSet(version: 3);
-      const defaultSet = ConversationPromptSet();
+      const customSet = ConversationPromptSet(version: 3, localeName: 'en');
+      const defaultSet = ConversationPromptSet(localeName: 'en');
       // version is not exposed publicly, but constructor accepts it
       expect(customSet, isA<ConversationPromptSet>());
       expect(defaultSet, isA<ConversationPromptSet>());
@@ -544,13 +544,13 @@ void main() {
 
   group('ConversationPromptSet', () {
     test('can be constructed with default params', () {
-      const templates = ConversationPromptSet();
+      const templates = ConversationPromptSet(localeName: 'en');
       expect(templates, isA<ConversationPromptSet>());
     });
 
     test('can be used as a valid instance', () {
       void takesConversationPromptSet(ConversationPromptSet set) {}
-      const templates = ConversationPromptSet();
+      const templates = ConversationPromptSet(localeName: 'en');
       expect(() => takesConversationPromptSet(templates), returnsNormally);
     });
   });

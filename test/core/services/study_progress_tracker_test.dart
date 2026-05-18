@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -13,6 +14,7 @@ import 'package:studyking/features/practice/data/repositories/attempt_repository
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
@@ -203,6 +205,7 @@ void main() {
         attemptRepo: mockRepo,
         sessionRepo: mockSessionRepo,
         masteryService: mockMasteryService,
+        l10n: lookupAppLocalizations(const Locale('en')),
       );
     });
 
@@ -457,7 +460,7 @@ void main() {
         ]);
 
         final badgeService = BadgeService(
-          tracker: tracker,
+          getStats: tracker.getOverallStats,
           notificationService: null,
         );
         await badgeService.checkAndUnlockBadges(testStudent);
@@ -476,7 +479,7 @@ void main() {
         mockRepo.setAttempts(attempts);
 
         final badgeService = BadgeService(
-          tracker: tracker,
+          getStats: tracker.getOverallStats,
           notificationService: null,
         );
         await badgeService.checkAndUnlockBadges(testStudent);

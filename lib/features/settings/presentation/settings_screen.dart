@@ -19,7 +19,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/features/ingestion/data/models/source_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -812,27 +812,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   }
 
   String _boxDisplayName(String boxName) {
+    final l10n = AppLocalizations.of(context)!;
     switch (boxName) {
-      case HiveBoxNames.subjects: return 'Subjects';
-      case HiveBoxNames.topics: return 'Topics';
-      case HiveBoxNames.questions: return 'Questions';
-      case HiveBoxNames.sources: return 'Sources';
-      case HiveBoxNames.lessons: return 'Lessons';
-      case HiveBoxNames.lessonBlocks: return 'Lesson Blocks';
-      case HiveBoxNames.sessionsTyped: return 'Sessions';
-      case HiveBoxNames.sessions: return 'Sessions (old)';
-      case HiveBoxNames.masteryStates: return 'Mastery States';
-      case HiveBoxNames.questionMasteryStates: return 'Question Mastery';
-      case HiveBoxNames.questionEvaluations: return 'Question Evaluations';
-      case HiveBoxNames.learningPlans: return 'Learning Plans';
-      case HiveBoxNames.planAdherence: return 'Plan Adherence';
-      case HiveBoxNames.planAdherenceMetrics: return 'Plan Metrics';
-      case HiveBoxNames.masteryImprovementMetrics: return 'Mastery Metrics';
-      case HiveBoxNames.conversations: return 'Conversations';
-      case HiveBoxNames.tutorSessions: return 'Tutor Sessions';
-      case HiveBoxNames.topicDependencies: return 'Topic Dependencies';
-      case HiveBoxNames.settings: return 'Settings';
-      case HiveBoxNames.profile: return 'Profile';
+      case HiveBoxNames.subjects: return l10n.backupBoxSubjects;
+      case HiveBoxNames.topics: return l10n.backupBoxTopics;
+      case HiveBoxNames.questions: return l10n.backupBoxQuestions;
+      case HiveBoxNames.sources: return l10n.backupBoxSources;
+      case HiveBoxNames.lessons: return l10n.backupBoxLessons;
+      case HiveBoxNames.lessonBlocks: return l10n.backupBoxLessonBlocks;
+      case HiveBoxNames.sessionsTyped: return l10n.backupBoxSessionsTyped;
+      case HiveBoxNames.sessions: return l10n.backupBoxSessions;
+      case HiveBoxNames.masteryStates: return l10n.backupBoxMasteryStates;
+      case HiveBoxNames.questionMasteryStates: return l10n.backupBoxQuestionMasteryStates;
+      case HiveBoxNames.questionEvaluations: return l10n.backupBoxQuestionEvaluations;
+      case HiveBoxNames.learningPlans: return l10n.backupBoxLearningPlans;
+      case HiveBoxNames.planAdherence: return l10n.backupBoxPlanAdherence;
+      case HiveBoxNames.planAdherenceMetrics: return l10n.backupBoxPlanAdherenceMetrics;
+      case HiveBoxNames.masteryImprovementMetrics: return l10n.backupBoxMasteryImprovementMetrics;
+      case HiveBoxNames.conversations: return l10n.backupBoxConversations;
+      case HiveBoxNames.tutorSessions: return l10n.backupBoxTutorSessions;
+      case HiveBoxNames.topicDependencies: return l10n.backupBoxTopicDependencies;
+      case HiveBoxNames.settings: return l10n.backupBoxSettings;
+      case HiveBoxNames.profile: return l10n.backupBoxProfile;
       default: return boxName;
     }
   }
@@ -915,7 +916,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('${l10n.importFailed}: $e')),
+          SnackBar(content: Text(l10n.importFailedWithError(e.toString()))),
         );
       }
     }
@@ -953,7 +954,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   final records = data[key]!;
                   return CheckboxListTile(
                     title: Text(_boxDisplayName(key)),
-                    subtitle: Text('${records.length} records'),
+                    subtitle: Text(l10n.recordCount(records.length)),
                     value: selected.contains(key),
                     onChanged: (v) {
                       setInnerState(() {
@@ -1209,7 +1210,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(selectedModelProvider.notifier).state = '';
     ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('${l10n.signOut} - ${l10n.done}')));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.signOutComplete)));
     Navigator.of(context).popUntil((route) => route.isFirst);
   }
 

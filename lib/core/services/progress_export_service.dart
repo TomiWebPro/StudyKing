@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
@@ -24,11 +25,13 @@ class ProgressExportService {
     MasteryGraphService? masteryService,
     AttemptRepository? attemptRepo,
     SessionRepository? sessionRepo,
+    AppLocalizations? l10n,
   })  : _tracker = tracker ??
             StudyProgressTracker(
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
               sessionRepo: sessionRepo,
+              l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
             ),
         _masteryService = masteryService ?? MasteryGraphService(),
         _attemptRepo = attemptRepo ?? AttemptRepository();
