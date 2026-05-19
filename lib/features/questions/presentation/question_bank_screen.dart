@@ -11,6 +11,9 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -111,7 +114,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         }
       }
     } catch (e) {
-      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+      const Logger('QuestionBankScreen').e('Failed to load questions', e);
+      if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
     }
   }
 
@@ -332,7 +336,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                   ),
                   items: QuestionType.values.map((t) => DropdownMenuItem(
                     value: t.name,
-                    child: Text(_questionTypeLabel(t, l10n)),
+                    child: Text(questionTypeLabel(t, l10n)),
                   )).toList(),
                   onChanged: (v) {
                     selectedType = v ?? QuestionType.singleChoice.name;
@@ -544,11 +548,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       body: _isLoading
           ? const LoadingScreen()
           : _error != null
-              ? Center(child: Column(mainAxisSize: MainAxisSize.min, children: [
-                  Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-                  const SizedBox(height: 16),
-                  ElevatedButton(onPressed: _load, child: Text(l10n.retry)),
-                ]))
+              ? ErrorRetryWidget(message: _error!, onRetry: _load)
               : Column(
                   children: [
                     _buildSearchAndFilter(l10n),
@@ -622,7 +622,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                                       spacing: 8,
                                                       runSpacing: 4,
                                                       children: [
-                                                        _smallChip(_questionTypeLabel(q.type, l10n), theme),
+                                                        _smallChip(questionTypeLabel(q.type, l10n), theme),
                                                         _smallChip(l10n.difficultyLabel(q.difficulty.toString()), theme),
                                                         if (subjectName != null) _smallChip(subjectName, theme),
                                                         if (topicName != null) _smallChip(topicName, theme),
@@ -708,7 +708,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                 _filterChip(
                   label: _typeFilter.isEmpty
                       ? l10n.allTypes
-                      : _questionTypeLabel(QuestionType.values[int.parse(_typeFilter)], l10n),
+                      : questionTypeLabel(QuestionType.values[int.parse(_typeFilter)], l10n),
                   selected: _typeFilter.isNotEmpty,
                   onTap: () => _showTypeFilter(l10n),
                   onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
@@ -734,12 +734,17 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     required VoidCallback onTap,
     VoidCallback? onClear,
   }) {
-    return InputChip(
-      label: Text(label),
+    return Semantics(
+      button: true,
       selected: selected,
-      onPressed: onTap,
-      deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
-      onDeleted: onClear,
+      label: label,
+      child: InputChip(
+        label: Text(label),
+        selected: selected,
+        onPressed: onTap,
+        deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
+        onDeleted: onClear,
+      ),
     );
   }
 
@@ -782,7 +787,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
             },
           ),
           ...QuestionType.values.map((t) => ListTile(
-            title: Text(_questionTypeLabel(t, l10n)),
+            title: Text(questionTypeLabel(t, l10n)),
             trailing: _typeFilter == t.index.toString() ? const Icon(Icons.check) : null,
             onTap: () { Navigator.pop(ctx); setState(() => _typeFilter = t.index.toString()); },
           )),
@@ -816,27 +821,4 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   }
 }
 
-String _questionTypeLabel(QuestionType type, AppLocalizations l10n) {
-  switch (type) {
-    case QuestionType.singleChoice:
-      return l10n.multipleChoice;
-    case QuestionType.multiChoice:
-      return l10n.multipleSelect;
-    case QuestionType.typedAnswer:
-      return l10n.textAnswer;
-    case QuestionType.canvas:
-      return l10n.canvas;
-    case QuestionType.essay:
-      return l10n.essay;
-    case QuestionType.stepByStep:
-      return l10n.stepByStep;
-    case QuestionType.mathExpression:
-      return l10n.math;
-    case QuestionType.graphDrawing:
-      return l10n.graphDrawing;
-    case QuestionType.fileUpload:
-      return l10n.fileUpload;
-    case QuestionType.audioRecording:
-      return l10n.audioRecording;
-  }
-}
+

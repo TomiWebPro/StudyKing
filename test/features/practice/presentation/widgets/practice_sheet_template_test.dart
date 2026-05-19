@@ -43,11 +43,10 @@ void main() {
       expect(text.style?.fontWeight, FontWeight.bold);
     });
 
-    testWidgets('applies custom padding', (tester) async {
+    testWidgets('renders with SafeArea padding', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const PracticeSheetTemplate(
           title: 'Padded',
-          padding: EdgeInsets.all(24),
           children: [Text('Content')],
         ),
       ));

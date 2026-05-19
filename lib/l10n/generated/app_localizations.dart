@@ -1280,7 +1280,7 @@ abstract class AppLocalizations {
   /// **'Exam Date (Optional)'**
   String get examDateOptional;
 
-  /// Semantics label and tooltip for backup and restore button
+  /// Semantic tooltip for backup and restore action
   ///
   /// In en, this message translates to:
   /// **'Backup & Restore'**
@@ -1934,10 +1934,10 @@ abstract class AppLocalizations {
   /// **'{percent}% Complete: {completed}/{total} questions generated'**
   String percentComplete(int percent, int completed, int total);
 
-  /// Title for schedule lesson dialog
+  /// Action button to schedule a lesson
   ///
   /// In en, this message translates to:
-  /// **'Schedule Lesson'**
+  /// **'Schedule a Lesson'**
   String get scheduleLesson;
 
   /// Content for schedule lesson dialog
@@ -2990,11 +2990,41 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get dismiss;
 
-  /// Tooltip for voice input button
+  /// Tooltip for voice input button when idle
   ///
   /// In en, this message translates to:
-  /// **'Voice Input'**
+  /// **'Voice input'**
   String get voiceInput;
+
+  /// Accessibility setting: bold font weight toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Bold Text'**
+  String get boldText;
+
+  /// Description for bold text accessibility setting
+  ///
+  /// In en, this message translates to:
+  /// **'Use bold font weight for text throughout the app'**
+  String get boldTextDescription;
+
+  /// Tooltip for voice input button when speech recognition is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Voice input not available'**
+  String get voiceInputNotAvailable;
+
+  /// Dialog title when microphone permission is needed
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone Permission Required'**
+  String get microphonePermissionRequired;
+
+  /// Semantics label for voice bar when actively listening
+  ///
+  /// In en, this message translates to:
+  /// **'Listening. Speak now.'**
+  String get voiceListeningHint;
 
   /// Tooltip for capture image button
   ///
@@ -4328,6 +4358,42 @@ abstract class AppLocalizations {
   /// **'Comprehensive progress report exported'**
   String get comprehensiveReportExported;
 
+  /// Detail description for CSV export confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges.'**
+  String get exportCsvDetail;
+
+  /// Detail description for PDF export confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing.'**
+  String get exportPdfDetail;
+
+  /// Detail description for JSON export confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'JSON: structured data export for programmatic analysis.'**
+  String get exportJsonDetail;
+
+  /// Detail description for progress CSV export confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Stats CSV: summary statistics and progress overview (lighter than full CSV).'**
+  String get exportProgressCsvDetail;
+
+  /// Detail description for instrumentation export confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Progress Analytics: plan adherence and mastery improvement metrics for analysis.'**
+  String get exportInstrumentationDetail;
+
+  /// Hint text suggesting to use Settings for full data backup
+  ///
+  /// In en, this message translates to:
+  /// **'For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore.'**
+  String get backupRestoreHint;
+
   /// Label for active roadmaps count
   ///
   /// In en, this message translates to:
@@ -5407,6 +5473,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Notifications about earned badges and achievements'**
   String get notifChannelBadgesDesc;
+
+  /// Notification channel name for mentor messages
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor Messages'**
+  String get notifChannelMentor;
+
+  /// Description of the mentor messages channel
+  ///
+  /// In en, this message translates to:
+  /// **'Proactive mentor check-ins and nudges'**
+  String get notifChannelMentorDesc;
+
+  /// Notification body when a lesson is ready
+  ///
+  /// In en, this message translates to:
+  /// **'{topicTitle} has a lesson ready'**
+  String lessonReadyBody(String topicTitle);
 
   /// Explanation when topic accuracy is below 60 percent
   ///
@@ -6753,7 +6837,7 @@ abstract class AppLocalizations {
   /// Lesson time status with topic and completion marker
   ///
   /// In en, this message translates to:
-  /// **'{topicId} · {time}{completedSuffix}'**
+  /// **'{topicId}, {time}{completedSuffix}'**
   String lessonTimeStatus(String topicId, String time, String completedSuffix);
 
   /// AppBar title combining practice mode and subject name
@@ -6774,11 +6858,11 @@ abstract class AppLocalizations {
   /// **'Unknown error'**
   String get unknownError;
 
-  /// Error message when plan fails to load
+  /// User-facing error message when plan fails to load
   ///
   /// In en, this message translates to:
-  /// **'Failed to load plan: {error}'**
-  String failedToLoadPlan(String error);
+  /// **'Failed to load study plan'**
+  String get failedToLoadPlan;
 
   /// Error message when backup export fails with details
   ///
@@ -6911,6 +6995,144 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile'**
   String get backupBoxProfile;
+
+  /// Backup box display name for answers
+  ///
+  /// In en, this message translates to:
+  /// **'Answers'**
+  String get backupBoxAnswers;
+
+  /// Backup box display name for attempts
+  ///
+  /// In en, this message translates to:
+  /// **'Attempts'**
+  String get backupBoxAttempts;
+
+  /// Backup box display name for badges
+  ///
+  /// In en, this message translates to:
+  /// **'Badges'**
+  String get backupBoxBadges;
+
+  /// Backup box display name for engagement nudges
+  ///
+  /// In en, this message translates to:
+  /// **'Engagement Nudges'**
+  String get backupBoxEngagementNudges;
+
+  /// Backup box display name for focus sessions
+  ///
+  /// In en, this message translates to:
+  /// **'Focus Sessions'**
+  String get backupBoxFocusSessions;
+
+  /// Backup box display name for pending actions
+  ///
+  /// In en, this message translates to:
+  /// **'Pending Actions'**
+  String get backupBoxPendingActions;
+
+  /// Backup box display name for progress
+  ///
+  /// In en, this message translates to:
+  /// **'Progress'**
+  String get backupBoxProgress;
+
+  /// Backup box display name for tasks
+  ///
+  /// In en, this message translates to:
+  /// **'Tasks'**
+  String get backupBoxTasks;
+
+  /// Backup box display name for student availability
+  ///
+  /// In en, this message translates to:
+  /// **'Student Availability'**
+  String get backupBoxStudentAvailability;
+
+  /// Backup box display name for roadmaps
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmaps'**
+  String get backupBoxRoadmaps;
+
+  /// Backup box display name for LLM tasks
+  ///
+  /// In en, this message translates to:
+  /// **'LLM Tasks'**
+  String get backupBoxLlmTasks;
+
+  /// Backup box display name for LLM usage records
+  ///
+  /// In en, this message translates to:
+  /// **'LLM Usage Records'**
+  String get backupBoxLlmUsageRecords;
+
+  /// Warning when exporting backup with sensitive data included
+  ///
+  /// In en, this message translates to:
+  /// **'Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.'**
+  String get apiKeyPlaintextWarning;
+
+  /// Count of boxes in backup summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 box} other{{count} boxes}}'**
+  String boxCountLabel(int count);
+
+  /// Truncated list indicator showing additional items
+  ///
+  /// In en, this message translates to:
+  /// **'... and {count,plural, =1{1 more} other{{count} more}}'**
+  String andMoreCount(int count);
+
+  /// Header for list of items cleared on sign out
+  ///
+  /// In en, this message translates to:
+  /// **'What will be cleared:'**
+  String get signOutClearList;
+
+  /// Item in sign-out clear list: API key
+  ///
+  /// In en, this message translates to:
+  /// **'API key'**
+  String get signOutClearsApiKey;
+
+  /// Item in sign-out clear list: AI model selection
+  ///
+  /// In en, this message translates to:
+  /// **'Selected AI model'**
+  String get signOutClearsAiModel;
+
+  /// Reassurance that study data is not deleted on sign out
+  ///
+  /// In en, this message translates to:
+  /// **'Your study data will be preserved.'**
+  String get signOutPreservesStudyData;
+
+  /// Hint shown after successful data import
+  ///
+  /// In en, this message translates to:
+  /// **'A restart may be needed for all changes to appear.'**
+  String get importRestartHint;
+
+  /// Title for student ID mismatch dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Student ID mismatch detected'**
+  String get studentIdMismatchTitle;
+
+  /// Body showing current and backup student IDs
+  ///
+  /// In en, this message translates to:
+  /// **'Current: {currentId}\nBackup: {backupId}'**
+  String studentIdMismatchBody(String currentId, String backupId);
+
+  /// Question to reconcile student ID mismatch
+  ///
+  /// In en, this message translates to:
+  /// **'Update student records to match current ID?'**
+  String get studentIdMismatchAction;
 
   /// Plural count of available questions
   ///
@@ -8267,43 +8489,43 @@ abstract class AppLocalizations {
   /// **'Share last backup'**
   String get shareLastBackup;
 
-  /// Semantics label and tooltip for export reports button
+  /// Semantic tooltip for export reports action
   ///
   /// In en, this message translates to:
   /// **'Export Reports'**
   String get exportReports;
 
-  /// Tooltip for read aloud button on chat bubble
+  /// Tooltip for read aloud button on tutor messages
   ///
   /// In en, this message translates to:
   /// **'Read aloud'**
   String get readAloud;
 
-  /// Semantics label and button label for file upload
+  /// Label for upload file button in question card
   ///
   /// In en, this message translates to:
   /// **'Upload file'**
   String get uploadFile;
 
-  /// Button label when a file is attached
+  /// Label shown when a file is attached to a question
   ///
   /// In en, this message translates to:
   /// **'File attached'**
   String get fileAttached;
 
-  /// Semantics label for audio recording button
+  /// Label for record audio button in question card
   ///
   /// In en, this message translates to:
   /// **'Record audio'**
   String get recordAudio;
 
-  /// Button label when recording is complete
+  /// Label shown when audio recording is complete
   ///
   /// In en, this message translates to:
   /// **'Recording complete'**
   String get recordingComplete;
 
-  /// Button label for idle recording state
+  /// Label for starting audio recording
   ///
   /// In en, this message translates to:
   /// **'Start recording'**
@@ -8336,6 +8558,192 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Mentor Check-In'**
   String get mentorCheckIn;
+
+  /// Dashboard card title for next upcoming items
+  ///
+  /// In en, this message translates to:
+  /// **'Next Up'**
+  String get nextUp;
+
+  /// Fallback text for a scheduled lesson with no topic title
+  ///
+  /// In en, this message translates to:
+  /// **'Scheduled lesson'**
+  String get scheduledLesson;
+
+  /// Number of upcoming lessons
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 upcoming lesson} other{{count} upcoming lessons}}'**
+  String upcomingLessonsCount(int count);
+
+  /// Number of reviews due for spaced repetition
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 review due} other{{count} reviews due}}'**
+  String reviewsDueCount(int count);
+
+  /// Subtitle for due review items
+  ///
+  /// In en, this message translates to:
+  /// **'Due for spaced repetition review'**
+  String get dueForReviewSubtitle;
+
+  /// Number of weak topics needing practice
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 weak topic} other{{count} weak topics}}'**
+  String weakTopicsCount(int count);
+
+  /// Subtitle for practicing weak topic areas
+  ///
+  /// In en, this message translates to:
+  /// **'Practice weak areas'**
+  String get practiceWeakAreas;
+
+  /// Number of estimated lessons remaining with tilde prefix
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{~{count} lesson} other{~{count} lessons}}'**
+  String lessonsCount(int count);
+
+  /// Number of topics that need attention in workload card
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 topic needs attention} other{{count} topics need attention}}'**
+  String topicsNeedAttention(int count);
+
+  /// Tooltip for voice input button when recording
+  ///
+  /// In en, this message translates to:
+  /// **'Stop recording'**
+  String get stopRecording;
+
+  /// Feedback shown when quiz answer is incorrect
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect answer'**
+  String get incorrectAnswer;
+
+  /// Accessible label for shimmer loading state
+  ///
+  /// In en, this message translates to:
+  /// **'Loading...'**
+  String get loadingWithEllipsis;
+
+  /// Section header for mentor messages received while away
+  ///
+  /// In en, this message translates to:
+  /// **'--- While you were away ---'**
+  String get whileYouWereAway;
+
+  /// Section footer for end of pending mentor messages
+  ///
+  /// In en, this message translates to:
+  /// **'--- End of pending messages ---'**
+  String get endOfPendingMessages;
+
+  /// Label shown during focus mode indicating lesson practice
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Practice'**
+  String get lessonPractice;
+
+  /// Label shown during focus mode with topic name
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson Practice: {topic}'**
+  String lessonPracticeWithTopic(String topic);
+
+  /// Page number indicator showing current page out of total
+  ///
+  /// In en, this message translates to:
+  /// **'{current} / {total}'**
+  String pageIndicator(int current, int total);
+
+  /// Notification channel name for mentor messages
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor Messages'**
+  String get mentorMessages;
+
+  /// Notification text to nudge the student to resume learning
+  ///
+  /// In en, this message translates to:
+  /// **'Ready to continue learning?'**
+  String get readyToContinueLearning;
+
+  /// Accessibility label for graph drawing canvas
+  ///
+  /// In en, this message translates to:
+  /// **'Graph canvas'**
+  String get graphCanvas;
+
+  /// Hint text for graph drawing area
+  ///
+  /// In en, this message translates to:
+  /// **'Draw your graph here'**
+  String get drawYourGraphHere;
+
+  /// Count of strokes and points in drawing
+  ///
+  /// In en, this message translates to:
+  /// **'{strokes} strokes, {points} points'**
+  String strokesCountPoints(int strokes, int points);
+
+  /// Tool name for freehand drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Freehand'**
+  String get toolFreehand;
+
+  /// Tool name for line drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Line'**
+  String get toolLine;
+
+  /// Tool name for rectangle drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Rectangle'**
+  String get toolRectangle;
+
+  /// Tool name for circle drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Circle'**
+  String get toolCircle;
+
+  /// Tool name for text drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get toolText;
+
+  /// Tool name for plot point drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Plot Point'**
+  String get toolPlotPoint;
+
+  /// Fallback message when evaluation JSON cannot be parsed
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to display evaluation result'**
+  String get unableToDisplayEvaluation;
+
+  /// Snackbar message when microphone permission is denied
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone access denied. Please enable it in Settings to use voice input.'**
+  String get micPermissionDenied;
+
+  /// Label appended to subject name in focus timer title
+  ///
+  /// In en, this message translates to:
+  /// **'(Focus)'**
+  String get focusTimerLabel;
 }
 
 class _AppLocalizationsDelegate

@@ -9,6 +9,7 @@ import 'package:studyking/features/teaching/data/repositories/conversation_repos
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
@@ -29,6 +30,7 @@ class ConversationManager {
   final Clock _clock;
   final VoiceService? _voiceService;
   bool enableVoiceOutput = false;
+  bool reduceMotion = false;
 
   final String studentId;
   final String topicTitle;
@@ -81,6 +83,18 @@ class ConversationManager {
   String get capturedExerciseQuestion => _lastExerciseQuestion;
 
   static final Logger _logger = const Logger('ConversationManager');
+
+  static const double _masteryThreshold = 0.7;
+  static const double _struggleThreshold = 0.3;
+  static const double _paceIncrement = 0.15;
+  static const double _maxPace = 1.5;
+  static const double _minPace = 0.5;
+  static const double _defaultConfidence = 0.5;
+  static const double _chunkSizeFast = 10;
+  static const int _chunkSizeNormal = 5;
+  static const int _chunkSizeSlow = 3;
+  static const double _paceFastThreshold = 1.2;
+  static const double _paceSlowThreshold = 0.8;
 
   Future<void> initialize() async {
     phase = ConversationPhase.greeting;
@@ -255,15 +269,19 @@ class ConversationManager {
   }
 
   Stream<String> _buildAdaptiveChunks(String fullContent) async* {
+    if (reduceMotion) {
+      yield fullContent;
+      return;
+    }
     final pace = adaptivePace;
-    final chunkSize = (pace > 1.2) ? 10 : (pace < 0.8 ? 3 : 5);
+    final chunkSize = (pace > _paceFastThreshold) ? _chunkSizeFast : (pace < _paceSlowThreshold ? _chunkSizeSlow : _chunkSizeNormal);
     int i = 0;
     while (i < fullContent.length) {
-      final end = (i + chunkSize).clamp(0, fullContent.length);
+      final end = (i + chunkSize).clamp(0, fullContent.length).toInt();
       yield fullContent.substring(i, end);
       i = end;
-      if (pace < 0.8) {
-        await Future.delayed(const Duration(milliseconds: 15));
+      if (pace < _paceSlowThreshold) {
+        await Future.delayed(Timeouts.adaptiveChunkDelay);
       }
     }
   }
@@ -280,18 +298,18 @@ class ConversationManager {
 
     lastEvaluationResult = result;
 
-    if (result.score >= 0.7) {
+    if (result.score >= _masteryThreshold) {
       correctCount++;
       _consecutiveIncorrect = 0;
-      adaptivePace = min(adaptivePace + 0.15, 1.5);
-    } else if (result.score <= 0.3) {
+      adaptivePace = min(adaptivePace + _paceIncrement, _maxPace);
+    } else if (result.score <= _struggleThreshold) {
       _consecutiveIncorrect++;
-      adaptivePace = max(adaptivePace - 0.15, 0.5);
+      adaptivePace = max(adaptivePace - _paceIncrement, _minPace);
     } else {
       _consecutiveIncorrect = 0;
     }
 
-    if (result.score >= 0.7 && phase == ConversationPhase.adaptiveReview) {
+    if (result.score >= _masteryThreshold && phase == ConversationPhase.adaptiveReview) {
       _logTransition(phase, ConversationPhase.teaching, 'correct in adaptive review');
       phase = ConversationPhase.teaching;
     } else {
@@ -345,17 +363,17 @@ class ConversationManager {
     correctCount++;
     exerciseCount++;
     _consecutiveIncorrect = 0;
-    adaptivePace = min(adaptivePace + 0.15, 1.5);
+    adaptivePace = min(adaptivePace + _paceIncrement, _maxPace);
   }
 
   void recordIncorrectAnswer() {
     exerciseCount++;
     _consecutiveIncorrect++;
-    adaptivePace = max(adaptivePace - 0.15, 0.5);
+    adaptivePace = max(adaptivePace - _paceIncrement, _minPace);
   }
 
   double get confidenceRating {
-    if (exerciseCount == 0) return 0.5;
+    if (exerciseCount == 0) return _defaultConfidence;
     final raw = correctCount / exerciseCount;
     return (raw * adaptivePace).clamp(0.0, 1.0);
   }

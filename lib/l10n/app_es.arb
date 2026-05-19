@@ -848,11 +848,11 @@
   },
   "sessionsLabel": "Sesiones",
   "@sessionsLabel": {
-    "description": "Etiqueta para el conteo de sesiones"
+    "description": "Label for sessions count"
   },
   "noActivity": "Sin actividad — estuvo ausente esta semana.",
   "@noActivity": {
-    "description": "Tooltip para semanas sin actividad por ausencia"
+    "description": "Tooltip for gap weeks with zero activity"
   },
   "questionsLabel": "Preguntas",
   "@questionsLabel": {
@@ -1886,7 +1886,7 @@
   },
   "instrumentation": "Estadísticas de Progreso",
   "@instrumentation": {
-    "description": "Etiqueta del botón para exportar estadísticas de progreso"
+    "description": "Button label to export progress statistics"
   },
   "overall": "General",
   "@overall": {
@@ -2884,19 +2884,19 @@
   },
   "labelJson": "JSON",
   "@labelJson": {
-    "description": "Etiqueta para formato de exportación JSON"
+    "description": "Label for JSON export format"
   },
   "unsavedChanges": "Cambios sin guardar",
   "@unsavedChanges": {
-    "description": "Título del diálogo de confirmación de cambios sin guardar"
+    "description": "Dialog title for unsaved changes confirmation"
   },
-  "unsavedChangesDescription": "Tienes cambios sin guardar. ¿Estás seguro de que quieres descartarlos?",
+  "unsavedChangesDescription": "Tiene cambios sin guardar. ¿Está seguro de que quiere descartarlos?",
   "@unsavedChangesDescription": {
-    "description": "Texto del cuerpo del diálogo de confirmación de cambios sin guardar"
+    "description": "Body text for unsaved changes confirmation dialog"
   },
   "discard": "Descartar",
   "@discard": {
-    "description": "Etiqueta del botón para descartar cambios sin guardar"
+    "description": "Button label to discard unsaved changes"
   },
   "goToSettings": "Ir a Configuración",
   "@goToSettings": {
@@ -3365,6 +3365,30 @@
   "@comprehensiveReportExported": {
     "description": "Snackbar when comprehensive report is exported"
   },
+  "exportCsvDetail": "CSV: estadísticas generales, dominio de temas, todos los intentos (uno por fila), tendencia semanal, insignias.",
+  "@exportCsvDetail": {
+    "description": "Detail description for CSV export confirmation dialog"
+  },
+  "exportPdfDetail": "PDF: informe formateado con tablas, gráficos y desgloses de dominio adecuados para impresión.",
+  "@exportPdfDetail": {
+    "description": "Detail description for PDF export confirmation dialog"
+  },
+  "exportJsonDetail": "JSON: exportación de datos estructurados para análisis programático.",
+  "@exportJsonDetail": {
+    "description": "Detail description for JSON export confirmation dialog"
+  },
+  "exportProgressCsvDetail": "CSV de estadísticas: resumen de estadísticas y visión general del progreso (más ligero que el CSV completo).",
+  "@exportProgressCsvDetail": {
+    "description": "Detail description for progress CSV export confirmation dialog"
+  },
+  "exportInstrumentationDetail": "Analíticas de Progreso: métricas de adherencia al plan y mejora de dominio para análisis.",
+  "@exportInstrumentationDetail": {
+    "description": "Detail description for instrumentation export confirmation dialog"
+  },
+  "backupRestoreHint": "Para una copia de seguridad completa (materias, preguntas, configuraciones), vaya a Configuración → Copia de seguridad y Restauración.",
+  "@backupRestoreHint": {
+    "description": "Hint text suggesting to use Settings for full data backup"
+  },
   "activeRoadmaps": "Roadmaps Activos",
   "@activeRoadmaps": {
     "description": "Label for active roadmaps count"
@@ -3477,7 +3501,7 @@
   "@allRequiredStepsMissing": {
     "description": "Feedback when required steps are missing from answer"
   },
-  "breakTime": "Descanso",
+  "breakTime": "¡Descanso!",
   "@breakTime": {
     "description": "Title shown during break after a focus session"
   },
@@ -3502,7 +3526,7 @@
   "@focus": {
     "description": "Bottom navigation label for study tab"
   },
-  "focusForMinutes": "{minutes,plural,=1{Enfócate por 1 minuto} other{Enfóquese por {minutes} minutos}}",
+  "focusForMinutes": "{minutes,plural,=1{Enfóquese por 1 minuto} other{Enfóquese por {minutes} minutos}}",
   "@focusForMinutes": {
     "description": "Button label to start a focus session with specified minutes",
     "placeholders": {
@@ -3548,7 +3572,7 @@
       }
     }
   },
-  "timerDone": "TERMINADO",
+  "timerDone": "¡TERMINADO!",
   "@timerDone": {
     "description": "Label indicating timer is complete"
   },
@@ -4253,6 +4277,23 @@
   "@notifChannelBadgesDesc": {
     "description": "Description of the badge notifications channel"
   },
+  "notifChannelMentor": "Mensajes del Mentor",
+  "@notifChannelMentor": {
+    "description": "Notification channel name for mentor messages"
+  },
+  "notifChannelMentorDesc": "Registros y sugerencias proactivas del mentor",
+  "@notifChannelMentorDesc": {
+    "description": "Description of the mentor messages channel"
+  },
+  "lessonReadyBody": "{topicTitle} tiene una lección lista",
+  "@lessonReadyBody": {
+    "description": "Notification body when a lesson is ready",
+    "placeholders": {
+      "topicTitle": {
+        "type": "String"
+      }
+    }
+  },
   "planAccuracyLow": "La precisión está por debajo del 60% — necesita práctica enfocada",
   "@planAccuracyLow": {
     "description": "Explanation when topic accuracy is below 60 percent"
@@ -4731,14 +4772,6 @@
       }
     }
   },
-  "tapToExpand": "Toca para expandir",
-  "@tapToExpand": {
-    "description": "Tooltip for collapsed card header"
-  },
-  "tapToCollapse": "Toca para colapsar",
-  "@tapToCollapse": {
-    "description": "Tooltip for expanded card header"
-  },
   "sendHint": "Presiona Enter para enviar, Ctrl+Enter para nueva línea",
   "@sendHint": {
     "description": "Hint text below chat input field"
@@ -4808,11 +4841,11 @@
   "@onboardingMentorDesc": {
     "description": "Mentor tab description in onboarding"
   },
-  "onboardingFocusDesc": "Mantenga el enfoque con sesiones de estudio estilo Pomodoro",
+  "onboardingFocusDesc": "Centro de práctica rápida con temporizador: practique preguntas y realice un seguimiento del enfoque",
   "@onboardingFocusDesc": {
     "description": "Focus mode description in onboarding"
   },
-  "onboardingSettingsDesc": "Configura claves API, apariencia y preferencias",
+  "onboardingSettingsDesc": "Configure claves API, apariencia y preferencias",
   "@onboardingSettingsDesc": {
     "description": "Settings tab description in onboarding"
   },
@@ -4820,7 +4853,7 @@
   "@dontShowAgain": {
     "description": "Checkbox label to suppress recurring dialog"
   },
-  "needApiKeyNotice": "Nota: Las funciones de IA requieren una clave API. Configúrala en Ajustes.",
+  "needApiKeyNotice": "Nota: Las funciones de IA requieren una clave API. Configúrela en Ajustes.",
   "@needApiKeyNotice": {
     "description": "API key notice in onboarding"
   },
@@ -4977,14 +5010,14 @@
   },
   "welcomeBackDays": "¡Bienvenido de nuevo! Ha estado ausente durante {days} días.",
   "@welcomeBackDays": {
-    "description": "Mensaje de bienvenida después de una ausencia",
+    "description": "Welcome back message after absence",
     "placeholders": {
       "days": { "type": "int" }
     }
   },
   "absenceDetectedTitle": "Ausencia Detectada",
   "@absenceDetectedTitle": {
-    "description": "Título para el banner de detección de ausencia"
+    "description": "Title for absence detection banner"
   },
   "absenceDetectedBody": "No ha usado StudyKing en {days} días. ¿Cómo le gustaría proceder?",
   "@absenceDetectedBody": {
@@ -5002,11 +5035,11 @@
   },
   "missedLessonLabel": "Perdida",
   "@missedLessonLabel": {
-    "description": "Etiqueta para lecciones perdidas"
+    "description": "Label for missed lessons"
   },
   "staleSessionLabel": "No completada",
   "@staleSessionLabel": {
-    "description": "Etiqueta para sesiones obsoletas"
+    "description": "Label for stale sessions"
   },
   "catchUp": "Ponerse al día",
   "@catchUp": {
@@ -5014,11 +5047,11 @@
   },
   "catchUpTitle": "¿Cómo le gustaría ponerse al día?",
   "@catchUpTitle": {
-    "description": "Título para la hoja de ponerse al día"
+    "description": "Title for catch-up sheet"
   },
   "catchUpDescription": "Estuvo ausente durante {days} días. Elija una estrategia:",
   "@catchUpDescription": {
-    "description": "Descripción para la hoja de ponerse al día",
+    "description": "Description for catch-up sheet",
     "placeholders": {
       "days": { "type": "int" }
     }
@@ -5036,26 +5069,26 @@
   },
   "planExtended": "Plan de estudio extendido por {days} días",
   "@planExtended": {
-    "description": "Mensaje de éxito después de extender el plan",
+    "description": "Success message after extending plan",
     "placeholders": {
       "days": { "type": "int" }
     }
   },
   "failedToExtendPlan": "Error al extender el plan de estudio",
   "@failedToExtendPlan": {
-    "description": "Mensaje de error al extender el plan"
+    "description": "Error message when extending plan fails"
   },
   "failedToCatchUp": "Error al procesar la estrategia de recuperación",
   "@failedToCatchUp": {
-    "description": "Mensaje de error cuando falla la recuperación"
+    "description": "Error message when recovery fails"
   },
   "missedDismissed": "Lecciones perdidas descartadas",
   "@missedDismissed": {
-    "description": "Mensaje de éxito después de descartar lecciones perdidas"
+    "description": "Success message after discarding missed lessons"
   },
   "failedToDismissMissed": "Error al descartar lecciones perdidas",
   "@failedToDismissMissed": {
-    "description": "Mensaje de error al descartar lecciones perdidas"
+    "description": "Error message when discarding missed lessons fails"
   },
   "dismissAllMissed": "Descartar todas las perdidas",
   "@dismissAllMissed": {
@@ -5063,7 +5096,7 @@
   },
   "missedLessonsCount": "Lecciones Perdidas ({count})",
   "@missedLessonsCount": {
-    "description": "Encabezado de sección para lecciones perdidas con conteo",
+    "description": "Section header for missed lessons with count",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -5387,7 +5420,7 @@
       }
     }
   },
-  "lessonTimeStatus": "{topicId} · {time}{completedSuffix}",
+  "lessonTimeStatus": "{topicId}, {time}{completedSuffix}",
   "@lessonTimeStatus": {
     "description": "Lesson time status with topic and completion marker",
     "placeholders": {
@@ -5537,6 +5570,116 @@
   "@backupBoxProfile": {
     "description": "Backup box display name for profile"
   },
+  "backupBoxAnswers": "Respuestas",
+  "@backupBoxAnswers": {
+    "description": "Backup box display name for answers"
+  },
+  "backupBoxAttempts": "Intentos",
+  "@backupBoxAttempts": {
+    "description": "Backup box display name for attempts"
+  },
+  "backupBoxBadges": "Insignias",
+  "@backupBoxBadges": {
+    "description": "Backup box display name for badges"
+  },
+  "backupBoxEngagementNudges": "Notificaciones de Compromiso",
+  "@backupBoxEngagementNudges": {
+    "description": "Backup box display name for engagement nudges"
+  },
+  "backupBoxFocusSessions": "Sesiones de Enfoque",
+  "@backupBoxFocusSessions": {
+    "description": "Backup box display name for focus sessions"
+  },
+  "backupBoxPendingActions": "Acciones Pendientes",
+  "@backupBoxPendingActions": {
+    "description": "Backup box display name for pending actions"
+  },
+  "backupBoxProgress": "Progreso",
+  "@backupBoxProgress": {
+    "description": "Backup box display name for progress"
+  },
+  "backupBoxTasks": "Tareas",
+  "@backupBoxTasks": {
+    "description": "Backup box display name for tasks"
+  },
+  "backupBoxStudentAvailability": "Disponibilidad del Estudiante",
+  "@backupBoxStudentAvailability": {
+    "description": "Backup box display name for student availability"
+  },
+  "backupBoxRoadmaps": "Hoja de Ruta",
+  "@backupBoxRoadmaps": {
+    "description": "Backup box display name for roadmaps"
+  },
+  "backupBoxLlmTasks": "Tareas del LLM",
+  "@backupBoxLlmTasks": {
+    "description": "Backup box display name for LLM tasks"
+  },
+  "backupBoxLlmUsageRecords": "Registros de Uso del LLM",
+  "@backupBoxLlmUsageRecords": {
+    "description": "Backup box display name for LLM usage records"
+  },
+  "apiKeyPlaintextWarning": "Tus claves API serán legibles como texto plano en el archivo de respaldo. Cualquier persona con acceso a este archivo puede usar tus claves API.",
+  "@apiKeyPlaintextWarning": {
+    "description": "Warning when exporting backup with sensitive data included"
+  },
+  "boxCountLabel": "{count,plural, =1{1 caja} other{{count} cajas}}",
+  "@boxCountLabel": {
+    "description": "Count of boxes in backup summary",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "andMoreCount": "... y {count,plural, =1{1 más} other{{count} más}}",
+  "@andMoreCount": {
+    "description": "Truncated list indicator showing additional items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "signOutClearList": "Lo que se borrará:",
+  "@signOutClearList": {
+    "description": "Header for list of items cleared on sign out"
+  },
+  "signOutClearsApiKey": "Clave API",
+  "@signOutClearsApiKey": {
+    "description": "Item in sign-out clear list: API key"
+  },
+  "signOutClearsAiModel": "Modelo de IA seleccionado",
+  "@signOutClearsAiModel": {
+    "description": "Item in sign-out clear list: AI model selection"
+  },
+  "signOutPreservesStudyData": "Tus datos de estudio se conservarán.",
+  "@signOutPreservesStudyData": {
+    "description": "Reassurance that study data is not deleted on sign out"
+  },
+  "importRestartHint": "Es posible que se necesite un reinicio para que todos los cambios aparezcan.",
+  "@importRestartHint": {
+    "description": "Hint shown after successful data import"
+  },
+  "studentIdMismatchTitle": "Se detectó una discrepancia en la ID del estudiante",
+  "@studentIdMismatchTitle": {
+    "description": "Title for student ID mismatch dialog"
+  },
+  "studentIdMismatchBody": "Actual: {currentId}\nRespaldo: {backupId}",
+  "@studentIdMismatchBody": {
+    "description": "Body showing current and backup student IDs",
+    "placeholders": {
+      "currentId": {
+        "type": "String"
+      },
+      "backupId": {
+        "type": "String"
+      }
+    }
+  },
+  "studentIdMismatchAction": "¿Actualizar los registros del estudiante para que coincidan con la ID actual?",
+  "@studentIdMismatchAction": {
+    "description": "Question to reconcile student ID mismatch"
+  },
   "questionsCountPlural": "{count,plural, =0{No hay preguntas disponibles} =1{1 pregunta disponible} other{{count} preguntas disponibles}}",
   "@questionsCountPlural": {
     "description": "Plural count of available questions",
@@ -5660,26 +5803,6 @@
   "breakDuration": "Duración del Descanso",
   "@breakDuration": {
     "description": "Tile title for break duration setting"
-  },
-  "sessionTracking": "Seguimiento de Sesiones",
-  "@sessionTracking": {
-    "description": "Section title for session tracking in settings"
-  },
-  "manualSessionTracker": "Rastreador Manual de Sesiones",
-  "@manualSessionTracker": {
-    "description": "Tile title for manual session tracker"
-  },
-  "manualSessionTrackerDescription": "Realice un seguimiento manual de sus sesiones de estudio",
-  "@manualSessionTrackerDescription": {
-    "description": "Subtitle for manual session tracker tile"
-  },
-  "sessionHistoryDescription": "Vea el historial de sus sesiones",
-  "@sessionHistoryDescription": {
-    "description": "Subtitle for session history navigation"
-  },
-  "exportProgressCsv": "Exportar Progreso CSV",
-  "@exportProgressCsv": {
-    "description": "Button label to export progress as CSV"
   },
   "featureLabelIngestion": "Ingestión",
   "@featureLabelIngestion": {
@@ -6679,5 +6802,213 @@
     "mentorCheckIn": "Control del Mentor",
     "@mentorCheckIn": {
       "description": "Title for mentor check-in notification"
+    },
+    "nextUp": "Próximo",
+    "@nextUp": {
+      "description": "Dashboard card title for next upcoming items"
+    },
+    "scheduledLesson": "Lección programada",
+    "@scheduledLesson": {
+      "description": "Fallback text for a scheduled lesson with no topic title"
+    },
+    "upcomingLessonsCount": "{count,plural, =1{1 lección próxima} other{{count} lecciones próximas}}",
+    "@upcomingLessonsCount": {
+      "description": "Number of upcoming lessons",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "reviewsDueCount": "{count,plural, =1{1 revisión pendiente} other{{count} revisiones pendientes}}",
+    "@reviewsDueCount": {
+      "description": "Number of reviews due for spaced repetition",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "dueForReviewSubtitle": "Pendiente de revisión por repaso espaciado",
+    "@dueForReviewSubtitle": {
+      "description": "Subtitle for due review items"
+    },
+    "weakTopicsCount": "{count,plural, =1{1 tema débil} other{{count} temas débiles}}",
+    "@weakTopicsCount": {
+      "description": "Number of weak topics needing practice",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "practiceWeakAreas": "Practicar áreas débiles",
+    "@practiceWeakAreas": {
+      "description": "Subtitle for practicing weak topic areas"
+    },
+    "lessonsCount": "{count,plural, =1{~{count} lección} other{~{count} lecciones}}",
+    "@lessonsCount": {
+      "description": "Number of estimated lessons remaining with tilde prefix",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "topicsNeedAttention": "{count,plural, =1{1 tema necesita atención} other{{count} temas necesitan atención}}",
+    "@topicsNeedAttention": {
+      "description": "Number of topics that need attention in workload card",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "voiceInput": "Entrada de voz",
+    "@voiceInput": {
+      "description": "Tooltip for voice input button when idle"
+    },
+    "stopRecording": "Detener grabación",
+    "@stopRecording": {
+      "description": "Tooltip for voice input button when recording"
+    },
+    "incorrectAnswer": "Respuesta incorrecta",
+    "@incorrectAnswer": {
+      "description": "Feedback shown when quiz answer is incorrect"
+    },
+    "loadingWithEllipsis": "Cargando...",
+    "@loadingWithEllipsis": {
+      "description": "Accessible label for shimmer loading state"
+    },
+    "exportReports": "Exportar Informes",
+    "@exportReports": {
+      "description": "Semantic tooltip for export reports action"
+    },
+    "backupAndRestore": "Copia de Seguridad y Restaurar",
+    "@backupAndRestore": {
+      "description": "Semantic tooltip for backup and restore action"
+    },
+    "whileYouWereAway": "--- Mientras estabas ausente ---",
+    "@whileYouWereAway": {
+      "description": "Section header for mentor messages received while away"
+    },
+    "endOfPendingMessages": "--- Fin de mensajes pendientes ---",
+    "@endOfPendingMessages": {
+      "description": "Section footer for end of pending mentor messages"
+    },
+    "lessonPractice": "Práctica de Lección",
+    "@lessonPractice": {
+      "description": "Label shown during focus mode indicating lesson practice"
+    },
+    "lessonPracticeWithTopic": "Práctica de Lección: {topic}",
+    "@lessonPracticeWithTopic": {
+      "description": "Label shown during focus mode with topic name",
+      "placeholders": {
+        "topic": {
+          "type": "String"
+        }
+      }
+    },
+    "mentorMessages": "Mensajes del Mentor",
+    "@mentorMessages": {
+      "description": "Notification channel name for mentor messages"
+    },
+    "readyToContinueLearning": "¿Listo para seguir aprendiendo?",
+    "@readyToContinueLearning": {
+      "description": "Notification text to nudge the student to resume learning"
+    },
+    "readAloud": "Leer en voz alta",
+    "@readAloud": {
+      "description": "Tooltip for read aloud button on tutor messages"
+    },
+    "uploadFile": "Subir archivo",
+    "@uploadFile": {
+      "description": "Label for upload file button in question card"
+    },
+    "recordAudio": "Grabar audio",
+    "@recordAudio": {
+      "description": "Label for record audio button in question card"
+    },
+    "fileAttached": "Archivo adjunto",
+    "@fileAttached": {
+      "description": "Label shown when a file is attached to a question"
+    },
+    "recordingComplete": "Grabación completa",
+    "@recordingComplete": {
+      "description": "Label shown when audio recording is complete"
+    },
+    "startRecording": "Iniciar grabación",
+    "@startRecording": {
+      "description": "Label for starting audio recording"
+    },
+    "graphCanvas": "Lienzo de gráficos",
+    "@graphCanvas": {
+      "description": "Accessibility label for graph drawing canvas"
+    },
+    "drawYourGraphHere": "Dibuja tu gráfico aquí",
+    "@drawYourGraphHere": {
+      "description": "Hint text for graph drawing area"
+    },
+    "strokesCountPoints": "{strokes} trazos, {points} puntos",
+    "@strokesCountPoints": {
+      "description": "Count of strokes and points in drawing",
+      "placeholders": {
+        "strokes": { "type": "int" },
+        "points": { "type": "int" }
+      }
+    },
+    "toolFreehand": "Mano alzada",
+    "@toolFreehand": {
+      "description": "Tool name for freehand drawing tool"
+    },
+    "toolLine": "Línea",
+    "@toolLine": {
+      "description": "Tool name for line drawing tool"
+    },
+    "toolRectangle": "Rectángulo",
+    "@toolRectangle": {
+      "description": "Tool name for rectangle drawing tool"
+    },
+    "toolCircle": "Círculo",
+    "@toolCircle": {
+      "description": "Tool name for circle drawing tool"
+    },
+    "toolText": "Texto",
+    "@toolText": {
+      "description": "Tool name for text drawing tool"
+    },
+    "toolPlotPoint": "Punto",
+    "@toolPlotPoint": {
+      "description": "Tool name for plot point drawing tool"
+    },
+    "failedToLoadPlan": "Error al cargar el plan de estudio",
+    "@failedToLoadPlan": {
+      "description": "User-facing error message when plan fails to load"
+    },
+    "unableToDisplayEvaluation": "No se puede mostrar el resultado de la evaluación",
+    "@unableToDisplayEvaluation": {
+      "description": "Fallback message when evaluation JSON cannot be parsed"
+    },
+    "micPermissionDenied": "Acceso al micrófono denegado. Actívalo en Ajustes para usar la entrada de voz.",
+    "@micPermissionDenied": {
+      "description": "Snackbar message when microphone permission is denied"
+    },
+    "scheduleLesson": "Programar una Lección",
+    "@scheduleLesson": {
+      "description": "Action button to schedule a lesson"
+    },
+    "focusTimerLabel": "(Enfoque)",
+    "@focusTimerLabel": {
+      "description": "Label appended to subject name in focus timer title"
+    },
+    "voiceListeningHint": "Escuchando. Hable ahora.",
+    "@voiceListeningHint": {
+      "description": "Semantics label for voice bar when actively listening"
+    },
+    "boldText": "Texto en Negrita",
+    "@boldText": {
+      "description": "Accessibility setting: bold font weight toggle label"
+    },
+    "boldTextDescription": "Usar fuente en negrita para el texto en toda la aplicación",
+    "@boldTextDescription": {
+      "description": "Description for bold text accessibility setting"
+    },
+    "voiceInputNotAvailable": "Entrada de voz no disponible",
+    "@voiceInputNotAvailable": {
+      "description": "Tooltip for voice input button when speech recognition is unavailable"
+    },
+    "microphonePermissionRequired": "Permiso de Micrófono Requerido",
+    "@microphonePermissionRequired": {
+      "description": "Dialog title when microphone permission is needed"
     }
   }

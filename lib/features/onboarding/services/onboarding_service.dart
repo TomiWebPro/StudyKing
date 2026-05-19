@@ -1,6 +1,9 @@
+import 'package:studyking/core/utils/logger.dart';
 import 'onboarding_storage.dart';
 
 class OnboardingService {
+  static final Logger _logger = const Logger('OnboardingService');
+
   static const String onboardingKey = 'onboarding_completed';
   static const String dontShowAgainKey = 'onboarding_dont_show_again';
 
@@ -12,9 +15,14 @@ class OnboardingService {
   }
 
   static Future<bool> isOnboardingNeeded() async {
-    final completed = await _storage.getBool(onboardingKey);
-    final dontShow = await _storage.getBool(dontShowAgainKey);
-    return !completed && !dontShow;
+    try {
+      final completed = await _storage.getBool(onboardingKey);
+      final dontShow = await _storage.getBool(dontShowAgainKey);
+      return !completed && !dontShow;
+    } catch (e) {
+      _logger.w('Failed to check onboarding needed: $e');
+      return true;
+    }
   }
 
   static Future<void> markCompleted() async {
@@ -26,7 +34,12 @@ class OnboardingService {
   }
 
   static Future<bool> isFirstLaunch() async {
-    final completed = await _storage.getBool(onboardingKey);
-    return !completed;
+    try {
+      final completed = await _storage.getBool(onboardingKey);
+      return !completed;
+    } catch (e) {
+      _logger.w('Failed to check first launch: $e');
+      return true;
+    }
   }
 }

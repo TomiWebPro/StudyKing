@@ -128,7 +128,20 @@ class TutorArgs {
   });
 }
 
-Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
+class FocusTimerScreenArgs {
+  final String? preselectedSubjectId;
+  final String? preselectedTopicId;
+  final int? defaultDurationMinutes;
+
+  const FocusTimerScreenArgs({
+    this.preselectedSubjectId,
+    this.preselectedTopicId,
+    this.defaultDurationMinutes,
+  });
+}
+
+Route<dynamic>? onGenerateRoute(RouteSettings routeSettings, [StudentIdService? studentIdService]) {
+  final service = studentIdService ?? StudentIdService();
   switch (routeSettings.name) {
     case AppRoutes.settings:
       return _materialPageRoute(const SettingsScreen(), routeSettings);
@@ -145,7 +158,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       return _materialPageRoute(
         UploadScreen(
           preselectedSubjectId: preselectedSubjectId,
-          fixedStudentId: StudentIdService().getStudentId(),
+          fixedStudentId: service.getStudentId(),
         ),
         routeSettings,
       );
@@ -173,7 +186,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       }
       return _materialPageRoute(
         DashboardScreen(
-          studentId: StudentIdService().getStudentId(),
+          studentId: service.getStudentId(),
         ),
         routeSettings,
       );
@@ -247,8 +260,15 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       return _errorRoute(routeSettings);
     case AppRoutes.focusMode:
       final args = routeSettings.arguments;
-      if (args is FocusTimerScreen) {
-        return _materialPageRoute(args, routeSettings);
+      if (args is FocusTimerScreenArgs) {
+        return _materialPageRoute(
+          FocusTimerScreen(
+            preselectedSubjectId: args.preselectedSubjectId,
+            preselectedTopicId: args.preselectedTopicId,
+            defaultDurationMinutes: args.defaultDurationMinutes,
+          ),
+          routeSettings,
+        );
       }
       return _materialPageRoute(
         const FocusTimerScreen(),

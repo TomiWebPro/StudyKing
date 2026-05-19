@@ -1088,7 +1088,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get scheduleLesson => 'Schedule Lesson';
+  String get scheduleLesson => 'Schedule a Lesson';
 
   @override
   String get selectCalendarDate => 'Select calendar date for lesson';
@@ -1700,7 +1700,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dismiss => 'Dismiss';
 
   @override
-  String get voiceInput => 'Voice Input';
+  String get voiceInput => 'Voice input';
+
+  @override
+  String get boldText => 'Bold Text';
+
+  @override
+  String get boldTextDescription => 'Use bold font weight for text throughout the app';
+
+  @override
+  String get voiceInputNotAvailable => 'Voice input not available';
+
+  @override
+  String get microphonePermissionRequired => 'Microphone Permission Required';
+
+  @override
+  String get voiceListeningHint => 'Listening. Speak now.';
 
   @override
   String get captureImage => 'Capture Image';
@@ -2537,6 +2552,30 @@ class AppLocalizationsEn extends AppLocalizations {
       'Comprehensive progress report exported';
 
   @override
+  String get exportCsvDetail =>
+      'CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges.';
+
+  @override
+  String get exportPdfDetail =>
+      'PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing.';
+
+  @override
+  String get exportJsonDetail =>
+      'JSON: structured data export for programmatic analysis.';
+
+  @override
+  String get exportProgressCsvDetail =>
+      'Stats CSV: summary statistics and progress overview (lighter than full CSV).';
+
+  @override
+  String get exportInstrumentationDetail =>
+      'Progress Analytics: plan adherence and mastery improvement metrics for analysis.';
+
+  @override
+  String get backupRestoreHint =>
+      'For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore.';
+
+  @override
   String get activeRoadmaps => 'Active Roadmaps';
 
   @override
@@ -2855,8 +2894,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nextStep => 'Next Step';
 
   @override
-  String topicsAutoCreated(int count) =>
-      '${count} topics auto-created from curriculum';
+  String topicsAutoCreated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics auto-created from curriculum',
+      one: '1 topic auto-created from curriculum',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get fileSaved => 'File saved successfully';
@@ -3171,6 +3217,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get notifChannelBadgesDesc =>
       'Notifications about earned badges and achievements';
+
+  @override
+  String get notifChannelMentor => 'Mentor Messages';
+
+  @override
+  String get notifChannelMentorDesc => 'Proactive mentor check-ins and nudges';
+
+  @override
+  String lessonReadyBody(String topicTitle) {
+    return '$topicTitle has a lesson ready';
+  }
 
   @override
   String get planAccuracyLow =>
@@ -4030,7 +4087,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String lessonTimeStatus(String topicId, String time, String completedSuffix) {
-    return '$topicId · $time$completedSuffix';
+    return '$topicId, $time$completedSuffix';
   }
 
   @override
@@ -4047,9 +4104,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownError => 'Unknown error';
 
   @override
-  String failedToLoadPlan(String error) {
-    return 'Failed to load plan: $error';
-  }
+  String get failedToLoadPlan => 'Failed to load study plan';
 
   @override
   String backupExportFailedWithError(String error) {
@@ -4120,6 +4175,96 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get backupBoxProfile => 'Profile';
+
+  @override
+  String get backupBoxAnswers => 'Answers';
+
+  @override
+  String get backupBoxAttempts => 'Attempts';
+
+  @override
+  String get backupBoxBadges => 'Badges';
+
+  @override
+  String get backupBoxEngagementNudges => 'Engagement Nudges';
+
+  @override
+  String get backupBoxFocusSessions => 'Focus Sessions';
+
+  @override
+  String get backupBoxPendingActions => 'Pending Actions';
+
+  @override
+  String get backupBoxProgress => 'Progress';
+
+  @override
+  String get backupBoxTasks => 'Tasks';
+
+  @override
+  String get backupBoxStudentAvailability => 'Student Availability';
+
+  @override
+  String get backupBoxRoadmaps => 'Roadmaps';
+
+  @override
+  String get backupBoxLlmTasks => 'LLM Tasks';
+
+  @override
+  String get backupBoxLlmUsageRecords => 'LLM Usage Records';
+
+  @override
+  String get apiKeyPlaintextWarning =>
+      'Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.';
+
+  @override
+  String boxCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count boxes',
+      one: '1 box',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String andMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more',
+      one: '1 more',
+    );
+    return '... and $_temp0';
+  }
+
+  @override
+  String get signOutClearList => 'What will be cleared:';
+
+  @override
+  String get signOutClearsApiKey => 'API key';
+
+  @override
+  String get signOutClearsAiModel => 'Selected AI model';
+
+  @override
+  String get signOutPreservesStudyData => 'Your study data will be preserved.';
+
+  @override
+  String get importRestartHint =>
+      'A restart may be needed for all changes to appear.';
+
+  @override
+  String get studentIdMismatchTitle => 'Student ID mismatch detected';
+
+  @override
+  String studentIdMismatchBody(String currentId, String backupId) {
+    return 'Current: $currentId\nBackup: $backupId';
+  }
+
+  @override
+  String get studentIdMismatchAction =>
+      'Update student records to match current ID?';
 
   @override
   String questionsCountPlural(int count) {
@@ -4999,4 +5144,144 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mentorCheckIn => 'Mentor Check-In';
+
+  @override
+  String get nextUp => 'Next Up';
+
+  @override
+  String get scheduledLesson => 'Scheduled lesson';
+
+  @override
+  String upcomingLessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count upcoming lessons',
+      one: '1 upcoming lesson',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewsDueCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews due',
+      one: '1 review due',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dueForReviewSubtitle => 'Due for spaced repetition review';
+
+  @override
+  String weakTopicsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count weak topics',
+      one: '1 weak topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get practiceWeakAreas => 'Practice weak areas';
+
+  @override
+  String lessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '~$count lessons',
+      one: '~$count lesson',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String topicsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics need attention',
+      one: '1 topic needs attention',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stopRecording => 'Stop recording';
+
+  @override
+  String get incorrectAnswer => 'Incorrect answer';
+
+  @override
+  String get loadingWithEllipsis => 'Loading...';
+
+  @override
+  String get whileYouWereAway => '--- While you were away ---';
+
+  @override
+  String get endOfPendingMessages => '--- End of pending messages ---';
+
+  @override
+  String get lessonPractice => 'Lesson Practice';
+
+  @override
+  String lessonPracticeWithTopic(String topic) {
+    return 'Lesson Practice: $topic';
+  }
+
+  @override
+  String pageIndicator(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get mentorMessages => 'Mentor Messages';
+
+  @override
+  String get readyToContinueLearning => 'Ready to continue learning?';
+
+  @override
+  String get graphCanvas => 'Graph canvas';
+
+  @override
+  String get drawYourGraphHere => 'Draw your graph here';
+
+  @override
+  String strokesCountPoints(int strokes, int points) {
+    return '$strokes strokes, $points points';
+  }
+
+  @override
+  String get toolFreehand => 'Freehand';
+
+  @override
+  String get toolLine => 'Line';
+
+  @override
+  String get toolRectangle => 'Rectangle';
+
+  @override
+  String get toolCircle => 'Circle';
+
+  @override
+  String get toolText => 'Text';
+
+  @override
+  String get toolPlotPoint => 'Plot Point';
+
+  @override
+  String get unableToDisplayEvaluation => 'Unable to display evaluation result';
+
+  @override
+  String get micPermissionDenied =>
+      'Microphone access denied. Please enable it in Settings to use voice input.';
+
+  @override
+  String get focusTimerLabel => '(Focus)';
 }

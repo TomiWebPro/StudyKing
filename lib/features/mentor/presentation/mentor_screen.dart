@@ -11,6 +11,7 @@ import 'package:studyking/features/subjects/providers/topic_repository_provider.
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
@@ -36,6 +37,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   late final ScrollController _scrollController;
   late final FocusNode _inputFocusNode;
   final List<ChatMessageData> _messages = [];
+  StreamSubscription<String>? _voiceSubscription;
   bool _isSending = false;
   bool _isInitialized = false;
   bool _initError = false;
@@ -67,6 +69,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     try {
       final recentNudges = await _mentorService.getRecentNudges(limit: 5);
       if (recentNudges.isNotEmpty && mounted) {
+        final l10n = AppLocalizations.of(context)!;
         setState(() {
           final nudgeMessages = recentNudges.map((n) => ChatMessageData(
             message: ConversationMessage(
@@ -87,7 +90,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   sessionId: 'mentor',
                   role: MessageRole.system,
                   type: MessageType.text,
-                  content: '--- While you were away ---',
+                  content: l10n.whileYouWereAway,
                   timestamp: DateTime.now(),
                 ),
                 isComplete: true,
@@ -99,7 +102,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                   sessionId: 'mentor',
                   role: MessageRole.system,
                   type: MessageType.text,
-                  content: '--- End of pending messages ---',
+                  content: l10n.endOfPendingMessages,
                   timestamp: DateTime.now(),
                 ),
                 isComplete: true,
@@ -108,12 +111,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           }
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to load pending messages', e);
+    }
   }
 
   Future<void> _initializeMentor() async {
     try {
-      final studentId = StudentIdService().getStudentId();
+      final studentId = ref.read(studentIdServiceProvider).getStudentId();
       _mentorService = ref.read(mentorServiceProvider(studentId));
 
       await _mentorService.initialize();
@@ -502,9 +507,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     });
   }
 
-  Widget? _buildVoiceButton() {
+  Widget _buildVoiceButton() {
     final voiceService = ref.read(voiceServiceProvider);
-    if (!voiceService.isAvailable) return null;
+    final l10n = AppLocalizations.of(context)!;
+    final isAvailable = voiceService.isAvailable;
+
     return IconButton(
       icon: Icon(
         voiceService.isListening ? Icons.mic : Icons.mic_none,
@@ -512,26 +519,29 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             ? Theme.of(context).colorScheme.error
             : null,
       ),
-      tooltip: AppLocalizations.of(context)!.voiceInput,
-      onPressed: () {
-        if (voiceService.isListening) {
-          voiceService.stopListening();
-        } else {
-          final l10n = AppLocalizations.of(context)!;
-          voiceService.startListening(localeName: l10n.localeName);
-          voiceService.transcribedText.listen((text) {
-            _textController.text = text;
-            _textController.selection = TextSelection.fromPosition(
-              TextPosition(offset: text.length),
-            );
-          });
-        }
-      },
+      tooltip: isAvailable ? l10n.voiceInput : l10n.micPermissionDenied,
+      onPressed: isAvailable
+          ? () {
+              if (voiceService.isListening) {
+                voiceService.stopListening();
+              } else {
+                voiceService.startListening(localeName: l10n.localeName);
+                _voiceSubscription?.cancel();
+                _voiceSubscription = voiceService.transcribedText.listen((text) {
+                  _textController.text = text;
+                  _textController.selection = TextSelection.fromPosition(
+                    TextPosition(offset: text.length),
+                  );
+                });
+              }
+            }
+          : null,
     );
   }
 
   @override
   void dispose() {
+    _voiceSubscription?.cancel();
     _textController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
@@ -844,7 +854,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       if (!mounted) return;
       try {
         Navigator.of(context).pop();
-      } catch (_) {
+      } catch (e) {
+        _logger.w('Failed to pop navigator in progress report', e);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.mentorProgressReportError)),
@@ -906,7 +917,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                       '${formatPercent(report.accuracy, localeName)} '
                       '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
                       '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
-                      '${l10n.mentorCompletedLessons('').split(':').first.trim().toLowerCase()})',
+                      '${l10n.mentorCompletedLessons('').split(':').first.normalized})',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),
@@ -1056,7 +1067,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       if (!mounted) return;
       try {
         Navigator.of(context).pop();
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to pop navigator in error handler', e);
+      }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.mentorProgressReportError)),

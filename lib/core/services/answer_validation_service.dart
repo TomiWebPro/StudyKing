@@ -5,6 +5,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import '../data/models/question_model.dart';
 
 class ValidationResult {
@@ -74,14 +75,14 @@ class AnswerValidationService {
     String? correctLabel,
     String? incorrectPrefix,
   }) {
-    final answer = userAnswer.toLowerCase().trim();
-    final correct = evaluation.correctAnswer.toLowerCase().trim();
+    final answer = userAnswer.normalized;
+    final correct = evaluation.correctAnswer.normalized;
     final isExactMatch = answer == correct;
 
     bool isMatch = isExactMatch;
     if (!isMatch) {
       for (final acceptable in evaluation.acceptableAnswers) {
-        if (acceptable.toLowerCase().trim() == answer) {
+        if (acceptable.normalized == answer) {
           isMatch = true;
           break;
         }
@@ -328,8 +329,8 @@ class QuestionAnswerValidator {
         explanation: msgs.pleaseProvideAnswer,
       );
     }
-    final normalizedUserAnswer = userAnswer.trim().toLowerCase();
-    final normalizedCorrectAnswer = markscheme.correctAnswer.trim().toLowerCase();
+    final normalizedUserAnswer = userAnswer.normalized;
+    final normalizedCorrectAnswer = markscheme.correctAnswer.normalized;
     if (normalizedUserAnswer == normalizedCorrectAnswer) {
       return ValidationResult(
         isCorrect: true,
@@ -337,7 +338,7 @@ class QuestionAnswerValidator {
       );
     }
     for (final acceptable in markscheme.acceptableAnswers) {
-      if (normalizedUserAnswer == acceptable.trim().toLowerCase()) {
+      if (normalizedUserAnswer == acceptable.normalized) {
         return ValidationResult(
           isCorrect: true,
           explanation: (markscheme.explanation?.isNotEmpty ?? false) ? markscheme.explanation! : msgs.correct,
@@ -357,15 +358,15 @@ class QuestionAnswerValidator {
     }
     switch (type) {
       case QuestionType.singleChoice:
-        final normalizedCorrect = markscheme.correctAnswer.trim().toLowerCase();
-        final normalizedUser = userAnswer.trim().toLowerCase();
+        final normalizedCorrect = markscheme.correctAnswer.normalized;
+        final normalizedUser = userAnswer.normalized;
         return ValidationResult(
           isCorrect: normalizedUser == normalizedCorrect,
           explanation: (markscheme.explanation?.isNotEmpty ?? false) ? markscheme.explanation! : msgs.incorrect,
         );
       case QuestionType.multiChoice:
-        final userAnswers = userAnswer.split(',').map((a) => a.trim().toLowerCase()).toList();
-        final correctAnswers = markscheme.correctAnswer.split(',').map((a) => a.trim().toLowerCase()).toList();
+        final userAnswers = userAnswer.split(',').map((a) => a.normalized).toList();
+        final correctAnswers = markscheme.correctAnswer.split(',').map((a) => a.normalized).toList();
         final isAllCorrect = userAnswers.every((a) => correctAnswers.contains(a)) &&
             correctAnswers.every((a) => userAnswers.contains(a));
         return ValidationResult(

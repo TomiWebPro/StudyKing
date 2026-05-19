@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'app_build_config.dart';
 import 'package:studyking/core/errors/exceptions.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 class SecurityConfig {
   const SecurityConfig._();
@@ -50,7 +51,7 @@ class SecurityConfig {
   }
 
   static String _normalizeKeyCandidate(String value) {
-    final lower = value.trim().toLowerCase();
+    final lower = value.normalized;
     return lower.replaceAll(RegExp(r'[^a-z0-9]+'), '');
   }
 

@@ -103,7 +103,7 @@ void main() {
       expect(controller.isListening, isTrue);
     });
 
-    testWidgets('second press stops and submits transcription', (tester) async {
+    testWidgets('second press shows review overlay and auto-submits after delay', (tester) async {
       await tester.pumpWidget(wrapApp(
         VoiceBar(
           controller: controller,
@@ -121,7 +121,16 @@ void main() {
       await tester.pump();
 
       expect(controller.isListening, isFalse);
+      // Review overlay shown, not yet submitted
+      expect(submitted, isEmpty);
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      // Advance past the review overlay duration
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump();
+
       expect(submitted, ['Hello world']);
+      expect(find.byIcon(Icons.close), findsNothing);
     });
 
     testWidgets('does not submit empty transcription on stop', (tester) async {
@@ -138,7 +147,9 @@ void main() {
       await tester.tap(find.byType(IconButton));
       await tester.pump();
 
+      // No review overlay since transcription is empty
       expect(submitted, isEmpty);
+      expect(find.byIcon(Icons.close), findsNothing);
     });
 
     testWidgets('shows transcription text when listening', (tester) async {
@@ -280,7 +291,7 @@ void main() {
       expect(find.byIcon(Icons.mic_none), findsNothing);
     });
 
-    testWidgets('reduceMotion true still renders waveform container when listening', (tester) async {
+    testWidgets('reduceMotion true hides waveform container', (tester) async {
       await tester.pumpWidget(wrapApp(
         VoiceBar(
           controller: controller,
@@ -302,7 +313,7 @@ void main() {
             w.height == 24 &&
             w.child is AnimatedBuilder,
       );
-      expect(waveformFinder, findsOneWidget);
+      expect(waveformFinder, findsNothing);
     });
 
     testWidgets('stream subscription lifecycle - emit after dispose is safe', (tester) async {
@@ -474,7 +485,7 @@ void main() {
       );
     });
 
-    testWidgets('requestPermission is called on init via postFrameCallback', (tester) async {
+    testWidgets('requestPermission is called on mic tap, not on init', (tester) async {
       await tester.pumpWidget(wrapApp(
         VoiceBar(
           controller: controller,
@@ -484,6 +495,11 @@ void main() {
 
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
+
+      expect(controller.requestPermissionCalled, isFalse);
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
 
       expect(controller.requestPermissionCalled, isTrue);
     });
@@ -505,10 +521,11 @@ void main() {
       await tester.tap(find.byType(IconButton));
       await tester.pump();
 
-      expect(submitted, ['Submit me']);
-
-      controller.addTranscription('');
+      // Wait for review overlay to auto-submit
+      await tester.pump(const Duration(seconds: 2));
       await tester.pump();
+
+      expect(submitted, ['Submit me']);
 
       await tester.tap(find.byType(IconButton));
       await tester.pump();

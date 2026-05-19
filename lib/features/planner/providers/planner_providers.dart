@@ -221,11 +221,12 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
   }
 
   Future<void> loadMissedLessons() async {
+    const logger = Logger('PlannerNotifier.loadMissedLessons');
     try {
       final missed = await _service.getMissedLessons();
       state = state.copyWith(missedLessons: missed);
     } catch (e) {
-      // silently fail
+      logger.w('Failed to load missed lessons', e);
     }
   }
 
@@ -244,7 +245,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       }
     } catch (e) {
       logger.w('Failed to load existing plan', e);
-      state = state.copyWith(error: 'Failed_to_load_plan: $e');
+      state = state.copyWith(error: 'failedToLoadPlan');
     }
   }
 
@@ -262,7 +263,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       logger.w('Failed to load roadmaps', e);
       state = state.copyWith(
         isLoadingRoadmaps: false,
-        error: 'Failed to load roadmaps: $e',
+        error: 'failedToLoadRoadmaps',
       );
     }
   }
@@ -341,9 +342,10 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         );
       }
     } catch (e) {
+      const Logger('PlannerNotifier').e('Generate plan failed', e);
       state = state.copyWith(
         isGenerating: false,
-        error: l10n.errorWithMessage(e.toString()),
+        error: l10n.somethingWentWrong,
       );
     }
   }
@@ -375,9 +377,10 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         );
       }
     } catch (e) {
+      const Logger('PlannerNotifier').e('Generate plan from syllabus failed', e);
       state = state.copyWith(
         isGenerating: false,
-        error: l10n.errorWithMessage(e.toString()),
+        error: l10n.somethingWentWrong,
       );
     }
   }
@@ -543,7 +546,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         state = state.copyWith(isGenerating: false, error: l10n.failedToRegeneratePlan);
       }
     } catch (e) {
-      state = state.copyWith(isGenerating: false, error: l10n.errorWithMessage(e.toString()));
+      const Logger('PlannerNotifier').e('Regenerate plan from adherence failed', e);
+      state = state.copyWith(isGenerating: false, error: l10n.somethingWentWrong);
     }
   }
 

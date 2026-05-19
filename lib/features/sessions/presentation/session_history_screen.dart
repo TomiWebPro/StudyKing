@@ -154,7 +154,8 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
               masteryService: masteryService,
               tracker: tracker,
             );
-            final studentId = StudentIdService().getStudentId();
+            final sidService = StudentIdService();
+            final studentId = sidService.getStudentId();
             final compFilename = 'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}';
             switch (format) {
               case 'comprehensive':
@@ -215,11 +216,11 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                   ),
                 ),
               ),
-              _exportTile(l10n, ctx, Icons.assignment, 'Full Progress CSV', l10n.exportAllDataDescription, 'comprehensive'),
+              _exportTile(l10n, ctx, Icons.assignment, l10n.comprehensiveCsv, l10n.exportAllDataDescription, 'comprehensive'),
               const Divider(height: 1, indent: 72),
-              _exportTile(l10n, ctx, Icons.picture_as_pdf, 'Full Progress PDF', l10n.exportAllDataDescription, 'comprehensive_pdf'),
+              _exportTile(l10n, ctx, Icons.picture_as_pdf, l10n.comprehensivePdf, l10n.exportAllDataDescription, 'comprehensive_pdf'),
               const Divider(height: 1, indent: 72),
-              _exportTile(l10n, ctx, Icons.code, 'Full Progress JSON', l10n.exportAllDataDescription, 'comprehensive_json'),
+              _exportTile(l10n, ctx, Icons.code, l10n.comprehensiveJson, l10n.exportAllDataDescription, 'comprehensive_json'),
             ],
           ),
         ),
@@ -347,31 +348,41 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                         spacing: 8,
                         runSpacing: 8,
                         children: [
-                          SizedBox(
-                            width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showDatePicker(),
-                              icon: Icon(Icons.calendar_today, color: theme.colorScheme.primary),
-                              label: Text(
-                                _selectedDate != null
-                                    ? DateFormat.yMd(l10n.localeName).format(_selectedDate!)
-                                    : l10n.filterByDate,
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: theme.colorScheme.primary,
+                          Semantics(
+                            button: true,
+                            selected: _selectedDate != null,
+                            label: l10n.filterByDate,
+                            child: SizedBox(
+                              width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showDatePicker(),
+                                icon: Icon(Icons.calendar_today, color: theme.colorScheme.primary),
+                                label: Text(
+                                  _selectedDate != null
+                                      ? DateFormat.yMd(l10n.localeName).format(_selectedDate!)
+                                      : l10n.filterByDate,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: theme.colorScheme.primary,
+                                ),
                               ),
                             ),
                           ),
-                          SizedBox(
-                            width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
-                            child: OutlinedButton.icon(
-                              onPressed: () => _showSubjectFilter(),
-                              icon: Icon(Icons.folder, color: theme.colorScheme.primary),
-                              label: Text(
-                                _selectedSubject != null ? _selectedSubject! : l10n.filterBySubject,
-                              ),
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: theme.colorScheme.primary,
+                          Semantics(
+                            button: true,
+                            selected: _selectedSubject != null,
+                            label: l10n.filterBySubject,
+                            child: SizedBox(
+                              width: ResponsiveUtils.breakpointOf(context).isMobile ? double.infinity : null,
+                              child: OutlinedButton.icon(
+                                onPressed: () => _showSubjectFilter(),
+                                icon: Icon(Icons.folder, color: theme.colorScheme.primary),
+                                label: Text(
+                                  _selectedSubject != null ? _selectedSubject! : l10n.filterBySubject,
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: theme.colorScheme.primary,
+                                ),
                               ),
                             ),
                           ),

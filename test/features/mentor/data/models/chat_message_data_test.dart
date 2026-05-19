@@ -102,6 +102,94 @@ void main() {
       expect(chatData.message.type, MessageType.toolResult);
       expect(chatData.message.toolResult, '{"count": 3}');
     });
+
+    test('wraps message with quiz type', () {
+      final message = ConversationMessage(
+        id: 'msg-qz',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.quiz,
+        content: 'What is 2+2?',
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.type, MessageType.quiz);
+      expect(chatData.message.content, 'What is 2+2?');
+    });
+
+    test('wraps message with feedback type', () {
+      final message = ConversationMessage(
+        id: 'msg-fb',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.feedback,
+        content: 'Correct answer!',
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.type, MessageType.feedback);
+      expect(chatData.message.content, 'Correct answer!');
+    });
+
+    test('wraps message with plan type', () {
+      final message = ConversationMessage(
+        id: 'msg-pl',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.plan,
+        content: 'Study plan for this week',
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.type, MessageType.plan);
+      expect(chatData.message.content, 'Study plan for this week');
+    });
+
+    test('ChatMessageData hashCode is stable on same instance', () {
+      final message = ConversationMessage(
+        id: 'msg-hc',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hello',
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final a = ChatMessageData(message: message, isComplete: true);
+
+      expect(a.hashCode, a.hashCode);
+    });
+
+    test('wraps message with very long content', () {
+      final longContent = 'A' * 10000;
+      final message = ConversationMessage(
+        id: 'msg-long',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: longContent,
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.content.length, 10000);
+    });
+
+    test('wraps message with special characters', () {
+      final message = ConversationMessage(
+        id: 'msg-spec',
+        sessionId: 'session-1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hello\nWorld\tTab',
+        timestamp: DateTime(2024, 6, 15),
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.content, 'Hello\nWorld\tTab');
+    });
   });
 
   group('ConversationMessage JSON serialization', () {

@@ -101,8 +101,8 @@ class NotificationService {
       ),
       AndroidNotificationChannel(
         NotificationChannelIds.mentor,
-        'Mentor Messages',
-        description: 'Proactive mentor check-ins and nudges',
+        l10n.notifChannelMentor,
+        description: l10n.notifChannelMentorDesc,
         importance: Importance.high,
       ),
     ];
@@ -310,8 +310,8 @@ class NotificationService {
     if (l10n == null) return;
     await showNotification(
       id: id,
-      title: 'Ready to continue learning?',
-      body: '$topicTitle has a lesson ready',
+      title: l10n.readyToContinueLearning,
+      body: l10n.lessonReadyBody(topicTitle),
       payload: 'lesson_$lessonId',
       channelId: NotificationChannelIds.lessons,
       channelName: l10n.notifChannelLessons,
@@ -329,7 +329,7 @@ class NotificationService {
       body: body,
       payload: 'open_mentor',
       channelId: NotificationChannelIds.mentor,
-      channelName: 'Mentor Messages',
+      channelName: _l10n?.notifChannelMentor ?? 'Mentor Messages',
     );
   }
 

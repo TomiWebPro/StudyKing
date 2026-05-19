@@ -90,6 +90,9 @@ class SettingsBox {
   @HiveField(25)
   late String lastLlmError;
 
+  @HiveField(26)
+  late bool boldText;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -105,6 +108,7 @@ class SettingsBox {
     this.highContrastEnabled = false,
     this.largeTouchTargets = false,
     this.reduceMotion = false,
+    this.boldText = false,
     this.revisionRemindersEnabled = true,
     this.lessonNotificationsEnabled = true,
     this.overworkAlertsEnabled = true,
@@ -144,6 +148,7 @@ class SettingsBox {
       'highContrastEnabled': highContrastEnabled,
       'largeTouchTargets': largeTouchTargets,
       'reduceMotion': reduceMotion,
+      'boldText': boldText,
       'revisionRemindersEnabled': revisionRemindersEnabled,
       'lessonNotificationsEnabled': lessonNotificationsEnabled,
       'overworkAlertsEnabled': overworkAlertsEnabled,
@@ -187,6 +192,9 @@ class SettingsBox {
           : false,
       reduceMotion: json['reduceMotion'] is bool
           ? json['reduceMotion'] as bool
+          : false,
+      boldText: json['boldText'] is bool
+          ? json['boldText'] as bool
           : false,
       revisionRemindersEnabled: json['revisionRemindersEnabled'] is bool
           ? json['revisionRemindersEnabled'] as bool
@@ -235,6 +243,7 @@ class SettingsBox {
     bool? highContrastEnabled,
     bool? largeTouchTargets,
     bool? reduceMotion,
+    bool? boldText,
     bool? revisionRemindersEnabled,
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
@@ -263,6 +272,7 @@ class SettingsBox {
       highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
       largeTouchTargets: largeTouchTargets ?? this.largeTouchTargets,
       reduceMotion: reduceMotion ?? this.reduceMotion,
+      boldText: boldText ?? this.boldText,
       revisionRemindersEnabled: revisionRemindersEnabled ?? this.revisionRemindersEnabled,
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? this.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? this.overworkAlertsEnabled,

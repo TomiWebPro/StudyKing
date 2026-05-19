@@ -74,7 +74,7 @@ void main() {
       );
     });
 
-    testWidgets('shows stat cards with zeros when repo throws', (tester) async {
+    testWidgets('shows error state when repo throws', (tester) async {
       final repo = _FakeSessionRepository([], shouldThrow: true);
       await tester.pumpWidget(
         _buildTestApp(
@@ -83,8 +83,9 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('Sessions'), findsOneWidget);
-      expect(find.text('0.0%'), findsAtLeast(1));
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.text('An error occurred'), findsOneWidget);
     });
 
     testWidgets('displays correct session count', (tester) async {

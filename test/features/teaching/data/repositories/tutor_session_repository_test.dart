@@ -514,6 +514,23 @@ void main() {
         expect(stats['completedSessions'], 1);
         expect(stats['totalHours'], greaterThan(0.0));
       });
+
+      test('getSessionStats totalHours precision with fixed elapsed minutes', () async {
+        final start = DateTime.now().subtract(const Duration(minutes: 90));
+        await repository.saveSession(createSession(
+          id: 's1', studentId: 'stu1', status: SessionStatus.completed,
+          startTime: start,
+          questionsAsked: 10, questionsCorrect: 5,
+        ));
+        final statsResult = await repository.getSessionStats('stu1');
+        expect(statsResult.isSuccess, true);
+        final stats = statsResult.data!;
+        expect(stats['totalSessions'], 1);
+        expect(stats['completedSessions'], 1);
+        expect(stats['totalHours'], greaterThanOrEqualTo(1.0));
+        expect((stats['totalQuestions'] as int), 10);
+        expect((stats['averageAccuracy'] as double), 0.5);
+      });
     });
   });
 

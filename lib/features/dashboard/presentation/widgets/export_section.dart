@@ -9,6 +9,7 @@ import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ExportSection extends ConsumerWidget {
@@ -124,7 +125,7 @@ class ExportSection extends ConsumerWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          'For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore.',
+          l10n.backupRestoreHint,
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
@@ -182,7 +183,7 @@ class ExportSection extends ConsumerWidget {
       context,
       l10n.exportCsv,
       l10n.comprehensiveReportExported,
-      'CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges.',
+      l10n.exportCsvDetail,
     );
     if (!confirmed || !context.mounted) return;
     try {
@@ -194,8 +195,9 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      const Logger('ExportSection').e('CSV export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
     }
   }
@@ -206,7 +208,7 @@ class ExportSection extends ConsumerWidget {
       context,
       l10n.exportPdf,
       l10n.comprehensiveReportExported,
-      'PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing.',
+      l10n.exportPdfDetail,
     );
     if (!confirmed || !context.mounted) return;
     try {
@@ -218,8 +220,9 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      const Logger('ExportSection').e('PDF export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
     }
   }
@@ -230,7 +233,7 @@ class ExportSection extends ConsumerWidget {
       context,
       l10n.labelJson,
       l10n.comprehensiveReportExported,
-      'JSON: structured data export for programmatic analysis.',
+      l10n.exportJsonDetail,
     );
     if (!confirmed || !context.mounted) return;
     try {
@@ -242,8 +245,9 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      const Logger('ExportSection').e('JSON export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
     }
   }
@@ -255,7 +259,7 @@ class ExportSection extends ConsumerWidget {
       context,
       l10n.exportProgressCsv,
       l10n.shareProgressReport,
-      'Stats CSV: summary statistics and progress overview (lighter than full CSV).',
+      l10n.exportProgressCsvDetail,
     );
     if (!confirmed || !context.mounted) return;
     try {
@@ -267,8 +271,9 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      const Logger('ExportSection').e('Progress CSV export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
     }
   }
@@ -280,15 +285,16 @@ class ExportSection extends ConsumerWidget {
       context,
       l10n.instrumentation,
       l10n.shareInstrumentationData,
-      'Progress Analytics: plan adherence and mastery improvement metrics for analysis.',
+      l10n.exportInstrumentationDetail,
     );
     if (!confirmed || !context.mounted) return;
     try {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
       if (result.isFailure) {
         if (!context.mounted) return;
+        const Logger('ExportSection').e('Instrumentation fetch failed', result.error);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.exportFailed(result.error!))),
+          SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
         );
         return;
       }
@@ -301,8 +307,9 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
+      const Logger('ExportSection').e('Instrumentation export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+        SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
     }
   }

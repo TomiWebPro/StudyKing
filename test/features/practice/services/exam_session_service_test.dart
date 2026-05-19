@@ -4,9 +4,9 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import '../../../helpers/fakes.dart';
 import 'package:studyking/core/utils/clock.dart';
 
 Question _q({
@@ -278,7 +278,7 @@ void main() {
   group('ExamSessionService error-state', () {
     test('finishExam handles session save failure gracefully', () async {
       final failingRepo = _FailingSessionRepository();
-      final studentIdService = StudentIdService();
+      final studentIdService = FakeStudentIdService();
       final service = ExamSessionService(
         sessionRepo: failingRepo,
         studentIdService: studentIdService,
@@ -307,21 +307,21 @@ void main() {
       service.dispose();
     });
 
-    test('isTimeUp returns false for fresh exam', () {
+    test('isTimeUp returns true for fresh exam (initial Duration.zero)', () {
       final failingRepo = _FailingSessionRepository();
-      final studentIdService = StudentIdService();
+      final studentIdService = FakeStudentIdService();
       final service = ExamSessionService(
         sessionRepo: failingRepo,
         studentIdService: studentIdService,
         clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
       );
-      expect(service.isTimeUp(), isFalse);
+      expect(service.isTimeUp(), isTrue);
       service.dispose();
     });
 
     test('cancelExam clears state', () async {
       final repo = _FailingSessionRepository();
-      final studentIdService = StudentIdService();
+      final studentIdService = FakeStudentIdService();
       final service = ExamSessionService(
         sessionRepo: repo,
         studentIdService: studentIdService,

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/constants/timeouts.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ShimmerWidget extends StatefulWidget {
   final double width;
@@ -58,21 +59,28 @@ class _ShimmerWidgetState extends State<ShimmerWidget>
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Opacity(
-          opacity: _animation.value,
-          child: Container(
-            width: widget.width,
-            height: widget.height,
-            decoration: BoxDecoration(
-              color: widget.color,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-        );
-      },
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+      liveRegion: true,
+      label: l10n?.loading ?? 'Loading',
+      child: ExcludeSemantics(
+        child: AnimatedBuilder(
+          animation: _animation,
+          builder: (context, child) {
+            return Opacity(
+              opacity: _animation.value,
+              child: Container(
+                width: widget.width,
+                height: widget.height,
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+              ),
+            );
+          },
+        ),
+      ),
     );
   }
 }

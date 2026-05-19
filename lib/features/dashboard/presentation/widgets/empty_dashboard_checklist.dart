@@ -35,8 +35,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
         title: l10n.takePracticeQuiz,
         subtitle: l10n.takePracticeQuizDesc,
         stepNumber: 3,
-        onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession,
-            arguments: const PracticeSessionArgs(subjectId: '', questionCount: 10)),
+        onTap: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
         completed: progress.hasPracticeSessions,
       ),
       _ChecklistData(

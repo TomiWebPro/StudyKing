@@ -10,6 +10,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -183,7 +184,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         topicQuestions = allQuestions
             .where((q) =>
                 q.topic != null &&
-                q.topic!.trim().toLowerCase() ==
+                q.topic!.normalized ==
                     trimmedTopic.toLowerCase())
             .toList();
       }

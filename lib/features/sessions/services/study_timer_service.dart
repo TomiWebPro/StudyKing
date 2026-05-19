@@ -183,6 +183,9 @@ class StudyTimerService {
           title: 'Focus Session Complete',
           body: 'Great focus! You completed ${_elapsedMs ~/ 60000} minutes.',
         );
+        // Note: Notification titles/bodies are intentionally invariant (English)
+        // because they are not rendered inside the app UI; they appear in the
+        // OS notification shade where locale is controlled by the OS, not the app.
       } catch (e) {
         _logger.w('Failed to show session complete notification', e);
       }

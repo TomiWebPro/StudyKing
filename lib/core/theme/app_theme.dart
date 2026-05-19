@@ -22,9 +22,13 @@ class AppTheme {
     );
   }
 
+  static const double _largeTargetMin = 48;
+  static const double _defaultTargetMin = 0;
+
   static ThemeData _baseTheme({
     required ColorScheme colorScheme,
     required double fontSize,
+    bool largeTouchTargets = false,
   }) {
     return ThemeData(
       useMaterial3: true,
@@ -55,6 +59,7 @@ class AppTheme {
           disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: largeTouchTargets ? const Size(_largeTargetMin, _largeTargetMin) : const Size(_defaultTargetMin, _defaultTargetMin),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -66,6 +71,7 @@ class AppTheme {
           disabledBackgroundColor: colorScheme.onSurface.withValues(alpha: 0.12),
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: largeTouchTargets ? const Size(_largeTargetMin, _largeTargetMin) : const Size(_defaultTargetMin, _defaultTargetMin),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -76,6 +82,7 @@ class AppTheme {
           elevation: 0,
           disabledForegroundColor: colorScheme.onSurface.withValues(alpha: 0.38),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+          minimumSize: largeTouchTargets ? const Size(_largeTargetMin, _largeTargetMin) : const Size(_defaultTargetMin, _defaultTargetMin),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(8),
           ),
@@ -158,29 +165,29 @@ class AppTheme {
     );
   }
 
-  static ThemeData lightTheme({double fontSize = 16}) {
+  static ThemeData lightTheme({double fontSize = 16, bool largeTouchTargets = false}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF673AB7),
       brightness: Brightness.light,
     );
-    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize, largeTouchTargets: largeTouchTargets);
   }
 
-  static ThemeData darkTheme({double fontSize = 16}) {
+  static ThemeData darkTheme({double fontSize = 16, bool largeTouchTargets = false}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF9575CD),
       brightness: Brightness.dark,
     );
-    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    return _baseTheme(colorScheme: colorScheme, fontSize: fontSize, largeTouchTargets: largeTouchTargets);
   }
 
-  static ThemeData highContrastLightTheme({double fontSize = 16}) {
+  static ThemeData highContrastLightTheme({double fontSize = 16, bool largeTouchTargets = false}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF673AB7),
       brightness: Brightness.light,
       contrastLevel: 1.0,
     );
-    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize, largeTouchTargets: largeTouchTargets);
     final baseInputTheme = base.inputDecorationTheme;
     return base.copyWith(
       dividerTheme: DividerThemeData(
@@ -267,7 +274,7 @@ class AppTheme {
     return Theme.of(context).colorScheme.primary;
   }
 
-  static ButtonStyle destructiveButtonStyle(BuildContext context) {
+  static ButtonStyle destructiveButtonStyle(BuildContext context, {bool largeTouchTargets = false}) {
     final cs = Theme.of(context).colorScheme;
     return FilledButton.styleFrom(
       backgroundColor: cs.error,
@@ -275,6 +282,7 @@ class AppTheme {
       disabledBackgroundColor: cs.onSurface.withValues(alpha: 0.12),
       disabledForegroundColor: cs.onSurface.withValues(alpha: 0.38),
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      minimumSize: largeTouchTargets ? const Size(_largeTargetMin, _largeTargetMin) : const Size(_defaultTargetMin, _defaultTargetMin),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(8),
       ),
@@ -292,13 +300,13 @@ class AppTheme {
     };
   }
 
-  static ThemeData highContrastDarkTheme({double fontSize = 16}) {
+  static ThemeData highContrastDarkTheme({double fontSize = 16, bool largeTouchTargets = false}) {
     final colorScheme = ColorScheme.fromSeed(
       seedColor: const Color(0xFF9575CD),
       brightness: Brightness.dark,
       contrastLevel: 1.0,
     );
-    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize);
+    final base = _baseTheme(colorScheme: colorScheme, fontSize: fontSize, largeTouchTargets: largeTouchTargets);
     final baseInputTheme = base.inputDecorationTheme;
     return base.copyWith(
       dividerTheme: DividerThemeData(

@@ -7,6 +7,7 @@ import 'package:studyking/features/settings/services/data_backup_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+  // Expected plugin: path_provider ^2.0 (channel: plugins.flutter.io/path_provider)
   const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
 
   setUp(() {

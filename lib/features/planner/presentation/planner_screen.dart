@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
+import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/widgets/loading_indicator.dart';
@@ -88,7 +89,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         });
       }
     } catch (e) {
-      if (mounted) setState(() => _subjectsError = e.toString());
+      const Logger('PlannerScreen').e('Failed to load subjects', e);
+      if (mounted) setState(() => _subjectsError = AppLocalizations.of(context)!.somethingWentWrong);
     }
   }
 
@@ -845,7 +847,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       await topicRepo.init();
       final result = await topicRepo.getBySubject(subjectId);
       return result.data?.length ?? 0;
-    } catch (_) {
+    } catch (e) {
+      const Logger('PlannerScreen').w('Failed to get topic count: $e');
       return 0;
     }
   }
@@ -873,7 +876,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   ? goal.subjectTitle
                   : l10n.unknown),
               subtitle: Text(
-                  '${goal.targetDays} ${l10n.days} ${l10n.planSummary} · $topicCount ${l10n.topics}'),
+                  '${goal.targetDays} ${l10n.days} ${l10n.planSummary}, $topicCount ${l10n.topics}'),
               trailing: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -1099,7 +1102,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                     decoration: TextDecoration.lineThrough,
                   )),
               subtitle: Text(
-                '${l10n.missedLessonLabel} · $time',
+                '${l10n.missedLessonLabel}, $time',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -1153,7 +1156,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                     decoration: isCompleted ? TextDecoration.lineThrough : null,
                   )),
               subtitle: Text(
-                l10n.lessonTimeStatus(lesson.topicId ?? '', time, isCompleted ? ' · ${l10n.completed}' : ''),
+                l10n.lessonTimeStatus(lesson.topicId ?? '', time, isCompleted ? ', ${l10n.completed}' : ''),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               trailing: Row(

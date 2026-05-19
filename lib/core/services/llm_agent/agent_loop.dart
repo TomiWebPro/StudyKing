@@ -157,7 +157,9 @@ class AgentLoop {
           return _ParsedResponse(toolName: toolName, toolArguments: argsStr);
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to parse inline JSON tool call: $e');
+    }
 
     final jsonBlock = RegExp(r'```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```').firstMatch(response);
     if (jsonBlock != null) {
@@ -171,7 +173,9 @@ class AgentLoop {
             return _ParsedResponse(toolName: toolName, toolArguments: argsStr);
           }
         }
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to parse JSON block tool call: $e');
+      }
     }
 
     return null;

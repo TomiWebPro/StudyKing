@@ -163,6 +163,11 @@ void main() {
       expect(LessonPlan.fromJson('not json'), isNull);
     });
 
+    test('returns null for JSON that is not a map', () {
+      expect(LessonPlan.fromJson('"just a string"'), isNull);
+      expect(LessonPlan.fromJson('42'), isNull);
+    });
+
     test('defaultPlan generates valid plan with 45 min', () {
       final plan = LessonPlan.defaultPlan(45);
       expect(plan.goals, isNotEmpty);
@@ -190,6 +195,25 @@ void main() {
     test('defaultPlan handles negative duration', () {
       final plan = LessonPlan.defaultPlan(-10);
       expect(plan.sections[1].durationMinutes, 5);
+    });
+
+    test('defaultPlan accepts all custom parameters', () {
+      final plan = LessonPlan.defaultPlan(
+        60,
+        goal: 'Master calculus',
+        introTitle: 'Warm-up',
+        mainTitle: 'Deep Dive',
+        practiceTitle: 'Exercises',
+        checkpointStarted: 'Begin',
+        checkpointCovered: 'Covered',
+        checkpointCompleted: 'Done',
+      );
+      expect(plan.goals, ['Master calculus']);
+      expect(plan.sections[0].title, 'Warm-up');
+      expect(plan.sections[1].title, 'Deep Dive');
+      expect(plan.sections[2].title, 'Exercises');
+      expect(plan.checkpoints, ['Begin', 'Covered', 'Done']);
+      expect(plan.totalDurationMinutes, 60);
     });
 
     test('serializes to JSON string', () {

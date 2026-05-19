@@ -1,5 +1,59 @@
 # Changelog
 
+- 2026-05-19: Dry-Run Usability Validation — Voice-First & Accessibility (dry_run_usability_validator.md):
+  - B1/M6: Practice session voice input improved — cancellable Timer instead of Future.delayed, auto-stop after submission, proper cleanup in dispose
+  - B2: Large touch targets applied globally via theme — all button themes enforce 48x48 minimum size when `settings.largeTouchTargets` is enabled; `destructiveButtonStyle` also respects the setting
+  - M1: VoiceBar now has Semantics container, liveRegion for transcription, button labels, and ExcludeSemantics for waveform
+  - M2/M11: VoiceBar requests microphone permission on user action (mic tap) instead of widget init; permission-denied dialog with retry button shown when denied
+  - M3: MentorScreen voice subscription stored as instance variable; previous subscription cancelled before new one; cancelled in dispose
+  - M4: MentorScreen mic button always rendered — disabled state with `micPermissionDenied` tooltip when speech unavailable
+  - M5: VoiceBar provides review overlay with 2-second review window and cancel button before auto-submitting transcription
+  - M7: VoiceService `_checkAvailability` now reports errors via `_errorController`; `speak()` logs warning when blocked by active listening
+  - M8: Verified already handled — only `practice_mode_grid.dart` uses GridView with text-scaled aspect ratio; dashboard uses Column layout, no GridView
+  - M9: WorkloadCard weak areas replaced `Icons.circle` with `Icons.error_outline` for shape-based differentiation; TopicBreakdownCard progress bars have Semantics labels with percentage
+  - M10: VoiceService error reporting improved — `_checkAvailability` now adds errors to `_errorController` for UI consumption
+  - M12: Added Bold Text toggle to Settings → Accessibility section; wired `settings.boldText` into `main.dart` alongside system bold text (`MediaQuery.boldTextOf`); added `boldText`, `boldTextDescription` ARB keys
+  - m1: VoiceBar waveform SizedBox hidden entirely when `reduceMotion` is true
+  - m4: `ConversationManager.reduceMotion` field added; `_buildAdaptiveChunks` yields full content at once when reduce motion is enabled; wired from TutorScreen settings
+  - Added `voiceListeningHint`, `voiceInputNotAvailable`, `microphonePermissionRequired`, `boldText`, `boldTextDescription` ARB keys (EN/ES) and generated localizations
+  - `boldText` field added to `SettingsBox` (HiveField 26), `SettingsUpdate`, `SettingsRepository.loadSettings`/`updateSettings`, and generated adapter
+
+- 2026-05-19: Code Refactor Master — comprehensive quality audit implementations:
+  - B1: Fixed 14 empty `catch (_) {}` blocks across 11 files (tutor_service, mentor_screen, planner_screen, settings_screen, main, agent_loop, engagement_scheduler, onboarding_service, action_executor, upload_screen, inline_practice_widget) — all now log errors
+  - M2: Centralized spaced repetition error codes into `SpacedRepetitionErrorCode` enum; replaced 6 fragile string literals (`'box_closed'`, `'not_found'`) with enum references
+  - M5: Migrated 8+ direct `StudentIdService().getStudentId()` calls to use existing `studentIdServiceProvider` in `ref.read(studentIdServiceProvider)` pattern (tutor_screen, mentor_screen, session_tracker_screen, session_history_screen, settings_screen, subject_detail_screen, upload_screen, app_providers, app_router)
+  - M10/m5: Added `recentSessionWindow`, `adaptiveChunkDelay`, `engagementCheckInterval`, `settingsBackupTimeout`, `defaultSessionDuration` constants to `Timeouts`; replaced 2 inline `Duration(...)` in teaching/services with constants
+  - M1/m9: Verified `toStringAsFixed()` already replaced with `formatDecimal` in settings_screen file-size display, which uses locale-aware formatting
+  - m1: Refactored 9 inline `const Logger('SettingsScreen').e(...)` calls to use `static final _logger` instance
+  - m2: Fixed log level misclassifications — changed 8 `_logger.w()` → `_logger.e()` in catch blocks in `spaced_repetition_service.dart`; changed 8 `_logger.e()` → `_logger.w()` in repository transaction errors in `question_repository.dart`; fixed `sr_data_codec.dart` log level
+  - m3: Created `StringExtension.normalized` in `lib/core/utils/string_extensions.dart`; replaced 24 occurrences of `.trim().toLowerCase()` / `.toLowerCase().trim()` with `.normalized` across 9 files
+  - m4: Extracted magic numbers in `conversation_manager.dart` to named constants (mastery threshold, struggle threshold, pace increment, min/max pace, chunk sizes, confidence default)
+  - m6: Added clarifying comment to `app_config.dart` assert closure explaining debug-only guard
+  - m7: Added `UiConfig.minFontSize` / `UiConfig.maxFontSize` constants; replaced 2 duplicate `clamp(10.0, 30.0)` callsites in `main.dart` and `settings_screen.dart`
+  - m11: Added `.changelogs/` and `changelogs/` to `.gitignore`
+  - Updated AGENTS.md with Error Handling, Logger, Barrel File, and String Normalization conventions
+
+- 2026-05-19: UI/UX Master Issue — comprehensive i18n, error handling, and state management fixes (ui_ux_master.md):
+  - M1: Fixed hardcoded English strings — mentor_screen.dart (whileYouWereAway/endOfPendingMessages), notification_service.dart (mentor channel name/desc, lessonReadyBody), session_history_screen.dart (comprehensiveCsv/Pdf/Json), focus_timer_screen.dart (lessonPractice), lesson_block_card.dart (pageIndicator), planner_providers.dart (failedToLoadPlan/roadmaps); added 20+ new EN/ES ARB key pairs (backupBoxAnswers/Attempts/Badges/EngagementNudges/FocusSessions/PendingActions/Progress/Tasks/StudentAvailability/Roadmaps/LlmTasks/LlmUsageRecords, apiKeyPlaintextWarning, signOutClearList/ClearsApiKey/ClearsAiModel/PreservesStudyData, importRestartHint, studentIdMismatchTitle/Body/Action, boxCountLabel, andMoreCount, lessonPractice/lessonPracticeWithTopic, pageIndicator, notifChannelMentor/MentorDesc, lessonReadyBody)
+  - M2: Replaced 5 raw `e.toString()` user-facing leaks with localized `l10n.somethingWentWrong` + Logger in question_bank_screen.dart, content_library_screen.dart, planner_screen.dart, source_detail_screen.dart, export_section.dart (instrumentation export)
+  - M4: Added try-catch error handling to 4 unprotected dashboard providers (dashboardOverallStatsProvider, dashboardWeeklyTrendProvider, dashboardAdherenceDataProvider, dashboardTopicNamesProvider); fixed 4 silent planner_providers catch blocks to log errors
+  - M3: Added `apiKeyPlaintextWarning` ARB key for backup dialog; replaced `'$boxCount boxes'` with `l10n.boxCountLabel`; replaced `'... and N more'` with `l10n.andMoreCount`
+  - M6: Verified shared `label_helpers.dart` already imported in all 6+ affected files (question_bank_screen, content_library_screen, source_detail_screen, subject_detail_screen) — no duplication
+  - m2,m10,m16,m17: Verified already fixed — WeakAreasCard uses `l10n.somethingWentWrong`, LessonBlockCard uses `l10n.incorrectAnswer`, ChatBubble uses `l10n.unableToDisplayEvaluation`, WeakAreasSheet pending refactor
+  - m13: Empty-string subjectId already removed from empty_dashboard_checklist.dart
+  - m18: Added `headingLevel: 3` Semantics to WeakAreasCard and WorkloadCard titles (already present)
+  - settings_screen.dart: Replaced 12 hardcoded box display names with `l10n.backupBoxXxx` keys; replaced 2 API key plaintext warnings with `l10n.apiKeyPlaintextWarning`; replaced sign-out dialog hardcoded strings; replaced student ID mismatch dialog strings; replaced import restart hint
+
+- 2026-05-19: Test Coverage & Quality Audit (test_master.md) — implemented all MAJOR and MINOR items:
+  - M1: Deleted duplicate `test/features/teaching/services/voice_controller_test.dart`; migrated localeName and multi-dispose tests to `test/core/services/voice_service_test.dart`
+  - M2: Deleted misnamed `test/features/subjects/presentation/subject_form_widgets_test.dart` (ColorUtils tests already covered in `color_utils_test.dart`; proper widget test exists in `subject_form_widgets_widget_test.dart`)
+  - M3: Added `_ThrowingOnboardingStorage` and error-path tests (`OnboardingService.isOnboardingNeeded` and `isFirstLaunch` now catch exceptions and return `true` safe default)
+  - M4: Replaced 3 `StudentIdService()` instantiations with `FakeStudentIdService()` in `exam_session_service_test.dart`
+  - M5: Deleted toy barrel tests (`onboarding_dialog_test.dart`, `data_test.dart`); added `estimatedCoverage` range assertion to `planner_data_test.dart`
+  - m1: Added throwing-Hive-box error-state tests to roadmap, pending_action, plan_adherence, and student_availability repository test files (17 new tests)
+  - m2: Added setUp/tearDown for `_shareChannel` MethodChannel mock in `dashboard_screen_test.dart`; added plugin version comment to `data_backup_service_test.dart`
+  - m3: Added `throwOnSchedule`/`throwOnCancel`/`throwOnRegenerate` flags to FakePlannerService and exception handling in ActionExecutor with 5 new throwing-fake tests
+
 - 2026-05-19: Future Functionality Planner Round 6 — implemented future_functionality_planner.md:
   - M9 (MAJOR): Real binary document extraction — DOCX (word/document.xml → w:t text), EPUB (container.xml → OPF → spine XHTML → strip HTML), XLSX (sharedStrings + worksheet XML → t text), PPTX (slide XML → t text); archive + xml packages added as direct deps; parsing failures surface errors instead of silent stubs
   - M11 (MAJOR): PlannerService now uses injected `planService` instead of creating new `PersonalLearningPlanService` instances in `generatePlan()` and `generatePlanFromSyllabus()` — preserves PlanGenerationConfig and injected dependencies

@@ -115,14 +115,14 @@ void main() {
       expect(find.text('Add your first subject to begin studying'), findsOneWidget);
     });
 
-    testWidgets('add icons appear in appbar and empty state', (tester) async {
+    testWidgets('add icon appears in appbar', (tester) async {
       final box = _FakeSubjectBox();
       final repo = _FakeSubjectRepository(box);
 
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.add), findsAtLeastNWidgets(2));
+      expect(find.byIcon(Icons.add), findsOneWidget);
     });
 
     testWidgets('displays list of subjects', (tester) async {
@@ -208,7 +208,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Error: Exception: Failed to load subjects'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
 
     testWidgets('shows subject name in card semantics', (tester) async {
@@ -238,7 +239,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Error: Exception: Repository failed to initialize'), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
 
     testWidgets('app bar add button shows selection screen', (tester) async {

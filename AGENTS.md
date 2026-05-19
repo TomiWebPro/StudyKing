@@ -54,6 +54,28 @@ When writing tests for `MentorService` or `MentorScreen`, provide these fakes:
 
 `MentorService.checkWellbeingAndGenerateNudges()` can be called independently for proactive engagement.
 
+## Error Handling Conventions
+
+- **Public repository and service method return types must be `Result<T>`**.
+- `throw` is only allowed in private helper methods or config validation at startup.
+- Use `SpacedRepetitionErrorCode` enum (from `lib/core/errors/spaced_repetition_error_codes.dart`) for spaced repetition error codes instead of string literals.
+- Empty `catch (_) {}` blocks are forbidden. Every catch must log the error with a descriptive message.
+
+## Logger Conventions
+
+- All Logger instances must be `static final` at class level.
+- Inline `const Logger('Name').e(...)` is forbidden.
+- `.e()` should only be used for unexpected exceptions that require immediate investigation.
+- `.w()` should be used for caught exceptions in expected error paths (e.g., box not open, item not found).
+
+## Barrel File Convention
+
+- Do not create barrel files unless they are imported by production code.
+
+## String Normalization Convention
+
+- Use the `.normalized` extension (from `lib/core/utils/string_extensions.dart`) instead of `.trim().toLowerCase()` or `.toLowerCase().trim()`.
+
 ## i18n / Number Formatting Conventions
 
 - **Never use `toStringAsFixed()` for user-facing numeric displays.** It always produces a period decimal separator (e.g. `"85.5%"`), which is incorrect for comma-decimal locales (Spanish `es`, French, German, etc.).

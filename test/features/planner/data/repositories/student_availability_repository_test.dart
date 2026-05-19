@@ -179,6 +179,22 @@ void main() {
     });
   });
 
+  group('error handling', () {
+    test('saveAvailability handles box throw gracefully', () async {
+      final repo = StudentAvailabilityRepository();
+      repo.attachBox(_ThrowingAvailabilityBox());
+      final model = createAvailability();
+      await repo.saveAvailability(model);
+    });
+
+    test('getByStudent returns null when box throws', () async {
+      final repo = StudentAvailabilityRepository();
+      repo.attachBox(_ThrowingAvailabilityBox());
+      final result = await repo.getByStudent('test');
+      expect(result, isNull);
+    });
+  });
+
   group('StudentAvailabilityRepository (init with real Hive)', () {
     late StudentAvailabilityRepository repository;
     late String hivePath;
@@ -216,6 +232,13 @@ void main() {
       expect(stored!.preferredStartHour, 10);
     });
   });
+}
+
+class _ThrowingAvailabilityBox implements Box<StudentAvailabilityModel> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Simulated Hive error');
+  }
 }
 
 class _TestStudentAvailabilityAdapter extends TypeAdapter<StudentAvailabilityModel> {

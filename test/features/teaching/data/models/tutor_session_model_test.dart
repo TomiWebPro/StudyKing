@@ -208,6 +208,17 @@ void main() {
         );
         expect(session.remainingMinutes, 45);
       });
+
+      test('returns 0 when elapsed exactly equals planned duration', () {
+        final past = DateTime.now().subtract(const Duration(minutes: 30));
+        final session = TutorSession(
+          id: id, studentId: studentId,
+          subjectId: subjectId, topicId: topicId,
+          topicTitle: topicTitle, startTime: past,
+          plannedDurationMinutes: 30,
+        );
+        expect(session.remainingMinutes, 0);
+      });
     });
 
     group('isOverTime', () {
@@ -257,6 +268,7 @@ void main() {
           questionsAsked: 5, questionsCorrect: 4, confidenceRating: 3,
           tutorNotes: 'Notes', topicsCovered: ['Algebra'],
           totalMessages: 10, totalTokensUsed: 2000,
+          lessonId: 'lesson-42',
         );
         final json = session.toJson();
         expect(json['id'], id);
@@ -266,6 +278,7 @@ void main() {
         expect(json['plannedDurationMinutes'], 30);
         expect(json['questionsAsked'], 5);
         expect(json['totalTokensUsed'], 2000);
+        expect(json['lessonId'], 'lesson-42');
       });
 
       test('serializes null endTime', () {
@@ -354,6 +367,46 @@ void main() {
         };
         final session = TutorSession.fromJson(json);
         expect(session.tutorNotes, isNull);
+      });
+
+      test('deserializes inProgress status', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle,
+          'status': 'inProgress',
+          'startTime': startTime.toIso8601String(),
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.status, SessionStatus.inProgress);
+      });
+
+      test('deserializes cancelled status', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle,
+          'status': 'cancelled',
+          'startTime': startTime.toIso8601String(),
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.status, SessionStatus.cancelled);
+      });
+
+      test('deserializes all four SessionStatus values', () {
+        for (final status in SessionStatus.values) {
+          final json = {
+            'id': 'status-${status.name}',
+            'studentId': studentId,
+            'subjectId': subjectId,
+            'topicId': topicId,
+            'topicTitle': topicTitle,
+            'status': status.name,
+            'startTime': startTime.toIso8601String(),
+          };
+          final session = TutorSession.fromJson(json);
+          expect(session.status, status, reason: 'Failed for status: $status');
+        }
       });
     });
 

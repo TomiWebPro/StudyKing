@@ -69,6 +69,8 @@ class AppConfig {
   }
 
   void debugLogSnapshot() {
+    // Debug-only logging — intentionally guarded by assert to avoid
+    // exposing config snapshot in release builds.
     assert(() {
       _logger.i('AppConfig snapshot: ${redactedRuntimeSnapshot()}');
       return true;

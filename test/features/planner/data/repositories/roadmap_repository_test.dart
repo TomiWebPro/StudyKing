@@ -164,6 +164,30 @@ void main() {
     });
   });
 
+  group('error handling', () {
+    test('getRoadmapsByStudent returns failure when box throws', () async {
+      final repo = RoadmapRepository();
+      repo.attachBox(_ThrowingRoadmapBox());
+      final result = await repo.getRoadmapsByStudent('test');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('hasRoadmap returns failure when box throws', () async {
+      final repo = RoadmapRepository();
+      repo.attachBox(_ThrowingRoadmapBox());
+      final result = await repo.hasRoadmap('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('saveRoadmap returns failure when box throws', () async {
+      final repo = RoadmapRepository();
+      repo.attachBox(_ThrowingRoadmapBox());
+      final roadmap = createTestRoadmap();
+      final result = await repo.saveRoadmap(roadmap);
+      expect(result.isFailure, isTrue);
+    });
+  });
+
   group('RoadmapRepository (init with real Hive)', () {
     late RoadmapRepository repository;
     late String hivePath;
@@ -207,6 +231,13 @@ void main() {
       expect((await repository.loadRoadmap('d1')).data, isNull);
     });
   });
+}
+
+class _ThrowingRoadmapBox implements Box<RoadmapModel> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Simulated Hive error');
+  }
 }
 
 class _TestMilestoneAdapter extends TypeAdapter<MilestoneModel> {

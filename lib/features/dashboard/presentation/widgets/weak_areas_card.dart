@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -41,15 +42,18 @@ class WeakAreasCard extends ConsumerWidget {
       child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  l10n.weakAreasAccuracy,
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
-                ),
-              ],
+            Semantics(
+              headingLevel: 3,
+              child: Row(
+                children: [
+                  Icon(Icons.warning_amber, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.weakAreasAccuracy,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Theme.of(context).colorScheme.primary),
+                  ),
+                ],
+              ),
             ),
             const Divider(),
             ...weakStates.take(5).map((state) => Padding(
@@ -142,9 +146,10 @@ class WeakAreasCard extends ConsumerWidget {
         ),
       );
     } catch (e) {
+      const Logger('WeakAreasCard').e('Failed to practice weak areas', e);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.noWeakAreasFound)));
+          SnackBar(content: Text(l10n.somethingWentWrong)));
     }
   }
 }

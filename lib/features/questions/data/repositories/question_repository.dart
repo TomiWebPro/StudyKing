@@ -19,7 +19,7 @@ class QuestionRepository extends Repository<Question> {
       if (result.isFailure) return Result.failure(result.error);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error creating question', e);
+      _logger.w('Error creating question', e);
       return Result.failure(e.toString());
     }
   }
@@ -31,7 +31,7 @@ class QuestionRepository extends Repository<Question> {
       }
       return Result.success(filterBy((q) => q.topicId, topicId));
     } catch (e) {
-      _logger.e('Error getting questions by topic', e);
+      _logger.w('Error getting questions by topic', e);
       return Result.failure(
             e.toString());
     }
@@ -44,7 +44,7 @@ class QuestionRepository extends Repository<Question> {
       }
       return Result.success(filterBy((q) => q.subjectId, subjectId));
     } catch (e) {
-      _logger.e('Error getting questions by subject', e);
+      _logger.w('Error getting questions by subject', e);
       return Result.failure(e.toString());
     }
   }
@@ -61,7 +61,7 @@ class QuestionRepository extends Repository<Question> {
       return Result.success(
           bySubject.where((q) => q.topicId == topicId).toList());
     } catch (e) {
-      _logger.e('Error getting questions by subject and topic', e);
+      _logger.w('Error getting questions by subject and topic', e);
       return Result.failure(e.toString());
     }
   }
@@ -73,7 +73,7 @@ class QuestionRepository extends Repository<Question> {
       }
       return Result.success(filterBy((q) => q.type, type));
     } catch (e) {
-      _logger.e('Error getting questions by type', e);
+      _logger.w('Error getting questions by type', e);
       return Result.failure(e.toString());
     }
   }
@@ -89,7 +89,7 @@ class QuestionRepository extends Repository<Question> {
       final bySubject = filterBy((q) => q.subjectId, subjectId);
       return Result.success(bySubject.where((q) => q.type == type).toList());
     } catch (e) {
-      _logger.e('Error getting questions by subject and type', e);
+      _logger.w('Error getting questions by subject and type', e);
       return Result.failure(e.toString());
     }
   }
@@ -117,7 +117,7 @@ class QuestionRepository extends Repository<Question> {
             .toList(),
       );
     } catch (e) {
-      _logger.e('Error getting questions with markscheme', e);
+      _logger.w('Error getting questions with markscheme', e);
       return Result.failure(e.toString());
     }
   }
@@ -133,7 +133,7 @@ class QuestionRepository extends Repository<Question> {
       await box.put(questionId, updated);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error updating markscheme', e);
+      _logger.w('Error updating markscheme', e);
       return Result.failure(e.toString());
     }
   }

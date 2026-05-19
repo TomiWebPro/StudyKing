@@ -90,8 +90,9 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
+        const Logger('SubjectTopicsTab').e('Create topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.topicCreateFailed(e.toString()))),
+          SnackBar(content: Text(l10n.topicCreateFailed(l10n.somethingWentWrong))),
         );
       }
     }
@@ -121,8 +122,9 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
+        const Logger('SubjectTopicsTab').e('Update topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.topicUpdateFailed(e.toString()))),
+          SnackBar(content: Text(l10n.topicUpdateFailed(l10n.somethingWentWrong))),
         );
       }
     }
@@ -153,8 +155,9 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
+        const Logger('SubjectTopicsTab').e('Update dependencies failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.dependenciesUpdateFailed(e.toString()))),
+          SnackBar(content: Text(l10n.dependenciesUpdateFailed(l10n.somethingWentWrong))),
         );
       }
     }
@@ -254,8 +257,9 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
+        const Logger('SubjectTopicsTab').e('Delete topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.topicDeleteFailed(e.toString()))),
+          SnackBar(content: Text(l10n.topicDeleteFailed(l10n.somethingWentWrong))),
         );
       }
     }

@@ -18,11 +18,13 @@ class DueReviewsCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Icon(Icons.autorenew, color: theme.colorScheme.primary),
-              const SizedBox(width: 8),
-              RichText(
+          Semantics(
+            headingLevel: 3,
+            child: Row(
+              children: [
+                Icon(Icons.autorenew, color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                RichText(
                 text: TextSpan(
                   style: theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.bold,
@@ -48,6 +50,7 @@ class DueReviewsCard extends StatelessWidget {
                 ),
               ),
             ],
+          ),
           ),
           if (data.subjectBreakdown.isNotEmpty) ...[
             const SizedBox(height: 12),

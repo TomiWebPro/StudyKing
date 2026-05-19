@@ -58,6 +58,12 @@ Widget _buildTestApp({
             builder: (_) => const Scaffold(body: Text('Lesson List')),
           );
         }
+        if (settings.name == AppRoutes.subjectSelection) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Subject Selection')),
+          );
+        }
         return null;
       },
     ),
@@ -184,6 +190,30 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Algebra'), findsOneWidget);
+    });
+
+    testWidgets('empty state shows Add Topic button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(topics: []));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Add Topic'), findsOneWidget);
+    });
+
+    testWidgets('Add Topic navigates to subject selection', (tester) async {
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(_buildTestApp(
+        topics: [],
+        navigatorObserver: observer,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Add Topic'));
+      await tester.pumpAndSettle();
+
+      expect(
+        observer.pushedRoutes.any((r) => r.settings.name == '/subject-selection'),
+        isTrue,
+      );
     });
   });
 }

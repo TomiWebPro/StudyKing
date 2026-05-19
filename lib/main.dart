@@ -100,7 +100,9 @@ Future<void> _runAutoBackupCheck() async {
             try {
               final obj = value as dynamic;
               records.add(obj.toJson() as Map<String, dynamic>);
-            } catch (_) {}
+            } catch (e) {
+              _mainLogger.w('Failed to serialize box entry: $e');
+            }
           }
         }
         if (records.isNotEmpty) boxData[boxName] = records;
@@ -327,10 +329,10 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
     });
     final locale = ref.watch(localeProvider);
     
-    final systemBoldText = MediaQuery.boldTextOf(context);
+    final systemBoldText = MediaQuery.boldTextOf(context) || settings.boldText;
     final systemHighContrast = MediaQuery.highContrastOf(context);
 
-    final effectiveFontSize = settings.fontSize.clamp(10.0, 30.0);
+    final effectiveFontSize = settings.fontSize.clamp(UiConfig.minFontSize, UiConfig.maxFontSize);
 
     final useHighContrast = systemHighContrast || settings.highContrastEnabled;
 
@@ -375,14 +377,14 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         ),
       },
       theme: useHighContrast
-          ? AppTheme.highContrastLightTheme(fontSize: effectiveFontSize)
-          : AppTheme.lightTheme(fontSize: effectiveFontSize),
+          ? AppTheme.highContrastLightTheme(fontSize: effectiveFontSize, largeTouchTargets: settings.largeTouchTargets)
+          : AppTheme.lightTheme(fontSize: effectiveFontSize, largeTouchTargets: settings.largeTouchTargets),
       darkTheme: useHighContrast
-          ? AppTheme.highContrastDarkTheme(fontSize: effectiveFontSize)
-          : AppTheme.darkTheme(fontSize: effectiveFontSize),
+          ? AppTheme.highContrastDarkTheme(fontSize: effectiveFontSize, largeTouchTargets: settings.largeTouchTargets)
+          : AppTheme.darkTheme(fontSize: effectiveFontSize, largeTouchTargets: settings.largeTouchTargets),
       themeMode: settings.themeModeEnum,
       home: const MainScreen(),
-      onGenerateRoute: onGenerateRoute,
+      onGenerateRoute: (settings) => onGenerateRoute(settings, ref.read(studentIdServiceProvider)),
     );
   }
 }

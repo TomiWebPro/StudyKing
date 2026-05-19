@@ -17,7 +17,7 @@ final _dashboardWeakTopicsProvider =
     FutureProvider.family<int, String>((ref, studentId) async {
   final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getWeakTopics(studentId);
-  return result.isSuccess ? result.data!.length : 0;
+  return result.isSuccess ? (result.data?.length ?? 0) : 0;
 });
 
 class NextUpCard extends ConsumerWidget {
@@ -33,12 +33,12 @@ class NextUpCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
+    final l10n = AppLocalizations.of(context)!;
     final dueCount = dueReviewsAsync.valueOrNull?.totalDue ?? 0;
     final upcomingLessons = upcomingLessonsAsync.valueOrNull ?? [];
     final weakCount = weakCountAsync.valueOrNull ?? 0;
 
     if (dueCount == 0 && upcomingLessons.isEmpty && weakCount == 0) {
-      final l10n = AppLocalizations.of(context)!;
       return Card(
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -64,15 +64,18 @@ class NextUpCard extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(
-              children: [
-                Icon(Icons.trending_up, color: cs.primary, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  'Next Up',
-                  style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
-                ),
-              ],
+            Semantics(
+              headingLevel: 3,
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: cs.primary, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.nextUp,
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
             ),
             const SizedBox(height: 12),
             if (upcomingLessons.isNotEmpty)
@@ -80,8 +83,8 @@ class NextUpCard extends ConsumerWidget {
                 context: context,
                 icon: Icons.schedule,
                 iconColor: cs.tertiary,
-                title: upcomingLessons.first.tutorMetadata?.topicTitle ?? upcomingLessons.first.topicId ?? 'Scheduled lesson',
-                subtitle: '${upcomingLessons.length} upcoming lesson(s)',
+                title: upcomingLessons.first.tutorMetadata?.topicTitle ?? upcomingLessons.first.topicId ?? l10n.scheduledLesson,
+                subtitle: l10n.upcomingLessonsCount(upcomingLessons.length),
                 onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
               ),
             if (dueCount > 0)
@@ -89,8 +92,8 @@ class NextUpCard extends ConsumerWidget {
                 context: context,
                 icon: Icons.autorenew,
                 iconColor: cs.primary,
-                title: '$dueCount review(s) due',
-                subtitle: 'Due for spaced repetition review',
+                title: l10n.reviewsDueCount(dueCount),
+                subtitle: l10n.dueForReviewSubtitle,
                 onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession),
               ),
             if (weakCount > 0)
@@ -98,8 +101,8 @@ class NextUpCard extends ConsumerWidget {
                 context: context,
                 icon: Icons.psychology,
                 iconColor: cs.error,
-                title: '$weakCount weak topic(s)',
-                subtitle: 'Practice weak areas',
+                title: l10n.weakTopicsCount(weakCount),
+                subtitle: l10n.practiceWeakAreas,
                 onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession),
               ),
           ],

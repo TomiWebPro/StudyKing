@@ -5,13 +5,11 @@ import 'package:studyking/core/utils/responsive.dart';
 class PracticeSheetTemplate extends StatelessWidget {
   final String title;
   final List<Widget> children;
-  final EdgeInsets padding;
 
   const PracticeSheetTemplate({
     super.key,
     required this.title,
     required this.children,
-    this.padding = const EdgeInsets.all(0),
   });
 
   static Future<void> show(
@@ -31,12 +29,11 @@ class PracticeSheetTemplate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenPad = ResponsiveUtils.screenPadding(context);
     return SafeArea(
-      child: Padding(
-        padding: padding,
-        child: Container(
-          padding: ResponsiveUtils.screenPadding(context),
-          child: Column(
+      child: Container(
+        padding: screenPad,
+        child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -52,7 +49,6 @@ class PracticeSheetTemplate extends StatelessWidget {
             ],
           ),
         ),
-      ),
-    );
+      );
   }
 }

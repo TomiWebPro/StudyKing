@@ -72,7 +72,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           }
         });
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.e('Failed to load subjects in session tracker', e);
+    }
   }
 
   @override
@@ -179,7 +181,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
 
     final questionsAnswered = stats?.questionsAnswered ?? 0;
     final correctAnswers = stats?.correctAnswers ?? 0;
-    final studentId = widget.fixedStudentId ?? StudentIdService().getStudentId();
+    final studentId = widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId();
 
     final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
 

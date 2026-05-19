@@ -94,5 +94,29 @@ void main() {
       await service.speak('');
       expect(service.isSpeaking, isFalse);
     });
+
+    test('startListening accepts localeName parameter', () async {
+      final service = VoiceService();
+      await service.startListening(localeName: 'es');
+      expect(service.isListening, isFalse);
+    });
+
+    test('speak accepts localeName parameter', () async {
+      final service = VoiceService();
+      await service.speak('Hola', localeName: 'es');
+      expect(service.isSpeaking, isFalse);
+    });
+
+    test('multiple dispose calls do not throw', () {
+      final service = VoiceService();
+      service.dispose();
+      service.dispose();
+    });
+
+    test('requestPermission returns false in test environment', () async {
+      final service = VoiceService();
+      final granted = await service.requestPermission();
+      expect(granted, isFalse);
+    });
   });
 }

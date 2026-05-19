@@ -724,7 +724,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get examDateOptional => 'Fecha de Examen (Opcional)';
 
   @override
-  String get backupAndRestore => 'Copia de seguridad y restaurar';
+  String get backupAndRestore => 'Copia de Seguridad y Restaurar';
 
   @override
   String get exportBackup => 'Exportar Copia';
@@ -1100,7 +1100,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get scheduleLesson => 'Programar Lección';
+  String get scheduleLesson => 'Programar una Lección';
 
   @override
   String get selectCalendarDate =>
@@ -1719,7 +1719,22 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dismiss => 'Descartar';
 
   @override
-  String get voiceInput => 'Entrada de Voz';
+  String get voiceInput => 'Entrada de voz';
+
+  @override
+  String get boldText => 'Texto en Negrita';
+
+  @override
+  String get boldTextDescription => 'Usar fuente en negrita para el texto en toda la aplicación';
+
+  @override
+  String get voiceInputNotAvailable => 'Entrada de voz no disponible';
+
+  @override
+  String get microphonePermissionRequired => 'Permiso de Micrófono Requerido';
+
+  @override
+  String get voiceListeningHint => 'Escuchando. Hable ahora.';
 
   @override
   String get captureImage => 'Capturar Imagen';
@@ -2565,6 +2580,30 @@ class AppLocalizationsEs extends AppLocalizations {
   String get comprehensiveReportExported => 'Informe completo exportado';
 
   @override
+  String get exportCsvDetail =>
+      'CSV: estadísticas generales, dominio de temas, todos los intentos (uno por fila), tendencia semanal, insignias.';
+
+  @override
+  String get exportPdfDetail =>
+      'PDF: informe formateado con tablas, gráficos y desgloses de dominio adecuados para impresión.';
+
+  @override
+  String get exportJsonDetail =>
+      'JSON: exportación de datos estructurados para análisis programático.';
+
+  @override
+  String get exportProgressCsvDetail =>
+      'CSV de estadísticas: resumen de estadísticas y visión general del progreso (más ligero que el CSV completo).';
+
+  @override
+  String get exportInstrumentationDetail =>
+      'Analíticas de Progreso: métricas de adherencia al plan y mejora de dominio para análisis.';
+
+  @override
+  String get backupRestoreHint =>
+      'Para una copia de seguridad completa (materias, preguntas, configuraciones), vaya a Configuración → Copia de seguridad y Restauración.';
+
+  @override
   String get activeRoadmaps => 'Roadmaps Activos';
 
   @override
@@ -2887,8 +2926,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get nextStep => 'Siguiente Paso';
 
   @override
-  String topicsAutoCreated(int count) =>
-      '$count temas auto-creados del plan de estudios';
+  String topicsAutoCreated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temas auto-creados del plan de estudios',
+      one: '1 tema auto-creado del plan de estudios',
+    );
+    return '$_temp0';
+  }
 
   @override
   String get fileSaved => 'Archivo guardado exitosamente';
@@ -3206,6 +3252,18 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get notifChannelBadgesDesc =>
       'Notificaciones sobre insignias y logros obtenidos';
+
+  @override
+  String get notifChannelMentor => 'Mensajes del Mentor';
+
+  @override
+  String get notifChannelMentorDesc =>
+      'Registros y sugerencias proactivas del mentor';
+
+  @override
+  String lessonReadyBody(String topicTitle) {
+    return '$topicTitle tiene una lección lista';
+  }
 
   @override
   String get planAccuracyLow =>
@@ -4071,7 +4129,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String lessonTimeStatus(String topicId, String time, String completedSuffix) {
-    return '$topicId · $time$completedSuffix';
+    return '$topicId, $time$completedSuffix';
   }
 
   @override
@@ -4088,9 +4146,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownError => 'Error desconocido';
 
   @override
-  String failedToLoadPlan(String error) {
-    return 'Error al cargar el plan: $error';
-  }
+  String get failedToLoadPlan => 'Error al cargar el plan de estudio';
 
   @override
   String backupExportFailedWithError(String error) {
@@ -4161,6 +4217,98 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get backupBoxProfile => 'Perfil';
+
+  @override
+  String get backupBoxAnswers => 'Respuestas';
+
+  @override
+  String get backupBoxAttempts => 'Intentos';
+
+  @override
+  String get backupBoxBadges => 'Insignias';
+
+  @override
+  String get backupBoxEngagementNudges => 'Notificaciones de Compromiso';
+
+  @override
+  String get backupBoxFocusSessions => 'Sesiones de Enfoque';
+
+  @override
+  String get backupBoxPendingActions => 'Acciones Pendientes';
+
+  @override
+  String get backupBoxProgress => 'Progreso';
+
+  @override
+  String get backupBoxTasks => 'Tareas';
+
+  @override
+  String get backupBoxStudentAvailability => 'Disponibilidad del Estudiante';
+
+  @override
+  String get backupBoxRoadmaps => 'Hoja de Ruta';
+
+  @override
+  String get backupBoxLlmTasks => 'Tareas del LLM';
+
+  @override
+  String get backupBoxLlmUsageRecords => 'Registros de Uso del LLM';
+
+  @override
+  String get apiKeyPlaintextWarning =>
+      'Tus claves API serán legibles como texto plano en el archivo de respaldo. Cualquier persona con acceso a este archivo puede usar tus claves API.';
+
+  @override
+  String boxCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count cajas',
+      one: '1 caja',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String andMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count más',
+      one: '1 más',
+    );
+    return '... y $_temp0';
+  }
+
+  @override
+  String get signOutClearList => 'Lo que se borrará:';
+
+  @override
+  String get signOutClearsApiKey => 'Clave API';
+
+  @override
+  String get signOutClearsAiModel => 'Modelo de IA seleccionado';
+
+  @override
+  String get signOutPreservesStudyData =>
+      'Tus datos de estudio se conservarán.';
+
+  @override
+  String get importRestartHint =>
+      'Es posible que se necesite un reinicio para que todos los cambios aparezcan.';
+
+  @override
+  String get studentIdMismatchTitle =>
+      'Se detectó una discrepancia en la ID del estudiante';
+
+  @override
+  String studentIdMismatchBody(String currentId, String backupId) {
+    return 'Actual: $currentId\nRespaldo: $backupId';
+  }
+
+  @override
+  String get studentIdMismatchAction =>
+      '¿Actualizar los registros del estudiante para que coincidan con la ID actual?';
 
   @override
   String questionsCountPlural(int count) {
@@ -5012,7 +5160,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareLastBackup => 'Compartir última copia';
 
   @override
-  String get exportReports => 'Exportar informes';
+  String get exportReports => 'Exportar Informes';
 
   @override
   String get readAloud => 'Leer en voz alta';
@@ -5053,4 +5201,146 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorCheckIn => 'Control del Mentor';
+
+  @override
+  String get nextUp => 'Próximo';
+
+  @override
+  String get scheduledLesson => 'Lección programada';
+
+  @override
+  String upcomingLessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lecciones próximas',
+      one: '1 lección próxima',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewsDueCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count revisiones pendientes',
+      one: '1 revisión pendiente',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dueForReviewSubtitle =>
+      'Pendiente de revisión por repaso espaciado';
+
+  @override
+  String weakTopicsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temas débiles',
+      one: '1 tema débil',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get practiceWeakAreas => 'Practicar áreas débiles';
+
+  @override
+  String lessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '~$count lecciones',
+      one: '~$count lección',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String topicsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temas necesitan atención',
+      one: '1 tema necesita atención',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stopRecording => 'Detener grabación';
+
+  @override
+  String get incorrectAnswer => 'Respuesta incorrecta';
+
+  @override
+  String get loadingWithEllipsis => 'Cargando...';
+
+  @override
+  String get whileYouWereAway => '--- Mientras estabas ausente ---';
+
+  @override
+  String get endOfPendingMessages => '--- Fin de mensajes pendientes ---';
+
+  @override
+  String get lessonPractice => 'Práctica de Lección';
+
+  @override
+  String lessonPracticeWithTopic(String topic) {
+    return 'Práctica de Lección: $topic';
+  }
+
+  @override
+  String pageIndicator(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get mentorMessages => 'Mensajes del Mentor';
+
+  @override
+  String get readyToContinueLearning => '¿Listo para seguir aprendiendo?';
+
+  @override
+  String get graphCanvas => 'Lienzo de gráficos';
+
+  @override
+  String get drawYourGraphHere => 'Dibuja tu gráfico aquí';
+
+  @override
+  String strokesCountPoints(int strokes, int points) {
+    return '$strokes trazos, $points puntos';
+  }
+
+  @override
+  String get toolFreehand => 'Mano alzada';
+
+  @override
+  String get toolLine => 'Línea';
+
+  @override
+  String get toolRectangle => 'Rectángulo';
+
+  @override
+  String get toolCircle => 'Círculo';
+
+  @override
+  String get toolText => 'Texto';
+
+  @override
+  String get toolPlotPoint => 'Punto';
+
+  @override
+  String get unableToDisplayEvaluation =>
+      'No se puede mostrar el resultado de la evaluación';
+
+  @override
+  String get micPermissionDenied =>
+      'Acceso al micrófono denegado. Actívalo en Ajustes para usar la entrada de voz.';
+
+  @override
+  String get focusTimerLabel => '(Enfoque)';
 }

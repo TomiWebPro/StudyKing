@@ -17,6 +17,9 @@ class FakePlannerService extends PlannerService {
   bool scheduleResult = true;
   bool cancelResult = true;
   bool regenerateResult = true;
+  bool throwOnSchedule = false;
+  bool throwOnCancel = false;
+  bool throwOnRegenerate = false;
 
   FakePlannerService() : super();
 
@@ -28,6 +31,7 @@ class FakePlannerService extends PlannerService {
     required DateTime scheduledTime,
     int durationMinutes = 30,
   }) async {
+    if (throwOnSchedule) throw Exception('Schedule failed');
     scheduleCalled = true;
     lastTopicId = topicId;
     lastTopicTitle = topicTitle;
@@ -39,6 +43,7 @@ class FakePlannerService extends PlannerService {
 
   @override
   Future<bool> cancelLesson(String sessionId) async {
+    if (throwOnCancel) throw Exception('Cancel failed');
     cancelCalled = true;
     lastSessionId = sessionId;
     return cancelResult;
@@ -49,6 +54,7 @@ class FakePlannerService extends PlannerService {
     required String studentId,
     required double adjustmentFactor,
   }) async {
+    if (throwOnRegenerate) throw Exception('Regenerate failed');
     regenerateCalled = true;
     lastAdjustmentFactor = adjustmentFactor;
     return regenerateResult;
@@ -189,6 +195,20 @@ void main() {
           final result = await executor.execute(action);
           expect(result, isFalse);
         });
+
+        test('returns false when plannerService throws', () async {
+          plannerService.throwOnSchedule = true;
+          final action = createAction(
+            actionType: 'schedule',
+            payload: {
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-01T10:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result, isFalse);
+        });
       });
 
       group('reschedule without sessionId', () {
@@ -256,6 +276,36 @@ void main() {
           final result = await executor.execute(action);
           expect(result, isFalse);
         });
+
+        test('returns false when cancelLesson throws', () async {
+          plannerService.throwOnCancel = true;
+          final action = createAction(
+            actionType: 'reschedule',
+            payload: {
+              'sessionId': 'session-1',
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-02T14:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result, isFalse);
+        });
+
+        test('returns false when scheduleLesson throws in reschedule', () async {
+          plannerService.throwOnSchedule = true;
+          final action = createAction(
+            actionType: 'reschedule',
+            payload: {
+              'sessionId': 'session-1',
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-02T14:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result, isFalse);
+        });
       });
 
       group('planAdjustment', () {
@@ -274,6 +324,16 @@ void main() {
           final action = createAction(
             actionType: 'planAdjustment',
             payload: {},
+          );
+          final result = await executor.execute(action);
+          expect(result, isFalse);
+        });
+
+        test('returns false when suggestPlanRegeneration throws', () async {
+          plannerService.throwOnRegenerate = true;
+          final action = createAction(
+            actionType: 'planAdjustment',
+            payload: {'adjustmentFactor': 0.8},
           );
           final result = await executor.execute(action);
           expect(result, isFalse);

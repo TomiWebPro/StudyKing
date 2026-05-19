@@ -33,5 +33,18 @@ void main() {
       expect(plan.planDurationDays, 7);
       expect(plan.summary.totalQuestions, 30);
     });
+
+    test('PlanSummary estimatedCoverage is between 0 and 1', () {
+      final summary = PlanSummary(
+        totalQuestions: 30,
+        totalMinutes: 180,
+        newTopics: 2,
+        reviewTopics: 1,
+        estimatedCoverage: 0.7,
+        focusAreas: ['Physics'],
+      );
+      expect(summary.estimatedCoverage, greaterThanOrEqualTo(0));
+      expect(summary.estimatedCoverage, lessThanOrEqualTo(1));
+    });
   });
 }

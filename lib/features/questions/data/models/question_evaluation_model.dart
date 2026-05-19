@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 enum EvaluationType {
   exactMatch,
@@ -133,13 +134,13 @@ class QuestionEvaluation extends HiveObject {
   }
 
   bool isMatch(String userAnswer) {
-    final normalizedAnswer = userAnswer.trim().toLowerCase();
-    final normalizedCorrect = correctAnswer.trim().toLowerCase();
+    final normalizedAnswer = userAnswer.normalized;
+    final normalizedCorrect = correctAnswer.normalized;
 
     if (normalizedAnswer == normalizedCorrect) return true;
 
     for (final acceptable in acceptableAnswers) {
-      if (normalizedAnswer == acceptable.trim().toLowerCase()) return true;
+      if (normalizedAnswer == acceptable.normalized) return true;
     }
 
     if (evaluationType == EvaluationType.fuzzyMatch && normalizedAnswer.isNotEmpty) {

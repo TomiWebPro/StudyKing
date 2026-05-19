@@ -73,14 +73,17 @@ Lesson _createLesson({
   String id = 'l1',
   String subjectId = 's1',
   String title = 'Algebra',
-  List<LessonBlock> blocks = const [],
+  List<LessonBlock>? blocks,
 }) {
   return Lesson(
     id: id,
     subjectId: subjectId,
     title: title,
     topicId: 't1',
-    blocks: blocks,
+    blocks: blocks ?? [
+      LessonBlock(id: 'b1', subjectId: subjectId, lessonId: id,
+          type: LessonBlockType.text, content: 'Content', order: 0),
+    ],
     createdAt: DateTime.now(),
   );
 }
@@ -147,8 +150,8 @@ void main() {
       expect(find.text('Exercise content'), findsOneWidget);
 
       expect(find.byIcon(Icons.description), findsOneWidget);
-      expect(find.byIcon(Icons.play_circle), findsOneWidget);
-      expect(find.byIcon(Icons.note_add), findsOneWidget);
+      expect(find.byIcon(Icons.lightbulb), findsOneWidget);
+      expect(find.byIcon(Icons.edit_note), findsOneWidget);
 
       expect(find.text('Explanation'), findsOneWidget);
       expect(find.text('Example'), findsOneWidget);
@@ -160,8 +163,8 @@ void main() {
 
       expect(find.text('Quiz content'), findsOneWidget);
       expect(find.text('Summary content'), findsOneWidget);
-      expect(find.byIcon(Icons.question_answer), findsOneWidget);
-      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.quiz), findsOneWidget);
+      expect(find.byIcon(Icons.checklist), findsOneWidget);
       expect(find.text('Slide'), findsOneWidget);
     });
 
@@ -234,6 +237,68 @@ void main() {
       await tester.pump(const Duration(seconds: 3));
 
       expect(find.text('00 03'), findsNothing);
+    });
+
+    testWidgets('shows empty blocks state with generating message and refresh button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        lessons: [
+          _createLesson(blocks: []),
+        ],
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.hourglass_top), findsOneWidget);
+      expect(find.text('Generating...'), findsOneWidget);
+      expect(find.text('In Progress'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('empty blocks retry refreshes the lesson', (tester) async {
+      final repo = _FakeLessonRepository(lessons: [
+        _createLesson(id: 'l1', title: 'Initial', blocks: []),
+      ]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const Scaffold(
+              body: LessonDetailScreen(
+                args: LessonDetailArgs(
+                  lessonId: 'l1', topicId: 't1', topicTitle: 'Algebra',
+                ),
+              ),
+            ),
+            onGenerateRoute: (settings) {
+              if (settings.name == AppRoutes.tutor) {
+                return MaterialPageRoute(
+                  settings: settings,
+                  builder: (_) => const Scaffold(body: Text('Tutor')),
+                );
+              }
+              return null;
+            },
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Generating...'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Initial'), findsOneWidget);
     });
 
     testWidgets('shows teaching mode icon button in app bar', (tester) async {

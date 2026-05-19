@@ -361,5 +361,68 @@ void main() {
       expect(copy.toolName, 'createPlan');
       expect(copy.toolResult, 'Plan created');
     });
+
+    test('toJson includes all tool fields when set', () {
+      final msg = ConversationMessage(
+        id: 'tool-json',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: '',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_json',
+        toolName: 'search',
+        toolArguments: '{"q":"test"}',
+        toolResult: null,
+      );
+      final json = msg.toJson();
+      expect(json['toolCallId'], 'call_json');
+      expect(json['toolName'], 'search');
+      expect(json['toolArguments'], '{"q":"test"}');
+      expect(json['toolResult'], isNull);
+    });
+
+    test('fromJson restores all tool fields', () {
+      final json = {
+        'id': 'tool-from',
+        'sessionId': 'session-1',
+        'role': 'tutor',
+        'type': 'toolResult',
+        'content': '',
+        'timestamp': DateTime(2026, 1, 1).toIso8601String(),
+        'tokenCount': 0,
+        'isStreaming': false,
+        'toolCallId': 'call_from',
+        'toolName': null,
+        'toolArguments': null,
+        'toolResult': 'Found results',
+      };
+      final msg = ConversationMessage.fromJson(json);
+      expect(msg.toolCallId, 'call_from');
+      expect(msg.toolResult, 'Found results');
+      expect(msg.toolName, isNull);
+      expect(msg.toolArguments, isNull);
+    });
+
+    test('toJson serializes toolResult separately from toolCall fields', () {
+      final msg = ConversationMessage(
+        id: 'tool-both',
+        sessionId: 'session-1',
+        role: MessageRole.system,
+        type: MessageType.toolResult,
+        content: 'Result content',
+        timestamp: DateTime(2026, 1, 1),
+        toolCallId: 'call_both',
+        toolName: 'func',
+        toolArguments: '{"arg":1}',
+        toolResult: 'Output',
+      );
+      final json = msg.toJson();
+      expect(json['toolCallId'], 'call_both');
+      expect(json['toolName'], 'func');
+      expect(json['toolArguments'], '{"arg":1}');
+      expect(json['toolResult'], 'Output');
+    });
+
   });
 }

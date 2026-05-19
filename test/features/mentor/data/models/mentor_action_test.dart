@@ -73,5 +73,67 @@ void main() {
 
       expect(a.runtimeType, b.runtimeType);
     });
+
+    test('accepts long message strings', () {
+      final long = 'A' * 10000;
+      final action = MentorAction(message: long);
+
+      expect(action.message, long);
+      expect(action.message.length, 10000);
+    });
+
+    test('accepts message with leading and trailing whitespace', () {
+      final action = MentorAction(message: '  Hello World  ');
+
+      expect(action.message, '  Hello World  ');
+    });
+
+    test('accepts message with unicode characters', () {
+      final action = MentorAction(message: 'Café résumé ñoño 中文');
+
+      expect(action.message, 'Café résumé ñoño 中文');
+    });
+
+    test('accepts message with special characters', () {
+      final action = MentorAction(message: 'Hello\nWorld\tTab');
+
+      expect(action.message, 'Hello\nWorld\tTab');
+    });
+
+    test('accepts various meaningful type values', () {
+      final types = ['nudge', 'reminder', 'alert', 'warning', 'encouragement',
+        'notification', 'feedback', 'tip', 'milestone', 'achievement'];
+      for (final t in types) {
+        final action = MentorAction(message: 'Msg', type: t);
+        expect(action.type, t);
+      }
+    });
+
+    test('accepts type with special characters', () {
+      final action = MentorAction(message: 'Test', type: 'type-with-hyphen');
+
+      expect(action.type, 'type-with-hyphen');
+    });
+
+    test('same const instance has consistent hashCode', () {
+      const a = MentorAction(message: 'Study', type: 'reminder');
+
+      expect(a.hashCode, a.hashCode);
+    });
+
+    test('different instances of same const have same runtimeType', () {
+      const a = MentorAction(message: 'Hello');
+      const b = MentorAction(message: 'Hello');
+
+      expect(a.runtimeType, b.runtimeType);
+    });
+
+    test('can be used in a Set with identity semantics', () {
+      final a = MentorAction(message: 'Hello');
+      final b = MentorAction(message: 'Hello');
+      final set = {a, b};
+
+      expect(set.length, 2);
+    });
   });
 }

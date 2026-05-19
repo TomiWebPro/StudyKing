@@ -6,6 +6,9 @@ class UiConfig {
   static const ThemeMode defaultThemeMode = ThemeMode.system;
   static const bool defaultNotificationsEnabled = true;
   static const Duration notificationReminderLeadTime = Duration(minutes: 10);
+
+  static const double minFontSize = 10.0;
+  static const double maxFontSize = 30.0;
 }
 
 class CacheConfig {

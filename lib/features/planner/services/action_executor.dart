@@ -1,7 +1,10 @@
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'planner_service.dart';
 
 class ActionExecutor {
+  static final Logger _logger = const Logger('ActionExecutor');
+
   final PlannerService _plannerService;
 
   ActionExecutor({
@@ -9,15 +12,20 @@ class ActionExecutor {
   }) : _plannerService = plannerService;
 
   Future<bool> execute(PendingActionModel action) async {
-    switch (action.actionType) {
-      case 'schedule':
-        return _executeSchedule(action);
-      case 'reschedule':
-        return _executeReschedule(action);
-      case 'planAdjustment':
-        return _executePlanAdjustment(action);
-      default:
-        return false;
+    try {
+      switch (action.actionType) {
+        case 'schedule':
+          return await _executeSchedule(action);
+        case 'reschedule':
+          return await _executeReschedule(action);
+        case 'planAdjustment':
+          return await _executePlanAdjustment(action);
+        default:
+          return false;
+      }
+    } catch (e) {
+      _logger.w('Failed to execute action: $e');
+      return false;
     }
   }
 

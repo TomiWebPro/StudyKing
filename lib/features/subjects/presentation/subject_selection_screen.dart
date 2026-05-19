@@ -189,8 +189,9 @@ class _SubjectSelectionScreenState
       }
     } catch (e) {
       if (mounted) {
+        const Logger('SubjectSelectionScreen').e('Save subject failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorSavingSubject(e.toString()))),
+          SnackBar(content: Text(l10n.errorSavingSubject(l10n.somethingWentWrong))),
         );
       }
     } finally {

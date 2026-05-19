@@ -18,7 +18,7 @@ class SrDataCodec {
             : null,
       );
     } catch (e) {
-      const Logger('SrDataCodec').w('Failed to deserialize SR data', e);
+      const Logger('SrDataCodec').e('Failed to deserialize SR data', e);
       return const QuestionSRData();
     }
   }

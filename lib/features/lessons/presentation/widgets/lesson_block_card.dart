@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../../core/data/enums.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class LessonBlockCard extends StatefulWidget {
@@ -134,7 +135,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                       child: Column(
                         children: [
                           Text(
-                            '${i + 1} / ${blocks.length}',
+                            l10n.pageIndicator(i + 1, blocks.length),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
@@ -178,7 +179,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                           builder: (context, _) {
                             final current = (pageController.page?.round() ?? 0) + 1;
                             return Text(
-                              '$current / ${blocks.length}',
+                              l10n.pageIndicator(current, blocks.length),
                               style: Theme.of(context).textTheme.bodyMedium,
                             );
                           },
@@ -246,7 +247,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                     border: const OutlineInputBorder(),
                     isDense: true,
                   ),
-                  onChanged: (v) => _quizAnswer = v,
+                  onChanged: (v) => setState(() => _quizAnswer = v),
                 )
               else
                 ..._buildQuizOptions(context),
@@ -263,7 +264,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ),
               const SizedBox(height: 8),
               Text(
-                _quizCorrect ? l10n.correct : l10n.submitAnswer,
+                _quizCorrect ? l10n.correct : l10n.incorrectAnswer,
                 style: theme.textTheme.titleMedium?.copyWith(
                   color: _quizCorrect ? cs.primary : cs.error,
                 ),
@@ -309,7 +310,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
     final answerKey = widget.block.answerKey;
     bool correct;
     if (answerKey.isNotEmpty) {
-      final keys = answerKey.split('||').map((k) => k.trim().toLowerCase());
+      final keys = answerKey.split('||').map((k) => k.normalized);
       correct = keys.any((k) => answer.toLowerCase() == k);
     } else {
       final content = widget.block.content.toLowerCase();
@@ -358,7 +359,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                   border: const OutlineInputBorder(),
                   alignLabelWithHint: true,
                 ),
-                onChanged: (v) => _exerciseAnswer = v,
+                onChanged: (v) => setState(() => _exerciseAnswer = v),
               ),
               const SizedBox(height: 12),
               Row(
@@ -389,11 +390,6 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                     Text(l10n.yourAnswer, style: theme.textTheme.labelMedium),
                     const SizedBox(height: 4),
                     Text(_exerciseAnswer, style: theme.textTheme.bodyMedium),
-                    const SizedBox(height: 8),
-                    Text(
-                      l10n.submitAnswer,
-                      style: theme.textTheme.bodySmall?.copyWith(color: cs.primary),
-                    ),
                   ],
                 ),
               ),

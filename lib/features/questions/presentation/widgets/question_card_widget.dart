@@ -4,6 +4,7 @@ import 'dart:convert';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
 import '../../../../core/utils/responsive.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
 import 'canvas_drawing_widget.dart';
 
@@ -376,17 +377,17 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
     if (widget.question.type == QuestionType.multiChoice) {
       final selected = _localAnswer!
           .split('||')
-          .map((e) => e.trim().toLowerCase())
+          .map((e) => e.normalized)
           .where((e) => e.isNotEmpty)
           .toSet();
       final expected = correct
           .split(',')
-          .map((e) => e.trim().toLowerCase())
+          .map((e) => e.normalized)
           .where((e) => e.isNotEmpty)
           .toSet();
       return selected.length == expected.length && selected.containsAll(expected);
     }
-    return _localAnswer!.trim().toLowerCase() == correct.trim().toLowerCase();
+    return _localAnswer!.normalized == correct.normalized;
   }
 
   bool get _canSubmit {

@@ -12,6 +12,7 @@ class SettingsUpdate {
   final bool? highContrastEnabled;
   final bool? largeTouchTargets;
   final bool? reduceMotion;
+  final bool? boldText;
   final bool? revisionRemindersEnabled;
   final bool? lessonNotificationsEnabled;
   final bool? overworkAlertsEnabled;
@@ -37,6 +38,7 @@ class SettingsUpdate {
     this.highContrastEnabled,
     this.largeTouchTargets,
     this.reduceMotion,
+    this.boldText,
     this.revisionRemindersEnabled,
     this.lessonNotificationsEnabled,
     this.overworkAlertsEnabled,
@@ -63,6 +65,7 @@ class SettingsUpdate {
     bool? highContrastEnabled,
     bool? largeTouchTargets,
     bool? reduceMotion,
+    bool? boldText,
     bool? revisionRemindersEnabled,
     bool? lessonNotificationsEnabled,
     bool? overworkAlertsEnabled,
@@ -88,6 +91,7 @@ class SettingsUpdate {
       highContrastEnabled: highContrastEnabled ?? this.highContrastEnabled,
       largeTouchTargets: largeTouchTargets ?? this.largeTouchTargets,
       reduceMotion: reduceMotion ?? this.reduceMotion,
+      boldText: boldText ?? this.boldText,
       revisionRemindersEnabled: revisionRemindersEnabled ?? this.revisionRemindersEnabled,
       lessonNotificationsEnabled: lessonNotificationsEnabled ?? this.lessonNotificationsEnabled,
       overworkAlertsEnabled: overworkAlertsEnabled ?? this.overworkAlertsEnabled,
@@ -116,6 +120,7 @@ class SettingsUpdate {
     if (highContrastEnabled != null) map['highContrastEnabled'] = highContrastEnabled;
     if (largeTouchTargets != null) map['largeTouchTargets'] = largeTouchTargets;
     if (reduceMotion != null) map['reduceMotion'] = reduceMotion;
+    if (boldText != null) map['boldText'] = boldText;
     if (revisionRemindersEnabled != null) map['revisionRemindersEnabled'] = revisionRemindersEnabled;
     if (lessonNotificationsEnabled != null) map['lessonNotificationsEnabled'] = lessonNotificationsEnabled;
     if (overworkAlertsEnabled != null) map['overworkAlertsEnabled'] = overworkAlertsEnabled;

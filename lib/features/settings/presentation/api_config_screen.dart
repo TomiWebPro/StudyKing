@@ -210,9 +210,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       }
     } catch (e) {
       if (!mounted) return;
+      _logger.e('Connection test failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(l10n.connectionFailed(e.toString())),
+          content: Text(l10n.connectionFailed(l10n.somethingWentWrong)),
           backgroundColor: errorColor,
         ),
       );

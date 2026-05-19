@@ -91,7 +91,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       _tutorService = ref.read(tutorServiceProvider);
     }
 
-    final studentId = StudentIdService().getStudentId();
+    final studentId = ref.read(studentIdServiceProvider).getStudentId();
     final agent = ref.read(llmAgentProvider(studentId));
     _tutorService.llmAgent = agent;
 
@@ -99,7 +99,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       final prereqCheck = PrerequisiteCheckService();
       final prereqResult = await prereqCheck.checkPrerequisites(
         topicId: widget.topicId,
-        studentId: StudentIdService().getStudentId(),
+        studentId: studentId,
       );
       if (prereqResult.isSuccess &&
           !prereqResult.data!.isReady &&
@@ -145,9 +145,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       });
 
       if (mounted) {
+        final settings = ref.read(settingsProvider);
         setState(() {
           _manager = manager;
           _manager!.enableVoiceOutput = _voiceOutputEnabled;
+          _manager!.reduceMotion = settings.reduceMotion;
           _isInitialized = true;
           _initError = false;
         });
@@ -451,7 +453,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                     _startFocusModePractice();
                   },
                   icon: const Icon(Icons.timer, size: 18),
-                  label: Text('${l10n.quickPractice} (Focus)'),
+                  label: Text('${l10n.quickPractice} ${l10n.focusTimerLabel}'),
                 ),
               ),
               const SizedBox(height: 8),

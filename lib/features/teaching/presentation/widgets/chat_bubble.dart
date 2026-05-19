@@ -223,7 +223,8 @@ class ChatBubble extends StatelessWidget {
       );
     } catch (e) {
       _logger.e('Failed to build evaluation content', e);
-      return Text(content);
+      final l10n = AppLocalizations.of(context)!;
+      return Text(l10n.unableToDisplayEvaluation);
     }
   }
 }

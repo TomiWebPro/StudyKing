@@ -9,6 +9,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class LessonAgentService {
@@ -121,7 +122,7 @@ class LessonAgentService {
     LessonBlockType? currentType;
 
     for (final line in lines) {
-      final trimmed = line.trim().toLowerCase();
+      final trimmed = line.normalized;
       if (trimmed.startsWith('#slide') || trimmed.startsWith('slide:')) {
         if (currentType != null && buffer.isNotEmpty) {
           blocks.add(LessonBlock(

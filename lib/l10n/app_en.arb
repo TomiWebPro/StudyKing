@@ -3365,6 +3365,30 @@
   "@comprehensiveReportExported": {
     "description": "Snackbar when comprehensive report is exported"
   },
+  "exportCsvDetail": "CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges.",
+  "@exportCsvDetail": {
+    "description": "Detail description for CSV export confirmation dialog"
+  },
+  "exportPdfDetail": "PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing.",
+  "@exportPdfDetail": {
+    "description": "Detail description for PDF export confirmation dialog"
+  },
+  "exportJsonDetail": "JSON: structured data export for programmatic analysis.",
+  "@exportJsonDetail": {
+    "description": "Detail description for JSON export confirmation dialog"
+  },
+  "exportProgressCsvDetail": "Stats CSV: summary statistics and progress overview (lighter than full CSV).",
+  "@exportProgressCsvDetail": {
+    "description": "Detail description for progress CSV export confirmation dialog"
+  },
+  "exportInstrumentationDetail": "Progress Analytics: plan adherence and mastery improvement metrics for analysis.",
+  "@exportInstrumentationDetail": {
+    "description": "Detail description for instrumentation export confirmation dialog"
+  },
+  "backupRestoreHint": "For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore.",
+  "@backupRestoreHint": {
+    "description": "Hint text suggesting to use Settings for full data backup"
+  },
   "activeRoadmaps": "Active Roadmaps",
   "@activeRoadmaps": {
     "description": "Label for active roadmaps count"
@@ -4252,6 +4276,23 @@
   "notifChannelBadgesDesc": "Notifications about earned badges and achievements",
   "@notifChannelBadgesDesc": {
     "description": "Description of the badge notifications channel"
+  },
+  "notifChannelMentor": "Mentor Messages",
+  "@notifChannelMentor": {
+    "description": "Notification channel name for mentor messages"
+  },
+  "notifChannelMentorDesc": "Proactive mentor check-ins and nudges",
+  "@notifChannelMentorDesc": {
+    "description": "Description of the mentor messages channel"
+  },
+  "lessonReadyBody": "{topicTitle} has a lesson ready",
+  "@lessonReadyBody": {
+    "description": "Notification body when a lesson is ready",
+    "placeholders": {
+      "topicTitle": {
+        "type": "String"
+      }
+    }
   },
   "planAccuracyLow": "Accuracy is below 60% — needs focused practice",
   "@planAccuracyLow": {
@@ -5387,7 +5428,7 @@
       }
     }
   },
-  "lessonTimeStatus": "{topicId} · {time}{completedSuffix}",
+  "lessonTimeStatus": "{topicId}, {time}{completedSuffix}",
   "@lessonTimeStatus": {
     "description": "Lesson time status with topic and completion marker",
     "placeholders": {
@@ -5536,6 +5577,116 @@
   "backupBoxProfile": "Profile",
   "@backupBoxProfile": {
     "description": "Backup box display name for profile"
+  },
+  "backupBoxAnswers": "Answers",
+  "@backupBoxAnswers": {
+    "description": "Backup box display name for answers"
+  },
+  "backupBoxAttempts": "Attempts",
+  "@backupBoxAttempts": {
+    "description": "Backup box display name for attempts"
+  },
+  "backupBoxBadges": "Badges",
+  "@backupBoxBadges": {
+    "description": "Backup box display name for badges"
+  },
+  "backupBoxEngagementNudges": "Engagement Nudges",
+  "@backupBoxEngagementNudges": {
+    "description": "Backup box display name for engagement nudges"
+  },
+  "backupBoxFocusSessions": "Focus Sessions",
+  "@backupBoxFocusSessions": {
+    "description": "Backup box display name for focus sessions"
+  },
+  "backupBoxPendingActions": "Pending Actions",
+  "@backupBoxPendingActions": {
+    "description": "Backup box display name for pending actions"
+  },
+  "backupBoxProgress": "Progress",
+  "@backupBoxProgress": {
+    "description": "Backup box display name for progress"
+  },
+  "backupBoxTasks": "Tasks",
+  "@backupBoxTasks": {
+    "description": "Backup box display name for tasks"
+  },
+  "backupBoxStudentAvailability": "Student Availability",
+  "@backupBoxStudentAvailability": {
+    "description": "Backup box display name for student availability"
+  },
+  "backupBoxRoadmaps": "Roadmaps",
+  "@backupBoxRoadmaps": {
+    "description": "Backup box display name for roadmaps"
+  },
+  "backupBoxLlmTasks": "LLM Tasks",
+  "@backupBoxLlmTasks": {
+    "description": "Backup box display name for LLM tasks"
+  },
+  "backupBoxLlmUsageRecords": "LLM Usage Records",
+  "@backupBoxLlmUsageRecords": {
+    "description": "Backup box display name for LLM usage records"
+  },
+  "apiKeyPlaintextWarning": "Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.",
+  "@apiKeyPlaintextWarning": {
+    "description": "Warning when exporting backup with sensitive data included"
+  },
+  "boxCountLabel": "{count,plural, =1{1 box} other{{count} boxes}}",
+  "@boxCountLabel": {
+    "description": "Count of boxes in backup summary",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "andMoreCount": "... and {count,plural, =1{1 more} other{{count} more}}",
+  "@andMoreCount": {
+    "description": "Truncated list indicator showing additional items",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "signOutClearList": "What will be cleared:",
+  "@signOutClearList": {
+    "description": "Header for list of items cleared on sign out"
+  },
+  "signOutClearsApiKey": "API key",
+  "@signOutClearsApiKey": {
+    "description": "Item in sign-out clear list: API key"
+  },
+  "signOutClearsAiModel": "Selected AI model",
+  "@signOutClearsAiModel": {
+    "description": "Item in sign-out clear list: AI model selection"
+  },
+  "signOutPreservesStudyData": "Your study data will be preserved.",
+  "@signOutPreservesStudyData": {
+    "description": "Reassurance that study data is not deleted on sign out"
+  },
+  "importRestartHint": "A restart may be needed for all changes to appear.",
+  "@importRestartHint": {
+    "description": "Hint shown after successful data import"
+  },
+  "studentIdMismatchTitle": "Student ID mismatch detected",
+  "@studentIdMismatchTitle": {
+    "description": "Title for student ID mismatch dialog"
+  },
+  "studentIdMismatchBody": "Current: {currentId}\nBackup: {backupId}",
+  "@studentIdMismatchBody": {
+    "description": "Body showing current and backup student IDs",
+    "placeholders": {
+      "currentId": {
+        "type": "String"
+      },
+      "backupId": {
+        "type": "String"
+      }
+    }
+  },
+  "studentIdMismatchAction": "Update student records to match current ID?",
+  "@studentIdMismatchAction": {
+    "description": "Question to reconcile student ID mismatch"
   },
   "questionsCountPlural": "{count,plural, =0{No questions available} =1{1 question available} other{{count} questions available}}",
   "@questionsCountPlural": {
@@ -6052,7 +6203,7 @@
   "@explanation": {
     "description": "Label for explanation input field"
   },
-  "sourcesCountLabel": "{count, plural, =1{1 Source} other{{count} Source(s)}}",
+  "sourcesCountLabel": "{count, plural, =1{1 Source} other{{count} Sources}}",
   "@sourcesCountLabel": {
     "description": "Label showing number of sources with capital S",
     "placeholders": {
@@ -6499,14 +6650,14 @@
   "@dependenciesNav": {
     "description": "Popup menu item for topic dependencies"
   },
-  "prerequisitesCount": "{count} prerequisites",
+  "prerequisitesCount": "{count, plural, =1{1 prerequisite} other{{count} prerequisites}}",
   "@prerequisitesCount": {
     "description": "Label showing prerequisite count",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "downstreamCount": "{count} downstream",
+  "downstreamCount": "{count, plural, =1{1 downstream} other{{count} downstream}}",
   "@downstreamCount": {
     "description": "Label showing downstream topic count",
     "placeholders": {
@@ -6521,7 +6672,7 @@
   "@addTopicTooltip": {
     "description": "Tooltip for add topic button"
   },
-   "downstreamTopicWarning": "⚠ {count} downstream topic(s) depend on this topic and may need to be updated.",
+   "downstreamTopicWarning": "⚠ {count, plural, =1{1 downstream topic depends} other{{count} downstream topics depend}} on this topic and may need to be updated.",
    "@downstreamTopicWarning": {
      "description": "Warning about downstream dependencies when deleting a topic",
      "placeholders": {
@@ -6679,5 +6830,225 @@
     "mentorCheckIn": "Mentor Check-In",
     "@mentorCheckIn": {
       "description": "Title for mentor check-in notification"
+    },
+    "nextUp": "Next Up",
+    "@nextUp": {
+      "description": "Dashboard card title for next upcoming items"
+    },
+    "scheduledLesson": "Scheduled lesson",
+    "@scheduledLesson": {
+      "description": "Fallback text for a scheduled lesson with no topic title"
+    },
+    "upcomingLessonsCount": "{count,plural, =1{1 upcoming lesson} other{{count} upcoming lessons}}",
+    "@upcomingLessonsCount": {
+      "description": "Number of upcoming lessons",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "reviewsDueCount": "{count,plural, =1{1 review due} other{{count} reviews due}}",
+    "@reviewsDueCount": {
+      "description": "Number of reviews due for spaced repetition",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "dueForReviewSubtitle": "Due for spaced repetition review",
+    "@dueForReviewSubtitle": {
+      "description": "Subtitle for due review items"
+    },
+    "weakTopicsCount": "{count,plural, =1{1 weak topic} other{{count} weak topics}}",
+    "@weakTopicsCount": {
+      "description": "Number of weak topics needing practice",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "practiceWeakAreas": "Practice weak areas",
+    "@practiceWeakAreas": {
+      "description": "Subtitle for practicing weak topic areas"
+    },
+    "lessonsCount": "{count,plural, =1{~{count} lesson} other{~{count} lessons}}",
+    "@lessonsCount": {
+      "description": "Number of estimated lessons remaining with tilde prefix",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "topicsNeedAttention": "{count,plural, =1{1 topic needs attention} other{{count} topics need attention}}",
+    "@topicsNeedAttention": {
+      "description": "Number of topics that need attention in workload card",
+      "placeholders": {
+        "count": { "type": "int" }
+      }
+    },
+    "voiceInput": "Voice input",
+    "@voiceInput": {
+      "description": "Tooltip for voice input button when idle"
+    },
+    "stopRecording": "Stop recording",
+    "@stopRecording": {
+      "description": "Tooltip for voice input button when recording"
+    },
+    "incorrectAnswer": "Incorrect answer",
+    "@incorrectAnswer": {
+      "description": "Feedback shown when quiz answer is incorrect"
+    },
+    "loadingWithEllipsis": "Loading...",
+    "@loadingWithEllipsis": {
+      "description": "Accessible label for shimmer loading state"
+    },
+    "exportReports": "Export Reports",
+    "@exportReports": {
+      "description": "Semantic tooltip for export reports action"
+    },
+    "backupAndRestore": "Backup & Restore",
+    "@backupAndRestore": {
+      "description": "Semantic tooltip for backup and restore action"
+    },
+    "whileYouWereAway": "--- While you were away ---",
+    "@whileYouWereAway": {
+      "description": "Section header for mentor messages received while away"
+    },
+    "endOfPendingMessages": "--- End of pending messages ---",
+    "@endOfPendingMessages": {
+      "description": "Section footer for end of pending mentor messages"
+    },
+    "lessonPractice": "Lesson Practice",
+    "@lessonPractice": {
+      "description": "Label shown during focus mode indicating lesson practice"
+    },
+    "lessonPracticeWithTopic": "Lesson Practice: {topic}",
+    "pageIndicator": "{current} / {total}",
+    "@pageIndicator": {
+      "description": "Page number indicator showing current page out of total",
+      "placeholders": {
+        "current": {
+          "type": "int"
+        },
+        "total": {
+          "type": "int"
+        }
+      }
+    },
+    "@lessonPracticeWithTopic": {
+      "description": "Label shown during focus mode with topic name",
+      "placeholders": {
+        "topic": {
+          "type": "String"
+        }
+      }
+    },
+    "mentorMessages": "Mentor Messages",
+    "@mentorMessages": {
+      "description": "Notification channel name for mentor messages"
+    },
+    "readyToContinueLearning": "Ready to continue learning?",
+    "@readyToContinueLearning": {
+      "description": "Notification text to nudge the student to resume learning"
+    },
+    "readAloud": "Read aloud",
+    "@readAloud": {
+      "description": "Tooltip for read aloud button on tutor messages"
+    },
+    "uploadFile": "Upload file",
+    "@uploadFile": {
+      "description": "Label for upload file button in question card"
+    },
+    "recordAudio": "Record audio",
+    "@recordAudio": {
+      "description": "Label for record audio button in question card"
+    },
+    "fileAttached": "File attached",
+    "@fileAttached": {
+      "description": "Label shown when a file is attached to a question"
+    },
+    "recordingComplete": "Recording complete",
+    "@recordingComplete": {
+      "description": "Label shown when audio recording is complete"
+    },
+    "startRecording": "Start recording",
+    "@startRecording": {
+      "description": "Label for starting audio recording"
+    },
+    "graphCanvas": "Graph canvas",
+    "@graphCanvas": {
+      "description": "Accessibility label for graph drawing canvas"
+    },
+    "drawYourGraphHere": "Draw your graph here",
+    "@drawYourGraphHere": {
+      "description": "Hint text for graph drawing area"
+    },
+    "strokesCountPoints": "{strokes} strokes, {points} points",
+    "@strokesCountPoints": {
+      "description": "Count of strokes and points in drawing",
+      "placeholders": {
+        "strokes": { "type": "int" },
+        "points": { "type": "int" }
+      }
+    },
+    "toolFreehand": "Freehand",
+    "@toolFreehand": {
+      "description": "Tool name for freehand drawing tool"
+    },
+    "toolLine": "Line",
+    "@toolLine": {
+      "description": "Tool name for line drawing tool"
+    },
+    "toolRectangle": "Rectangle",
+    "@toolRectangle": {
+      "description": "Tool name for rectangle drawing tool"
+    },
+    "toolCircle": "Circle",
+    "@toolCircle": {
+      "description": "Tool name for circle drawing tool"
+    },
+    "toolText": "Text",
+    "@toolText": {
+      "description": "Tool name for text drawing tool"
+    },
+    "toolPlotPoint": "Plot Point",
+    "@toolPlotPoint": {
+      "description": "Tool name for plot point drawing tool"
+    },
+    "failedToLoadPlan": "Failed to load study plan",
+    "@failedToLoadPlan": {
+      "description": "User-facing error message when plan fails to load"
+    },
+    "unableToDisplayEvaluation": "Unable to display evaluation result",
+    "@unableToDisplayEvaluation": {
+      "description": "Fallback message when evaluation JSON cannot be parsed"
+    },
+    "micPermissionDenied": "Microphone access denied. Please enable it in Settings to use voice input.",
+    "@micPermissionDenied": {
+      "description": "Snackbar message when microphone permission is denied"
+    },
+    "scheduleLesson": "Schedule a Lesson",
+    "@scheduleLesson": {
+      "description": "Action button to schedule a lesson"
+    },
+    "focusTimerLabel": "(Focus)",
+    "@focusTimerLabel": {
+      "description": "Label appended to subject name in focus timer title"
+    },
+    "voiceListeningHint": "Listening. Speak now.",
+    "@voiceListeningHint": {
+      "description": "Semantics label for voice bar when actively listening"
+    },
+    "boldText": "Bold Text",
+    "@boldText": {
+      "description": "Accessibility setting: bold font weight toggle label"
+    },
+    "boldTextDescription": "Use bold font weight for text throughout the app",
+    "@boldTextDescription": {
+      "description": "Description for bold text accessibility setting"
+    },
+    "voiceInputNotAvailable": "Voice input not available",
+    "@voiceInputNotAvailable": {
+      "description": "Tooltip for voice input button when speech recognition is unavailable"
+    },
+    "microphonePermissionRequired": "Microphone Permission Required",
+    "@microphonePermissionRequired": {
+      "description": "Dialog title when microphone permission is needed"
     }
   }

@@ -71,40 +71,42 @@ class CollapsibleCard extends ConsumerWidget {
     return Card(
       child: Column(
         children: [
-          Semantics(
-            button: true,
-            expanded: !isCollapsed,
-            hint: isCollapsed
-                ? AppLocalizations.of(context)!.tapToExpand
-                : AppLocalizations.of(context)!.tapToCollapse,
-            child: InkWell(
-              onTap: () =>
-                  ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
-              child: Padding(
-                padding: EdgeInsetsDirectional.only(
-                  start: ResponsiveUtils.cardPadding(context).left,
-                  end: ResponsiveUtils.cardPadding(context).right,
-                  top: 12,
-                  bottom: 12,
-                ),
-                child: Row(
-                  children: [
-                    Expanded(child: title),
-                    IconButton(
-                      icon: Icon(
-                        isCollapsed ? Icons.expand_more : Icons.expand_less,
-                        size: 20,
-                      ),
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      tooltip: isCollapsed
-                          ? AppLocalizations.of(context)!.tapToExpand
-                          : AppLocalizations.of(context)!.tapToCollapse,
-                      onPressed: () =>
+          Padding(
+            padding: EdgeInsetsDirectional.only(
+              start: ResponsiveUtils.cardPadding(context).left,
+              end: ResponsiveUtils.cardPadding(context).right,
+              top: 12,
+              bottom: 12,
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Semantics(
+                    button: true,
+                    expanded: !isCollapsed,
+                    hint: isCollapsed
+                        ? AppLocalizations.of(context)!.tapToExpand
+                        : AppLocalizations.of(context)!.tapToCollapse,
+                    child: InkWell(
+                      onTap: () =>
                           ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
+                      child: title,
                     ),
-                  ],
+                  ),
                 ),
-              ),
+                IconButton(
+                  icon: Icon(
+                    isCollapsed ? Icons.expand_more : Icons.expand_less,
+                    size: 20,
+                  ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  tooltip: isCollapsed
+                      ? AppLocalizations.of(context)!.tapToExpand
+                      : AppLocalizations.of(context)!.tapToCollapse,
+                  onPressed: () =>
+                      ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
+                ),
+              ],
             ),
           ),
           if (reduceMotion)

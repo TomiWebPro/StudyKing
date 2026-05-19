@@ -230,6 +230,51 @@ void main() {
     });
   });
 
+  group('error handling', () {
+    test('getPending returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final result = await repo.getPending('test');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('create returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final action = createTestAction();
+      final result = await repo.create(action);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('markCompleted returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final result = await repo.markCompleted('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('markRejected returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final result = await repo.markRejected('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('clearAll returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final result = await repo.clearAll('test');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('hasPending returns failure when box throws', () async {
+      final repo = PendingActionRepository();
+      repo.attachBox(_ThrowingPendingActionBox());
+      final result = await repo.hasPending('test');
+      expect(result.isFailure, isTrue);
+    });
+  });
+
   group('PendingActionRepository (init with real Hive)', () {
     late PendingActionRepository repository;
     late String hivePath;
@@ -299,6 +344,13 @@ void main() {
       expect((await repository.hasPending('s1')).data, isFalse);
     });
   });
+}
+
+class _ThrowingPendingActionBox implements Box<PendingActionModel> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Simulated Hive error');
+  }
 }
 
 class _TestPendingActionAdapter extends TypeAdapter<PendingActionModel> {

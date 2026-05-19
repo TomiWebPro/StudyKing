@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 @HiveType(typeId: 12)
 class Markscheme extends HiveObject {
@@ -51,13 +52,13 @@ class Markscheme extends HiveObject {
   );
 
   bool isMatch(String userAnswer) {
-    final normalizedAnswer = userAnswer.trim().toLowerCase();
-    final normalizedCorrect = correctAnswer.trim().toLowerCase();
+    final normalizedAnswer = userAnswer.normalized;
+    final normalizedCorrect = correctAnswer.normalized;
     if (normalizedAnswer == normalizedCorrect || normalizedAnswer.contains(normalizedCorrect)) {
       return true;
     }
     for (final acceptable in acceptableAnswers) {
-      if (normalizedAnswer == acceptable.trim().toLowerCase()) {
+      if (normalizedAnswer == acceptable.normalized) {
         return true;
       }
     }

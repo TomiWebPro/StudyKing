@@ -262,7 +262,9 @@ class TutorService {
         () async {
           try {
             await _planOrchestrator.checkAdherence(session.studentId);
-          } catch (_) {}
+          } catch (e) {
+            _logger.e('Post-lesson adherence update failed', e);
+          }
         },
       );
       _llmAgent!.enqueueBackgroundTask(
@@ -270,7 +272,9 @@ class TutorService {
         () async {
           try {
             await _masteryService.getWeakTopics(session.studentId);
-          } catch (_) {}
+          } catch (e) {
+            _logger.e('Post-lesson weak topic reanalysis failed', e);
+          }
         },
       );
       _llmAgent!.enqueueBackgroundTask(
@@ -302,7 +306,9 @@ class TutorService {
               await _lessonRepository.init();
               await _lessonRepository.create(lesson);
             }
-          } catch (_) {}
+          } catch (e) {
+            _logger.e('Next topic lesson prep failed', e);
+          }
         },
       );
     }

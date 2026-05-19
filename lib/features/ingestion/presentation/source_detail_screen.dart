@@ -16,6 +16,7 @@ import 'package:studyking/features/subjects/data/repositories/subject_repository
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SourceDetailScreen extends ConsumerStatefulWidget {
@@ -124,7 +125,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       }
     } catch (e) {
       _logger.e('_load failed', e);
-      if (mounted) setState(() { _error = e.toString(); _isLoading = false; });
+      if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
     }
   }
 
@@ -188,8 +189,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
+        _logger.e('Reprocess failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorWithMessage(e.toString()))),
+          SnackBar(content: Text(l10n.somethingWentWrong)),
         );
       }
     } finally {
@@ -253,13 +255,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.sourceDetail)),
         body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(_error ?? l10n.sourceNotFound, style: TextStyle(color: theme.colorScheme.error)),
-              const SizedBox(height: 16),
-              ElevatedButton(onPressed: _load, child: Text(l10n.retry)),
-            ],
+          child: ErrorRetryWidget(
+            message: _error ?? l10n.sourceNotFound,
+            onRetry: _load,
           ),
         ),
       );
@@ -316,10 +314,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _InfoRow(label: l10n.status, value: _processingStatusLabel(status, l10n)),
+                  _InfoRow(label: l10n.status, value: processingStatusLabel(status, l10n)),
                   if (subjectName.isNotEmpty)
                     _InfoRow(label: l10n.subject, value: subjectName),
-                  _InfoRow(label: l10n.type, value: _sourceTypeLabel(source.type, l10n)),
+                  _InfoRow(label: l10n.type, value: sourceTypeLabel(source.type, l10n)),
                   _InfoRow(label: l10n.id, value: source.id),
                   if (source.createdAt != null)
                     _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
@@ -454,7 +452,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                               child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
                             ),
                             title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
+                            subtitle: Text(l10n.questionSubtitle(questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
                             trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                             onTap: () {
                               Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
@@ -597,71 +595,4 @@ class _SectionHeader extends StatelessWidget {
   }
 }
 
-String _questionTypeLabel(QuestionType type, AppLocalizations l10n) {
-  switch (type) {
-    case QuestionType.singleChoice:
-      return l10n.multipleChoice;
-    case QuestionType.multiChoice:
-      return l10n.multipleSelect;
-    case QuestionType.typedAnswer:
-      return l10n.textAnswer;
-    case QuestionType.canvas:
-      return l10n.canvas;
-    case QuestionType.essay:
-      return l10n.essay;
-    case QuestionType.stepByStep:
-      return l10n.stepByStep;
-    case QuestionType.mathExpression:
-      return l10n.math;
-    case QuestionType.graphDrawing:
-      return l10n.graphDrawing;
-    case QuestionType.fileUpload:
-      return l10n.fileUpload;
-    case QuestionType.audioRecording:
-      return l10n.audioRecording;
-  }
-}
 
-String _processingStatusLabel(ProcessingStatus status, AppLocalizations l10n) {
-  switch (status) {
-    case ProcessingStatus.pending:
-      return l10n.pending;
-    case ProcessingStatus.extracting:
-      return l10n.extracting;
-    case ProcessingStatus.classifying:
-      return l10n.processing;
-    case ProcessingStatus.generatingQuestions:
-      return l10n.generatingQuestions;
-    case ProcessingStatus.validating:
-      return l10n.validating;
-    case ProcessingStatus.completed:
-      return l10n.completed;
-    case ProcessingStatus.failed:
-      return l10n.failed;
-  }
-}
-
-String _sourceTypeLabel(SourceType type, AppLocalizations l10n) {
-  switch (type) {
-    case SourceType.pdf:
-      return l10n.pdfLabel;
-    case SourceType.syllabus:
-      return l10n.syllabusLabel;
-    case SourceType.textbook:
-      return l10n.textbookLabel;
-    case SourceType.video:
-      return l10n.videoLabel;
-    case SourceType.lectureNotes:
-      return l10n.lectureNotesLabel;
-    case SourceType.externalResource:
-      return l10n.externalResourceLabel;
-    case SourceType.image:
-      return l10n.imageLabel;
-    case SourceType.webPage:
-      return l10n.webPageLabel;
-    case SourceType.audio:
-      return l10n.audioLabel;
-    case SourceType.document:
-      return l10n.documentLabel;
-  }
-}

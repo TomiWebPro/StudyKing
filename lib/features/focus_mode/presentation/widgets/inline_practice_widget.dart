@@ -148,7 +148,9 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
           confidence: 3,
           userAnswer: _currentAnswer ?? '',
         );
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to record attempt in inline practice', e);
+      }
     }
 
     if (_currentIndex + 1 >= _questions.length) {
@@ -177,7 +179,6 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
     }
 
     setState(() => _isComplete = true);
-    widget.onComplete(_correctCount, _questions.length, perSubjectAccuracies);
   }
 
   @override
@@ -236,7 +237,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
               ],
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: () {},
+                onPressed: () => widget.onComplete(_correctCount, _questions.length, _perSubjectAccuracies),
                 child: Text(l10n.close),
               ),
             ],

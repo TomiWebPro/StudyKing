@@ -13,6 +13,8 @@ class VoiceService {
       StreamController<String>.broadcast();
   final StreamController<bool> _listeningStateController =
       StreamController<bool>.broadcast();
+  final StreamController<String?> _errorController =
+      StreamController<String?>.broadcast();
 
   stt.SpeechToText? _speech;
   FlutterTts? _tts;
@@ -23,6 +25,7 @@ class VoiceService {
 
   Stream<String> get transcribedText => _transcriptionController.stream;
   Stream<bool> get listeningState => _listeningStateController.stream;
+  Stream<String?> get lastError => _errorController.stream;
   bool get isListening => _isListening;
   bool get isSpeaking => _isSpeaking;
   bool get isAvailable => _isAvailable;
@@ -56,6 +59,7 @@ class VoiceService {
       final available = await _speech!.initialize(
         onError: (error) {
           _isAvailable = false;
+          _errorController.add('Speech recognition error: $error');
         },
         onStatus: (status) {
           if (status == 'notListening' || status == 'done') {
@@ -65,27 +69,49 @@ class VoiceService {
         },
       );
       _isAvailable = available;
+      if (!available) {
+        _errorController.add('Microphone permission is required.');
+      }
     } catch (e) {
       _logger.w('Failed to check speech availability', e);
+      _errorController.add('Failed to initialize speech recognition: $e');
       _isAvailable = false;
     }
   }
 
   Future<bool> requestPermission() async {
-    if (_speech == null) return false;
+    if (_speech == null) {
+      _errorController.add('Speech engine not available');
+      return false;
+    }
     try {
       final hasPermission = await _speech!.initialize();
       _isAvailable = hasPermission;
+      if (!hasPermission) {
+        _errorController.add('Microphone permission denied. Grant access in Settings.');
+      }
       return hasPermission;
     } catch (e) {
       _logger.w('Failed to request speech permission', e);
+      _errorController.add('Failed to request microphone permission: $e');
       return false;
     }
   }
 
   Future<void> startListening({String? localeName}) async {
-    if (_speech == null || !_isAvailable) return;
+    if (_speech == null) {
+      _errorController.add('Speech engine not available');
+      return;
+    }
+    if (!_isAvailable) {
+      _errorController.add('Microphone permission is required. Please grant access.');
+      return;
+    }
     if (_isListening) return;
+
+    if (_isSpeaking) {
+      await stopSpeaking();
+    }
 
     try {
       await _speech!.listen(
@@ -105,6 +131,7 @@ class VoiceService {
       _listeningStateController.add(true);
     } catch (e) {
       _logger.w('Failed to start listening', e);
+      _errorController.add('Failed to start listening: $e');
       _isListening = false;
       _listeningStateController.add(false);
     }
@@ -159,6 +186,12 @@ class VoiceService {
   Future<void> speak(String text, {String? localeName}) async {
     if (_tts == null) return;
     if (text.isEmpty) return;
+
+    if (_isListening) {
+      _logger.w('TTS blocked: voice input is active');
+      return;
+    }
+
     _isSpeaking = true;
     try {
       await _tts!.setLanguage(_localeForTts(localeName));
@@ -188,11 +221,16 @@ class VoiceService {
     _isSpeaking = false;
   }
 
+  Future<void> stopAll() async {
+    await stopListening();
+    await stopSpeaking();
+  }
+
   void dispose() {
-    stopListening();
-    stopSpeaking();
+    stopAll();
     _transcriptionController.close();
     _listeningStateController.close();
+    _errorController.close();
   }
 }
 

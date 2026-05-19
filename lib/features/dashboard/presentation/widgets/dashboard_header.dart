@@ -14,16 +14,19 @@ class DashboardHeader extends StatelessWidget {
       children: [
         Icon(Icons.dashboard, color: Theme.of(context).colorScheme.primary),
         const SizedBox(width: 8),
-        Semantics(
-          headingLevel: 1,
-          child: Text(
-            l10n.studyDashboard,
-            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.bold,
+        Expanded(
+          child: Semantics(
+            headingLevel: 1,
+            child: Text(
+              l10n.studyDashboard,
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.bold,
+              ),
+              overflow: TextOverflow.ellipsis,
             ),
           ),
         ),
-        const Spacer(),
+        const SizedBox(width: 8),
         Semantics(
           button: true,
           label: l10n.exportReports,

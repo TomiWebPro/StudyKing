@@ -6,6 +6,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/errors/spaced_repetition_error_codes.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 /// Tolerance window used for strict "due" checks (not for session selection).
@@ -101,12 +102,12 @@ class SpacedRepetitionService {
   Future<Result<List<Question>>> getQuestionsDue({DateTime? asOf}) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('box_closed');
+        return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
       final dueQuestions = getQuestionsDueForReview(asOf: asOf);
       return Result.success(dueQuestions);
     } catch (e) {
-      _logger.w('Error getting due questions', e);
+      _logger.e('Error getting due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -121,7 +122,7 @@ class SpacedRepetitionService {
       final questionResult = await _questionRepo.get(questionId);
       final question = questionResult.data;
       if (question == null) {
-        return Result.failure('not_found');
+        return Result.failure(SpacedRepetitionErrorCode.notFound.name);
       }
 
       final grade = _masteryLevelToGrade(masteryLevel);
@@ -141,7 +142,7 @@ class SpacedRepetitionService {
 
       return Result.success(null);
     } catch (e) {
-      _logger.w('Error updating next review date', e);
+      _logger.e('Error updating next review date', e);
       return Result.failure(e.toString());
     }
   }
@@ -169,7 +170,7 @@ class SpacedRepetitionService {
             : null,
       );
     } catch (e) {
-      _logger.w('Error deserializing SR data', e);
+      _logger.e('Error deserializing SR data', e);
       return const QuestionSRData();
     }
   }
@@ -190,7 +191,7 @@ class SpacedRepetitionService {
       final attemptResult = await _attemptRepo.get(questionId);
       final attempt = attemptResult.data;
       if (attempt == null) {
-        return Result.failure('not_found');
+        return Result.failure(SpacedRepetitionErrorCode.notFound.name);
       }
 
       final timestamps = attempt.lastDueDate != null
@@ -199,7 +200,7 @@ class SpacedRepetitionService {
 
       return Result.success(timestamps);
     } catch (e) {
-      _logger.w('Error getting question due times', e);
+      _logger.e('Error getting question due times', e);
       return Result.failure(e.toString());
     }
   }
@@ -209,7 +210,7 @@ class SpacedRepetitionService {
       String subjectId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('box_closed');
+        return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
 
       final all = _questionRepo.box.values.toList();
@@ -219,7 +220,7 @@ class SpacedRepetitionService {
 
       return Result.success(practiceQuestions.toList());
     } catch (e) {
-      _logger.w('Error getting practice questions', e);
+      _logger.e('Error getting practice questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -228,7 +229,7 @@ class SpacedRepetitionService {
   Future<Result<List<Question>>> getTopicTimeDue(String topicId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('box_closed');
+        return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
 
       final all = _questionRepo.box.values.toList();
@@ -236,7 +237,7 @@ class SpacedRepetitionService {
 
       return Result.success(topicQuestions.toList());
     } catch (e) {
-      _logger.w('Error getting topic time due questions', e);
+      _logger.e('Error getting topic time due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -247,7 +248,7 @@ class SpacedRepetitionService {
       await _questionRepo.delete(questionId);
       return Result.success(null);
     } catch (e) {
-      _logger.w('Error removing question', e);
+      _logger.e('Error removing question', e);
       return Result.failure(e.toString());
     }
   }
@@ -256,7 +257,7 @@ class SpacedRepetitionService {
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
     try {
       if (!_questionRepo.box.isOpen) {
-        return Result.failure('box_closed');
+        return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
 
       final all = _questionRepo.box.values.toList();
@@ -268,7 +269,7 @@ class SpacedRepetitionService {
 
       return Result.success(dueCount);
     } catch (e) {
-      _logger.w('Error getting subject due count', e);
+      _logger.e('Error getting subject due count', e);
       return Result.failure(e.toString());
     }
   }

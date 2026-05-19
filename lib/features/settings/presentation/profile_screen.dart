@@ -90,7 +90,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = e.toString();
+          _error = AppLocalizations.of(context)!.somethingWentWrong;
         });
       }
     }
@@ -150,8 +150,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
+        _logger.e('Error saving profile', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorSavingProfile(e.toString()))),
+          SnackBar(content: Text(l10n.somethingWentWrong)),
         );
       }
     } finally {
@@ -299,6 +300,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    ref.watch(localeProvider);
     final l10n = AppLocalizations.of(context)!;
 
     if (_isLoading) {

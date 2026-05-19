@@ -492,7 +492,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                         const SizedBox(width: 4),
                         Flexible(
                           child: Text(
-                            'Lesson Practice${widget.preselectedTopicId != null ? ": ${widget.preselectedTopicId}" : ""}',
+                            widget.preselectedTopicId != null
+                                ? l10n.lessonPracticeWithTopic(widget.preselectedTopicId!)
+                                : l10n.lessonPractice,
                             style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: cs.onPrimaryContainer,
                             ),

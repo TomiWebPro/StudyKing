@@ -385,6 +385,14 @@ void main() {
         expect(result.isSuccess, true);
         expect(result.data, isEmpty);
       });
+
+      test('returns all when fewer than limit with sessionId filter', () async {
+        await repository.saveMessage(createMessage(id: 'm1', sessionId: 's1'));
+        await repository.saveMessage(createMessage(id: 'm2', sessionId: 's1'));
+        final result = await repository.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(result.isSuccess, true);
+        expect(result.data!.length, 2);
+      });
     });
 
     group('clearAll', () {
@@ -638,6 +646,14 @@ void main() {
         final result = await hiveRepo.getRecentMessages(limit: 0);
         expect(result.isSuccess, true);
         expect(result.data, isEmpty);
+      });
+
+      test('returns all when fewer than limit with sessionId filter', () async {
+        await hiveRepo.saveMessage(hiveMsg(id: 'm1', sessionId: 's1'));
+        await hiveRepo.saveMessage(hiveMsg(id: 'm2', sessionId: 's1'));
+        final result = await hiveRepo.getRecentMessages(limit: 10, sessionId: 's1');
+        expect(result.isSuccess, true);
+        expect(result.data!.length, 2);
       });
     });
 

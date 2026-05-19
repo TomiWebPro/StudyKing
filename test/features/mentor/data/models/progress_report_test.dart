@@ -238,5 +238,141 @@ void main() {
       expect(report.badges, isEmpty);
       expect(report.recommendations, isEmpty);
     });
+
+    test('accepts multiple weak topics', () {
+      final now = DateTime.now();
+      final weakTopics = [
+        MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now),
+        MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now),
+        MasteryState(studentId: 's1', topicId: 't3', lastAttempt: now, lastUpdated: now),
+      ];
+
+      final report = ProgressReport(
+        totalAttempts: 50, correctAttempts: 25, accuracy: 0.5,
+        topicsStudied: 3, completedLessons: 2, weeklyActivity: 1,
+        totalStudyTimeHours: 10, weakTopics: weakTopics,
+      );
+
+      expect(report.weakTopics, hasLength(3));
+      expect(report.weakTopics[0].topicId, 't1');
+      expect(report.weakTopics[1].topicId, 't2');
+      expect(report.weakTopics[2].topicId, 't3');
+    });
+
+    test('accepts multiple badges and recommendations', () {
+      final badges = [
+        {'name': 'Fast Learner', 'icon': 'star'},
+        {'name': 'Consistent', 'icon': 'fire'},
+        {'name': 'Math Whiz', 'icon': 'trophy'},
+      ];
+      final recommendations = [
+        {'action': 'Review Algebra', 'priority': 'high'},
+        {'action': 'Practice Geometry', 'priority': 'medium'},
+      ];
+
+      final report = ProgressReport(
+        totalAttempts: 300, correctAttempts: 240, accuracy: 0.8,
+        topicsStudied: 10, completedLessons: 20, weeklyActivity: 7,
+        totalStudyTimeHours: 80, badges: badges, recommendations: recommendations,
+      );
+
+      expect(report.badges, hasLength(3));
+      expect(report.badges[0]['name'], 'Fast Learner');
+      expect(report.badges[1]['name'], 'Consistent');
+      expect(report.badges[2]['name'], 'Math Whiz');
+      expect(report.recommendations, hasLength(2));
+      expect(report.recommendations[1]['action'], 'Practice Geometry');
+    });
+
+    test('handles large numeric values', () {
+      final report = ProgressReport(
+        totalAttempts: 999999, correctAttempts: 888888, accuracy: 0.888,
+        topicsStudied: 500, completedLessons: 999, weeklyActivity: 365,
+        totalStudyTimeHours: 8760,
+      );
+
+      expect(report.totalAttempts, 999999);
+      expect(report.correctAttempts, 888888);
+      expect(report.weeklyActivity, 365);
+      expect(report.totalStudyTimeHours, 8760);
+    });
+
+    test('handles fractional accuracy values', () {
+      final report = ProgressReport(
+        totalAttempts: 1000, correctAttempts: 333, accuracy: 0.333,
+        topicsStudied: 10, completedLessons: 5, weeklyActivity: 3,
+        totalStudyTimeHours: 25.75,
+      );
+
+      expect(report.accuracy, closeTo(0.333, 0.001));
+    });
+
+    test('can be constructed with negative values', () {
+      final report = ProgressReport(
+        totalAttempts: -5, correctAttempts: -3, accuracy: -0.5,
+        topicsStudied: -1, completedLessons: -2, weeklyActivity: -1,
+        totalStudyTimeHours: -10,
+      );
+
+      expect(report.totalAttempts, -5);
+      expect(report.accuracy, -0.5);
+    });
+
+    test('handles incorrectAttempts calculation', () {
+      final report = ProgressReport(
+        totalAttempts: 100, correctAttempts: 75, accuracy: 0.75,
+        topicsStudied: 5, completedLessons: 10, weeklyActivity: 7,
+        totalStudyTimeHours: 42.5,
+      );
+
+      final incorrect = report.totalAttempts - report.correctAttempts;
+      expect(incorrect, 25);
+    });
+
+    test('hashCode is stable on same instance', () {
+      final a = ProgressReport(
+        totalAttempts: 10, correctAttempts: 8, accuracy: 0.8,
+        topicsStudied: 2, completedLessons: 4, weeklyActivity: 2,
+        totalStudyTimeHours: 8,
+      );
+
+      expect(a.hashCode, a.hashCode);
+    });
+
+    test('const hashCode is stable', () {
+      const a = ProgressReport(
+        totalAttempts: 10, correctAttempts: 8, accuracy: 0.8,
+        topicsStudied: 2, completedLessons: 4, weeklyActivity: 2,
+        totalStudyTimeHours: 8,
+      );
+
+      expect(a.hashCode, a.hashCode);
+    });
+
+    test('accuracy field stores double precision', () {
+      final report = ProgressReport(
+        totalAttempts: 1, correctAttempts: 1, accuracy: 0.123456789,
+        topicsStudied: 1, completedLessons: 1, weeklyActivity: 1,
+        totalStudyTimeHours: 1,
+      );
+
+      expect(report.accuracy, 0.123456789);
+    });
+
+    test('totalStudyTimeHours accepts num as both int and double', () {
+      const asInt = ProgressReport(
+        totalAttempts: 0, correctAttempts: 0, accuracy: 0,
+        topicsStudied: 0, completedLessons: 0, weeklyActivity: 0,
+        totalStudyTimeHours: 10,
+      );
+      const asDouble = ProgressReport(
+        totalAttempts: 0, correctAttempts: 0, accuracy: 0,
+        topicsStudied: 0, completedLessons: 0, weeklyActivity: 0,
+        totalStudyTimeHours: 10.0,
+      );
+
+      expect(asInt.totalStudyTimeHours.runtimeType, int);
+      expect(asDouble.totalStudyTimeHours.runtimeType, double);
+    });
   });
 }

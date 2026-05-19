@@ -11,6 +11,7 @@ import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -292,7 +293,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     context,
                     AppRoutes.dashboard,
                     arguments: DashboardArgs(
-                      studentId: StudentIdService().getStudentId(),
+                      studentId: ref.read(studentIdServiceProvider).getStudentId(),
                     ),
                   );
                 },
@@ -363,8 +364,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
+      const Logger('SubjectDetailScreen').e('Delete subject failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.errorWithMessage(e.toString()))),
+        SnackBar(content: Text(l10n.somethingWentWrong)),
       );
     }
   }
@@ -559,7 +561,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        _statusLabel(item.status, l10n),
+                        processingStatusLabel(item.status, l10n),
                         style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
                       ),
                     ),
@@ -592,25 +594,6 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
       case SourceType.audio: return Icons.headphones;
       case SourceType.document: return Icons.description;
     }
-  }
-}
-
-String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
-  switch (status) {
-    case ProcessingStatus.pending:
-      return l10n.pending;
-    case ProcessingStatus.extracting:
-      return l10n.extracting;
-    case ProcessingStatus.classifying:
-      return l10n.processing;
-    case ProcessingStatus.generatingQuestions:
-      return l10n.generatingQuestions;
-    case ProcessingStatus.validating:
-      return l10n.validating;
-    case ProcessingStatus.completed:
-      return l10n.completed;
-    case ProcessingStatus.failed:
-      return l10n.failed;
   }
 }
 

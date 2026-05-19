@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/remaining_workload_estimator.dart';
-import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class WorkloadCard extends StatelessWidget {
@@ -33,7 +32,6 @@ class WorkloadCard extends StatelessWidget {
     }
 
     final totalLessons = workload!.estimatedLessonsRemaining;
-    final totalLessonsStr = formatDecimal(totalLessons, l10n.localeName, minFractionDigits: 0);
     final topicsNeedingAttention = workload!.topicWorkloads
         .where((t) => t.estimatedLessonsRemaining > 0)
         .toList();
@@ -42,17 +40,20 @@ class WorkloadCard extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(Icons.trending_up, color: Theme.of(context).colorScheme.primary),
-              const SizedBox(width: 8),
-              Text(
-                'Remaining Workload',
-                style: Theme.of(context).textTheme.titleMedium,
+          children: [
+            Semantics(
+              headingLevel: 3,
+              child: Row(
+                children: [
+                  Icon(Icons.trending_up, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.remainingWorkload,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ],
               ),
-            ],
-          ),
+            ),
           const Divider(),
           Row(
             children: [
@@ -63,15 +64,7 @@ class WorkloadCard extends StatelessWidget {
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   children: [
-                    TextSpan(text: '~$totalLessonsStr'),
-                    WidgetSpan(
-                      child: Text(
-                        ' lessons',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                      ),
-                    ),
+                    TextSpan(text: l10n.lessonsCount(totalLessons.toInt())),
                   ],
                 ),
               ),
@@ -79,7 +72,7 @@ class WorkloadCard extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            '${topicsNeedingAttention.length} topics need attention',
+            l10n.topicsNeedAttention(topicsNeedingAttention.length),
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: Theme.of(context).colorScheme.onSurfaceVariant,
             ),
@@ -90,7 +83,7 @@ class WorkloadCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: 2),
               child: Row(
                 children: [
-                  Icon(Icons.circle, size: 8, color: Theme.of(context).colorScheme.error),
+                  Icon(Icons.error_outline, size: 14, color: Theme.of(context).colorScheme.error),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(

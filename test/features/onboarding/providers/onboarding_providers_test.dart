@@ -4,6 +4,18 @@ import 'package:studyking/features/onboarding/providers/onboarding_providers.dar
 import 'package:studyking/features/onboarding/services/onboarding_service.dart';
 import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 
+class _ThrowingOnboardingStorage extends OnboardingStorage {
+  @override
+  Future<bool> getBool(String key, {bool defaultValue = false}) async {
+    throw Exception('Storage failure');
+  }
+
+  @override
+  Future<void> setBool(String key, bool value) async {
+    throw Exception('Storage failure');
+  }
+}
+
 void main() {
   group('onboardingNeededProvider', () {
     setUp(() {
@@ -27,6 +39,16 @@ void main() {
       addTearDown(() => container.dispose());
       final result = await container.read(onboardingNeededProvider.future);
       expect(result, isFalse);
+    });
+
+    test('returns true when storage throws (safe default)', () async {
+      OnboardingService.setStorage(_ThrowingOnboardingStorage());
+      addTearDown(() => OnboardingService.setStorage(HiveOnboardingStorage()));
+
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+      final result = await container.read(onboardingNeededProvider.future);
+      expect(result, isTrue);
     });
   });
 
@@ -52,6 +74,16 @@ void main() {
       addTearDown(() => container.dispose());
       final result = await container.read(isFirstLaunchProvider.future);
       expect(result, isFalse);
+    });
+
+    test('returns true when storage throws (safe default)', () async {
+      OnboardingService.setStorage(_ThrowingOnboardingStorage());
+      addTearDown(() => OnboardingService.setStorage(HiveOnboardingStorage()));
+
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+      final result = await container.read(isFirstLaunchProvider.future);
+      expect(result, isTrue);
     });
   });
 }

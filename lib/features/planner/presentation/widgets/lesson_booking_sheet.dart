@@ -74,6 +74,12 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       }
     } catch (e) {
       const Logger('LessonBookingSheet').e('Failed to load availability: $e');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorOccurred)),
+        );
+      }
     }
   }
 
@@ -259,6 +265,12 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       }
     } catch (e) {
       const Logger('LessonBookingSheet').e('Failed to check scheduling conflict', e);
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorOccurred)),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() => _isCheckingConflict = false);

@@ -232,7 +232,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                 .map((t) => t.title)
                 .where((t) => t.isNotEmpty)
                 .toList();
-          } catch (_) {}
+          } catch (e) {
+            const Logger('UploadScreen').w('Failed to load topics: $e');
+          }
         }
 
         final actualContent = _useFilePicker && _selectedFilePath != null
@@ -243,7 +245,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           title: title,
           content: actualContent,
           type: sourceType,
-          studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
+          studentId: widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId(),
           modelId: resolvedModelId,
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
@@ -275,7 +277,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           title: title,
           content: actualContent,
           type: sourceType,
-          studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
+          studentId: widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId(),
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
         );

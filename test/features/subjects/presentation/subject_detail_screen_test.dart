@@ -201,12 +201,12 @@ void main() {
       expect(find.byType(SliverAppBar), findsOneWidget);
     });
 
-    testWidgets('renders tab bar with 4 tabs', (tester) async {
+    testWidgets('renders tab bar with 6 tabs', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
 
       expect(find.byType(TabBar), findsOneWidget);
-      expect(find.byType(Tab), findsNWidgets(4));
+      expect(find.byType(Tab), findsNWidgets(6));
     });
 
     testWidgets('renders more option icon', (tester) async {
@@ -222,6 +222,8 @@ void main() {
 
       expect(find.text('Lessons'), findsOneWidget);
       expect(find.text('Practice'), findsOneWidget);
+      expect(find.text('Topics'), findsOneWidget);
+      expect(find.text('Sources'), findsOneWidget);
       expect(find.text('History'), findsOneWidget);
       expect(find.text('Stats'), findsOneWidget);
     });
@@ -306,7 +308,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp());
       await tester.pump();
 
-      for (final tab in ['Lessons', 'Practice', 'History', 'Stats']) {
+      for (final tab in ['Lessons', 'Practice', 'Topics', 'Sources', 'History', 'Stats']) {
         await tester.tap(find.text(tab));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 200));
@@ -660,6 +662,62 @@ void main() {
       await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Edit Subject Mock'), findsOneWidget);
+    });
+
+    testWidgets('sources tab shows error state when source repo fails', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Sources'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('sources tab shows retry button on error', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Sources'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+    });
+
+    testWidgets('topics tab renders content', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      await tester.tap(find.text('Topics'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.byIcon(Icons.topic), findsOneWidget);
+    });
+
+    testWidgets('bottom sheet does not show sources option when sourceCount is 0', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pump();
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Upload Content'), findsOneWidget);
+      expect(find.text('Dashboard'), findsOneWidget);
+      expect(find.text('Delete Subject'), findsOneWidget);
     });
 
     testWidgets('delete shows error snackbar on failure', (tester) async {

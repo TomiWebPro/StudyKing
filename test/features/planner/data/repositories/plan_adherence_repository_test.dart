@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
@@ -333,6 +334,67 @@ void main() {
     });
   });
 
+  group('error handling', () {
+    test('getByStudent throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.getByStudent('test'), throwsException);
+    });
+
+    test('create does not throw when box throws (caught by base)', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      final model = createTestAdherence();
+      await repo.create(model);
+    });
+
+    test('get returns failure when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      final result = await repo.get('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getByDateRange throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(
+        () => repo.getByDateRange('test', DateTime(2024, 1, 1), DateTime(2024, 12, 31)),
+        throwsException,
+      );
+    });
+
+    test('getWeekly throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.getWeekly('test'), throwsException);
+    });
+
+    test('getAverageAdherence throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.getAverageAdherence('test'), throwsException);
+    });
+
+    test('getConsecutiveLowAdherenceDays throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.getConsecutiveLowAdherenceDays('test'), throwsException);
+    });
+
+    test('getToday throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.getToday('test'), throwsException);
+    });
+
+    test('deleteByStudent throws when box throws', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(_ThrowingAdherenceBox());
+      expect(() => repo.deleteByStudent('test'), throwsException);
+    });
+  });
+
   group('PlanAdherenceRepository (init with real Hive)', () {
     late PlanAdherenceRepository repository;
     late String hivePath;
@@ -434,4 +496,11 @@ void main() {
       expect((await repository.get('ds3')).data, isNotNull);
     });
   });
+}
+
+class _ThrowingAdherenceBox implements Box<PlanAdherenceModel> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Simulated Hive error');
+  }
 }

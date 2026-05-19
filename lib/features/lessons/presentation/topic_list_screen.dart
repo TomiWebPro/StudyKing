@@ -56,7 +56,12 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
     final l10n = AppLocalizations.of(context)!;
     if (_isLoading) return const LoadingIndicator();
     if (_topics.isEmpty) {
-      return Center(child: Text(l10n.noTopicsYetAddSome));
+      return EmptyStateWidget(
+        icon: Icons.folder_off,
+        title: l10n.noTopicsYetAddSome,
+        actionLabel: l10n.addTopic,
+        onAction: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+      );
     }
     return ListView.builder(
       padding: ResponsiveUtils.listPadding(context),

@@ -5,6 +5,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
@@ -61,6 +62,7 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticKeepAliveClientMixin {
+  static final Logger _logger = const Logger('SettingsScreen');
   final TextEditingController _modelSearchController = TextEditingController();
 
   @override
@@ -103,7 +105,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         );
       }
     } catch (e) {
-      const Logger('SettingsScreen').e('Auto-backup failed', e);
+      _logger.e('Auto-backup failed', e);
     }
   }
 
@@ -153,6 +155,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   () => _showFontSizeDialog(settings.fontSize)),
             ]),
             _section(l10n.accessibility, [
+              SwitchListTile(
+                secondary: const Icon(Icons.format_bold),
+                title: Text(l10n.boldText),
+                subtitle: Text(l10n.boldTextDescription),
+                value: settings.boldText,
+                onChanged: (value) =>
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(boldText: value)),
+              ),
               SwitchListTile(
                 secondary: const Icon(Icons.contrast),
                 title: Text(l10n.highContrastMode),
@@ -499,7 +509,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                     max: 30,
                     divisions: 20,
                     onChanged: (value) {
-                      final validSize = value.clamp(10.0, 30.0).toDouble();
+                      final validSize = value.clamp(UiConfig.minFontSize, UiConfig.maxFontSize).toDouble();
                       setInnerState(() => localSize = validSize);
                       ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(fontSize: validSize));
                     },
@@ -598,7 +608,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
       return cap > 0 ? l10n.minutesValue(cap) : l10n.noLimit;
     } catch (e) {
-      const Logger('SettingsScreen').e('Failed to get daily cap label', e);
+      _logger.e('Failed to get daily cap label', e);
       return l10n.noLimit;
     }
   }
@@ -628,7 +638,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
       );
     } catch (e) {
-      const Logger('SettingsScreen').e('Failed to show daily cap dialog: $e');
+      _logger.e('Failed to show daily cap dialog: $e');
     }
   }
 
@@ -707,7 +717,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
       );
     } catch (e) {
-      const Logger('SettingsScreen').e('Failed to show auto backup dialog: $e');
+      _logger.e('Failed to show auto backup dialog: $e');
     }
   }
 
@@ -836,8 +846,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Your API keys will be readable as plaintext in the backup file. '
-                    'Anyone with access to this file can use your API keys.',
+                    l10n.apiKeyPlaintextWarning,
                     style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                       color: Theme.of(ctx).colorScheme.error,
                     ),
@@ -923,7 +932,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               Text(l10n.recordCount(totalRecords)),
               const SizedBox(height: 8),
               Text(
-                '$boxCount boxes',
+                l10n.boxCountLabel(boxCount),
                 style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                   color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                 ),
@@ -942,7 +951,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
-                          'Your API keys will be stored in plaintext. Anyone with this file can use your API keys.',
+                          l10n.apiKeyPlaintextWarning,
                           style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                             color: Theme.of(ctx).colorScheme.error,
                           ),
@@ -964,7 +973,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
                 )),
                 Text(
-                  '... and ${boxSummaries.length - 19} more',
+                  l10n.andMoreCount(boxSummaries.length - 19),
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                   ),
@@ -1022,8 +1031,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       }
     } catch (e) {
       if (mounted) {
+        _logger.e('Backup export failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.backupExportFailedWithError(e.toString()))),
+          SnackBar(content: Text(l10n.backupExportFailedWithError(l10n.somethingWentWrong))),
         );
       }
     }
@@ -1052,18 +1062,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       case HiveBoxNames.topicDependencies: return l10n.backupBoxTopicDependencies;
       case HiveBoxNames.settings: return l10n.backupBoxSettings;
       case HiveBoxNames.profile: return l10n.backupBoxProfile;
-      case HiveBoxNames.answers: return 'Answers';
-      case HiveBoxNames.attempts: return 'Attempts';
-      case HiveBoxNames.badges: return 'Badges';
-      case HiveBoxNames.engagementNudges: return 'Engagement Nudges';
-      case HiveBoxNames.focusSessions: return 'Focus Sessions';
-      case HiveBoxNames.pendingActions: return 'Pending Actions';
-      case HiveBoxNames.progress: return 'Progress';
-      case HiveBoxNames.tasks: return 'Tasks';
-      case HiveBoxNames.studentAvailability: return 'Student Availability';
-      case HiveBoxNames.roadmaps: return 'Roadmaps';
-      case HiveBoxNames.llmTasks: return 'LLM Tasks';
-      case HiveBoxNames.llmUsageRecords: return 'LLM Usage Records';
+      case HiveBoxNames.answers: return l10n.backupBoxAnswers;
+      case HiveBoxNames.attempts: return l10n.backupBoxAttempts;
+      case HiveBoxNames.badges: return l10n.backupBoxBadges;
+      case HiveBoxNames.engagementNudges: return l10n.backupBoxEngagementNudges;
+      case HiveBoxNames.focusSessions: return l10n.backupBoxFocusSessions;
+      case HiveBoxNames.pendingActions: return l10n.backupBoxPendingActions;
+      case HiveBoxNames.progress: return l10n.backupBoxProgress;
+      case HiveBoxNames.tasks: return l10n.backupBoxTasks;
+      case HiveBoxNames.studentAvailability: return l10n.backupBoxStudentAvailability;
+      case HiveBoxNames.roadmaps: return l10n.backupBoxRoadmaps;
+      case HiveBoxNames.llmTasks: return l10n.backupBoxLlmTasks;
+      case HiveBoxNames.llmUsageRecords: return l10n.backupBoxLlmUsageRecords;
       default: return boxName;
     }
   }
@@ -1144,7 +1154,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         }
         if (backupStudentId != null) break;
       }
-      final currentStudentId = StudentIdService().getStudentId();
+      final currentStudentId = ref.read(studentIdServiceProvider).getStudentId();
       final idMismatch = backupStudentId != null && backupStudentId != currentStudentId;
 
       if (idMismatch) {
@@ -1154,10 +1164,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             title: Text(l10n.importConfirmTitle),
             content: Text(
               '${l10n.importPreview(1, 1)}\n\n'
-              'Student ID mismatch detected. '
-              'Current: $currentStudentId\n'
-              'Backup: $backupStudentId\n\n'
-              'Update student records to match current ID?',
+              '${l10n.studentIdMismatchTitle}\n'
+              '${l10n.studentIdMismatchBody(currentStudentId, backupStudentId!)}\n\n'
+              '${l10n.studentIdMismatchAction}',
             ),
             actions: [
               TextButton(
@@ -1203,7 +1212,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                 Text(l10n.importPreview(1, 1)),
                 const SizedBox(height: 12),
                 Text(
-                  'Data restored successfully. A restart may be needed for all changes to appear.',
+                  l10n.importRestartHint,
                   style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                     color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                   ),
@@ -1224,8 +1233,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       }
     } catch (e) {
       if (mounted) {
+        _logger.e('Import backup failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.importFailedWithError(e.toString()))),
+          SnackBar(content: Text(l10n.importFailedWithError(l10n.somethingWentWrong))),
         );
       }
     }
@@ -1352,7 +1362,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final obj = value as dynamic;
       return obj.toJson() as Map<String, dynamic>;
     } catch (e) {
-      const Logger('SettingsScreen').e('Failed to convert map', e);
+      _logger.e('Failed to convert map', e);
       return null;
     }
   }
@@ -1554,36 +1564,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Icon(Icons.info_outline, size: 16, color: Theme.of(ctx).colorScheme.tertiary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'What will be cleared:',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '• API key\n• Selected AI model',
-                    style: Theme.of(ctx).textTheme.bodySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Icon(Icons.check_circle_outline, size: 16, color: Theme.of(ctx).colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Your study data will be preserved.',
-                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(ctx).colorScheme.primary,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.info_outline, size: 16, color: Theme.of(ctx).colorScheme.tertiary),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.signOutClearList,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
                         ),
-                      ),
-                    ],
-                  ),
-                ],
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• ${l10n.signOutClearsApiKey}\n• ${l10n.signOutClearsAiModel}',
+                      style: Theme.of(ctx).textTheme.bodySmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.check_circle_outline, size: 16, color: Theme.of(ctx).colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.signOutPreservesStudyData,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx).colorScheme.primary,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
               ),
             ),
           ],
@@ -1610,6 +1620,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 }
 
 void _showAboutDialog(BuildContext context) async {
+  final log = const Logger('SettingsScreen');
   final l10n = AppLocalizations.of(context)!;
   String version = l10n.aboutVersion;
   try {
@@ -1617,7 +1628,9 @@ void _showAboutDialog(BuildContext context) async {
     if (info.version.isNotEmpty) {
       version = '${info.version}+${info.buildNumber}';
     }
-  } catch (_) {}
+  } catch (e) {
+    log.w('Failed to get package info: $e');
+  }
   if (!context.mounted) return;
   showDialog(
     context: context,
@@ -1762,6 +1775,7 @@ class _FailedUploadsTile extends ConsumerStatefulWidget {
 }
 
 class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
+  static final Logger _logger = const Logger('_FailedUploadsTile');
   int _failedCount = 0;
 
   @override
@@ -1777,7 +1791,7 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
       final failed = await repo.getFailed();
       if (mounted) setState(() => _failedCount = failed.length);
     } catch (e) {
-      const Logger('SettingsScreen').e('Failed to load failed count', e);
+      _logger.e('Failed to load failed count', e);
     }
   }
 

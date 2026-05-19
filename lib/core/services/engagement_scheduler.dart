@@ -147,7 +147,8 @@ class EngagementScheduler {
     try {
       final box = Hive.box('settings');
       return box.get('mentorCheckinFrequencyDays', defaultValue: 1) as int;
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to get mentor checkin frequency: $e');
       return 1;
     }
   }

@@ -1,550 +1,563 @@
-# Code Refactor Master & Quality Audit
+# Code Refactor Master Issue
 
-> Generated: 2026-05-19
-> Scope: Full codebase exploration across `lib/`, `test/`, configuration, and architecture.
-
----
-
-## BLOCKER (app crashes or user cannot proceed)
-
-### B1. Memory leak risk — empty `catch (_) {}` swallowing fatal errors
-
-**Context:** Five locations silently catch all exceptions with empty handlers, suppressing crashes that should propagate or at least be logged.
-
-| File | Line | Code |
-|---|---|---|
-| `lib/main.dart` | 102 | `} catch (_) {}` |
-| `lib/features/teaching/services/tutor_service.dart` | 265, 273, 305 | `} catch (_) {}` (3x) |
-| `lib/features/sessions/presentation/session_tracker_screen.dart` | 75 | `} catch (_) {}` |
-| `lib/features/settings/presentation/settings_screen.dart` | 1593 | `} catch (_) {}` |
-
-**Rationale:** Swallowing exceptions makes failures completely invisible. If the tutor service or session tracker silently drops errors, the user gets no feedback and the app appears broken.
-
-**Acceptance criteria:**
-- Replace every empty `catch (_) {}` with either:
-  - `catch (e, st) { _logger.e('...', e, st); }` with a descriptive message, or
-  - `catch (e) { Result.failure(e.toString()); }` if in a Result-returning context.
-- Verify no other empty catch blocks exist via `git grep 'catch\s*(\s*_\s*)'`.
+**Generated:** 2026-05-19
+**Scope:** Entire `lib/` codebase (364 Dart source files)
+**Analysis methods:** `flutter analyze`, ripgrep pattern analysis, cross-file import tracing, manual review
 
 ---
 
-## MAJOR (feature broken or misleading)
+## BLOCKER — App crashes or user cannot proceed
 
-### M1. i18n violation — `toStringAsFixed()` in user-facing file-size display
+### B1. Silent error swallowing in `agent_loop.dart`
 
-**Affected file:** `lib/features/settings/presentation/settings_screen.dart:972,974`
+**File:** `lib/core/services/llm_agent/agent_loop.dart:87-88, 101-102`
 
-**Context:** The `_formatBytes` helper (line ~970) uses `toStringAsFixed()` to display file sizes. This produces period decimals (`"1.2 MB"`) even for comma-decimal locales (Spanish `es`, French, German). Per AGENTS.md: *"Never use `toStringAsFixed()` for user-facing numeric displays."*
-
-**Rationale:** Spanish-speaking users see `"1.2 MB"` instead of `"1,2 MB"`, breaking the i18n promise.
-
-**Acceptance criteria:**
-- Replace `toStringAsFixed()` in `_formatBytes` with `formatDecimal` or a dedicated `formatFileSize` utility from `lib/core/utils/number_format_utils.dart`.
-- Unit test the new helper with `localeName: 'es'` to verify comma decimal.
-- Confirm all other `toStringAsFixed()` calls are in CSV/LLM-facing contexts (exempt per AGENTS.md).
-
----
-
-### M2. Mixed error-handling strategy (Result + raw exceptions + string errors)
-
-**Context:** Three coexisting patterns — no enforcement of which to use where.
-
-| Pattern | Prevalence | Example |
-|---|---|---|
-| `Result.failure('...')` | ~176 calls | `spaced_repetition_service.dart`, `settings_repository.dart` |
-| `throw AppException(...)` | `app_api_config.dart:22,38`; `settings_repository.dart:21,29` | |
-| Raw `Exception` / `throw` | Various | Ad-hoc string exceptions |
-
-**Affected files:**
-- `lib/features/settings/data/repositories/settings_repository.dart` — **same class** mixes `throw AppException` (lines 21, 29) and `return Result.failure(...)` (line 40).
-- `lib/core/constants/app_api_config.dart` — throws `AppException` instead of returning `Result.failure`.
-- `lib/features/practice/services/spaced_repetition_service.dart` — uses fragile string error codes (`'box_closed'`, `'not_found'`) not centralized anywhere.
-
-**Rationale:** Callers cannot rely on a single error path. Some upper layers expect `Result`, others expect exceptions — leading to unhandled `AppException` crashes when a Result-returning method is refactored to throw.
-
-**Acceptance criteria:**
-- Establish a single codebase-wide rule in AGENTS.md: **public repository/service method return types must be `Result<T>`**; `throw` is only allowed in private helpers or config validation at startup.
-- Refactor `settings_repository.dart` to consistently return `Result.failure(...)` instead of `throw AppException`.
-- Refactor `app_api_config.dart` getters to return `Result<String>` instead of throwing.
-- Centralize error-code strings (e.g., `SpacedRepetitionErrorCodes` enum in `lib/core/errors/`).
-
----
-
-### M3. Secret injection unimplemented — API keys embedded at compile time
-
-**Affected file:** `lib/core/constants/app_api_config.dart:32`
+Two `catch` blocks silently swallow exceptions without any logging:
 
 ```dart
-// TODO: implement runtime secret injection (keystore/native layer) over compile-time embedding.
-```
-
-**Context:** The `runtimeApiKey` and `runtimeBaseUrl` fields on `ApiConfig` are never populated. All API keys flow through `--dart-define` at build time, meaning they are plaintext in the binary.
-
-**Rationale:** Security best practice violation. API keys can be extracted from the compiled binary.
-
-**Acceptance criteria:**
-- Implement the TODO by integrating a keystore/native secrets layer (e.g., `flutter_secure_storage` or platform channels).
-- Fall back to `--dart-define` only when runtime storage is unavailable (dev builds).
-- Remove the commented TODO after implementation.
-- Unit test: confirm `ApiConfig.runtimeApiKey` returns stored value when available.
-
----
-
-### M4. Massive build methods violate single-responsibility principle
-
-**Affected files:**
-
-| File | Build method length | Total file |
-|---|---|---|
-| `lib/features/planner/presentation/planner_screen.dart:428` | ~1046 lines | 1474 |
-| `lib/features/mentor/presentation/mentor_screen.dart:532` | ~579 lines | 1118 |
-| `lib/features/settings/presentation/settings_screen.dart:125` | ~243 lines (`_buildSettingsBody`) | 1826 |
-| `lib/features/teaching/presentation/tutor_screen.dart:537` | ~391 lines | 928 |
-
-**Rationale:** These methods handle layout, state derivation, event handling, and nested widget construction — far beyond "describe what this screen looks like." Each screen is a maintenance hazard: merges conflict constantly, readability is poor, and adding a single setting touch requires navigating 1800 lines.
-
-**Acceptance criteria:**
-- Extract every distinct logical section into its own `StatelessWidget` in a `widgets/` subdirectory.
-  - `planner_screen.dart`: extract Calendar section, PlanSummary section, Roadmap section, PendingActions section into separate widget files.
-  - `settings_screen.dart`: extract each settings category (Appearance, Notifications, Data, About, etc.) into a dedicated widget.
-  - `mentor_screen.dart`: extract ChatPanel, StatsPanel, NudgePanel.
-  - `tutor_screen.dart`: extract ChatArea, LessonProgress, VoiceBar, ExerciseArea.
-- Each extracted widget must be under 150 lines.
-- No existing widget test should break after extraction.
-
----
-
-### M5. `StudentIdService()` direct instantiation in 28+ locations (no DI)
-
-**Context:** `StudentIdService` is instantiated directly via `StudentIdService().getStudentId()` across the codebase instead of being injected via Riverpod or constructor parameter.
-
-**Partial list of offenders:**
-- `lib/main.dart:197-198,465`
-- `lib/features/teaching/presentation/tutor_screen.dart:92,100`
-- `lib/features/sessions/presentation/session_tracker_screen.dart:182`
-- `lib/features/sessions/presentation/session_history_screen.dart:157`
-- `lib/features/planner/services/planner_service.dart:77`
-- `lib/features/mentor/services/mentor_service.dart:202`
-- `lib/features/mentor/presentation/mentor_screen.dart:115`
-- `lib/features/ingestion/presentation/upload_screen.dart:246,278`
-- `lib/core/services/study_progress_tracker.dart:129,260`
-- `lib/core/routes/app_router.dart:148,176`
-- `lib/core/providers/app_providers.dart:223`
-
-**Rationale:** Tight coupling makes it impossible to stub `StudentIdService` in tests, forcing every test to initialise Hive. AGENTS.md already recommends `fixedStudentId` for testing, yet production code never uses DI.
-
-**Acceptance criteria:**
-- Create a Riverpod provider for `StudentIdService` (or inject it as a parameter).
-- Refactor all direct `StudentIdService().getStudentId()` calls to use the provider or constructor injection.
-- Verify that at least one widget test no longer requires Hive initialization to run.
-
----
-
-### M6. Cross-feature contamination — core services import feature packages
-
-**Context:** Files in `lib/core/services/` import directly from `lib/features/*/data/repositories/`, creating a circular-ish dependency where core depends on features and features depend on core.
-
-**Affected files:**
-- `lib/core/services/personal_learning_plan_service.dart` — imports 6+ feature repositories (mastery graph, topic, subject, plan, etc.)
-- `lib/core/services/mastery_graph_service.dart` — imports `features/practice/data/repositories/mastery_graph_repository.dart`
-- `lib/core/services/study_progress_tracker.dart` — imports `features/planner/data/repositories/plan_adherence_repository.dart`
-- `lib/core/data/hive_initializer.dart` — imports adapters from ALL features (lines 8-15)
-
-**Rationale:** Architecture violation. Core should be feature-agnostic. When core depends on features, extracting a feature into a separate package becomes impossible, and the dependency graph is a mess.
-
-**Acceptance criteria:**
-- Move feature-specific services currently in `core/services/` into their respective feature directories:
-  - `mastery_graph_service.dart` → `features/practice/services/`
-  - `study_progress_tracker.dart` → `features/dashboard/services/` or `features/practice/services/`
-  - `personal_learning_plan_service.dart` → `features/planner/services/`
-  - `plan_adherence_orchestrator.dart` → `features/planner/services/`
-- Move feature models from `core/data/models/` into their respective features:
-  - `session_model.dart` → `features/sessions/data/models/`
-  - `subject_model.dart` → `features/subjects/data/models/`
-  - `topic_model.dart` → `features/subjects/data/models/`
-  - `markscheme_model.dart` → `features/questions/data/models/`
-- All existing imports across the codebase must be updated accordingly.
-- The `hive_initializer.dart` should use a registry pattern or central adapter list, not per-feature imports.
-
----
-
-### M7. Barrel files never imported by production code — dead exports
-
-**Affected files:**
-- `lib/features/features.dart`
-- `lib/features/onboarding/onboarding.dart`
-- `lib/features/quickguide/quickguide.dart`
-- `lib/features/focus_mode/focus_mode.dart`
-- `lib/features/llm_tasks/llm_tasks.dart`
-- `lib/features/mentor/mentor.dart`
-- `lib/features/ingestion/ingestion.dart`
-- `lib/features/sessions/sessions.dart`
-- `lib/features/subjects/subjects.dart`
-- `lib/features/practice/practice.dart`
-- `lib/features/planner/planner.dart`
-- `lib/features/dashboard/dashboard.dart`
-- `lib/features/lessons/lessons.dart`
-- `lib/features/settings/settings.dart`
-- `lib/features/teaching/teaching.dart`
-- `lib/features/questions/questions.dart`
-- `lib/core/utils/utils.dart`
-
-**Rationale:** These barrel files export their feature's public API but nothing in production imports them — only test files reference them sporadically. They are misleading (suggest a public API surface that isn't used) and add unnecessary maintenance.
-
-**Acceptance criteria:**
-- Either delete all unreferenced barrel files, or make a single barrel `lib/studyking.dart` that aggregates only what external consumers need (unlikely in a Flutter app).
-- Add a lint rule (e.g., `avoid_relative_lib_imports` or a custom `dart_code_metrics` rule) to prevent future barrel bloat.
-- Update AGENTS.md to specify: *"Do not create barrel files unless they are imported by production code."*
-
----
-
-### M8. Dead/inactive files (zero production usage)
-
-**Context:** These files are never imported or referenced by any `lib/` production code. They only exist in test imports or nowhere at all.
-
-| File | Lines | Status |
-|---|---|---|
-| `lib/core/services/cross_feature_integrator.dart` | 198 | Test-only |
-| `lib/core/services/topic_readiness_service.dart` | 133 | Test-only |
-| `lib/core/services/pdf_generator/question_pdf_generator.dart` | 157 | Test-only |
-| `lib/core/services/llm/llm_embeddings_service.dart` | 79 | Zero references anywhere |
-| `lib/core/providers/study_progress_provider.dart` | 27 | Test-only |
-| `lib/core/utils/sr_data_codec.dart` | 34 | Test-only |
-
-**Rationale:** Dead code increases maintenance surface, creates false confidence in test coverage (lines are "covered" but feature is dead), and confuses new contributors.
-
-**Acceptance criteria:**
-- For each file: either delete it, or move it to a `_deprecated/` directory with a clear comment and link to the tracking issue.
-- Write a quick script (or manual check) to confirm no `lib/` imports reference these files.
-- Pass: `git grep -l 'cross_feature_integrator' lib/` returns empty.
-
----
-
-### M9. Dead utility functions — `snackbar_utils.dart` and `dialog_utils.dart` functions never called
-
-**Affected files:**
-- `lib/core/widgets/snackbar_utils.dart` — `showSuccessSnackBar` and `showErrorSnackBar` defined but never called in any `lib/` file.
-- `lib/core/widgets/dialog_utils.dart` — `showConfirmationDialog` defined but never called.
-
-**Rationale:** These exist in a shared widgets barrel (`lib/core/widgets/widgets.dart`) suggesting they are available utilities, but no production code uses them. New contributors may waste time evaluating them or worse, build on top of untested dead utilities.
-
-**Acceptance criteria:**
-- Either delete these files and their barrel exports, or add callsites in appropriate screens.
-- If kept, add unit tests covering the functions.
-
----
-
-### M10. Hardcoded Duration values outside `timeouts.dart` (>20 instances)
-
-**Context:** `lib/core/constants/timeouts.dart` exists as the canonical location for Duration constants, yet values are scattered inline.
-
-**Partial list:**
-- `lib/features/settings/presentation/settings_screen.dart:1647` — `Duration(seconds: 10)`
-- `lib/features/teaching/presentation/tutor_screen.dart:137,449,863,908,919` — various
-- `lib/features/teaching/services/conversation_manager.dart:258` — `Duration(milliseconds: 15)`
-- `lib/features/sessions/presentation/session_history_screen.dart:491` — `Duration(hours: 1)`
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:691,746,747` — various
-- `lib/features/planner/services/planner_service.dart:388,407` — `Duration(hours: 1)` (duplicate)
-- `lib/core/services/engagement_scheduler.dart:106` — `Duration(minutes: 5)`
-- `lib/core/services/llm_agent/idle_executor.dart:41` — `Duration(seconds: 30)`
-- etc.
-
-**Rationale:** Inline durations make it impossible to tune timing globally, and duplicate values (like `Duration(hours: 1)` for "recent session" in 3 places) risk silent drift.
-
-**Acceptance criteria:**
-- Audit all inline `Duration(...)` in `lib/` (excluding animation-specific durations in widget build methods).
-- Move every repeated or semantically meaningful duration into `lib/core/constants/timeouts.dart` with a descriptive name.
-- Replace all inline durations with the constant reference.
-
----
-
-## MINOR (code quality / UX friction)
-
-### m1. Inconsistent Logger instantiation pattern
-
-**Affected files:** Widespread (30+ files).
-
-**Patterns found:**
-```dart
-final Logger _logger = const Logger('Name');          // instance variable
-static final Logger _logger = const Logger('Name');    // static final
-const Logger('SettingsScreen').e('...');               // inline (settings_screen.dart, 8x)
-```
-
-**Rationale:** Inline Logger creation (third pattern) allocates a new object on every error call path and makes it impossible to globally configure log filtering by tag.
-
-**Acceptance criteria:**
-- Codify in AGENTS.md: *"All Logger instances must be `static final` at class level."*
-- Refactor all inline `const Logger(...).e(...)` calls to use a `static final` instance.
-- Refactor instance-level `final Logger(...)` to `static final`.
-
----
-
-### m2. Incorrect log levels — warnings used for errors, errors for warnings
-
-**Affected files:**
-
-`.w()` where `.e()` is appropriate:
-- `lib/features/practice/services/spaced_repetition_service.dart` — 8 catch blocks use `.w()` for `Exception` handling (lines 109, 144, 172, 202, 222, 239, 250, 271)
-- `lib/core/utils/sr_data_codec.dart:21` — `.w()` for deserialization failure
-
-`.e()` where `.w()` may be more appropriate:
-- `lib/features/questions/data/repositories/question_repository.dart` — 8 locations use `.e()` for repository transaction errors (lines 22, 34, 47, 64, 76, 92, 120, 136)
-
-**Rationale:** When developers search logs for `ERROR` level, they miss actual errors logged as warnings. Conversely, routine repository errors at `.e()` flood the error channel and desensitize the team.
-
-**Acceptance criteria:**
-- `.e()` should only be used for unexpected exceptions that require immediate investigation.
-- `.w()` should be used for caught exceptions in expected error paths (e.g., box not open, item not found).
-- Audit every `.w()` and `.e()` call across `lib/` and correct misclassifications.
-
----
-
-### m3. Duplicate `trim().toLowerCase()` normalization (30+ callsites)
-
-**Affected files (partial):**
-- `lib/core/services/answer_validation_service.dart:77-78,331-332,360-361,367-368`
-- `lib/core/data/models/markscheme_model.dart:54-55,60`
-- `lib/features/questions/data/models/question_evaluation_model.dart:136-137,142`
-- `lib/features/questions/presentation/widgets/question_card_widget.dart:377,382,387`
-- `lib/features/lessons/presentation/widgets/lesson_block_card.dart:312-316`
-- `lib/features/lessons/services/lesson_agent_service.dart:122`
-
-**Rationale:** Each callsite implements the exact same string normalization with subtle ordering differences (`.trim().toLowerCase()` vs `.toLowerCase().trim()`). A shared extension method eliminates duplication and guarantees consistent behavior.
-
-**Acceptance criteria:**
-- Add a `StringExtension` extension in `lib/core/utils/string_extensions.dart`:
-  ```dart
-  extension StringExtension on String {
-    String get normalized => trim().toLowerCase();
-  }
-  ```
-- Replace all `trim().toLowerCase()` / `toLowerCase().trim()` patterns with `.normalized`.
-- Delete the utility file instead of adding if only one normalization strategy is used (collapse into fewer patterns).
-
----
-
-### m4. Magic numbers in business logic (>15 occurrences)
-
-**Affected files (key examples):**
-- `lib/features/teaching/services/conversation_manager.dart:278,281,340,346,350` — 0.15, 1.5, 0.5, 0.5 (adaptive pace adjustments and default exercise ratio, repeated)
-- `lib/features/practice/services/spaced_repetition_service.dart:152,163` — 0.5 mastery threshold, 2.5 default ease factor
-- `lib/features/planner/providers/planner_providers.dart:79,114,120,240` — 0.5 adherence threshold repeated 4x
-- `lib/features/planner/presentation/planner_screen.dart:695-696` — 0.5, 8.0 pace hours clamp
-- `lib/features/practice/presentation/screens/practice_screen.dart:215` — `_minAttemptsForWeakAreas = 10`
-- `lib/features/lessons/presentation/lesson_list_screen.dart:88` / `lesson_detail_screen.dart:81` — `_defaultDurationMinutes = 45` (duplicate)
-- `lib/main.dart:317` / `lib/features/settings/presentation/settings_screen.dart:476` — font size `10.0, 30.0` clamps (duplicate)
-
-**Rationale:** Magic numbers are untestable, undocumented, and duplicated. When the `0.5` mastery threshold changes, it must be updated in every file that duplicates it.
-
-**Acceptance criteria:**
-- Extract every semantic number into a named constant at the top of its class or in a shared constants file.
-- For values shared across files (e.g., mastery threshold, font-size range), move to `lib/core/constants/`.
-- Ensure zero approval of new magic numbers via a lint rule (`no-magic-number` or custom).
-
----
-
-### m5. Duplicate clarity: `Duration(hours: 1)` repeated for "recent session" filtering
-
-**Affected files:**
-- `lib/features/sessions/data/repositories/session_repository.dart:213`
-- `lib/features/sessions/presentation/session_history_screen.dart:491`
-- `lib/features/planner/services/planner_service.dart:388,407`
-
-**Rationale:** All four instances represent the same concept: *"how recent must a session be to count as 'recent'".* Each defines it independently.
-
-**Acceptance criteria:**
-- Add `static const recentSessionWindow = Duration(hours: 1);` to `lib/core/constants/timeouts.dart`.
-- Replace all four inline `Duration(hours: 1)` with `Timeouts.recentSessionWindow`.
-
----
-
-### m6. Assert-with-closure pattern in `app_config.dart`
-
-**Affected file:** `lib/core/constants/app_config.dart:72`
-
-```dart
-assert(() {
-  // body
-  return true;
-}());
-```
-
-**Rationale:** This pattern runs code inside an `assert` closure, which works in debug mode but silently disappears in release mode. If the closure has side effects or is meant to validate at runtime, it's a bug; if it's truly just for debugging, the body should be trivial.
-
-**Acceptance criteria:**
-- Move any validation logic out of the assert closure into a real `if` check that throws an `AppException` with a clear message.
-- If the body is genuinely debug-only (e.g., logging), leave it but add a comment explaining why it's assert-guarded.
-
----
-
-### m7. Duplicate font-size clamp constant
-
-**Affected files:**
-- `lib/main.dart:317` — `fontSize.clamp(10.0, 30.0)`
-- `lib/features/settings/presentation/settings_screen.dart:476` — `fontSize.clamp(10.0, 30.0)`
-
-**Rationale:** The min/max font sizes are architectural decisions that should be defined once.
-
-**Acceptance criteria:**
-- Add `static const double minFontSize = 10.0; static const double maxFontSize = 30.0;` to a shared location (e.g., `app_constants.dart` or a `ui_constants.dart`).
-- Replace both clamp callsites.
-
----
-
-### m8. Null-assert operator `!.` used extensively (235 matches)
-
-**Context:** `git grep '\!.' lib/ | wc -l` yields ~235 matches across the codebase.
-
-**Notable high-concentration files:**
-- `lib/features/teaching/presentation/tutor_screen.dart` — `_manager!.`, `prereqResult.data!.`, etc.
-- `lib/features/planner/presentation/planner_screen.dart` — `state.plan!.`, `state.data!.`
-- `lib/features/practice/presentation/screens/practice_screen.dart` — `prereqResult.data!.`
-- `lib/features/settings/data/repositories/settings_repository.dart:185,224` — `currentResult.data!.`
-
-**Rationale:** Every `!.` is a potential runtime null-pointer crash in production. With 235 assertions, a single unexpected null causes an unrecoverable error.
-
-**Acceptance criteria:**
-- For every `data!` on a `Result`, replace with `data ?? fallback` or `switch (result) { ok: ..., err: ... }`.
-- For every `late` field that is `!`-accessed, verify it's guaranteed initialized or add a null check.
-- Track this as a backlog item with target: reduce `!.` count by 80% (from 235 to <50).
-
----
-
-### m9. Repository init() boilerplate duplication
-
-**Context:** Every repository class (20+) duplicates the same pattern:
-```dart
-Future<void> init() async {
-  box = await Hive.openBox<ModelType>(BoxNames.someBox);
+// Line 87-88 — JSON parse failure silently ignored
+} catch (e) {
+  toolArgs = {};
+}
+
+// Line 101-102 — Tool execution failure silently absorbed
+} catch (e) {
+  toolResult = {'error': e.toString()};
 }
 ```
 
-**Affected files:** All files in `lib/**/repositories/*.dart`.
-
-**Rationale:** The base `Repository` class at `lib/core/data/repository.dart` already provides `save()`, `get()`, `delete()` etc., but `init()` is left to each subclass to implement identically.
+**Rationale:** The first block means any malformed tool-call JSON from the LLM is silently discarded — the LLM agent gets empty args with no feedback, leading to silent tool-call failures or infinite retry loops. The second at least captures the error string into the result, but with zero local logging, debugging agent loops becomes extremely difficult.
 
 **Acceptance criteria:**
-- Add a `boxName` parameter to the `Repository` base class constructor and implement a single `init()` that opens the box by name.
-- Remove `init()` overrides from all 20+ repos (they become zero-code subclasses).
-- Verify no test relies on custom init logic that differs from the base class pattern.
+- [ ] Both catch blocks must log the exception using `_logger.w('...')` with a descriptive message
+- [ ] The first catch should also consider whether to include the error in the agent's message history so the LLM can self-correct
+- [ ] Both blocks must continue to handle the error gracefully (no crash), but must emit a structured warning log
+
+### B2. Missing try/catch on `OnboardingService` completion methods
+
+**Files:**
+- `lib/features/onboarding/services/onboarding_service.dart:28` (`markCompleted`)
+- `lib/features/onboarding/services/onboarding_service.dart:32` (`markDontShowAgain`)
+
+**Issue:** These methods perform Hive write operations but have no try/catch wrapper. If the Hive box is not open, they will throw an unhandled exception that cascades to the widget tree.
+
+**Acceptance criteria:**
+- [ ] `markCompleted()` must wrap the Hive write in try/catch and return `Result<void>` or catch + log gracefully
+- [ ] `markDontShowAgain()` must do the same
+- [ ] Both methods should have a unit test that verifies graceful handling when the box is closed
 
 ---
 
-### m10. Inline dialogs in `settings_screen.dart` — repeated pattern
+## MAJOR — Feature is broken, misleading, or structurally unsound
 
-**Context:** `lib/features/settings/presentation/settings_screen.dart` contains nearly identical `showDialog` + `ListView` + `ListTile` implementations for theme selection, font size, timeout duration, break duration, and more.
+### M1. Cross-feature circular dependency: `practice` ↔ `questions`
 
-**Rationale:** ~50 lines of dialog boilerplate × 6 settings = ~300 lines of duplicated code that could be a single reusable `SettingsPickerDialog<T>` widget.
-
-**Acceptance criteria:**
-- Extract a generic `SettingsPickerDialog<T>` widget parameterized by title, option list, selected value, and `onSelected` callback.
-- Replace all 6+ inline dialogs with the shared widget.
-- Delete no-longer-needed dialog-building methods.
-
----
-
-### m11. Changelogs and auto-improve reports committed to repo
-
-**Context:**
-- `.changelogs/` directory
-- `.auto_improve_reports/` directory
-- `changelogs/` directory
-
-**Rationale:** These appear to be machine-generated files committed to version control. They bloat the repository and create noise in diffs.
-
-**Acceptance criteria:**
-- Add `.changelogs/`, `.auto_improve_reports/`, `changelogs/` to `.gitignore`.
-- Delete the existing tracked files (after verifying nothing references them).
-
----
-
-### m12. `lib/core/utils/sr_data_codec.dart` — test-only utility shipped in production bundle
-
-**Affected file:** `lib/core/utils/sr_data_codec.dart:34`
-
-**Context:** `SrDataCodec` is only referenced in test files (`test/features/practice/utils/sr_data_codec_test.dart`). It is shipped in the production binary but never called.
-
-**Rationale:** Wasted bytes in the release APK/app bundle. More importantly, it may give the misleading impression that SR data serialization goes through this codec when it actually goes through Hive adapters.
-
-**Acceptance criteria:**
-- Move to `test/` directory (e.g., `test/helpers/sr_data_codec.dart`) if it's a test helper, or delete if it's unused entirely.
-- Verify `git grep 'SrDataCodec' lib/` returns empty after removal.
-
----
-
-### m13. `@visibleForTesting` underused — only 9 annotations
-
-**Context:** Many internal methods are tested directly without `@visibleForTesting` annotation (e.g., `settings_repository` private helpers, `_buildSettingsBody`).
-
-**Rationale:** Without `@visibleForTesting`, the analyzer permits importing private members from test code only via hacks (part files, etc.), or tests test the public API only. The low count suggests either: (a) testing is primarily end-to-end, or (b) internal methods are tested through public methods, which is fine, but the lack of annotation makes it hard to distinguish.
-
-**Acceptance criteria:**
-- Audit 10 largest files. For every private method that has a dedicated unit test, add `@visibleForTesting`.
-- Add a lint rule or CI check warning when tests import private members without `@visibleForTesting`.
-
----
-
-## DEPENDENCY / ARCHITECTURE CHART
-
+**Cycle detected:**
 ```
-                    ┌──────────────────────────┐
-                    │    lib/core/              │
-                    │  services/ constants/     │
-                    │  errors/ utils/ widgets/  │
-                    └────┬──────┬──────┬───────┘
-                         │      │      │
-          ┌──────────────┘      │      └──────────────┐
-          ▼                     ▼                     ▼
-┌───────────────────┐  ┌───────────────────┐  ┌───────────────────┐
-│ Features/planner  │  │ Features/practice │  │ Features/settings  │
-│  ┌────────────┐   │  │  ┌────────────┐   │  │  ┌────────────┐   │
-│  │ services/  │───┼──┼─►│ data/      │   │  │  │ services/  │   │
-│  │ planners/  │   │  │  │ repos/     │   │  │  │ repos/     │   │
-│  └────────────┘   │  │  └────────────┘   │  │  └────────────┘   │
-└───────────────────┘  └───────────────────┘  └───────────────────┘
-         │                      │                      │
-         │         VIOLATION    │                      │
-         └──────────────────────┼──────────────────────┘
-                                │
-                                ▼
-              ┌──────────────────────────────┐
-              │  lib/core/services/          │◄──── imports feature repos!
-              │  personal_learning_plan      │
-              │  mastery_graph_service       │
-              │  study_progress_tracker      │
-              └──────────────────────────────┘
+features/practice/ ──imports──▶ features/questions/
+features/questions/ ──imports──▶ features/practice/
 ```
 
-**Problem:** `core/services/` importing downwards into `features/` — violation of layered architecture.
+**Evidence:**
+
+| Direction | File | What is imported |
+|---|---|---|
+| practice → questions | `practice/services/spaced_repetition_service.dart` | `questions/data/repositories/question_repository.dart` |
+| practice → questions | `practice/presentation/screens/practice_screen.dart` | `questions/providers/question_providers.dart`, `questions/data/repositories/question_repository.dart` |
+| practice → questions | `practice/providers/practice_providers.dart` | `questions/providers/question_providers.dart` |
+| questions → practice | `questions/presentation/question_bank_screen.dart:15` | `practice/providers/practice_providers.dart` |
+
+**Rationale:** A direct 2-step cycle creates a fragile bidirectional coupling where changes in either feature risk breaking the other. The question bank screen imports `practice_providers` for due-count display, while practice services import question repositories for retrieval. This cycle makes it impossible to extract either feature into a standalone package.
+
+**Acceptance criteria:**
+- [ ] Move the shared interface (e.g., `PracticeSummaryProvider` or `DueCount`) into `core/providers/` or define it as an abstract contract in a neutral location
+- [ ] `QuestionBankScreen` must depend on an abstract provider interface rather than directly on `practice_providers`
+- [ ] `SpacedRepetitionService` must depend on an abstract `QuestionRepositoryInterface` rather than the concrete `QuestionRepository`
+- [ ] All imports crossing the cycle must be mediated by core abstractions; verify with `rg` that no `features/practice/` file directly imports from `features/questions/` and vice versa after the refactor
+
+### M2. Cross-feature coupling mesh (12/15 features directly import other features)
+
+**Summary:** 12 of 15 features contain direct imports from other features, creating a tightly coupled dependency web. The most imported features are:
+
+| Feature | Imported By | Outgoing imports (other features) |
+|---|---|---|
+| `subjects/` | 8 features | 4 features |
+| `practice/` | 7 features | 4 features |
+| `questions/` | 7 features | 3 features |
+| `sessions/` | 6 features | 2 features |
+| `settings/` | 1 feature | **8 features (highest fan-out)** |
+| `dashboard/` | 1 feature | **7 features (2nd highest fan-out)** |
+
+**Full cross-feature import matrix (all):**
+
+| Feature | Imports From |
+|---|---|
+| planner | lessons, practice, subjects, questions, sessions |
+| practice | questions, sessions, subjects, ingestion |
+| teaching | lessons, focus_mode |
+| mentor | teaching, planner, sessions, practice, subjects, questions |
+| focus_mode | practice, questions, sessions, subjects, settings |
+| settings | ALL except onboarding, llm_tasks, quickguide |
+| dashboard | practice, sessions, subjects, planner, questions, ingestion, focus_mode |
+| ingestion | subjects, questions, lessons |
+| subjects | ingestion, sessions, practice, lessons |
+| questions | ingestion, subjects, practice |
+| sessions | practice, planner, subjects |
+| quickguide | teaching |
+| lessons | (self-contained) |
+| llm_tasks | (self-contained) |
+| onboarding | (self-contained) |
+
+**Affected files:** 100+ files across `lib/features/` (see companion matrix from exploration for exact per-file mapping)
+
+**Rationale:** This degree of coupling means:
+1. No single feature can be extracted, tested, or maintained in isolation
+2. A change in `subjects/` models can ripple through 8 features
+3. `settings_screen.dart` (1859 lines) imports 18 models from 7 other features just for its data-clear functionality — a strong Modularity Violation smell
+4. `mentor_service.dart` is a God Service importing from 6 other features with 792 lines
+
+**Acceptance criteria (gradual, ordered by impact):**
+- [ ] Extract shared domain models used across ≥3 features into `core/data/models/`:
+  - `MasteryStateModel` (used by 5+ features) — currently in `features/practice/data/models/`
+  - `TopicDependencyModel` (used by 5+ features) — currently in `features/subjects/data/models/`
+  - `QuestionEvaluationModel` (used by 3+ features) — currently in `features/questions/data/models/`
+  - `LessonModel` / `LessonBlockModel` (used by 5+ features) — currently in `features/lessons/data/models/`
+- [ ] Replace cross-feature repository imports with abstract interfaces in core (e.g. `QuestionRepositoryInterface` in `core/data/interfaces/`)
+- [ ] Refactor `settings_screen.dart` clear-cache to use a dedicated `CacheWipeService` in core instead of importing 18 models
+- [ ] Verify after each extraction: only `core/data/models/` and `core/data/interfaces/` are imported across feature boundaries
+
+### M3. SettingsRepository throws in private helpers (Result convention violation)
+
+**File:** `lib/features/settings/data/repositories/settings_repository.dart:21, 29`
+
+**Issue:** `_requireSettingsBox()` and `_requireProfileBox()` throw `AppException` directly instead of returning `Result<Box>`. While the throws are caught by callers' try/catch blocks, this creates a fragile dependency — any new public method that forgets the try/catch propagates an unhandled exception.
+
+**Acceptance criteria:**
+- [ ] Change `_requireSettingsBox()` to return `Result<Box>` (or make it a getter that initializes lazily)
+- [ ] Change `_requireProfileBox()` to return `Result<Box>`
+- [ ] Remove the try/catch from all 12 public methods that currently rely on throwing as control flow
+- [ ] Verify no other file in the codebase calls `settings_repository.dart` methods without try/catch or Result handling
+
+### M4. Public methods returning `void` / bare types instead of `Result<T>`
+
+**Files and methods:**
+
+| File | Method | Current Return | Should Be |
+|---|---|---|---|
+| `lib/features/planner/services/personal_learning_plan_service.dart:510` | `recordDailyAdherence()` | `Future<void>` | `Future<Result<void>>` |
+| `lib/features/planner/services/personal_learning_plan_service.dart:657` | `extendPlan()` | `Future<void>` | `Future<Result<void>>` |
+| `lib/features/planner/services/personal_learning_plan_service.dart:616` | `redistributeMissedWorkload()` | `Future<void>` | `Future<Result<void>>` |
+| `lib/features/sessions/services/study_timer_service.dart:97` | `startSession()` | `Future<Session>` | `Future<Result<Session>>` |
+| `lib/core/services/study_progress_tracker.dart:34` | `getOverallStats()` | `Future<Map<String, dynamic>>` | `Future<Result<Map<String, dynamic>>>` |
+
+**Rationale:** Per AGENTS.md: "Public repository and service method return types must be `Result<T>`." These methods currently force callers to inspect raw exceptions or risk unhandled crashes when errors occur.
+
+**Acceptance criteria:**
+- [ ] `recordDailyAdherence()` returns `Future<Result<void>>`; all callers updated
+- [ ] `extendPlan()` returns `Future<Result<void>>`; all callers updated
+- [ ] `redistributeMissedWorkload()` returns `Future<Result<void>>`; all callers updated
+- [ ] `startSession()` returns `Future<Result<Session>>`; all callers handle binding/unwrapping
+- [ ] `getOverallStats()` returns `Future<Result<Map<String, dynamic>>>`; all callers handle binding/unwrapping
+
+### M5. Unused `SpacedRepetitionErrorCode` values
+
+**File:** `lib/core/errors/spaced_repetition_error_codes.dart`
+
+**Issue:** 2 of 4 enum values are never used in production code:
+
+| Value | Status |
+|---|---|
+| `boxClosed` | Used (lines 105, 213, 231, 261 in `spaced_repetition_service.dart`) |
+| `notFound` | Used (lines 125, 194 in `spaced_repetition_service.dart`) |
+| `invalidState` | **Never referenced anywhere in `lib/` or `test/`** |
+| `storageFailure` | **Never referenced anywhere in `lib/` or `test/`** |
+
+**Acceptance criteria:**
+- [ ] Either remove `invalidState` and `storageFailure` (simplest), OR
+- [ ] Add code paths in `spaced_repetition_service.dart` that produce these codes for appropriate error scenarios
+- [ ] After cleanup, add a test that verifies all enum values are used at least once (use reflection or a simple coverage lint)
+
+### M6. 27 unused barrel files (AGENTS.md convention violation)
+
+**Convention:** "Do not create barrel files unless they are imported by production code."
+
+**Barrel files NOT imported by any production code:**
+
+| File | Lines |
+|---|---|
+| `lib/core/utils/utils.dart` | ≥1 export |
+| `lib/features/features.dart` | ≥1 export |
+| `lib/features/onboarding/onboarding.dart` | ≥1 export |
+| `lib/features/settings/settings.dart` | ≥1 export |
+| `lib/features/planner/planner.dart` | ≥1 export |
+| `lib/features/planner/data/planner_data.dart` | ≥1 export |
+| `lib/features/mentor/mentor.dart` | ≥1 export |
+| `lib/features/ingestion/ingestion.dart` | ≥1 export |
+| `lib/features/quickguide/quickguide.dart` | ≥1 export |
+| `lib/features/sessions/sessions.dart` | ≥1 export |
+| `lib/features/questions/questions.dart` | ≥1 export |
+| `lib/features/questions/data/questions_data.dart` | ≥1 export |
+| `lib/features/focus_mode/focus_mode.dart` | ≥1 export |
+| `lib/features/llm_tasks/llm_tasks.dart` | ≥1 export |
+| `lib/features/subjects/subjects.dart` | ≥1 export |
+| `lib/features/subjects/data/subjects_data.dart` | ≥1 export |
+| `lib/features/teaching/teaching.dart` | ≥1 export |
+| `lib/features/teaching/data/teaching_data.dart` | ≥1 export |
+| `lib/features/practice/practice.dart` | ≥1 export |
+| `lib/features/practice/data/practice_data.dart` | ≥1 export |
+| `lib/features/dashboard/dashboard.dart` | ≥1 export |
+| `lib/features/lessons/lessons.dart` | ≥1 export |
+| `lib/core/data/data.dart` | ≥1 export |
+| (plus 4 more nested barrel files not individually listed) | |
+
+**Exception (valid):** `core/widgets/widgets.dart` — imported by 15 production files.
+
+**Note:** `core/data/data.dart` is imported by `main.dart` and should be retained.
+
+**Acceptance criteria:**
+- [ ] Files that are truly unused (no production imports at all): **Delete the file** (the exports are unused; removing the barrel does not break imports since code imports by direct path)
+- [ ] Files that have at least one production import: **Retain** but verify their exports are all consumed
+- [ ] Move the `export` lines from deleted barrel files into the relevant feature entry point if one exists
+- [ ] Update `AGENTS.md` if a barrel convention exception is needed (e.g. for test convenience)
+
+### M7. 62+ inline `const Logger('Name')` violations (AGENTS.md convention)
+
+**Convention:** "All Logger instances must be `static final` at class level. Inline `const Logger('Name').e(...)` is forbidden."
+
+**Worst offenders:**
+
+| File | Count | Pattern |
+|---|---|---|
+| `planner/providers/planner_providers.dart` | 24 | Per-method `final logger = const Logger('PlannerNotifier.xxx')` |
+| `dashboard/providers/dashboard_data_providers.dart` | 10 | Inline in every catch block |
+| `planner/services/planner_service.dart` | 9 | Inline in every catch block |
+| `practice/services/spaced_repetition_service.dart` | 8 | All `.e()` (not `.w()`) inline |
+| `settings/presentation/settings_screen.dart` | 8 | Mixed `.e()` and `.w()` inline |
+| `subjects/presentation/widgets/subject_topics_tab.dart` | 6 | All `.e()` inline |
+| `focus_mode/presentation/focus_timer_screen.dart` | 5 | All `.e()` inline |
+| `teaching/services/tutor_service.dart` | 10 | All `.e()` inline |
+| `dashboard/presentation/widgets/export_section.dart` | 6 | Inline in every catch block |
+| `document_extractor.dart` | 4 | Mixed inline |
+| `core/services/llm/llm_chat_service.dart` | 3 | Inline in stream error handlers |
+
+**Full list of ~62 locations:** See companion log-level analysis report.
+
+**Acceptance criteria:**
+- [ ] Every class in `lib/` that logs must declare `static final Logger _logger = const Logger('ClassName');` as a class-level field
+- [ ] Every inline `const Logger('Tag').method(...)` call must be replaced with `_logger.method(...)`
+- [ ] Top-level functions (e.g. `_showAboutDialog` in `settings_screen.dart`) may use `final log = const Logger('Tag');` as a local variable but must declare it once per function, not inline per-catch
+- [ ] After changes, run `rg 'const Logger\(' lib/` — there should be 0 matches for inline usage (only class-level declarations remain)
+
+### M8. Widespread wrong log level: 178 `.e()` calls that should be `.w()`
+
+**Convention:** "`.e()` should only be used for unexpected exceptions that require immediate investigation. `.w()` should be used for caught exceptions in expected error paths."
+
+**Summary:** 178 of 178 caught-exception `.e()` calls across the codebase should be `.w()`. These are all expected errors (box not open, item not found, API failure, data loading failure) that are handled gracefully.
+
+**Worst offenders (10+ violations):**
+
+| File | `.e()` count | Example error being logged |
+|---|---|---|
+| `settings/presentation/settings_screen.dart` | 8 | "Failed to load data", backup failures |
+| `teaching/services/tutor_service.dart` | 10 | Session update failed, plan adapter failed |
+| `practice/services/spaced_repetition_service.dart` | 8 | Box closed, item not found (expected) |
+| `dashboard/providers/dashboard_data_providers.dart` | 10 | Stats/badges/trends fetch failed |
+| `subjects/presentation/widgets/subject_topics_tab.dart` | 6 | CRUD operation failures |
+| `subjects/presentation/subject_detail_screen.dart` | 4 | Loading/editing failures |
+| `focus_mode/presentation/focus_timer_screen.dart` | 5 | Initialization failures |
+| `practice/presentation/screens/practice_screen.dart` | 4 | Due-count/attempt load failures |
+| `sessions/presentation/session_tracker_screen.dart` | 4 | Session/adherence load failures |
+| `dashboard/presentation/widgets/export_section.dart` | 6 | Export format failures |
+
+**Example of correct usage (model to follow):**
+- `features/questions/data/repositories/question_repository.dart` — all 8 caught exceptions correctly use `.w()`
+- `features/planner/services/planner_service.dart` — all caught exceptions use `.w()`
+- `core/services/engagement_scheduler.dart` — all caught exceptions use `.w()`
+
+**Acceptance criteria:**
+- [ ] All 178 `.e()` calls in caught-exception blocks must be changed to `.w()`
+- [ ] Exception: `.e()` may remain for `catch` blocks that indicate a truly unexpected/impossible state (e.g., a code path that "can't happen")
+- [ ] Verify with `rg '\.e\(' lib/` that remaining `.e()` calls are only on unexpected, non-handled exceptions
+- [ ] Add a lint rule (e.g. custom lint or code review check) enforcing `.w()` for caught exceptions going forward
+
+### M9. Empty directory: `lib/features/practice/utils/`
+
+**File:** `lib/features/practice/utils/` — directory exists but contains zero files.
+
+**Acceptance criteria:**
+- [ ] Remove the empty directory, OR add a `.gitkeep` with an explanation comment
 
 ---
 
-## SUMMARY PRIORITY TABLE
+## MINOR — Code quality / UX friction / maintainability
 
-| ID | Severity | Issue | Effort | Risk if unfixed |
-|---|---|---|---|---|
-| **B1** | BLOCKER | Empty catch blocks swallowing errors | Small | Undiagnosed crashes |
-| **M1** | MAJOR | `toStringAsFixed()` i18n violation | Small | Broken UX for Spanish users |
-| **M2** | MAJOR | Mixed error handling | Medium | Unhandled exceptions |
-| **M3** | MAJOR | API keys in binary | Medium | Security leak |
-| **M4** | MAJOR | Massive build methods | Large | Maintenance nightmare |
-| **M5** | MAJOR | StudentIdService direct instantiation | Medium | Testing friction |
-| **M6** | MAJOR | Cross-feature contamination | Large | Architecture rot |
-| **M7** | MAJOR | Dead barrel files | Small | Misleading API surface |
-| **M8** | MAJOR | Dead/inactive files | Small | Wasted maintenance |
-| **M9** | MAJOR | Dead utility functions | Small | Dead code confusion |
-| **M10** | MAJOR | Hardcoded Durations | Medium | Tuning impossible |
-| **m1** | MINOR | Logger inconsistency | Small | Log filtering issues |
-| **m2** | MINOR | Wrong log levels | Small | Log noise |
-| **m3** | MINOR | Duplicate string normalization | Small | Tech debt |
-| **m4** | MINOR | Magic numbers | Small | Readability |
-| **m5** | MINOR | Duplicate Duration hours:1 | Small | Drift risk |
-| **m6** | MINOR | Assert closure pattern | Small | Silent failures |
-| **m7** | MINOR | Font clamp duplicated | Tiny | Consistency |
-| **m8** | MINOR | 235 `!.` operators | Large | Crash risk |
-| **m9** | MINOR | Repository init boilerplate | Medium | Boilerplate |
-| **m10** | MINOR | Inline settings dialogs | Medium | Code duplication |
-| **m11** | MINOR | Changelogs committed | Small | Repo bloat |
-| **m12** | MINOR | Test utility in production | Tiny | Bundle size |
-| **m13** | MINOR | `@visibleForTesting` underused | Small | Test hygiene |
+### m1. Raw magic numbers `60000` and `1000` should use defined constants
+
+**Constants defined but unused:** `lib/core/utils/study_utils.dart` defines `msPerMinute = 60000` and `msPerSecond = 1000`, but they are never used — raw literals appear everywhere:
+
+**`60000` appears 14 times:**
+| File | Lines |
+|---|---|
+| `session_export_service.dart` | 44, 170, 180 |
+| `study_timer_service.dart` | 76, 86, 93, 184 |
+| `session_tracker_screen.dart` | 231 |
+| `focus_timer_screen.dart` | 98, 873 |
+| `tutor_service.dart` | 169, 186 |
+| `mentor_service.dart` | 392 |
+| `study_progress_tracker.dart` | 120 |
+
+**`1000` appears 16 times:**
+| File | Lines |
+|---|---|
+| `study_timer_service.dart` | 32, 56, 144 |
+| `session_export_service.dart` | 181 |
+| `session_repository.dart` | 182 |
+| `focus_timer_screen.dart` | 208 |
+| `session_summary_card.dart` | 29 |
+| `dashboard_data_providers.dart` | 80 |
+| `dashboard_service.dart` | 82 |
+| `study_progress_tracker.dart` | 84, 326, 351 |
+| `progress_export_service.dart` | 91 |
+| `settings_screen.dart` | 1474 |
+| `settings_model.dart` | 183 |
+| `session_migration_service.dart` | 70 |
+
+**Acceptance criteria:**
+- [ ] Import `msPerMinute` from `study_utils.dart` in all 14 locations and replace `60000`
+- [ ] Import `msPerSecond` from `study_utils.dart` in all 16 locations and replace `1000`
+- [ ] Verify no raw `60000` or `1000` remains for time conversions (search with `rg '\b60000\b'` and `rg '\b1000\b'`)
+
+### m2. Dead production code: `AppFontSize` class
+
+**File:** `lib/core/constants/app_radius.dart:29-39`
+
+`class AppFontSize` with 7 static const values (xs through display) is defined but imported by zero production files.
+
+**Acceptance criteria:**
+- [ ] Either remove `AppFontSize` entirely, OR move it to a separate `app_font_size.dart` if it is intended for future use (with appropriate justification comment)
+
+### m3. Dead production code: `QuestionPdfGenerator`
+
+**File:** `lib/core/services/pdf_generator/question_pdf_generator.dart` (157 lines)
+
+Only imported by a single test file (`test/core/services/question_pdf_generator_test.dart`). Not wired into any production flow.
+
+**Acceptance criteria:**
+- [ ] Either (a) wire it into the app's export functionality (e.g., add a "Generate PDF question bank" button), OR
+- [ ] Remove the class and its test (dead code), OR
+- [ ] Move to a `staging/` directory with a ticket reference for future integration
+
+### m4. `settings_model.dart` hardcodes `'en'` locale for currency display
+
+**File:** `lib/features/settings/data/models/settings_model.dart:117`
+
+```dart
+formatCurrency(totalCost, 'en', ...)
+```
+
+Hardcodes `'en'` locale inside a model class. The locale should be passed in from the presentation layer via `AppLocalizations.of(context)!.localeName`.
+
+**Acceptance criteria:**
+- [ ] `SettingsModel.formatCurrency` (or equivalent method) accepts `localeName` as a parameter
+- [ ] All callers pass `l10n.localeName` from the presentation layer
+- [ ] No hardcoded locale strings in any model class
+
+### m5. `mentor_screen.dart` uses `.normalized` on localized display string
+
+**File:** `lib/features/mentor/presentation/mentor_screen.dart:914`
+
+```dart
+l10n.mentorCompletedLessons('').split(':').first.normalized
+```
+
+The `.normalized` extension lowercases the string, which may strip semantically meaningful casing from the localized display.
+
+**Acceptance criteria:**
+- [ ] Review whether `.normalized` is semantically correct here (is this used for display or for matching?)
+- [ ] If for display, remove `.normalized` and use the localized string as-is
+- [ ] Add a comment if `.normalized` is intentionally used (e.g., for comparison/sorting)
+
+### m6. Redundant `MasteryGraphRepository` facade advises against its own use
+
+**File:** `lib/features/practice/data/repositories/mastery_graph_repository.dart:14-15`
+
+```dart
+/// Facade that delegates to four individual repositories.
+/// New code should depend on the specific repositories directly.
+```
+
+A class whose own doc comment tells new code not to use it.
+
+**Acceptance criteria:**
+- [ ] Either remove the facade entirely and update all existing consumers to depend on the individual repositories, OR
+- [ ] Update the comment to reflect its actual purpose (e.g., facade for backward compatibility with a planned removal date)
+
+### m7. 20 repository subclasses with identical boilerplate (code generation opportunity)
+
+**File:** `lib/core/data/repository.dart` defines base `Repository<T>` with 4 methods (put, get, getAll, delete).
+
+Every one of the 20 concrete repository subclasses overrides all 4 methods with near-identical try/catch/`Result.failure` boilerplate. Example pattern repeated ~80 times across the codebase:
+
+```dart
+Future<Result<T>> get(String key) async {
+  try {
+    final box = await Hive.openBox<T>(boxName);
+    final item = box.get(key);
+    return Result.success(item);
+  } catch (e) {
+    return Result.failure('Failed to get $key: $e');
+  }
+}
+```
+
+**Affected files (20 repos, ~80 catch blocks):**
+- `question_repository.dart`, `subject_repository.dart`, `topic_repository.dart`, `session_repository.dart`, `lesson_repository.dart`, `mastery_state_repository.dart`, `attempt_repository.dart`, `mastery_graph_repository.dart`, `question_mastery_state_repository.dart`, `question_evaluation_repository.dart`, `topic_dependency_repository.dart`, `source_repository.dart`, `plan_repository.dart`, `roadmap_repository.dart`, `pending_action_repository.dart`, `plan_adherence_repository.dart`, `engagement_nudge_repository.dart`, `student_availability_repository.dart`, `tutor_session_repository.dart`, `conversation_repository.dart`, `badge_repository.dart`, `settings_repository.dart`
+
+**Acceptance criteria:**
+- [ ] Evaluate a mixin-based approach: define `BoxRepositoryMixin` in `core/data/` that provides default put/get/getAll/delete implementations with Result wrapping
+- [ ] Each repository uses the mixin and only overrides methods for custom business logic
+- [ ] Target: eliminate >50% of the repetitive try/catch boilerplate
+- [ ] Alternative: consider `Repository<T>.auto(T Function())` pattern that wraps arbitrary operations in Result
+
+### m8. 6+ monolithic build methods exceeding 200 lines
+
+**Files with overly large build/widget methods:**
+
+| File | Size | Method |
+|---|---|---|
+| `lib/features/mentor/presentation/mentor_screen.dart` | 1165 lines total | `build()` ~555 lines |
+| `lib/features/planner/presentation/planner_screen.dart` | 1477 lines total | `build()` ~270 lines |
+| `lib/features/settings/presentation/settings_screen.dart` | 1859 lines total | `_buildSettingsBody()` ~212 lines |
+| `lib/features/focus_mode/presentation/focus_timer_screen.dart` | 1092 lines total | `build()` large |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 985 lines total | `build()` large |
+| `lib/features/practice/presentation/screens/practice_screen.dart` | 864 lines total | `build()` large |
+
+**Acceptance criteria (per file):**
+- [ ] Extract sections of the build method into separate `Widget` classes or `StatelessWidget` methods
+- [ ] Each extracted widget must have a single responsibility (e.g., `_buildStatsSection`, `_buildActionButtons`)
+- [ ] Target: no build method exceeds 100 lines
+- [ ] Each extracted widget must have its own test (widget test or unit test as appropriate)
+- [ ] After extraction, verify the screen file is <500 lines total (ideally <400)
+
+### m9. `spaced_repetition_service.dart` comment marks `SpacedRepetitionQueries` as temporary
+
+**File:** `lib/features/practice/services/spaced_repetition_service.dart:21`
+
+```dart
+// Remove after migrating test helpers to use SpacedRepetitionService methods.
+```
+
+This comment references `SpacedRepetitionQueries` as a temporary helper that should be removed, but the class is still in production code.
+
+**Acceptance criteria:**
+- [ ] Audit usage of `SpacedRepetitionQueries` in both production and test code
+- [ ] If all usages have been migrated, remove the class and the comment
+- [ ] If not yet migrated, update the comment with a concrete target date or ticket reference
+
+### m10. Non-`static final` Logger declarations (convention violation)
+
+**Convention:** "All Logger instances must be `static final` at class level."
+
+~35 files declare `final Logger _logger` (instance-level) instead of `static final Logger _logger`. Including:
+
+| File | Line | Declaration |
+|---|---|---|
+| `core/data/database_service.dart` | 13 | `final Logger _logger` |
+| `core/data/extraction/pdf_extractor.dart` | 19 | `final Logger _logger` |
+| `core/services/cross_feature_integrator.dart` | 34 | `final Logger _logger` |
+| `core/services/engagement_scheduler.dart` | 40 | `final Logger _logger` |
+| `features/practice/services/spaced_repetition_service.dart` | 67 | `final Logger _logger` |
+| ... and ~30 more | | |
+
+**Acceptance criteria:**
+- [ ] Change all `final Logger _logger` to `static final Logger _logger` in all service/repository/utility classes
+- [ ] Presentation widgets/screens are lower priority but should follow suit
+- [ ] Run `rg '^\s+final Logger _logger' lib/` to verify zero remaining instance-level Logger declarations
+
+### m11. Inconsistent error string format in `Result.failure()` calls
+
+**Files use at least 3 different error string styles:**
+
+| Style | Example | Files |
+|---|---|---|
+| Enum code name | `Result.failure(SpacedRepetitionErrorCode.boxClosed.name)` | `spaced_repetition_service.dart` |
+| Code-like identifier | `Result.failure('Question_bank_not_open')` | `question_repository.dart` |
+| Descriptive prose | `Result.failure('Failed to get item: $e')` | Most repositories |
+| Raw exception | `Result.failure(e.toString())` | Common pattern |
+
+**Acceptance criteria:**
+- [ ] Decide on a single standard (recommended: `'ClassName.methodName: description'` for consistency with log format)
+- [ ] Apply the standard across all `Result.failure()` calls
+- [ ] Update the AGENTS.md convention to document the chosen standard
+- [ ] Verify with `rg 'Result\.failure\(' lib/` that all ~120 calls follow the new standard
+
+### m12. `'Bearer '` string literal duplicated 9 times
+
+**Appears in:**
+- `lib/core/services/llm/llm_chat_service.dart` (lines 390, 432, 625, 666)
+- `lib/core/services/llm/llm_model_service.dart` (lines 145, 179)
+- `lib/core/services/llm/llm_embeddings_service.dart` (lines 41, 49)
+- `lib/features/settings/presentation/api_config_screen.dart` (line 177)
+
+**Acceptance criteria:**
+- [ ] Define a `static const String bearerAuth = 'Bearer '` in a central location (e.g., `core/constants/app_api_config.dart`)
+- [ ] Replace all 9 occurrences with the named constant
+
+### m13. Hardcoded API URLs not environment-configurable
+
+**File:** `lib/core/constants/app_api_config.dart:57-70`
+
+The following URLs are hardcoded:
+- OpenRouter base URL, Ollama URL, OpenAI URL
+- YouTube transcript API URL
+- YouTube Data API v3 URL
+- User-Agent string
+
+These cannot be overridden for staging/test environments or self-hosted alternatives.
+
+**Acceptance criteria:**
+- [ ] Add `--dart-define` environment variables for each URL (e.g., `OPENROUTER_BASE_URL`, `OLLAMA_BASE_URL`, etc.)
+- [ ] Fall back to the current hardcoded values when the env var is not set
+- [ ] Update `.env.example` with the new variables
+- [ ] Verify all 4 LLM services read from the config rather than raw literals
+
+### m14. Missing lint: no `rethrow` within `Result<T>` return-type context
+
+**Files using `rethrow` in methods that don't return `Result<T>`:**
+- `core/services/llm/llm_chat_service.dart` — stream methods (OK — streams can't return Result)
+- `features/mentor/services/mentor_service.dart:191` — `chat()` rethrows inside a stream
+- `features/teaching/services/conversation_manager.dart:213` — `sendMessage()` rethrows inside a stream
+
+These are acceptable because stream methods inherently can't use `Result<T>`. However, this inconsistency means stream consumers must handle both patterns.
+
+**Acceptance criteria (investigative, not prescriptive):**
+- [ ] Document in AGENTS.md how stream-based methods should communicate errors (e.g., `Result<T>` for non-stream, `Exception` via stream for stream)
+- [ ] Add a `StreamResult<T>` type or convention if widely applicable (optional, for future consideration)
+
+---
+
+## Files exceeding complexity thresholds (for prioritization)
+
+| File | Lines | Primary Concern |
+|---|---|---|
+| `features/settings/presentation/settings_screen.dart` | 1859 | God screen: imports from 7 features, 12 catch blocks, 8 `.e()` violations |
+| `features/planner/presentation/planner_screen.dart` | 1477 | God screen: build() ~270 lines, 25+ catch blocks in providers |
+| `features/mentor/presentation/mentor_screen.dart` | 1165 | build() ~555 lines, imports from 4 features |
+| `features/focus_mode/presentation/focus_timer_screen.dart` | 1092 | God screen: 10 catch blocks, 5 inline Logger violations |
+| `features/planner/services/personal_learning_plan_service.dart` | 1018 | God service: 3 methods return void instead of Result |
+| `features/teaching/presentation/tutor_screen.dart` | 985 | Large build method, inline Logger violations |
+| `features/mentor/services/mentor_service.dart` | 792 | God service: imports from 6 features, 792 lines |
+| `core/services/llm/llm_chat_service.dart` | 748 | Heavy service with 4 stream implementations |
+
+---
+
+## Summary of counts
+
+| Severity | Count | Key items |
+|---|---|---|
+| **BLOCKER** | 2 | Silent error swallowing, missing try/catch in onboarding |
+| **MAJOR** | 9 | Circular dep, coupling mesh, Result violations, inline Logger (62×), wrong log levels (178×), unused barrels (27×), unused enum values, empty dir |
+| **MINOR** | 14 | Magic numbers (30×), dead code classes, hardcoded locale, facade advising against itself, boilerplate repos, monolithic builds, inconsistent error strings, hardcoded URLs, etc. |
+| **Total** | **25** | |
+
+**Note:** `dart analyze lib/` (3.4s) reports **0 issues** as of 2026-05-19 — the codebase is syntactically clean despite the structural issues above.

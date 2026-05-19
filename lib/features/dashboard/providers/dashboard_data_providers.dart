@@ -29,7 +29,7 @@ final dashboardAllMasteryProvider =
   await ref.watch(dashboardInitProvider.future);
   final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getAllTopicMastery(studentId);
-  return result.isSuccess ? result.data! : [];
+  return result.isSuccess ? (result.data ?? []) : [];
 });
 
 final dashboardMasterySnapshotProvider =
@@ -37,24 +37,35 @@ final dashboardMasterySnapshotProvider =
   await ref.watch(dashboardInitProvider.future);
   final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getMasterySnapshot(studentId);
-  return result.isSuccess ? MasterySnapshot.fromMap(result.data!) : null;
+  final snapshot = result.data;
+  return result.isSuccess && snapshot != null ? MasterySnapshot.fromMap(snapshot) : null;
 });
 
 final dashboardOverallStatsProvider =
     FutureProvider.family<OverallStats?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
-  final stats = await tracker.getOverallStats(studentId);
-  return OverallStats.fromMap(stats);
+  try {
+    final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
+    final stats = await tracker.getOverallStats(studentId);
+    return OverallStats.fromMap(stats);
+  } catch (e) {
+    const Logger('dashboardOverallStatsProvider').e('Failed to get overall stats', e);
+    return null;
+  }
 });
 
 final dashboardWeeklyTrendProvider =
     FutureProvider.family<List<WeeklyTrendEntry>, String>(
         (ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
-  final trend = await tracker.getWeeklyTrend(8, studentId: studentId);
-  return trend.map((m) => WeeklyTrendEntry.fromMap(m)).toList();
+  try {
+    final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
+    final trend = await tracker.getWeeklyTrend(8, studentId: studentId);
+    return trend.map((m) => WeeklyTrendEntry.fromMap(m)).toList();
+  } catch (e) {
+    const Logger('dashboardWeeklyTrendProvider').e('Failed to get weekly trend', e);
+    return [];
+  }
 });
 
 final dashboardFocusStatsProvider =
@@ -82,34 +93,44 @@ final dashboardFocusStatsProvider =
 final dashboardAdherenceDataProvider =
     FutureProvider.family<AdherenceData, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final adherenceRepo = ref.watch(engagementAdherenceRepoProvider);
-  final averageAdherence = await adherenceRepo.getAverageAdherence(studentId);
-  final weeklyRecords = await adherenceRepo.getWeekly(studentId);
-  final weeklyAdherence = weeklyRecords.isEmpty
-      ? 0.0
-      : weeklyRecords.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
-          weeklyRecords.length;
-  return AdherenceData(
-    averageAdherence: averageAdherence,
-    weeklyAdherence: weeklyAdherence,
-  );
+  try {
+    final adherenceRepo = ref.watch(engagementAdherenceRepoProvider);
+    final averageAdherence = await adherenceRepo.getAverageAdherence(studentId);
+    final weeklyRecords = await adherenceRepo.getWeekly(studentId);
+    final weeklyAdherence = weeklyRecords.isEmpty
+        ? 0.0
+        : weeklyRecords.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
+            weeklyRecords.length;
+    return AdherenceData(
+      averageAdherence: averageAdherence,
+      weeklyAdherence: weeklyAdherence,
+    );
+  } catch (e) {
+    const Logger('dashboardAdherenceDataProvider').e('Failed to get adherence data', e);
+    return AdherenceData(averageAdherence: 0.0, weeklyAdherence: 0.0);
+  }
 });
 
 final dashboardTopicNamesProvider =
     FutureProvider.family<Map<String, String>, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final topicRepo = ref.watch(topicRepositoryProvider);
-  final allMastery = await ref.watch(dashboardAllMasteryProvider(studentId).future);
-  final allTopicsResult = await topicRepo.getAll();
-  final allTopics = allTopicsResult.data ?? [];
-  final topicMap = <String, String>{};
-  for (final topic in allTopics) {
-    topicMap[topic.id] = topic.title;
+  try {
+    final topicRepo = ref.watch(topicRepositoryProvider);
+    final allMastery = await ref.watch(dashboardAllMasteryProvider(studentId).future);
+    final allTopicsResult = await topicRepo.getAll();
+    final allTopics = allTopicsResult.data ?? [];
+    final topicMap = <String, String>{};
+    for (final topic in allTopics) {
+      topicMap[topic.id] = topic.title;
+    }
+    for (final state in allMastery) {
+      topicMap.putIfAbsent(state.topicId, () => state.topicId);
+    }
+    return topicMap;
+  } catch (e) {
+    const Logger('dashboardTopicNamesProvider').e('Failed to get topic names', e);
+    return {};
   }
-  for (final state in allMastery) {
-    topicMap.putIfAbsent(state.topicId, () => state.topicId);
-  }
-  return topicMap;
 });
 
 final dashboardBadgesProvider =
@@ -157,7 +178,7 @@ final dashboardWorkloadProvider =
     final estimator = RemainingWorkloadEstimator();
     return estimator.estimateSubjectWorkload(
       subjectId: 'all',
-      subjectTitle: 'All Subjects',
+      subjectTitle: 'all',
       topicTitles: topicNames,
       questionsPerTopic: questionsPerTopic,
       topicMasteryLevels: topicMasteryLevels,

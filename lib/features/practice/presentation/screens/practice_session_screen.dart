@@ -69,6 +69,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   bool _isCorrect = false;
   int _currentConfidence = 3;
   DateTime? _questionStartTime;
+  StreamSubscription<String>? _voiceSubscription;
+  Timer? _voiceTimeout;
+  String? _voiceTranscriptionPreview;
 
   @override
   void initState() {
@@ -515,16 +518,59 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   void _useVoiceInput() {
     final voiceService = ref.read(voiceServiceProvider);
-    if (!voiceService.isAvailable) return;
+
+    if (!voiceService.isAvailable) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.micPermissionDenied)),
+      );
+      return;
+    }
+
+    if (voiceService.isListening) {
+      voiceService.stopListening();
+      _voiceSubscription?.cancel();
+      _voiceSubscription = null;
+      _voiceTimeout?.cancel();
+      _voiceTimeout = null;
+      if (_voiceTranscriptionPreview != null && _voiceTranscriptionPreview!.isNotEmpty) {
+        _onAnswerSelected(_voiceTranscriptionPreview);
+      }
+      _voiceTranscriptionPreview = null;
+      if (mounted) setState(() {});
+      return;
+    }
+
     final l10n = AppLocalizations.of(context)!;
     voiceService.startListening(localeName: l10n.localeName);
-    voiceService.transcribedText.listen((text) {
-      _onAnswerSelected(text);
+
+    _voiceSubscription?.cancel();
+    _voiceSubscription = voiceService.transcribedText.listen((text) {
+      if (_isSubmitted) return;
+      if (mounted) {
+        setState(() => _voiceTranscriptionPreview = text);
+      }
+    });
+
+    _voiceTimeout?.cancel();
+    _voiceTimeout = Timer(Timeouts.voicePracticeListen, () {
+      if (mounted) {
+        voiceService.stopListening();
+        _voiceSubscription?.cancel();
+        _voiceSubscription = null;
+        if (_voiceTranscriptionPreview != null && _voiceTranscriptionPreview!.isNotEmpty) {
+          _onAnswerSelected(_voiceTranscriptionPreview);
+        }
+        _voiceTranscriptionPreview = null;
+        _voiceTimeout = null;
+        setState(() {});
+      }
     });
   }
 
   @override
   void dispose() {
+    _voiceSubscription?.cancel();
+    _voiceTimeout?.cancel();
     _sessionService.elapsedNotifier.removeListener(_onElapsedChanged);
     _sessionService.dispose();
     super.dispose();
@@ -634,14 +680,19 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                       Consumer(
                                         builder: (_, ref, __) {
                                           final vs = ref.watch(voiceServiceProvider);
-                                          if (!vs.isAvailable) return const SizedBox.shrink();
-                                          return IconButton(
-                                            icon: Icon(
-                                              vs.isListening ? Icons.mic : Icons.mic_none,
-                                              color: vs.isListening ? Theme.of(context).colorScheme.error : null,
+                                          return Semantics(
+                                            label: vs.isAvailable ? l10n.voiceInput : l10n.voiceInputNotAvailable,
+                                            button: true,
+                                            child: IconButton(
+                                              icon: Icon(
+                                                vs.isListening ? Icons.mic : Icons.mic_none,
+                                                color: vs.isListening
+                                                    ? Theme.of(context).colorScheme.error
+                                                    : vs.isAvailable ? null : Theme.of(context).colorScheme.onSurfaceVariant,
+                                              ),
+                                              tooltip: vs.isAvailable ? l10n.voiceInput : l10n.voiceInputNotAvailable,
+                                              onPressed: vs.isAvailable ? _useVoiceInput : null,
                                             ),
-                                            tooltip: l10n.voiceInput,
-                                            onPressed: _useVoiceInput,
                                           );
                                         },
                                       ),

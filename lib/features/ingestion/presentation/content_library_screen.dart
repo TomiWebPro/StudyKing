@@ -5,11 +5,14 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
@@ -70,9 +73,10 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         });
       }
     } catch (e) {
+      const Logger('ContentLibraryScreen').e('Failed to load sources', e);
       if (mounted) {
         setState(() {
-          _error = e.toString();
+          _error = AppLocalizations.of(context)!.somethingWentWrong;
           _isLoading = false;
         });
       }
@@ -122,25 +126,6 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       case ProcessingStatus.generatingQuestions:
       case ProcessingStatus.validating:
         return cs.tertiary;
-    }
-  }
-
-  String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
-    switch (status) {
-      case ProcessingStatus.pending:
-        return l10n.pending;
-      case ProcessingStatus.extracting:
-        return l10n.extracting;
-      case ProcessingStatus.classifying:
-        return l10n.processing;
-      case ProcessingStatus.generatingQuestions:
-        return l10n.generatingQuestions;
-      case ProcessingStatus.validating:
-        return l10n.validating;
-      case ProcessingStatus.completed:
-        return l10n.completed;
-      case ProcessingStatus.failed:
-        return l10n.failed;
     }
   }
 
@@ -279,16 +264,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       body: _isLoading
           ? const LoadingScreen()
           : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(_error!, style: TextStyle(color: theme.colorScheme.error)),
-                      const SizedBox(height: 16),
-                      ElevatedButton(onPressed: _load, child: Text(l10n.retry)),
-                    ],
-                  ),
-                )
+              ? ErrorRetryWidget(message: _error!, onRetry: _load)
               : Column(
                   children: [
                     _buildFilterBar(l10n),
@@ -324,7 +300,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
                                     subjectName: subjectName,
                                     typeIcon: _typeIcon(source.type),
                                     statusColor: _statusColor(source.statusEnum, context),
-                                    statusLabel: _statusLabel(source.statusEnum, l10n),
+                                    statusLabel: processingStatusLabel(source.statusEnum, l10n),
                                     onTap: () {
                                       Navigator.pushNamed(
                                         context,
@@ -361,7 +337,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             _filterChip(
               label: _typeFilter.isEmpty
                   ? l10n.allTypes
-                  : _sourceTypeLabel(SourceType.values[int.parse(_typeFilter)], l10n),
+                  : sourceTypeLabel(SourceType.values[int.parse(_typeFilter)], l10n),
               selected: _typeFilter.isNotEmpty,
               onSelected: () => _showTypeFilter(l10n),
               onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
@@ -370,7 +346,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             _filterChip(
               label: _statusFilter.isEmpty
                   ? l10n.allStatuses
-                  : _statusLabel(ProcessingStatus.values[int.parse(_statusFilter)], l10n),
+                  : processingStatusLabel(ProcessingStatus.values[int.parse(_statusFilter)], l10n),
               selected: _statusFilter.isNotEmpty,
               onSelected: () => _showStatusFilter(l10n),
               onClear: _statusFilter.isNotEmpty ? () => setState(() => _statusFilter = '') : null,
@@ -387,12 +363,17 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     required VoidCallback onSelected,
     VoidCallback? onClear,
   }) {
-    return InputChip(
-      label: Text(label),
+    return Semantics(
+      button: true,
       selected: selected,
-      onPressed: onSelected,
-      deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
-      onDeleted: onClear,
+      label: label,
+      child: InputChip(
+        label: Text(label),
+        selected: selected,
+        onPressed: onSelected,
+        deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
+        onDeleted: onClear,
+      ),
     );
   }
 
@@ -423,31 +404,6 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     );
   }
 
-  String _sourceTypeLabel(SourceType type, AppLocalizations l10n) {
-    switch (type) {
-      case SourceType.pdf:
-        return l10n.pdfLabel;
-      case SourceType.syllabus:
-        return l10n.syllabusLabel;
-      case SourceType.textbook:
-        return l10n.textbookLabel;
-      case SourceType.video:
-        return l10n.videoLabel;
-      case SourceType.lectureNotes:
-        return l10n.lectureNotesLabel;
-      case SourceType.externalResource:
-        return l10n.externalResourceLabel;
-      case SourceType.image:
-        return l10n.imageLabel;
-      case SourceType.webPage:
-        return l10n.webPageLabel;
-      case SourceType.audio:
-        return l10n.audioLabel;
-      case SourceType.document:
-        return l10n.documentLabel;
-    }
-  }
-
   void _showTypeFilter(AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
@@ -463,7 +419,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             },
           ),
           ...SourceType.values.map((t) => ListTile(
-                title: Text(_sourceTypeLabel(t, l10n)),
+                title: Text(sourceTypeLabel(t, l10n)),
                 trailing: _typeFilter == t.index.toString() ? const Icon(Icons.check) : null,
                 onTap: () {
                   Navigator.pop(ctx);
@@ -490,7 +446,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             },
           ),
           ...ProcessingStatus.values.map((s) => ListTile(
-                title: Text(_statusLabel(s, l10n)),
+                title: Text(processingStatusLabel(s, l10n)),
                 trailing: _statusFilter == s.index.toString() ? const Icon(Icons.check) : null,
                 onTap: () {
                   Navigator.pop(ctx);

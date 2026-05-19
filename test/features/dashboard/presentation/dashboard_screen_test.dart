@@ -407,14 +407,8 @@ Widget _buildTestAppWithRoutes(
   );
 }
 
+// Expected plugin: share_plus ^7.0 (channel: dev.fluttercommunity.plus/share)
 const _shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
-
-void _mockShareChannel() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(_shareChannel, (methodCall) async {
-    return null;
-  });
-}
 
 Future<void> scrollToFind(WidgetTester tester, Finder finder) async {
   await tester.ensureVisible(finder);
@@ -438,8 +432,19 @@ Widget _buildExportTestApp(
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-  _mockShareChannel();
   final defaultTopicRepo = FakeTopicRepository();
+
+  setUp(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_shareChannel, (methodCall) async {
+      return null;
+    });
+  });
+
+  tearDown(() {
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+        .setMockMethodCallHandler(_shareChannel, null);
+  });
 
   group('DashboardScreen', () {
     group('initial loading state', () {

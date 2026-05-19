@@ -62,6 +62,10 @@ coverage/
 # Auto-improve reports
 .auto_improve_reports/
 
+# Changelogs (auto-generated, not for version control)
+.changelogs/
+changelogs/
+
 # Cache
 .caches/
 .cache/

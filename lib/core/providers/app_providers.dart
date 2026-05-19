@@ -222,7 +222,7 @@ final engagementPlannerServiceProvider = Provider<PlannerService>((ref) {
 final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
   final l10n = ref.watch(l10nProvider);
   final defaultL10n = lookupAppLocalizations(const Locale('en'));
-  final studentId = StudentIdService().getStudentId();
+  final studentId = ref.read(studentIdServiceProvider).getStudentId();
   final scheduler = EngagementScheduler(
     tracker: ref.watch(engagementTrackerProvider),
     masteryService: ref.watch(engagementMasteryServiceProvider),
