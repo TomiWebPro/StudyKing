@@ -58,7 +58,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
   final _perSubjectCorrect = <String, int>{};
   final _perSubjectTotal = <String, int>{};
   final _answerRecords = <PracticeAnswerRecord>[];
-  late final AnswerValidationService _validationService;
+  late AnswerValidationService _validationService;
   late final MasteryRecorder _masteryRecorder;
 
   @override

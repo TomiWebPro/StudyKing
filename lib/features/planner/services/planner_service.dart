@@ -13,7 +13,7 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
-import '../../../core/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adherence_orchestrator.dart';
@@ -102,20 +102,13 @@ class PlannerService {
     await planRepo.init();
     await roadmapRepo.init();
 
-    final svc = PersonalLearningPlanService(
-      masteryService: masteryService,
-      repository: repository,
-      topicRepository: topicRepository,
-      planRepository: planRepo,
-      syllabusResolver: syllabusResolver,
-      config: PlanGenerationConfig(
-        planDurationDays: daysValue,
-        targetMinutesPerDay: (hoursValue * 60).toDouble(),
-        targetQuestionsPerDay: 15,
-      ),
+    planService.config = PlanGenerationConfig(
+      planDurationDays: daysValue,
+      targetMinutesPerDay: (hoursValue * 60).toDouble(),
+      targetQuestionsPerDay: 15,
     );
 
-    final result = await svc.generatePlan(
+    final result = await planService.generatePlan(
       studentId,
       courseName: course,
     );
@@ -130,20 +123,13 @@ class PlannerService {
     await planRepo.init();
     await roadmapRepo.init();
 
-    final svc = PersonalLearningPlanService(
-      masteryService: masteryService,
-      repository: repository,
-      topicRepository: topicRepository,
-      planRepository: planRepo,
-      syllabusResolver: syllabusResolver,
-      config: PlanGenerationConfig(
-        planDurationDays: daysValue,
-        targetMinutesPerDay: (hoursValue * 60).toDouble(),
-        targetQuestionsPerDay: 15,
-      ),
+    planService.config = PlanGenerationConfig(
+      planDurationDays: daysValue,
+      targetMinutesPerDay: (hoursValue * 60).toDouble(),
+      targetQuestionsPerDay: 15,
     );
 
-    final result = await svc.generatePlanFromSyllabus(
+    final result = await planService.generatePlanFromSyllabus(
       studentId: studentId,
       syllabusGoals: syllabusGoals,
     );

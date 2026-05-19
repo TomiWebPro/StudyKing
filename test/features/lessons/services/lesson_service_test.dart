@@ -82,7 +82,7 @@ void main() {
   late _FakeTopicRepository topicRepo;
   late _FakeTutorSessionRepository sessionRepo;
   late DatabaseService database;
-  late LessonSessionService service;
+  late SessionQueryService service;
 
   setUp(() {
     topicRepo = _FakeTopicRepository();
@@ -97,7 +97,7 @@ void main() {
       conversationRepository: ConversationRepository(),
       tutorSessionRepository: sessionRepo,
     );
-    service = LessonSessionService(database: database);
+    service = SessionQueryService(database: database);
   });
 
   group('getLessonsForStudent', () {

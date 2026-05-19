@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -8,6 +9,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class LessonAgentService {
   static final Logger _logger = const Logger('LessonAgentService');
@@ -253,15 +255,11 @@ class LessonAgentService {
   }
 
   String _buildLessonPrompt(String topicTitle, String localeName) {
-    return 'Generate a structured lesson plan for the topic: "$topicTitle". '
-        'Include slides (key concepts), examples, exercises, and a summary. '
-        'Respond in $localeName. '
-        'Format your response as a JSON array of blocks, each with "type" (slide, text, example, exercise, quiz, summary) and "content" fields.';
+    return lookupAppLocalizations(Locale(localeName)).lessonBuildPrompt(topicTitle, localeName);
   }
 
   String _lessonSystemPrompt(String localeName) {
-    return 'You are a lesson planning AI. Generate educational content in $localeName. '
-        'Your response must be valid JSON.';
+    return lookupAppLocalizations(Locale(localeName)).lessonSystemPrompt(localeName);
   }
 
   Future<Lesson?> generateLessonFromSource({
@@ -271,11 +269,7 @@ class LessonAgentService {
     required String sourceContent,
     String localeName = 'en',
   }) async {
-    final prompt = 'Based on the following source material, generate a structured lesson:\n\n'
-        '$sourceContent\n\n'
-        'Topic: $topicTitle\n'
-        'Generate slides, examples, exercises, and a summary. '
-        'Respond in $localeName as a JSON array of blocks.';
+    final prompt = lookupAppLocalizations(Locale(localeName)).lessonBuildPromptFromSource(sourceContent, topicTitle, localeName);
 
     final result = await _llmService.chat(
       message: prompt,

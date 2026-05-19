@@ -69,7 +69,7 @@ void main() {
 
     test('uses default grid color when not specified', () {
       final painter = GridPainter();
-      expect(painter.gridColor, const Color(0xFFE0E0E0));
+      expect(painter.gridColor, const Color(0xFF9E9E9E));
     });
   });
 }

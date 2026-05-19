@@ -362,7 +362,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
 
                 return Card(
                   key: ValueKey(topic.id),
-                  margin: EdgeInsets.only(bottom: 4, left: indentation * 16.0),
+                  margin: EdgeInsetsDirectional.only(bottom: 4, start: indentation * 16.0),
                   child: ListTile(
                     leading: ReorderableDragStartListener(
                       index: index,

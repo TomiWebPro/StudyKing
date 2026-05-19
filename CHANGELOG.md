@@ -1,5 +1,55 @@
 # Changelog
 
+- 2026-05-19: Future Functionality Planner Round 6 — implemented future_functionality_planner.md:
+  - M9 (MAJOR): Real binary document extraction — DOCX (word/document.xml → w:t text), EPUB (container.xml → OPF → spine XHTML → strip HTML), XLSX (sharedStrings + worksheet XML → t text), PPTX (slide XML → t text); archive + xml packages added as direct deps; parsing failures surface errors instead of silent stubs
+  - M11 (MAJOR): PlannerService now uses injected `planService` instead of creating new `PersonalLearningPlanService` instances in `generatePlan()` and `generatePlanFromSyllabus()` — preserves PlanGenerationConfig and injected dependencies
+  - M12 (MAJOR): AgentLoop._parseResponse() now supports JSON-mode tool calling fallback (```json {"tool":"...","arguments":{...}} ```) alongside original TOOL_CALL: regex format; markdown code fences parsed correctly
+  - M13 (MAJOR): IdleExecutor.startIdleMonitoring() called in AgentFactory.create() — background idle monitoring now active when agent is created
+  - M17 (MAJOR): AgentMemoryStore uses dedicated 'agent_memory' Hive box instead of 'profile' box; auto-migration from old prefixed keys on first init
+  - M19 (MAJOR): Moved PersonalLearningPlanService from lib/core/services/ to lib/features/planner/services/ (fixes layering violation); updated all 6 consumer imports across lib and test files
+  - m21: Replaced hardcoded 'Mentor Check-In' notification title with l10n.mentorCheckIn in engagement_scheduler.dart; added mentorCheckIn key to en/es ARB files
+  - m25: Renamed LessonSessionService → SessionQueryService in lesson_service.dart, barrel export, provider, and all 3 test files
+  - m31: Changed post-lesson "Practice Mode" button (tutor_screen.dart _startPostLessonPractice) to navigate to FocusTimerScreen (30min default) instead of bare AppRoutes.practiceSession
+
+- 2026-05-19: Internationalisation (i18n) Master Issue — Round 2 (internationalisation_master.md):
+  - **M6:** Replaced hardcoded English strings with `AppLocalizations` in `settings_screen.dart`, `dashboard_header.dart`, `chat_bubble.dart`, `question_card_widget.dart`
+  - **M7:** Migrated lesson prompts in `lesson_agent_service.dart` to ARB keys via `lookupAppLocalizations`
+  - **M8:** Fixed locale-switch staleness — changed `late final` → `late` in `practice_session_screen.dart` and `inline_practice_widget.dart`; removed `_localized` guard in `quick_guide_screen.dart`
+  - **m9:** Replaced `toStringAsFixed` with `formatDecimal` for locale-aware file size display in `settings_screen.dart`
+  - **m10:** Changed `EdgeInsets.only(left:)` → `EdgeInsetsDirectional.only(start:)` in `planner_screen.dart` for RTL support
+  - **m11:** Changed `EdgeInsets.only(left:)` → `EdgeInsetsDirectional.only(start:)` in `subject_topics_tab.dart` for RTL support
+  - **m13:** Replaced raw integer badge labels with `formatDecimal` in `settings_screen.dart`
+  - **m14:** Added invariant comment for LLM-facing diagnostic strings in `mentor_service.dart`
+  - Fixed ES ARB indentation for `accuracy`, `preferredStudyTimeHint`, `mentorAccuracy` to resolve i18n coverage gaps
+
+- 2026-05-19: Dry-Run Usability Validation — AI Provider Failure Recovery (dry_run_usability_validator.md):
+  - **B1:** Tutor screen stream errors now caught with retry banner — `_sendMessage` wraps stream in try-catch; `_retryLastMessage` resends original text; `_buildRetryBanner` shows retry action below chat
+  - **B2:** HTTP status codes parsed in all `LlmService` calls — `_errorForStatusCode` maps 401/403/404/429/5xx to specific user messages; `ExceptionType.apiError` added for generic errors
+  - **B3:** Client-side request throttling (500ms min interval) enforced via `_throttle()` in all provider methods
+  - **B4:** Provider failover mechanism wired — `_streamWithFallback` and `_callWithFallback` now used by `chatStream()` and `chat()`; backup config supports auto-failover on 5xx/timeout
+  - **M1:** Mentor screen failed messages now show retry banner — `_pendingRetryText` stores original message; `_retryLastMessage` repopulates input and resends
+  - **M2:** Test connection sends actual chat completion (`/chat/completions`) instead of `/models` endpoint; records `lastConnectionTestMs` timestamp
+  - **M3:** `selectedModel` cleared when provider dropdown changes (both state provider and on switch)
+  - **M5:** Partial responses preserved on mid-stream error in both `conversation_manager.dart` and `mentor_service.dart` — accumulated buffer saved to conversation memory before rethrow
+  - **M6:** `LlmTask` stores `description` field; `retryTask()` preserves original task description; `createTask()` accepts optional description
+  - **P1:** Eager provider initialization — `SettingsController` loads settings in constructor; `StudyKingApp.build()` syncs `apiKeyProvider`, `apiBaseUrlProvider`, `selectedModelProvider`, and `llmProviderProvider` from persisted settings; `llmProviderName` field added to `SettingsBox`
+  - **P2:** Connection health tile added to settings AI configuration section; `lastConnectionTestMs` and `lastLlmError` fields track health; test timestamp saved on successful connection test
+
+- 2026-05-19: Code Refactor Master Issue — Phase 1 (code_refactor_master.md):
+  - **M2:** Fixed mutual import cycle between `app_router.dart` and `not_found_screen.dart` — `NotFoundScreen` now uses string literal `/dashboard` instead of importing `AppRoutes`
+  - **M4:** Split `TutorSessionAdapter` into its own file `tutor_session_adapter.dart` — `conversation_message_adapter.dart` now defines only `ConversationMessageAdapter`
+  - **m3:** Removed `dart:io` from presentation layer — `export_section.dart` and `settings_screen.dart` now use `XFile.fromData()` instead of `File` operations
+  - **m4:** Expanded `planner_data.dart` barrel to export all models and repositories for consistency
+  - **m5:** Fixed file placement violations — moved `sr_data_codec.dart` to `core/utils/`, `session_utils.dart` to `sessions/presentation/utils/`, `focus_session_model.dart` to `focus_mode/data/models/`, `onboarding_state.dart` to `onboarding/data/models/`, removed empty `quickguide/data/` directory
+  - **m6:** Fixed hardcoded values — `web_scraper.dart` uses `ApiConfig.userAgent`, `main.dart` uses `Timeouts.week.inMilliseconds`
+  - **m7:** Deleted stale `test/temp_should_delete_test.dart`
+  - **m8:** Fixed log level inconsistencies in teaching services — changed 8 `.w()` calls to `.e()` for operation failures
+  - **m10:** Created shared `showConfirmationDialog()` and `showSuccessSnackBar()` / `showErrorSnackBar()` utilities in `core/widgets/`
+  - **m11:** Updated stale `v0.1.0` version string to `v1.0.0` in ARB and generated l10n files
+  - **m12:** Converted relative imports to absolute `package:` imports in all teaching service files
+  - **m13:** Updated stale TODO for `SpacedRepetitionQueries` with concrete action item
+  - **M3:** Fixed cross-feature import in `teaching_providers.dart` — now uses `engagementMasteryServiceProvider` from `app_providers.dart` instead of importing from `practice_providers.dart`
+
 - 2026-05-19: Dry-Run Result Fixes — First Launch IB Chemistry (dry_run_result_first_launch_ib_chemistry.md):
   - **Critical:** Fixed Upload pipeline (4.1, 4.2, 4.5) — UploadScreen now reads `contentPipelineProvider` when `widget.pipeline` is null; "Upload & Analyze" no longer falls through to bare source creation
   - **Critical:** Fixed QuickGuide silent fallback (5.1) — Added API key banner warning when no key configured; `_sendMessage` now shows actionable message instead of silently returning canned responses

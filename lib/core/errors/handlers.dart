@@ -74,6 +74,7 @@ class AppErrorHandler {
       ExceptionType.apiNotFound => l10n.errorApiNotFound,
       ExceptionType.apiInternalServer => l10n.errorApiInternalServer,
       ExceptionType.apiAuth => l10n.errorApiAuth,
+      ExceptionType.apiError => l10n.errorUnexpected,
       ExceptionType.database => l10n.errorDatabase,
       ExceptionType.validation => l10n.validationFailed(exception.message),
       ExceptionType.pdfParse => l10n.errorPdfParse,
@@ -90,6 +91,7 @@ class AppErrorHandler {
       ExceptionType.apiRateLimit => Icons.pause_circle,
       ExceptionType.apiNotFound => Icons.looks_one_outlined,
       ExceptionType.apiInternalServer => Icons.bug_report,
+      ExceptionType.apiError => Icons.error_outline,
       ExceptionType.database => Icons.storage,
       ExceptionType.validation => Icons.info,
       ExceptionType.pdfParse => Icons.picture_as_pdf,
@@ -165,10 +167,18 @@ class AppErrorHandler {
       );
     }
 
-    if (errorStr.contains('403') || errorStr.contains('forbidden')) {
+    if (errorStr.contains('429') || errorStr.contains('rate limit') || errorStr.contains('too many requests')) {
       return AppException(
         message: l10n.errorApiRateLimit,
         type: ExceptionType.apiRateLimit,
+        originalError: error,
+      );
+    }
+
+    if (errorStr.contains('403') || errorStr.contains('forbidden')) {
+      return AppException(
+        message: l10n.errorApiAuth,
+        type: ExceptionType.apiAuth,
         originalError: error,
       );
     }

@@ -1,6 +1,7 @@
 class HiveBoxNames {
   HiveBoxNames._();
 
+  static const String agentMemory = 'agent_memory';
   static const String answers = 'answers';
   static const String attempts = 'attempts';
   static const String badges = 'badges';

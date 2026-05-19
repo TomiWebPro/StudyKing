@@ -19,7 +19,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
+import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 

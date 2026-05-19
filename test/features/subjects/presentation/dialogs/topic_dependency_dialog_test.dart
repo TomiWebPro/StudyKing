@@ -232,5 +232,208 @@ void main() {
 
       expect(find.textContaining('No other topics'), findsOneWidget);
     });
+
+    testWidgets('initializes with existing dependency data', (tester) async {
+      final existingDependency = TopicDependency(
+        topicId: 't-a',
+        prerequisites: ['t-b'],
+        downstreamTopics: ['t-c'],
+        masteryThreshold: 0.5,
+        isRequired: false,
+        syllabusWeight: 2.0,
+        sortOrder: 3,
+        parentTopicId: null,
+      );
+
+      await tester.pumpWidget(_buildTestApp(
+        TopicDependencyDialog(
+          topic: topicA,
+          allTopics: allTopics,
+          dependency: existingDependency,
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final geometryTile = find.ancestor(
+        of: find.text('Geometry'),
+        matching: find.byType(CheckboxListTile),
+      );
+      final geometryCheckbox = tester.widget<CheckboxListTile>(geometryTile);
+      expect(geometryCheckbox.value, isTrue);
+
+      final calculusTile = find.ancestor(
+        of: find.text('Calculus'),
+        matching: find.byType(CheckboxListTile),
+      );
+      final calculusCheckbox = tester.widget<CheckboxListTile>(calculusTile);
+      expect(calculusCheckbox.value, isFalse);
+
+      expect(find.textContaining('Optional topic'), findsOneWidget);
+    });
+
+    testWidgets('unchecking a pre-selected prerequisite removes it',
+        (tester) async {
+      TopicDependency? result;
+      final existingDependency = TopicDependency(
+        topicId: 't-a',
+        prerequisites: ['t-b', 't-c'],
+        downstreamTopics: [],
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<TopicDependency>(
+                context: context,
+                builder: (_) => TopicDependencyDialog(
+                  topic: topicA,
+                  allTopics: allTopics,
+                  dependency: existingDependency,
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final geometryTile = find.ancestor(
+        of: find.text('Geometry'),
+        matching: find.byType(CheckboxListTile),
+      );
+      await tester.tap(geometryTile);
+      await tester.pumpAndSettle();
+
+      final geometryCheckbox = tester.widget<CheckboxListTile>(geometryTile);
+      expect(geometryCheckbox.value, isFalse);
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.prerequisites, isNot(contains('t-b')));
+      expect(result!.prerequisites, contains('t-c'));
+    });
+
+    testWidgets('save with modified fields returns correct dependency',
+        (tester) async {
+      TopicDependency? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<TopicDependency>(
+                context: context,
+                builder: (_) => TopicDependencyDialog(
+                  topic: topicA,
+                  allTopics: allTopics,
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final geometryTile = find.ancestor(
+        of: find.text('Geometry'),
+        matching: find.byType(CheckboxListTile),
+      );
+      await tester.tap(geometryTile);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.prerequisites, contains('t-b'));
+      expect(result!.prerequisites, isNot(contains('t-c')));
+      expect(result!.isRequired, isFalse);
+      expect(result!.topicId, 't-a');
+    });
+
+    testWidgets('save with existing dependency preserves downstream topics',
+        (tester) async {
+      TopicDependency? result;
+      final existingDependency = TopicDependency(
+        topicId: 't-a',
+        prerequisites: [],
+        downstreamTopics: ['t-c'],
+        masteryThreshold: 0.9,
+        isRequired: false,
+        syllabusWeight: 1.5,
+        sortOrder: 2,
+        parentTopicId: null,
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<TopicDependency>(
+                context: context,
+                builder: (_) => TopicDependencyDialog(
+                  topic: topicA,
+                  allTopics: allTopics,
+                  dependency: existingDependency,
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.downstreamTopics, contains('t-c'));
+      expect(result!.masteryThreshold, 0.9);
+      expect(result!.syllabusWeight, 1.5);
+      expect(result!.isRequired, isFalse);
+      expect(result!.sortOrder, 2);
+    });
+
+    testWidgets('syllabus weight slider interaction changes value',
+        (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicDependencyDialog(
+          topic: topicA,
+          allTopics: allTopics,
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final sliders = find.byType(Slider);
+      expect(sliders, findsNWidgets(2));
+
+      final syllabusSlider = sliders.at(1);
+      await tester.drag(syllabusSlider, const Offset(50, 0));
+      await tester.pumpAndSettle();
+    });
   });
 }

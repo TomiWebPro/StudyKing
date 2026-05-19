@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -16,14 +17,48 @@ class LlmConfiguration {
   final LlmProvider provider;
   final String apiKey;
   final String baseUrl;
+  final String model;
+
+  // Backup provider fields (B4: provider fallback/failover)
+  final LlmProvider? backupProvider;
+  final String? backupApiKey;
+  final String? backupBaseUrl;
+  final String? backupModel;
+
   final void Function(int inputTokens, int outputTokens, String model)? onTokenUsage;
 
   const LlmConfiguration({
     required this.provider,
     required this.apiKey,
     this.baseUrl = '',
+    this.model = '',
+    this.backupProvider,
+    this.backupApiKey,
+    this.backupBaseUrl,
+    this.backupModel,
     this.onTokenUsage,
   });
+
+  bool get hasBackup => backupProvider != null && (backupApiKey != null && backupApiKey!.isNotEmpty);
+
+  LlmConfiguration copyWithBackup({
+    LlmProvider? backupProvider,
+    String? backupApiKey,
+    String? backupBaseUrl,
+    String? backupModel,
+  }) {
+    return LlmConfiguration(
+      provider: provider,
+      apiKey: apiKey,
+      baseUrl: baseUrl,
+      model: model,
+      backupProvider: backupProvider ?? this.backupProvider,
+      backupApiKey: backupApiKey ?? this.backupApiKey,
+      backupBaseUrl: backupBaseUrl ?? this.backupBaseUrl,
+      backupModel: backupModel ?? this.backupModel,
+      onTokenUsage: onTokenUsage,
+    );
+  }
 }
 
 class LlmService {
@@ -36,6 +71,10 @@ class LlmService {
   final LlmTaskManager? _taskManager;
   final LlmUsageMeter? _usageMeter;
 
+  /// Client-side throttling: minimum 500ms between calls (B3)
+  DateTime _lastCallTime = DateTime.now().subtract(const Duration(seconds: 1));
+  static const Duration _minCallInterval = Duration(milliseconds: 500);
+
   LlmService({
     required this.config,
     http.Client? httpClient,
@@ -46,6 +85,163 @@ class LlmService {
        _usageMeter = usageMeter;
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
+
+  /// Status code to typed error mapping (B2)
+  static String _errorForStatusCode(int code, String providerName) {
+    return switch (code) {
+      401 => 'API key is invalid or expired. Update in Settings.',
+      403 => 'Access forbidden. Check your API key permissions.',
+      404 => 'Model not found. Check model name in Settings.',
+      429 => 'Too many requests. Wait and try again.',
+      500 || 502 || 503 => 'Provider experiencing issues. Try again later or switch providers.',
+      _ => '$providerName API Error (HTTP $code)',
+    };
+  }
+
+  /// Enforce minimum interval between calls (B3)
+  Future<void> _throttle() async {
+    final elapsed = DateTime.now().difference(_lastCallTime);
+    if (elapsed < _minCallInterval) {
+      await Future.delayed(_minCallInterval - elapsed);
+    }
+    _lastCallTime = DateTime.now();
+  }
+
+  /// Attempt streaming with a backup provider if primary fails (B4)
+  Stream<String> _streamWithFallback({
+    required String message,
+    required String modelId,
+    required String systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+    required Stream<String> Function({
+      required String message,
+      required String modelId,
+      required String systemPrompt,
+      ConversationMemory? memory,
+      List<Map<String, String>>? history,
+      String feature,
+    }) primaryStream,
+  }) async* {
+    try {
+      yield* primaryStream(
+        message: message,
+        modelId: modelId,
+        systemPrompt: systemPrompt,
+        memory: memory,
+        history: history,
+        feature: feature,
+      );
+    } catch (e) {
+      final errorStr = e.toString();
+      final isServerError = errorStr.contains('500') || errorStr.contains('502') ||
+          errorStr.contains('503') || errorStr.contains('timed out') ||
+          errorStr.contains('ConnectionFailedError') || errorStr.contains('SocketException');
+
+      if (isServerError && config.hasBackup) {
+        yield '\n\n[Primary provider failed. Trying backup provider...]\n\n';
+        yield* _streamBackup(
+          message: message,
+          modelId: config.backupModel ?? modelId,
+          systemPrompt: systemPrompt,
+          memory: memory,
+          history: history,
+          feature: feature,
+        );
+      } else {
+        rethrow;
+      }
+    }
+  }
+
+  Stream<String> _streamBackup({
+    required String message,
+    required String modelId,
+    required String systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    final backupConfig = LlmConfiguration(
+      provider: config.backupProvider!,
+      apiKey: config.backupApiKey!,
+      baseUrl: config.backupBaseUrl ?? '',
+      model: config.backupModel ?? modelId,
+    );
+    final backupService = LlmService(
+      config: backupConfig,
+      httpClient: _httpClient,
+      taskManager: _taskManager,
+      usageMeter: _usageMeter,
+    );
+    yield* backupService.chatStream(
+      message: message,
+      modelId: modelId,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+      feature: feature,
+    );
+  }
+
+  /// Non-streaming fallback (B4)
+  Future<Result<String>> _callWithFallback({
+    required String message,
+    required String modelId,
+    required String systemPrompt,
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+    required Future<Result<String>> Function({
+      required String message,
+      required String modelId,
+      required String systemPrompt,
+      ConversationMemory? memory,
+      List<Map<String, String>>? history,
+      String feature,
+    }) primaryCall,
+  }) async {
+    final result = await primaryCall(
+      message: message,
+      modelId: modelId,
+      systemPrompt: systemPrompt,
+      memory: memory,
+      history: history,
+      feature: feature,
+    );
+
+    if (result.isFailure && config.hasBackup) {
+      final errorStr = result.error ?? '';
+      final isServerError = errorStr.contains('500') || errorStr.contains('502') ||
+          errorStr.contains('503') || errorStr.contains('timed out') ||
+          errorStr.contains('SocketException');
+
+      if (isServerError) {
+        final backupConfig = LlmConfiguration(
+          provider: config.backupProvider!,
+          apiKey: config.backupApiKey!,
+          baseUrl: config.backupBaseUrl ?? '',
+          model: config.backupModel ?? modelId,
+        );
+        final backupService = LlmService(
+          config: backupConfig,
+          httpClient: _httpClient,
+          taskManager: _taskManager,
+          usageMeter: _usageMeter,
+        );
+        return await backupService.chat(
+          message: message,
+          modelId: config.backupModel ?? modelId,
+          systemPrompt: systemPrompt,
+          memory: memory,
+          history: history,
+          feature: '$feature (fallback)',
+        );
+      }
+    }
+    return result;
+  }
 
   Future<Result<String>> chat({
     required String message,
@@ -62,14 +258,31 @@ class LlmService {
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
-    switch (config.provider) {
-      case LlmProvider.openRouter:
-        return await _callOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
-      case LlmProvider.ollama:
-        return await _callOllama(message, modelId, memory: memory, history: history, feature: feature);
-      case LlmProvider.openAI:
-        return await _callOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
-    }
+    return await _callWithFallback(
+      message: message,
+      modelId: modelId,
+      systemPrompt: effectiveSystemPrompt,
+      memory: memory,
+      history: history,
+      feature: feature,
+      primaryCall: ({
+        required String message,
+        required String modelId,
+        required String systemPrompt,
+        ConversationMemory? memory,
+        List<Map<String, String>>? history,
+        String feature = 'general',
+      }) async {
+        switch (config.provider) {
+          case LlmProvider.openRouter:
+            return await _callOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+          case LlmProvider.ollama:
+            return await _callOllama(message, modelId, memory: memory, history: history, feature: feature);
+          case LlmProvider.openAI:
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+        }
+      },
+    );
   }
 
   Stream<String> chatStream({
@@ -88,17 +301,31 @@ class LlmService {
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
-    switch (config.provider) {
-      case LlmProvider.openRouter:
-        yield* _streamOpenRouter(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
-        break;
-      case LlmProvider.ollama:
-        yield* _streamOllama(message, modelId, memory: memory, history: history, feature: feature);
-        break;
-      case LlmProvider.openAI:
-        yield* _streamOpenAI(message, modelId, effectiveSystemPrompt, memory: memory, history: history, feature: feature);
-        break;
-    }
+    yield* _streamWithFallback(
+      message: message,
+      modelId: modelId,
+      systemPrompt: effectiveSystemPrompt,
+      memory: memory,
+      history: history,
+      feature: feature,
+      primaryStream: ({
+        required String message,
+        required String modelId,
+        required String systemPrompt,
+        ConversationMemory? memory,
+        List<Map<String, String>>? history,
+        String feature = 'general',
+      }) {
+        switch (config.provider) {
+          case LlmProvider.openRouter:
+            return _streamOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+          case LlmProvider.ollama:
+            return _streamOllama(message, modelId, memory: memory, history: history, feature: feature);
+          case LlmProvider.openAI:
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+        }
+      },
+    );
   }
 
   List<Map<String, String>> _buildMessages({
@@ -148,6 +375,7 @@ class LlmService {
   }) async {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final url = _openRouterUrl;
     final messages = _buildMessages(
       message: message,
@@ -174,8 +402,9 @@ class LlmService {
       _trackUsage(data, modelId, feature, taskId: taskId);
       return Result.success(content);
     }
-    _failTask(taskId, 'OpenRouter API Error: ${response.body}');
-    return Result.failure('OpenRouter API Error: ${response.body}');
+    final errorMsg = _errorForStatusCode(response.statusCode, 'OpenRouter');
+    _failTask(taskId, errorMsg);
+    return Result.failure(errorMsg);
   }
 
   Stream<String> _streamOpenRouter(
@@ -188,6 +417,7 @@ class LlmService {
   }) async* {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final url = _openRouterUrl;
     final messages = _buildMessages(
       message: message,
@@ -210,6 +440,12 @@ class LlmService {
 
     try {
       final streamedResponse = await _httpClient.send(request);
+      if (streamedResponse.statusCode != 200) {
+        final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'OpenRouter');
+        _failTask(taskId, errorMsg);
+        yield '\n\n[$errorMsg]\n\n';
+        return;
+      }
       final lines = streamedResponse.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter());
@@ -258,6 +494,7 @@ class LlmService {
   }) async {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
@@ -289,8 +526,9 @@ class LlmService {
       );
       return Result.success(content);
     }
-    _failTask(taskId, 'Ollama API Error: ${response.body}');
-    return Result.failure('Ollama API Error: ${response.body}');
+    final errorMsg = _errorForStatusCode(response.statusCode, 'Ollama');
+    _failTask(taskId, errorMsg);
+    return Result.failure(errorMsg);
   }
 
   Stream<String> _streamOllama(
@@ -302,6 +540,7 @@ class LlmService {
   }) async* {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
     var ollamaMessages = <Map<String, String>>[];
     if (memory != null) {
@@ -321,6 +560,12 @@ class LlmService {
 
     try {
       final streamedResponse = await _httpClient.send(request);
+      if (streamedResponse.statusCode != 200) {
+        final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'Ollama');
+        _failTask(taskId, errorMsg);
+        yield '\n\n[$errorMsg]\n\n';
+        return;
+      }
       final lines = streamedResponse.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter());
@@ -365,6 +610,7 @@ class LlmService {
   }) async {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
     final messages = _buildMessages(
       message: message,
@@ -390,8 +636,9 @@ class LlmService {
       _trackUsage(data, modelId, feature, taskId: taskId);
       return Result.success(content);
     }
-    _failTask(taskId, 'OpenAI API Error: ${response.body}');
-    return Result.failure('OpenAI API Error: ${response.body}');
+    final errorMsg = _errorForStatusCode(response.statusCode, 'OpenAI');
+    _failTask(taskId, errorMsg);
+    return Result.failure(errorMsg);
   }
 
   Stream<String> _streamOpenAI(
@@ -404,6 +651,7 @@ class LlmService {
   }) async* {
     final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
     _initTask(taskId);
+    await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
     final messages = _buildMessages(
       message: message,
@@ -425,6 +673,12 @@ class LlmService {
 
     try {
       final streamedResponse = await _httpClient.send(request);
+      if (streamedResponse.statusCode != 200) {
+        final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'OpenAI');
+        _failTask(taskId, errorMsg);
+        yield '\n\n[$errorMsg]\n\n';
+        return;
+      }
       final lines = streamedResponse.stream
           .transform(utf8.decoder)
           .transform(const LineSplitter());

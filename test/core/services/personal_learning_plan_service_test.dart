@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';

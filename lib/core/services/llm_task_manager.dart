@@ -15,6 +15,7 @@ class LlmTask {
   final int tokensUsed;
   final double estimatedCost;
   final String? error;
+  final String? description;
   final Completer<void>? cancelCompleter;
 
   LlmTask({
@@ -27,6 +28,7 @@ class LlmTask {
     this.tokensUsed = 0,
     this.estimatedCost = 0.0,
     this.error,
+    this.description,
     this.cancelCompleter,
   });
 
@@ -40,6 +42,7 @@ class LlmTask {
     'tokensUsed': tokensUsed,
     'estimatedCost': estimatedCost,
     'error': error,
+    'description': description,
   };
 
   factory LlmTask.fromJson(Map<String, dynamic> json) => LlmTask(
@@ -55,6 +58,7 @@ class LlmTask {
     tokensUsed: (json['tokensUsed'] as num?)?.toInt() ?? 0,
     estimatedCost: (json['estimatedCost'] as num?)?.toDouble() ?? 0.0,
     error: json['error'] as String?,
+    description: json['description'] as String?,
   );
 
   LlmTask copyWith({
@@ -67,6 +71,7 @@ class LlmTask {
     int? tokensUsed,
     double? estimatedCost,
     String? error,
+    String? description,
   }) {
     return LlmTask(
       id: id ?? this.id,
@@ -78,6 +83,7 @@ class LlmTask {
       tokensUsed: tokensUsed ?? this.tokensUsed,
       estimatedCost: estimatedCost ?? this.estimatedCost,
       error: error ?? this.error,
+      description: description ?? this.description,
       cancelCompleter: cancelCompleter,
     );
   }
@@ -124,6 +130,7 @@ class LlmTaskManager {
   String createTask({
     required String feature,
     required String modelId,
+    String? description,
   }) {
     final id = 'task_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _tasks.add(LlmTask(
@@ -131,6 +138,7 @@ class LlmTaskManager {
       feature: feature,
       modelId: modelId,
       startTime: DateTime.now(),
+      description: description,
     ));
     if (_tasks.length > 1000) {
       _tasks.removeRange(0, _tasks.length - 1000);
@@ -210,7 +218,11 @@ class LlmTaskManager {
     final idx = _tasks.indexWhere((t) => t.id == taskId);
     if (idx == -1) return '';
     final oldTask = _tasks[idx];
-    return createTask(feature: oldTask.feature, modelId: oldTask.modelId);
+    return createTask(
+      feature: oldTask.feature,
+      modelId: oldTask.modelId,
+      description: oldTask.description,
+    );
   }
 
   void Function(String feature, String error)? onTaskFailed;

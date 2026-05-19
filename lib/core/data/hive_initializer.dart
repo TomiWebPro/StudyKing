@@ -9,7 +9,6 @@ import 'package:studyking/features/ingestion/data/adapters/adapters.dart';
 import 'package:studyking/features/sessions/data/adapters/adapters.dart';
 import 'package:studyking/features/questions/data/questions_data.dart';
 import 'package:studyking/features/practice/data/practice_data.dart';
-import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/planner_data.dart';
 import 'package:studyking/features/subjects/data/subjects_data.dart';
 import 'package:studyking/features/teaching/data/teaching_data.dart';

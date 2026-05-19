@@ -233,5 +233,158 @@ void main() {
       expect(find.text('Algebra'), findsOneWidget);
       expect(find.text('Geometry'), findsOneWidget);
     });
+
+    testWidgets('edit mode displays sort order value', (tester) async {
+      final existingTopic = Topic(
+        id: 't-3',
+        subjectId: 'sub-1',
+        title: 'Trigonometry',
+        description: 'Angles',
+        syllabusText: 'Trig syllabus',
+        sortOrder: 5,
+      );
+
+      await tester.pumpWidget(buildTestApp(
+        TopicEditDialog(
+          title: 'Edit Topic',
+          topic: existingTopic,
+          existingTopics: existingTopics,
+          existingDependencies: const [],
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Sort Order'), findsOneWidget);
+      expect(find.textContaining('5'), findsOneWidget);
+    });
+
+    testWidgets('edit mode preserves topic id on save', (tester) async {
+      Topic? result;
+      final existingTopic = Topic(
+        id: 't-3',
+        subjectId: 'sub-1',
+        title: 'Trigonometry',
+        description: 'Angles',
+        syllabusText: 'Trig syllabus',
+        parentId: 't-1',
+        sortOrder: 3,
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Edit Topic',
+                  topic: existingTopic,
+                  existingTopics: existingTopics,
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.id, 't-3');
+      expect(result!.subjectId, 'sub-1');
+      expect(result!.title, 'Trigonometry');
+      expect(result!.description, 'Angles');
+      expect(result!.syllabusText, 'Trig syllabus');
+      expect(result!.parentId, 't-1');
+      expect(result!.sortOrder, 3);
+    });
+
+    testWidgets('parent topic dropdown selection sets parentId on save',
+        (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: existingTopics,
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'New Topic');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Algebra').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.parentId, 't-1');
+      expect(result!.title, 'New Topic');
+    });
+
+    testWidgets('dropdown hidden when no eligible root topics', (tester) async {
+      final childTopics = [
+        Topic(
+          id: 't-1',
+          subjectId: 'sub-1',
+          title: 'Algebra',
+          description: 'Basics',
+          syllabusText: 'Syllabus',
+          parentId: 'root',
+        ),
+        Topic(
+          id: 't-2',
+          subjectId: 'sub-1',
+          title: 'Geometry',
+          description: 'Shapes',
+          syllabusText: 'Syllabus',
+          parentId: 'root',
+        ),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        TopicEditDialog(
+          title: 'Add Topic',
+          existingTopics: childTopics,
+          existingDependencies: const [],
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Parent Topic'), findsNothing);
+      expect(find.byType(DropdownButtonFormField<String>), findsNothing);
+    });
   });
 }

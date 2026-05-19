@@ -6,6 +6,7 @@ enum ExceptionType {
   apiRateLimit,
   apiNotFound,
   apiInternalServer,
+  apiError,
   database,
   validation,
   pdfParse,

@@ -814,7 +814,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                       builder: (ctx, snap) {
                         final count = snap.data ?? 0;
                         return Padding(
-                          padding: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsetsDirectional.only(start: 4),
                           child: Text(
                             l10n.topicCountTemplate(count),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(

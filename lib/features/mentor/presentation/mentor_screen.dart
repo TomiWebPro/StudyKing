@@ -41,6 +41,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _initError = false;
   bool _isRetrying = false;
   String _initErrorMessage = '';
+  String? _pendingRetryText;
   MentorAction? _suggestedAction;
   bool _suggestedActionError = false;
   bool _didInit = false;
@@ -297,6 +298,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     } catch (e) {
       final l10n = AppLocalizations.of(context)!;
       final idx = _messages.length - 1;
+      _pendingRetryText = text;
       setState(() {
         _messages[idx] = ChatMessageData(
           message: _messages[idx].message.copyWith(
@@ -311,6 +313,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     _scrollToBottom();
     _inputFocusNode.requestFocus();
     await _handlePostChatIntents();
+  }
+
+  Future<void> _retryLastMessage() async {
+    final text = _pendingRetryText;
+    if (text == null || text.isEmpty || _isSending) return;
+    _pendingRetryText = null;
+    _textController.text = text;
+    _sendMessage();
   }
 
   Future<void> _handlePostChatIntents() async {
@@ -581,6 +591,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 _buildSuggestedActionCard(l10n)
               else if (_suggestedActionError)
                 _buildSuggestedActionError(l10n),
+              if (_pendingRetryText != null)
+                _buildRetryBanner(l10n),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState(l10n)
@@ -766,6 +778,34 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildRetryBanner(AppLocalizations l10n) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: cs.errorContainer,
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 18, color: cs.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.messageFailedRetry,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _retryLastMessage,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l10n.retry),
+          ),
+        ],
       ),
     );
   }

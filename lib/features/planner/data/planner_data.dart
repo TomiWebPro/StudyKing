@@ -1,2 +1,15 @@
 export 'adapters.dart';
+export 'models/engagement_nudge_model.dart';
+export 'models/pending_action_model.dart';
 export 'models/personal_learning_plan_model.dart';
+export 'models/plan_adherence_metric_model.dart';
+export 'models/plan_adherence_model.dart';
+export 'models/roadmap_model.dart';
+export 'models/student_availability_model.dart';
+export 'models/task_model.dart';
+export 'repositories/engagement_nudge_repository.dart';
+export 'repositories/pending_action_repository.dart';
+export 'repositories/plan_adherence_repository.dart';
+export 'repositories/plan_repository.dart';
+export 'repositories/roadmap_repository.dart';
+export 'repositories/student_availability_repository.dart';

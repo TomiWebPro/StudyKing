@@ -81,6 +81,15 @@ class SettingsBox {
   @HiveField(22)
   late bool dailyReminderEnabled;
 
+  @HiveField(23)
+  late String llmProviderName;
+
+  @HiveField(24)
+  late int lastConnectionTestMs;
+
+  @HiveField(25)
+  late String lastLlmError;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -105,6 +114,9 @@ class SettingsBox {
     this.dailyReminderMinute = 0,
     this.firstFocusVisit = true,
     this.dailyReminderEnabled = false,
+    this.llmProviderName = 'openRouter',
+    this.lastConnectionTestMs = 0,
+    this.lastLlmError = '',
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -141,6 +153,9 @@ class SettingsBox {
       'dailyReminderMinute': dailyReminderMinute,
       'firstFocusVisit': firstFocusVisit,
       'dailyReminderEnabled': dailyReminderEnabled,
+      'llmProviderName': llmProviderName,
+      'lastConnectionTestMs': lastConnectionTestMs,
+      'lastLlmError': lastLlmError,
     };
   }
 
@@ -195,6 +210,13 @@ class SettingsBox {
       dailyReminderEnabled: json['dailyReminderEnabled'] is bool
           ? json['dailyReminderEnabled'] as bool
           : false,
+      llmProviderName: json['llmProviderName'] is String
+          ? json['llmProviderName'] as String
+          : 'openRouter',
+      lastConnectionTestMs: (json['lastConnectionTestMs'] as num?)?.toInt() ?? 0,
+      lastLlmError: json['lastLlmError'] is String
+          ? json['lastLlmError'] as String
+          : '',
     );
   }
 
@@ -222,6 +244,9 @@ class SettingsBox {
     int? dailyReminderMinute,
     bool? firstFocusVisit,
     bool? dailyReminderEnabled,
+    String? llmProviderName,
+    int? lastConnectionTestMs,
+    String? lastLlmError,
   }) {
     return SettingsBox(
       apiKey: apiKey ?? this.apiKey,
@@ -247,6 +272,9 @@ class SettingsBox {
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
       firstFocusVisit: firstFocusVisit ?? this.firstFocusVisit,
       dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
+      llmProviderName: llmProviderName ?? this.llmProviderName,
+      lastConnectionTestMs: lastConnectionTestMs ?? this.lastConnectionTestMs,
+      lastLlmError: lastLlmError ?? this.lastLlmError,
     );
   }
 

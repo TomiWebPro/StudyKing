@@ -138,13 +138,43 @@ class AgentLoop {
 
   _ParsedResponse? _parseResponse(String response) {
     final toolMatch = RegExp(r'TOOL_CALL:\s*(\S+)').firstMatch(response);
-    if (toolMatch == null) return null;
-    final toolName = toolMatch.group(1)!.trim();
+    if (toolMatch != null) {
+      final toolName = toolMatch.group(1)!.trim();
+      final argsMatch = RegExp(r'ARGUMENTS:\s*(\{.*\})', dotAll: true).firstMatch(response);
+      final args = argsMatch != null ? argsMatch.group(1)!.trim() : '{}';
+      return _ParsedResponse(toolName: toolName, toolArguments: args);
+    }
 
-    final argsMatch = RegExp(r'ARGUMENTS:\s*(\{.*\})', dotAll: true).firstMatch(response);
-    final args = argsMatch != null ? argsMatch.group(1)!.trim() : '{}';
+    try {
+      final jsonMatch = RegExp(r'```(?:json)?\s*(\{.*?\})\s*```', dotAll: true).firstMatch(response);
+      final jsonStr = jsonMatch != null ? jsonMatch.group(1)!.trim() : response.trim();
+      final parsed = jsonDecode(jsonStr);
+      if (parsed is Map<String, dynamic>) {
+        final toolName = parsed['tool'] as String? ?? parsed['tool_call'] as String? ?? '';
+        final args = parsed['arguments'] ?? parsed['args'] ?? <String, dynamic>{};
+        final argsStr = args is String ? args : jsonEncode(args);
+        if (toolName.isNotEmpty) {
+          return _ParsedResponse(toolName: toolName, toolArguments: argsStr);
+        }
+      }
+    } catch (_) {}
 
-    return _ParsedResponse(toolName: toolName, toolArguments: args);
+    final jsonBlock = RegExp(r'```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```').firstMatch(response);
+    if (jsonBlock != null) {
+      try {
+        final parsed = jsonDecode(jsonBlock.group(1)!);
+        if (parsed is Map<String, dynamic>) {
+          final toolName = parsed['tool'] as String? ?? parsed['tool_call'] as String? ?? '';
+          final args = parsed['arguments'] ?? parsed['args'] ?? <String, dynamic>{};
+          final argsStr = args is String ? args : jsonEncode(args);
+          if (toolName.isNotEmpty) {
+            return _ParsedResponse(toolName: toolName, toolArguments: argsStr);
+          }
+        }
+      } catch (_) {}
+    }
+
+    return null;
   }
 }
 

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
@@ -166,16 +167,33 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
     try {
       final stopwatch = Stopwatch()..start();
-      final url = baseUrl.isNotEmpty ? '$baseUrl/models' : '${ApiConfig.openRouterBaseUrlString}/models';
-      final response = await http.get(
-        Uri.parse(url),
-        headers: {'Authorization': 'Bearer $apiKey'},
+      final chatUrl = baseUrl.isNotEmpty
+          ? '$baseUrl/chat/completions'
+          : '${ApiConfig.openRouterBaseUrlString}/chat/completions';
+      final response = await http.post(
+        Uri.parse(chatUrl),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $apiKey',
+        },
+        body: jsonEncode({
+          'model': ref.read(selectedModelProvider).isNotEmpty
+              ? ref.read(selectedModelProvider)
+              : 'gpt-4o-mini',
+          'messages': [
+            {'role': 'user', 'content': 'Reply with exactly: OK'},
+          ],
+          'max_tokens': 10,
+        }),
       ).timeout(Timeouts.apiCall);
       stopwatch.stop();
 
       if (!mounted) return;
 
       if (response.statusCode == 200) {
+        ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(
+          lastConnectionTestMs: DateTime.now().millisecondsSinceEpoch,
+        ));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.connectionSuccessful(stopwatch.elapsedMilliseconds)),
@@ -405,6 +423,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             if (value == null) return;
 
             ref.read(llmProviderProvider.notifier).state = value;
+            ref.read(selectedModelProvider.notifier).state = '';
 
             setState(() {
               _selectedProvider = value;

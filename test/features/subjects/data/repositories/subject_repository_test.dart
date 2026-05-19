@@ -1092,5 +1092,33 @@ void main() {
         expect(result.data!.length, 1);
       });
     });
+
+    group('Fallback behavior - uninitialized box', () {
+      test('getWithTopics returns empty list when box is not initialized', () async {
+        final repo = SubjectRepository();
+        final result = await repo.getWithTopics(['topic-1']);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('addTopicToSubject returns success when box is not initialized', () async {
+        final repo = SubjectRepository();
+        final result = await repo.addTopicToSubject('s1', 't1');
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('removeTopicFromSubject returns success when box is not initialized', () async {
+        final repo = SubjectRepository();
+        final result = await repo.removeTopicFromSubject('s1', 't1');
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('getByCode returns success(null) when box is not initialized', () async {
+        final repo = SubjectRepository();
+        final result = await repo.getByCode('CODE-1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
+      });
+    });
   });
 }

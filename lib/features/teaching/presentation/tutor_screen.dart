@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider;
@@ -62,6 +63,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   bool _isSending = false;
   bool _initError = false;
   String _initErrorMessage = '';
+  String? _retryMessage;
   Timer? _timer;
   int _elapsedMinutes = 0;
   LessonPlan? _lessonPlan;
@@ -170,11 +172,15 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final buffer = StringBuffer();
 
     final l10n = AppLocalizations.of(context)!;
-    await for (final chunk in _manager!.sendMessage(
-        l10n.readyToLearnAbout(widget.topicTitle))) {
-      buffer.write(chunk);
-      setState(() {});
-      _scrollToBottom();
+    try {
+      await for (final chunk in _manager!.sendMessage(
+          l10n.readyToLearnAbout(widget.topicTitle))) {
+        buffer.write(chunk);
+        setState(() {});
+        _scrollToBottom();
+      }
+    } catch (e) {
+      const Logger('TutorScreen').e('Initial greeting failed', e);
     }
 
     if (mounted) setState(() => _isSending = false);
@@ -184,13 +190,34 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   Future<void> _sendMessage() async {
     final text = _textController.text.trim();
     if (text.isEmpty || _isSending || _manager == null) return;
-
     _textController.clear();
-    setState(() => _isSending = true);
+    _retryMessage = null;
+    await _sendText(text);
+  }
 
+  Future<void> _retryLastMessage() async {
+    final text = _retryMessage;
+    if (text == null || text.isEmpty || _isSending || _manager == null) return;
+    _retryMessage = null;
+    await _sendText(text);
+  }
+
+  Future<void> _sendText(String text) async {
+    setState(() => _isSending = true);
     final buffer = StringBuffer();
-    await for (final chunk in _manager!.sendMessage(text)) {
-      buffer.write(chunk);
+    try {
+      await for (final chunk in _manager!.sendMessage(text)) {
+        buffer.write(chunk);
+        setState(() {});
+        _scrollToBottom();
+      }
+    } catch (e) {
+      final l10n = AppLocalizations.of(context)!;
+      const Logger('TutorScreen').e('Stream failed', e);
+      _manager!.addAssistantMessage(
+        '${l10n.errorWithResponse}\n\n${l10n.tryAgain}',
+      );
+      _retryMessage = text;
       setState(() {});
       _scrollToBottom();
     }
@@ -383,11 +410,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     Navigator.of(context).pop();
     await Navigator.pushNamed(
       context,
-      AppRoutes.practiceSession,
-      arguments: PracticeSessionArgs(
-        subjectId: widget.subjectId,
-        topicId: widget.topicId,
-        questionCount: questionCount,
+      AppRoutes.focusMode,
+      arguments: FocusTimerScreen(
+        preselectedSubjectId: widget.subjectId,
+        preselectedTopicId: widget.topicId,
+        defaultDurationMinutes: 30,
       ),
     );
   }
@@ -629,6 +656,8 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
               ),
             if (isEnding && _isInitialized && _manager != null)
               _buildTimeEndedBanner(l10n),
+            if (_retryMessage != null)
+              _buildRetryBanner(l10n),
             if (!_showSlides)
               ConversationInput(
                 controller: _textController,
@@ -831,6 +860,34 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildRetryBanner(AppLocalizations l10n) {
+    final cs = Theme.of(context).colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      color: cs.errorContainer,
+      child: Row(
+        children: [
+          Icon(Icons.error_outline, size: 18, color: cs.error),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.messageFailedRetry,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onErrorContainer,
+              ),
+            ),
+          ),
+          TextButton.icon(
+            onPressed: _retryLastMessage,
+            icon: const Icon(Icons.refresh, size: 18),
+            label: Text(l10n.retry),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:file_picker/file_picker.dart';
@@ -29,7 +28,7 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
-import 'package:studyking/features/focus_mode/data/focus_session_model.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
@@ -94,10 +93,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
           SnackBar(
             content: Text(l10n.backupCompleted),
             action: SnackBarAction(
-              label: 'Share',
+              label: l10n.share,
               onPressed: () => Share.shareXFiles(
                 [XFile(filePath)],
-                text: 'StudyKing Backup — ${DateTime.now().toIso8601String().substring(0, 10)}',
+                text: l10n.backupShareText(DateTime.now().toIso8601String().substring(0, 10)),
               ),
             ),
           ),
@@ -186,6 +185,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   () => _showAiModelSelection(settings.selectedModel, apiKey, llmProvider, apiBaseUrl)),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
+              _buildHealthTile(l10n, settings),
               _AiTaskMonitorTile(),
             ]),
             _section(l10n.notificationPreferences, [
@@ -414,6 +414,31 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
     return name[0].toUpperCase() + name.substring(1);
   }
 
+  Widget _buildHealthTile(AppLocalizations l10n, SettingsBox settings) {
+    final hasBeenTested = settings.lastConnectionTestMs > 0;
+    final hasError = settings.lastLlmError.isNotEmpty;
+    final cs = Theme.of(context).colorScheme;
+    final healthColor = hasBeenTested
+        ? (hasError ? cs.error : cs.primary)
+        : cs.onSurfaceVariant;
+    final healthIcon = hasBeenTested
+        ? (hasError ? Icons.error_outline : Icons.check_circle)
+        : Icons.help_outline;
+    final healthLabel = hasBeenTested
+        ? (hasError
+            ? l10n.errorOccurred
+            : l10n.connectionSuccessful(0))
+        : l10n.notTested;
+
+    return ListTile(
+      leading: Icon(healthIcon, color: healthColor),
+      title: Text(l10n.connectionHealth),
+      subtitle: Text(healthLabel),
+      trailing: const Icon(Icons.arrow_forward_ios),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.apiConfig),
+    );
+  }
+
   void _showThemeDialog(ThemeMode currentMode) {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
@@ -633,7 +658,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   _performAutoBackup();
                 },
                 icon: const Icon(Icons.backup, size: 18),
-                label: const Text('Back Up Now'),
+                label: Text(l10n.backupNow),
               ),
             ),
             const Divider(),
@@ -654,11 +679,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   onPressed: () {
                     Navigator.pop(ctx);
                     Share.shareXFiles([XFile(lastBackupPath)],
-                      text: 'StudyKing Backup — ${lastBackupStr.substring(0, 10)}',
+                      text: l10n.backupShareText(lastBackupStr.substring(0, 10)),
                     );
                   },
                   icon: const Icon(Icons.share, size: 16),
-                  label: Text('Share last backup', style: Theme.of(context).textTheme.bodySmall),
+                  label: Text(l10n.shareLastBackup, style: Theme.of(context).textTheme.bodySmall),
                 ),
               ),
             ...options.map((opt) {
@@ -968,11 +993,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         if (kIsWeb) {
           sizeStr = '0 B';
         } else {
-          final fileSize = await File(filePath).length();
+          final fileSize = await XFile(filePath).length();
+          final localeName = l10n.localeName;
           sizeStr = fileSize > 1048576
-              ? '${(fileSize / 1048576).toStringAsFixed(1)} MB'
+              ? '${formatDecimal(fileSize / 1048576, localeName, maxFractionDigits: 1)} MB'
               : fileSize > 1024
-                  ? '${(fileSize / 1024).toStringAsFixed(0)} KB'
+                  ? '${formatDecimal(fileSize / 1024, localeName, maxFractionDigits: 0)} KB'
                   : '$fileSize B';
         }
         final shareText = l10n.exportBackup;
@@ -1761,7 +1787,7 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
     return ListTile(
       leading: _failedCount > 0
           ? Badge(
-              label: Text('$_failedCount'),
+              label: Text(formatDecimal(_failedCount.toDouble(), l10n.localeName, maxFractionDigits: 0)),
               child: const Icon(Icons.error_outline),
             )
           : const Icon(Icons.error_outline),
@@ -1804,7 +1830,7 @@ class _AiTaskMonitorTileState extends ConsumerState<_AiTaskMonitorTile> {
     return ListTile(
       leading: total > 0
           ? Badge(
-              label: Text('$total'),
+              label: Text(formatDecimal(total.toDouble(), l10n.localeName, maxFractionDigits: 0)),
               child: const Icon(Icons.monitor_heart),
             )
           : const Icon(Icons.monitor_heart),

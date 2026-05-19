@@ -128,8 +128,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '${count}min',
-      one: '1min',
+      other: '${count}m',
+      one: '1m',
     );
     return '$_temp0';
   }
@@ -724,7 +724,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get examDateOptional => 'Fecha de Examen (Opcional)';
 
   @override
-  String get backupAndRestore => 'Copia de Seguridad';
+  String get backupAndRestore => 'Copia de seguridad y restaurar';
 
   @override
   String get exportBackup => 'Exportar Copia';
@@ -2061,7 +2061,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get aboutApplicationName => 'StudyKing';
 
   @override
-  String get aboutVersion => 'v0.1.0';
+  String get aboutVersion => 'v1.0.0';
 
   @override
   String get aboutLegalese => '© 2026 StudyKing.';
@@ -2882,6 +2882,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get scheduleAiTutorDesc =>
       'Reciba tutoría personalizada uno a uno con IA';
+
+  @override
+  String get nextStep => 'Siguiente Paso';
+
+  @override
+  String topicsAutoCreated(int count) =>
+      '$count temas auto-creados del plan de estudios';
 
   @override
   String get fileSaved => 'Archivo guardado exitosamente';
@@ -4587,8 +4594,8 @@ class AppLocalizationsEs extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Fuente(s)',
-      one: '1 Fuente',
+      other: '$count fuentes',
+      one: '1 fuente',
     );
     return '$_temp0';
   }
@@ -4923,7 +4930,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String downstreamTopicWarning(int count) {
-    return '⚠ $count tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count temas dependientes dependen',
+      one: '1 tema dependiente depende',
+    );
+    return '⚠ $_temp0 de este tema y pueden necesitar actualización.';
   }
 
   @override
@@ -4974,4 +4987,70 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get slides => 'Diapositivas';
+
+  @override
+  String get connectionHealth => 'Estado de la Conexión';
+
+  @override
+  String get notTested => 'No probado';
+
+  @override
+  String get messageFailedRetry => 'Mensaje fallido. Toca para reintentar.';
+
+  @override
+  String get share => 'Compartir';
+
+  @override
+  String backupShareText(String date) {
+    return 'Copia de seguridad de StudyKing — $date';
+  }
+
+  @override
+  String get backupNow => 'Hacer copia ahora';
+
+  @override
+  String get shareLastBackup => 'Compartir última copia';
+
+  @override
+  String get exportReports => 'Exportar informes';
+
+  @override
+  String get readAloud => 'Leer en voz alta';
+
+  @override
+  String get uploadFile => 'Subir archivo';
+
+  @override
+  String get fileAttached => 'Archivo adjunto';
+
+  @override
+  String get recordAudio => 'Grabar audio';
+
+  @override
+  String get recordingComplete => 'Grabación completa';
+
+  @override
+  String get startRecording => 'Iniciar grabación';
+
+  @override
+  String lessonSystemPrompt(String localeName) {
+    return 'Eres una IA de planificación de lecciones. Genera contenido educativo en $localeName. Tu respuesta debe ser JSON válido.';
+  }
+
+  @override
+  String lessonBuildPrompt(String topicTitle, String localeName) {
+    return 'Genera un plan de lección estructurado para el tema: \"$topicTitle\". Incluye diapositivas (conceptos clave), ejemplos, ejercicios y un resumen. Responde en $localeName. Formatea tu respuesta como un arreglo JSON de bloques, cada uno con campos \"type\" (slide, text, example, exercise, quiz, summary) y \"content\".';
+  }
+
+  @override
+  String lessonBuildPromptFromSource(
+    String sourceContent,
+    String topicTitle,
+    String localeName,
+  ) {
+    return 'Basado en el siguiente material fuente, genera una lección estructurada:\n\n$sourceContent\n\nTema: $topicTitle\nGenera diapositivas, ejemplos, ejercicios y un resumen. Responde en $localeName como un arreglo JSON de bloques.';
+  }
+
+  @override
+  String get mentorCheckIn => 'Control del Mentor';
 }

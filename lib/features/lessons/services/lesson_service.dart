@@ -3,10 +3,10 @@ import '../../../core/data/database_service.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/topic_model.dart';
 
-class LessonSessionService {
+class SessionQueryService {
   final DatabaseService _database;
 
-  LessonSessionService({
+  SessionQueryService({
     required DatabaseService database,
   }) : _database = database;
 

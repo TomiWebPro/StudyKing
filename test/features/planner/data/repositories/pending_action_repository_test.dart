@@ -262,7 +262,7 @@ void main() {
     test('getPending works after init', () async {
       await repository.create(createTestAction(id: 'a1', studentId: 's1'));
       await repository.create(createTestAction(id: 'a2', studentId: 's1', status: 'completed'));
-      expect(await repository.getPending('s1'), hasLength(1));
+      expect((await repository.getPending('s1')).data, hasLength(1));
     });
 
     test('markCompleted works after init', () async {
@@ -291,12 +291,12 @@ void main() {
 
     test('hasPending returns true when pending actions exist', () async {
       await repository.create(createTestAction(id: 'hp1', studentId: 's1'));
-      expect(await repository.hasPending('s1'), isTrue);
+      expect((await repository.hasPending('s1')).data, isTrue);
     });
 
     test('hasPending returns false when only completed actions exist', () async {
       await repository.create(createTestAction(id: 'hp2', studentId: 's1', status: 'completed'));
-      expect(await repository.hasPending('s1'), isFalse);
+      expect((await repository.hasPending('s1')).data, isFalse);
     });
   });
 }

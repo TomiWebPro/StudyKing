@@ -141,7 +141,7 @@
       }
     }
   },
-  "durationMinutes": "{count, plural, =1{1min} other{{count}min}}",
+  "durationMinutes": "{count, plural, =1{1m} other{{count}m}}",
   "@durationMinutes": {
     "description": "Duration in minutes abbreviated",
     "placeholders": {
@@ -353,10 +353,10 @@
   "@correctAnswers": {
     "description": "Label for correct answers stat in results"
   },
-   "accuracy": "Exactitud",
-   "@accuracy": {
-     "description": "Label for accuracy stat"
-   },
+  "accuracy": "Exactitud",
+  "@accuracy": {
+    "description": "Label for accuracy stat"
+  },
   "examConfiguration": "Configuración del Examen",
   "@examConfiguration": {
     "description": "Heading for exam configuration screen"
@@ -565,7 +565,7 @@
   "@preferredStudyTime": {
     "description": "Label for preferred study time input field"
   },
-   "preferredStudyTimeHint": "p. ej., Tarde (6-9 p. m.)",
+  "preferredStudyTimeHint": "p. ej., Tarde (6-9 p. m.)",
   "@preferredStudyTimeHint": {
     "description": "Hint text for preferred study time input field"
   },
@@ -2705,7 +2705,7 @@
   "@aboutApplicationName": {
     "description": "Application name for About dialog"
   },
-  "aboutVersion": "v0.1.0",
+  "aboutVersion": "v1.0.0",
   "@aboutVersion": {
     "description": "Application version for About dialog"
   },
@@ -3107,10 +3107,10 @@
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
   },
-   "mentorAccuracy": "Exactitud",
-   "@mentorAccuracy": {
-     "description": "Section header for accuracy in progress report"
-   },
+  "mentorAccuracy": "Exactitud",
+  "@mentorAccuracy": {
+    "description": "Section header for accuracy in progress report"
+  },
   "mentorBadges": "Insignias",
   "@mentorBadges": {
     "description": "Section header for badges in progress report"
@@ -3810,6 +3810,17 @@
   "scheduleAiTutorDesc": "Reciba tutoría personalizada uno a uno con IA",
   "@scheduleAiTutorDesc": {
     "description": "Description for AI tutor checklist item"
+  },
+  "nextStep": "Siguiente Paso",
+  "@nextStep": {
+    "description": "Badge label for the next incomplete step in the getting started checklist"
+  },
+  "topicsAutoCreated": "{count, plural, =1{1 tema auto-creado del plan de estudios} other{{count} temas auto-creados del plan de estudios}}",
+  "@topicsAutoCreated": {
+    "description": "Snackbar message when topics are auto-created from seed data",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   },
   "fileSaved": "Archivo guardado exitosamente",
   "@fileSaved": {
@@ -6041,7 +6052,7 @@
   "@explanation": {
     "description": "Label for explanation input field"
   },
-  "sourcesCountLabel": "{count, plural, =1{1 Fuente} other{{count} Fuente(s)}}",
+  "sourcesCountLabel": "{count, plural, =1{1 fuente} other{{count} fuentes}}",
   "@sourcesCountLabel": {
     "description": "Label showing number of sources with capital S",
     "placeholders": {
@@ -6510,7 +6521,7 @@
   "@addTopicTooltip": {
     "description": "Tooltip for add topic button"
   },
-   "downstreamTopicWarning": "⚠ {count} tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización.",
+   "downstreamTopicWarning": "⚠ {count, plural, =1{1 tema dependiente depende} other{{count} temas dependientes dependen}} de este tema y pueden necesitar actualización.",
    "@downstreamTopicWarning": {
      "description": "Warning about downstream dependencies when deleting a topic",
      "placeholders": {
@@ -6577,5 +6588,96 @@
     "slides": "Diapositivas",
     "@slides": {
       "description": "Tooltip label for slides view in tutor screen"
+    },
+    "connectionHealth": "Estado de la Conexión",
+    "@connectionHealth": {
+      "description": "Tile title for API connection health indicator in settings"
+    },
+    "notTested": "No probado",
+    "@notTested": {
+      "description": "Label when connection has not been tested yet"
+    },
+    "messageFailedRetry": "Mensaje fallido. Toca para reintentar.",
+    "@messageFailedRetry": {
+      "description": "Label on retry banner for failed chat messages"
+    },
+    "share": "Compartir",
+    "@share": {
+      "description": "SnackBarAction label for sharing backup"
+    },
+    "backupShareText": "Copia de seguridad de StudyKing — {date}",
+    "@backupShareText": {
+      "description": "Share text for backup file",
+      "placeholders": {
+        "date": { "type": "String" }
+      }
+    },
+    "backupNow": "Hacer copia ahora",
+    "@backupNow": {
+      "description": "FilledButton label for manual backup"
+    },
+    "shareLastBackup": "Compartir última copia",
+    "@shareLastBackup": {
+      "description": "TextButton label to share the last backup"
+    },
+    "exportReports": "Exportar informes",
+    "@exportReports": {
+      "description": "Semantics label and tooltip for export reports button"
+    },
+    "backupAndRestore": "Copia de seguridad y restaurar",
+    "@backupAndRestore": {
+      "description": "Semantics label and tooltip for backup and restore button"
+    },
+    "readAloud": "Leer en voz alta",
+    "@readAloud": {
+      "description": "Tooltip for read aloud button on chat bubble"
+    },
+    "uploadFile": "Subir archivo",
+    "@uploadFile": {
+      "description": "Semantics label and button label for file upload"
+    },
+    "fileAttached": "Archivo adjunto",
+    "@fileAttached": {
+      "description": "Button label when a file is attached"
+    },
+    "recordAudio": "Grabar audio",
+    "@recordAudio": {
+      "description": "Semantics label for audio recording button"
+    },
+    "recordingComplete": "Grabación completa",
+    "@recordingComplete": {
+      "description": "Button label when recording is complete"
+    },
+    "startRecording": "Iniciar grabación",
+    "@startRecording": {
+      "description": "Button label for idle recording state"
+    },
+    "lessonSystemPrompt": "Eres una IA de planificación de lecciones. Genera contenido educativo en {localeName}. Tu respuesta debe ser JSON válido.",
+    "@lessonSystemPrompt": {
+      "description": "System prompt for lesson generation LLM",
+      "placeholders": {
+        "localeName": { "type": "String" }
+      }
+    },
+    "lessonBuildPrompt": "Genera un plan de lección estructurado para el tema: \"{topicTitle}\". Incluye diapositivas (conceptos clave), ejemplos, ejercicios y un resumen. Responde en {localeName}. Formatea tu respuesta como un arreglo JSON de bloques, cada uno con campos \"type\" (slide, text, example, exercise, quiz, summary) y \"content\".",
+    "@lessonBuildPrompt": {
+      "description": "Prompt for generating lesson blocks from LLM",
+      "placeholders": {
+        "topicTitle": { "type": "String" },
+        "localeName": { "type": "String" }
+      }
+    },
+    "lessonBuildPromptFromSource": "Basado en el siguiente material fuente, genera una lección estructurada:\n\n{sourceContent}\n\nTema: {topicTitle}\nGenera diapositivas, ejemplos, ejercicios y un resumen. Responde en {localeName} como un arreglo JSON de bloques.",
+    "@lessonBuildPromptFromSource": {
+      "description": "Prompt for generating lesson from source material",
+      "placeholders": {
+        "sourceContent": { "type": "String" },
+        "topicTitle": { "type": "String" },
+        "localeName": { "type": "String" }
+      }
+    },
+    "mentorCheckIn": "Control del Mentor",
+    "@mentorCheckIn": {
+      "description": "Title for mentor check-in notification"
     }
   }

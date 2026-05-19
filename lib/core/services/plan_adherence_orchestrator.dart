@@ -5,7 +5,7 @@ import 'package:studyking/features/planner/data/repositories/plan_repository.dar
 import '../utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import '../../l10n/generated/app_localizations.dart';
-import 'personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 
@@ -42,7 +42,6 @@ class PlanAdherenceOrchestrator {
   PlanAdherenceRepository get adherenceRepository => _adherenceRepository;
   final PlanRepository _planRepository;
   final PersonalLearningPlanService _planService;
-  final MasteryGraphService _masteryService;
   final AppLocalizations? _l10n;
 
   PlanAdherenceOrchestrator({
@@ -54,7 +53,6 @@ class PlanAdherenceOrchestrator {
   })  : _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _planService = planService ?? PersonalLearningPlanService(),
-        _masteryService = masteryService ?? MasteryGraphService(),
         _l10n = l10n;
 
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
@@ -136,12 +134,9 @@ class PlanAdherenceOrchestrator {
         restDayFrequency: 7,
       );
 
-      final svc = PersonalLearningPlanService(
-        masteryService: _masteryService,
-        config: adjustedConfig,
-      );
+      _planService.config = adjustedConfig;
 
-      return await svc.generatePlan(studentId);
+      return await _planService.generatePlan(studentId);
     } catch (e) {
       return Result.failure(e.toString());
     }

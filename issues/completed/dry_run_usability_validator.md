@@ -1,193 +1,277 @@
-# Dry-Run Usability Validator — Backup, Restore & Data Portability
+# Dry-Run Usability Validation Report
 
-**Scenario file:** `dry-run-test/scenario_backup_restore_data_portability.md`
-**Date:** 2026-05-19
-**Validator:** Codebase verification against actual source
-
----
-
-## Scenario Summary
-
-A student with 1+ month of StudyKing usage (two subjects, practice data, tutor sessions, focus mode, study plans, roadmaps, Mentor conversations, API key) wants to back up all data before reinstalling, export progress to share with a teacher, restore data after reinstallation, and configure auto-backup. The user discovers that:
-
-1. The full-backup button ("Export Backup (full)") is a no-op due to a control-flow bug (`null` vs `null` check)
-2. Auto-backup only triggers when the Settings screen initializes — not on app launch or periodically
-3. Auto-backup files go to an inaccessible temp directory with a dead "View in Settings" button
-4. 13+ Hive box types have no typed deserializer on restore
-5. Two Hive boxes (`llmTasks`, `llmUsageRecords`) are silently excluded from all backups
-6. Sign-out doesn't clear data, doesn't offer backup — just clears the API key
-7. App version in About is a hardcoded translation string, not the real build version
+**Generated:** 2026-05-19
+**Scenario:** `scenario_ai_provider_failures_recovery.md`
+**Persona:** A student with two weeks of usage whose AI provider (OpenRouter) goes down. Needs to diagnose failures, switch to a backup provider (Ollama), and recover from failed operations.
 
 ---
 
-## Findings by Severity
+## Summary of Findings
 
-### BLOCKER — App crashes or user cannot proceed
-
-#### Finding B1: "Export Backup (full)" button is a no-op due to null/boolean inversion
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:764-781` — dialog button returns `null` for full export, then line 781 checks `includeSensitive == null` and returns early
-  - `lib/features/settings/presentation/settings_screen.dart:773-776` — `FilledButton` labeled "Export Backup" returns `Navigator.pop(ctx, null)` on press
-  - `lib/features/settings/presentation/settings_screen.dart:764-770` — "Exclude Sensitive Data" `TextButton` returns `Navigator.pop(ctx, true)` (works)
-  - `lib/features/settings/presentation/settings_screen.dart:765-767` — "Cancel" returns `Navigator.pop(ctx, false)` (works)
-- **Rationale:** The dialog has 3 buttons: Cancel (`false`), Exclude Sensitive Data (`true`), Export Backup full (`null`). The guard at line 781 — `if (includeSensitive == null || !mounted) return;` — treats the full-export option (`null`) the same as cancelled, causing an early return with zero user feedback. No snackbar, no file, no error. The primary/filled button is a dead end. The user who wants a full backup (with API keys) cannot create one through the intended UI path.
-- **Acceptance criteria:** Invert the semantics OR change the return values. Options:
-  - Change "Export Backup (full)" to return `false` and "Cancel" to return `null`: `if (includeSensitive == null)` means cancelled, `false` means full export, `true` means exclude sensitive.
-  - Or keep current return values but change line 781 to: `if (includeSensitive == false || !mounted) return;` (treating `false` as cancel, `null` and `true` as proceed).
-  - Must include unit test(s) covering all 3 dialog button paths.
-
-#### Finding B2: Auto-backup only fires when Settings screen initializes
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:57` — `initState` calls `_checkAutoBackup()` via `addPostFrameCallback`
-  - `lib/features/settings/presentation/settings_screen.dart:66-86` — `_checkAutoBackup()` implementation — only runs when called, no timer, no background scheduling
-  - `lib/main.dart:100-150` — app initialization only calls `_initHive()` and renders `MainScreen` — no periodic backup timer
-- **Rationale:** The auto-backup check is tied to `_SettingsScreenState.initState()`. If the user configures weekly auto-backup and never opens the Settings screen again, the backup never runs. The user can use the app daily (Practice, Tutor, Mentor, Focus Mode) for weeks without triggering a single auto-backup. The EngagementScheduler at least runs a periodic timer (though in-process); the backup system has no timer at all outside the Settings screen lifecycle.
-- **Acceptance criteria:** Move the auto-backup check to the app startup flow (in `main.dart` after `_initHive()`) so it fires every time the app launches, not just when Settings is opened. Consider adding a `Timer.periodic(Duration(days: 1))` in the app's root widget for daily checks regardless of screen state.
-
-#### Finding B3: Auto-backup stores files in temp directory — user cannot retrieve them
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:88-113` — `_performAutoBackup()` calls `backupService.exportAllData()` which saves to `getTemporaryDirectory()`
-  - `lib/features/settings/services/data_backup_service.dart:23-24` — `getTemporaryDirectory()` used — system temp dir
-  - `lib/features/settings/presentation/settings_screen.dart:103-106` — snackbar action `label: l10n.viewInSettings` with `onPressed: () {}` (empty callback)
-- **Rationale:** Auto-backup files are written to `getTemporaryDirectory()` — a system temporary folder that can be cleaned by the OS at any time. The file path is not stored anywhere. The snackbar that appears on backup completion has a "View in Settings" action button, but its `onPressed` is an empty function (`() {}`). The user cannot retrieve, share, or manage their auto-backup files. The feature creates backups that exist for an indeterminate time and then vanish.
-- **Acceptance criteria:** Either (a) save auto-backup files to a persistent, user-accessible location (e.g., app documents directory) and show a "Share" option in the snackbar, or (b) store the file path in the settings box and provide a "Last Auto-Backup" tile that lets users retrieve/share the file. Fix the `viewInSettings` action to actually navigate to Settings or show the backup file. Add auto-backup file management (view, share, delete).
+| Step | Scenario Expectation | Status | Severity |
+|---|---|---|---|
+| 1 | Tutor timeouts with clear error when provider down | Tutor streaming errors NOT caught — unhandled exception locks UI | BLOCKER |
+| 6 | HTTP status codes (401, 429, 404) produce specific user messages | No HTTP status code parsing anywhere; `ExceptionType` enum is dead code | BLOCKER |
+| 9 | Rate limiting is detected and handled | No client-side rate limiting; 429 not parsed — only 403 string matched | BLOCKER |
+| 12 | Automatic failover to backup provider on connection failure | No fallback/backup provider concept exists | BLOCKER |
+| 2 | Mentor shows clear error with retry option when provider down | Error caught and displayed, but NO retry button for failed messages | MAJOR |
+| 4 | Provider switching auto-confirms and preserves model selection | Model only cleared on save, no confirmation dialog, shallow test | MAJOR |
+| 5 | Test Connection verifies chat completions and model availability | Only tests `/models` endpoint, not actual chat; doesn't verify model name | MAJOR |
+| 7 | Failed operations can be retried without data loss | Tutor: no retry, `_isSending` stuck. Mentor: must retype. Task retry loses context | MAJOR |
+| 8 | Mid-stream errors preserve partial responses | Partial content NOT saved to memory on failure; lost on error | MAJOR |
+| 11 | Different providers per feature | Single global `LlmService` — no per-feature provider config | MAJOR |
+| 10 | Provider config survives restart (no race conditions) | In-memory providers reset to defaults on cold restart; depends on init order | PARTIAL |
+| 3 | Settings tiles show error history and provider health | No "last error" or health status on AI config tiles | PARTIAL |
 
 ---
 
-### MAJOR — Feature is broken or misleading
+## BLOCKER Findings
 
-#### Finding M1: 13+ Hive box types lack typed deserialization on restore
+### B1: Tutor Streaming Errors Crash Silently — UI Locks Up
 
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:1087-1126` — `_deserializeRecord()` only handles `subjects`, `topics`, `questions`, `sources`, `lessons`, `sessionsTyped`, `masteryStates`, `questionMasteryStates`, `questionEvaluations`, `learningPlans`, `planAdherence`, `planAdherenceMetrics`, `masteryImprovementMetrics`, `conversations`, `tutorSessions`, `topicDependencies`, `lessonBlocks` — 17 types
-  - Boxes NOT deserialized (fall through to `default: return json`): `answers`, `attempts`, `badges`, `engagementNudges`, `focusSessions`, `pendingActions`, `progress`, `sessions` (legacy), `tasks`, `settings`, `profile`, `studentAvailability` — 12 types
-  - `lib/features/settings/presentation/settings_screen.dart:994-1040` — `_collectAllBoxData()` lists 28 boxes but HiveBoxNames defines 35
-  - `lib/core/data/hive_box_names.dart:35` — `llmTasks`, `llmUsageRecords` not in collection list
-- **Rationale:** During restore, 12+ box types are stored as raw `Map<String, dynamic>` instead of their typed Hive model. For boxes opened with a generic type parameter (e.g., `Hive.openBox<Session>`), raw maps may fail to load or lose type-specific behavior (field defaults, computed getters). The `llmTasks` and `llmUsageRecords` boxes (tracking LLM token usage and task management) are excluded from `_collectAllBoxData()` entirely — they are lost in any backup/restore cycle. A user who backs up and restores will permanently lose their LLM usage tracking history.
-- **Acceptance criteria:** Add `fromJson()` deserialization for all remaining box types, or confirm that raw-map storage is acceptable (add `// ok: stored as raw map` comments). Add `llmTasks` and `llmUsageRecords` to `_collectAllBoxData()`. Add round-trip tests for each box type verifying that `toJson()` → `fromJson()` → `toJson()` yields identical output.
+**Files:** `lib/features/teaching/presentation/tutor_screen.dart:180-197`
 
-#### Finding M2: No studentId/UUID reconciliation on restore
+**What happens:** The `_sendMessage()` method uses `await for (final chunk in _manager!.sendMessage(text))` with NO try-catch block. If the LLM stream throws (timeout, network error, provider down), the exception propagates unhandled. `_isSending` stays `true` permanently, disabling the input. The user cannot send another message, retry, or interact with the tutor screen. They must pop the screen and restart.
 
-- **Files:**
-  - `lib/core/services/student_id_service.dart:27` — generates UUID on first install, persists it
-  - `lib/features/settings/presentation/settings_screen.dart:1054-1085` — `_writeBoxData()` / `_writeBoxDataMerge()` — writes all records with their original IDs
-  - `lib/features/settings/presentation/settings_screen.dart:847-929` — `_importBackup()` — no studentId handling anywhere in the restore flow
-- **Rationale:** When a user reinstalls the app, `StudentIdService` generates a NEW UUID. The backup file contains ALL records with the OLD UUID embedded in `studentId` fields across `attempts`, `sessionsTyped`, `tutorSessions`, `conversations`, etc. After restore, the old data still references the old UUID. The `profile` box contains the old UUID. Queries that filter by `studentId` will return empty for the new UUID, making all restored data invisible until the user somehow discovers the mismatch. There is zero user-facing indication of this issue.
-- **Acceptance criteria:** On restore, either (a) detect and warn about UUID mismatch ("This backup was created on a different device/install. Your current student ID will be updated to match the backup."), or (b) provide an option to rewrite all `studentId` fields in restored records to match the current UUID. Store the backup's studentId in the restore summary dialog.
+Compare to the Mentor screen (`lib/features/mentor/presentation/mentor_screen.dart:249-262`) which DOES catch the error, replace the message with error text, and re-enable input.
 
-#### Finding M3: No post-restore state refresh
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:912-921` — after `_writeBoxDataMerge()` or `_writeBoxData()`, only a success snackbar is shown
-  - `lib/features/settings/presentation/settings_screen.dart:847-929` — `_importBackup()` — no `ref.invalidate()` calls
-- **Rationale:** After a successful restore, all Hive boxes have new/updated data, but all Riverpod providers still hold their pre-restore state. The user sees the old data (or empty state) on every screen until they restart the app. No UI refresh is triggered. The success snackbar misleadingly implies the restore is complete, but the user navigates to the Dashboard to find nothing changed.
-- **Acceptance criteria:** After restore completes, call `ref.invalidate()` for all data-dependent providers, or at minimum show a dialog: "Data restored successfully. Please restart the app to see your data." Better yet, trigger a hot restart or invalidate key providers.
-
-#### Finding M4: No backup size preview or record count summary
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:742-818` — `_exportBackup()` — the sensitive-data dialog says nothing about what data is in the backup
-  - `lib/features/settings/services/data_backup_service.dart:10-31` — `exportAllData()` — returns only the file path, no metadata
-- **Rationale:** The user sees: "The backup contains sensitive data. You can choose to exclude it." They have no idea how much data is included — how many subjects, questions, sessions, conversations. A user with 50MB of data might be surprised when the share sheet shows a huge file. A user with empty data might not realize their backup is empty. No size estimation, no record count, no "what's included" preview.
-- **Acceptance criteria:** Before showing the share sheet, display a summary dialog: "Backup contains: 2 subjects, 240 questions, 800 attempts, 15 sessions, 4 conversations. File size: ~1.2 MB." Either compute this from `boxData` before passing to `exportAllData()` or have `exportAllData()` return a result with metadata (file size, record counts).
-
-#### Finding M5: No backup encryption — API keys in plaintext
-
-- **Files:**
-  - `lib/features/settings/services/data_backup_service.dart:15-19` — backup is plain JSON with `JsonEncoder.withIndent`
-  - `lib/features/settings/presentation/settings_screen.dart:783-789` — full export (if the bug were fixed) includes the `settings` box with plaintext API key
-- **Rationale:** If the full-backup option is used (or the B1 bug is fixed), the backup JSON file contains all API keys in plaintext. The file is shared via `Share.shareXFiles`, which means it goes through the system share sheet — potentially uploaded to cloud storage, emailed, sent via messaging apps. There is no encryption, no password protection, no warning that the backup contains credentials. For a local-only app where the API key is the only sensitive credential, this is a significant data leakage risk.
-- **Acceptance criteria:** At minimum, add a clear warning dialog when including the settings box: "Your API keys will be stored in plaintext in this backup file. Anyone with access to this file can use your API keys." Consider implementing optional password-based encryption for backup files.
-
-#### Finding M6: Sign-out doesn't clear data, doesn't offer backup — clears only API key
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:1197-1221` — `_showSignOutDialog()` — only clears `apiKey`, `selectedModel`, and calls `Navigator.popUntil`
-  - `lib/l10n/generated/app_localizations_en.dart` — `signOut` string implies account-level action
-- **Rationale:** The "Sign Out" option is labeled and styled like an account-level action (red text, icon is `Icons.logout`). But it only clears the API key and selected model. All study data (subjects, questions, attempts, sessions, conversations, plans) remains untouched. There is no backup-first prompt. There is no actual user account system — `StudentIdService` uses a fixed UUID. The feature is a misleadingly labeled "clear API key" action. A user who signs out intending to hand the device to someone else leaves all their personal study data accessible.
-- **Acceptance criteria:** Either (a) rename to "Clear API Key" and add a description: "This will remove your API key. Your study data will be preserved.", or (b) implement true sign-out that offers backup first, then clears all local data. Add a warning if study data exists: "You have study data. Would you like to back it up first?"
-
-#### Finding M7: App version in About dialog is a hardcoded translation string
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:1225-1235` — `_showAboutDialog()` calls `l10n.aboutVersion` for the version parameter
-  - `lib/l10n/generated/app_localizations_en.dart:4636` — `String get aboutVersion => '1.0.0';`
-  - `lib/l10n/generated/app_localizations_es.dart:4683` — `String get aboutVersion => '1.0.0';`
-- **Rationale:** The displayed version (`"1.0.0"`) is a hardcoded string in ARB translation files. It does NOT change when the app is built at a different version. If the app's `pubspec.yaml` version is bumped to `1.2.0`, the About dialog still shows `"1.0.0"`. The `package_info_plus` package is available in the dependency tree but never used for version display.
-- **Acceptance criteria:** Use `package_info_plus` (or `Platform.version` on web) to read the actual build version from the platform. Fall back to `pubspec.yaml` version via `PackageInfo.fromPlatform()`. The translation strings should be used only for labels, not version values.
-
-#### Finding M8: Two LLM-related Hive boxes silently excluded from backup
-
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:994-1040` — `_collectAllBoxData()` iterates 28 box names
-  - `lib/core/data/hive_box_names.dart:34-35` — `llmTasks`, `llmUsageRecords` constants defined
-  - `lib/core/services/llm_task_manager.dart:97` — opens `HiveBoxNames.llmTasks`
-  - `lib/core/services/llm_usage_meter.dart:56` — opens `HiveBoxNames.llmUsageRecords`
-- **Rationale:** The `llmTasks` and `llmUsageRecords` boxes store LLM task execution history and token usage records. These are active boxes that maintain state across app restarts. They are not included in `_collectAllBoxData()` and therefore are never backed up. On a full backup/restore cycle, this data is permanently lost. A user relying on the LLM usage meter for cost tracking will see their history reset to zero after restore.
-- **Acceptance criteria:** Add `llmTasks` and `llmUsageRecords` to the `_collectAllBoxData()` box list. Add corresponding entries to `_deserializeRecord()` and `_boxDisplayName()`.
-
-#### Finding M9: Export confirmation dialogs give no information about what will be exported
-
-- **Files:**
-  - `lib/features/dashboard/presentation/widgets/export_section.dart:103-123` — `_showExportConfirmation()` — generic title + description, same for all formats
-  - `lib/features/dashboard/presentation/widgets/export_section.dart:127-131` — CSV export passes `l10n.exportCsv` as both title and description content
-- **Rationale:** Before exporting, the user sees a confirmation dialog with the export format name and "Comprehensive report exported" — no information about what data is included. CSV, PDF, and JSON exports contain different data (CSV has attempt-level detail, PDF has formatted tables, JSON has structured data), but the dialog is identical for all three. The user has no way to know which format contains what they need.
-- **Acceptance criteria:** Each export format should show a brief description of its contents: "CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges." — "PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing." — "JSON: structured data export for programmatic analysis."
-
-#### Finding M10: ProgressExportService bypasses dependency injection
-
-- **Files:**
-  - `lib/core/services/progress_export_service.dart:23-37` — default constructor creates `AttemptRepository()` and `MasteryGraphService()` directly
-- **Rationale:** The default constructor instantiates raw repository objects (`AttemptRepository()`, `MasteryGraphService()`) instead of using provider-injected instances. If these repositories have constructor dependencies (e.g., `AttemptRepository` requires a `Hive` box that isn't initialized at construction time), the export could fail. This also breaks testability — tests must rely on the default internal fakes rather than injected fakes.
-- **Acceptance criteria:** The Dashboard section should pass the already-available `tracker` and `instrumentation` objects to the export service, or the export service should obtain them from providers. Make all constructor parameters required (remove defaults) or obtain them from Riverpod's `ref.read()`.
+**Acceptance criteria:**
+- `_sendMessage()` in `tutor_screen.dart` must wrap the stream iteration in try-catch
+- On catch: replace the incomplete assistant message with a localized error string (e.g., `l10n.errorWithResponse`)
+- Set `_isSending = false` so the user can retry
+- Show a retry action (button or inline chip) for the failed message
+- Log the error for debugging
 
 ---
 
-### MINOR — UX friction
+### B2: No HTTP Status Code Parsing — All Errors Are Generic
 
-#### Finding N1: Backup is only discoverable via Settings — no Dashboard shortcut
+**Files:**
+- `lib/core/services/llm/llm_chat_service.dart:210-248` (`_streamOpenRouter`), `321-354` (`_streamOllama`), `425-463` (`_streamOpenAI`)
+- `lib/core/services/llm/llm_chat_service.dart:170` (`_callOpenRouter`), `278` (`_callOllama`), `386` (`_callOpenAI`)
+- `lib/core/errors/exceptions.dart:6` (`ExceptionType` enum)
 
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:315-322` — backup section only in Settings
-  - `lib/features/dashboard/presentation/widgets/export_section.dart:27-100` — Dashboard Export section has no backup option
-- **Rationale:** Users looking for "how do I back up my data?" will naturally look at the Dashboard's Export section, which has "CSV", "PDF", "JSON" labels. These are progress reports, not full data backups. The actual backup feature is two navigation levels deep in Settings. Users may export a progress report thinking it's a backup, then later lose their data on reinstall.
-- **Acceptance criteria:** Add a "Backup All Data" card or button to the Dashboard's Export section, or add a Settings shortcut tile. At minimum, add a note in the Export section: "For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore."
+**What happens:** The streaming methods have NO HTTP status code checking whatsoever — they directly read the response stream and any HTTP error manifests as a generic exception. Non-streaming methods only check `statusCode == 200` vs everything else, returning `Result.failure('ProviderName API Error: ${response.body}')`.
 
-#### Finding N2: Two CSV buttons with different scope but similar labels
+The `ExceptionType` enum (line 6 of `exceptions.dart`) defines `apiAuth`, `apiRateLimit`, `apiNotFound`, `apiInternalServer`, but NOT ONE of these types is ever set by the LLM service. The error classification system is completely disconnected from the actual error-producing code.
 
-- **Files:**
-  - `lib/features/dashboard/presentation/widgets/export_section.dart:41-44` — `_exportCSV` — comprehensive CSV with stats + mastery + attempts + trend + badges
-  - `lib/features/dashboard/presentation/widgets/export_section.dart:61-70` — `_exportProgressCSV` — different CSV via `StudyProgressTracker.exportProgressCSV()`
-- **Rationale:** Both buttons say "Export CSV" (the smaller one says "Progress CSV"). A user might not understand the difference. Exporting both produces two different CSV formats, which is confusing for a user who expects a single "Export as CSV" action.
-- **Acceptance criteria:** Rename the smaller "Progress CSV" button to clearly distinguish its content: "Stats CSV" or "Summary CSV". Alternatively, merge the two CSV exports into one comprehensive CSV and remove the duplicate.
+**Specific failures:**
+- 401 Unauthorized (expired/invalid key) → generic "API Error" → no "update your API key" prompt
+- 429 Too Many Requests (rate limited) → generic "API Error" → no backoff suggestion
+- 404 Model Not Found → generic "API Error" → no "check model name" guidance
+- 5xx Server Error → generic "API Error" → no "provider down, try again later"
 
-#### Finding N3: Auto-backup has no manual trigger in its dialog
+**Acceptance criteria:**
+- `LlmService` must parse HTTP status codes from non-streaming responses and yield typed errors
+- Streaming methods must check the initial HTTP response status before reading the stream
+- Map 401 → `ExceptionType.apiAuth` with message "API key is invalid or expired. Update in Settings."
+- Map 429 → `ExceptionType.apiRateLimit` with message "Too many requests. Wait and try again."
+- Map 404 → `ExceptionType.apiNotFound` with message "Model not found. Check model name in Settings."
+- Map 5xx → `ExceptionType.apiInternalServer` with message "Provider experiencing issues. Try again later or switch providers."
+- All other errors → `ExceptionType.apiError` with the raw message
 
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:611-661` — `_showAutoBackupDialog()` — only interval selection options
-- **Rationale:** The auto-backup dialog only lets the user choose an interval (Never/Daily/Weekly). There's no "Back Up Now" button. To manually trigger a backup, the user must leave the dialog, find the "Export Backup" tile, and use that. After configuring auto-backup, the natural next action would be to trigger the first backup immediately.
-- **Acceptance criteria:** Add a "Back Up Now" button at the top of the auto-backup bottom sheet that runs `_performAutoBackup()` immediately. Show a progress indicator and success/failure feedback within the sheet.
+---
 
-#### Finding N4: Export section is at the very bottom of a long Dashboard scroll
+### B3: No Rate Limiting Detection or Handling — 429 Invisible
 
-- **Files:**
-  - `lib/features/dashboard/presentation/screens/dashboard_screen.dart:138-155` — ExportSection is the last widget in the Dashboard column
-- **Rationale:** The Dashboard has ~10+ cards of stats, charts, and metrics before the Export section. On a phone, users must scroll past all 10+ cards to find export. Most users won't scroll that far. The export functionality is functionally invisible for casual users.
-- **Acceptance criteria:** Add an "Export" icon button in the Dashboard's AppBar that scrolls to or opens the export section directly. Or move the export to a more prominent position.
+**Files:**
+- `lib/core/services/llm/llm_chat_service.dart` (entire file — no 429 handling)
+- `lib/core/errors/handlers.dart:168-174` (rate limit detection maps "403"/"forbidden", NOT 429)
+- No client-side rate limiting anywhere
 
-#### Finding N5: Backup file has no human-readable description in the share sheet
+**What happens:** HTTP 429 (Too Many Requests) is the standard rate limit response from OpenRouter, OpenAI, and most API providers. The app has zero handling for this status code:
+1. No client-side throttling (no request queue, no leaky bucket, no minimum interval enforcement)
+2. The error classification maps "403" and "forbidden" (incorrectly) to `apiRateLimit` but completely misses "429"
+3. A real 429 response falls through to the generic error path
+4. Users can hammer the API as fast as they can type, triggering server-side rate limits with no warning
 
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:795-797` — `Share.shareXFiles([XFile(file.path)], text: 'StudyKing Backup')`
-- **Rationale:** When sharing the backup file, the share sheet shows "StudyKing Backup" as the text. There's no context about when the backup was created, how large it is, or what data it contains. If a user has multiple backup files, they can't distinguish them without opening each.
-- **Acceptance criteria:** Include the export date and record count in the share text: "StudyKing Backup — 2026-05-19 — 2 subjects, 240 questions, 800 attempts (1.2 MB)". Derive this from the backup data before exporting.
+**Acceptance criteria:**
+- Add client-side request throttling: minimum 500ms between chat requests from the same screen
+- Parse 429 status code in `LlmService` → `ExceptionType.apiRateLimit`
+- Show `errorApiRateLimit` message with `retryAfterWait` action
+- Extract `Retry-After` header from 429 response and display countdown if available
+- Remove the incorrect 403→rateLimit mapping, or keep it as a secondary check alongside proper 429 handling
 
-#### Finding N6: Sign-out confirmation doesn't mention what will be cleared
+---
 
-- **Files:**
-  - `lib/features/settings/presentation/settings_screen.dart:1199-1213` — `_showSignOutDialog()` content is just `l10n.signOutConfirmation` with no specifics
-- **Rationale:** The sign-out confirmation says "Are you sure you want to sign out?" but doesn't explain what happens: "Your API key and selected model will be cleared. Your study data will be preserved." The user might think sign-out deletes everything or does nothing.
-- **Acceptance criteria:** The confirmation dialog should list exactly what will be cleared and what will be preserved.
+### B4: No Provider Fallback / Failover Mechanism
+
+**Files:**  
+- `lib/core/providers/llm_providers.dart:19-34` (single `LlmService`, single `LlmConfiguration`)
+- `lib/features/settings/presentation/api_config_screen.dart` (no backup/secondary provider UI)
+- No "backup provider" concept in any model, provider, or service
+
+**What happens:** The app has a single `LlmService` with a single `LlmConfiguration`. When the provider fails, there is zero fallback behavior:
+- No automatic retry with a different provider
+- No prompt: "Your provider is down. Switch to Ollama (local)?"
+- No "backup provider" configuration field
+- User must manually go to Settings, change provider, enter new config, test, and return
+
+For a student mid-lesson, this is catastrophic — the tutor session is aborted with no recovery path.
+
+**Acceptance criteria:**
+- Add `backupProvider`, `backupApiKey`, `backupBaseUrl`, `backupModel` fields to configuration
+- Add backup provider UI in `ApiConfigScreen` (e.g., "Fallback Provider" section with same dropdown+fields)
+- On streaming failure in Tutor/Mentor, show dialog: "Primary provider failed. Switch to [backup]?"
+- Automatic failover: on 5xx/timeout, try backup provider with a status indicator
+- Persist backup config in Hive alongside primary config
+
+---
+
+## MAJOR Findings
+
+### M1: Mentor Failed Messages Have No Retry Button
+
+**Files:** `lib/features/mentor/presentation/mentor_screen.dart:249-262`
+
+**What happens:** When `_sendMessage()` catches a streaming error, it replaces the incomplete message with `l10n.errorWithResponse`. The input is re-enabled so the user can type a new message. But there's no retry button on the failed message — the user has to manually re-type their question.
+
+**Acceptance criteria:**
+- Add a "Retry" button (icon or chip) to failed mentor messages
+- Tapping retry calls `_sendMessage()` with the original user message text
+- Failed messages show a distinguishing style (e.g., red-tinted background, error icon)
+
+---
+
+### M2: Test Connection Only Tests `/models` Endpoint, Not Chat
+
+**Files:** `lib/features/settings/presentation/api_config_screen.dart:111-164`
+
+**What happens:** `_testConnection()` makes a GET request to `<baseUrl>/models` with the API key. A 200 response only proves that the endpoint is reachable and the key has read access. It does NOT verify:
+1. The selected model exists on this provider
+2. The model supports chat completions
+3. The provider can actually generate responses
+4. The API key has write/chat permissions (some keys may be read-only)
+
+A connection test could succeed but the first chat request could fail.
+
+**Acceptance criteria:**
+- Send an actual lightweight chat completion request (e.g., "Reply with OK") instead of or in addition to the `/models` check
+- Verify that the selected model name returns a valid response
+- Show the model's response time and first-token latency
+- If the model name is empty when testing, prompt user to select one first
+
+---
+
+### M3: Provider Switching Doesn't Clear Model — Stale Model Survives
+
+**Files:** `lib/features/settings/presentation/api_config_screen.dart:321-336`
+
+**What happens:** When the user switches from `openRouter` to `ollama` in the provider dropdown, the base URL auto-populates with the new default. But the `selectedModel` field is NOT cleared — it retains the previous model name (e.g., `chatgpt-4o-latest`). The user would need to manually notice and change it. The model IS cleared on save (`_saveKeys()` sets it to `''` at line 75), but not on the visual dropdpown switch.
+
+**Acceptance criteria:**
+- Clear `selectedModel` when the provider dropdown is changed by the user
+- Show a hint: "Model will be cleared when provider changes. Select a model for [new provider]."
+- OR: Fetch available models automatically on provider switch (already exists as `_showAiModelSelection`)
+
+---
+
+### M4: No Per-Feature Provider Configuration
+
+**Files:** `lib/core/providers/llm_providers.dart:19-34`
+
+**What happens:** All AI features (Tutor, Mentor, exercise evaluator, lesson planner, summary generator, content pipeline) share a single `LlmService` with one `LlmConfiguration`. The user cannot, for example, use OpenRouter (powerful, cloud) for tutor lessons and Ollama (fast, local) for Mentor chat. This limits flexibility and optimization.
+
+**Acceptance criteria (optional enhancement):**
+- Allow per-feature provider override (e.g., "Tutor uses: OpenRouter", "Mentor uses: Ollama")
+- Default to the global provider with per-feature opt-out
+- Store per-feature overrides in Hive `settings` box
+
+---
+
+### M5: Partial Responses Lost on Mid-Stream Error
+
+**Files:**
+- `lib/features/teaching/services/conversation_manager.dart:170-200` (buffer not saved on error)
+- `lib/features/mentor/services/mentor_service.dart:129-189` (context not preserved on error)
+
+**What happens:** During streaming, chunks are accumulated in a `buffer` and yielded to the UI in real-time. But `addAssistantMessage(buffer.toString())` is only called AFTER the stream completes successfully (conversation_manager.dart:192). If the stream fails mid-way:
+- The accumulated buffer is lost — it was rendered in UI but never saved to memory
+- The user sees partial text, then an error, then the partial text disappears
+- On next message, the conversation includes the user's original message but not the partial assistant response
+- Mentor: error message replaces partial content entirely
+
+**Acceptance criteria:**
+- On mid-stream error, save the accumulated partial response to conversation memory before showing the error
+- Preserve partial content in the chat bubble (show what was received, append error indicator)
+- Add a visual indicator: 🤖 "Response interrupted after [N] characters"
+
+---
+
+### M6: Task Retry Loses All Context
+
+**Files:** `lib/core/services/llm_task_manager.dart:209-214`
+
+**What happens:** `retryTask(taskId)` creates a brand new task with the same `feature` and `modelId` but carries over NO data, context, messages, or payload from the original failed task. The old task remains in the list with `failed` status. The new task starts as `queued`. So retrying a "generate lesson plan" task creates a new "generate lesson plan" task, but with no knowledge of WHICH subject, topic, or what the original request was.
+
+**Acceptance criteria:**
+- `retryTask()` should accept an optional `context` parameter (payload/messages from original request)
+- OR: tasks should store their input payload/context so retry can reproduce it
+- Show "Retrying task [name]" progress in the task manager UI
+
+---
+
+## PARTIAL Findings
+
+### P1: Configuration Persistence Depends on Initialization Order
+
+**Files:**
+- `lib/core/providers/app_providers.dart:129-135` (in-memory providers with defaults)
+- `lib/core/providers/llm_providers.dart:19-34` (watches in-memory providers)
+- `lib/features/settings/presentation/settings_screen.dart` (reads `settingsProvider` for display)
+
+**What happens:** The `apiKeyProvider`, `apiBaseUrlProvider`, `selectedModelProvider`, and `llmProviderProvider` are simple `StateProvider`s initialized with defaults (empty key, `openRouter`, default URL, empty model). They get their actual persisted values when a screen explicitly reads from `settingsProvider` and writes to them. If `llmServiceProvider` is read (and thus the `LlmService` created) before the persisted settings have been loaded into these state providers, the service starts with defaults (empty key, wrong URL, wrong model). The API config screen then corrects this on its first build.
+
+**Acceptance criteria:**
+- Initialize providers from persisted settings eagerly (at app startup in `main.dart`, before any screen renders)
+- Add a provider like `ref.onInit(...)` or use `ProviderScope` with overrides from persisted settings
+- Ensure `llmServiceProvider` is never constructed with empty/default config before settings are loaded
+
+---
+
+### P2: Settings Tiles Don't Show Error History or Health Status
+
+**Files:** `lib/features/settings/presentation/settings_screen.dart:179-187`
+
+**What happens:** The AI Configuration section shows:
+- "API Keys: Configured" (just presence check, not validity)
+- "AI Model: [model name]" (no indication if the model is working)
+- "Request Timeout: [seconds]" (just the configured value)
+- "AI Task Monitor: [count]" (only count, no health status)
+
+There is no "Last Error" field, no "Provider Health" indicator, no way to see if the current configuration has been tested recently or has been failing.
+
+**Acceptance criteria:**
+- Show a health indicator (green/yellow/red dot) next to the provider name based on recent success/failure ratio
+- Show "Last tested: [timestamp]" for the connection test
+- Show "Last error: [message]" if the last LLM call failed
+- Store LLM health metrics in Hive for persistence across restarts
+
+---
+
+## Code Map
+
+| File | Lines | Relevance |
+|---|---|---|
+| `lib/core/services/llm/llm_chat_service.dart` | 1-493 | Core LLM streaming, no timeouts, no status parsing |
+| `lib/features/teaching/services/conversation_manager.dart` | 170-200 | No try-catch on stream, partial content lost on error |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 180-197 | NO error handling — UI locks up on stream failure |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 249-262 | Error caught, message replaced, NO retry button |
+| `lib/features/mentor/services/mentor_service.dart` | 129-189 | No try-catch on chat stream |
+| `lib/features/settings/presentation/api_config_screen.dart` | 111-164 | Test connects to `/models` only, not chat endpoints |
+| `lib/features/settings/presentation/api_config_screen.dart` | 298-346 | Provider dropdown, model NOT cleared on switch |
+| `lib/features/settings/presentation/settings_screen.dart` | 179-187 | AI Config tiles — no health/error display |
+| `lib/core/providers/llm_providers.dart` | 19-34 | Single `LlmService`, single global config |
+| `lib/core/providers/app_providers.dart` | 129-135 | In-memory providers, defaults risk race condition |
+| `lib/core/errors/exceptions.dart` | 6 | `ExceptionType` enum — dead code, never set by LlmService |
+| `lib/core/errors/handlers.dart` | 168-174 | Rate limit maps 403/forbidden, misses 429 |
+| `lib/core/constants/timeouts.dart` | 12-17 | Timeout constants defined but never wired into HTTP calls |
+| `lib/core/services/llm_task_manager.dart` | 209-214 | `retryTask()` loses all payload/context |
+
+---
+
+## Conclusion
+
+The AI provider failure handling has **4 BLOCKER** issues that would prevent a user from recovering when their provider goes down. The most critical is B1 (tutor streaming errors crash silently), followed by B2 (no HTTP status code parsing = all errors are generic), B3 (no rate limiting handling), and B4 (no provider fallback).
+
+The codebase has the right architectural pieces (`ExceptionType` enum, `ErrorHandler` UI, `LlmTaskManager`, localization strings) but they are disconnected from each other. The `LlmService` produces raw exceptions, the `ErrorHandler` expects typed `AppException`s, and the bridge (`convertToAppException`) only matches string patterns for 403 — missing 401, 429, 404, and 5xx entirely.

@@ -1,9 +1,9 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
-import '../../../core/utils/logger.dart';
-import '../../../core/constants/llm_defaults.dart' show evaluationPromptTemplate;
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/constants/llm_defaults.dart' show evaluationPromptTemplate;
 import '../data/models/evaluation_result.dart';
 
 class ExerciseEvaluator {
@@ -84,7 +84,7 @@ class ExerciseEvaluator {
       final json = jsonDecode(response) as Map<String, dynamic>;
       return EvaluationResult.fromJson(json);
     } catch (e) {
-      _logger.w('Failed to parse evaluation response', e);
+      _logger.e('Failed to parse evaluation response', e);
       return EvaluationResult(
         score: 0.5,
         explanation: response,

@@ -2041,7 +2041,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get aboutApplicationName => 'StudyKing';
 
   @override
-  String get aboutVersion => 'v0.1.0';
+  String get aboutVersion => 'v1.0.0';
 
   @override
   String get aboutLegalese => '© 2026 StudyKing.';
@@ -2850,6 +2850,13 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get scheduleAiTutorDesc =>
       'Get personalized one-on-one tutoring with AI';
+
+  @override
+  String get nextStep => 'Next Step';
+
+  @override
+  String topicsAutoCreated(int count) =>
+      '${count} topics auto-created from curriculum';
 
   @override
   String get fileSaved => 'File saved successfully';
@@ -4926,4 +4933,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get slides => 'Slides';
+
+  @override
+  String get connectionHealth => 'Connection Health';
+
+  @override
+  String get notTested => 'Not tested';
+
+  @override
+  String get messageFailedRetry => 'Message failed. Tap to retry.';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String backupShareText(String date) {
+    return 'StudyKing Backup — $date';
+  }
+
+  @override
+  String get backupNow => 'Back Up Now';
+
+  @override
+  String get shareLastBackup => 'Share last backup';
+
+  @override
+  String get exportReports => 'Export Reports';
+
+  @override
+  String get readAloud => 'Read aloud';
+
+  @override
+  String get uploadFile => 'Upload file';
+
+  @override
+  String get fileAttached => 'File attached';
+
+  @override
+  String get recordAudio => 'Record audio';
+
+  @override
+  String get recordingComplete => 'Recording complete';
+
+  @override
+  String get startRecording => 'Start recording';
+
+  @override
+  String lessonSystemPrompt(String localeName) {
+    return 'You are a lesson planning AI. Generate educational content in $localeName. Your response must be valid JSON.';
+  }
+
+  @override
+  String lessonBuildPrompt(String topicTitle, String localeName) {
+    return 'Generate a structured lesson plan for the topic: \"$topicTitle\". Include slides (key concepts), examples, exercises, and a summary. Respond in $localeName. Format your response as a JSON array of blocks, each with \"type\" (slide, text, example, exercise, quiz, summary) and \"content\" fields.';
+  }
+
+  @override
+  String lessonBuildPromptFromSource(
+    String sourceContent,
+    String topicTitle,
+    String localeName,
+  ) {
+    return 'Based on the following source material, generate a structured lesson:\n\n$sourceContent\n\nTopic: $topicTitle\nGenerate slides, examples, exercises, and a summary. Respond in $localeName as a JSON array of blocks.';
+  }
+
+  @override
+  String get mentorCheckIn => 'Mentor Check-In';
 }

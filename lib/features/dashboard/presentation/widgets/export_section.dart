@@ -1,11 +1,8 @@
 import 'dart:convert';
-import 'dart:io' show File;
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
@@ -191,21 +188,10 @@ class ExportSection extends ConsumerWidget {
     try {
       final csv = await exportService.exportComprehensiveCSV(studentId, l10n: l10n);
       if (!context.mounted) return;
-      if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
-          text: l10n.comprehensiveReportExported,
-        );
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv');
-        await file.writeAsString(csv);
-        if (!context.mounted) return;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: l10n.comprehensiveReportExported,
-        );
-      }
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
+        text: l10n.comprehensiveReportExported,
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -226,21 +212,10 @@ class ExportSection extends ConsumerWidget {
     try {
       final pdfBytes = await exportService.exportComprehensivePDF(studentId, l10n);
       if (!context.mounted) return;
-      if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(Uint8List.fromList(pdfBytes), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf', mimeType: 'application/pdf')],
-          text: l10n.comprehensiveReportExported,
-        );
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf');
-        await file.writeAsBytes(pdfBytes);
-        if (!context.mounted) return;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: l10n.comprehensiveReportExported,
-        );
-      }
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(pdfBytes), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf', mimeType: 'application/pdf')],
+        text: l10n.comprehensiveReportExported,
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -261,21 +236,10 @@ class ExportSection extends ConsumerWidget {
     try {
       final jsonStr = await exportService.exportComprehensiveJSON(studentId, l10n);
       if (!context.mounted) return;
-      if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(Uint8List.fromList(utf8.encode(jsonStr)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
-          text: l10n.comprehensiveReportExported,
-        );
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json');
-        await file.writeAsString(jsonStr);
-        if (!context.mounted) return;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: l10n.comprehensiveReportExported,
-        );
-      }
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(jsonStr)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
+        text: l10n.comprehensiveReportExported,
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -297,21 +261,10 @@ class ExportSection extends ConsumerWidget {
     try {
       final csv = await tracker.exportProgressCSV(studentId);
       if (!context.mounted) return;
-      if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
-          text: l10n.shareProgressReport,
-        );
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv');
-        await file.writeAsString(csv);
-        if (!context.mounted) return;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: l10n.shareProgressReport,
-        );
-      }
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
+        text: l10n.shareProgressReport,
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -342,21 +295,10 @@ class ExportSection extends ConsumerWidget {
       final data = result.data!;
       final jsonString = formatInstrumentation(data, l10n);
       if (!context.mounted) return;
-      if (kIsWeb) {
-        await Share.shareXFiles(
-          [XFile.fromData(Uint8List.fromList(utf8.encode(jsonString)), name: 'studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
-          text: l10n.shareInstrumentationData,
-        );
-      } else {
-        final dir = await getTemporaryDirectory();
-        final file = File('${dir.path}/studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json');
-        await file.writeAsString(jsonString);
-        if (!context.mounted) return;
-        await Share.shareXFiles(
-          [XFile(file.path)],
-          text: l10n.shareInstrumentationData,
-        );
-      }
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(jsonString)), name: 'studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
+        text: l10n.shareInstrumentationData,
+      );
     } catch (e) {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

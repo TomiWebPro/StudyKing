@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:archive/archive.dart';
+import 'package:xml/xml.dart';
 
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -104,19 +106,25 @@ class DocumentExtractor {
           final bytes = file.readAsBytesSync();
           if (bytes.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[3] == 0x04) {
             final extension = filePath.split('.').last.toLowerCase();
-            final formatHint = switch (extension) {
-              'docx' => 'DOCX (Word document — ZIP-based XML format)',
-              'epub' => 'EPUB (e-book — ZIP-based XML/HTML format)',
-              'xlsx' => 'XLSX (Excel spreadsheet — ZIP-based XML format)',
-              'pptx' => 'PPTX (PowerPoint — ZIP-based XML format)',
-              _ => 'ZIP archive',
-            };
-            return ExtractionResult(
-              text: '[$formatHint] File: $filePath — content is a binary archive, not plain text. '
-                  'Please process this file using its native format. If text extraction is needed, '
-                  'pass the raw bytes to an LLM with format-specific instructions.',
-              extractionMethod: '${extension}_binary_not_decoded',
-            );
+            try {
+              final text = _extractFromZip(bytes, extension);
+              if (text.isNotEmpty) {
+                final chunks = _chunkContent(text);
+                return ExtractionResult(
+                  text: text,
+                  extractionMethod: '${extension}_parsed',
+                  pageCount: chunks.isNotEmpty ? chunks.length : null,
+                  chunks: chunks,
+                );
+              }
+            } catch (e) {
+              const Logger('DocumentExtractor').w('Failed to parse $extension archive: $e');
+              return ExtractionResult(
+                text: '',
+                extractionMethod: '${extension}_parse_failed',
+                errorMessage: 'Failed to extract text from $extension file: $e',
+              );
+            }
           }
           final content = utf8.decode(bytes, allowMalformed: true);
           if (content.length > 50) {
@@ -360,6 +368,212 @@ class DocumentExtractor {
         buffer.write(char);
       }
     }
+    return buffer.toString().trim();
+  }
+
+  String _extractFromZip(List<int> bytes, String extension) {
+    final archive = ZipDecoder().decodeBytes(bytes);
+    switch (extension) {
+      case 'docx':
+        return _extractDocx(archive);
+      case 'epub':
+        return _extractEpub(archive);
+      case 'xlsx':
+        return _extractXlsx(archive);
+      case 'pptx':
+        return _extractPptx(archive);
+      default:
+        return '';
+    }
+  }
+
+  String _extractDocx(Archive archive) {
+    final documentFile = archive.files.firstWhere(
+      (f) => f.name == 'word/document.xml',
+      orElse: () => ArchiveFile('', 0, 0),
+    );
+    if (documentFile.size == 0) return '';
+
+    final document = XmlDocument.parse(utf8.decode(documentFile.content));
+    final buffer = StringBuffer();
+
+    for (final paragraph in document.findAllElements('w:p')) {
+      for (final text in paragraph.findAllElements('w:t')) {
+        buffer.write(text.innerText);
+      }
+      buffer.writeln();
+    }
+
+    return buffer.toString().trim();
+  }
+
+  String _extractEpub(Archive archive) {
+    String stripHtmlTags(String html) {
+      final buffer = StringBuffer();
+      var inTag = false;
+      for (var i = 0; i < html.length; i++) {
+        final char = html[i];
+        if (char == '<') {
+          inTag = true;
+        } else if (char == '>') {
+          inTag = false;
+        } else if (!inTag) {
+          buffer.write(char);
+        }
+      }
+      return buffer.toString().trim();
+    }
+
+    String readFileContent(Archive archive, String path) {
+      final file = archive.files.firstWhere(
+        (f) => f.name == path,
+        orElse: () => ArchiveFile('', 0, 0),
+      );
+      if (file.size == 0) return '';
+      return utf8.decode(file.content);
+    }
+
+    try {
+      final containerXml = readFileContent(archive, 'META-INF/container.xml');
+      if (containerXml.isEmpty) return '';
+
+      final container = XmlDocument.parse(containerXml);
+      final rootfile = container.findAllElements('rootfile').firstOrNull;
+      if (rootfile == null) return '';
+
+      final opfPath = rootfile.getAttribute('full-path') ?? '';
+      if (opfPath.isEmpty) return '';
+
+      final opfContent = readFileContent(archive, opfPath);
+      if (opfContent.isEmpty) return '';
+
+      final opf = XmlDocument.parse(opfContent);
+      final opfDir = opfPath.contains('/')
+          ? opfPath.substring(0, opfPath.lastIndexOf('/') + 1)
+          : '';
+
+      final spineItemRefs = opf.findAllElements('itemref')
+          .map((e) => e.getAttribute('idref'))
+          .whereType<String>()
+          .toList();
+
+      final manifestItems = <String, String>{};
+      for (final item in opf.findAllElements('item')) {
+        final id = item.getAttribute('id');
+        final href = item.getAttribute('href');
+        if (id != null && href != null) {
+          manifestItems[id] = href;
+        }
+      }
+
+      final buffer = StringBuffer();
+      for (final ref in spineItemRefs) {
+        final href = manifestItems[ref];
+        if (href == null) continue;
+
+        final fullPath = opfDir.isNotEmpty ? '$opfDir$href' : href;
+        final content = readFileContent(archive, fullPath);
+        if (content.isNotEmpty &&
+            (content.contains('<html') || content.contains('<!DOCTYPE html'))) {
+          buffer.writeln(stripHtmlTags(content));
+        }
+      }
+
+      return buffer.toString().trim();
+    } catch (e) {
+      const Logger('DocumentExtractor').w('EPUB extraction failed: $e');
+      return '';
+    }
+  }
+
+  String _extractXlsx(Archive archive) {
+    String readFile(Archive archive, String path) {
+      final file = archive.files.firstWhere(
+        (f) => f.name == path,
+        orElse: () => ArchiveFile('', 0, 0),
+      );
+      if (file.size == 0) return '';
+      return utf8.decode(file.content);
+    }
+
+    try {
+      final sharedStringsXml = readFile(archive, 'xl/sharedStrings.xml');
+      final sharedStrings = <int, String>{};
+      if (sharedStringsXml.isNotEmpty) {
+        final ssDoc = XmlDocument.parse(sharedStringsXml);
+        var index = 0;
+        for (final si in ssDoc.findAllElements('si')) {
+          final textParts = si.findAllElements('t').map((t) => t.innerText).join();
+          sharedStrings[index++] = textParts;
+        }
+      }
+
+      final buffer = StringBuffer();
+      final sheetFiles = archive.files
+          .where((f) => f.name.startsWith('xl/worksheets/sheet') && f.name.endsWith('.xml'))
+          .toList()
+        ..sort((a, b) => a.name.compareTo(b.name));
+
+      for (final sheetFile in sheetFiles) {
+        final sheetXml = utf8.decode(sheetFile.content);
+        final sheet = XmlDocument.parse(sheetXml);
+
+        for (final row in sheet.findAllElements('row')) {
+          final cells = <String>[];
+          for (final cell in row.findAllElements('c')) {
+            final type = cell.getAttribute('t');
+            final value = cell.findElements('v').firstOrNull;
+            if (value == null) continue;
+
+            if (type == 's') {
+              final ssIndex = int.tryParse(value.innerText) ?? -1;
+              cells.add(sharedStrings[ssIndex] ?? '');
+            } else {
+              cells.add(value.innerText);
+            }
+          }
+          if (cells.isNotEmpty) {
+            buffer.writeln(cells.join('\t'));
+          }
+        }
+      }
+
+      return buffer.toString().trim();
+    } catch (e) {
+      const Logger('DocumentExtractor').w('XLSX extraction failed: $e');
+      return '';
+    }
+  }
+
+  String _extractPptx(Archive archive) {
+    String extractSlideText(String xmlContent) {
+      try {
+        final slide = XmlDocument.parse(xmlContent);
+        final buffer = StringBuffer();
+        for (final text in slide.findAllElements('t')) {
+          buffer.write(text.innerText);
+          buffer.write(' ');
+        }
+        return buffer.toString().trim();
+      } catch (e) {
+        return '';
+      }
+    }
+
+    final buffer = StringBuffer();
+    final slideFiles = archive.files
+        .where((f) => f.name.startsWith('ppt/slides/slide') && f.name.endsWith('.xml'))
+        .toList()
+      ..sort((a, b) => a.name.compareTo(b.name));
+
+    for (final slideFile in slideFiles) {
+      final text = extractSlideText(utf8.decode(slideFile.content));
+      if (text.isNotEmpty) {
+        buffer.writeln(text);
+        buffer.writeln('---');
+      }
+    }
+
     return buffer.toString().trim();
   }
 

@@ -2705,7 +2705,7 @@
   "@aboutApplicationName": {
     "description": "Application name for About dialog"
   },
-  "aboutVersion": "v0.1.0",
+  "aboutVersion": "v1.0.0",
   "@aboutVersion": {
     "description": "Application version for About dialog"
   },
@@ -3810,6 +3810,17 @@
   "scheduleAiTutorDesc": "Get personalized one-on-one tutoring with AI",
   "@scheduleAiTutorDesc": {
     "description": "Description for AI tutor checklist item"
+  },
+  "nextStep": "Next Step",
+  "@nextStep": {
+    "description": "Badge label for the next incomplete step in the getting started checklist"
+  },
+  "topicsAutoCreated": "{count, plural, =1{1 topic auto-created from curriculum} other{{count} topics auto-created from curriculum}}",
+  "@topicsAutoCreated": {
+    "description": "Snackbar message when topics are auto-created from seed data",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   },
   "fileSaved": "File saved successfully",
   "@fileSaved": {
@@ -6577,5 +6588,96 @@
     "slides": "Slides",
     "@slides": {
       "description": "Tooltip label for slides view in tutor screen"
+    },
+    "connectionHealth": "Connection Health",
+    "@connectionHealth": {
+      "description": "Tile title for API connection health indicator in settings"
+    },
+    "notTested": "Not tested",
+    "@notTested": {
+      "description": "Label when connection has not been tested yet"
+    },
+    "messageFailedRetry": "Message failed. Tap to retry.",
+    "@messageFailedRetry": {
+      "description": "Label on retry banner for failed chat messages"
+    },
+    "share": "Share",
+    "@share": {
+      "description": "SnackBarAction label for sharing backup"
+    },
+    "backupShareText": "StudyKing Backup — {date}",
+    "@backupShareText": {
+      "description": "Share text for backup file",
+      "placeholders": {
+        "date": { "type": "String" }
+      }
+    },
+    "backupNow": "Back Up Now",
+    "@backupNow": {
+      "description": "FilledButton label for manual backup"
+    },
+    "shareLastBackup": "Share last backup",
+    "@shareLastBackup": {
+      "description": "TextButton label to share the last backup"
+    },
+    "exportReports": "Export Reports",
+    "@exportReports": {
+      "description": "Semantics label and tooltip for export reports button"
+    },
+    "backupAndRestore": "Backup & Restore",
+    "@backupAndRestore": {
+      "description": "Semantics label and tooltip for backup and restore button"
+    },
+    "readAloud": "Read aloud",
+    "@readAloud": {
+      "description": "Tooltip for read aloud button on chat bubble"
+    },
+    "uploadFile": "Upload file",
+    "@uploadFile": {
+      "description": "Semantics label and button label for file upload"
+    },
+    "fileAttached": "File attached",
+    "@fileAttached": {
+      "description": "Button label when a file is attached"
+    },
+    "recordAudio": "Record audio",
+    "@recordAudio": {
+      "description": "Semantics label for audio recording button"
+    },
+    "recordingComplete": "Recording complete",
+    "@recordingComplete": {
+      "description": "Button label when recording is complete"
+    },
+    "startRecording": "Start recording",
+    "@startRecording": {
+      "description": "Button label for idle recording state"
+    },
+    "lessonSystemPrompt": "You are a lesson planning AI. Generate educational content in {localeName}. Your response must be valid JSON.",
+    "@lessonSystemPrompt": {
+      "description": "System prompt for lesson generation LLM",
+      "placeholders": {
+        "localeName": { "type": "String" }
+      }
+    },
+    "lessonBuildPrompt": "Generate a structured lesson plan for the topic: \"{topicTitle}\". Include slides (key concepts), examples, exercises, and a summary. Respond in {localeName}. Format your response as a JSON array of blocks, each with \"type\" (slide, text, example, exercise, quiz, summary) and \"content\" fields.",
+    "@lessonBuildPrompt": {
+      "description": "Prompt for generating lesson blocks from LLM",
+      "placeholders": {
+        "topicTitle": { "type": "String" },
+        "localeName": { "type": "String" }
+      }
+    },
+    "lessonBuildPromptFromSource": "Based on the following source material, generate a structured lesson:\n\n{sourceContent}\n\nTopic: {topicTitle}\nGenerate slides, examples, exercises, and a summary. Respond in {localeName} as a JSON array of blocks.",
+    "@lessonBuildPromptFromSource": {
+      "description": "Prompt for generating lesson from source material",
+      "placeholders": {
+        "sourceContent": { "type": "String" },
+        "topicTitle": { "type": "String" },
+        "localeName": { "type": "String" }
+      }
+    },
+    "mentorCheckIn": "Mentor Check-In",
+    "@mentorCheckIn": {
+      "description": "Title for mentor check-in notification"
     }
   }

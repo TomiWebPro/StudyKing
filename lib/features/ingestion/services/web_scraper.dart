@@ -1,4 +1,5 @@
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
@@ -20,7 +21,7 @@ class WebScraper {
       final response = await _httpClient.get(
         uri,
         headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; StudyKing/1.0)',
+          'User-Agent': ApiConfig.userAgent,
         },
       );
 

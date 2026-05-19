@@ -7,11 +7,11 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
-import '../../../core/services/voice_service.dart';
-import '../../../core/utils/clock.dart';
-import '../../../core/utils/logger.dart';
-import '../../../core/utils/number_format_utils.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import '../data/models/evaluation_result.dart';
 import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
@@ -180,16 +180,24 @@ class ConversationManager {
       phase: phase,
     );
 
-    await for (final chunk in _llmService.chatStream(
-      message: content,
-      modelId: _modelId,
-      memory: _memory,
-      systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
-    )) {
-      buffer.write(chunk);
-      if (buffer.length > 0) {
-        yield* _buildAdaptiveChunks(buffer.toString());
+    try {
+      await for (final chunk in _llmService.chatStream(
+        message: content,
+        modelId: _modelId,
+        memory: _memory,
+        systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
+      )) {
+        buffer.write(chunk);
+        if (buffer.length > 0) {
+          yield* _buildAdaptiveChunks(buffer.toString());
+        }
       }
+    } catch (e) {
+      final partialContent = buffer.toString();
+      if (partialContent.isNotEmpty) {
+        _memory.addAssistantMessage(partialContent);
+      }
+      rethrow;
     }
 
     final assistantContent = buffer.toString();
@@ -402,5 +410,9 @@ class ConversationManager {
 
   void clearMessages() {
     _memory.clear();
+  }
+
+  void addAssistantMessage(String content) {
+    _memory.addAssistantMessage(content);
   }
 }

@@ -3,7 +3,7 @@ export 'data/repositories/lesson_repository.dart';
 export 'presentation/topic_list_screen.dart';
 export 'presentation/lesson_list_screen.dart';
 export 'presentation/lesson_detail_screen.dart';
-export 'services/lesson_service.dart' show LessonSessionService;
+export 'services/lesson_service.dart' show SessionQueryService;
 export 'providers/lesson_providers.dart';
 export 'presentation/widgets/lesson_block_card.dart';
 export 'presentation/widgets/lesson_list_item.dart';

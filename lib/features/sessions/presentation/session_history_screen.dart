@@ -12,7 +12,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
+import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:intl/intl.dart';

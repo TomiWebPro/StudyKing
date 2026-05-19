@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
+import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 
 void main() {
   group('sessionIcon', () {

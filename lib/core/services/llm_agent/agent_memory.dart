@@ -6,9 +6,36 @@ import 'package:studyking/core/utils/logger.dart';
 class AgentMemoryStore {
   final Logger _logger = const Logger('AgentMemoryStore');
   Box? _box;
+  bool _migrated = false;
 
   Future<void> init() async {
-    _box = await Hive.openBox(HiveBoxNames.profile);
+    _box = await Hive.openBox(HiveBoxNames.agentMemory);
+    await _migrateFromProfileBox();
+  }
+
+  Future<void> _migrateFromProfileBox() async {
+    if (_migrated) return;
+    _migrated = true;
+    try {
+      if (!Hive.isBoxOpen(HiveBoxNames.profile)) return;
+      final profileBox = Hive.box(HiveBoxNames.profile);
+      final agentKeys = profileBox.keys.where(
+        (k) => k.toString().startsWith('agent_'),
+      ).toList();
+      if (agentKeys.isEmpty) return;
+      for (final key in agentKeys) {
+        final value = profileBox.get(key);
+        if (value != null) {
+          await _box?.put(key, value);
+        }
+      }
+      for (final key in agentKeys) {
+        await profileBox.delete(key);
+      }
+      _logger.d('Migrated ${agentKeys.length} agent memory keys from profile box');
+    } catch (e) {
+      _logger.w('Failed to migrate agent memory from profile box', e);
+    }
   }
 
   Future<void> rememberFact(String studentId, String key, String value) async {

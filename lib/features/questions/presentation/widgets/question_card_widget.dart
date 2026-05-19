@@ -335,31 +335,33 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildFileUploadContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasFile = _localAnswer != null && _localAnswer!.isNotEmpty;
     return Semantics(
       button: true,
-      label: 'Upload file',
+      label: l10n.uploadFile,
       child: OutlinedButton.icon(
         onPressed: widget.isSubmitted
             ? null
             : () => _updateAnswer('file_uploaded'),
         icon: Icon(hasFile ? Icons.check_circle : Icons.upload_file),
-        label: Text(hasFile ? 'File attached' : 'Upload file'),
+        label: Text(hasFile ? l10n.fileAttached : l10n.uploadFile),
       ),
     );
   }
 
   Widget _buildAudioRecordingContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final hasRecording = _localAnswer != null && _localAnswer!.isNotEmpty;
     return Semantics(
       button: true,
-      label: 'Record audio',
+      label: l10n.recordAudio,
       child: OutlinedButton.icon(
         onPressed: widget.isSubmitted
             ? null
             : () => _updateAnswer('audio_recorded'),
         icon: Icon(hasRecording ? Icons.mic : Icons.mic_none),
-        label: Text(hasRecording ? 'Recording complete' : 'Start recording'),
+        label: Text(hasRecording ? l10n.recordingComplete : l10n.startRecording),
       ),
     );
   }

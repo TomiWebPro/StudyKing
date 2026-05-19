@@ -26,19 +26,19 @@ class DashboardHeader extends StatelessWidget {
         const Spacer(),
         Semantics(
           button: true,
-          label: 'Export Reports',
+          label: l10n.exportReports,
           child: IconButton(
             icon: const Icon(Icons.file_download_outlined),
-            tooltip: 'Export Reports',
+            tooltip: l10n.exportReports,
             onPressed: onExportTap ?? () => Navigator.pushNamed(context, AppRoutes.settings),
           ),
         ),
         Semantics(
           button: true,
-          label: 'Backup & Restore',
+          label: l10n.backupAndRestore,
           child: IconButton(
             icon: const Icon(Icons.backup_outlined),
-            tooltip: 'Backup & Restore',
+            tooltip: l10n.backupAndRestore,
             onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
           ),
         ),

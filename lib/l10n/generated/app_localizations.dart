@@ -1280,7 +1280,7 @@ abstract class AppLocalizations {
   /// **'Exam Date (Optional)'**
   String get examDateOptional;
 
-  /// Section title for backup & restore in settings
+  /// Semantics label and tooltip for backup and restore button
   ///
   /// In en, this message translates to:
   /// **'Backup & Restore'**
@@ -3545,7 +3545,7 @@ abstract class AppLocalizations {
   /// Application version for About dialog
   ///
   /// In en, this message translates to:
-  /// **'v0.1.0'**
+  /// **'v1.0.0'**
   String get aboutVersion;
 
   /// Copyright notice for About dialog
@@ -4873,6 +4873,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Get personalized one-on-one tutoring with AI'**
   String get scheduleAiTutorDesc;
+
+  /// Badge label for the next incomplete step in the getting started checklist
+  ///
+  /// In en, this message translates to:
+  /// **'Next Step'**
+  String get nextStep;
+
+  /// Snackbar message when topics are auto-created from seed data
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 topic auto-created from curriculum} other{{count} topics auto-created from curriculum}}'**
+  String topicsAutoCreated(int count);
 
   /// Snackbar message when file is saved
   ///
@@ -8212,6 +8224,118 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Slides'**
   String get slides;
+
+  /// Tile title for API connection health indicator in settings
+  ///
+  /// In en, this message translates to:
+  /// **'Connection Health'**
+  String get connectionHealth;
+
+  /// Label when connection has not been tested yet
+  ///
+  /// In en, this message translates to:
+  /// **'Not tested'**
+  String get notTested;
+
+  /// Label on retry banner for failed chat messages
+  ///
+  /// In en, this message translates to:
+  /// **'Message failed. Tap to retry.'**
+  String get messageFailedRetry;
+
+  /// SnackBarAction label for sharing backup
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// Share text for backup file
+  ///
+  /// In en, this message translates to:
+  /// **'StudyKing Backup — {date}'**
+  String backupShareText(String date);
+
+  /// FilledButton label for manual backup
+  ///
+  /// In en, this message translates to:
+  /// **'Back Up Now'**
+  String get backupNow;
+
+  /// TextButton label to share the last backup
+  ///
+  /// In en, this message translates to:
+  /// **'Share last backup'**
+  String get shareLastBackup;
+
+  /// Semantics label and tooltip for export reports button
+  ///
+  /// In en, this message translates to:
+  /// **'Export Reports'**
+  String get exportReports;
+
+  /// Tooltip for read aloud button on chat bubble
+  ///
+  /// In en, this message translates to:
+  /// **'Read aloud'**
+  String get readAloud;
+
+  /// Semantics label and button label for file upload
+  ///
+  /// In en, this message translates to:
+  /// **'Upload file'**
+  String get uploadFile;
+
+  /// Button label when a file is attached
+  ///
+  /// In en, this message translates to:
+  /// **'File attached'**
+  String get fileAttached;
+
+  /// Semantics label for audio recording button
+  ///
+  /// In en, this message translates to:
+  /// **'Record audio'**
+  String get recordAudio;
+
+  /// Button label when recording is complete
+  ///
+  /// In en, this message translates to:
+  /// **'Recording complete'**
+  String get recordingComplete;
+
+  /// Button label for idle recording state
+  ///
+  /// In en, this message translates to:
+  /// **'Start recording'**
+  String get startRecording;
+
+  /// System prompt for lesson generation LLM
+  ///
+  /// In en, this message translates to:
+  /// **'You are a lesson planning AI. Generate educational content in {localeName}. Your response must be valid JSON.'**
+  String lessonSystemPrompt(String localeName);
+
+  /// Prompt for generating lesson blocks from LLM
+  ///
+  /// In en, this message translates to:
+  /// **'Generate a structured lesson plan for the topic: \"{topicTitle}\". Include slides (key concepts), examples, exercises, and a summary. Respond in {localeName}. Format your response as a JSON array of blocks, each with \"type\" (slide, text, example, exercise, quiz, summary) and \"content\" fields.'**
+  String lessonBuildPrompt(String topicTitle, String localeName);
+
+  /// Prompt for generating lesson from source material
+  ///
+  /// In en, this message translates to:
+  /// **'Based on the following source material, generate a structured lesson:\n\n{sourceContent}\n\nTopic: {topicTitle}\nGenerate slides, examples, exercises, and a summary. Respond in {localeName} as a JSON array of blocks.'**
+  String lessonBuildPromptFromSource(
+    String sourceContent,
+    String topicTitle,
+    String localeName,
+  );
+
+  /// Title for mentor check-in notification
+  ///
+  /// In en, this message translates to:
+  /// **'Mentor Check-In'**
+  String get mentorCheckIn;
 }
 
 class _AppLocalizationsDelegate

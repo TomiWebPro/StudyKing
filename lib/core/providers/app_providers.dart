@@ -58,7 +58,9 @@ class SettingsController extends StateNotifier<SettingsBox> {
   final SettingsRepository _repository;
   bool _hasLoadedOnce = false;
 
-  SettingsController(this._repository) : super(SettingsBox());
+  SettingsController(this._repository) : super(SettingsBox()) {
+    _loadSettings();
+  }
 
   SettingsBox get currentState => state;
 

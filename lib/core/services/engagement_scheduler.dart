@@ -130,7 +130,7 @@ class EngagementScheduler {
       if (nudges.isNotEmpty) {
         await _notificationService.showMentorMessage(
           id: _notificationIdCounter++,
-          title: 'Mentor Check-In',
+          title: _l10n.mentorCheckIn,
           body: nudges.first.length > 120
               ? '${nudges.first.substring(0, 120)}...'
               : nudges.first,

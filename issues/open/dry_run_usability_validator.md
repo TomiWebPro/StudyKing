@@ -1,277 +1,281 @@
-# Dry-Run Usability Validation Report
+# Dry-Run Usability Validation: Voice-First Interaction & Accessibility
 
-**Generated:** 2026-05-19
-**Scenario:** `scenario_ai_provider_failures_recovery.md`
-**Persona:** A student with two weeks of usage whose AI provider (OpenRouter) goes down. Needs to diagnose failures, switch to a backup provider (Ollama), and recover from failed operations.
+## Scenario Summary
 
----
-
-## Summary of Findings
-
-| Step | Scenario Expectation | Status | Severity |
-|---|---|---|---|
-| 1 | Tutor timeouts with clear error when provider down | Tutor streaming errors NOT caught — unhandled exception locks UI | BLOCKER |
-| 6 | HTTP status codes (401, 429, 404) produce specific user messages | No HTTP status code parsing anywhere; `ExceptionType` enum is dead code | BLOCKER |
-| 9 | Rate limiting is detected and handled | No client-side rate limiting; 429 not parsed — only 403 string matched | BLOCKER |
-| 12 | Automatic failover to backup provider on connection failure | No fallback/backup provider concept exists | BLOCKER |
-| 2 | Mentor shows clear error with retry option when provider down | Error caught and displayed, but NO retry button for failed messages | MAJOR |
-| 4 | Provider switching auto-confirms and preserves model selection | Model only cleared on save, no confirmation dialog, shallow test | MAJOR |
-| 5 | Test Connection verifies chat completions and model availability | Only tests `/models` endpoint, not actual chat; doesn't verify model name | MAJOR |
-| 7 | Failed operations can be retried without data loss | Tutor: no retry, `_isSending` stuck. Mentor: must retype. Task retry loses context | MAJOR |
-| 8 | Mid-stream errors preserve partial responses | Partial content NOT saved to memory on failure; lost on error | MAJOR |
-| 11 | Different providers per feature | Single global `LlmService` — no per-feature provider config | MAJOR |
-| 10 | Provider config survives restart (no race conditions) | In-memory providers reset to defaults on cold restart; depends on init order | PARTIAL |
-| 3 | Settings tiles show error history and provider health | No "last error" or health status on AI config tiles | PARTIAL |
+A student recovering from RSI (repetitive strain injury) tries to use StudyKing entirely through voice interaction and accessibility features — speech-to-text for input, text-to-speech for output, screen reader navigation, large text, high contrast, and large touch targets. The scenario traces through Mentor chat, Tutor lessons, practice sessions, and Settings, finding critical gaps in voice pipeline robustness, accessibility coverage, and settings effectiveness.
 
 ---
 
 ## BLOCKER Findings
 
-### B1: Tutor Streaming Errors Crash Silently — UI Locks Up
+### B1. Practice Session Voice Input Submits Partial Transcriptions as Final Answers
 
-**Files:** `lib/features/teaching/presentation/tutor_screen.dart:180-197`
+**Files:** `lib/features/practice/presentation/screens/practice_session_screen.dart:516-524`
 
-**What happens:** The `_sendMessage()` method uses `await for (final chunk in _manager!.sendMessage(text))` with NO try-catch block. If the LLM stream throws (timeout, network error, provider down), the exception propagates unhandled. `_isSending` stays `true` permanently, disabling the input. The user cannot send another message, retry, or interact with the tutor screen. They must pop the screen and restart.
+**Affected lines:**
+```dart
+void _useVoiceInput() {
+  final voiceService = ref.read(voiceServiceProvider);
+  if (!voiceService.isAvailable) return;
+  final l10n = AppLocalizations.of(context)!;
+  voiceService.startListening(localeName: l10n.localeName);
+  voiceService.transcribedText.listen((text) {
+    _onAnswerSelected(text);
+  });
+}
+```
 
-Compare to the Mentor screen (`lib/features/mentor/presentation/mentor_screen.dart:249-262`) which DOES catch the error, replace the message with error text, and re-enable input.
+**Rationale:** `_onAnswerSelected(text)` is invoked on **every partial transcription update** from the speech-to-text engine. When a user says "two point five moles", the STT engine produces incremental results: "two" → "two point" → "two point five" → "two point five moles". Each partial update triggers a full answer submission, recording 4 separate attempts against the mastery graph. The first 3 are incorrect, artificially deflating the user's accuracy score. The user sees "Wrong!" flash 3 times before the final "Correct!" — a confusing and destructive experience.
 
 **Acceptance criteria:**
-- `_sendMessage()` in `tutor_screen.dart` must wrap the stream iteration in try-catch
-- On catch: replace the incomplete assistant message with a localized error string (e.g., `l10n.errorWithResponse`)
-- Set `_isSending = false` so the user can retry
-- Show a retry action (button or inline chip) for the failed message
-- Log the error for debugging
+- Voice input in practice sessions must wait for the user to indicate completion (stop button, silence timeout, or manual submit) before calling `_onAnswerSelected`.
+- Partial results should be displayed in the answer field for user review, not auto-submitted.
+- If a submission is already in progress, subsequent transcriptions should be ignored until the current question is resolved.
 
----
-
-### B2: No HTTP Status Code Parsing — All Errors Are Generic
+### B2. Large Touch Targets Setting Ignored by 95% of the App
 
 **Files:**
-- `lib/core/services/llm/llm_chat_service.dart:210-248` (`_streamOpenRouter`), `321-354` (`_streamOllama`), `425-463` (`_streamOpenAI`)
-- `lib/core/services/llm/llm_chat_service.dart:170` (`_callOpenRouter`), `278` (`_callOllama`), `386` (`_callOpenAI`)
-- `lib/core/errors/exceptions.dart:6` (`ExceptionType` enum)
+- `lib/features/settings/presentation/settings_screen.dart:164-170` (setting toggle saved)
+- `lib/features/practice/presentation/widgets/practice_session_question_card.dart:189` (only consumer)
+- All other screens: NO read of `largeTouchTargets`
 
-**What happens:** The streaming methods have NO HTTP status code checking whatsoever — they directly read the response stream and any HTTP error manifests as a generic exception. Non-streaming methods only check `statusCode == 200` vs everything else, returning `Result.failure('ProviderName API Error: ${response.body}')`.
-
-The `ExceptionType` enum (line 6 of `exceptions.dart`) defines `apiAuth`, `apiRateLimit`, `apiNotFound`, `apiInternalServer`, but NOT ONE of these types is ever set by the LLM service. The error classification system is completely disconnected from the actual error-producing code.
-
-**Specific failures:**
-- 401 Unauthorized (expired/invalid key) → generic "API Error" → no "update your API key" prompt
-- 429 Too Many Requests (rate limited) → generic "API Error" → no backoff suggestion
-- 404 Model Not Found → generic "API Error" → no "check model name" guidance
-- 5xx Server Error → generic "API Error" → no "provider down, try again later"
+**Rationale:** The `largeTouchTargets` setting is persisted in the Settings model but only consumed in one widget across the entire app. Users who need larger touch targets to accommodate motor impairments will find the setting in Settings, enable it, and see zero difference in 95% of screens (Dashboard, Subjects, Mentor, Tutor, Planner, Settings, Focus Mode, Question Bank, etc.). Buttons, chips, list tiles, and icon buttons all remain at default sizes regardless of the setting.
 
 **Acceptance criteria:**
-- `LlmService` must parse HTTP status codes from non-streaming responses and yield typed errors
-- Streaming methods must check the initial HTTP response status before reading the stream
-- Map 401 → `ExceptionType.apiAuth` with message "API key is invalid or expired. Update in Settings."
-- Map 429 → `ExceptionType.apiRateLimit` with message "Too many requests. Wait and try again."
-- Map 404 → `ExceptionType.apiNotFound` with message "Model not found. Check model name in Settings."
-- Map 5xx → `ExceptionType.apiInternalServer` with message "Provider experiencing issues. Try again later or switch providers."
-- All other errors → `ExceptionType.apiError` with the raw message
-
----
-
-### B3: No Rate Limiting Detection or Handling — 429 Invisible
-
-**Files:**
-- `lib/core/services/llm/llm_chat_service.dart` (entire file — no 429 handling)
-- `lib/core/errors/handlers.dart:168-174` (rate limit detection maps "403"/"forbidden", NOT 429)
-- No client-side rate limiting anywhere
-
-**What happens:** HTTP 429 (Too Many Requests) is the standard rate limit response from OpenRouter, OpenAI, and most API providers. The app has zero handling for this status code:
-1. No client-side throttling (no request queue, no leaky bucket, no minimum interval enforcement)
-2. The error classification maps "403" and "forbidden" (incorrectly) to `apiRateLimit` but completely misses "429"
-3. A real 429 response falls through to the generic error path
-4. Users can hammer the API as fast as they can type, triggering server-side rate limits with no warning
-
-**Acceptance criteria:**
-- Add client-side request throttling: minimum 500ms between chat requests from the same screen
-- Parse 429 status code in `LlmService` → `ExceptionType.apiRateLimit`
-- Show `errorApiRateLimit` message with `retryAfterWait` action
-- Extract `Retry-After` header from 429 response and display countdown if available
-- Remove the incorrect 403→rateLimit mapping, or keep it as a secondary check alongside proper 429 handling
-
----
-
-### B4: No Provider Fallback / Failover Mechanism
-
-**Files:**  
-- `lib/core/providers/llm_providers.dart:19-34` (single `LlmService`, single `LlmConfiguration`)
-- `lib/features/settings/presentation/api_config_screen.dart` (no backup/secondary provider UI)
-- No "backup provider" concept in any model, provider, or service
-
-**What happens:** The app has a single `LlmService` with a single `LlmConfiguration`. When the provider fails, there is zero fallback behavior:
-- No automatic retry with a different provider
-- No prompt: "Your provider is down. Switch to Ollama (local)?"
-- No "backup provider" configuration field
-- User must manually go to Settings, change provider, enter new config, test, and return
-
-For a student mid-lesson, this is catastrophic — the tutor session is aborted with no recovery path.
-
-**Acceptance criteria:**
-- Add `backupProvider`, `backupApiKey`, `backupBaseUrl`, `backupModel` fields to configuration
-- Add backup provider UI in `ApiConfigScreen` (e.g., "Fallback Provider" section with same dropdown+fields)
-- On streaming failure in Tutor/Mentor, show dialog: "Primary provider failed. Switch to [backup]?"
-- Automatic failover: on 5xx/timeout, try backup provider with a status indicator
-- Persist backup config in Hive alongside primary config
+- Every interactive widget across all screens must read and apply `settings.largeTouchTargets`.
+- A minimum touch target of 48x48dp must be enforced when the setting is enabled.
+- Icon-only buttons should show visible labels or get larger bounding boxes.
+- Chips and small tap targets should expand to meet accessibility minimums.
 
 ---
 
 ## MAJOR Findings
 
-### M1: Mentor Failed Messages Have No Retry Button
+### M1. VoiceBar Has No Screen Reader Support
 
-**Files:** `lib/features/mentor/presentation/mentor_screen.dart:249-262`
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:72-121`
 
-**What happens:** When `_sendMessage()` catches a streaming error, it replaces the incomplete message with `l10n.errorWithResponse`. The input is re-enabled so the user can type a new message. But there's no retry button on the failed message — the user has to manually re-type their question.
+**Rationale:** The `VoiceBar` widget (the primary voice control UI in the Tutor screen) has zero semantic labels for screen readers:
+- The `IconButton` at line 111-118 uses `tooltip` (for long-press hint) but NOT a `Semantics` wrapper — Flutter's `IconButton` may not expose tooltip text through all screen reader APIs.
+- The waveform `_WaveformPainter` at lines 94-108 is a `CustomPaint` in a 24x24 `SizedBox` — a screen reader sees only an empty box with no semantic role.
+- The transcription `Text` at lines 80-93 has no `Semantics` label — partial speech results are invisible to screen readers.
 
-**Acceptance criteria:**
-- Add a "Retry" button (icon or chip) to failed mentor messages
-- Tapping retry calls `_sendMessage()` with the original user message text
-- Failed messages show a distinguishing style (e.g., red-tinted background, error icon)
-
----
-
-### M2: Test Connection Only Tests `/models` Endpoint, Not Chat
-
-**Files:** `lib/features/settings/presentation/api_config_screen.dart:111-164`
-
-**What happens:** `_testConnection()` makes a GET request to `<baseUrl>/models` with the API key. A 200 response only proves that the endpoint is reachable and the key has read access. It does NOT verify:
-1. The selected model exists on this provider
-2. The model supports chat completions
-3. The provider can actually generate responses
-4. The API key has write/chat permissions (some keys may be read-only)
-
-A connection test could succeed but the first chat request could fail.
+A blind user relying on TalkBack/VoiceOver cannot discover, understand, or operate the voice input control.
 
 **Acceptance criteria:**
-- Send an actual lightweight chat completion request (e.g., "Reply with OK") instead of or in addition to the `/models` check
-- Verify that the selected model name returns a valid response
-- Show the model's response time and first-token latency
-- If the model name is empty when testing, prompt user to select one first
+- `VoiceBar` must have `Semantics` container with a clear label like "Voice input. Double-tap to start speaking."
+- When listening, semantics must announce "Listening. Speak now."
+- The `IconButton` must use `Semantics(button: true, label: ...)` instead of or in addition to `tooltip`.
+- The waveform animation must be `ExcludeSemantics` or have a meaningful label.
+- Transcription text must be wrapped in `Semantics(liveRegion: true)` so screen readers announce partial results.
 
----
+### M2. VoiceBar Requests Microphone Permission on Widget Mount (Before User Action)
 
-### M3: Provider Switching Doesn't Clear Model — Stale Model Survives
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:41-43`
 
-**Files:** `lib/features/settings/presentation/api_config_screen.dart:321-336`
+**Rationale:** `requestPermission()` is called in `initState` via `addPostFrameCallback`. This means the microphone permission dialog appears immediately when the Tutor screen loads, before the user has indicated any intention to use voice input. The user might be confused by a system permission dialog appearing on screen load with no context.
 
-**What happens:** When the user switches from `openRouter` to `ollama` in the provider dropdown, the base URL auto-populates with the new default. But the `selectedModel` field is NOT cleared — it retains the previous model name (e.g., `chatgpt-4o-latest`). The user would need to manually notice and change it. The model IS cleared on save (`_saveKeys()` sets it to `''` at line 75), but not on the visual dropdpown switch.
+Compare with the Mentor screen approach (line 507) which simply hides the mic button if `isAvailable` is false — and the Practice screen approach (line 637) which does the same. Inconsistent permission strategies across the same app.
 
 **Acceptance criteria:**
-- Clear `selectedModel` when the provider dropdown is changed by the user
-- Show a hint: "Model will be cleared when provider changes. Select a model for [new provider]."
-- OR: Fetch available models automatically on provider switch (already exists as `_showAiModelSelection`)
+- Permission must be requested on user action (tapping the mic button), not on widget init.
+- If permission is denied, a clear explanation must be shown with a "Retry" button or Settings link.
+- All three screens (Tutor, Mentor, Practice) must use a consistent permission strategy.
 
----
+### M3. Mentor Voice Input Leaks Stream Subscriptions
 
-### M4: No Per-Feature Provider Configuration
+**Files:** `lib/features/mentor/presentation/mentor_screen.dart:505-531`
 
-**Files:** `lib/core/providers/llm_providers.dart:19-34`
+**Rationale:**
+```dart
+voiceService.transcribedText.listen((text) {
+  _textController.text = text;
+  _textController.selection = TextSelection.fromPosition(
+    TextPosition(offset: text.length),
+  );
+});
+```
+Each press of the mic button calls `.listen()` which returns a `StreamSubscription` that is **never stored or cancelled**. The subscription is stored in a local scope only. If the user taps the mic button 5 times, 5 simultaneous listeners write transcribed text into the text field. The `dispose()` method (line 534) does not cancel any subscription because there's no reference to it.
 
-**What happens:** All AI features (Tutor, Mentor, exercise evaluator, lesson planner, summary generator, content pipeline) share a single `LlmService` with one `LlmConfiguration`. The user cannot, for example, use OpenRouter (powerful, cloud) for tutor lessons and Ollama (fast, local) for Mentor chat. This limits flexibility and optimization.
+**Acceptance criteria:**
+- Store the `StreamSubscription` from `transcribedText.listen()` as an instance variable.
+- Cancel the previous subscription before creating a new one on each press.
+- Cancel the subscription in `dispose()`.
+- Consider using `_textController.addListener` or a single persistent subscription with a flag to reduce complexity.
 
-**Acceptance criteria (optional enhancement):**
-- Allow per-feature provider override (e.g., "Tutor uses: OpenRouter", "Mentor uses: Ollama")
-- Default to the global provider with per-feature opt-out
-- Store per-feature overrides in Hive `settings` box
+### M4. Mentor Voice Button Hidden When Unavailable (No Fallback)
 
----
+**Files:** `lib/features/mentor/presentation/mentor_screen.dart:507` and `lib/features/practice/presentation/screens/practice_session_screen.dart:637`
 
-### M5: Partial Responses Lost on Mid-Stream Error
+**Rationale:**
+```dart
+if (!voiceService.isAvailable) return null; // Mentor, line 507
+if (!vs.isAvailable) return const SizedBox.shrink(); // Practice, line 637
+```
+When the speech-to-text service is unavailable (no permission, no microphone, platform not supported), the mic button is completely removed from the UI. There is no disabled state, no tooltip explaining why it's missing, no fallback message like "Voice input not available on this device." A user looking for voice input sees nothing and has no way to know the feature exists but is unavailable.
+
+**Acceptance criteria:**
+- The mic button must always be rendered. When unavailable, show a disabled state with a tooltip/explanation: "Voice input not available on this device" or "Microphone permission required."
+- The button should never disappear from the UI — only toggle between enabled and disabled states.
+
+### M5. VoiceBar Auto-Submits Transcription Without User Review
+
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:56-60`
+
+**Rationale:** When the user stops listening (by tapping the mic button again), if `_currentTranscription.isNotEmpty`, the transcription is immediately submitted via `onTranscriptionSubmitted`. There is no review step — the user cannot correct speech-to-text errors before sending. If the STT engine transcribes "Avogadro's number" as "avocado's number", the wrong text is sent directly to the AI tutor.
+
+Compare with the Mentor screen approach (line 522-527) which writes transcription to the text field for manual review and editing. Inconsistent patterns.
+
+**Acceptance criteria:**
+- VoiceBar must provide an optional review mode (configurable) where transcription is written to the text field instead of auto-submitted.
+- At minimum, VoiceBar should show the final transcription for 1-2 seconds with an undo/cancel button before auto-submitting.
+- Or align with the Mentor approach: always write to text field, let the user manually submit.
+
+### M6. Practice Session Voice Input Has No Listen Duration Limit
+
+**Files:** `lib/features/practice/presentation/screens/practice_session_screen.dart:516-524`
+
+**Rationale:** `_useVoiceInput()` starts listening with the default `voiceListen` timeout (60 seconds from `Timeouts.voiceListen`). During this time, every partial transcription triggers `_onAnswerSelected`. For a `typedAnswer` question expecting a short number, the STT engine might produce noise for 60 seconds, submitting dozens of incorrect predictions. There is no mechanism to stop listening after a submission is made.
+
+**Acceptance criteria:**
+- After one submission via voice, the mic must auto-stop listening.
+- A shorter listen duration (10-15 seconds) should be used for practice answers vs. conversational chat.
+- The user must be able to manually stop listening at any time.
+- Multiple rapid submissions must be coalesced or the latest transcription must take priority.
+
+### M7. TTS and STT Have No Mutual Interruption Logic
 
 **Files:**
-- `lib/features/teaching/services/conversation_manager.dart:170-200` (buffer not saved on error)
-- `lib/features/mentor/services/mentor_service.dart:129-189` (context not preserved on error)
+- `lib/core/services/voice_service.dart:86-111` (startListening)  
+- `lib/core/services/voice_service.dart:159-179` (speak/TTS)
 
-**What happens:** During streaming, chunks are accumulated in a `buffer` and yielded to the UI in real-time. But `addAssistantMessage(buffer.toString())` is only called AFTER the stream completes successfully (conversation_manager.dart:192). If the stream fails mid-way:
-- The accumulated buffer is lost — it was rendered in UI but never saved to memory
-- The user sees partial text, then an error, then the partial text disappears
-- On next message, the conversation includes the user's original message but not the partial assistant response
-- Mentor: error message replaces partial content entirely
+**Rationale:** `startListening()` does not check `_isSpeaking` before starting, and `speak()` does not check `_isListening`. If TTS is reading an AI response and the user triggers voice input, both audio streams will play simultaneously. The user hears the AI voice while their microphone is open — producing feedback loops, overlapping audio, and confusing behavior.
 
 **Acceptance criteria:**
-- On mid-stream error, save the accumulated partial response to conversation memory before showing the error
-- Preserve partial content in the chat bubble (show what was received, append error indicator)
-- Add a visual indicator: 🤖 "Response interrupted after [N] characters"
+- Starting voice input must stop any active TTS.
+- Starting TTS must not interrupt active voice input (or should provide a warning).
+- `VoiceService` should expose a `stopAll()` method that stops both listening and speaking.
+- The Tutor screen should pause TTS when voice input is triggered and resume when transcription completes.
 
----
-
-### M6: Task Retry Loses All Context
-
-**Files:** `lib/core/services/llm_task_manager.dart:209-214`
-
-**What happens:** `retryTask(taskId)` creates a brand new task with the same `feature` and `modelId` but carries over NO data, context, messages, or payload from the original failed task. The old task remains in the list with `failed` status. The new task starts as `queued`. So retrying a "generate lesson plan" task creates a new "generate lesson plan" task, but with no knowledge of WHICH subject, topic, or what the original request was.
-
-**Acceptance criteria:**
-- `retryTask()` should accept an optional `context` parameter (payload/messages from original request)
-- OR: tasks should store their input payload/context so retry can reproduce it
-- Show "Retrying task [name]" progress in the task manager UI
-
----
-
-## PARTIAL Findings
-
-### P1: Configuration Persistence Depends on Initialization Order
+### M8. Inconsistent Grid Text Scaling
 
 **Files:**
-- `lib/core/providers/app_providers.dart:129-135` (in-memory providers with defaults)
-- `lib/core/providers/llm_providers.dart:19-34` (watches in-memory providers)
-- `lib/features/settings/presentation/settings_screen.dart` (reads `settingsProvider` for display)
+- `lib/main.dart:350-358` (text scaling logic)
+- `lib/features/dashboard/presentation/dashboard_screen.dart:133` (grid aspect ratio)
+- `lib/features/practice/presentation/widgets/practice_mode_grid.dart:71` (adjusts for text scale)
+- `lib/features/subjects/presentation/subject_selection_screen.dart` (subject list grid)
 
-**What happens:** The `apiKeyProvider`, `apiBaseUrlProvider`, `selectedModelProvider`, and `llmProviderProvider` are simple `StateProvider`s initialized with defaults (empty key, `openRouter`, default URL, empty model). They get their actual persisted values when a screen explicitly reads from `settingsProvider` and writes to them. If `llmServiceProvider` is read (and thus the `LlmService` created) before the persisted settings have been loaded into these state providers, the service starts with defaults (empty key, wrong URL, wrong model). The API config screen then corrects this on its first build.
-
-**Acceptance criteria:**
-- Initialize providers from persisted settings eagerly (at app startup in `main.dart`, before any screen renders)
-- Add a provider like `ref.onInit(...)` or use `ProviderScope` with overrides from persisted settings
-- Ensure `llmServiceProvider` is never constructed with empty/default config before settings are loaded
-
----
-
-### P2: Settings Tiles Don't Show Error History or Health Status
-
-**Files:** `lib/features/settings/presentation/settings_screen.dart:179-187`
-
-**What happens:** The AI Configuration section shows:
-- "API Keys: Configured" (just presence check, not validity)
-- "AI Model: [model name]" (no indication if the model is working)
-- "Request Timeout: [seconds]" (just the configured value)
-- "AI Task Monitor: [count]" (only count, no health status)
-
-There is no "Last Error" field, no "Provider Health" indicator, no way to see if the current configuration has been tested recently or has been failing.
+**Rationale:** The `practice_mode_grid.dart` adjusts `childAspectRatio` based on `MediaQuery.textScalerOf(context).scale(1.0)`, but the Dashboard's metric card grid does not. At maximum font size (2.0x scale), Dashboard cards may overflow their grid cells. Other grids (subject selection, question bank) may have similar issues.
 
 **Acceptance criteria:**
-- Show a health indicator (green/yellow/red dot) next to the provider name based on recent success/failure ratio
-- Show "Last tested: [timestamp]" for the connection test
-- Show "Last error: [message]" if the last LLM call failed
-- Store LLM health metrics in Hive for persistence across restarts
+- All `SliverGrid` and `GridView` widgets must adjust `childAspectRatio` for text scaling, following the pattern in `practice_mode_grid.dart:71`.
+- Cards should use `softWrap: true` and handle overflow gracefully at all text sizes.
+- Test at maximum text scale (2.0x) on the smallest supported screen size.
+
+### M9. Color-Blind Accessibility Gaps
+
+**Files:**
+- `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart:128-133` (color-only progress bars)
+- `lib/features/dashboard/presentation/widgets/workload_card.dart:93` (red dot for weak areas)
+- `lib/core/theme/app_theme.dart:177-184` (high contrast theme has no color-blind palette adjustment)
+
+**Rationale:** Mastery level differentiation on progress bars uses color only (`primary`/`tertiary`/`error`). The weak areas card uses a red `Icons.circle` with no icon alternative. No color-blind safe palette (e.g., blue-orange instead of red-green) exists. While text labels on mastery chips partially mitigate this, the progress bar fill color and the weak-area red dot are pure color signals with no shape/icon/pattern alternative.
+
+**Acceptance criteria:**
+- Progress bar colors must be supplemented with patterns or shapes (e.g., diagonal stripes for the filled portion).
+- The weak areas dot must use `Icons.warning_amber` or `Icons.error_outline` instead of `Icons.circle` — shape-based differentiation.
+- A color-blind safe theme palette should be added as an option.
+- All color-only indicators (error/success/warning states, progress values, mastery levels) must have a non-color alternative.
+
+### M10. Permission Denied Results in Silent Failure
+
+**Files:** `lib/core/services/voice_service.dart:86-88`
+
+**Rationale:**
+```dart
+Future<void> startListening({String? localeName}) async {
+  if (_speech == null || !_isAvailable) return;
+  if (_isListening) return;
+  // ...
+}
+```
+When `_isAvailable` is false (permission denied), `startListening()` returns early with no user feedback. No snackbar, no dialog, no explanation. The user pressed the mic button expecting to be heard, but got silence. The only clue is that the microphone icon might toggle briefly (the button state doesn't change because `!_isAvailable` returns early before `_isListening` is set).
+
+**Acceptance criteria:**
+- When `startListening()` is called but the service is unavailable, the calling code must show a user-visible message: "Microphone permission is required. Go to Settings to enable it." or similar.
+- `VoiceService` should expose a `lastError` string or stream for the UI to render.
+- A "Permission denied" callback chain must be established from `_checkAvailability` through to the UI.
+
+### M11. No Permission Re-Request Path
+
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:41-43`
+
+**Rationale:** `VoiceBar.requestPermission()` is called exactly once — in `initState`. If the user denies permission on first request, `isAvailable` stays false forever. The `VoiceBar` never retries. The user cannot grant permission later without restarting the app or the Tutor screen. The Mentor and Practice screens don't call `requestPermission()` at all — they just hide the mic button.
+
+**Acceptance criteria:**
+- A "retry permission" mechanism must exist on all three screens (Tutor, Mentor, Practice).
+- If permission was denied, tapping the disabled mic button should show a dialog: "Microphone access is needed for voice input. Open Settings to grant permission, or try again."
+- Alternatively, call `requestPermission()` each time the user taps the mic button (not just at init).
+
+### M12. Bold Text Field Is Dead Code
+
+**Files:** `lib/features/settings/data/models/accessibility_preferences.dart:8`
+
+**Rationale:** The `boldText` Hive field (typeId: 34, field 0) is defined in the model with full `toJson`, `fromJson`, and `copyWith` support — but has zero UI consumers:
+- No Settings toggle writes to it (Settings accessibility section has High Contrast, Large Touch Targets, Reduce Motion — not Bold Text)
+- `main.dart:330` reads `MediaQuery.boldTextOf(context)` (system setting), not `settings.boldText`
+- The field is persisted to Hive but never read by any code path
+
+The field is needlessly stored in every backup (wasting space) and gives a false impression that Bold Text is configurable.
+
+**Acceptance criteria:**
+- Either add a Bold Text toggle in Settings → Accessibility that writes to this field and applies the setting, OR
+- Remove the `boldText` field from `AccessibilityPreferences` entirely.
 
 ---
 
-## Code Map
+## MINOR Findings
 
-| File | Lines | Relevance |
-|---|---|---|
-| `lib/core/services/llm/llm_chat_service.dart` | 1-493 | Core LLM streaming, no timeouts, no status parsing |
-| `lib/features/teaching/services/conversation_manager.dart` | 170-200 | No try-catch on stream, partial content lost on error |
-| `lib/features/teaching/presentation/tutor_screen.dart` | 180-197 | NO error handling — UI locks up on stream failure |
-| `lib/features/mentor/presentation/mentor_screen.dart` | 249-262 | Error caught, message replaced, NO retry button |
-| `lib/features/mentor/services/mentor_service.dart` | 129-189 | No try-catch on chat stream |
-| `lib/features/settings/presentation/api_config_screen.dart` | 111-164 | Test connects to `/models` only, not chat endpoints |
-| `lib/features/settings/presentation/api_config_screen.dart` | 298-346 | Provider dropdown, model NOT cleared on switch |
-| `lib/features/settings/presentation/settings_screen.dart` | 179-187 | AI Config tiles — no health/error display |
-| `lib/core/providers/llm_providers.dart` | 19-34 | Single `LlmService`, single global config |
-| `lib/core/providers/app_providers.dart` | 129-135 | In-memory providers, defaults risk race condition |
-| `lib/core/errors/exceptions.dart` | 6 | `ExceptionType` enum — dead code, never set by LlmService |
-| `lib/core/errors/handlers.dart` | 168-174 | Rate limit maps 403/forbidden, misses 429 |
-| `lib/core/constants/timeouts.dart` | 12-17 | Timeout constants defined but never wired into HTTP calls |
-| `lib/core/services/llm_task_manager.dart` | 209-214 | `retryTask()` loses all payload/context |
+### m1. VoiceBar Waveform SizedBox Still Renders with Reduce Motion
+
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:94-109`
+
+The `_WaveformPainter` `SizedBox` continues to render (as a static 24x24 space with 5 bars drawn at their initial height) even when `reduceMotion` is true. The animation is disabled but the widget occupies the same space and draws the same elements. Should be hidden entirely when `reduceMotion` is true to reduce visual noise.
+
+### m2. Keyboard Focus May Not Reach VoiceBar IconButton Consistently
+
+**Files:** `lib/features/teaching/presentation/widgets/voice_bar.dart:72-121`
+
+The VoiceBar's `IconButton` is inside a `Row` with a `CustomPaint` `SizedBox`. The `SizedBox` has no `focusNode` but may intercept keyboard focus traversal in the `FocusTraversalGroup`. The exact behavior depends on the Flutter framework's focus traversal algorithm with mixed focusable/non-focusable children.
+
+### m3. TTS Does Not Resume After Interruption
+
+**Files:** `lib/features/teaching/services/conversation_manager.dart:219-224`
+
+If the user navigates away while TTS is speaking, and the tab is eventually destroyed, the utterance is lost. On return, there is no "resume last TTS utterance" mechanism. For a voice-reliant user, interrupted audio that never resumes is disorienting.
+
+### m4. ChatBubble Streaming Uses Same Chunk Size Regardless of Reduce Motion
+
+**Files:** `lib/features/teaching/services/conversation_manager.dart:257-264`
+
+The `_buildAdaptiveChunks` method yields adaptive chunk sizes (3-10 characters per chunk) to animate text streaming. This chunked rendering continues regardless of the `reduceMotion` setting. A screen reader reading partial chunks may confuse the user. Should yield the entire response at once when reduce motion is enabled.
+
+### m5. Reduce Motion Not Checked in LessonProgressBar and PhaseIndicator
+
+The `LessonProgressBar` and `PhaseIndicator` widgets may have animated transitions (progress bar fill, phase change animation). These should be disabled or made instant when reduce motion is enabled.
 
 ---
 
-## Conclusion
+## Finding Severity Summary
 
-The AI provider failure handling has **4 BLOCKER** issues that would prevent a user from recovering when their provider goes down. The most critical is B1 (tutor streaming errors crash silently), followed by B2 (no HTTP status code parsing = all errors are generic), B3 (no rate limiting handling), and B4 (no provider fallback).
+| Severity | Count | Key Issues |
+|----------|-------|------------|
+| BLOCKER | 2 | Practice voice corrupts mastery data via partial submissions; Large Touch Targets ignored by 95% of app |
+| MAJOR | 12 | Screen reader invisible VoiceBar; aggressive permission; subscription leaks; hidden voice buttons; auto-submit without review; no TTS/STT mutual interruption; inconsistent grid scaling; color-blind gaps; silent permission failure; no retry path; dead bold text field |
+| MINOR | 5 | Reduce motion widget still renders; keyboard focus concerns; TTS loses state on tab destroy; streaming not disabled with reduce motion; animation widgets not reduce-motion-aware |
 
-The codebase has the right architectural pieces (`ExceptionType` enum, `ErrorHandler` UI, `LlmTaskManager`, localization strings) but they are disconnected from each other. The `LlmService` produces raw exceptions, the `ErrorHandler` expects typed `AppException`s, and the bridge (`convertToAppException`) only matches string patterns for 403 — missing 401, 429, 404, and 5xx entirely.
+---
+
+## Associated Scenario
+
+`dry-run-test/scenario_voice_first_accessibility.md` — 20-step user journey covering voice-first interaction, screen reader navigation, text scaling, color-blind accessibility, and accessibility settings effectiveness.

@@ -21,6 +21,9 @@ class SettingsUpdate {
   final int? dailyReminderMinute;
   final bool? firstFocusVisit;
   final bool? dailyReminderEnabled;
+  final String? llmProviderName;
+  final int? lastConnectionTestMs;
+  final String? lastLlmError;
 
   const SettingsUpdate({
     this.apiKey,
@@ -43,6 +46,9 @@ class SettingsUpdate {
     this.dailyReminderMinute,
     this.firstFocusVisit,
     this.dailyReminderEnabled,
+    this.llmProviderName,
+    this.lastConnectionTestMs,
+    this.lastLlmError,
   });
 
   SettingsUpdate copyWith({
@@ -66,6 +72,9 @@ class SettingsUpdate {
     int? dailyReminderMinute,
     bool? firstFocusVisit,
     bool? dailyReminderEnabled,
+    String? llmProviderName,
+    int? lastConnectionTestMs,
+    String? lastLlmError,
   }) {
     return SettingsUpdate(
       apiKey: apiKey ?? this.apiKey,
@@ -88,6 +97,9 @@ class SettingsUpdate {
       dailyReminderMinute: dailyReminderMinute ?? this.dailyReminderMinute,
       firstFocusVisit: firstFocusVisit ?? this.firstFocusVisit,
       dailyReminderEnabled: dailyReminderEnabled ?? this.dailyReminderEnabled,
+      llmProviderName: llmProviderName ?? this.llmProviderName,
+      lastConnectionTestMs: lastConnectionTestMs ?? this.lastConnectionTestMs,
+      lastLlmError: lastLlmError ?? this.lastLlmError,
     );
   }
 
@@ -113,6 +125,9 @@ class SettingsUpdate {
     if (dailyReminderMinute != null) map['dailyReminderMinute'] = dailyReminderMinute;
     if (firstFocusVisit != null) map['firstFocusVisit'] = firstFocusVisit;
     if (dailyReminderEnabled != null) map['dailyReminderEnabled'] = dailyReminderEnabled;
+    if (llmProviderName != null) map['llmProviderName'] = llmProviderName;
+    if (lastConnectionTestMs != null) map['lastConnectionTestMs'] = lastConnectionTestMs;
+    if (lastLlmError != null) map['lastLlmError'] = lastLlmError;
     return map;
   }
 }

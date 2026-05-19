@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:studyking/core/utils/logger.dart';
-import '../services/spaced_repetition_engine.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 
 class SrDataCodec {
   static QuestionSRData deserialize(String? json) {

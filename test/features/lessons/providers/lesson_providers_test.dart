@@ -147,12 +147,12 @@ void main() {
   });
 
   group('lessonServiceProvider', () {
-    test('creates a LessonSessionService and is singleton', () {
+    test('creates a SessionQueryService and is singleton', () {
       final container = ProviderContainer();
       addTearDown(container.dispose);
       final svc1 = container.read(lessonServiceProvider);
       final svc2 = container.read(lessonServiceProvider);
-      expect(svc1, isA<LessonSessionService>());
+      expect(svc1, isA<SessionQueryService>());
       expect(svc1, same(svc2));
     });
 

@@ -78,6 +78,7 @@ class AgentFactory {
       llmTaskManager: taskManager,
       studentId: studentId,
     );
+    idleExecutor.startIdleMonitoring();
 
     final loop = AgentLoop(
       llmService: llmService,

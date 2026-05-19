@@ -1,288 +1,242 @@
-# Internationalisation (i18n) Master Issue
+# Internationalisation (i18n) Master Issue — Round 2
 
 **Date:** 2026-05-19  
 **Auditor:** Internationalisation Master  
-**Scope:** All user-facing strings across lib/ and l10n/  
+**Scope:** Remaining i18n gaps after Round 1 (see `issues/completed/internationalisation_master.md`)  
 **Target Locale:** Spanish (es), patterns generalisable to other locales  
 
 ---
 
 ## BLOCKER
 
-None identified. ARB coverage is broad (6500+ keys per locale), `AppLocalizations.of(context)` is used consistently, and format helper utilities (`number_format_utils.dart`) are wired through most display paths.
+None identified.
 
 ---
 
 ## MAJOR
 
-### M1. Hardcoded `%` sign missing locale-appropriate spacing in ARB values
+### M6. Hardcoded user-facing English strings in 5 widget files
 
-**Rationale:** Spanish typographic convention requires a non-breaking space between the number and the `%` sign (`85 %` not `85%`). Several ARB values hardcode `%` immediately adjacent to the placeholder/number with no space, producing incorrect output for `es`.
+**Rationale:** These strings are never translated via `AppLocalizations`. A Spanish user will always see English text regardless of their locale setting.
 
-**Affected ARB keys (es only, en values likely need no change):**
+**Affected files and occurrences:**
 
-| ARB Key | Current (es) | Should be |
-|---|---|---|
-| `completionOfValue` | `"{value}% Completo"` | `"{value} % Completo"` |
-| `percentComplete` | `"{percent}% Completado: ..."` | `"{percent} % Completado: ..."` |
-| `weakAreasAccuracy` | `"Áreas por mejorar (Precisión < 60%)"` | `"Áreas por mejorar (Precisión < 60 %)"` |
-| `paceLabel` | `"{pace}% ritmo"` | `"{pace} % ritmo"` |
-| `score` comment (accuracy labels) | Several ARB placeholders that receive pre-formatted `formatPercent` output | N/A — callers must ensure `formatPercent` output already has correct spacing (it does, since `NumberFormat.percentPattern(locale)` is locale-aware) |
+| # | File | Line | String | Context |
+|---|---|---|---|---|
+| 6a | `lib/features/settings/presentation/settings_screen.dart` | 96 | `'Share'` | `SnackBarAction` label in auto-backup success |
+| 6b | same file | 99 | `'StudyKing Backup — ${...}'` | `Share.shareXFiles` text in auto-backup |
+| 6c | same file | 633 | `'Back Up Now'` | `FilledButton` label in backup dialog |
+| 6d | same file | 654 | `'StudyKing Backup — ${...}'` | `Share.shareXFiles` text in manual backup |
+| 6e | same file | 658 | `'Share last backup'` | `TextButton` label |
+| 6f | `lib/features/dashboard/presentation/widgets/dashboard_header.dart` | 29 | `'Export Reports'` | `Semantics` label |
+| 6g | same file | 32 | `'Export Reports'` | `IconButton` tooltip |
+| 6h | same file | 38 | `'Backup & Restore'` | `Semantics` label |
+| 6i | same file | 41 | `'Backup & Restore'` | `IconButton` tooltip |
+| 6j | `lib/features/teaching/presentation/tutor_screen.dart` | 557 | `'Chat'` / `'Slides'` | `IconButton` tooltip (toggle) |
+| 6k | same file | 563 | `'Voice output'` | `IconButton` tooltip |
+| 6l | `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 85 | `'Read aloud'` | `IconButton` tooltip |
+| 6m | `lib/features/questions/presentation/widgets/question_card_widget.dart` | 341 | `'Upload file'` | `Semantics` label |
+| 6n | same file | 347 | `'File attached'` | Button label (file upload state) |
+| 6o | same file | 347 | `'Upload file'` | Button label (no file state) |
+| 6p | same file | 356 | `'Record audio'` | `Semantics` label |
+| 6q | same file | 362 | `'Recording complete'` | Button label (recording done) |
+| 6r | same file | 362 | `'Start recording'` | Button label (idle state) |
 
 **Acceptance Criteria:**
-- All ARB strings containing `%` without a preceding space are updated in `app_es.arb` to use `" % "` (with non-breaking space or regular space per convention).
-- Visual confirmation on a Spanish device shows `85 %` not `85%`.
+- Every string above is replaced with an `AppLocalizations.of(context)!.someKey` call.
+- New ARB keys are added to both `app_en.arb` and `app_es.arb`.
+- The generated Dart code compiles without errors.
+- A Spanish device shows translated strings for each of these UI elements.
+- `scripts/check_i18n_coverage.sh` passes with 100 % key parity.
 
 ---
 
-### M2. `completionOfValue` uses raw `double` placeholder with hardcoded `%` instead of ICU message format
+### M7. `lesson_agent_service.dart` uses hardcoded English system prompts instead of ARB
 
-**File:** `app_en.arb:3279`, `app_es.arb:3279`
+**File:** `lib/features/lessons/services/lesson_agent_service.dart`
 
+**Lines 255–265:**
+```dart
+String _buildLessonPrompt(String topicTitle, String localeName) {
+  return 'Generate a structured lesson plan for the topic: "$topicTitle". '
+      'Include slides (key concepts), examples, exercises, and a summary. '
+      'Respond in $localeName. '
+      'Format your response as a JSON array of blocks...';
+}
+
+String _lessonSystemPrompt(String localeName) {
+  return 'You are a lesson planning AI. Generate educational content in $localeName. '
+      'Your response must be valid JSON.';
+}
+```
+
+**Rationale:** The `teaching/services/prompts/prompts.dart` file already has a proper pattern — all prompt strings are in ARB and accessed via `lookupAppLocalizations(Locale(localeName))`. This file bypasses that pattern entirely, producing English prompts even when the user's locale is `es`. A Spanish user asking for a lesson will receive a system prompt in English, which means the LLM may produce lesson structure descriptions in English before switching mid-generation.
+
+**Also affected — `question_variant_generator.dart:87-88`:**
+```dart
+String _variantSystemPrompt() {
+  return 'You are a question variant generator. Generate semantically equivalent ...';
+}
+```
+Same pattern — hardcoded English prompt not passed through ARB.
+
+**Acceptance Criteria:**
+- All prompt strings in `lesson_agent_service.dart` are moved to ARB keys (`lessonSystemPrompt`, `lessonBuildPrompt`).
+- The `_variantSystemPrompt()` in `question_variant_generator.dart` uses `lookupAppLocalizations` or receives the l10n instance.
+- Both EN and ES ARB files contain the new keys.
+- Generated Dart code compiles.
+- A Spanish device triggers lesson generation and the LLM receives a Spanish system prompt.
+
+---
+
+### M8. Locale switch does not trigger rebuild of `AppLocalizations.of(context)`
+
+**Rationale:** When the user changes language in Settings, `ref.read(localeProvider.notifier).state = Locale(value)` is called. This updates a `StateProvider<Locale>`. However, `AppLocalizations.of(context)` is resolved by Flutter's `Localizations` widget ancestor, which does **not** watch `localeProvider`. Screens that call `final l10n = AppLocalizations.of(context)!` inside `build()` **will** see updated strings because Flutter rebuilds the widget tree when `Localizations` changes — but only if the locale change is propagated through `MaterialApp`'s `locale` parameter back to `Localizations`.
+
+**The root cause:** The app likely sets `locale:` on `MaterialApp` from `localeProvider`. If this is a plain `StateProvider<Locale>`, the widget tree rebuilds and `Localizations` re-resolves, so strings refresh. However, `AGENTS.md` explicitly warns about screens that cache `l10n` in a local variable outside `build` — such screens display stale text until re-entered.
+
+**Confirmation needed — investigate:**
+- `lib/main.dart` — how is `locale` wired to `MaterialApp`?
+- Does `MaterialApp` receive `ref.watch(localeProvider)` so it triggers a full rebuild?
+- Are there any `StatefulWidget` screens that assign `l10n` to a field in `initState` / `didChangeDependencies` and read it later without re-reading on rebuild?
+
+**Acceptance Criteria:**
+- After switching from English to Spanish in Settings, every visible screen updates its strings (check: dashboard, planner, mentor, tutor, settings).
+- `MaterialApp` watches `localeProvider` via `ref.watch(localeProvider)`.
+- Any `StatefulWidget` that caches `l10n` outside `build` is refactored to re-read on locale change (e.g. via `didChangeDependencies` + `Locale` key check, or `Consumer` wrapping).
+- A test exists that simulates locale switch and verifies string refresh on a representative screen.
+
+---
+
+### M9. Spanish ARB uses English-style `(s)` plural notation instead of ICU plural
+
+**File:** `lib/l10n/app_es.arb`
+
+**Two keys affected:**
+
+Key `sourcesCountLabel` (line 6044):
 ```json
-"completionOfValue": "{value}% Complete",
-"@completionOfValue": {
-  "placeholders": { "value": { "type": "double" } }
-}
+"sourcesCountLabel": "{count, plural, =1{1 Fuente} other{{count} Fuente(s)}}"
 ```
+The `other` branch uses `Fuente(s)` — this is an English convention (adding `(s)` to indicate optional plural). In Spanish the plural should be `fuentes` (lowercase).
 
-**Rationale:** The `%` is glued to the value literal. ICU message format for percentages exists (`{value, number, ::percent}`) but Flutter's ARB ICU does not support the `::percent` skeleton in placeholders reliably in generated Dart code. This means the `%` must remain in the string body, but the locale-appropriate spacing is lost when the value is rendered via the double placeholder.
-
-**Alternative:** Remove `%` from the ARB and have the caller use `formatPercent(value, localeName)` instead, OR keep `%` in the ARB but ensure spacing is locale-appropriate (see M1).
-
-**Affected files:**  
-- `lib/l10n/app_en.arb` (~line 3279)  
-- `lib/l10n/app_es.arb` (~line 3279)  
-- All callers of `completionOfValue`  
+Key `downstreamTopicWarning` (line 6513):
+```json
+"downstreamTopicWarning": "⚠ {count} tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización."
+```
+This is not ICU-pluralised at all — it's a plain `{count}` placeholder with English `(s)` appended manually. When `count == 1`, the string reads `"⚠ 1 tema(s) dependiente(s) dependen..."` which is incorrect in both English and Spanish.
 
 **Acceptance Criteria:**
-- `completionOfValue` either (a) drops the `%` from the ARB and callers pass a `formatPercent`-formatted string via the placeholder, or (b) ARB value is corrected to `"{value} % Completo"` for es.
-
----
-
-### M3. `formatPercent` calling convention inconsistency — risk of silent off-by-100× errors
-
-**File:** `lib/core/utils/number_format_utils.dart:15-24`
-
-```dart
-String formatPercent(double value, String localeName, {...}) {
-  final fmt = NumberFormat.percentPattern(localeName)...
-  return fmt.format(value / 100);
-}
-```
-
-**Rationale:** The function divides by 100, which means it expects 0–100 input range (as documented in AGENTS.md). However, callers are inconsistent:
-
-| Caller | Passes | Expectation |
-|---|---|---|
-| `lib/.../summary_row.dart:43` | `accuracy.toDouble()` (no `* 100`) | Assumes caller is already 0–100 (OK if `accuracy` is 0–100) |
-| `lib/.../subject_stats_tab.dart:117` | `avgScore` (no `* 100`) | Same assumption |
-| `lib/.../practice_results_screen.dart:66` | `accuracy` (no `* 100`) | Same assumption |
-| `lib/.../mentor_screen.dart:836` | `report.accuracy` (no `* 100`) | Same assumption |
-| `lib/.../exam_session_screen.dart:669` | `result.accuracy * 100` | Assumes caller is 0–1 (inconsistent style) |
-| `lib/.../weak_areas_card.dart:66` | `state.accuracy * 100` | Same (0–1 → 0–100) |
-| `lib/.../plan_adherence_card.dart:42` | `averageAdherence * 100` | Same |
-| `lib/.../mastery_progress_card.dart:61` | `avgAccuracy * 100` | Same |
-
-**Risk:** If any field that is **not** multiplied by 100 is actually in 0–1 range (e.g. `0.85`), the displayed value would be `0.85 %` instead of `85 %`. The dev needs to audit each caller's data source to confirm.
-
-**Acceptance Criteria:**
-- All callers are audited and either consistently multiply by 100 or the function is changed to **not** divide by 100 (and instead callers pass 0–1 range).  
-- A lint rule or code review checklist item prevents new ambiguous callers.  
-- Unit tests for `formatPercent` verify the contract with known values and a locale.
-
----
-
-### M4. PDF export table alignments use `centerLeft`/`centerRight` — not RTL-safe
-
-**File:** `lib/features/sessions/services/session_export_service.dart:126-134`
-
-```dart
-cellAlignments: {
-  0: pw.Alignment.centerLeft,   // Column #
-  1: pw.Alignment.centerLeft,   // Subject
-  2: pw.Alignment.centerLeft,   // Date
-  3: pw.Alignment.centerRight,  // Duration
-  4: pw.Alignment.centerRight,  // Correct
-  5: pw.Alignment.centerRight,  // Accuracy
-  6: pw.Alignment.centerLeft,   // Type
-},
-```
-
-**Rationale:** `centerLeft`/`centerRight` are physical alignment values that do not flip for RTL locales (Arabic, Hebrew). The `pdf` package does not yet support `centerStart`/`centerEnd`, but a comment on line 124 acknowledges this. For Arabic users, numeric columns would appear on the wrong side.
-
-Also: column header `l10n.sessionType` is used in the PDF header (line 96) but `s.type.name` at line 113 is the raw enum name (e.g. `"focus"`, `"practice"`), not a localized label. Enum `.name` is English.
-
-**Affected files:**
-- `lib/features/sessions/services/session_export_service.dart`
-- `lib/core/services/progress_export_service.dart` (similar PDF table)
-
-**Acceptance Criteria:**
-- PDF tables use locale-aware alignment (if library supports it, otherwise document limitation).  
-- `s.type.name` is replaced with a localized session type string via `l10n`.
-
----
-
-### M5. Spanish `hoursPerDayAbbrev` translation is ungrammatical
-
-**File:** `lib/l10n/app_es.arb` (~line 5335)
-
-| Key | EN | ES |
-|---|---|---|
-| `hoursPerDayAbbrev` | `{hours}/Days` | `{hours}/Días` |
-
-**Usage** at `lib/features/planner/presentation/planner_screen.dart:851`:
-```dart
-Text(l10n.hoursPerDayAbbrev(formatDecimal(...)))
-```
-→ Renders as e.g. `"1.5/Días"` in Spanish.
-
-**Rationale:** `"1.5/Días"` is not idiomatic Spanish. The conventional abbreviation is `"1.5 h/día"` (horas por día). The slash with "Días" capitalised and pluralised reads as broken English calque.
-
-**Acceptance Criteria:**
-- Spanish value changed to `"{hours} h/día"` (or `"{hours} h/d"` for brevity).  
-- Unit test verifies Spanish output matches expected pattern.
+- `sourcesCountLabel` is changed to `"{count,plural,=1{1 fuente} other{{count} fuentes}}"` in `app_es.arb`.
+- `downstreamTopicWarning` is changed to use ICU plural syntax: `"⚠ {count,plural,=1{1 tema dependiente depende} other{{count} temas dependientes dependen}} de este tema y pueden necesitar actualización."`
+- Generated Dart compiles and displays correctly for count = 1 and count = 5.
+- `scripts/check_i18n_coverage.sh` passes.
 
 ---
 
 ## MINOR
 
-### m1. `planAdjustmentSuggested` lacks ICU pluralisation
+### m9. `settings_screen.dart` 966–968 — `toStringAsFixed` for user-facing file size
 
-**File:** `lib/l10n/app_en.arb:2227`, `lib/l10n/app_es.arb:2227`
+**File:** `lib/features/settings/presentation/settings_screen.dart:965-969`
 
-| Key | Current value |
+```dart
+final sizeStr = fileSize > 1048576
+    ? '${(fileSize / 1048576).toStringAsFixed(1)} MB'
+    : fileSize > 1024
+        ? '${(fileSize / 1024).toStringAsFixed(0)} KB'
+        : '$fileSize B';
+```
+
+**Rationale:** Per AGENTS.md, `toStringAsFixed` must never be used for user-facing numeric displays — it always produces a period decimal separator (`"1.5 MB"`), which is incorrect for Spanish (`"1,5 MB"`). Use `formatDecimal(fileSizeInMb, localeName, maxFractionDigits: 1)` instead.
+
+**Acceptance Criteria:**
+- Replace with `formatDecimal(fileSize / 1048576, localeName, maxFractionDigits: 1)` + `" MB"` (or move the unit into ARB).
+- Spanish display shows `"1,5 MB"`, not `"1.5 MB"`.
+
+---
+
+### m10. RTL: Hardcoded `EdgeInsets.only(left:)` in `planner_screen.dart`
+
+**File:** `lib/features/planner/presentation/planner_screen.dart:788`
+
+```dart
+padding: const EdgeInsets.only(left: 4),
+```
+
+**Rationale:** Hardcoded `left` padding does not flip for RTL locales. Should use `EdgeInsetsDirectional.only(start: 4)`.
+
+**Acceptance Criteria:**
+- Changed to `const EdgeInsetsDirectional.only(start: 4)`.
+- Visual verification: the spacing appears on the correct side when text direction is RTL.
+
+---
+
+### m11. RTL: Hardcoded `EdgeInsets.only(left:)` in `subject_topics_tab.dart`
+
+**File:** `lib/features/subjects/presentation/widgets/subject_topics_tab.dart:365`
+
+```dart
+margin: EdgeInsets.only(bottom: 4, left: indentation * 16.0),
+```
+
+**Rationale:** `left:` is direction-fixed and does not flip for RTL. Should use `EdgeInsetsDirectional.only(bottom: 4, start: indentation * 16.0)`.
+
+**Acceptance Criteria:**
+- Changed to `EdgeInsetsDirectional.only(bottom: 4, start: indentation * 16.0)`.
+- Indentation appears on the correct side for RTL.
+
+---
+
+### m12. `durationMinutes` abbreviation mismatch between EN and ES
+
+**File:** `lib/l10n/app_en.arb:144` vs `lib/l10n/app_es.arb:144`
+
+| Locale | Value |
 |---|---|
-| EN | `"You've had {count} days of low plan adherence. ..."` |
-| ES | `"Ha tenido {count} días de bajo cumplimiento del plan. ..."` |
+| `en` | `{count, plural, =1{1m} other{{count}m}}` |
+| `es` | `{count, plural, =1{1min} other{{count}min}}` |
 
-**Rationale:** When `count == 1`, the string reads `"You've had 1 days of low plan adherence."` (grammar error). Both EN and ES should use ICU plural syntax:
-```
-"You've had {count,plural,=1{1 day} other{{count} days}} of low plan adherence. ..."
-```
+**Rationale:** The Spanish version uses the longer `min` abbreviation while English uses `m`. This causes inconsistent layout widths — a planner screen using these values may render `5min` in Spanish where English shows `5m`, potentially breaking tight layouts or grid alignments. Either both should converge on the same abbreviation, or the layout must accommodate the wider string.
 
-**Acceptance Criteria:**
-- ARB values use `{count,plural,=1{...} other{...}}` for the count phrase.  
-- Generated Dart code compiles and reads correctly for count = 0, 1, 5.
-
----
-
-### m2. `paceLabel` percentage spacing for Spanish
-
-**File:** `lib/l10n/app_es.arb:2973`
-
-```
-"paceLabel": "{pace}% ritmo"
-```
-
-Same issue as M1 — should be `"{pace} % ritmo"` in Spanish.
-
----
-
-### m3. CSV columns are hardcoded English (intentional, but worth documenting)
-
-**File:** `lib/features/sessions/services/session_export_service.dart:26-27`
-
-```dart
-buffer.writeln('Session ID,Student ID,Subject,Type,Start Time,End Time,'
-    'Duration (min),Planned Duration (min),Questions Answered,Correct,Accuracy (%)');
-```
-
-**Rationale:** Per AGENTS.md, CSV exports must remain invariant `en` because CSV is data, not display. However, there is no automated test asserting that future contributors don't accidentally localise CSV headers. Add a test that verifies invariants.
+**Also note:** The same inconsistency exists for `durationSeconds` and `durationHours` — verify these are consistent.
 
 **Acceptance Criteria:**
-- Test at `test/features/sessions/services/session_export_service_test.dart` asserts CSV header line matches the exact English string.
+- Either change ES to `m` (matching EN) or EN to `min` (matching ES) — not both.
+- Visual check on a Spanish planner screen that duration labels fit within their containers.
 
 ---
 
-### m4. `completionOfValue` `double` placeholder may lose fractional digits
+### m13. Badge labels in `settings_screen.dart` use raw integer instead of locale-aware format
 
-**File:** `lib/l10n/app_en.arb:3279`
+**File:** `lib/features/settings/presentation/settings_screen.dart`
 
-```json
-"completionOfValue": "{value}% Complete",
-"@completionOfValue": {
-  "placeholders": { "value": { "type": "double" } }
-}
-```
+- Line 1754: `label: Text('$_failedCount'),` — Badge showing failure count
+- Line 1797: `label: Text('$total'),` — Badge showing total active+failed count
 
-**Rationale:** Flutter's ARB codegen for `double` placeholders uses `value.toStringAsFixed(...)` internally, which always uses period decimal separator regardless of locale. For locale-aware formatting, callers should pass a `String` (pre-formatted with `formatDecimal`/`formatPercent`) instead of a `double`.
-
-**Affected callers:** TBD — need to grep for `l10n.completionOfValue(` usage.
+**Rationale:** These raw integers are not formatted with locale-aware `NumberFormat`. While Arabic numerals (0-9) are universally understood, `NumberFormat.decimalPattern(localeName)` should be used for consistency and future locale support. More critically, `$_failedCount` and `$total` are just numbers — they should ideally use `l10n.failedCount(_failedCount)` if a pluralised ARB key exists.
 
 **Acceptance Criteria:**
-- Placeholder type changed to `String`, or callers use `formatDecimal`/`formatPercent` before passing.  
-- Spanish output shows `"85,5 % Completo"` not `"85.5% Completo"`.
+- Replace with `formatDecimal(count.toDouble(), localeName, maxFractionDigits: 0)` or equivalent.
+- Verify that the Badge displays correctly for count values 0, 1, 99.
 
 ---
 
-### m5. `_languageInstruction` in `prompts.dart` constructs locale instruction inline rather than via ARB
+### m14. LLM-facing `mentor_service.dart` has hardcoded English strings in diagnostics
 
-**File:** `lib/features/teaching/services/prompts/prompts.dart:25-28`
+**File:** `lib/features/mentor/services/mentor_service.dart:291-294`
 
 ```dart
-String get _languageInstruction {
-  if (localeName == 'en') return '';
-  return '\nIMPORTANT: Respond in the same language as the student (locale: $localeName). Do not use English unless the student does.';
-}
+buffer.writeln('${bullet}Sessions today: ${todaySessions.length}');
+...
+buffer.writeln('${bullet}WARNING: ${lateNight.length} session(s) started after 10 PM (late-night study detected)');
 ```
 
-**Rationale:** The instruction text is hardcoded in English. For a Spanish-speaking student receiving lessons from an AI, this instruction should be **in Spanish** so the AI understands the language requirement expressed in the student's own language. Move this string to ARB as a parameterised message.
+**Rationale:** These strings are injected into the LLM prompt context. While LLM-facing strings can be in invariant English (per AGENTS.md), the `session(s)` pattern with English-only `(s)` plural is inconsistent with the rest of the codebase. The content might affect LLM comprehension for Spanish — the LLM may interpret `session(s)` differently when the preceding context is in Spanish.
 
 **Acceptance Criteria:**
-- ARB key `languageInstruction` added to both EN and ES ARB files.  
-- `_languageInstruction` reads from `l10n.languageInstruction(localeName)` instead of hardcoded English.
-
----
-
-### m6. `ConversationManager` keyword detection for `continue`/`exercise` has limited locale support
-
-**File:** `lib/features/teaching/services/conversation_manager.dart:279-287`
-
-```dart
-static const Map<String, List<String>> _continueKeywordsByLocale = {
-  'en': ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'],
-  'es': ['entiendo', 'entendido', 'ya veo', 'siguiente', 'continúa', 'ok', 'sí', 'si'],
-};
-static const Map<String, List<String>> _exerciseKeywordsByLocale = {
-  'en': ['exercise', 'practice', 'quiz'],
-  'es': ['ejercicio', 'práctica', 'práct', 'examen', 'quiz'],
-};
-```
-
-**Rationale:** This static list approach does not scale to additional locales. It also misses variations (e.g. `"d'accordo"` for Italian, `"compris"` for French). The Spanish list includes `'práct'` which would match `"prácticamente"` (unrelated word) as a false positive.
-
-**Acceptance Criteria:**
-- (Future) Keyword detection is refactored to use LLM-based phase detection or locale-packaged keyword lists loaded from config.  
-- For now, add a known-issue comment and test that the Spanish list does not produce false positives on common words.
-
----
-
-### m7. `s.type.name` in PDF export is not localised
-
-**File:** `lib/features/sessions/services/session_export_service.dart:113`
-
-```dart
-s.type.name,  // e.g. "focus", "practice", "exam"
-```
-
-The session type enum name is always English. A lookup map from enum value to `l10n.sessionTypeFocus`, `l10n.sessionTypePractice`, etc. (if they exist) should be used.
-
----
-
-### m8. `formatCurrency` in `number_format_utils.dart` — `minFractionDigits != maxFractionDigits` case is a no-op
-
-**File:** `lib/core/utils/number_format_utils.dart:57-61`
-
-```dart
-if (minFractionDigits == maxFractionDigits) {
-  return fmt.format(value);
-}
-final result = fmt.format(value);
-return result;
-```
-
-When `minFractionDigits != maxFractionDigits`, the function sets `decimalDigits: maxFractionDigits` on `NumberFormat.currency`, which fixes fractional digits to exactly `maxFractionDigits`. The intent of having different min/max is lost — `NumberFormat.currency` does not support a variable range for decimal digits. This should be documented or reimplemented (e.g. format with `maxFractionDigits`, then strip trailing zeros if above `minFractionDigits`).
+- Either extract these to ARB `mentorDiagnosticSessionsToday` and `mentorDiagnosticLateNight` keys, or add a comment explaining why they are intentionally invariant.
+- If ARB keys are added, provide Spanish translations.
 
 ---
 
@@ -291,5 +245,5 @@ When `minFractionDigits != maxFractionDigits`, the function sets `decimalDigits:
 | Severity | Count | Key themes |
 |---|---|---|
 | BLOCKER | 0 | |
-| MAJOR | 5 | Percent spacing, formatPercent convention, RTL-safe PDF alignments, ungrammatical ES shorthand, hardcoded `%` in completion value |
-| MINOR | 8 | Plural gaps, locale keyword lists, enum .name, currency formatting, double placeholders, CSV invariant test |
+| MAJOR | 4 | Hardcoded English UI strings (M6), LLM prompts bypassing ARB (M7), locale-switch staleness (M8), English `(s)` plurals in ES ARB (M9) |
+| MINOR | 6 | `toStringAsFixed` in file size (m9), RTL hardcoded left padding ×2 (m10–m11), duration abbreviation mismatch (m12), raw integer badge labels (m13), hardcoded mentor diagnostics (m14) |

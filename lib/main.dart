@@ -15,6 +15,7 @@ import 'core/utils/error_boundary.dart';
 import 'core/theme/app_theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/app_providers.dart';
+import 'core/services/llm/llm_chat_service.dart';
 import 'core/constants/app_constants.dart';
 import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
@@ -303,11 +304,26 @@ class StudyKingApp extends ConsumerStatefulWidget {
 }
 
 class _StudyKingAppState extends ConsumerState<StudyKingApp> {
+  bool _providersInited = false;
+
   @override
   Widget build(BuildContext context) {
     final settings = ref.watch(settingsProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _engagementScheduler?.updateSettings(settings);
+      if (!_providersInited) {
+        _providersInited = true;
+        ref.read(apiKeyProvider.notifier).state = settings.apiKey;
+        ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
+        ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
+        final providerName = settings.llmProviderName;
+        if (providerName.isNotEmpty) {
+          ref.read(llmProviderProvider.notifier).state = LlmProvider.values.firstWhere(
+            (p) => p.name == providerName,
+            orElse: () => LlmProvider.openRouter,
+          );
+        }
+      }
     });
     final locale = ref.watch(localeProvider);
     
@@ -448,7 +464,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
         final dismissedTime = settingsBox.get(_bannerDismissedTimeKey) as int?;
         final shouldShow = apiKey.isEmpty && (dismissedTime == null ||
-            DateTime.now().millisecondsSinceEpoch - dismissedTime > 7 * 24 * 60 * 60 * 1000);
+            DateTime.now().millisecondsSinceEpoch - dismissedTime > Timeouts.week.inMilliseconds);
         if (shouldShow) {
           setState(() => _showApiKeyBanner = true);
         }

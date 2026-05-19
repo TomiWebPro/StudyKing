@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
-import 'package:studyking/features/practice/utils/sr_data_codec.dart';
+import 'package:studyking/core/utils/sr_data_codec.dart';
 
 void main() {
   group('SrDataCodec', () {

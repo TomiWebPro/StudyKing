@@ -2,8 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/features/subjects/data/curriculum_seed_data.dart';
+import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -89,6 +93,59 @@ class _SubjectSelectionScreenState
 
       final repo = await ref.read(subjectsRepositoryProvider.future);
       await repo.create(subject);
+
+      final seedEntry = !widget.isEditing
+          ? findSeedEntry(_nameController.text.trim())
+          : null;
+      if (seedEntry != null && mounted) {
+        try {
+          final topicRepo = TopicRepository();
+          await topicRepo.init();
+          final createdTopicIds = <String>[];
+          for (final seedTopic in seedEntry.topics) {
+            final topicId = 'topic_${DateTime.now().millisecondsSinceEpoch}_${createdTopicIds.length}';
+            final topic = Topic(
+              id: topicId,
+              subjectId: subject.id,
+              title: seedTopic.title,
+              description: seedTopic.description,
+              syllabusText: seedTopic.syllabusText,
+              sortOrder: seedTopic.sortOrder,
+            );
+            await topicRepo.create(topic);
+            createdTopicIds.add(topicId);
+
+            for (var i = 0; i < seedTopic.subtopics.length; i++) {
+              final sub = seedTopic.subtopics[i];
+              final subId = 'topic_${DateTime.now().millisecondsSinceEpoch}_${createdTopicIds.length}';
+              final subtopic = Topic(
+                id: subId,
+                subjectId: subject.id,
+                title: sub.title,
+                description: sub.description,
+                syllabusText: sub.syllabusText,
+                sortOrder: sub.sortOrder,
+                parentId: topicId,
+              );
+              await topicRepo.create(subtopic);
+              createdTopicIds.add(subId);
+            }
+          }
+          final updatedSubject = subject.copyWith(topicIds: createdTopicIds);
+          await repo.put(updatedSubject.id, updatedSubject);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  l10n.topicsAutoCreated(seedEntry.topics.length),
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          const Logger('SubjectSelectionScreen').w('Failed to auto-create seed topics', e);
+        }
+      }
 
       if (mounted) {
         if (widget.isEditing) {

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class NotFoundScreen extends StatelessWidget {
@@ -53,7 +52,7 @@ class NotFoundScreen extends StatelessWidget {
                     navigator.pop();
                   } else {
                     navigator.pushNamedAndRemoveUntil(
-                      AppRoutes.dashboard,
+                      '/dashboard',
                       (route) => false,
                     );
                   }

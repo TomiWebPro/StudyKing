@@ -1,12 +1,12 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
-import '../../../core/data/database_service.dart';
-import '../../../core/data/enums.dart';
-import '../../../core/data/models/question_model.dart';
-import '../../../core/data/models/session_model.dart';
-import '../../../core/utils/clock.dart';
-import '../../../core/utils/logger.dart';
+import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -14,11 +14,11 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
-import '../../../core/services/llm/llm_chat_service.dart';
-import '../../../core/services/llm_agent/llm_agent.dart';
-import '../../../core/services/mastery_graph_service.dart';
-import '../../../core/services/plan_adherence_orchestrator.dart';
-import '../../../core/services/voice_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/llm_agent.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 
@@ -104,7 +104,7 @@ class TutorService {
           await _database.sessionRepository.save(updatedSession.id, updatedSession);
         }
       } catch (e) {
-        _logger.w('Failed to update scheduled session to inProgress', e);
+        _logger.e('Failed to update scheduled session to inProgress', e);
       }
     }
 
@@ -178,7 +178,7 @@ class TutorService {
         actualMinutes: _elapsedMinutes(session).clamp(1, 480),
       );
     } catch (e) {
-      _logger.w('Failed to record tutor session to plan adapter', e);
+      _logger.e('Failed to record tutor session to plan adapter', e);
     }
 
     try {
@@ -209,7 +209,7 @@ class TutorService {
       );
       await _database.sessionRepository.save(sessionToSave.id, sessionToSave);
     } catch (e) {
-      _logger.w('Failed to save tutor session as Session', e);
+      _logger.e('Failed to save tutor session as Session', e);
     }
 
     if (_scheduledSessionId != null) {
@@ -225,7 +225,7 @@ class TutorService {
           await _database.sessionRepository.save(completedSession.id, completedSession);
         }
       } catch (e) {
-        _logger.w('Failed to update scheduled session to completed', e);
+        _logger.e('Failed to update scheduled session to completed', e);
       }
     }
 
@@ -252,7 +252,7 @@ class TutorService {
           await _lessonRepository.create(updated);
         }
       } catch (e) {
-        _logger.w('Failed to update lesson record after tutor session', e);
+        _logger.e('Failed to update lesson record after tutor session', e);
       }
     }
 
@@ -319,7 +319,7 @@ class TutorService {
       if (planJson.isEmpty) return _fallbackBlocks(subjectId, topicId);
       return _parseBlocks(planJson, subjectId, topicId);
     } catch (e) {
-      _logger.w('Failed to convert lesson plan to blocks', e);
+      _logger.e('Failed to convert lesson plan to blocks', e);
       return _fallbackBlocks(subjectId, topicId);
     }
   }
@@ -341,7 +341,7 @@ class TutorService {
         }).toList();
       }
     } catch (e) {
-      _logger.w('Failed to parse lesson plan JSON', e);
+      _logger.e('Failed to parse lesson plan JSON', e);
     }
     return _fallbackBlocks(subjectId, topicId);
   }

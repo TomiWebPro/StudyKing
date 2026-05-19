@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/onboarding/data/onboarding_state.dart';
+import 'package:studyking/features/onboarding/data/models/onboarding_state.dart';
 
 void main() {
   group('OnboardingState', () {

@@ -579,6 +579,210 @@ void main() {
     });
   });
 
+  group('TopicRepository - dependency graph operations', () {
+    late TopicRepository repo;
+
+    setUp(() {
+      repo = TopicRepository();
+    });
+
+    group('getDependencyGraph', () {
+      test('produces correct graph with dependencies', () async {
+        final result = await repo.getDependencyGraph(
+          ['t1', 't2', 't3'],
+          {'t2': ['t1'], 't3': ['t1', 't2']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['t1'], []);
+        expect(result.data!['t2'], ['t1']);
+        expect(result.data!['t3'], ['t1', 't2']);
+      });
+
+      test('returns empty lists for topics with no dependencies', () async {
+        final result = await repo.getDependencyGraph(
+          ['t1', 't2'],
+          {},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['t1'], []);
+        expect(result.data!['t2'], []);
+      });
+
+      test('handles empty topic list', () async {
+        final result = await repo.getDependencyGraph([], {});
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('excludes dependencies for topics not in topicIds', () async {
+        final result = await repo.getDependencyGraph(
+          ['t1'],
+          {'t2': ['t1']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, hasLength(1));
+        expect(result.data!.containsKey('t2'), isFalse);
+      });
+
+      test('includes topic even if it has no entry in dependencies map', () async {
+        final result = await repo.getDependencyGraph(
+          ['orphan'],
+          {'other': ['some']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!['orphan'], []);
+      });
+    });
+
+    group('getTopologicalOrder', () {
+      test('returns correct order for a simple chain', () async {
+        final result = await repo.getTopologicalOrder(
+          ['t1', 't2', 't3'],
+          {'t2': ['t1'], 't3': ['t2']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.indexOf('t1'), lessThan(result.data!.indexOf('t2')));
+        expect(result.data!.indexOf('t2'), lessThan(result.data!.indexOf('t3')));
+      });
+
+      test('handles single node', () async {
+        final result = await repo.getTopologicalOrder(['t1'], {});
+        expect(result.isSuccess, isTrue);
+        expect(result.data!, ['t1']);
+      });
+
+      test('handles disconnected graph', () async {
+        final result = await repo.getTopologicalOrder(
+          ['t1', 't2', 't3'],
+          {},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, hasLength(3));
+        expect(result.data, containsAll(['t1', 't2', 't3']));
+      });
+
+      test('handles empty topic list', () async {
+        final result = await repo.getTopologicalOrder([], {});
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('cycle results in empty order (Kahn partial result)', () async {
+        final result = await repo.getTopologicalOrder(
+          ['t1', 't2'],
+          {'t1': ['t2'], 't2': ['t1']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('complex DAG with multiple dependencies', () async {
+        final result = await repo.getTopologicalOrder(
+          ['t1', 't2', 't3', 't4'],
+          {'t3': ['t1', 't2'], 't4': ['t3']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.indexOf('t1'), lessThan(result.data!.indexOf('t3')));
+        expect(result.data!.indexOf('t2'), lessThan(result.data!.indexOf('t3')));
+        expect(result.data!.indexOf('t3'), lessThan(result.data!.indexOf('t4')));
+      });
+
+      test('multiple independent chains maintain ordering within each', () async {
+        final result = await repo.getTopologicalOrder(
+          ['a1', 'a2', 'b1', 'b2'],
+          {'a2': ['a1'], 'b2': ['b1']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.indexOf('a1'), lessThan(result.data!.indexOf('a2')));
+        expect(result.data!.indexOf('b1'), lessThan(result.data!.indexOf('b2')));
+        expect(result.data, hasLength(4));
+      });
+
+      test('fan-in: multiple prerequisites for one topic', () async {
+        final result = await repo.getTopologicalOrder(
+          ['a', 'b', 'c'],
+          {'c': ['a', 'b']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.indexOf('a'), lessThan(result.data!.indexOf('c')));
+        expect(result.data!.indexOf('b'), lessThan(result.data!.indexOf('c')));
+      });
+
+      test('fan-out: one prerequisite for multiple topics', () async {
+        final result = await repo.getTopologicalOrder(
+          ['a', 'b', 'c'],
+          {'b': ['a'], 'c': ['a']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.indexOf('a'), lessThan(result.data!.indexOf('b')));
+        expect(result.data!.indexOf('a'), lessThan(result.data!.indexOf('c')));
+      });
+    });
+
+    group('getDownstreamTopicIds', () {
+      test('returns direct and indirect downstream topics', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t2': ['t1'], 't3': ['t2']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, containsAll(['t2', 't3']));
+      });
+
+      test('returns empty when no downstream topics', () async {
+        final result = await repo.getDownstreamTopicIds('t1', {});
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('handles deep dependency chain', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t2': ['t1'], 't3': ['t2'], 't4': ['t3']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, ['t2', 't3', 't4']);
+      });
+
+      test('does not include topics that do not depend on the target', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t2': ['t1'], 't3': ['t2'], 't4': ['t5']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, containsAll(['t2', 't3']));
+        expect(result.data, isNot(contains('t4')));
+      });
+
+      test('handles topic that is a downstream of multiple paths', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t2': ['t1'], 't3': ['t1'], 't4': ['t2', 't3']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, containsAll(['t2', 't3', 't4']));
+      });
+
+      test('does not include the target topic itself', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t1': ['t0']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('handles circular dependency gracefully', () async {
+        final result = await repo.getDownstreamTopicIds(
+          't1',
+          {'t1': ['t2'], 't2': ['t1']},
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, ['t2', 't1']);
+      });
+    });
+  });
+
   group('TopicRepository (init with real Hive)', () {
     late TopicRepository repository;
     late String hivePath;

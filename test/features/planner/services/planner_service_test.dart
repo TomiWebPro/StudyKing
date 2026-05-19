@@ -19,7 +19,7 @@ import 'package:studyking/features/sessions/data/repositories/session_repository
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';

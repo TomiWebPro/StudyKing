@@ -15,11 +15,9 @@ import 'package:studyking/core/utils/logger.dart';
 /// Set to [Duration.zero] for exact matching.
 Duration dueWindowTolerance = Timeouts.hour;
 
-// TODO(m-2): Evaluate if this static class is still needed.
-// It requires raw Box<Question> access and may be a candidate for removal
-// in favor of SpacedRepetitionService methods.
-/// Static utility queries for spaced repetition.
-/// These operate on a [Box<Question>] directly for testability.
+/// Static utility queries for spaced repetition used only in tests.
+/// Operates on a [Box<Question>] directly for testability.
+/// Remove after migrating test helpers to use SpacedRepetitionService methods.
 class SpacedRepetitionQueries {
   static List<Question> getQuestionsDueForReview(Box<Question> box,
       {DateTime? asOf}) {

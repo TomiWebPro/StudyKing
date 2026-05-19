@@ -48,13 +48,12 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   List<String> _suggestedPrompts = [];
   bool _isStreaming = false;
   bool _hasInteracted = false;
-  bool _localized = false;
   bool _showSuggestions = true;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_localized) {
+    if (_messages.isEmpty) {
       final l10n = AppLocalizations.of(context)!;
       _messages = [
         ConversationMessage(
@@ -71,7 +70,6 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         l10n.suggestedPromptQuiz,
         l10n.suggestedPromptMath,
       ];
-      _localized = true;
     }
   }
 

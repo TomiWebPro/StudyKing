@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/focus_mode/data/focus_session_model.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 
 void main() {
   group('FocusSession', () {

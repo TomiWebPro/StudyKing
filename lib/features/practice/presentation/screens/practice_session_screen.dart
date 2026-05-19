@@ -49,7 +49,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late QuestionRepository _questionRepo;
   late SpacedRepetitionService _srService;
   late PracticeSessionService _sessionService;
-  late final AnswerValidationService _validationService;
+  late AnswerValidationService _validationService;
   late final StudentIdService _studentIdService;
   late final MasteryRecorder _masteryRecorder;
   late final MistakeReviewService _mistakeReviewService;

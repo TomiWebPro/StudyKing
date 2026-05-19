@@ -24,6 +24,7 @@ class ChatBubble extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final isStudent = message.role == MessageRole.student;
     final isTutor = message.role == MessageRole.tutor;
     final isRtl = Directionality.of(context) == TextDirection.rtl;
@@ -62,7 +63,7 @@ class ChatBubble extends StatelessWidget {
                     Padding(
                       padding: const EdgeInsets.only(bottom: 4),
                       child: Text(
-                        isStudent ? AppLocalizations.of(context)!.senderYou : (isTutor ? AppLocalizations.of(context)!.senderTutor : AppLocalizations.of(context)!.senderSystem),
+                        isStudent ? l10n.senderYou : (isTutor ? l10n.senderTutor : l10n.senderSystem),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                               color: isStudent
                                   ? Theme.of(context)
@@ -82,7 +83,7 @@ class ChatBubble extends StatelessWidget {
                       child: IconButton(
                         icon: const Icon(Icons.volume_up, size: 16),
                         onPressed: onSpeak,
-                        tooltip: 'Read aloud',
+                        tooltip: l10n.readAloud,
                         visualDensity: VisualDensity.compact,
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),

@@ -40,13 +40,16 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       dailyReminderMinute: fields[20] as int,
       firstFocusVisit: fields[21] as bool,
       dailyReminderEnabled: fields[22] as bool,
+      llmProviderName: fields[23] as String,
+      lastConnectionTestMs: fields[24] as int,
+      lastLlmError: fields[25] as String,
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(23)
+      ..writeByte(26)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -92,7 +95,13 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(21)
       ..write(obj.firstFocusVisit)
       ..writeByte(22)
-      ..write(obj.dailyReminderEnabled);
+      ..write(obj.dailyReminderEnabled)
+      ..writeByte(23)
+      ..write(obj.llmProviderName)
+      ..writeByte(24)
+      ..write(obj.lastConnectionTestMs)
+      ..writeByte(25)
+      ..write(obj.lastLlmError);
   }
 
   @override

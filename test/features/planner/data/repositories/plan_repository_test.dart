@@ -172,18 +172,18 @@ void main() {
 
     group('hasPlan', () {
       test('returns false when no plan exists', () async {
-        expect(await repository.hasPlan('student-1'), isFalse);
+        expect((await repository.hasPlan('student-1')).data, isFalse);
       });
 
       test('returns true when plan exists', () async {
         await repository.savePlan(createPlan());
-        expect(await repository.hasPlan('student-1'), isTrue);
+        expect((await repository.hasPlan('student-1')).data, isTrue);
       });
 
       test('returns false after plan is deleted', () async {
         await repository.savePlan(createPlan());
         await repository.deletePlan('student-1');
-        expect(await repository.hasPlan('student-1'), isFalse);
+        expect((await repository.hasPlan('student-1')).data, isFalse);
       });
     });
 

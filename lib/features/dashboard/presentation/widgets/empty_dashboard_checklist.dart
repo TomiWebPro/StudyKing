@@ -18,6 +18,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
         icon: Icons.library_add,
         title: l10n.addSubject,
         subtitle: l10n.addSubjectDesc,
+        stepNumber: 1,
         onTap: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
         completed: progress.hasSubjects,
       ),
@@ -25,6 +26,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
         icon: Icons.upload_file,
         title: l10n.uploadMaterial,
         subtitle: l10n.uploadMaterialDesc,
+        stepNumber: 2,
         onTap: () => Navigator.pushNamed(context, AppRoutes.upload),
         completed: progress.hasSources,
       ),
@@ -32,6 +34,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
         icon: Icons.quiz,
         title: l10n.takePracticeQuiz,
         subtitle: l10n.takePracticeQuizDesc,
+        stepNumber: 3,
         onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession,
             arguments: const PracticeSessionArgs(subjectId: '', questionCount: 10)),
         completed: progress.hasPracticeSessions,
@@ -40,10 +43,13 @@ class EmptyDashboardChecklist extends StatelessWidget {
         icon: Icons.smart_toy,
         title: l10n.scheduleAiTutor,
         subtitle: l10n.scheduleAiTutorDesc,
+        stepNumber: 4,
         onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
         completed: progress.hasScheduledLessons,
       ),
     ];
+
+    final firstIncompleteIndex = items.indexWhere((item) => !item.completed);
 
     return Card(
       child: Padding(
@@ -89,6 +95,9 @@ class EmptyDashboardChecklist extends StatelessWidget {
             ...items.asMap().entries.map((entry) {
               final i = entry.key;
               final item = entry.value;
+              final isFirstIncomplete = i == firstIncompleteIndex;
+              final showStepNumber = item.completed;
+
               return Padding(
                 padding: EdgeInsets.only(bottom: i < items.length - 1 ? 16 : 0),
                 child: Semantics(
@@ -99,8 +108,16 @@ class EmptyDashboardChecklist extends StatelessWidget {
                     child: AnimatedOpacity(
                       duration: const Duration(milliseconds: 200),
                       opacity: item.completed ? 0.6 : 1.0,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 4, horizontal: 4),
+                      child: Container(
+                        decoration: isFirstIncomplete
+                            ? BoxDecoration(
+                                border: Border.all(
+                                  color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                                ),
+                                borderRadius: BorderRadius.circular(12),
+                              )
+                            : null,
+                        padding: EdgeInsets.all(isFirstIncomplete ? 8 : 4),
                         child: Row(
                           children: [
                             Container(
@@ -109,14 +126,18 @@ class EmptyDashboardChecklist extends StatelessWidget {
                               decoration: BoxDecoration(
                                 color: item.completed
                                     ? theme.colorScheme.primaryContainer
-                                    : theme.colorScheme.surfaceContainerHighest,
+                                    : isFirstIncomplete
+                                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                                        : theme.colorScheme.surfaceContainerHighest,
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Icon(
                                 item.completed ? Icons.check_circle : item.icon,
                                 color: item.completed
                                     ? theme.colorScheme.primary
-                                    : theme.colorScheme.onSurfaceVariant,
+                                    : isFirstIncomplete
+                                        ? theme.colorScheme.primary
+                                        : theme.colorScheme.onSurfaceVariant,
                               ),
                             ),
                             const SizedBox(width: 16),
@@ -124,21 +145,70 @@ class EmptyDashboardChecklist extends StatelessWidget {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    item.title,
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      decoration: item.completed ? TextDecoration.lineThrough : null,
-                                    ),
+                                  Row(
+                                    children: [
+                                      if (showStepNumber)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 6),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.surfaceContainerHighest,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              '${item.stepNumber}',
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      Flexible(
+                                        child: Text(
+                                          item.title,
+                                          style: theme.textTheme.titleSmall?.copyWith(
+                                            fontWeight: FontWeight.w600,
+                                            decoration: item.completed ? TextDecoration.lineThrough : null,
+                                          ),
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 2),
-                                  Text(
-                                    item.completed ? l10n.completed : item.subtitle,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: item.completed
-                                          ? theme.colorScheme.primary
-                                          : theme.colorScheme.onSurfaceVariant,
-                                    ),
+                                  Row(
+                                    children: [
+                                      if (isFirstIncomplete)
+                                        Padding(
+                                          padding: const EdgeInsets.only(right: 6),
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: theme.colorScheme.primary,
+                                              borderRadius: BorderRadius.circular(6),
+                                            ),
+                                            child: Text(
+                                              l10n.nextStep,
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                color: theme.colorScheme.onPrimary,
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 10,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      Text(
+                                        item.completed ? l10n.completed : item.subtitle,
+                                        style: theme.textTheme.bodySmall?.copyWith(
+                                          color: item.completed
+                                              ? theme.colorScheme.primary
+                                              : isFirstIncomplete
+                                                  ? theme.colorScheme.primary
+                                                  : theme.colorScheme.onSurfaceVariant,
+                                        ),
+                                      ),
+                                    ],
                                   ),
                                 ],
                               ),
@@ -148,7 +218,9 @@ class EmptyDashboardChecklist extends StatelessWidget {
                                 Directionality.of(context) == TextDirection.rtl
                                     ? Icons.chevron_left
                                     : Icons.chevron_right,
-                                color: theme.colorScheme.onSurfaceVariant,
+                                color: isFirstIncomplete
+                                    ? theme.colorScheme.primary
+                                    : theme.colorScheme.onSurfaceVariant,
                               ),
                           ],
                         ),
@@ -169,6 +241,7 @@ class _ChecklistData {
   final IconData icon;
   final String title;
   final String subtitle;
+  final int stepNumber;
   final VoidCallback onTap;
   final bool completed;
 
@@ -176,6 +249,7 @@ class _ChecklistData {
     required this.icon,
     required this.title,
     required this.subtitle,
+    required this.stepNumber,
     required this.onTap,
     this.completed = false,
   });

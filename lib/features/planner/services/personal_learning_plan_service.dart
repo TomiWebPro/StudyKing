@@ -1,8 +1,8 @@
-import '../errors/result.dart';
-import '../utils/localization_helpers.dart';
-import '../utils/logger.dart';
-import '../utils/study_utils.dart';
-import '../utils/time_utils.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/localization_helpers.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/study_utils.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -13,12 +13,12 @@ import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import '../data/models/topic_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import '../../l10n/generated/app_localizations.dart';
-import 'mastery_graph_service.dart';
-import 'student_id_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 
 
 class PlanGenerationConfig {
@@ -121,11 +121,11 @@ class PersonalLearningPlanService {
       return Result.failure(allDependenciesResult.error);
     }
 
-    final topicMastery = masteryStatesResult.data!;
+    var topicMastery = masteryStatesResult.data!;
     final dependencies = allDependenciesResult.data!;
     final dependencyMap = {for (var d in dependencies) d.topicId: d};
 
-    final completedTopicIds = topicMastery
+    var completedTopicIds = topicMastery
         .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
         .map((s) => s.topicId)
         .toSet();
@@ -141,6 +141,36 @@ class PersonalLearningPlanService {
       return Result.failure(
         'You need to add a subject and its topics before generating a plan.',
       );
+    }
+
+    if (courseName.isNotEmpty) {
+      try {
+        final subjectRepo = SubjectRepository();
+        await subjectRepo.init();
+        final subjectsResult = await subjectRepo.getAll();
+        if (subjectsResult.isSuccess) {
+          final matchingSubject = (subjectsResult.data ?? []).where(
+            (s) => s.name.toLowerCase() == courseName.toLowerCase(),
+          ).firstOrNull;
+          if (matchingSubject != null) {
+            await _topicRepository.init();
+            final topicsResult = await _topicRepository.getBySubject(matchingSubject.id);
+            if (topicsResult.isSuccess) {
+              final subjectTopicIds = (topicsResult.data ?? []).map((t) => t.id).toSet();
+              final filteredMastery = topicMastery.where((s) => subjectTopicIds.contains(s.topicId)).toList();
+              if (filteredMastery.isNotEmpty) {
+                topicMastery = filteredMastery;
+                completedTopicIds = topicMastery
+                    .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
+                    .map((s) => s.topicId)
+                    .toSet();
+              }
+            }
+          }
+        }
+      } catch (e) {
+        _logger.w('Failed to resolve subject for mastery filtering', e);
+      }
     }
 
     final allTopics = <String, Topic>{};
@@ -327,6 +357,8 @@ class PersonalLearningPlanService {
       ));
     }
 
+    final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
+
     final summary = PlanSummary(
       totalQuestions: config.targetQuestionsPerDay * totalDays,
       totalMinutes: (config.targetMinutesPerDay * totalDays).round(),
@@ -339,7 +371,7 @@ class PersonalLearningPlanService {
     final plan = PersonalLearningPlan(
       studentId: studentId,
       generatedAt: now,
-      dailyPlans: dailyPlans,
+      dailyPlans: linkedPlans,
       summary: summary,
       recommendations: [],
       planDurationDays: config.planDurationDays,

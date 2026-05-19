@@ -140,7 +140,7 @@ void main() {
         final json = original.toJson();
         final restored = StudentAvailabilityModel.fromJson(json);
         expect(restored.preferredStudyHoursPerDay, 12);
-        expect(restored.preferredStudyDays, isEmpty);
+        expect(restored.preferredStudyDays, [1, 2, 3, 4, 5, 6, 7]);
         expect(restored.blackoutDates, isEmpty);
       });
     });

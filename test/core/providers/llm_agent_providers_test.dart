@@ -9,7 +9,7 @@ import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';

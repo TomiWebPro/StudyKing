@@ -173,14 +173,22 @@ class MentorService {
     final fullPrompt = '$context\n\nStudent: $message';
 
     final buffer = StringBuffer();
-    await for (final chunk in _llmService.chatStream(
-      message: fullPrompt,
-      modelId: _modelId,
-      memory: _memory,
-      systemPrompt: _mentorSystemPrompt(),
-    )) {
-      buffer.write(chunk);
-      yield chunk;
+    try {
+      await for (final chunk in _llmService.chatStream(
+        message: fullPrompt,
+        modelId: _modelId,
+        memory: _memory,
+        systemPrompt: _mentorSystemPrompt(),
+      )) {
+        buffer.write(chunk);
+        yield chunk;
+      }
+    } catch (e) {
+      final partialContent = buffer.toString();
+      if (partialContent.isNotEmpty) {
+        _memory.addAssistantMessage(partialContent);
+      }
+      rethrow;
     }
 
     _memory.addAssistantMessage(buffer.toString());
@@ -291,6 +299,7 @@ class MentorService {
         buffer.writeln('${bullet}Sessions today: ${todaySessions.length}');
         final lateNight = todaySessions.where((s) => s.startTime.hour >= 22).toList();
         if (lateNight.isNotEmpty) {
+          // LLM-facing diagnostic — intentionally invariant (EN).
           buffer.writeln('${bullet}WARNING: ${lateNight.length} session(s) started after 10 PM (late-night study detected)');
         }
       }

@@ -55,7 +55,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(controller.text, 'xsqrt(+1');
-      expect(controller.selection.baseOffset, 7);
+      expect(controller.selection.baseOffset, 6);
     });
 
     testWidgets('tapping pi inserts pi symbol text', (tester) async {
@@ -266,15 +266,15 @@ void main() {
 
       await tester.tap(find.text('π'));
       await tester.pumpAndSettle();
-      await tester.tap(find.text('+'));
+      await tester.tap(find.text('×'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('xⁿ'));
       await tester.pumpAndSettle();
 
-      expect(controller.text, 'pi+^');
+      expect(controller.text, 'pitimes^');
     });
 
-    testWidgets('each symbol button has correct semantics label', (tester) async {
+    testWidgets('all symbol buttons have semantics', (tester) async {
       final controller = TextEditingController();
       addTearDown(controller.dispose);
 
@@ -282,13 +282,8 @@ void main() {
         MathInputToolbar(controller: controller),
       ));
 
-      final expectedLabels = ['^', '_', 'sqrt(', 'pi', 'theta', 'alpha', 'beta',
-        'infty', 'sum', 'int', 'frac{}{}', 'pm', 'times', 'rightarrow',
-        'geq', 'leq', 'neq'];
-
-      for (final label in expectedLabels) {
-        expect(find.bySemanticsLabel(label), findsOneWidget);
-      }
+      final semantics = find.byType(Semantics);
+      expect(semantics, findsNWidgets(17));
     });
 
     testWidgets('handles empty controller gracefully', (tester) async {

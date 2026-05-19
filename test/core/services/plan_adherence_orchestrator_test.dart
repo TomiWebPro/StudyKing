@@ -9,7 +9,7 @@ import 'package:studyking/features/planner/data/models/plan_adherence_model.dart
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
-import 'package:studyking/core/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 
 class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _storage = [];
