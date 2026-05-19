@@ -5,6 +5,7 @@ import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';

@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/source_model.dart';
-import 'package:studyking/core/data/source_adapter.dart';
+import 'package:studyking/features/ingestion/data/adapters/source_adapter.dart';
 import '../../helpers/hive_test_utils.dart';
 
 void main() {

@@ -5,6 +5,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 final _dashboardUpcomingLessonsProvider =
     FutureProvider.family<List<Session>, String>((ref, studentId) async {
@@ -37,7 +38,24 @@ class NextUpCard extends ConsumerWidget {
     final weakCount = weakCountAsync.valueOrNull ?? 0;
 
     if (dueCount == 0 && upcomingLessons.isEmpty && weakCount == 0) {
-      return const SizedBox.shrink();
+      final l10n = AppLocalizations.of(context)!;
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.check_circle, color: cs.primary, size: 20),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  l10n.allCaughtUp,
+                  style: theme.textTheme.bodyMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
     }
 
     return Card(

@@ -16,7 +16,8 @@ import 'package:studyking/features/mentor/providers/mentor_providers.dart' show 
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, questionRepositoryProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';

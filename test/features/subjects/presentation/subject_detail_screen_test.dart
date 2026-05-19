@@ -102,6 +102,25 @@ Route<dynamic>? _testRoute(RouteSettings settings) {
   return null;
 }
 
+final _testSubject = Subject(
+  id: 'test-id',
+  name: 'Mathematics',
+  code: 'MATH101',
+  color: '#2196F3',
+  description: 'Mathematics course',
+  teacher: 'Dr. Smith',
+  topicIds: ['topic-1', 'topic-2'],
+  createdAt: DateTime(2024, 1, 1),
+);
+
+final _testSubjectMinimal = Subject(
+  id: 'test-id',
+  name: 'Physics',
+  color: '#4CAF50',
+  topicIds: [],
+  createdAt: DateTime(2024, 1, 1),
+);
+
 Widget _buildTestApp() {
   return ProviderScope(
     child: MaterialApp(
@@ -109,15 +128,7 @@ Widget _buildTestApp() {
       supportedLocales: AppLocalizations.supportedLocales,
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
-        args: const SubjectDetailArgs(
-          subjectId: 'test-id',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH101',
-          subjectColor: '#2196F3',
-          subjectDescription: 'Mathematics course',
-          subjectTeacher: 'Dr. Smith',
-          topicIds: ['topic-1', 'topic-2'],
-        ),
+        subject: _testSubject,
       ),
     ),
   );
@@ -130,12 +141,7 @@ Widget _buildTestAppMinimal() {
       supportedLocales: AppLocalizations.supportedLocales,
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
-        args: const SubjectDetailArgs(
-          subjectId: 'test-id',
-          subjectName: 'Physics',
-          subjectColor: '#4CAF50',
-          topicIds: [],
-        ),
+        subject: _testSubjectMinimal,
       ),
     ),
   );
@@ -149,15 +155,7 @@ Widget _buildTestAppWithObserver(TestNavigatorObserver observer) {
       navigatorObservers: [observer],
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
-        args: const SubjectDetailArgs(
-          subjectId: 'test-id',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH101',
-          subjectColor: '#2196F3',
-          subjectDescription: 'Mathematics course',
-          subjectTeacher: 'Dr. Smith',
-          topicIds: ['topic-1', 'topic-2'],
-        ),
+        subject: _testSubject,
       ),
     ),
   );
@@ -171,15 +169,7 @@ Widget _buildTestAppWithSessionRepo(SessionRepository sessionRepo) {
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
         sessionRepository: sessionRepo,
-        args: const SubjectDetailArgs(
-          subjectId: 'test-id',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH101',
-          subjectColor: '#2196F3',
-          subjectDescription: 'Mathematics course',
-          subjectTeacher: 'Dr. Smith',
-          topicIds: ['topic-1', 'topic-2'],
-        ),
+        subject: _testSubject,
       ),
     ),
   );
@@ -195,15 +185,7 @@ Widget _buildTestAppWithSubjectRepo(SubjectRepository subjectRepo) {
       supportedLocales: AppLocalizations.supportedLocales,
       onGenerateRoute: _testRoute,
       home: SubjectDetailScreen(
-        args: const SubjectDetailArgs(
-          subjectId: 'test-id',
-          subjectName: 'Mathematics',
-          subjectCode: 'MATH101',
-          subjectColor: '#2196F3',
-          subjectDescription: 'Mathematics course',
-          subjectTeacher: 'Dr. Smith',
-          topicIds: ['topic-1', 'topic-2'],
-        ),
+        subject: _testSubject,
       ),
     ),
   );
@@ -466,11 +448,10 @@ void main() {
             navigatorObservers: [observer],
             onGenerateRoute: _testRoute,
             home: SubjectDetailScreen(
-              args: const SubjectDetailArgs(
-                subjectId: 'test-id',
-                subjectName: 'Mathematics',
-                subjectColor: '#2196F3',
-                topicIds: [],
+              subject: Subject(
+                id: 'test-id', name: 'Mathematics',
+                color: '#2196F3', topicIds: [],
+                createdAt: DateTime(2024, 1, 1),
               ),
             ),
           ),
@@ -648,11 +629,10 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             onGenerateRoute: _testRoute,
             home: SubjectDetailScreen(
-              args: const SubjectDetailArgs(
-                subjectId: 'test-id',
-                subjectName: 'Mathematics',
-                subjectColor: '#2196F3',
-                topicIds: ['topic-1'],
+              subject: Subject(
+                id: 'test-id', name: 'Mathematics',
+                color: '#2196F3', topicIds: ['topic-1'],
+                createdAt: DateTime(2024, 1, 1),
               ),
             ),
           ),
@@ -696,11 +676,10 @@ void main() {
             supportedLocales: AppLocalizations.supportedLocales,
             onGenerateRoute: _testRoute,
             home: SubjectDetailScreen(
-              args: const SubjectDetailArgs(
-                subjectId: 'test-id',
-                subjectName: 'Mathematics',
-                subjectColor: '#2196F3',
-                topicIds: [],
+              subject: Subject(
+                id: 'test-id', name: 'Mathematics',
+                color: '#2196F3', topicIds: [],
+                createdAt: DateTime(2024, 1, 1),
               ),
             ),
           ),

@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
@@ -10,9 +10,6 @@ import 'package:studyking/features/planner/data/repositories/plan_repository.dar
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 
@@ -44,32 +41,6 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
     return records.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
         records.length;
   }
-}
-
-class _FakeMasteryGraphRepo extends MasteryGraphRepository {
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<Result<List<MasteryState>>> getAllMasteryStates(
-      String studentId) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<MasteryState>> getMasteryState(
-      String studentId, String topicId) async {
-    return Result.success(
-        MasteryState.initial(studentId: studentId, topicId: topicId));
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _FakeTopicRepo extends TopicRepository {
@@ -210,11 +181,10 @@ void main() {
         adherenceScore: 0.88,
       ));
 
-      final masteryRepo = _FakeMasteryGraphRepo();
       final plannerService = PlannerService(
         planRepo: planRepo,
         adherenceRepo: adherenceRepo,
-        masteryService: MasteryGraphService(repository: masteryRepo),
+        masteryService: MasteryGraphService(),
         topicRepository: _FakeTopicRepo(),
         fixedStudentId: studentId,
       );
@@ -222,7 +192,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           plannerServiceProvider.overrideWithValue(plannerService),
-          dashboardAdherenceRepositoryProvider
+          engagementAdherenceRepoProvider
               .overrideWithValue(adherenceRepo),
         ],
       );
@@ -274,7 +244,7 @@ void main() {
       final plannerService = PlannerService(
         planRepo: planRepo,
         adherenceRepo: adherenceRepo,
-        masteryService: MasteryGraphService(repository: _FakeMasteryGraphRepo()),
+        masteryService: MasteryGraphService(),
         topicRepository: _FakeTopicRepo(),
         fixedStudentId: studentId,
       );
@@ -282,7 +252,7 @@ void main() {
       final container = ProviderContainer(
         overrides: [
           plannerServiceProvider.overrideWithValue(plannerService),
-          dashboardAdherenceRepositoryProvider
+          engagementAdherenceRepoProvider
               .overrideWithValue(adherenceRepo),
         ],
       );

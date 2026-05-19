@@ -4,10 +4,14 @@ import 'package:studyking/features/practice/data/repositories/attempt_repository
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, l10nProvider;
+import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, l10nProvider, databaseProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 final mentorAttemptRepositoryProvider = Provider<AttemptRepository>((ref) {
@@ -47,4 +51,21 @@ final mentorModelIdProvider = Provider<String>((ref) {
   if (savedModel.isNotEmpty) return savedModel;
   final provider = ref.watch(llmProviderProvider);
   return defaultModelForProvider(provider);
+});
+
+final mentorServiceProvider = Provider.family<MentorService, String>((ref, studentId) {
+  final l10n = ref.watch(l10nProvider);
+  return MentorService(
+    database: ref.watch(databaseProvider),
+    llmService: ref.watch(llmServiceProvider),
+    masteryService: ref.watch(masteryGraphServiceProvider),
+    progressTracker: ref.watch(mentorProgressTrackerProvider),
+    plannerService: ref.watch(plannerServiceProvider),
+    nudgeRepo: ref.watch(mentorEngagementNudgeRepoProvider),
+    sessionRepository: ref.watch(mentorSessionRepositoryProvider),
+    modelId: ref.watch(mentorModelIdProvider),
+    studentId: studentId,
+    localeName: l10n?.localeName ?? 'en',
+    agent: ref.watch(llmAgentProvider(studentId)),
+  );
 });

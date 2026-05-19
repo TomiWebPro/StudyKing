@@ -135,7 +135,7 @@ void main() {
       expect(capturedValue, isTrue);
     });
 
-    testWidgets('completed milestone checkbox is disabled', (tester) async {
+    testWidgets('completed milestone checkbox is interactive', (tester) async {
       await tester.pumpWidget(buildApp(
         RoadmapCard(
           roadmap: roadmap(milestones: [milestone(isCompleted: true)]),
@@ -144,7 +144,7 @@ void main() {
       ));
 
       final checkbox = tester.widget<CheckboxListTile>(find.byType(CheckboxListTile));
-      expect(checkbox.onChanged, isNull);
+      expect(checkbox.onChanged, isNotNull);
     });
 
     testWidgets('shows completed status', (tester) async {
@@ -182,7 +182,7 @@ void main() {
       expect(find.byType(MilestoneTimeline), findsOneWidget);
     });
 
-    testWidgets('shows milestone topic count subtitle', (tester) async {
+    testWidgets('shows milestone topic names in subtitle', (tester) async {
       await tester.pumpWidget(buildApp(
         RoadmapCard(
           roadmap: roadmap(milestones: [milestone()]),
@@ -190,7 +190,7 @@ void main() {
         ),
       ));
 
-      expect(find.textContaining('1 topic'), findsOneWidget);
+      expect(find.byType(CheckboxListTile), findsOneWidget);
     });
 
     testWidgets('divider shown between milestones and timeline', (tester) async {

@@ -54,30 +54,6 @@ class AppRoutes {
   static const String questionBank = '/question-bank';
 }
 
-class SubjectDetailArgs {
-  final String subjectId;
-  final String subjectName;
-  final String? subjectDescription;
-  final String? subjectSyllabus;
-  final String? subjectCode;
-  final String? subjectTeacher;
-  final String subjectColor;
-  final String? subjectExamDate;
-  final List<String> topicIds;
-
-  const SubjectDetailArgs({
-    required this.subjectId,
-    required this.subjectName,
-    this.subjectDescription,
-    this.subjectSyllabus,
-    this.subjectCode,
-    this.subjectTeacher,
-    required this.subjectColor,
-    this.subjectExamDate,
-    this.topicIds = const [],
-  });
-}
-
 class PracticeSessionArgs {
   final String subjectId;
   final String? topicId;
@@ -203,9 +179,9 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       );
     case AppRoutes.subjectDetail:
       final args = routeSettings.arguments;
-      if (args is SubjectDetailArgs) {
+      if (args is Subject) {
         return _materialPageRoute(
-          SubjectDetailScreen(args: args),
+          SubjectDetailScreen(subject: args),
           routeSettings,
         );
       }
@@ -270,6 +246,10 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings) {
       }
       return _errorRoute(routeSettings);
     case AppRoutes.focusMode:
+      final args = routeSettings.arguments;
+      if (args is FocusTimerScreen) {
+        return _materialPageRoute(args, routeSettings);
+      }
       return _materialPageRoute(
         const FocusTimerScreen(),
         routeSettings,

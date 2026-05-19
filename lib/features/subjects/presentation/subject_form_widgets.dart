@@ -2,6 +2,100 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+const _commonSyllabi = [
+  // International Baccalaureate (IB)
+  'IB Biology',
+  'IB Chemistry',
+  'IB Physics',
+  'IB Mathematics: Analysis & Approaches',
+  'IB Mathematics: Applications & Interpretation',
+  'IB English A: Literature',
+  'IB English A: Language & Literature',
+  'IB History',
+  'IB Economics',
+  'IB Psychology',
+  'IB Computer Science',
+  'IB Environmental Systems & Societies',
+  'IB French B',
+  'IB Spanish B',
+  'IB German B',
+  'IB Chinese B',
+  'IB Visual Arts',
+  'IB Theory of Knowledge',
+  // A-Levels (UK)
+  'A-Level Biology',
+  'A-Level Chemistry',
+  'A-Level Physics',
+  'A-Level Mathematics',
+  'A-Level Further Mathematics',
+  'A-Level English Literature',
+  'A-Level History',
+  'A-Level Economics',
+  'A-Level Geography',
+  'A-Level Psychology',
+  'A-Level Computer Science',
+  'A-Level French',
+  'A-Level Spanish',
+  'A-Level German',
+  'A-Level Business Studies',
+  'A-Level Law',
+  'A-Level Art & Design',
+  // Advanced Placement (AP)
+  'AP Biology',
+  'AP Chemistry',
+  'AP Physics 1',
+  'AP Physics 2',
+  'AP Physics C: Mechanics',
+  'AP Physics C: E&M',
+  'AP Calculus AB',
+  'AP Calculus BC',
+  'AP Statistics',
+  'AP English Language',
+  'AP English Literature',
+  'AP US History',
+  'AP World History',
+  'AP European History',
+  'AP Economics (Macro)',
+  'AP Economics (Micro)',
+  'AP Psychology',
+  'AP Computer Science A',
+  'AP Computer Science Principles',
+  'AP Environmental Science',
+  'AP Human Geography',
+  'AP Spanish Language',
+  'AP French Language',
+  'AP Art History',
+  'AP Music Theory',
+  // GCSE / IGCSE
+  'GCSE Biology',
+  'GCSE Chemistry',
+  'GCSE Physics',
+  'GCSE Mathematics',
+  'GCSE English Language',
+  'GCSE English Literature',
+  'GCSE History',
+  'GCSE Geography',
+  'GCSE French',
+  'GCSE Spanish',
+  'GCSE Computer Science',
+  'IGCSE Biology',
+  'IGCSE Chemistry',
+  'IGCSE Physics',
+  'IGCSE Mathematics',
+  'IGCSE English',
+  'IGCSE Economics',
+  'IGCSE Business Studies',
+  // Standardized Tests
+  'SAT Math',
+  'SAT Reading & Writing',
+  'ACT',
+  'GRE',
+  'GMAT',
+  'MCAT',
+  'LSAT',
+  'DAT',
+];
+
 class SubjectColorSelector extends StatelessWidget {
   final String? selectedColor;
   final ValueChanged<String> onColorSelected;
@@ -101,18 +195,30 @@ class SubjectFormFields extends StatelessWidget {
         shrinkWrap: true,
         physics: const ClampingScrollPhysics(),
         children: [
-          TextFormField(
-            controller: nameController,
-            decoration: InputDecoration(
-              labelText: l10n.subjectName,
-              hintText: l10n.subjectNameHint,
-              border: OutlineInputBorder(),
-            ),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return l10n.pleaseEnterSubjectName;
-              }
-              return null;
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue value) {
+              if (value.text.isEmpty) return [];
+              final matches = _commonSyllabi.where((s) =>
+                  s.toLowerCase().contains(value.text.toLowerCase()));
+              return matches.take(10);
+            },
+            onSelected: (selection) => nameController.text = selection,
+            fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+              return TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  labelText: l10n.subjectName,
+                  hintText: l10n.subjectNameHint,
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.trim().isEmpty) {
+                    return l10n.pleaseEnterSubjectName;
+                  }
+                  return null;
+                },
+              );
             },
           ),
           const SizedBox(height: 16),
@@ -135,14 +241,25 @@ class SubjectFormFields extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 16),
-          TextFormField(
-            controller: syllabusController,
-            decoration: InputDecoration(
-              labelText: l10n.syllabusScopeOptional,
-              hintText: l10n.syllabusDescriptionHint,
-              border: OutlineInputBorder(),
-            ),
-            maxLines: 3,
+          Autocomplete<String>(
+            optionsBuilder: (TextEditingValue value) {
+              if (value.text.isEmpty) return _commonSyllabi;
+              return _commonSyllabi.where((s) =>
+                  s.toLowerCase().contains(value.text.toLowerCase()));
+            },
+            onSelected: (selection) => syllabusController.text = selection,
+            fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+              return TextFormField(
+                controller: controller,
+                focusNode: focusNode,
+                decoration: InputDecoration(
+                  labelText: l10n.syllabusScopeOptional,
+                  hintText: l10n.syllabusDescriptionHint,
+                  border: OutlineInputBorder(),
+                ),
+                maxLines: 3,
+              );
+            },
           ),
           const SizedBox(height: 16),
           TextFormField(

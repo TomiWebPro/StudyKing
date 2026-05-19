@@ -15,8 +15,10 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
+import '../../../core/services/llm_agent/llm_agent.dart';
 import '../../../core/services/mastery_graph_service.dart';
-import '../../../core/services/plan_adapter.dart';
+import '../../../core/services/plan_adherence_orchestrator.dart';
+import '../../../core/services/voice_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 
@@ -26,14 +28,17 @@ class TutorService {
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
   final String _modelId;
-  final PlanAdapter _planAdapter;
+  final PlanAdherenceOrchestrator _planOrchestrator;
   final ExerciseEvaluator _exerciseEvaluator;
   final Clock _clock;
   final ConversationRepository _conversationRepository;
   final LessonRepository _lessonRepository;
+  final VoiceService? _voiceService;
+  LlmAgent? _llmAgent;
   ConversationManager? _currentManager;
   String? _scheduledSessionId;
   String? _currentLessonId;
+  List<LessonBlock>? _currentLessonBlocks;
 
   TutorService({
     required DatabaseService database,
@@ -43,7 +48,9 @@ class TutorService {
     required ExerciseEvaluator exerciseEvaluator,
     required ConversationRepository conversationRepository,
     LessonRepository? lessonRepository,
-    PlanAdapter? planAdapter,
+    PlanAdherenceOrchestrator? planOrchestrator,
+    VoiceService? voiceService,
+    LlmAgent? llmAgent,
     Clock? clock,
   })  : _database = database,
         _llmService = llmService,
@@ -52,10 +59,16 @@ class TutorService {
         _exerciseEvaluator = exerciseEvaluator,
         _conversationRepository = conversationRepository,
         _lessonRepository = lessonRepository ?? LessonRepository(),
-        _planAdapter = planAdapter ?? PlanAdapter(),
+        _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
+        _voiceService = voiceService,
+        _llmAgent = llmAgent,
         _clock = clock ?? SystemClock();
 
   ConversationManager? get currentManager => _currentManager;
+
+  List<LessonBlock>? get currentLessonBlocks => _currentLessonBlocks;
+
+  set llmAgent(LlmAgent? agent) => _llmAgent = agent;
 
   Future<ConversationManager> startLesson({
     required String studentId,
@@ -107,6 +120,7 @@ class TutorService {
       persistenceRepo: _conversationRepository,
       clock: _clock,
       localeName: localeName,
+      voiceService: _voiceService,
     );
 
     await manager.initialize();
@@ -132,6 +146,7 @@ class TutorService {
     );
     await _lessonRepository.create(lesson);
     _currentLessonId = lesson.id;
+    _currentLessonBlocks = lesson.blocks;
 
     _currentManager = manager;
     return manager;
@@ -158,7 +173,7 @@ class TutorService {
     await _persistExercisesAsQuestions(session);
 
     try {
-      await _planAdapter.recordFromTutorSession(
+      await _planOrchestrator.recordActivity(
         studentId: session.studentId,
         actualMinutes: _elapsedMinutes(session).clamp(1, 480),
       );
@@ -241,9 +256,61 @@ class TutorService {
       }
     }
 
+    if (_llmAgent != null) {
+      _llmAgent!.enqueueBackgroundTask(
+        'Post-lesson adherence update',
+        () async {
+          try {
+            await _planOrchestrator.checkAdherence(session.studentId);
+          } catch (_) {}
+        },
+      );
+      _llmAgent!.enqueueBackgroundTask(
+        'Post-lesson weak topic reanalysis',
+        () async {
+          try {
+            await _masteryService.getWeakTopics(session.studentId);
+          } catch (_) {}
+        },
+      );
+      _llmAgent!.enqueueBackgroundTask(
+        'Next topic lesson prep',
+        () async {
+          try {
+            final weakResult = await _masteryService.getWeakTopics(session.studentId);
+            if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
+              final nextTopic = weakResult.data!.first;
+              final lesson = Lesson(
+                id: const Uuid().v4(),
+                subjectId: session.subjectId,
+                title: nextTopic.topicId,
+                topicId: nextTopic.topicId,
+                blocks: [
+                  LessonBlock(
+                    id: const Uuid().v4(),
+                    subjectId: session.subjectId,
+                    lessonId: nextTopic.topicId,
+                    type: LessonBlockType.text,
+                    content: 'Pre-generated lesson for ${nextTopic.topicId}. Open to start learning.',
+                    order: 0,
+                  ),
+                ],
+                difficulty: 3,
+                generatedBy: GeneratedBy.ai,
+                createdAt: _clock.now(),
+              );
+              await _lessonRepository.init();
+              await _lessonRepository.create(lesson);
+            }
+          } catch (_) {}
+        },
+      );
+    }
+
     _currentManager = null;
     _scheduledSessionId = null;
     _currentLessonId = null;
+    _currentLessonBlocks = null;
   }
 
   List<LessonBlock> _lessonPlanToBlocks(LessonPlan lessonPlan, String subjectId, String topicId) {

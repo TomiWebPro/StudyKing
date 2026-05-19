@@ -9,21 +9,18 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_screen.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 import '../shared_test_helpers.dart';
 
@@ -182,8 +179,6 @@ const _kWeakAreas = 'Weak Areas';
 const _kExamMode = 'Exam Mode';
 const _kAtRiskQuestions = 'At-Risk Questions';
 const _kPractice = 'Practice';
-const _kSourcePractice = 'Source Practice';
-const _kNoWeakAreasFound = 'No weak areas found. Keep up the great work!';
 
 void main() {
   setUp(() async {
@@ -446,7 +441,6 @@ void main() {
 
     group('load error recovery', () {
       testWidgets('shows error state on load failure', (tester) async {
-        final box = _FakeSubjectBox();
         final repo = _FailingSubjectRepo();
 
         await tester.pumpWidget(_buildTestApp(subjectRepo: repo));

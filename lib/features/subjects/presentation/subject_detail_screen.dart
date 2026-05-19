@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -21,12 +22,12 @@ import 'package:studyking/features/subjects/presentation/widgets/subject_history
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 
 class SubjectDetailScreen extends ConsumerStatefulWidget {
-  final SubjectDetailArgs args;
+  final Subject subject;
   final SessionRepository? sessionRepository;
 
   const SubjectDetailScreen({
     super.key,
-    required this.args,
+    required this.subject,
     this.sessionRepository,
   });
 
@@ -49,7 +50,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     try {
       final repo = SourceRepository();
       await repo.init();
-      final sources = await repo.getBySubject(widget.args.subjectId);
+      final sources = await repo.getBySubject(widget.subject.id);
       if (mounted) setState(() => _sourceCount = sources.length);
     } catch (e) {
       const Logger('SubjectDetailScreen').e('Failed to load source count: $e');
@@ -65,9 +66,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final color = ColorUtils.stringToColor(widget.args.subjectColor);
-    final textOnColor = ColorUtils.contrastingTextColor(color);
+    final color = ColorUtils.stringToColor(widget.subject.color);
     final l10n = AppLocalizations.of(context)!;
+    final highContrast = MediaQuery.highContrastOf(context);
 
     return Scaffold(
       body: CustomScrollView(
@@ -79,23 +80,42 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             backgroundColor: color.withValues(alpha: 0.1),
             flexibleSpace: FlexibleSpaceBar(
               title: Text(
-                                    widget.args.subjectName,
+                                    widget.subject.name,
                 style: theme.textTheme.headlineMedium?.copyWith(
-                  color: textOnColor,
+                  color: Theme.of(context).colorScheme.onSurface,
                   fontWeight: FontWeight.bold,
                 ),
               ),
               background: Container(
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      color.withValues(alpha: 0.8),
-                      color.withValues(alpha: 0.4),
-                    ],
-                    begin: AlignmentDirectional.topStart,
-                    end: AlignmentDirectional.bottomEnd,
-                  ),
+                  gradient: highContrast
+                      ? LinearGradient(
+                          colors: [
+                            color,
+                            color,
+                          ],
+                        )
+                      : LinearGradient(
+                          colors: [
+                            color.withValues(alpha: 0.8),
+                            color.withValues(alpha: 0.6),
+                          ],
+                          begin: AlignmentDirectional.topStart,
+                          end: AlignmentDirectional.bottomEnd,
+                        ),
                 ),
+                  foregroundDecoration: highContrast
+                    ? null
+                    : BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            Theme.of(context).colorScheme.shadow.withValues(alpha: 0.2),
+                            Theme.of(context).colorScheme.shadow.withValues(alpha: 0.05),
+                          ],
+                          begin: AlignmentDirectional.topStart,
+                          end: AlignmentDirectional.bottomEnd,
+                        ),
+                      ),
                 child: SafeArea(
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -111,7 +131,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                   radius: 24,
                                   backgroundColor: theme.colorScheme.surface,
                                   child: Text(
-                                    widget.args.subjectName.isNotEmpty ? widget.args.subjectName[0].toUpperCase() : '?',
+                                    widget.subject.name.isNotEmpty ? widget.subject.name[0].toUpperCase() : '?',
                                     style: TextStyle(
                                       color: color,
                                       fontSize: 24,
@@ -125,17 +145,17 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(
-                widget.args.subjectName,
+                widget.subject.name,
                                         style: theme.textTheme.titleLarge?.copyWith(
-                                          color: textOnColor,
+                                          color: ColorUtils.contrastingTextColor(color),
                                           fontWeight: FontWeight.bold,
                                         ),
                                       ),
-                                      if (widget.args.subjectCode != null)
+                                      if (widget.subject.code != null)
                                         Text(
-                                          widget.args.subjectCode!,
+                                          widget.subject.code!,
                                           style: theme.textTheme.bodyMedium?.copyWith(
-                                            color: textOnColor.withValues(alpha: 0.8),
+                                            color: ColorUtils.contrastingTextColor(color).withValues(alpha: 0.8),
                                           ),
                                         ),
                                     ],
@@ -181,19 +201,19 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
               child: TabBarView(
                 controller: _tabController,
                 children: [
-                  SubjectLessonsTab(subjectId: widget.args.subjectId),
+                  SubjectLessonsTab(subjectId: widget.subject.id),
                   SubjectPracticeTab(
                     onStartPractice: () => _startPractice(isSpacedRepetition: false),
                     onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
                   ),
-                  SubjectTopicsTab(subjectId: widget.args.subjectId),
-                  _SubjectSourcesTab(subjectId: widget.args.subjectId, subjectName: widget.args.subjectName),
+                  SubjectTopicsTab(subjectId: widget.subject.id),
+                  _SubjectSourcesTab(subjectId: widget.subject.id, subjectName: widget.subject.name),
                   SubjectHistoryTab(
-                    subjectId: widget.args.subjectId,
+                    subjectId: widget.subject.id,
                     onSessionTap: (session) => _showSessionDetails(session),
                     sessionRepository: widget.sessionRepository,
                   ),
-                  SubjectStatsTab(subjectId: widget.args.subjectId),
+                  SubjectStatsTab(subjectId: widget.subject.id),
                 ],
               ),
             ),
@@ -209,7 +229,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       context,
       AppRoutes.practiceSession,
       arguments: PracticeSessionArgs(
-        subjectId: widget.args.subjectId,
+        subjectId: widget.subject.id,
         isSpacedRepetition: isSpacedRepetition,
       ),
     );
@@ -244,7 +264,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   Navigator.pushNamed(
                     context,
                     AppRoutes.upload,
-                    arguments: widget.args.subjectId,
+                    arguments: widget.subject.id,
                   );
                 },
               ),
@@ -299,7 +319,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     if (!mounted) return;
     try {
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      final subjectResult = await repo.get(widget.args.subjectId);
+      final subjectResult = await repo.get(widget.subject.id);
       final subject = subjectResult.data;
       if (subject == null || !mounted) return;
       Navigator.pushNamed(
@@ -335,7 +355,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     if (confirmed != true || !mounted) return;
     try {
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      await repo.delete(widget.args.subjectId);
+      await repo.delete(widget.subject.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.deleteSubject)),

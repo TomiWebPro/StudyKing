@@ -13,6 +13,7 @@ class AnimatedBarChart extends StatefulWidget {
   final bool showValueTooltips;
   final bool reduceMotion;
   final double maxBarWidth;
+  final Set<String> gapWeeks;
   final String Function(String day, int count)? semanticsLabelBuilder;
 
   const AnimatedBarChart({
@@ -27,6 +28,7 @@ class AnimatedBarChart extends StatefulWidget {
     this.showValueTooltips = true,
     this.reduceMotion = false,
     this.maxBarWidth = 48,
+    this.gapWeeks = const {},
     this.semanticsLabelBuilder,
   });
 
@@ -48,16 +50,23 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
   }
 
   Widget _buildBar(BuildContext context, double height, String day, int count, int maxCount, ThemeData theme, double barWidth, Color accentColor) {
+    final isGap = widget.gapWeeks.contains(day);
     if (widget.reduceMotion) {
       return Container(
         width: barWidth,
-        height: height,
+        height: isGap ? widget.minBarHeight * 0.15 : height,
         decoration: BoxDecoration(
-          color: count > 0
-              ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
-              : theme.disabledColor.withValues(alpha: 0.2),
+          color: isGap
+              ? Colors.transparent
+              : (count > 0
+                  ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+                  : theme.disabledColor.withValues(alpha: 0.2)),
+          border: isGap ? Border.all(color: theme.colorScheme.outlineVariant, width: 1.5) : null,
           borderRadius: BorderRadius.circular(widget.borderRadius),
         ),
+        child: isGap
+              ? Center(child: Text('\u2014', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outlineVariant)))
+            : null,
       );
     }
     final previousHeight = _previousHeights[day] ?? widget.minBarHeight;
@@ -71,13 +80,19 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
       builder: (context, value, child) {
         return Container(
           width: barWidth,
-          height: value,
+          height: isGap ? widget.minBarHeight * 0.15 : value,
           decoration: BoxDecoration(
-            color: count > 0
-                ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
-                : theme.disabledColor.withValues(alpha: 0.2),
+            color: isGap
+                ? Colors.transparent
+                : (count > 0
+                    ? accentColor.withValues(alpha: 0.7 + (count / maxCount * 0.3))
+                    : theme.disabledColor.withValues(alpha: 0.2)),
+            border: isGap ? Border.all(color: theme.colorScheme.outlineVariant, width: 1.5) : null,
             borderRadius: BorderRadius.circular(widget.borderRadius),
           ),
+          child: isGap
+            ? Center(child: Text('\u2014', style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.outlineVariant)))
+              : null,
         );
       },
     );
@@ -140,11 +155,12 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                   final height = widget.minBarHeight +
                       (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
+                  final isGapWeek = widget.gapWeeks.contains(day);
                   return Semantics(
                     label: widget.semanticsLabelBuilder != null
                         ? widget.semanticsLabelBuilder!(day, count)
-                        : '$day: $count sessions',
-                    value: '$count',
+                        : isGapWeek ? 'No activity' : '$day: $count sessions',
+                    value: isGapWeek ? 'No activity' : '$count',
                     child: Column(
                       key: ValueKey('bar_$day'),
                       mainAxisSize: MainAxisSize.min,

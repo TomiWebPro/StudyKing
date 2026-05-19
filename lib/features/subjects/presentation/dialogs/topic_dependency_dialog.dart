@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -53,31 +54,33 @@ class _TopicDependencyDialogState extends State<TopicDependencyDialog> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final localeName = l10n.localeName;
     final theme = Theme.of(context);
 
     return AlertDialog(
-      title: Text('${widget.topic.title} — Dependencies'),
+      title: Text(l10n.dependenciesTitle(widget.topic.title)),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Prerequisites',
+              Text(l10n.prerequisites,
                 style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               if (_availablePrerequisites.isEmpty)
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text('No other topics available for prerequisites.',
+                  child: Text(l10n.noTopicsForPrerequisites,
                     style: theme.textTheme.bodySmall),
                 )
               else
                 ..._availablePrerequisites.map((t) => CheckboxListTile(
                   dense: true,
                   title: Text(t.title, style: theme.textTheme.bodyMedium),
-                  subtitle: Text(t.description.isNotEmpty ? t.description : 'No description',
+                  subtitle: Text(t.description.isNotEmpty ? t.description : l10n.noDescription,
                     style: theme.textTheme.bodySmall),
                   value: _selectedPrerequisites.contains(t.id),
                   onChanged: (checked) {
@@ -91,7 +94,7 @@ class _TopicDependencyDialogState extends State<TopicDependencyDialog> {
                   },
                 )),
               const Divider(),
-              Text('Mastery Threshold: ${(_masteryThreshold * 100).round()}%',
+              Text(l10n.masteryThreshold('${(_masteryThreshold * 100).round()}'),
                 style: theme.textTheme.bodyMedium),
               Slider(
                 value: _masteryThreshold,
@@ -104,10 +107,10 @@ class _TopicDependencyDialogState extends State<TopicDependencyDialog> {
               const SizedBox(height: 8),
               SwitchListTile(
                 dense: true,
-                title: const Text('Required Topic'),
+                title: Text(l10n.requiredTopic),
                 subtitle: Text(_isRequired
-                  ? 'Student must master this topic'
-                  : 'Optional topic — can be skipped',
+                  ? l10n.requiredTopicOn
+                  : l10n.requiredTopicOff,
                   style: theme.textTheme.bodySmall),
                 value: _isRequired,
                 onChanged: (v) => setState(() => _isRequired = v),
@@ -116,7 +119,8 @@ class _TopicDependencyDialogState extends State<TopicDependencyDialog> {
               Row(
                 children: [
                   Expanded(
-                    child: Text('Syllabus Weight: ${_syllabusWeight.toStringAsFixed(1)}',
+                    child: Text(l10n.syllabusWeight(
+                      formatDecimal(_syllabusWeight, localeName, minFractionDigits: 1, maxFractionDigits: 1)),
                       style: theme.textTheme.bodyMedium),
                   ),
                 ],
@@ -126,7 +130,7 @@ class _TopicDependencyDialogState extends State<TopicDependencyDialog> {
                 min: 0.1,
                 max: 3.0,
                 divisions: 29,
-                label: _syllabusWeight.toStringAsFixed(1),
+                label: formatDecimal(_syllabusWeight, localeName, minFractionDigits: 1, maxFractionDigits: 1),
                 onChanged: (v) => setState(() => _syllabusWeight = v),
               ),
             ],

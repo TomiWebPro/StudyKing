@@ -5,7 +5,7 @@ import '../../../core/data/models/session_model.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/study_progress_tracker.dart';
-import '../../../core/services/plan_adapter.dart';
+import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../features/practice/data/models/mastery_state_model.dart';
 import '../../../features/sessions/data/repositories/session_repository.dart';
 import '../../../features/planner/data/repositories/plan_adherence_repository.dart';
@@ -16,7 +16,7 @@ import '../data/models/dashboard_models.dart';
 class DashboardService {
   final MasteryGraphService _masteryService;
   final StudyProgressTracker _progressTracker;
-  final PlanAdapter _planAdapter;
+  final PlanAdherenceOrchestrator _planOrchestrator;
   final SessionRepository _sessionRepo;
   final PlanAdherenceRepository _adherenceRepo;
   final TopicRepository _topicRepo;
@@ -24,7 +24,7 @@ class DashboardService {
   DashboardService({
     MasteryGraphService? masteryService,
     StudyProgressTracker? progressTracker,
-    PlanAdapter? planAdapter,
+    PlanAdherenceOrchestrator? planOrchestrator,
     SessionRepository? sessionRepo,
     PlanAdherenceRepository? adherenceRepo,
     TopicRepository? topicRepo,
@@ -37,7 +37,7 @@ class DashboardService {
               sessionRepo: sessionRepo,
               l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
             ),
-        _planAdapter = planAdapter ?? PlanAdapter(),
+        _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
         _sessionRepo = sessionRepo ?? SessionRepository(),
         _adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
         _topicRepo = topicRepo ?? TopicRepository();
@@ -45,7 +45,7 @@ class DashboardService {
   Future<void> init() async {
     await Future.wait([
       _masteryService.init(),
-      _planAdapter.adherenceRepository.init(),
+      _planOrchestrator.adherenceRepository.init(),
       _topicRepo.init(),
       _sessionRepo.init(),
     ]);

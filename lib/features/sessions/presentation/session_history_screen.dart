@@ -2,11 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
@@ -23,7 +27,7 @@ class SessionHistoryScreen extends StatefulWidget {
   State<SessionHistoryScreen> createState() => _SessionHistoryScreenState();
 }
 
-class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
+class _SessionHistoryScreenState extends State<SessionHistoryScreen> with AutomaticKeepAliveClientMixin {
   final Logger _logger = const Logger('SessionHistoryScreen');
   late SessionRepository _sessionRepository;
   List<Session> _allSessions = [];
@@ -32,6 +36,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
   String? _selectedSubject;
   bool _isLoading = true;
   String? _error;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -107,76 +114,59 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     }
 
     try {
+      final filename = 'session_history_${DateTime.now().millisecondsSinceEpoch}';
       switch (format) {
         case 'csv':
-          await SessionExportService.shareCSV(
-            sessions,
-            'session_history_${DateTime.now().millisecondsSinceEpoch}',
-            l10n: l10n,
-          );
+          await SessionExportService.shareCSV(sessions, filename, l10n: l10n);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
             );
           }
         case 'pdf':
-          await SessionExportService.sharePDF(
-            sessions,
-            'session_history_${DateTime.now().millisecondsSinceEpoch}',
-            l10n,
-          );
+          await SessionExportService.sharePDF(sessions, filename, l10n);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.sessionHistoryExportedPdf)),
             );
           }
         case 'json':
-          await SessionExportService.shareJSON(
-            sessions,
-            'session_history_${DateTime.now().millisecondsSinceEpoch}',
-            l10n: l10n,
-          );
+          await SessionExportService.shareJSON(sessions, filename, l10n: l10n);
           if (mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(content: Text(l10n.sessionHistoryExportedJson)),
             );
           }
-        case 'comprehensive_csv':
-          {
-            final exportService = ProgressExportService();
-            await exportService.shareComprehensiveCSV(
-              StudentIdService().getStudentId(),
-              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
-              l10n,
-            );
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.comprehensiveReportExported)),
-              );
-            }
-          }
+        case 'comprehensive':
         case 'comprehensive_pdf':
-          {
-            final exportService = ProgressExportService();
-            await exportService.shareComprehensivePDF(
-              StudentIdService().getStudentId(),
-              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
-              l10n,
-            );
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.comprehensiveReportExported)),
-              );
-            }
-          }
         case 'comprehensive_json':
           {
-            final exportService = ProgressExportService();
-            await exportService.shareComprehensiveJSON(
-              StudentIdService().getStudentId(),
-              'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}',
-              l10n,
+            final attemptRepo = AttemptRepository();
+            await attemptRepo.init();
+            final masteryService = MasteryGraphService();
+            await masteryService.init();
+            final tracker = StudyProgressTracker(
+              attemptRepo: attemptRepo,
+              l10n: l10n,
             );
+            final exportService = ProgressExportService(
+              attemptRepo: attemptRepo,
+              masteryService: masteryService,
+              tracker: tracker,
+            );
+            final studentId = StudentIdService().getStudentId();
+            final compFilename = 'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}';
+            switch (format) {
+              case 'comprehensive':
+                await exportService.shareComprehensiveCSV(studentId, compFilename, l10n);
+                break;
+              case 'comprehensive_pdf':
+                await exportService.shareComprehensivePDF(studentId, compFilename, l10n);
+                break;
+              case 'comprehensive_json':
+                await exportService.shareComprehensiveJSON(studentId, compFilename, l10n);
+                break;
+            }
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(l10n.comprehensiveReportExported)),
@@ -188,10 +178,65 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       _logger.e('Export failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+          SnackBar(content: Text(l10n.exportFailed(''))),
         );
       }
     }
+  }
+
+  void _showExportSheet(AppLocalizations l10n, ThemeData theme) {
+    showModalBottomSheet(
+      context: context,
+      shape: AppTheme.bottomSheetShape,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                l10n.sessionHistoryExport,
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _exportTile(l10n, ctx, Icons.table_chart, l10n.exportCsv, l10n.sessionHistoryDescription, 'csv'),
+              const Divider(height: 1, indent: 72),
+              _exportTile(l10n, ctx, Icons.picture_as_pdf, l10n.exportPdf, l10n.sessionHistoryDescription, 'pdf'),
+              const Divider(height: 1, indent: 72),
+              _exportTile(l10n, ctx, Icons.code, l10n.labelJson, l10n.sessionHistoryDescription, 'json'),
+              const Divider(height: 1),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Text(
+                  l10n.exportComprehensiveReport,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ),
+              _exportTile(l10n, ctx, Icons.assignment, 'Full Progress CSV', l10n.exportAllDataDescription, 'comprehensive'),
+              const Divider(height: 1, indent: 72),
+              _exportTile(l10n, ctx, Icons.picture_as_pdf, 'Full Progress PDF', l10n.exportAllDataDescription, 'comprehensive_pdf'),
+              const Divider(height: 1, indent: 72),
+              _exportTile(l10n, ctx, Icons.code, 'Full Progress JSON', l10n.exportAllDataDescription, 'comprehensive_json'),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _exportTile(AppLocalizations l10n, BuildContext ctx, IconData icon, String title, String subtitle, String format) {
+    return ListTile(
+      leading: Icon(icon),
+      title: Text(title),
+      subtitle: Text(subtitle),
+      onTap: () {
+        Navigator.pop(ctx);
+        _handleExport(format);
+      },
+    );
   }
 
   Future<bool> _deleteSession(Session session) async {
@@ -208,7 +253,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: FilledButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(context),
             child: Text(l10n.delete),
           ),
         ],
@@ -240,7 +285,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.failedToDeleteSession(e.toString()))),
+            SnackBar(content: Text(l10n.failedToDeleteSession(''))),
           );
         }
         return false;
@@ -255,6 +300,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final totalMinutes = _filteredSessions.fold<int>(
@@ -276,86 +322,15 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                 tooltip: l10n.clearFilters,
               ),
             ),
-            PopupMenuButton<String>(
+            IconButton(
               icon: const Icon(Icons.share),
               tooltip: l10n.sessionHistoryExport,
-              onSelected: (value) => _handleExport(value),
-              itemBuilder: (context) => [
-                PopupMenuItem(
-                  enabled: false,
-                  child: Text(
-                    l10n.sessionHistoryExport,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'csv',
-                  child: ListTile(
-                    leading: const Icon(Icons.table_chart),
-                    title: Text(l10n.exportCsv),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'pdf',
-                  child: ListTile(
-                    leading: const Icon(Icons.picture_as_pdf),
-                    title: Text(l10n.exportPdf),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'json',
-                  child: ListTile(
-                    leading: const Icon(Icons.code),
-                    title: Text(l10n.labelJson),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  enabled: false,
-                  child: Text(
-                    l10n.exportComprehensiveReport,
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'comprehensive_csv',
-                  child: ListTile(
-                    leading: const Icon(Icons.assignment),
-                    title: Text(l10n.comprehensiveCsv),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'comprehensive_pdf',
-                  child: ListTile(
-                    leading: const Icon(Icons.description),
-                    title: Text(l10n.comprehensivePdf),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-                PopupMenuItem(
-                  value: 'comprehensive_json',
-                  child: ListTile(
-                    leading: const Icon(Icons.assignment),
-                    title: Text(l10n.comprehensiveJson),
-                    contentPadding: EdgeInsets.zero,
-                  ),
-                ),
-              ],
+              onPressed: () => _showExportSheet(l10n, theme),
             ),
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? const LoadingScreen()
           : _error != null
               ? _buildErrorState(theme)
               : FocusTraversalGroup(
@@ -466,7 +441,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 32),
             child: Text(
-              _error!,
+              l10n.somethingWentWrong,
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
               textAlign: TextAlign.center,
             ),
@@ -510,6 +485,38 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     );
   }
 
+  bool _isStale(Session session) {
+    return session.endTime == null &&
+        !session.completed &&
+        session.startTime.isBefore(DateTime.now().subtract(const Duration(hours: 1)));
+  }
+
+  Future<void> _dismissStaleSession(Session session) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.staleSessionLabel),
+        content: Text(l10n.cancelLessonConfirmation),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.noThanks),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.cancel),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      final dismissed = session.copyWith(completed: true);
+      await _sessionRepository.save(dismissed.id, dismissed);
+      _loadSessions();
+    }
+  }
+
   Widget _buildSessionsList(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
     return ListView.separated(
@@ -520,6 +527,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
         final position = _allSessions.indexOf(session);
         final icon = sessionIcon(session.type);
         final color = sessionColor(session.type, theme);
+        final isStale = _isStale(session);
 
         return Semantics(
           hint: l10n.swipeToDelete,
@@ -541,10 +549,11 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               leading: Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: color.withValues(alpha: 0.1),
+                  color: (isStale ? theme.colorScheme.error : color).withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: color),
+                child: Icon(isStale ? Icons.error_outline : icon,
+                    color: isStale ? theme.colorScheme.error : color),
               ),
               title: Row(
                 children: [
@@ -556,6 +565,20 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
                   ),
                   const SizedBox(width: 8),
                   Icon(icon, size: 14, color: color),
+                  if (isStale) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(l10n.staleSessionLabel,
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          )),
+                    ),
+                  ],
                 ],
               ),
               subtitle: Column(
@@ -582,23 +605,31 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text(
-                    formatDurationFromContext(context, session.actualDuration),
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: theme.colorScheme.primary,
+                  if (isStale)
+                    TextButton.icon(
+                      onPressed: () => _dismissStaleSession(session),
+                      icon: const Icon(Icons.close, size: 16),
+                      label: Text(l10n.dismissAllMissed),
+                    )
+                  else ...[
+                    Text(
+                      formatDurationFromContext(context, session.actualDuration),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: theme.colorScheme.primary,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Semantics(
-                    label: l10n.deleteSession,
-                    button: true,
-                    child: IconButton(
-                      icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
-                      tooltip: l10n.deleteSession,
-                      onPressed: () => _deleteSession(session),
+                    const SizedBox(width: 8),
+                    Semantics(
+                      label: l10n.deleteSession,
+                      button: true,
+                      child: IconButton(
+                        icon: Icon(Icons.delete_outline, color: theme.colorScheme.error),
+                        tooltip: l10n.deleteSession,
+                        onPressed: () => _deleteSession(session),
+                      ),
                     ),
-                  ),
+                  ],
                 ],
               ),
               isThreeLine: true,
@@ -639,7 +670,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
     for (final id in subjectIds) {
       final result = await subjectRepo.get(id);
       final subject = result.data;
-      subjectNames[id] = subject?.name ?? id;
+      subjectNames[id] = subject?.name ?? l10n.unknown;
     }
 
     if (!mounted) return;
@@ -654,7 +685,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> {
             itemCount: subjectIds.length,
             itemBuilder: (context, index) {
               final id = subjectIds[index];
-              final name = subjectNames[id] ?? id;
+              final name = subjectNames[id] ?? l10n.unknown;
               return ListTile(
                 title: Text(name),
                 selected: id == _selectedSubject,

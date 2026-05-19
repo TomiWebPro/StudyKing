@@ -143,5 +143,100 @@ void main() {
 
       expect(a, isNot(equals(b)));
     });
+
+    test('can be const', () {
+      const report = ProgressReport(
+        totalAttempts: 5,
+        correctAttempts: 3,
+        accuracy: 0.6,
+        topicsStudied: 1,
+        completedLessons: 2,
+        weeklyActivity: 1,
+        totalStudyTimeHours: 3,
+      );
+
+      expect(report.totalAttempts, 5);
+    });
+
+    test('accepts int value for totalStudyTimeHours as num', () {
+      final report = ProgressReport(
+        totalAttempts: 10,
+        correctAttempts: 8,
+        accuracy: 0.8,
+        topicsStudied: 2,
+        completedLessons: 4,
+        weeklyActivity: 2,
+        totalStudyTimeHours: 8,
+      );
+
+      expect(report.totalStudyTimeHours, isA<num>());
+      expect(report.totalStudyTimeHours, 8);
+    });
+
+    test('accepts double value for totalStudyTimeHours as num', () {
+      final report = ProgressReport(
+        totalAttempts: 10,
+        correctAttempts: 8,
+        accuracy: 0.8,
+        topicsStudied: 2,
+        completedLessons: 4,
+        weeklyActivity: 2,
+        totalStudyTimeHours: 8.5,
+      );
+
+      expect(report.totalStudyTimeHours, isA<num>());
+      expect(report.totalStudyTimeHours, 8.5);
+    });
+
+    test('handles zero values', () {
+      final report = ProgressReport(
+        totalAttempts: 0,
+        correctAttempts: 0,
+        accuracy: 0.0,
+        topicsStudied: 0,
+        completedLessons: 0,
+        weeklyActivity: 0,
+        totalStudyTimeHours: 0,
+      );
+
+      expect(report.accuracy, 0.0);
+      expect(report.totalAttempts, 0);
+      expect(report.correctAttempts, 0);
+    });
+
+    test('handles boundary accuracy values', () {
+      final zero = ProgressReport(
+        totalAttempts: 0, correctAttempts: 0, accuracy: 0.0,
+        topicsStudied: 0, completedLessons: 0, weeklyActivity: 0,
+        totalStudyTimeHours: 0,
+      );
+      final full = ProgressReport(
+        totalAttempts: 10, correctAttempts: 10, accuracy: 1.0,
+        topicsStudied: 1, completedLessons: 1, weeklyActivity: 1,
+        totalStudyTimeHours: 1,
+      );
+
+      expect(zero.accuracy, 0.0);
+      expect(full.accuracy, 1.0);
+    });
+
+    test('handles explicit empty lists', () {
+      final report = ProgressReport(
+        totalAttempts: 10,
+        correctAttempts: 8,
+        accuracy: 0.8,
+        topicsStudied: 2,
+        completedLessons: 4,
+        weeklyActivity: 2,
+        totalStudyTimeHours: 8,
+        weakTopics: [],
+        badges: [],
+        recommendations: [],
+      );
+
+      expect(report.weakTopics, isEmpty);
+      expect(report.badges, isEmpty);
+      expect(report.recommendations, isEmpty);
+    });
   });
 }

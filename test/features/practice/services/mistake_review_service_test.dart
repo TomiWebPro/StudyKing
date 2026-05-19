@@ -314,5 +314,82 @@ void main() {
       );
       expect(mistakes, isEmpty);
     });
+
+    group('error-state: repository failures', () {
+      test('getMistakesFromSession handles attemptRepo failure', () async {
+        final failingRepo = _FailingAttemptRepository();
+        final localService = MistakeReviewService(
+          attemptRepo: failingRepo,
+          questionRepo: questionRepo,
+        );
+        final mistakes = await localService.getMistakesFromSession(
+          studentId: 's1',
+          subjectId: 'sub1',
+        );
+        expect(mistakes, isEmpty);
+      });
+
+      test('getMistakesFromSession handles questionRepo failure', () async {
+        attemptRepo.addAttempt(StudentAttempt(
+          id: 'a1',
+          studentId: 's1',
+          questionId: 'q1',
+          subjectId: 'sub1',
+          isCorrect: false,
+          timestamp: DateTime(2026, 1, 1),
+          userAnswer: 'wrong',
+        ));
+        final failingRepo = _FailingQuestionRepository();
+        final localService = MistakeReviewService(
+          attemptRepo: attemptRepo,
+          questionRepo: failingRepo,
+        );
+        final mistakes = await localService.getMistakesFromSession(
+          studentId: 's1',
+          subjectId: 'sub1',
+        );
+        expect(mistakes, isEmpty);
+      });
+
+      test('getPendingMistakes handles attemptRepo failure', () async {
+        final failingRepo = _FailingAttemptRepository();
+        final localService = MistakeReviewService(
+          attemptRepo: failingRepo,
+          questionRepo: questionRepo,
+        );
+        final pending = await localService.getPendingMistakes(
+          studentId: 's1',
+          subjectId: 'sub1',
+        );
+        expect(pending, isEmpty);
+      });
+    });
   });
+}
+
+class _FailingAttemptRepository extends AttemptRepository {
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.failure('Storage error');
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
+    String studentId,
+    String subjectId,
+  ) async {
+    return Result.failure('Storage error');
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.failure('Storage error');
+  }
+}
+
+class _FailingQuestionRepository extends QuestionRepository {
+  @override
+  Future<Result<Question?>> get(String id) async {
+    return Result.failure('Storage error');
+  }
 }

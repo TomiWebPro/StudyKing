@@ -5,7 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart' show subjectRepositoryProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -31,7 +33,7 @@ class SessionTrackerScreen extends ConsumerStatefulWidget {
   ConsumerState<SessionTrackerScreen> createState() => _SessionTrackerScreenState();
 }
 
-class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> with WidgetsBindingObserver {
+class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   final Logger _logger = const Logger('SessionTrackerScreen');
   late SessionRepository _sessionRepository;
   List<Session> _allSessions = [];
@@ -43,6 +45,11 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   int _elapsedSeconds = 0;
   bool _isLoading = true;
   String? _error;
+  List<Subject> _subjects = [];
+  String _selectedSubjectId = '';
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -50,6 +57,22 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     WidgetsBinding.instance.addObserver(this);
     _sessionRepository = widget.sessionRepository ?? SessionRepository();
     _loadSessions();
+    _loadSubjects();
+  }
+
+  Future<void> _loadSubjects() async {
+    try {
+      final repo = ref.read(subjectRepositoryProvider);
+      final result = await repo.getAll();
+      if (mounted) {
+        setState(() {
+          _subjects = result.data ?? [];
+          if (_subjects.isNotEmpty && _selectedSubjectId.isEmpty) {
+            _selectedSubjectId = _subjects.first.id;
+          }
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -169,14 +192,14 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
         studentId: studentId,
-        subjectId: 'all',
+        subjectId: _selectedSubjectId,
         type: SessionType.manual,
       );
       await _sessionRepository.save(session.id, session);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveSession(e.toString()))),
+          SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveSession(''))),
         );
       }
     }
@@ -239,6 +262,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
@@ -249,7 +273,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           centerTitle: false,
           elevation: 0,
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const LoadingIndicator(),
       );
     }
 
@@ -274,7 +298,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
-                  _error!,
+                  l10n.somethingWentWrong,
                   style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),
@@ -301,6 +325,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         child: Padding(
           padding: ResponsiveUtils.screenPadding(context),
           child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: FocusTraversalGroup(
             child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -342,7 +367,28 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
+                    if (!_isTrackingSession && _subjects.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: DropdownButtonFormField<String>(
+                          initialValue: _selectedSubjectId.isNotEmpty ? _selectedSubjectId : null,
+                          decoration: InputDecoration(
+                            labelText: l10n.subject,
+                            border: const OutlineInputBorder(),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            isDense: true,
+                          ),
+                          items: _subjects.map((s) => DropdownMenuItem(
+                            value: s.id,
+                            child: Text(s.name, overflow: TextOverflow.ellipsis),
+                          )).toList(),
+                          onChanged: (v) {
+                            if (v != null) setState(() => _selectedSubjectId = v);
+                          },
+                        ),
+                      ),
+                    const SizedBox(height: 8),
                     Wrap(
                       spacing: 12,
                       runSpacing: 12,

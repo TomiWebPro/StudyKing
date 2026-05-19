@@ -8,8 +8,7 @@ final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
   return ref.watch(databaseProvider).sessionRepository;
 });
 
-// Orphaned: consumed only in tests (session_providers_test.dart). No production consumers.
-// Kept as future-use convenience providers that wrap sessionRepositoryProvider.
+// Convenience providers wrapping sessionRepositoryProvider for future consumers.
 final allSessionsProvider = FutureProvider<Result<List<Session>>>((ref) {
   return ref.watch(sessionRepositoryProvider).getAll();
 });

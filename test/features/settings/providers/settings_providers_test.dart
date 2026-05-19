@@ -15,6 +15,15 @@ class _FakeDataBackupService extends DataBackupService {
       ],
     });
   }
+
+  @override
+  Future<Result<String>> exportAllData({
+    required Map<String, List<Map<String, dynamic>>> boxData,
+    String? filename,
+    String? outputDir,
+  }) async {
+    return Result.success('/fake/backup/path.json');
+  }
 }
 
 class _ThrowingDataBackupService extends DataBackupService {
@@ -81,6 +90,25 @@ void main() {
       final result = await service.restoreData('/bad/path');
       expect(result.isFailure, isTrue);
       expect(result.error, contains('Backup restore failed'));
+    });
+
+    test('behavioral assertion - fake exportAllData flows through provider', () async {
+      final fakeService = _FakeDataBackupService();
+      final container = ProviderContainer(
+        overrides: [
+          dataBackupServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final service = container.read(dataBackupServiceProvider);
+      final result = await service.exportAllData(boxData: {
+        'subjects': [
+          {'id': 's1', 'name': 'Math'},
+        ],
+      });
+      expect(result.isSuccess, isTrue);
+      expect(result.data, endsWith('.json'));
     });
   });
 }

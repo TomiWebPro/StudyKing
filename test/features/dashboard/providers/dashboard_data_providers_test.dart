@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
@@ -16,6 +17,7 @@ import 'package:studyking/features/planner/data/models/plan_adherence_model.dart
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart' show topicRepositoryProvider;
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -195,10 +197,10 @@ ProviderContainer _createContainer({
       dashboardInstrumentationServiceProvider.overrideWithValue(
         instrumentation ?? _FakeInstrumentationService(),
       ),
-      dashboardTopicRepositoryProvider.overrideWithValue(
+      topicRepositoryProvider.overrideWithValue(
         topicRepo ?? _FakeTopicRepo(),
       ),
-      dashboardAdherenceRepositoryProvider.overrideWithValue(
+      engagementAdherenceRepoProvider.overrideWithValue(
         adherenceRepo ?? _FakePlanAdherenceRepo(),
       ),
       if (sessionRepo != null)

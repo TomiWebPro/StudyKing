@@ -1,16 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/cross_feature_integrator.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
-
-class _FakeStudentIdService extends StudentIdService {
-  @override
-  String getStudentId() => 'test-student';
-  @override
-  Future<void> init() async {}
-}
+import '../../helpers/fakes.dart';
 
 class _FailingSessionRepo extends SessionRepository {
   @override
@@ -75,7 +68,7 @@ void main() {
       sessionRepo = _FakeSessionRepository();
       integrator = CrossFeatureIntegrator(
         sessionRepo: sessionRepo,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
     });
 
@@ -358,7 +351,7 @@ void main() {
         final failingRepo = _FailingSessionRepo();
         final failingIntegrator = CrossFeatureIntegrator(
           sessionRepo: failingRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 
         final timeline = await failingIntegrator.getUnifiedTimeline(studentId: 's1');
@@ -369,7 +362,7 @@ void main() {
         final failingRepo = _FailingSessionRepo();
         final failingIntegrator = CrossFeatureIntegrator(
           sessionRepo: failingRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 
         final total = await failingIntegrator.getTotalStudyDurationMs(studentId: 's1');
@@ -380,7 +373,7 @@ void main() {
         final failingRepo = _FailingSessionRepo();
         final failingIntegrator = CrossFeatureIntegrator(
           sessionRepo: failingRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 
         final count = await failingIntegrator.getCompletedSessionCount(studentId: 's1');
@@ -391,7 +384,7 @@ void main() {
         final failingRepo = _FailingSessionRepo();
         final failingIntegrator = CrossFeatureIntegrator(
           sessionRepo: failingRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 
         final byType = await failingIntegrator.getDurationByType(studentId: 's1');
@@ -412,7 +405,7 @@ void main() {
         final failingRepo = _FailingSessionRepo();
         final failingIntegrator = CrossFeatureIntegrator(
           sessionRepo: failingRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 
         await expectLater(

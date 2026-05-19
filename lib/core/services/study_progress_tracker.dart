@@ -130,6 +130,14 @@ class StudyProgressTracker {
     final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
     final allAttempts = allAttemptsResult.data ?? [];
 
+    bool hasPriorData = false;
+    for (final a in allAttempts) {
+      if (a.timestamp.isBefore(DateTime.now().subtract(const Duration(days: 7)))) {
+        hasPriorData = true;
+        break;
+      }
+    }
+
     final trend = <Map<String, dynamic>>[];
     final now = DateTime.now();
 
@@ -144,12 +152,15 @@ class StudyProgressTracker {
       final correct = weekAttempts.where((a) => a.isCorrect).length;
       final accuracy = weekAttempts.isEmpty ? 0.0 : correct / weekAttempts.length;
 
+      final isGap = weekAttempts.isEmpty && hasPriorData;
+
       trend.add({
         'week': weekStart.year,
         'month': weekStart.month,
         'attempts': weekAttempts.length,
         'accuracy': (accuracy * 100).round(),
         'improvement': _calculateImprovement(weekAttempts, trend.isNotEmpty ? trend.first : {}),
+        'isGap': isGap,
       });
     }
 

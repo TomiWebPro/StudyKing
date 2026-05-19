@@ -165,6 +165,7 @@ class _SubjectSelectionScreenState
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

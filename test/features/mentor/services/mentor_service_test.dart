@@ -14,7 +14,7 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
-import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviation;
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart' show AdherenceDeviation;
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -116,20 +116,21 @@ class FakePendingActionRepository extends PendingActionRepository {
   void setThrowOnCreate() => _throwOnCreate = true;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<void> create(PendingActionModel action) async {
+  Future<Result<void>> create(PendingActionModel action) async {
     if (_throwOnCreate) throw Exception('Simulated error');
     _actions.add(action);
+    return Result.success(null);
   }
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
-    return _actions
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(_actions
         .where((a) => a.studentId == studentId && a.status == 'pending')
         .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
   }
 }
 
@@ -1027,6 +1028,200 @@ void main() {
         final service = createMentorService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
         expect(result, isA<List<String>>());
+      });
+
+      test('generates revision nudge when 3+ at-risk questions', () async {
+        final mastery = FakeMasteryGraphService();
+        final now = DateTime.now();
+        mastery.setAtRiskResult(Result.success([
+          QuestionMasteryState(studentId: 'test-student', questionId: 'q-1', lastAttempt: now, nextReview: now),
+          QuestionMasteryState(studentId: 'test-student', questionId: 'q-2', lastAttempt: now, nextReview: now),
+          QuestionMasteryState(studentId: 'test-student', questionId: 'q-3', lastAttempt: now, nextReview: now),
+        ]));
+        // Ensure the at-risk list has >= 3 items to trigger revision nudge
+        final service = createMentorService(masteryService: mastery);
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result, isNotEmpty);
+        expect(result.first, contains('revision'));
+      });
+    });
+
+    group('getters', () {
+      test('hasApiKey returns false when API key is empty', () {
+        final service = createMentorService();
+        expect(service.hasApiKey, isFalse);
+      });
+
+      test('clearPendingSchedule sets pending schedule to null', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule a lesson').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        service.clearPendingSchedule();
+        expect(service.pendingScheduleProposal, isNull);
+      });
+
+      test('clearPendingPlan sets pending plan to null', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('plan a roadmap').toList();
+        expect(service.pendingPlanProposal, isNotNull);
+        service.clearPendingPlan();
+        expect(service.pendingPlanProposal, isNull);
+      });
+    });
+
+    group('planDaysMessage', () {
+      test('returns English message with correct day count', () {
+        final service = createMentorService();
+        final msg = service.planDaysMessage(30);
+        expect(msg, contains('30'));
+      });
+
+      test('returns Spanish message with correct day count', () {
+        final service = createMentorService(localeName: 'es');
+        final msg = service.planDaysMessage(30);
+        expect(msg, contains('30'));
+      });
+    });
+
+    group('getRecentNudges', () {
+      test('returns empty list when no nudges exist', () async {
+        final service = createMentorService();
+        final nudges = await service.getRecentNudges();
+        expect(nudges, isEmpty);
+      });
+    });
+
+    group('hasMeaningfulData', () {
+      test('returns false when no subjects and no attempts', () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setStats({
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'avgTimePerQuestion': 0,
+          'totalStudyTimeHours': 0,
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        });
+        final service = createMentorService(progressTracker: tracker);
+        final result = await service.hasMeaningfulData();
+        expect(result, isFalse);
+      });
+
+      test('returns true when subjects exist', () async {
+        final subjectRepo = FakeSubjectRepository();
+        subjectRepo.addSubject(Subject(id: 's1', name: 'Math'));
+        final db = DatabaseService(
+          topicRepository: TopicRepository(),
+          questionRepository: QuestionRepository(),
+          attemptRepository: AttemptRepository(),
+          lessonRepository: LessonRepository(),
+          sessionRepository: FakeSessionRepository(),
+          subjectRepository: subjectRepo,
+          conversationRepository: ConversationRepository(),
+          tutorSessionRepository: FakeTutorSessionRepository(),
+        );
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setStats({
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'avgTimePerQuestion': 0,
+          'totalStudyTimeHours': 0,
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        });
+        final service = createMentorService(database: db, progressTracker: tracker);
+        final result = await service.hasMeaningfulData();
+        expect(result, isTrue);
+      });
+    });
+
+    group('confirmSchedule', () {
+      test('schedules lesson and returns success message when no conflict', () async {
+        final fakePlanner = FakePlannerService();
+        fakePlanner.setHasConflict(false);
+        fakePlanner.setScheduleResult(true);
+        final service = createMentorService(plannerService: fakePlanner);
+
+        final proposal = ScheduleProposal(
+          topicTitle: 'general',
+          proposedTime: DateTime.now().add(const Duration(hours: 2)),
+        );
+        final result = await service.confirmSchedule(proposal);
+        expect(result, contains('scheduled'));
+        expect(fakePlanner.scheduleCallCount, equals(1));
+      });
+
+      test('returns failure message when scheduling returns false', () async {
+        final fakePlanner = FakePlannerService();
+        fakePlanner.setHasConflict(false);
+        fakePlanner.setScheduleResult(false);
+        final service = createMentorService(plannerService: fakePlanner);
+
+        final proposal = ScheduleProposal(
+          topicTitle: 'general',
+          proposedTime: DateTime.now().add(const Duration(hours: 2)),
+        );
+        final result = await service.confirmSchedule(proposal);
+        expect(result, contains('unable to schedule'));
+        expect(fakePlanner.scheduleCallCount, equals(1));
+      });
+
+      test('returns conflict message when scheduling conflict detected', () async {
+        final fakePlanner = FakePlannerService();
+        fakePlanner.setHasConflict(true);
+        final service = createMentorService(plannerService: fakePlanner);
+
+        final proposal = ScheduleProposal(
+          topicTitle: 'general',
+          proposedTime: DateTime.now().add(const Duration(hours: 2)),
+        );
+        final result = await service.confirmSchedule(proposal);
+        expect(result, contains('conflict'));
+        expect(fakePlanner.scheduleCallCount, equals(0));
+      });
+    });
+
+    group('_extractTopic locale-awareness', () {
+      test('extracts topic using Spanish sobre keyword', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm, localeName: 'es');
+        await service.chat('programar sobre calculo diferencial').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculo diferencial'));
+      });
+
+      test('extracts topic using Spanish materia keyword', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm, localeName: 'es');
+        await service.chat('programar materia historia universal').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('historia universal'));
+      });
+    });
+
+    group('_extractPlanProposal', () {
+      test('extracts days and goal from plan message', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('plan a 60-day roadmap for organic chemistry').toList();
+        expect(service.pendingPlanProposal, isNotNull);
+        expect(service.pendingPlanProposal!.days, equals(60));
+        expect(service.pendingPlanProposal!.goal, contains('organic chemistry'));
+      });
+
+      test('defaults to 30 days when no duration specified', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm);
+        await service.chat('plan a roadmap').toList();
+        expect(service.pendingPlanProposal, isNotNull);
+        expect(service.pendingPlanProposal!.days, equals(30));
+        expect(service.pendingPlanProposal!.goal, isNull);
       });
     });
   });

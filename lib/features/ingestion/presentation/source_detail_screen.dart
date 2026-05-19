@@ -15,7 +15,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/core/widgets/loading_screen.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SourceDetailScreen extends ConsumerStatefulWidget {
@@ -304,7 +304,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const CircularProgressIndicator(),
+                  const LoadingIndicator(),
                   const SizedBox(height: 16),
                   Text(_reprocessingStage),
                 ],
@@ -312,6 +312,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
             )
           : SingleChildScrollView(
               padding: ResponsiveUtils.screenPadding(context),
+              physics: const AlwaysScrollableScrollPhysics(),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -414,6 +415,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                               controller: _scrollController,
                               child: SingleChildScrollView(
                                 controller: _scrollController,
+                                physics: const AlwaysScrollableScrollPhysics(),
                                 child: source.extractedText.isNotEmpty
                                     ? Text(source.extractedText, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))
                                     : Text(
@@ -440,20 +442,24 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   else
                     ...List.generate(_questions.length, (i) {
                       final q = _questions[i];
-                      return Card(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            radius: 14,
-                            backgroundColor: theme.colorScheme.primaryContainer,
-                            child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
+                      return Semantics(
+                        button: true,
+                        label: q.text,
+                        child: Card(
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              radius: 14,
+                              backgroundColor: theme.colorScheme.primaryContainer,
+                              child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
+                            ),
+                            title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                            subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
+                            trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
+                            onTap: () {
+                              Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
+                            },
                           ),
-                          title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                          subtitle: Text(l10n.questionSubtitle(_questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
-                          trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
-                          onTap: () {
-                            Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
-                          },
                         ),
                       );
                     }),
@@ -581,9 +587,12 @@ class _SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+    return Semantics(
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: 8),
+        child: Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+      ),
     );
   }
 }

@@ -32,6 +32,7 @@ import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -331,8 +332,8 @@ Widget _buildTestApp(
         instrumentation ?? FakeInstrumentationService(),
       ),
       if (topicRepo != null)
-        dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
-      dashboardAdherenceRepositoryProvider.overrideWithValue(
+        topicRepositoryProvider.overrideWithValue(topicRepo),
+      engagementAdherenceRepoProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(average: 0.5, weekly: 0.5),
       ),
       spacedRepetitionServiceProvider.overrideWithValue(
@@ -374,8 +375,8 @@ Widget _buildTestAppWithRoutes(
         instrumentation ?? FakeInstrumentationService(),
       ),
       if (topicRepo != null)
-        dashboardTopicRepositoryProvider.overrideWithValue(topicRepo),
-      dashboardAdherenceRepositoryProvider.overrideWithValue(
+        topicRepositoryProvider.overrideWithValue(topicRepo),
+      engagementAdherenceRepoProvider.overrideWithValue(
         adherenceRepo ?? FakePlanAdherenceRepository(average: 0.5, weekly: 0.5),
       ),
       spacedRepetitionServiceProvider.overrideWithValue(

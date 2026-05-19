@@ -31,6 +31,9 @@ class Lesson extends HiveObject {
   @HiveField(8, defaultValue: '')
   final String? markscheme;
 
+  @HiveField(9, defaultValue: '')
+  final String? sessionId;
+
   Lesson({
     required this.id,
     required this.subjectId,
@@ -41,6 +44,7 @@ class Lesson extends HiveObject {
     this.generatedBy = GeneratedBy.manual,
     required this.createdAt,
     this.markscheme,
+    this.sessionId,
   }) : blocks = blocks ?? [];
 
   Map<String, dynamic> toJson() => {
@@ -53,6 +57,7 @@ class Lesson extends HiveObject {
     'generatedBy': generatedBy.index,
     'createdAt': createdAt.toIso8601String(),
     'markscheme': markscheme,
+    'sessionId': sessionId,
   };
 
   factory Lesson.fromJson(Map<String, dynamic> json) => Lesson(
@@ -65,6 +70,7 @@ class Lesson extends HiveObject {
     generatedBy: GeneratedBy.values[json['generatedBy'] ?? 0],
     createdAt: DateTime.parse(json['createdAt']),
     markscheme: json['markscheme'],
+    sessionId: json['sessionId'],
   );
 
   Lesson copyWith({
@@ -77,6 +83,7 @@ class Lesson extends HiveObject {
     GeneratedBy? generatedBy,
     DateTime? createdAt,
     String? markscheme,
+    String? sessionId,
   }) {
     return Lesson(
       id: id ?? this.id,
@@ -88,6 +95,7 @@ class Lesson extends HiveObject {
       generatedBy: generatedBy ?? this.generatedBy,
       createdAt: createdAt ?? this.createdAt,
       markscheme: markscheme ?? this.markscheme,
+      sessionId: sessionId ?? this.sessionId,
     );
   }
 }

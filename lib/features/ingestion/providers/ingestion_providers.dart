@@ -5,6 +5,7 @@ import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 
@@ -45,6 +46,7 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
     sourceRepository: sourceRepository,
     topicRepository: topicRepository,
     questionRepository: questionRepository,
+    lessonAgentService: ref.watch(lessonAgentServiceProvider),
     documentExtractor: documentExtractor,
     webScraper: webScraper,
     modelId: modelId,

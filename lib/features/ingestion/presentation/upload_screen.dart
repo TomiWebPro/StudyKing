@@ -9,12 +9,11 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/data/models/source_model.dart';
-import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
+import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show contentPipelineProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class UploadScreen extends ConsumerStatefulWidget {
@@ -39,7 +38,6 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _urlController = TextEditingController();
-  final _sourceRepo = SourceRepository();
 
   String? _selectedSubjectId;
   List<Subject> _subjects = [];
@@ -49,6 +47,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _useUrlInput = false;
   bool _useFilePicker = false;
   bool _generateQuestions = true;
+  bool _generateLessons = false;
   String? _selectedFilePath;
   String? _selectedFileName;
   ProcessingStatus? _processingStage;
@@ -100,7 +99,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.filePickerError(e.toString())),
+            content: Text(l10n.filePickerError('')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -132,7 +131,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              AppLocalizations.of(context)!.cameraError(e.toString()),
+              AppLocalizations.of(context)!.cameraError(''),
             ),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
@@ -141,17 +140,13 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     }
   }
 
+  ContentPipeline _getPipeline() {
+    if (widget.pipeline != null) return widget.pipeline!;
+    return ref.read(contentPipelineProvider);
+  }
+
   Future<void> _fetchUrlContent(String url) async {
-    final pipeline = widget.pipeline;
-    if (pipeline == null) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.contentPipelineNotAvailable)),
-        );
-      }
-      return;
-    }
+    final pipeline = _getPipeline();
 
     try {
       final result = await pipeline.fetchAndScrapeUrl(url);
@@ -177,7 +172,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10n.urlFetchError(e.toString())),
+            content: Text(l10n.urlFetchError('')),
             backgroundColor: Theme.of(context).colorScheme.error,
           ),
         );
@@ -208,101 +203,89 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
     try {
       final l10n = AppLocalizations.of(context)!;
-      final pipeline = widget.pipeline;
+      final pipeline = _getPipeline();
       final sourceType = _useFilePicker
           ? _inferSourceType(_selectedFileName ?? '')
           : _useUrlInput
-              ? SourceType.webPage
+              ? _inferSourceType(content)
               : SourceType.externalResource;
 
-      if (pipeline != null) {
+      if (fullPipeline || _generateQuestions || _generateLessons) {
+        final resolvedModelId = widget.fixedModelId != null
+            ? widget.fixedModelId!
+            : ref.read(selectedModelProvider);
+        if ((_generateQuestions || _generateLessons) && resolvedModelId.isEmpty) {
+          setState(() {
+            _error = l10n.modelNotConfigured;
+            _isUploading = false;
+          });
+          return;
+        }
+
+        List<String> possibleTopics = [];
+        if (_selectedSubjectId != null && _selectedSubjectId!.isNotEmpty) {
+          try {
+            final topicRepo = TopicRepository();
+            await topicRepo.init();
+            final topicsResult = await topicRepo.getBySubject(_selectedSubjectId!);
+            possibleTopics = (topicsResult.data ?? [])
+                .map((t) => t.title)
+                .where((t) => t.isNotEmpty)
+                .toList();
+          } catch (_) {}
+        }
+
         final actualContent = _useFilePicker && _selectedFilePath != null
             ? 'file://$_selectedFilePath'
             : content;
 
-        if (fullPipeline) {
-          final resolvedModelId = widget.fixedModelId != null
-              ? widget.fixedModelId!
-              : ref.read(selectedModelProvider);
-          if (_generateQuestions && resolvedModelId.isEmpty) {
-            setState(() {
-              _error = l10n.modelNotConfigured;
-              _isUploading = false;
-            });
-            return;
-          }
-
-          List<String> possibleTopics = [];
-          if (_selectedSubjectId != null && _selectedSubjectId!.isNotEmpty) {
-            try {
-              final topicRepo = TopicRepository();
-              await topicRepo.init();
-              final topicsResult = await topicRepo.getBySubject(_selectedSubjectId!);
-              possibleTopics = (topicsResult.data ?? [])
-                  .map((t) => t.title)
-                  .where((t) => t.isNotEmpty)
-                  .toList();
-            } catch (_) {}
-          }
-
-          final result = await pipeline.processFullPipeline(
-            title: title,
-            content: actualContent,
-            type: sourceType,
-            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
-            modelId: resolvedModelId,
-            subjectId: _selectedSubjectId ?? '',
-            sourceUrl: _useUrlInput ? content : '',
-            possibleTopics: possibleTopics,
-            generateQuestions: _generateQuestions,
-            onProgress: (status, description) {
-              if (mounted) {
-                setState(() {
-                  _processingStage = status;
-                  _processingStageDescription = description;
-                });
-              }
-            },
-          );
-          if (result.isFailure) {
-            setState(() {
-              _error = l10n.uploadFailed(result.error ?? '');
-              _isUploading = false;
-            });
-            return;
-          }
-        } else {
-          final result = await pipeline.processUpload(
-            title: title,
-            content: actualContent,
-            type: sourceType,
-            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
-            subjectId: _selectedSubjectId ?? '',
-            sourceUrl: _useUrlInput ? content : '',
-          );
-          if (result.isFailure) {
-            setState(() {
-              _error = l10n.uploadFailed(result.error ?? '');
-              _isUploading = false;
-            });
-            return;
-          }
+        final result = await pipeline.processFullPipeline(
+          title: title,
+          content: actualContent,
+          type: sourceType,
+          studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
+          modelId: resolvedModelId,
+          subjectId: _selectedSubjectId ?? '',
+          sourceUrl: _useUrlInput ? content : '',
+          possibleTopics: possibleTopics,
+          generateQuestions: _generateQuestions,
+          generateLessons: _generateLessons,
+          onProgress: (status, description) {
+            if (mounted) {
+              setState(() {
+                _processingStage = status;
+                _processingStageDescription = description;
+              });
+            }
+          },
+        );
+        if (result.isFailure) {
+          setState(() {
+            _error = l10n.uploadFailed(result.error ?? '');
+            _isUploading = false;
+          });
+          return;
         }
       } else {
-        await _sourceRepo.init();
-        await _sourceRepo.create(
-          Source(
-            id: 'src_${DateTime.now().millisecondsSinceEpoch}',
-            title: title,
-            content: _useFilePicker && _selectedFilePath != null
-                ? 'file://$_selectedFilePath'
-                : content,
-            type: sourceType,
-            studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
-            subjectId: _selectedSubjectId ?? '',
-            sourceUrl: _useUrlInput ? content : '',
-          ),
+        final actualContent = _useFilePicker && _selectedFilePath != null
+            ? 'file://$_selectedFilePath'
+            : content;
+
+        final result = await pipeline.processUpload(
+          title: title,
+          content: actualContent,
+          type: sourceType,
+          studentId: widget.fixedStudentId ?? StudentIdService().getStudentId(),
+          subjectId: _selectedSubjectId ?? '',
+          sourceUrl: _useUrlInput ? content : '',
         );
+        if (result.isFailure) {
+          setState(() {
+            _error = l10n.uploadFailed(result.error ?? '');
+            _isUploading = false;
+          });
+          return;
+        }
       }
 
       setState(() {
@@ -323,7 +306,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             content: Text(_success!),
             duration: Timeouts.snackbarSuccess,
             action: SnackBarAction(
-              label: 'View Library',
+              label: l10n.contentLibrary,
               onPressed: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
             ),
           ),
@@ -332,7 +315,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       }
     } catch (e) {
       setState(() {
-        _error = AppLocalizations.of(context)!.uploadFailed(e.toString());
+        _error = AppLocalizations.of(context)!.uploadFailed('');
         _isUploading = false;
         _processingStage = null;
         _processingStageDescription = '';
@@ -340,8 +323,12 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     }
   }
 
-  SourceType _inferSourceType(String fileName) {
-    final ext = fileName.split('.').last.toLowerCase();
+  SourceType _inferSourceType(String name) {
+    final lower = name.toLowerCase();
+    if (lower.contains('youtube.com') || lower.contains('youtu.be')) {
+      return SourceType.video;
+    }
+    final ext = name.split('.').last.toLowerCase();
     switch (ext) {
       case 'pdf':
         return SourceType.pdf;
@@ -377,6 +364,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: FocusTraversalGroup(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -544,7 +532,17 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                 onChanged: (val) {
                   setState(() => _generateQuestions = val ?? true);
                 },
-                controlAffinity: ListTileControlAffinity.leading,
+                controlAffinity: ListTileControlAffinity.platform,
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                title: Text(l10n.generateLessonFromContent),
+                subtitle: Text(l10n.generateLessonFromContentHint),
+                value: _generateLessons,
+                onChanged: (val) {
+                  setState(() => _generateLessons = val ?? true);
+                },
+                controlAffinity: ListTileControlAffinity.platform,
                 contentPadding: EdgeInsets.zero,
               ),
 
@@ -553,7 +551,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               if (_error != null)
                 Semantics(
                   liveRegion: true,
-                  label: 'Error: $_error',
+                  label: l10n.errorOccurred,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
@@ -577,7 +575,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               if (_success != null)
                 Semantics(
                   liveRegion: true,
-                  label: 'Success: $_success',
+                  label: l10n.uploaded,
                   child: Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(

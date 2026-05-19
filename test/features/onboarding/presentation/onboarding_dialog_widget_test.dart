@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
 import 'package:studyking/features/onboarding/services/onboarding_service.dart';
+import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -567,15 +568,12 @@ void main() {
   });
 
   group('persistence', () {
-    late Map<String, dynamic> storage;
-
     setUp(() {
-      storage = <String, dynamic>{};
-      OnboardingService.setTestStorage(storage);
+      OnboardingService.setStorage(InMemoryOnboardingStorage());
     });
 
     tearDown(() {
-      OnboardingService.setTestStorage(null);
+      OnboardingService.setStorage(HiveOnboardingStorage());
     });
 
     testWidgets('Get Started persists onboarding_completed flag', (tester) async {
@@ -584,7 +582,7 @@ void main() {
       await tester.tap(find.text('Get Started'));
       await tester.pump();
 
-      expect(storage['onboarding_completed'], isTrue);
+      expect(await OnboardingService.isOnboardingNeeded(), isFalse);
     });
   });
 }

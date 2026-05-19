@@ -1,10 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../services/voice_controller.dart';
 
 class VoiceBar extends StatefulWidget {
-  final VoiceController controller;
+  final VoiceService controller;
   final ValueChanged<String> onTranscriptionSubmitted;
   final bool isEnabled;
   final bool reduceMotion;

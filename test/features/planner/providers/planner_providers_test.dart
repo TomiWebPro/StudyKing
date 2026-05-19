@@ -16,7 +16,7 @@ import 'package:studyking/features/planner/data/repositories/pending_action_repo
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/data/adapters.dart';
@@ -189,33 +189,35 @@ class _FakePendingActionRepo extends PendingActionRepository {
   void addAction(PendingActionModel action) => _actions[action.id] = action;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
     if (_throwOnGetPending) throw Exception('get pending error');
-    return _actions.values
+    return Result.success(_actions.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
-        .toList();
+        .toList());
   }
 
   @override
   Future<Result<PendingActionModel?>> get(String id) async => Result.success(_actions[id]);
 
   @override
-  Future<void> markCompleted(String id) async {
+  Future<Result<void>> markCompleted(String id) async {
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'completed');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> markRejected(String id) async {
+  Future<Result<void>> markRejected(String id) async {
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'rejected');
     }
+    return Result.success(null);
   }
 }
 
@@ -237,8 +239,8 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   }
 }
 
-class _FakePlanAdapter extends PlanAdapter {
-  _FakePlanAdapter() : super();
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  _FakePlanAdherenceOrchestrator() : super();
 
   AdherenceDeviation? _deviation;
   PersonalLearningPlan? _regeneratedPlan;
@@ -270,13 +272,7 @@ class _FakePlanAdapter extends PlanAdapter {
   }
 
   @override
-  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
 }
 
 class _FakeErrorPlannerService extends PlannerService {
@@ -292,7 +288,7 @@ class _FakeErrorPlannerService extends PlannerService {
     required RoadmapRepository roadmapRepo,
     required SessionRepository sessionRepo,
     required PendingActionRepository pendingActionRepo,
-    required PlanAdapter planAdapter,
+    required PlanAdherenceOrchestrator planOrchestrator,
     super.fixedStudentId,
     super.repository,
     this.throwOnScheduleLesson = false,
@@ -306,7 +302,7 @@ class _FakeErrorPlannerService extends PlannerService {
     roadmapRepo: roadmapRepo,
     sessionRepo: sessionRepo,
     pendingActionRepo: pendingActionRepo,
-    planAdapter: planAdapter,
+    planOrchestrator: planOrchestrator,
   );
 
   @override
@@ -340,9 +336,9 @@ class _FakeErrorPlannerService extends PlannerService {
   }
 
   @override
-  Future<void> redistributeWorkload(int missedMinutes) async {
+  Future<void> redistributeWorkload(int missedMinutes, {String strategy = 'days:3'}) async {
     if (throwOnRedistribute) throw Exception('redistribute error');
-    return super.redistributeWorkload(missedMinutes);
+    return super.redistributeWorkload(missedMinutes, strategy: strategy);
   }
 }
 
@@ -353,7 +349,7 @@ PlannerService _createService({
   _FakeRoadmapRepository? roadmapRepo,
   _FakeSessionRepo? sessionRepo,
   _FakePendingActionRepo? pendingActionRepo,
-  _FakePlanAdapter? planAdapter,
+  _FakePlanAdherenceOrchestrator? planOrchestrator,
   _FakeAdherenceRepo? adherenceRepo,
   SyllabusResolver? syllabusResolver,
   String? fixedStudentId,
@@ -364,20 +360,20 @@ PlannerService _createService({
   final rRepo = roadmapRepo ?? _FakeRoadmapRepository();
   final sRepo = sessionRepo ?? _FakeSessionRepo();
   final paRepo = pendingActionRepo ?? _FakePendingActionRepo();
-  final adapter = planAdapter ?? _FakePlanAdapter();
+  final adapter = planOrchestrator ?? _FakePlanAdherenceOrchestrator();
   final resolver = syllabusResolver ?? SyllabusResolver(
     topicRepository: tRepo,
     masteryRepository: mRepo,
   );
   return PlannerService(
     planRepo: pRepo,
-    masteryService: MasteryGraphService(repository: mRepo),
+    masteryService: MasteryGraphService(),
     repository: mRepo,
     topicRepository: tRepo,
     roadmapRepo: rRepo,
     sessionRepo: sRepo,
     pendingActionRepo: paRepo,
-    planAdapter: adapter,
+    planOrchestrator: adapter,
     adherenceRepo: adherenceRepo,
     syllabusResolver: resolver,
     fixedStudentId: fixedStudentId ?? 'test-student',
@@ -432,7 +428,7 @@ void main() {
     late _FakeRoadmapRepository roadmapRepo;
     late _FakeSessionRepo sessionRepo;
     late _FakePendingActionRepo pendingActionRepo;
-    late _FakePlanAdapter planAdapter;
+    late _FakePlanAdherenceOrchestrator planOrchestrator;
     late PlannerService service;
     late PlannerNotifier notifier;
 
@@ -447,7 +443,7 @@ void main() {
       roadmapRepo = _FakeRoadmapRepository();
       sessionRepo = _FakeSessionRepo();
       pendingActionRepo = _FakePendingActionRepo();
-      planAdapter = _FakePlanAdapter();
+      planOrchestrator = _FakePlanAdherenceOrchestrator();
 
       final syllabusResolver = SyllabusResolver(
         topicRepository: topicRepo,
@@ -461,7 +457,7 @@ void main() {
         roadmapRepo: roadmapRepo,
         sessionRepo: sessionRepo,
         pendingActionRepo: pendingActionRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         syllabusResolver: syllabusResolver,
       );
 
@@ -782,13 +778,13 @@ void main() {
       test('sets error when service throws', () async {
         final fakeService = _FakeErrorPlannerService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(repository: masteryRepo),
+          masteryService: MasteryGraphService(),
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           fixedStudentId: 'test-student',
           throwOnScheduleLesson: true,
         );
@@ -829,13 +825,13 @@ void main() {
       test('sets error when service throws', () async {
         final fakeService = _FakeErrorPlannerService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(repository: masteryRepo),
+          masteryService: MasteryGraphService(),
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           fixedStudentId: 'test-student',
         );
         final throwingNotifier = PlannerNotifier(fakeService);
@@ -944,13 +940,13 @@ void main() {
       test('acceptPendingAction sets error when service throws', () async {
         final fakeService = _FakeErrorPlannerService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(repository: masteryRepo),
+          masteryService: MasteryGraphService(),
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           fixedStudentId: 'test-student',
           throwOnAcceptPendingAction: true,
         );
@@ -971,13 +967,13 @@ void main() {
       test('dismissPendingAction sets error when service throws', () async {
         final fakeService = _FakeErrorPlannerService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(repository: masteryRepo),
+          masteryService: MasteryGraphService(),
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           fixedStudentId: 'test-student',
           throwOnDismissPendingAction: true,
         );
@@ -1011,7 +1007,7 @@ void main() {
       });
 
       test('regenerates plan successfully', () async {
-        planAdapter.setRegeneratedPlan(PersonalLearningPlan(
+        planOrchestrator.setRegeneratedPlan(PersonalLearningPlan(
           studentId: 'test-student',
           generatedAt: DateTime.now(),
           dailyPlans: [],
@@ -1034,7 +1030,7 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        planAdapter.setThrowOnSuggestRegeneration();
+        planOrchestrator.setThrowOnSuggestRegeneration();
 
         await notifier.regenerateFromAdherence(l10n);
 
@@ -1165,7 +1161,7 @@ void main() {
 
     group('checkAdherence', () {
       test('updates state with adherence deviation', () async {
-        planAdapter.setDeviation(const AdherenceDeviation(
+        planOrchestrator.setDeviation(const AdherenceDeviation(
           consecutiveLowDays: 5,
           averageAdherence: 0.4,
           requiresRegeneration: true,
@@ -1188,7 +1184,7 @@ void main() {
       });
 
       test('handles exception gracefully', () async {
-        planAdapter.setThrowOnCheckAdherence();
+        planOrchestrator.setThrowOnCheckAdherence();
 
         await notifier.checkAdherence();
 
@@ -1257,7 +1253,7 @@ void main() {
           status: SessionStatus.planned,
           tutorMetadata: TutorMetadata(topicTitle: 'Vectors'),
         ));
-        planAdapter.setDeviation(const AdherenceDeviation(
+        planOrchestrator.setDeviation(const AdherenceDeviation(
           consecutiveLowDays: 3,
           averageAdherence: 0.5,
           requiresRegeneration: true,
@@ -1331,13 +1327,13 @@ void main() {
       test('sets error on failure', () async {
         final failingService = _FakeErrorPlannerService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(repository: masteryRepo),
+          masteryService: MasteryGraphService(),
           repository: masteryRepo,
           topicRepository: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           fixedStudentId: 'test-student',
           throwOnRedistribute: true,
         );
@@ -1347,29 +1343,6 @@ void main() {
       });
     });
 
-    group('linkDailyPlanToRoadmap', () {
-      test('completes without error when called', () async {
-        await notifier.linkDailyPlanToRoadmap(['topic-1', 'topic-2']);
-        expect(notifier.currentState.roadmaps, isEmpty);
-      });
-
-      test('updates roadmaps when roadmaps exist', () async {
-        roadmapRepo.addRoadmap(RoadmapModel(
-          id: 'rm-1',
-          studentId: 'test-student',
-          goal: 'Learn Physics',
-          createdAt: DateTime.now(),
-        ));
-        await notifier.linkDailyPlanToRoadmap(['topic-1']);
-        expect(notifier.currentState.roadmaps, hasLength(1));
-      });
-
-      test('handles exception gracefully when service throws', () async {
-        roadmapRepo.setThrowOnGetRoadmaps();
-        await notifier.linkDailyPlanToRoadmap(['topic-1']);
-        expect(notifier.currentState.roadmaps, isEmpty);
-      });
-    });
   });
 
   group('plannerServiceProvider', () {

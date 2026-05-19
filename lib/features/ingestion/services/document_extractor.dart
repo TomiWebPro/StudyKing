@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -63,6 +64,13 @@ class DocumentExtractor {
     String rawContent,
     SourceType sourceType,
   ) async {
+    if (kIsWeb && rawContent.startsWith('file://')) {
+      return ExtractionResult(
+        text: rawContent,
+        extractionMethod: 'pdf_web_unsupported',
+      );
+    }
+
     if (rawContent.isEmpty) {
       return ExtractionResult(text: '', extractionMethod: 'pdf_empty');
     }
@@ -94,12 +102,28 @@ class DocumentExtractor {
         final file = File(filePath);
         if (file.existsSync()) {
           final bytes = file.readAsBytesSync();
+          if (bytes.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[3] == 0x04) {
+            final extension = filePath.split('.').last.toLowerCase();
+            final formatHint = switch (extension) {
+              'docx' => 'DOCX (Word document — ZIP-based XML format)',
+              'epub' => 'EPUB (e-book — ZIP-based XML/HTML format)',
+              'xlsx' => 'XLSX (Excel spreadsheet — ZIP-based XML format)',
+              'pptx' => 'PPTX (PowerPoint — ZIP-based XML format)',
+              _ => 'ZIP archive',
+            };
+            return ExtractionResult(
+              text: '[$formatHint] File: $filePath — content is a binary archive, not plain text. '
+                  'Please process this file using its native format. If text extraction is needed, '
+                  'pass the raw bytes to an LLM with format-specific instructions.',
+              extractionMethod: '${extension}_binary_not_decoded',
+            );
+          }
           final content = utf8.decode(bytes, allowMalformed: true);
           if (content.length > 50) {
             final chunks = _chunkContent(content);
             return ExtractionResult(
               text: content,
-              extractionMethod: 'pdf_file_read',
+              extractionMethod: 'file_read',
               pageCount: chunks.isNotEmpty ? chunks.length : null,
               chunks: chunks,
             );

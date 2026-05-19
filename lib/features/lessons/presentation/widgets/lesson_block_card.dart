@@ -6,8 +6,16 @@ import '../../../../l10n/generated/app_localizations.dart';
 class LessonBlockCard extends StatefulWidget {
   final LessonBlock block;
   final VoidCallback? onStartTutor;
+  final List<LessonBlock>? allBlocks;
+  final int? blockIndex;
 
-  const LessonBlockCard({super.key, required this.block, this.onStartTutor});
+  const LessonBlockCard({
+    super.key,
+    required this.block,
+    this.onStartTutor,
+    this.allBlocks,
+    this.blockIndex,
+  });
 
   @override
   State<LessonBlockCard> createState() => _LessonBlockCardState();
@@ -43,50 +51,53 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
     final cs = theme.colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: () => _showSlideFullScreenDialog(context),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [cs.primaryContainer, cs.secondaryContainer],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
+      child: Semantics(
+        button: true,
+        child: InkWell(
+          onTap: () => _showSlideFullScreenDialog(context),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 20),
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [cs.primaryContainer, cs.secondaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(Icons.slideshow, size: 48, color: cs.onPrimaryContainer),
+                    const SizedBox(height: 16),
+                    Text(
+                      widget.block.content,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: cs.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
-              child: Column(
-                children: [
-                  Icon(Icons.slideshow, size: 48, color: cs.onPrimaryContainer),
-                  const SizedBox(height: 16),
-                  Text(
-                    widget.block.content,
-                    style: theme.textTheme.titleLarge?.copyWith(
-                      color: cs.onPrimaryContainer,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.all(12),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.fullscreen, size: 16, color: cs.primary),
-                  const SizedBox(width: 4),
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.fullscreen, size: 16, color: cs.primary),
+                    const SizedBox(width: 4),
                     Text(
                       AppLocalizations.of(context)!.blockTypeSlide,
                       style: theme.textTheme.bodySmall?.copyWith(color: cs.primary),
                     ),
-                ],
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -94,31 +105,107 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
 
   void _showSlideFullScreenDialog(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      useSafeArea: false,
-      builder: (ctx) => Dialog.fullscreen(
-        child: Scaffold(
+    final blocks = widget.allBlocks ?? [widget.block];
+    final startIndex = widget.blockIndex ?? 0;
+    final pageController = PageController(initialPage: startIndex);
+
+    Navigator.of(context).push(
+      PageRouteBuilder(
+        pageBuilder: (ctx, animation, secondaryAnimation) => Scaffold(
           appBar: AppBar(
             title: Text(l10n.blockTypeSlide),
             leading: IconButton(
               icon: const Icon(Icons.close),
+              tooltip: l10n.close,
               onPressed: () => Navigator.pop(ctx),
             ),
           ),
-          body: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(32),
-              child: Text(
-                widget.block.content,
-                style: Theme.of(ctx).textTheme.headlineMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+          body: Column(
+            children: [
+              Expanded(
+                child: PageView.builder(
+                  controller: pageController,
+                  itemCount: blocks.length,
+                  itemBuilder: (context, i) {
+                    final block = blocks[i];
+                    return SingleChildScrollView(
+                      padding: const EdgeInsets.all(32),
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: Column(
+                        children: [
+                          Text(
+                            '${i + 1} / ${blocks.length}',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          Text(
+                            block.content,
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                 ),
-                textAlign: TextAlign.center,
               ),
-            ),
+              if (blocks.length > 1)
+                SafeArea(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.chevron_left),
+                          onPressed: () {
+                            final current = pageController.page?.round() ?? 0;
+                            if (current > 0) {
+                              pageController.previousPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                        ),
+                        const SizedBox(width: 16),
+                        ListenableBuilder(
+                          listenable: pageController,
+                          builder: (context, _) {
+                            final current = (pageController.page?.round() ?? 0) + 1;
+                            return Text(
+                              '$current / ${blocks.length}',
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            );
+                          },
+                        ),
+                        const SizedBox(width: 16),
+                        IconButton(
+                          icon: const Icon(Icons.chevron_right),
+                          onPressed: () {
+                            final current = pageController.page?.round() ?? 0;
+                            if (current < blocks.length - 1) {
+                              pageController.nextPage(
+                                duration: const Duration(milliseconds: 300),
+                                curve: Curves.easeInOut,
+                              );
+                            }
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
       ),
     );
   }
@@ -171,14 +258,14 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
             ] else ...[
               Icon(
                 _quizCorrect ? Icons.check_circle : Icons.cancel,
-                color: _quizCorrect ? Colors.green : Colors.red,
+                color: _quizCorrect ? cs.primary : cs.error,
                 size: 32,
               ),
               const SizedBox(height: 8),
               Text(
                 _quizCorrect ? l10n.correct : l10n.submitAnswer,
                 style: theme.textTheme.titleMedium?.copyWith(
-                  color: _quizCorrect ? Colors.green : Colors.red,
+                  color: _quizCorrect ? cs.primary : cs.error,
                 ),
               ),
               const SizedBox(height: 8),
@@ -218,9 +305,18 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
   }
 
   void _submitQuiz() {
-    final content = widget.block.content.toLowerCase();
-    final answer = _quizAnswer.toLowerCase().trim();
-    final correct = content.contains('answer:') && content.contains(answer);
+    final answer = _quizAnswer.trim();
+    final answerKey = widget.block.answerKey;
+    bool correct;
+    if (answerKey.isNotEmpty) {
+      final keys = answerKey.split('||').map((k) => k.trim().toLowerCase());
+      correct = keys.any((k) => answer.toLowerCase() == k);
+    } else {
+      final content = widget.block.content.toLowerCase();
+      final ansLower = answer.toLowerCase();
+      final idx = content.indexOf('answer:');
+      correct = idx >= 0 && content.substring(idx).contains(ansLower);
+    }
     setState(() {
       _quizSubmitted = true;
       _quizCorrect = correct;

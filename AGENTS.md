@@ -12,7 +12,7 @@ Every source file in `lib/features/*/` must have a corresponding test file follo
 | `lib/features/*/providers/*.dart` | `test/features/*/providers/*_test.dart` |
 | `lib/features/*/presentation/*.dart` | `test/features/*/presentation/*_test.dart` |
 | `lib/features/*/presentation/widgets/*.dart` | `test/features/*/presentation/widgets/*_test.dart` |
-| `lib/features/*/models/*.dart` | `test/features/*/models/*_test.dart` |
+| `lib/features/*/data/models/*.dart` | `test/features/*/data/models/*_test.dart` |
 | `lib/core/services/*.dart` | `test/core/services/*_test.dart` |
 | `lib/core/providers/*.dart` | `test/core/providers/*_test.dart` |
 | `lib/core/utils/*.dart` | `test/core/utils/*_test.dart` |
@@ -67,3 +67,10 @@ When writing tests for `MentorService` or `MentorScreen`, provide these fakes:
 - **CSV exports** should remain in invariant `en` format (CSV is data, not display).
 - **PDF exports** should use the user's locale (they are user-facing documents).
 - **LLM-facing** strings (prompts, tutor notes) can stay in `en` invariant format.
+
+## i18n Locale Switching Gotcha
+
+When the user changes their language in the Profile screen (`ref.read(localeProvider.notifier).state = Locale(value)`), any screen that caches `l10n = AppLocalizations.of(context)!` in a local variable (not inside `build`) will display stale strings until the screen is re-entered. To avoid stale text:
+
+- Always read `l10n` inside the `build` method or use `Consumer`/`ConsumerWidget` that re-reads on every build.
+- If stale text is observed after a locale switch, refactor to ensure `context` is fresh (e.g., via `Navigator.pushAndRemoveUntil` or by using `ref.watch(localeProvider)` at the widget root).

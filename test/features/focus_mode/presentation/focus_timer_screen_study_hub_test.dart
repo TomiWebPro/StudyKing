@@ -6,9 +6,9 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, notificationServiceProvider, planAdapterProvider, SettingsController;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, notificationServiceProvider, planOrchestratorProvider, SettingsController;
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
@@ -18,7 +18,8 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider, questionRepositoryProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
@@ -26,6 +27,7 @@ import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/notification_service.dart';
@@ -113,20 +115,14 @@ class _FakeQuestionRepository extends QuestionRepository {
   Future<Result<List<Question>>> getAll() async => Result.success(List.from(_questions));
 }
 
-// ── Fake PlanAdapter ───────────────────────────────────────────────────
+// ── Fake PlanAdherenceOrchestrator ───────────────────────────────────────────────────
 
-class _FakePlanAdapter extends PlanAdapter {
-  bool recordFromFocusSessionCalled = false;
-
-  _FakePlanAdapter() : super();
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  bool recordActivityCalled = false;
 
   @override
-  Future<void> recordFromFocusSession({
-    required String studentId,
-    required int actualMinutes,
-    String? planId,
-  }) async {
-    recordFromFocusSessionCalled = true;
+  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
+    recordActivityCalled = true;
   }
 }
 
@@ -268,16 +264,7 @@ class _FakeSettingsRepo extends SettingsRepository {
   Future<Result<SettingsBox>> getSettings() async => Result.success(_settings);
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey, String? apiBaseUrl, String? selectedModel,
-    ThemeMode? themeMode, double? fontSize, bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds, int? sessionDurationMinutes,
-    bool? highContrastEnabled, bool? largeTouchTargets, bool? reduceMotion,
-    bool? revisionRemindersEnabled, bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled, bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds, int? dailyReminderHour, int? dailyReminderMinute,
-    bool? firstFocusVisit, bool? dailyReminderEnabled,
-  }) async => Result.success(null);
+  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
 }
 
 // ── Factories ──────────────────────────────────────────────────────────
@@ -304,7 +291,7 @@ Widget _buildApp({
   SpacedRepetitionService? srService,
   MasteryGraphService? masteryGraphService,
   QuestionRepository? questionRepo,
-  PlanAdapter? planAdapter,
+  PlanAdherenceOrchestrator? planOrchestrator,
   StudyTimerService? timerService,
   SettingsBox? settings,
   TestNavigatorObserver? navigatorObserver,
@@ -317,7 +304,7 @@ Widget _buildApp({
       spacedRepetitionServiceProvider.overrideWithValue(srService ?? _FakeSpacedRepetitionService([])),
       questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
       studentIdValueProvider.overrideWithValue('test-student'),
-      planAdapterProvider.overrideWithValue(planAdapter ?? _FakePlanAdapter()),
+      planOrchestratorProvider.overrideWithValue(planOrchestrator ?? _FakePlanAdherenceOrchestrator()),
       settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepo(settings ?? SettingsBox()))),
       notificationServiceProvider.overrideWithValue(NotificationService()),
       if (masteryGraphService != null)

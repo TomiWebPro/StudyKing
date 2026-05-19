@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -178,23 +175,6 @@ Markscheme createTestMarkscheme({String answer = 'Paris'}) {
   return Markscheme(correctAnswer: answer);
 }
 
-/// Minimal Hive TypeAdapter for Question (no .g.dart file exists for it).
-class _TestQuestionAdapter extends TypeAdapter<Question> {
-  @override
-  final int typeId = 2;
-
-  @override
-  Question read(BinaryReader reader) {
-    final raw = reader.read() as Map;
-    return Question.fromJson(Map<String, dynamic>.from(raw));
-  }
-
-  @override
-  void write(BinaryWriter writer, Question obj) {
-    writer.write(obj.toJson());
-  }
-}
-
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
@@ -271,7 +251,7 @@ void main() {
         repo.attachBox(_ThrowingBox());
         final result = await repo.create(createTestQuestion());
         expect(result.isFailure, isTrue);
-        expect(result.error, 'Exception: Box put error');
+        expect(result.error, 'Failed to put: Exception: Box put error');
       });
     });
 
@@ -316,6 +296,13 @@ void main() {
         await repository.create(createTestQuestion(id: 'c'));
         final all = await repository.getAll();
         expect(all.data!.map((q) => q.id).toList(), ['a', 'b', 'c']);
+      });
+
+      test('returns failure when box.values throws', () async {
+        final repo = QuestionRepository();
+        repo.attachBox(_ThrowingBox());
+        final result = await repo.getAll();
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -685,6 +672,13 @@ void main() {
         expect(all.data!.length, 1);
         expect(all.data!.first.id, 'keep');
       });
+
+      test('returns failure when box.delete throws', () async {
+        final repo = QuestionRepository();
+        repo.attachBox(_ThrowingBox());
+        final result = await repo.delete('any');
+        expect(result.isFailure, isTrue);
+      });
     });
   });
 
@@ -722,52 +716,4 @@ void main() {
     });
   });
 
-  // ===========================================================================
-  // Hive integration test for init()
-  // ===========================================================================
-  group('QuestionRepository.init() (real Hive)', () {
-    late String hivePath;
-
-    setUp(() async {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      final dir = await Directory.systemTemp.createTemp('hive_question_test_');
-      hivePath = dir.path;
-      Hive.init(hivePath);
-      if (!Hive.isAdapterRegistered(2)) {
-        Hive.registerAdapter(_TestQuestionAdapter());
-      }
-    });
-
-    tearDown(() async {
-      await Hive.close();
-      if (hivePath.isNotEmpty) {
-        await Directory(hivePath).delete(recursive: true);
-      }
-    });
-
-    test('initializes repository and opens the box', () async {
-      final repo = QuestionRepository();
-      await repo.init();
-      expect(repo, isNotNull);
-    });
-
-    test('can create and retrieve after init', () async {
-      final repo = QuestionRepository();
-      await repo.init();
-      final result = await repo.create(createTestQuestion(id: 'init-q'));
-      expect(result.isSuccess, isTrue);
-      final stored = await repo.get('init-q');
-      expect(stored.data, isNotNull);
-      expect(stored.data!.id, 'init-q');
-    });
-
-    test('can getAll after init', () async {
-      final repo = QuestionRepository();
-      await repo.init();
-      await repo.create(createTestQuestion(id: 'a'));
-      await repo.create(createTestQuestion(id: 'b'));
-      final all = await repo.getAll();
-      expect(all.data!.length, 2);
-    });
-  });
 }

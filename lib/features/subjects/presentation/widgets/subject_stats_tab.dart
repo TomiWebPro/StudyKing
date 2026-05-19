@@ -51,7 +51,7 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
       future: _sessionsFuture,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingIndicator();
         }
         if (snapshot.hasError) {
           return Semantics(

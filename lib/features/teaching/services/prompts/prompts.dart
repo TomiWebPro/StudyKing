@@ -22,9 +22,9 @@ class ConversationPromptSet {
 
   static const ConversationPromptSet defaultTemplates = ConversationPromptSet(localeName: 'en');
 
-  String get _languageInstruction {
+  String _languageInstruction(AppLocalizations l10n) {
     if (localeName == 'en') return '';
-    return '\nIMPORTANT: Respond in the same language as the student (locale: $localeName). Do not use English unless the student does.';
+    return '\n${l10n.languageInstruction(localeName)}';
   }
 
   PromptEntry lessonPlan({
@@ -34,7 +34,7 @@ class ConversationPromptSet {
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     return PromptEntry(
-      systemPrompt: '${l10n.lessonPlanSystemPrompt}$_languageInstruction',
+      systemPrompt: '${l10n.lessonPlanSystemPrompt}${_languageInstruction(l10n)}',
       userPrompt: l10n.lessonPlanUserPrompt(subjectId, topicTitle, durationMinutes),
     );
   }
@@ -59,7 +59,7 @@ class ConversationPromptSet {
       ConversationPhase.adaptiveReview => l10n.adaptiveReviewContext,
       ConversationPhase.closing => l10n.closingContext,
     };
-    final systemPrompt = '${l10n.tutorSystemPrompt(subjectId, topicTitle)}$_languageInstruction';
+    final systemPrompt = '${l10n.tutorSystemPrompt(subjectId, topicTitle)}${_languageInstruction(l10n)}';
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);
   }
@@ -73,7 +73,7 @@ class ConversationPromptSet {
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     return PromptEntry(
-      systemPrompt: '${l10n.summarySystemPrompt}$_languageInstruction',
+      systemPrompt: '${l10n.summarySystemPrompt}${_languageInstruction(l10n)}',
       userPrompt: l10n.summaryUserPrompt(
         topicTitle, 
         exerciseCount, 
@@ -99,7 +99,7 @@ class ConversationPromptSet {
       studentAnswer: studentAnswer,
     );
     return PromptEntry(
-      systemPrompt: '${l10n.evaluationSystemPrompt}$_languageInstruction',
+      systemPrompt: '${l10n.evaluationSystemPrompt}${_languageInstruction(l10n)}',
       userPrompt: userPrompt,
     );
   }

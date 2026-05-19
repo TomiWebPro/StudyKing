@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_mode_card.dart';
 
@@ -24,6 +25,29 @@ class PracticeModeGrid extends StatelessWidget {
     required this.onTopicFocus,
     required this.onWeakAreas,
   });
+
+  void _showDisabledCardDialog(BuildContext context, String title, String message, String actionLabel, VoidCallback action) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(AppLocalizations.of(ctx)!.cancel),
+          ),
+          FilledButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              action();
+            },
+            child: Text(actionLabel),
+          ),
+        ],
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,6 +76,15 @@ class PracticeModeGrid extends StatelessWidget {
               subtitle: _getQuickPracticeSubtitle(l10n),
               color: Theme.of(context).colorScheme.primary,
               onTap: totalQuestionCount > 0 ? onQuickPractice : null,
+              onTapDisabled: totalQuestionCount == 0
+                  ? () => _showDisabledCardDialog(
+                      context,
+                      l10n.quickPractice,
+                      l10n.uploadMaterialsToCreateQuestions,
+                      l10n.uploadMaterials,
+                      () => Navigator.pushNamed(context, AppRoutes.upload),
+                    )
+                  : null,
             ),
             PracticeModeCard(
               icon: Icons.schedule,
@@ -59,6 +92,15 @@ class PracticeModeGrid extends StatelessWidget {
               subtitle: _getSpacedRepetitionSubtitle(l10n),
               color: Theme.of(context).colorScheme.tertiary,
               onTap: dueCounts.values.any((c) => c > 0) ? onSpacedRepetition : null,
+              onTapDisabled: dueCounts.values.every((c) => c <= 0)
+                  ? () => _showDisabledCardDialog(
+                      context,
+                      l10n.spacedRepetition,
+                      l10n.noReviewsScheduled,
+                      l10n.practice,
+                      onQuickPractice,
+                    )
+                  : null,
               badge: () {
                 final total = dueCounts.values.fold(0, (a, b) => a + b);
                 return total > 0 ? total : null;
@@ -77,6 +119,15 @@ class PracticeModeGrid extends StatelessWidget {
               subtitle: l10n.focusOnMistakes,
               color: Theme.of(context).colorScheme.error,
               onTap: hasSubjects ? onWeakAreas : null,
+              onTapDisabled: !hasSubjects
+                  ? () => _showDisabledCardDialog(
+                      context,
+                      l10n.weakAreas,
+                      l10n.addFirstSubject,
+                      l10n.subjects,
+                      () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+                    )
+                  : null,
             ),
           ],
         ),

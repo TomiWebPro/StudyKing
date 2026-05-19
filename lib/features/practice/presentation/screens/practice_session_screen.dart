@@ -11,15 +11,16 @@ import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
-import 'package:studyking/features/practice/services/difficulty_adapter.dart';
+import 'package:studyking/features/practice/services/difficulty_controller.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -30,6 +31,7 @@ import 'package:studyking/features/practice/presentation/widgets/practice_sessio
 import 'package:studyking/features/practice/presentation/widgets/practice_session_nav_buttons.dart';
 import 'package:studyking/features/practice/presentation/widgets/mistake_review_widget.dart';
 import 'package:studyking/features/practice/services/question_type_localizer.dart';
+import 'package:studyking/core/widgets/loading_indicator.dart';
 
 class PracticeSessionScreen extends ConsumerStatefulWidget {
   final PracticeSessionArgs args;
@@ -51,7 +53,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late final StudentIdService _studentIdService;
   late final MasteryRecorder _masteryRecorder;
   late final MistakeReviewService _mistakeReviewService;
-  late final DifficultyAdapter _difficultyAdapter;
+  late final DifficultyController _difficultyAdapter;
   List<Question> _questions = [];
   int _currentIndex = 0;
   int _previousIndex = 0;
@@ -76,7 +78,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _studentIdService = ref.read(studentIdServiceProvider);
     _masteryRecorder = ref.read(masteryRecorderProvider);
     _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
-    _difficultyAdapter = DifficultyAdapter();
+    _difficultyAdapter = DifficultyController();
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
@@ -328,37 +330,55 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _completeSession() async {
-    await _finalizeSession();
-    if (!mounted) return;
     if (_mistakeQuestionIds.isNotEmpty) {
-      _showMistakeReview();
+      // Save session data before showing the review
+      if (!_sessionAutoSaved) {
+        _sessionAutoSaved = true;
+        await _sessionService.autoSaveSession(
+          questionsAnswered: _questions.length,
+          correctAnswers: _correctAnswers,
+        );
+      }
+      await _recordAdherence();
+
+      final shouldFinalize = await _showMistakeReview();
+      if (!shouldFinalize) return;
+      if (!mounted) return;
+      final breakdown = _computeTopicBreakdown();
+      Navigator.pop(context, PracticeSessionResult(
+        questionsAnswered: _questions.length,
+        correctAnswers: _correctAnswers,
+        topicBreakdown: breakdown,
+      ));
     } else {
+      await _finalizeSession();
+      if (!mounted) return;
       _navigateToResults();
     }
   }
 
-  void _showMistakeReview() async {
+  Future<bool> _showMistakeReview() async {
     final mistakes = await _mistakeReviewService.getMistakesFromSession(
       studentId: _studentIdService.getStudentId(),
       subjectId: widget.args.subjectId,
       after: _sessionService.sessionStartTime,
     );
-    if (!mounted || mistakes.isEmpty) {
-      _navigateToResults();
-      return;
-    }
+    if (!mounted || mistakes.isEmpty) return true;
+    final completer = Completer<bool>();
     MistakeReviewWidget.show(
       context,
       mistakes: mistakes,
       onRedo: () {
         Navigator.pop(context);
         _startMistakeRedo(mistakes);
+        completer.complete(false);
       },
       onDismiss: () {
         Navigator.pop(context);
-        _navigateToResults();
+        completer.complete(true);
       },
     );
+    return completer.future;
   }
 
   void _startMistakeRedo(List<MistakeEntry> mistakes) {
@@ -397,6 +417,18 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     return breakdown;
   }
 
+  List<QuestionReviewData> _buildReviewData() {
+    return _questions.map((q) {
+      final record = _answerRecords.where((r) => r.questionId == q.id).firstOrNull;
+      return QuestionReviewData(
+        question: q,
+        userAnswer: record?.userAnswer,
+        correctAnswer: q.markscheme?.correctAnswer,
+        isCorrect: record?.isCorrect ?? false,
+      );
+    }).toList();
+  }
+
   void _navigateToResults() {
     final breakdown = _computeTopicBreakdown();
     Future.delayed(Timeouts.ms500, () {
@@ -414,8 +446,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final elapsedMinutes = DateTime.now()
         .difference(_sessionService.sessionStartTime)
         .inMinutes;
-    final planAdapter = PlanAdapter();
-    await planAdapter.recordFromPracticeSession(
+    final planOrchestrator = PlanAdherenceOrchestrator();
+    await planOrchestrator.recordActivity(
       studentId: _studentIdService.getStudentId(),
       actualQuestions: _questions.length,
       actualMinutes: elapsedMinutes.clamp(1, 480),
@@ -507,7 +539,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
               ? AppLocalizations.of(context)!.spacedRepetitionMode
               : AppLocalizations.of(context)!.practice),
         ),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const LoadingIndicator(),
       );
     }
 
@@ -517,6 +549,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         correctAnswers: _correctAnswers,
         onPracticeAgain: _restartSession,
         topicBreakdown: _computeTopicBreakdown(),
+        reviewQuestions: _buildReviewData(),
       );
     }
 
@@ -605,7 +638,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                           return IconButton(
                                             icon: Icon(
                                               vs.isListening ? Icons.mic : Icons.mic_none,
-                                              color: vs.isListening ? Colors.red : null,
+                                              color: vs.isListening ? Theme.of(context).colorScheme.error : null,
                                             ),
                                             tooltip: l10n.voiceInput,
                                             onPressed: _useVoiceInput,
@@ -704,6 +737,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
               final rating = index + 1;
               final isSelected = _currentConfidence == rating;
               return Semantics(
+                button: true,
                 selected: isSelected,
                   child: InkWell(
                   onTap: () => setState(() => _currentConfidence = rating),

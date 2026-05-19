@@ -133,5 +133,48 @@ void main() {
         expect(a.hashCode, a.hashCode);
       });
     });
+
+    group('serialization', () {
+      test('toJson/fromJson round-trip preserves all fields', () {
+        final now = DateTime(2026, 5, 19);
+        final original = EngagementNudgeModel(
+          id: 'rt-1',
+          studentId: 'student-1',
+          nudgeType: 'overwork',
+          message: 'Take a break!',
+          severity: 'high',
+          topicId: 'topic-1',
+          sentAt: now,
+          wasActedUpon: true,
+          actedUponAt: now,
+        );
+        final json = original.toJson();
+        final restored = EngagementNudgeModel.fromJson(json);
+        expect(restored.id, original.id);
+        expect(restored.studentId, original.studentId);
+        expect(restored.nudgeType, original.nudgeType);
+        expect(restored.message, original.message);
+        expect(restored.severity, original.severity);
+        expect(restored.topicId, original.topicId);
+        expect(restored.sentAt, original.sentAt);
+        expect(restored.wasActedUpon, original.wasActedUpon);
+        expect(restored.actedUponAt, original.actedUponAt);
+      });
+
+      test('toJson/fromJson round-trip with null optionals', () {
+        final original = EngagementNudgeModel(
+          id: 'rt-2',
+          studentId: 'student-1',
+          nudgeType: 'motivation',
+          message: 'Keep going!',
+        );
+        final json = original.toJson();
+        final restored = EngagementNudgeModel.fromJson(json);
+        expect(restored.severity, 'medium');
+        expect(restored.topicId, isNull);
+        expect(restored.wasActedUpon, isFalse);
+        expect(restored.actedUponAt, isNull);
+      });
+    });
   });
 }

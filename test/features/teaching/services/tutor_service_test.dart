@@ -15,7 +15,7 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/services/conversation_phase.dart';
@@ -136,15 +136,20 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
   }
 }
 
-class FakePlanAdapter extends PlanAdapter {
-  FakePlanAdapter() : super();
+class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  bool recordActivityCalled = false;
+
+  FakePlanAdherenceOrchestrator() : super();
 
   @override
-  Future<void> recordFromTutorSession({
+  Future<void> recordActivity({
     required String studentId,
     required int actualMinutes,
+    int actualQuestions = 0,
     String? planId,
-  }) async {}
+  }) async {
+    recordActivityCalled = true;
+  }
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -249,7 +254,7 @@ void main() {
         modelId: 'test-model',
         exerciseEvaluator: exerciseEvaluator,
         conversationRepository: conversationRepo,
-        planAdapter: FakePlanAdapter(),
+        planOrchestrator: FakePlanAdherenceOrchestrator(),
       );
     });
 

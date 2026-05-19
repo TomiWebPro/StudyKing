@@ -1,267 +1,277 @@
-# Dry-Run Usability Validator — Issue Log
+# Dry-Run Usability Validation Report
 
-**Scenario:** Returning After a 2-Week Break — Plan Drift, Stale Sessions, and Re-Engagement
-**Scenario file:** `dry-run-test/scenario_returning_after_break.md`
-**Date:** 2026-05-18
-
----
-
-## BLOCKER — App Crash or User Cannot Proceed
-
-### B1. No absence/gap detection mechanism exists in the entire app
-
-**Context:** The app has no concept of "last accessed" or "last activity" timestamp. `StudentIdService` (`lib/core/services/student_id_service.dart:27`) stores only a UUID. No profile model, settings box, or repository tracks when the user last opened the app or had any activity. A 2-week absence is indistinguishable from a 5-minute coffee break.
-
-**Affected files:**
-- `lib/core/services/student_id_service.dart:27` — UUID only, no timestamp
-- `lib/features/planner/data/repositories/plan_adherence_repository.dart:44-56` — `getConsecutiveLowAdherenceDays()` returns 0 when no records exist
-- `lib/core/services/plan_adapter.dart:48-91` — `checkAdherence()` cannot detect a clean-slate gap
-
-**Rationale:** Without a last-activity timestamp, the app cannot determine that the user has been away. All downstream features (adherence detection, planner banner, mentor context, re-engagement nudges) depend on this data and fail silently. The returning user receives zero acknowledgement or help.
-
-**Acceptance criteria (fixed):**
-- Add a `lastActivityAt` timestamp to `StudentIdService` (persisted to Hive), updated on every app foreground event and after any completed session.
-- Add a `daysSinceLastActivity` helper that computes the gap from today.
-- Use this timestamp in `PlanAdapter.checkAdherence()` to return a special `AbsenceDeviation` (extending `AdherenceDeviation`) when `daysSinceLastActivity >= 3`.
-
-### B2. Adherence deviation banner never shows for clean-slate gaps
-
-**Context:** `PlanAdapter.checkAdherence()` (`lib/core/services/plan_adapter.dart:48-91`) calls `getConsecutiveLowAdherenceDays()` which returns 0 when no adherence records exist. With `consecutiveLowDays == 0`, `requiresRegeneration` is `false`, and no `AdherenceDeviation` object is returned. The planner screen at `planner_screen.dart:737-796` checks `state.adherenceDeviation != null` — it's null, so no banner renders. A 14-day absence with zero records produces zero deviation.
-
-**Affected files:**
-- `lib/features/planner/data/repositories/plan_adherence_repository.dart:44-56` — loop has no "no records" fallback
-- `lib/core/services/plan_adapter.dart:48-91` — `checkAdherence()` does not check for zero-record scenarios
-- `lib/features/planner/presentation/planner_screen.dart:737-796` — banner only renders for non-null deviation
-
-**Rationale:** The user who most needs to see the adherence banner (returning from long absence with an outdated plan) is the one user who will never see it. The system treats "no data" as "no problem."
-
-**Acceptance criteria (fixed):**
-- After fixing B1, modify `checkAdherence()` to return an `AbsenceDeviation` when `daysSinceLastActivity >= 3` with `requiresRegeneration: true`.
-- Add a new localized string for the absence banner: "You've been away for {days} days. Your study plan may need adjustment."
-- Ensure the planner banner renders for `AbsenceDeviation` with the same redistribute/regenerate buttons.
-
-### B3. No catch-up mechanism for multi-week absences
-
-**Context:** `redistributeMissedWorkload()` (`lib/core/services/personal_learning_plan_service.dart:542-570`) only spreads missed minutes across the next 3 days. For a 14-day absence at 60 min/day, each of the next 3 days gets +280 min (4.7 hours extra per day) — an unreasonable workload. The method does not extend the plan end date, reduce scope, or offer the user a choice of catch-up strategy. There is no "Extend Plan" or "Catch Up" button anywhere in the UI. The regenerate path (`PlannerNotifier.regenerateFromAdherence()` at `planner_providers.dart:441-457`) is gated behind the invisible adherence banner.
-
-**Affected files:**
-- `lib/core/services/personal_learning_plan_service.dart:542-570` — 3-day redistribution only
-- `lib/features/planner/providers/planner_providers.dart:441-457` — regenerate path inaccessible without banner
-- `lib/features/planner/presentation/planner_screen.dart` — no "Extend Plan" or "Catch Up" button in the UI
-
-**Rationale:** A student returning from a 2-week absence has no supported path to adjust their plan duration. The only redistribution mechanism unreasonably increases daily workload. Without ability to extend the schedule, the student either falls further behind or must delete and recreate their plan (losing continuity).
-
-**Acceptance criteria (fixed):**
-- Add an `extendPlan(days)` method to `PersonalLearningPlanService` that shifts all remaining plan days by `days`, moving the end date later.
-- Add a "Catch Up" bottom sheet (accessible from planner screen or the new absence banner) with options: "Redistribute missed workload" (spread across remaining days), "Extend plan duration" (shift end date), "Regenerate plan" (create new plan from current data).
-- Modify `redistributeMissedWorkload()` to accept a strategy parameter: `{days: 3, 7, all}` instead of hardcoding 3.
-
-### B4. Engagement scheduler is entirely in-process — no background execution
-
-**Context:** `EngagementScheduler` (`lib/core/services/engagement_scheduler.dart:107-108`) uses `Timer.periodic` for daily checks. This timer stops when the app process is killed. There is no `WorkManager`, `AlarmManager`, or `BGTaskScheduler` integration for platform-level background scheduling. Additionally, there is no missed-nudge accumulation — if the scheduler misses 14 daily checks, those nudges are lost forever with no catch-up on app restart.
-
-**Affected files:**
-- `lib/core/services/engagement_scheduler.dart:107-108` — `Timer.periodic`, no platform background scheduling
-- `lib/main.dart:100-112` — scheduler created before `runApp()`, no background task registration
-- `pubspec.yaml` — check for `workmanager` or `flutter_background_service` dependency (likely absent)
-
-**Rationale:** Users who do not keep the app in memory receive zero engagement nudges during their absence. On return, no catch-up or summary nudge is generated. The entire proactive engagement system is non-functional for absent users.
-
-**Acceptance criteria (fixed):**
-- Integrate `workmanager` (Android) and `BGTaskScheduler` (iOS) for daily background checks.
-- On app start, compare `lastActivityAt` (from B1) with current time. If gap > 48 hours, generate a single "Welcome back" summary nudge with key stats from the gap period.
-- Store the last scheduler run timestamp; on a gap, skip missed checks (don't try to backfill all 14).
-
-### B5. No mechanism to clear stale "scheduled" lessons from absence period
-
-**Context:** `getScheduledLessons()` (`lib/features/planner/services/planner_service.dart:330-343`) filters sessions by `!completed && endTime == null`. A lesson scheduled 14 days ago that was never attended still appears as "upcoming" because it has no `endTime`. There is no time-based filter (e.g., `startTime.isAfter(DateTime.now().subtract(1.hour))`), no auto-expiry, no "missed" label, and no batch-dismiss UI.
-
-**Affected files:**
-- `lib/features/planner/services/planner_service.dart:330-343` — no time-based filtering on `getScheduledLessons()`
-- `lib/features/planner/presentation/planner_screen.dart:798-897` — scheduled lessons section, no "missed" indicator
-
-**Rationale:** Returning users see old, irrelevant scheduled lessons alongside upcoming ones. This clutters the UI and creates confusion ("Did I miss this lesson or is it still upcoming?").
-
-**Acceptance criteria (fixed):**
-- Add time-based filtering to `getScheduledLessons()`: exclude sessions where `startTime` is more than 1 hour in the past.
-- Add a `getMissedLessons()` method that returns past sessions with `endTime == null`.
-- In the planner screen, add a collapsed "Missed Lessons ({count})" section below scheduled lessons.
-- Add a "Dismiss All Missed" button that batch-sets `completed = true` for all missed lessons.
+**Generated:** 2026-05-19
+**Scenario:** `scenario_ai_provider_failures_recovery.md`
+**Persona:** A student with two weeks of usage whose AI provider (OpenRouter) goes down. Needs to diagnose failures, switch to a backup provider (Ollama), and recover from failed operations.
 
 ---
 
-## MAJOR — Feature Is Broken or Misleading
+## Summary of Findings
 
-### M1. Dashboard shows zeros for absent weeks with no explanation
-
-**Context:** `getWeeklyTrend()` (`lib/core/services/study_progress_tracker.dart:128-157`) iterates 8 weeks and produces entries for every week, including absent weeks where attempts = 0 and accuracy = 0.0. The `WeeklyChart` renders these as zero-height bars. There is no annotation, tooltip, or label explaining that the zero values are due to absence rather than poor performance.
-
-**Affected files:**
-- `lib/core/services/study_progress_tracker.dart:128-157` — produces zero entries for absent weeks
-- `lib/features/dashboard/presentation/widgets/weekly_chart.dart` — no gap/absence annotation in chart rendering
-- `lib/features/dashboard/providers/dashboard_data_providers.dart:46-53` — passes weekly trend data unchanged
-
-**Rationale:** A user looking at their dashboard after returning sees a discouraging flatline of zeros. The chart is factually correct but psychologically misleading — it communicates failure rather than "you were on break."
-
-**Acceptance criteria (fixed):**
-- When a week has zero attempts AND the user has existing data before that week, mark the week as an "absence gap" in the trend data.
-- In `WeeklyChart`, render gap weeks with a distinct visual style (e.g., dashed outline, lighter fill, or a "no data" label instead of a zero-height bar).
-- Add a tooltip on hover/tap: "No activity — you were away this week."
-
-### M2. Past daily plan cards are visually identical to future cards
-
-**Context:** `DailyPlanCard` (`lib/features/planner/presentation/widgets/daily_plan_card.dart:1-119`) renders every plan day identically regardless of whether it's in the past, present, or future. Past days show "Start Tutoring" buttons and priority topics as if the day is still active. There is no `isPast` check, no `completed` state, and no visual distinction.
-
-**Affected files:**
-- `lib/features/planner/presentation/widgets/daily_plan_card.dart` — no past/future awareness in rendering
-- `lib/features/planner/models/daily_plan.dart` — no `wasCompleted` or `wasAttended` field on the model
-
-**Rationale:** Returning users cannot visually distinguish between days they completed, days they missed, and upcoming days. The plan appears as a flat wall of identical cards. Starting a tutoring session on a day 2 weeks in the past is contextually nonsensical.
-
-**Acceptance criteria (fixed):**
-- Add an `isCompleted` field to `DailyPlan` model, populated from adherence records.
-- In `DailyPlanCard`, check if the day is in the past. If so:
-  - If completed: show a green checkmark overlay, disable action buttons, reduce opacity slightly.
-  - If missed (not completed): show a red "MISSED" badge, disable action buttons, add "Catch Up" button that navigates to a catch-up flow.
-- If the day is today: add a subtle "Today" indicator (pill badge or accent border).
-
-### M3. Mentor LLM context has no "days since last session" metric
-
-**Context:** `_buildContextPrompt()` (`lib/features/mentor/services/mentor_service.dart:155-256`) assembles a rich context string but does not include `daysSinceLastSession` or any gap-length metric. The `_getConsecutiveStudyDays()` method (`mentor_service.dart:351-374`) returns only the current streak (which is 0 after a break), not the gap length. The LLM cannot differentiate between "studied yesterday and took today off" vs. "last studied 14 days ago."
-
-**Affected files:**
-- `lib/features/mentor/services/mentor_service.dart:155-256` — context lacks gap metrics
-- `lib/features/mentor/services/mentor_service.dart:351-374` — `_getConsecutiveStudyDays()` only counts streak, not gap
-
-**Rationale:** The mentor is the most natural place for a returning user to ask for help ("I've been away, what do I do?"), but the LLM has no data to form a context-aware response. The conversation is generic.
-
-**Acceptance criteria (fixed):**
-- After fixing B1, add `daysSinceLastActivity` to the LLM context string: "The student has not been active for {daysSinceLastActivity} days."
-- If `daysSinceLastActivity >= 3`, prepend a system instruction: "The student is returning after a {daysSinceLastActivity}-day absence. Provide a warm welcome-back and suggest specific catch-up steps."
-
-### M4. CheckWellbeingAndGenerateNudges() has no differentiated messaging for long absences
-
-**Context:** `checkWellbeingAndGenerateNudges()` (`lib/features/mentor/services/mentor_service.dart:376-462`) has a single inactivity check at lines 433-450: if `consecutiveDays == 0` and the last session was >= 48 hours ago, it generates a `nudgeInactive48h`. There is no differentiated threshold for 7+, 14+, or 30+ day absences. All absences longer than 48 hours get the same "you've been inactive" message.
-
-**Affected files:**
-- `lib/features/mentor/services/mentor_service.dart:433-450` — single 48h threshold, no graduated messaging
-
-**Rationale:** "You haven't studied in 48 hours" is an appropriate nudge for a weekend gap but feels tone-deaf after a 2-week absence. The user needs a different message that acknowledges the longer gap and helps them plan re-engagement.
-
-**Acceptance criteria (fixed):**
-- Add graduated thresholds: 48h (>2 days), 7+ days, 14+ days, 30+ days.
-- Generate distinct nudge messages per threshold: "It's been {days} days. Let's ease back in..." (7+), "Welcome back! It's been {days} days..." (14+).
-- Add localized strings for each threshold in ARB files.
-
-### M5. Stale in-progress sessions orphaned after absence
-
-**Context:** Sessions that were not properly ended (e.g., app killed during Focus Mode or Tutor lesson) have `endTime: null` and `completed: false`. These appear in `getScheduledLessons()` (because `endTime == null` filter) and in `SessionHistoryScreen` with `Duration.zero` and 0 questions. No stale/expired indicator exists.
-
-**Affected files:**
-- `lib/features/sessions/presentation/session_history_screen.dart:513-611` — no "in progress" or "stale" badge for sessions with `endTime == null`
-- `lib/features/planner/services/planner_service.dart:330-343` — orphaned sessions appear in scheduled lessons
-- `lib/features/sessions/data/repositories/session_repository.dart` — no `getStaleOrphaned()` query
-
-**Rationale:** Returning users may see confusing sessions from before their break with zero duration and no context. A tutor session that was never ended looks like an upcoming lesson.
-
-**Acceptance criteria (fixed):**
-- In `SessionHistoryScreen`, sessions with `endTime == null` and `startTime` > 1 hour ago should show a "Stale" badge with an explanation tooltip.
-- Add a "Dismiss Stale Session" action (sets `completed = true`, `endTime = startTime`, `actualDuration = Duration.zero`).
-- Filter out stale sessions (no `endTime` and > 1 hour past) from `getScheduledLessons()`.
+| Step | Scenario Expectation | Status | Severity |
+|---|---|---|---|
+| 1 | Tutor timeouts with clear error when provider down | Tutor streaming errors NOT caught — unhandled exception locks UI | BLOCKER |
+| 6 | HTTP status codes (401, 429, 404) produce specific user messages | No HTTP status code parsing anywhere; `ExceptionType` enum is dead code | BLOCKER |
+| 9 | Rate limiting is detected and handled | No client-side rate limiting; 429 not parsed — only 403 string matched | BLOCKER |
+| 12 | Automatic failover to backup provider on connection failure | No fallback/backup provider concept exists | BLOCKER |
+| 2 | Mentor shows clear error with retry option when provider down | Error caught and displayed, but NO retry button for failed messages | MAJOR |
+| 4 | Provider switching auto-confirms and preserves model selection | Model only cleared on save, no confirmation dialog, shallow test | MAJOR |
+| 5 | Test Connection verifies chat completions and model availability | Only tests `/models` endpoint, not actual chat; doesn't verify model name | MAJOR |
+| 7 | Failed operations can be retried without data loss | Tutor: no retry, `_isSending` stuck. Mentor: must retype. Task retry loses context | MAJOR |
+| 8 | Mid-stream errors preserve partial responses | Partial content NOT saved to memory on failure; lost on error | MAJOR |
+| 11 | Different providers per feature | Single global `LlmService` — no per-feature provider config | MAJOR |
+| 10 | Provider config survives restart (no race conditions) | In-memory providers reset to defaults on cold restart; depends on init order | PARTIAL |
+| 3 | Settings tiles show error history and provider health | No "last error" or health status on AI config tiles | PARTIAL |
 
 ---
 
-### M6. Plan duration does not adjust for missed days after user returns
+## BLOCKER Findings
 
-**Context:** After the user returns and begins studying again, the original plan end date remains unchanged. Days 1-14 of the plan are past days that now sit as "missed" (though the app doesn't mark them as such — see M2). The remaining plan days are unchanged. The user is effectively 14 days behind the schedule with no automated adjustment.
+### B1: Tutor Streaming Errors Crash Silently — UI Locks Up
 
-**Affected files:**
-- `lib/features/planner/services/personal_learning_plan_service.dart` — no `shiftPlanDates()` or `extendPlan()` method
-- `lib/features/planner/presentation/planner_screen.dart` — no "Extend Plan" or "Re-schedule Remaining" action
+**Files:** `lib/features/teaching/presentation/tutor_screen.dart:180-197`
 
-**Rationale:** Without duration extension, a returning student's plan becomes increasingly unrealistic. They fall further behind each day as the fixed end date approaches.
+**What happens:** The `_sendMessage()` method uses `await for (final chunk in _manager!.sendMessage(text))` with NO try-catch block. If the LLM stream throws (timeout, network error, provider down), the exception propagates unhandled. `_isSending` stays `true` permanently, disabling the input. The user cannot send another message, retry, or interact with the tutor screen. They must pop the screen and restart.
 
-**Acceptance criteria (fixed):**
-- Same as B3 acceptance criteria.
-- Additionally, on first return after absence (detected via B1's `lastActivityAt`), if `daysSinceLastActivity >= 3`, auto-show a dialog: "You were away for {days} days. Would you like to extend your study plan by {days} days?"
+Compare to the Mentor screen (`lib/features/mentor/presentation/mentor_screen.dart:249-262`) which DOES catch the error, replace the message with error text, and re-enable input.
 
-### M7. `getAdherenceReport()` returns perfect adherence (1.0) for zero-record periods
-
-**Context:** `PlanAdapter.getAdherenceReport()` (`lib/core/services/plan_adapter.dart:125-152`) returns `averageAdherence: 1.0` when no records exist. Meanwhile `PlanAdherenceRepository.getAverageAdherence()` (`plan_adherence_repository.dart:37-42`) returns `0.0` for the same scenario. Two methods used by different parts of the app return contradictory results for the same data state.
-
-**Affected files:**
-- `lib/core/services/plan_adapter.dart:125-152` — returns 1.0 for empty data
-- `lib/features/planner/data/repositories/plan_adherence_repository.dart:37-42` — returns 0.0 for empty data
-
-**Rationale:** Depending on which component reads adherence data, the app may report perfect adherence (1.0) or zero adherence (0.0) for the same 14-day absence. This inconsistency could cause conflicting behavior in different parts of the app.
-
-**Acceptance criteria (fixed):**
-- Make both methods return `null` or a sentinel value (like `-1`) for "no data" instead of returning meaningful values.
-- Update all callers to handle `null` by displaying "No data / Not enough data" instead of treating it as a numeric value.
+**Acceptance criteria:**
+- `_sendMessage()` in `tutor_screen.dart` must wrap the stream iteration in try-catch
+- On catch: replace the incomplete assistant message with a localized error string (e.g., `l10n.errorWithResponse`)
+- Set `_isSending = false` so the user can retry
+- Show a retry action (button or inline chip) for the failed message
+- Log the error for debugging
 
 ---
 
-## MINOR — UX Friction
+### B2: No HTTP Status Code Parsing — All Errors Are Generic
 
-### m1. No "Welcome back" or "re-engagement" localized strings in ARB files
+**Files:**
+- `lib/core/services/llm/llm_chat_service.dart:210-248` (`_streamOpenRouter`), `321-354` (`_streamOllama`), `425-463` (`_streamOpenAI`)
+- `lib/core/services/llm/llm_chat_service.dart:170` (`_callOpenRouter`), `278` (`_callOllama`), `386` (`_callOpenAI`)
+- `lib/core/errors/exceptions.dart:6` (`ExceptionType` enum)
 
-**Context:** Searching `lib/l10n/app_en.arb` and `lib/l10n/app_es.arb` for "welcome back," "returning," "away," "break" (absence sense), "holiday," or "vacation" returns zero results. The only re-engagement string is `recommendNoActivity` which is a code-level fallback in `StudyProgressTracker`, not a localized ARB string.
+**What happens:** The streaming methods have NO HTTP status code checking whatsoever — they directly read the response stream and any HTTP error manifests as a generic exception. Non-streaming methods only check `statusCode == 200` vs everything else, returning `Result.failure('ProviderName API Error: ${response.body}')`.
 
-**Affected files:**
-- `lib/l10n/app_en.arb` — no re-engagement strings
-- `lib/l10n/app_es.arb` — no re-engagement strings
+The `ExceptionType` enum (line 6 of `exceptions.dart`) defines `apiAuth`, `apiRateLimit`, `apiNotFound`, `apiInternalServer`, but NOT ONE of these types is ever set by the LLM service. The error classification system is completely disconnected from the actual error-producing code.
 
-**Acceptance criteria (fixed):**
-- Add the following localized strings (English shown; add all locales):
-  - `welcomeBackDays`: "Welcome back! You've been away for {days} days."
-  - `absenceDetectedTitle`: "Absence Detected"
-  - `absenceDetectedBody`: "You haven't used StudyKing in {days} days. How would you like to proceed?"
-  - `extendPlan`: "Extend study plan by {days} days"
-  - `missedLessonLabel`: "Missed"
-  - `staleSessionLabel`: "Not completed"
+**Specific failures:**
+- 401 Unauthorized (expired/invalid key) → generic "API Error" → no "update your API key" prompt
+- 429 Too Many Requests (rate limited) → generic "API Error" → no backoff suggestion
+- 404 Model Not Found → generic "API Error" → no "check model name" guidance
+- 5xx Server Error → generic "API Error" → no "provider down, try again later"
 
-### m2. Weekly chart zero bars could be misinterpreted
-
-**Context:** The `WeeklyChart` at `lib/features/dashboard/presentation/widgets/weekly_chart.dart` renders bars whose height corresponds to question count. A 0-question week renders as an invisible/flat bar. On a small screen, multiple consecutive flat bars could look like a chart rendering glitch.
-
-**Affected files:**
-- `lib/features/dashboard/presentation/widgets/weekly_chart.dart` — zero-height bars are invisible, not distinguishable from "no data"
-
-**Acceptance criteria (fixed):**
-- When a week has 0 questions and the user has existing data, render a subtle dashed outline bar at minimum height (2-4px) with a different color (e.g., grey instead of primary).
-- Add a label "No activity" or a tooltip on empty bars.
-
-### m3. Consecutive study days computation only considers completed sessions
-
-**Context:** `_getConsecutiveStudyDays()` (`mentor_service.dart:351-374`) only counts sessions where `session.completed == true`. Sessions that were orphaned (see M5) are not counted. This means a user who used the app but had sessions improperly ended will show a shorter streak than reality.
-
-**Affected files:**
-- `lib/features/mentor/services/mentor_service.dart:351-374`
-
-**Acceptance criteria (fixed):**
-- Count sessions with any `actualDurationMs > 0` as a study day, regardless of `completed` flag.
-- Or add a fallback: if a session has `startTime` on a given date but no `endTime`, count it as a study day with a "partial" qualifier.
-
-### m4. No loading/transition state when returning app processes stale data
-
-**Context:** After a long absence, the app loads all Hive data synchronously on init. There is no intermediate loading state that says "Loading your data...", "Checking for updates...", or "Welcome back! Restoring your session..." The first frame shows whatever data was cached.
-
-**Affected files:**
-- `lib/main.dart:127-131` — `runApp(StudyKingApp())` starts immediately
-- `lib/features/dashboard/presentation/dashboard_screen.dart` — no "restoring state" overlay
-
-**Acceptance criteria (fixed):**
-- After fixing B1, if `daysSinceLastActivity >= 1`, show a brief (1-2 second) "Welcome back" splash overlay while data loads.
-- This overlay could show: days since last visit, total progress summary, and a "Continue where you left off" button.
+**Acceptance criteria:**
+- `LlmService` must parse HTTP status codes from non-streaming responses and yield typed errors
+- Streaming methods must check the initial HTTP response status before reading the stream
+- Map 401 → `ExceptionType.apiAuth` with message "API key is invalid or expired. Update in Settings."
+- Map 429 → `ExceptionType.apiRateLimit` with message "Too many requests. Wait and try again."
+- Map 404 → `ExceptionType.apiNotFound` with message "Model not found. Check model name in Settings."
+- Map 5xx → `ExceptionType.apiInternalServer` with message "Provider experiencing issues. Try again later or switch providers."
+- All other errors → `ExceptionType.apiError` with the raw message
 
 ---
 
-## Cross-References to Related Issues
+### B3: No Rate Limiting Detection or Handling — 429 Invisible
 
-| Finding | Related Issue |
-|---|---|
-| B1 (no last-activity timestamp) | Related to `scenario_first_launch_ib_chemistry` finding about no profile prompt |
-| B4 (in-process scheduler) | Related to scenario 9's `EngagementScheduler` findings |
-| B5 (stale scheduled lessons) | Cross-refs `scenario_existing_user_pace_subjects_provider` B1 (no cancel lesson UI) |
-| M1 (dashboard zeros) | Related to `ui_ux_master.md` M1 (dashboard skeleton/loading) |
-| M3 (mentor LLM context) | Cross-refs `scenario_mentor_study_companion` findings about missing context |
+**Files:**
+- `lib/core/services/llm/llm_chat_service.dart` (entire file — no 429 handling)
+- `lib/core/errors/handlers.dart:168-174` (rate limit detection maps "403"/"forbidden", NOT 429)
+- No client-side rate limiting anywhere
+
+**What happens:** HTTP 429 (Too Many Requests) is the standard rate limit response from OpenRouter, OpenAI, and most API providers. The app has zero handling for this status code:
+1. No client-side throttling (no request queue, no leaky bucket, no minimum interval enforcement)
+2. The error classification maps "403" and "forbidden" (incorrectly) to `apiRateLimit` but completely misses "429"
+3. A real 429 response falls through to the generic error path
+4. Users can hammer the API as fast as they can type, triggering server-side rate limits with no warning
+
+**Acceptance criteria:**
+- Add client-side request throttling: minimum 500ms between chat requests from the same screen
+- Parse 429 status code in `LlmService` → `ExceptionType.apiRateLimit`
+- Show `errorApiRateLimit` message with `retryAfterWait` action
+- Extract `Retry-After` header from 429 response and display countdown if available
+- Remove the incorrect 403→rateLimit mapping, or keep it as a secondary check alongside proper 429 handling
+
+---
+
+### B4: No Provider Fallback / Failover Mechanism
+
+**Files:**  
+- `lib/core/providers/llm_providers.dart:19-34` (single `LlmService`, single `LlmConfiguration`)
+- `lib/features/settings/presentation/api_config_screen.dart` (no backup/secondary provider UI)
+- No "backup provider" concept in any model, provider, or service
+
+**What happens:** The app has a single `LlmService` with a single `LlmConfiguration`. When the provider fails, there is zero fallback behavior:
+- No automatic retry with a different provider
+- No prompt: "Your provider is down. Switch to Ollama (local)?"
+- No "backup provider" configuration field
+- User must manually go to Settings, change provider, enter new config, test, and return
+
+For a student mid-lesson, this is catastrophic — the tutor session is aborted with no recovery path.
+
+**Acceptance criteria:**
+- Add `backupProvider`, `backupApiKey`, `backupBaseUrl`, `backupModel` fields to configuration
+- Add backup provider UI in `ApiConfigScreen` (e.g., "Fallback Provider" section with same dropdown+fields)
+- On streaming failure in Tutor/Mentor, show dialog: "Primary provider failed. Switch to [backup]?"
+- Automatic failover: on 5xx/timeout, try backup provider with a status indicator
+- Persist backup config in Hive alongside primary config
+
+---
+
+## MAJOR Findings
+
+### M1: Mentor Failed Messages Have No Retry Button
+
+**Files:** `lib/features/mentor/presentation/mentor_screen.dart:249-262`
+
+**What happens:** When `_sendMessage()` catches a streaming error, it replaces the incomplete message with `l10n.errorWithResponse`. The input is re-enabled so the user can type a new message. But there's no retry button on the failed message — the user has to manually re-type their question.
+
+**Acceptance criteria:**
+- Add a "Retry" button (icon or chip) to failed mentor messages
+- Tapping retry calls `_sendMessage()` with the original user message text
+- Failed messages show a distinguishing style (e.g., red-tinted background, error icon)
+
+---
+
+### M2: Test Connection Only Tests `/models` Endpoint, Not Chat
+
+**Files:** `lib/features/settings/presentation/api_config_screen.dart:111-164`
+
+**What happens:** `_testConnection()` makes a GET request to `<baseUrl>/models` with the API key. A 200 response only proves that the endpoint is reachable and the key has read access. It does NOT verify:
+1. The selected model exists on this provider
+2. The model supports chat completions
+3. The provider can actually generate responses
+4. The API key has write/chat permissions (some keys may be read-only)
+
+A connection test could succeed but the first chat request could fail.
+
+**Acceptance criteria:**
+- Send an actual lightweight chat completion request (e.g., "Reply with OK") instead of or in addition to the `/models` check
+- Verify that the selected model name returns a valid response
+- Show the model's response time and first-token latency
+- If the model name is empty when testing, prompt user to select one first
+
+---
+
+### M3: Provider Switching Doesn't Clear Model — Stale Model Survives
+
+**Files:** `lib/features/settings/presentation/api_config_screen.dart:321-336`
+
+**What happens:** When the user switches from `openRouter` to `ollama` in the provider dropdown, the base URL auto-populates with the new default. But the `selectedModel` field is NOT cleared — it retains the previous model name (e.g., `chatgpt-4o-latest`). The user would need to manually notice and change it. The model IS cleared on save (`_saveKeys()` sets it to `''` at line 75), but not on the visual dropdpown switch.
+
+**Acceptance criteria:**
+- Clear `selectedModel` when the provider dropdown is changed by the user
+- Show a hint: "Model will be cleared when provider changes. Select a model for [new provider]."
+- OR: Fetch available models automatically on provider switch (already exists as `_showAiModelSelection`)
+
+---
+
+### M4: No Per-Feature Provider Configuration
+
+**Files:** `lib/core/providers/llm_providers.dart:19-34`
+
+**What happens:** All AI features (Tutor, Mentor, exercise evaluator, lesson planner, summary generator, content pipeline) share a single `LlmService` with one `LlmConfiguration`. The user cannot, for example, use OpenRouter (powerful, cloud) for tutor lessons and Ollama (fast, local) for Mentor chat. This limits flexibility and optimization.
+
+**Acceptance criteria (optional enhancement):**
+- Allow per-feature provider override (e.g., "Tutor uses: OpenRouter", "Mentor uses: Ollama")
+- Default to the global provider with per-feature opt-out
+- Store per-feature overrides in Hive `settings` box
+
+---
+
+### M5: Partial Responses Lost on Mid-Stream Error
+
+**Files:**
+- `lib/features/teaching/services/conversation_manager.dart:170-200` (buffer not saved on error)
+- `lib/features/mentor/services/mentor_service.dart:129-189` (context not preserved on error)
+
+**What happens:** During streaming, chunks are accumulated in a `buffer` and yielded to the UI in real-time. But `addAssistantMessage(buffer.toString())` is only called AFTER the stream completes successfully (conversation_manager.dart:192). If the stream fails mid-way:
+- The accumulated buffer is lost — it was rendered in UI but never saved to memory
+- The user sees partial text, then an error, then the partial text disappears
+- On next message, the conversation includes the user's original message but not the partial assistant response
+- Mentor: error message replaces partial content entirely
+
+**Acceptance criteria:**
+- On mid-stream error, save the accumulated partial response to conversation memory before showing the error
+- Preserve partial content in the chat bubble (show what was received, append error indicator)
+- Add a visual indicator: 🤖 "Response interrupted after [N] characters"
+
+---
+
+### M6: Task Retry Loses All Context
+
+**Files:** `lib/core/services/llm_task_manager.dart:209-214`
+
+**What happens:** `retryTask(taskId)` creates a brand new task with the same `feature` and `modelId` but carries over NO data, context, messages, or payload from the original failed task. The old task remains in the list with `failed` status. The new task starts as `queued`. So retrying a "generate lesson plan" task creates a new "generate lesson plan" task, but with no knowledge of WHICH subject, topic, or what the original request was.
+
+**Acceptance criteria:**
+- `retryTask()` should accept an optional `context` parameter (payload/messages from original request)
+- OR: tasks should store their input payload/context so retry can reproduce it
+- Show "Retrying task [name]" progress in the task manager UI
+
+---
+
+## PARTIAL Findings
+
+### P1: Configuration Persistence Depends on Initialization Order
+
+**Files:**
+- `lib/core/providers/app_providers.dart:129-135` (in-memory providers with defaults)
+- `lib/core/providers/llm_providers.dart:19-34` (watches in-memory providers)
+- `lib/features/settings/presentation/settings_screen.dart` (reads `settingsProvider` for display)
+
+**What happens:** The `apiKeyProvider`, `apiBaseUrlProvider`, `selectedModelProvider`, and `llmProviderProvider` are simple `StateProvider`s initialized with defaults (empty key, `openRouter`, default URL, empty model). They get their actual persisted values when a screen explicitly reads from `settingsProvider` and writes to them. If `llmServiceProvider` is read (and thus the `LlmService` created) before the persisted settings have been loaded into these state providers, the service starts with defaults (empty key, wrong URL, wrong model). The API config screen then corrects this on its first build.
+
+**Acceptance criteria:**
+- Initialize providers from persisted settings eagerly (at app startup in `main.dart`, before any screen renders)
+- Add a provider like `ref.onInit(...)` or use `ProviderScope` with overrides from persisted settings
+- Ensure `llmServiceProvider` is never constructed with empty/default config before settings are loaded
+
+---
+
+### P2: Settings Tiles Don't Show Error History or Health Status
+
+**Files:** `lib/features/settings/presentation/settings_screen.dart:179-187`
+
+**What happens:** The AI Configuration section shows:
+- "API Keys: Configured" (just presence check, not validity)
+- "AI Model: [model name]" (no indication if the model is working)
+- "Request Timeout: [seconds]" (just the configured value)
+- "AI Task Monitor: [count]" (only count, no health status)
+
+There is no "Last Error" field, no "Provider Health" indicator, no way to see if the current configuration has been tested recently or has been failing.
+
+**Acceptance criteria:**
+- Show a health indicator (green/yellow/red dot) next to the provider name based on recent success/failure ratio
+- Show "Last tested: [timestamp]" for the connection test
+- Show "Last error: [message]" if the last LLM call failed
+- Store LLM health metrics in Hive for persistence across restarts
+
+---
+
+## Code Map
+
+| File | Lines | Relevance |
+|---|---|---|
+| `lib/core/services/llm/llm_chat_service.dart` | 1-493 | Core LLM streaming, no timeouts, no status parsing |
+| `lib/features/teaching/services/conversation_manager.dart` | 170-200 | No try-catch on stream, partial content lost on error |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 180-197 | NO error handling — UI locks up on stream failure |
+| `lib/features/mentor/presentation/mentor_screen.dart` | 249-262 | Error caught, message replaced, NO retry button |
+| `lib/features/mentor/services/mentor_service.dart` | 129-189 | No try-catch on chat stream |
+| `lib/features/settings/presentation/api_config_screen.dart` | 111-164 | Test connects to `/models` only, not chat endpoints |
+| `lib/features/settings/presentation/api_config_screen.dart` | 298-346 | Provider dropdown, model NOT cleared on switch |
+| `lib/features/settings/presentation/settings_screen.dart` | 179-187 | AI Config tiles — no health/error display |
+| `lib/core/providers/llm_providers.dart` | 19-34 | Single `LlmService`, single global config |
+| `lib/core/providers/app_providers.dart` | 129-135 | In-memory providers, defaults risk race condition |
+| `lib/core/errors/exceptions.dart` | 6 | `ExceptionType` enum — dead code, never set by LlmService |
+| `lib/core/errors/handlers.dart` | 168-174 | Rate limit maps 403/forbidden, misses 429 |
+| `lib/core/constants/timeouts.dart` | 12-17 | Timeout constants defined but never wired into HTTP calls |
+| `lib/core/services/llm_task_manager.dart` | 209-214 | `retryTask()` loses all payload/context |
+
+---
+
+## Conclusion
+
+The AI provider failure handling has **4 BLOCKER** issues that would prevent a user from recovering when their provider goes down. The most critical is B1 (tutor streaming errors crash silently), followed by B2 (no HTTP status code parsing = all errors are generic), B3 (no rate limiting handling), and B4 (no provider fallback).
+
+The codebase has the right architectural pieces (`ExceptionType` enum, `ErrorHandler` UI, `LlmTaskManager`, localization strings) but they are disconnected from each other. The `LlmService` produces raw exceptions, the `ErrorHandler` expects typed `AppException`s, and the bridge (`convertToAppException`) only matches string patterns for 403 — missing 401, 429, 404, and 5xx entirely.

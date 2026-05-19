@@ -66,6 +66,42 @@ void main() {
 
       expect(chatData.message.isStreaming, isTrue);
     });
+
+    test('wraps message with toolCall type and tool fields', () {
+      final message = ConversationMessage(
+        id: 'msg-tc1',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: 'Searching questions...',
+        timestamp: DateTime(2024, 6, 15),
+        toolCallId: 'call-1',
+        toolName: 'searchQuestions',
+        toolArguments: '{"keyword": "algebra"}',
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.type, MessageType.toolCall);
+      expect(chatData.message.toolCallId, 'call-1');
+      expect(chatData.message.toolName, 'searchQuestions');
+      expect(chatData.message.toolArguments, '{"keyword": "algebra"}');
+    });
+
+    test('wraps message with toolResult type', () {
+      final message = ConversationMessage(
+        id: 'msg-tr1',
+        sessionId: 'session-1',
+        role: MessageRole.tutor,
+        type: MessageType.toolResult,
+        content: 'Found 3 questions',
+        timestamp: DateTime(2024, 6, 15),
+        toolResult: '{"count": 3}',
+      );
+      final chatData = ChatMessageData(message: message, isComplete: true);
+
+      expect(chatData.message.type, MessageType.toolResult);
+      expect(chatData.message.toolResult, '{"count": 3}');
+    });
   });
 
   group('ConversationMessage JSON serialization', () {
@@ -112,9 +148,13 @@ void main() {
       expect(restored.tokenCount, 0);
       expect(restored.isStreaming, isFalse);
       expect(restored.metadataJson, isNull);
+      expect(restored.toolCallId, isNull);
+      expect(restored.toolName, isNull);
+      expect(restored.toolArguments, isNull);
+      expect(restored.toolResult, isNull);
     });
 
-    test('fromJson handles null metadataJson', () {
+    test('handles null metadataJson', () {
       final json = {
         'id': 'msg-7',
         'sessionId': 'session-4',
@@ -133,7 +173,7 @@ void main() {
       expect(restored.id, 'msg-7');
     });
 
-    test('fromJson with missing tokenCount defaults to 0', () {
+    test('with missing tokenCount defaults to 0', () {
       final json = {
         'id': 'msg-8',
         'sessionId': 'session-5',
@@ -150,7 +190,7 @@ void main() {
       expect(restored.tokenCount, 0);
     });
 
-    test('fromJson with missing isStreaming defaults to false', () {
+    test('with missing isStreaming defaults to false', () {
       final json = {
         'id': 'msg-9',
         'sessionId': 'session-6',
@@ -165,6 +205,208 @@ void main() {
       final restored = ConversationMessage.fromJson(json);
 
       expect(restored.isStreaming, isFalse);
+    });
+
+    test('round-trip with toolCall type', () {
+      final original = ConversationMessage(
+        id: 'msg-tc2',
+        sessionId: 'session-7',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: 'Searching...',
+        timestamp: DateTime(2024, 6, 15, 10, 0),
+        toolCallId: 'call-42',
+        toolName: 'searchQuestions',
+        toolArguments: '{"keyword": "physics"}',
+      );
+
+      final json = original.toJson();
+      final restored = ConversationMessage.fromJson(json);
+
+      expect(restored.type, MessageType.toolCall);
+      expect(restored.toolCallId, 'call-42');
+      expect(restored.toolName, 'searchQuestions');
+      expect(restored.toolArguments, '{"keyword": "physics"}');
+      expect(restored.toolResult, isNull);
+    });
+
+    test('round-trip with toolResult type', () {
+      final original = ConversationMessage(
+        id: 'msg-tr2',
+        sessionId: 'session-8',
+        role: MessageRole.tutor,
+        type: MessageType.toolResult,
+        content: 'Done',
+        timestamp: DateTime(2024, 6, 15, 11, 0),
+        toolResult: '{"success": true}',
+      );
+
+      final json = original.toJson();
+      final restored = ConversationMessage.fromJson(json);
+
+      expect(restored.type, MessageType.toolResult);
+      expect(restored.toolResult, '{"success": true}');
+      expect(restored.toolCallId, isNull);
+      expect(restored.toolName, isNull);
+      expect(restored.toolArguments, isNull);
+    });
+
+    test('with missing tool fields defaults to null', () {
+      final json = {
+        'id': 'msg-tm',
+        'sessionId': 'session-9',
+        'role': 'tutor',
+        'type': 'toolCall',
+        'content': 'Thinking...',
+        'metadataJson': null,
+        'timestamp': '2024-06-15T12:00:00.000',
+        'tokenCount': 0,
+        'isStreaming': false,
+      };
+
+      final restored = ConversationMessage.fromJson(json);
+
+      expect(restored.toolCallId, isNull);
+      expect(restored.toolName, isNull);
+      expect(restored.toolArguments, isNull);
+      expect(restored.toolResult, isNull);
+    });
+
+    test('fromJson throws on unknown role', () {
+      final json = {
+        'id': 'msg-err',
+        'sessionId': 'session-err',
+        'role': 'alien',
+        'type': 'text',
+        'content': 'bad',
+        'metadataJson': null,
+        'timestamp': '2024-06-15T12:00:00.000',
+        'tokenCount': 0,
+        'isStreaming': false,
+      };
+
+      expect(
+        () => ConversationMessage.fromJson(json),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('fromJson throws on unknown type', () {
+      final json = {
+        'id': 'msg-err2',
+        'sessionId': 'session-err2',
+        'role': 'tutor',
+        'type': 'unknown_type',
+        'content': 'bad',
+        'metadataJson': null,
+        'timestamp': '2024-06-15T12:00:00.000',
+        'tokenCount': 0,
+        'isStreaming': false,
+      };
+
+      expect(
+        () => ConversationMessage.fromJson(json),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
+
+  group('ConversationMessage.copyWith', () {
+    test('returns identical message when no arguments given', () {
+      final original = ConversationMessage(
+        id: 'msg-cw1',
+        sessionId: 's1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hello',
+        timestamp: DateTime(2024, 6, 15),
+      );
+
+      final copied = original.copyWith();
+
+      expect(copied.id, original.id);
+      expect(copied.sessionId, original.sessionId);
+      expect(copied.role, original.role);
+      expect(copied.type, original.type);
+      expect(copied.content, original.content);
+      expect(copied.timestamp, original.timestamp);
+    });
+
+    test('overrides specified fields', () {
+      final original = ConversationMessage(
+        id: 'msg-cw2',
+        sessionId: 's1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hello',
+        timestamp: DateTime(2024, 6, 15),
+      );
+
+      final copied = original.copyWith(
+        content: 'Updated',
+        type: MessageType.plan,
+      );
+
+      expect(copied.content, 'Updated');
+      expect(copied.type, MessageType.plan);
+      expect(copied.id, original.id);
+      expect(copied.sessionId, original.sessionId);
+    });
+
+    test('overrides tool fields', () {
+      final original = ConversationMessage(
+        id: 'msg-cw3',
+        sessionId: 's1',
+        role: MessageRole.tutor,
+        type: MessageType.toolCall,
+        content: 'Search',
+        timestamp: DateTime(2024, 6, 15),
+      );
+
+      final copied = original.copyWith(
+        toolCallId: 'call-99',
+        toolName: 'getWeather',
+        toolArguments: '{"city": "London"}',
+      );
+
+      expect(copied.toolCallId, 'call-99');
+      expect(copied.toolName, 'getWeather');
+      expect(copied.toolArguments, '{"city": "London"}');
+      expect(copied.toolResult, isNull);
+    });
+
+    test('overrides metadataJson', () {
+      final original = ConversationMessage(
+        id: 'msg-cw4',
+        sessionId: 's1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hi',
+        timestamp: DateTime(2024, 6, 15),
+      );
+
+      final copied = original.copyWith(metadataJson: '{"key": "val"}');
+
+      expect(copied.metadataJson, '{"key": "val"}');
+    });
+
+    test('overrides boolean and numeric fields', () {
+      final original = ConversationMessage(
+        id: 'msg-cw5',
+        sessionId: 's1',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: 'Hi',
+        timestamp: DateTime(2024, 6, 15),
+      );
+
+      final copied = original.copyWith(
+        tokenCount: 100,
+        isStreaming: true,
+      );
+
+      expect(copied.tokenCount, 100);
+      expect(copied.isStreaming, isTrue);
     });
   });
 
@@ -198,13 +440,15 @@ void main() {
 
   group('MessageType enum', () {
     test('has all expected values', () {
-      expect(MessageType.values.length, 6);
+      expect(MessageType.values.length, 8);
       expect(MessageType.values[0], MessageType.text);
       expect(MessageType.values[1], MessageType.exercise);
       expect(MessageType.values[2], MessageType.quiz);
       expect(MessageType.values[3], MessageType.feedback);
       expect(MessageType.values[4], MessageType.plan);
       expect(MessageType.values[5], MessageType.system);
+      expect(MessageType.values[6], MessageType.toolCall);
+      expect(MessageType.values[7], MessageType.toolResult);
     });
 
     test('fromJson parses type names correctly', () {

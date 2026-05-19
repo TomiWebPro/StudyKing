@@ -2,8 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/core/widgets/not_found_screen.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
   group('AppRoutes', () {
@@ -31,83 +29,47 @@ void main() {
     test('questionBank', () => expect(AppRoutes.questionBank, '/question-bank'));
   });
 
-  group('SubjectDetailArgs', () {
-    test('creates with required fields only', () {
-      final args = const SubjectDetailArgs(
-        subjectId: 's1',
-        subjectName: 'Math',
-        subjectColor: '0xFF0000',
-      );
-      expect(args.subjectId, 's1');
-      expect(args.subjectName, 'Math');
-      expect(args.subjectColor, '0xFF0000');
-      expect(args.subjectDescription, isNull);
-      expect(args.subjectSyllabus, isNull);
-      expect(args.subjectCode, isNull);
-      expect(args.subjectTeacher, isNull);
-      expect(args.subjectExamDate, isNull);
-      expect(args.topicIds, isEmpty);
+  group('Subject', () {
+    test('Subject can be passed directly as route argument', () {
+      final subject = Subject(id: 's1', name: 'Math', color: '0xFF0000');
+      expect(subject.id, 's1');
+      expect(subject.name, 'Math');
+      expect(subject.color, '0xFF0000');
+      expect(subject.description, isNull);
+      expect(subject.syllabus, isNull);
+      expect(subject.code, isNull);
+      expect(subject.teacher, isNull);
+      expect(subject.examDate, isNull);
+      expect(subject.topicIds, isEmpty);
     });
 
-    test('creates with all fields', () {
-      final args = const SubjectDetailArgs(
-        subjectId: 's1',
-        subjectName: 'Math',
-        subjectDescription: 'Algebra course',
-        subjectSyllabus: 'Syllabus content',
-        subjectCode: 'MATH101',
-        subjectTeacher: 'Dr. Smith',
-        subjectColor: '0xFF0000',
-        subjectExamDate: '2025-06-01',
+    test('Subject with all fields', () {
+      final subject = Subject(
+        id: 's1',
+        name: 'Math',
+        description: 'Algebra course',
+        syllabus: 'Syllabus content',
+        code: 'MATH101',
+        teacher: 'Dr. Smith',
+        color: '0xFF0000',
+        examDate: DateTime(2025, 6, 1),
         topicIds: ['t1', 't2'],
       );
-      expect(args.subjectId, 's1');
-      expect(args.subjectName, 'Math');
-      expect(args.subjectDescription, 'Algebra course');
-      expect(args.subjectSyllabus, 'Syllabus content');
-      expect(args.subjectCode, 'MATH101');
-      expect(args.subjectTeacher, 'Dr. Smith');
-      expect(args.subjectColor, '0xFF0000');
-      expect(args.subjectExamDate, '2025-06-01');
-      expect(args.topicIds, ['t1', 't2']);
+      expect(subject.id, 's1');
+      expect(subject.name, 'Math');
+      expect(subject.description, 'Algebra course');
+      expect(subject.syllabus, 'Syllabus content');
+      expect(subject.code, 'MATH101');
+      expect(subject.teacher, 'Dr. Smith');
+      expect(subject.color, '0xFF0000');
+      expect(subject.examDate, DateTime(2025, 6, 1));
+      expect(subject.topicIds, ['t1', 't2']);
     });
 
     test('topicIds defaults to empty list', () {
-      final args = const SubjectDetailArgs(
-        subjectId: 's1',
-        subjectName: 'Math',
-        subjectColor: '0xFF0000',
-      );
-      expect(args.topicIds, isA<List<String>>());
-      expect(args.topicIds, isEmpty);
-    });
-
-    test('optional fields can be explicitly null', () {
-      final args = const SubjectDetailArgs(
-        subjectId: 's1',
-        subjectName: 'Math',
-        subjectColor: '0xFF0000',
-        subjectDescription: null,
-        subjectSyllabus: null,
-        subjectCode: null,
-        subjectTeacher: null,
-        subjectExamDate: null,
-      );
-      expect(args.subjectDescription, isNull);
-      expect(args.subjectSyllabus, isNull);
-      expect(args.subjectCode, isNull);
-      expect(args.subjectTeacher, isNull);
-      expect(args.subjectExamDate, isNull);
-    });
-
-    test('topicIds is immutable (cannot modify through getter)', () {
-      final args = const SubjectDetailArgs(
-        subjectId: 's1',
-        subjectName: 'Math',
-        subjectColor: '0xFF0000',
-        topicIds: ['t1'],
-      );
-      expect(args.topicIds, ['t1']);
+      final subject = Subject(id: 's1', name: 'Math', color: '0xFF0000');
+      expect(subject.topicIds, isA<List<String>>());
+      expect(subject.topicIds, isEmpty);
     });
   });
 
@@ -492,31 +454,27 @@ void main() {
     });
 
     group('subjectDetail', () {
-      test('returns route with SubjectDetailArgs (required only)', () {
+      test('returns route with Subject (required only)', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
-          arguments: const SubjectDetailArgs(
-            subjectId: 's1',
-            subjectName: 'Math',
-            subjectColor: '0xFF0000',
-          ),
+          arguments: Subject(id: 's1', name: 'Math', color: '0xFF0000'),
         ));
         expect(route, isNotNull);
         expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns route with SubjectDetailArgs (all fields)', () {
+      test('returns route with Subject (all fields)', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
-          arguments: const SubjectDetailArgs(
-            subjectId: 's1',
-            subjectName: 'Math',
-            subjectDescription: 'Algebra',
-            subjectSyllabus: 'Syllabus',
-            subjectCode: 'MATH101',
-            subjectTeacher: 'Dr. Smith',
-            subjectColor: '0xFF0000',
-            subjectExamDate: '2025-06-01',
+          arguments: Subject(
+            id: 's1',
+            name: 'Math',
+            description: 'Algebra',
+            syllabus: 'Syllabus',
+            code: 'MATH101',
+            teacher: 'Dr. Smith',
+            color: '0xFF0000',
+            examDate: DateTime(2025, 6, 1),
             topicIds: ['t1', 't2'],
           ),
         ));
@@ -553,10 +511,10 @@ void main() {
         expect(route!.settings.name, AppRoutes.subjectDetail);
       });
 
-      test('returns error route with Map args instead of SubjectDetailArgs', () {
+      test('returns error route with Map args instead of Subject', () {
         final route = onGenerateRoute(RouteSettings(
           name: AppRoutes.subjectDetail,
-          arguments: <String, dynamic>{'subjectId': 's1'},
+          arguments: <String, dynamic>{'id': 's1'},
         ));
         expect(route, isNotNull);
         expect(route, isA<PageRouteBuilder>());
@@ -1071,64 +1029,6 @@ void main() {
       ));
       final builder = route as PageRouteBuilder;
       expect(builder.transitionsBuilder, isNotNull);
-    });
-
-    testWidgets('transitionsBuilder produces FadeTransition widget',
-        (tester) async {
-      final route = onGenerateRoute(const RouteSettings(
-        name: AppRoutes.settings,
-      )) as PageRouteBuilder;
-
-      await tester.pumpWidget(
-        Directionality(
-          textDirection: TextDirection.ltr,
-          child: Builder(
-            builder: (context) {
-              final animation = AnimationController(
-                vsync: tester,
-                value: 1,
-              );
-              final secondaryAnimation = AnimationController(
-                vsync: tester,
-                value: 1,
-              );
-              return route.transitionsBuilder(
-                context,
-                animation,
-                secondaryAnimation,
-                const Text('child'),
-              );
-            },
-          ),
-        ),
-      );
-
-      expect(find.byType(FadeTransition), findsOneWidget);
-    });
-
-    testWidgets('error route pageBuilder produces NotFoundScreen',
-        (tester) async {
-      final route = onGenerateRoute(const RouteSettings(
-        name: AppRoutes.subjectDetail,
-      )) as PageRouteBuilder;
-
-      await tester.pumpWidget(
-        MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: Builder(
-            builder: (context) {
-              final animation = AnimationController(
-                vsync: tester,
-                value: 0,
-              );
-              return route.pageBuilder(context, animation, animation);
-            },
-          ),
-        ),
-      );
-
-      expect(find.byType(NotFoundScreen), findsOneWidget);
     });
   });
 

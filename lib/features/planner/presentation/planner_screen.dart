@@ -5,12 +5,15 @@ import '../../../l10n/generated/app_localizations.dart';
 import 'package:intl/intl.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/number_format_utils.dart';
+import '../../../core/widgets/loading_indicator.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/subject_model.dart';
 import '../../../features/subjects/data/repositories/subject_repository.dart';
 import '../../../features/subjects/data/repositories/topic_repository.dart';
 import '../data/models/personal_learning_plan_model.dart';
+import '../data/models/roadmap_model.dart';
 import '../providers/planner_providers.dart';
+import '../../../core/services/plan_adherence_orchestrator.dart';
 import 'widgets/plan_summary_card.dart';
 import 'widgets/daily_plan_card.dart';
 import 'widgets/roadmap_card.dart';
@@ -57,6 +60,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   final List<_SyllabusEntry> _syllabusEntries = [];
   bool _useMultiSyllabus = false;
   List<Subject> _allSubjects = [];
+  String? _subjectsError;
+  double _paceHours = 1.0;
 
   @override
   void initState() {
@@ -79,10 +84,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       if (mounted) {
         setState(() {
           _allSubjects = result.data ?? [];
+          _subjectsError = null;
         });
       }
     } catch (e) {
-      // Subjects loaded silently
+      if (mounted) setState(() => _subjectsError = e.toString());
     }
   }
 
@@ -168,15 +174,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         await topicRepo.init();
         final topicsResult = await topicRepo.getBySubject(entry.selectedSubjectId!);
         final topics = topicsResult.data ?? [];
-        if (topics.isEmpty) {
-          final subjectName = entry.selectedSubjectTitle ?? entry.selectedSubjectId!;
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('$subjectName has no topics. Add topics first or upload a syllabus.')),
-            );
+          if (topics.isEmpty) {
+            final subjectName = entry.selectedSubjectTitle ?? entry.selectedSubjectId!;
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10nGen.subjectNoTopics(subjectName))),
+              );
+            }
+            return;
           }
-          return;
-        }
       }
 
       final syllabusGoals = validEntries.map((e) => SyllabusGoal(
@@ -222,9 +228,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(l10nGen.errorWithMessage(
-              "No subject named '$course' found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.",
-            )),
+            content: Text(l10nGen.errorWithMessage(l10nGen.courseNotFound(course))),
           ),
         );
         return;
@@ -238,8 +242,19 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10nGen.errorWithMessage(
-              "'$course' has no topics. Upload a syllabus to auto-create topics, or add topics manually.",
+              l10nGen.subjectNoTopics(course),
             )),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: l10nGen.addTopic,
+              onPressed: () {
+                Navigator.pushNamed(
+                  context,
+                  AppRoutes.subjectDetail,
+                  arguments: matchingSubject,
+                );
+              },
+            ),
           ),
         );
         return;
@@ -254,65 +269,103 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         );
   }
 
-  Future<void> _showCreateRoadmapDialog() async {
+  Future<void> _showCreateRoadmapDialog({RoadmapModel? existing}) async {
     final l10n = AppLocalizations.of(context)!;
-    final goalController = TextEditingController();
-    final daysController = TextEditingController();
-    var selectedSubjectId = '';
+    final goalController = TextEditingController(text: existing?.goal ?? '');
+    final daysController = TextEditingController(
+      text: existing != null && existing.targetCompletionDate != null
+          ? '${existing.targetCompletionDate!.difference(existing.createdAt).inDays}'
+          : '30',
+    );
+    var selectedSubjectId = existing?.subjectId ?? '';
+    var daysError = '';
 
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        semanticLabel: l10n.createRoadmap,
-        title: Text(l10n.createRoadmap),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: goalController,
-                decoration: InputDecoration(
-                  labelText: l10n.roadmapGoal,
-                  hintText: l10n.roadmapGoalHint,
-                  border: const OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setDialogState) => AlertDialog(
+          semanticLabel: existing != null ? l10n.edit : l10n.createRoadmap,
+          title: Text(existing != null ? l10n.edit : l10n.createRoadmap),
+          content: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: goalController,
+                  decoration: InputDecoration(
+                    labelText: l10n.roadmapGoal,
+                    hintText: l10n.roadmapGoalHint,
+                    border: const OutlineInputBorder(),
+                  ),
+                  maxLines: 2,
                 ),
-                maxLines: 2,
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: daysController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: l10n.days,
-                  border: const OutlineInputBorder(),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: daysController,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(
+                    labelText: l10n.days,
+                    border: const OutlineInputBorder(),
+                    errorText: daysError.isNotEmpty ? daysError : null,
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                decoration: InputDecoration(
-                  labelText: l10n.subjectOptional,
-                  hintText: l10n.subjectIdHint,
-                  border: const OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  initialValue: selectedSubjectId.isNotEmpty ? selectedSubjectId : null,
+                  decoration: InputDecoration(
+                    labelText: l10n.subjectOptional,
+                    border: const OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                  hint: Text(l10n.subjectOptional),
+                  isExpanded: true,
+                  items: [
+                    DropdownMenuItem(
+                      value: '',
+                      child: Text(l10n.none),
+                    ),
+                    ..._allSubjects.map((s) => DropdownMenuItem(
+                      value: s.id,
+                      child: Text(s.name, overflow: TextOverflow.ellipsis),
+                    )),
+                  ],
+                  onChanged: (v) {
+                    setDialogState(() {
+                      selectedSubjectId = v ?? '';
+                    });
+                  },
                 ),
-                onChanged: (v) => selectedSubjectId = v.trim(),
-              ),
-            ],
+              ],
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () {
+                final goal = goalController.text.trim();
+                if (goal.isEmpty) return;
+                final daysStr = daysController.text.trim();
+                final days = int.tryParse(daysStr);
+                if (daysStr.isNotEmpty && days == null) {
+                  setDialogState(() {
+                    daysError = l10n.enterValidNumber;
+                  });
+                  return;
+                }
+                Navigator.pop(ctx, {
+                  'goal': goal,
+                  'days': daysStr.isNotEmpty ? daysStr : '30',
+                  'subjectId': selectedSubjectId,
+                });
+              },
+              child: Text(existing != null ? l10n.save : l10n.generateRoadmap),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, {
-              'goal': goalController.text.trim(),
-              'days': daysController.text.trim(),
-              'subjectId': selectedSubjectId,
-            }),
-            child: Text(l10n.generateRoadmap),
-          ),
-        ],
       ),
     );
 
@@ -326,12 +379,49 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     final subjectId = result['subjectId']?.isNotEmpty == true ? result['subjectId'] : null;
 
     if (!mounted) return;
-    await ref.read(plannerProvider.notifier).createRoadmap(
-          goal: goal,
-          days: days,
-          l10n: AppLocalizations.of(context)!,
-          subjectId: subjectId,
-        );
+    final notifier = ref.read(plannerProvider.notifier);
+    if (existing != null) {
+      await notifier.updateRoadmap(
+        roadmapId: existing.id,
+        goal: goal,
+        days: days,
+        l10n: AppLocalizations.of(context)!,
+        subjectId: subjectId,
+      );
+    } else {
+      await notifier.createRoadmap(
+        goal: goal,
+        days: days,
+        l10n: AppLocalizations.of(context)!,
+        subjectId: subjectId,
+      );
+    }
+  }
+
+  Future<void> _confirmDeleteRoadmap(RoadmapModel roadmap, AppLocalizations l10n) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.delete),
+        content: Text(l10n.roadmapDeleteConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.error,
+            ),
+            child: Text(l10n.delete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(plannerProvider.notifier).deleteRoadmap(roadmap.id, l10n);
+    }
   }
 
   @override
@@ -381,6 +471,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   Widget _buildStudyPlanTab(AppLocalizations l10n, PlannerState state) {
     return SingleChildScrollView(
       padding: ResponsiveUtils.screenPadding(context),
+      physics: const AlwaysScrollableScrollPhysics(),
       child: FocusTraversalGroup(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -402,6 +493,21 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               _buildScheduledLessonsSection(l10n, state),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
+            if (state.missedLessons.isNotEmpty) ...[
+              _buildMissedLessonsSection(l10n, state),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+            ],
+            if (_subjectsError != null && _tabController.index == 0)
+              Container(
+                width: double.infinity,
+                padding: ResponsiveUtils.cardPadding(context),
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(_subjectsError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+              ),
             Row(
               children: [
                 Expanded(
@@ -429,9 +535,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               ),
               if (_allSubjects.isNotEmpty)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4, left: 4),
+                    padding: const EdgeInsets.only(top: 4).add(const EdgeInsetsDirectional.only(start: 4)),
                   child: Text(
-                    'Enter an existing subject name to base the plan on its syllabus',
+                    l10n.planSubjectHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),
@@ -519,15 +625,96 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                         TextStyle(color: Theme.of(context).colorScheme.error)),
               ),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
-            if (state.plan != null) ...[
+              if (state.plan != null) ...[
               if (state.plan!.syllabusGoals.isNotEmpty)
                 _buildSubjectProgressTabs(l10n, state)
               else ...[
                 PlanSummaryCard(summary: state.plan!.summary),
                 SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               ],
+              _buildPaceAdjustment(l10n, state),
+              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
               _buildDailyPlans(state, l10n),
             ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaceAdjustment(AppLocalizations l10n, PlannerState state) {
+    if (state.plan == null) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Icon(Icons.rocket_launch, size: 20, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(l10n.noStudyPlanYet,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    final currentHours = state.plan!.targetMinutesPerDay / 60;
+    _paceHours = currentHours;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.speed, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Text(l10n.planAdjusted,
+                    style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Text(l10n.hoursPerDay),
+                const Spacer(),
+                Text(
+                  '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            Slider(
+              value: _paceHours,
+              min: 0.5,
+              max: 8.0,
+              divisions: 15,
+              label: '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+              onChanged: (value) {
+                setState(() => _paceHours = value);
+              },
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  final newTargetMinutes = (_paceHours * 60).round();
+                  ref.read(plannerProvider.notifier).adjustPace(
+                    newTargetMinutes.toDouble(),
+                    l10n,
+                  );
+                },
+                icon: const Icon(Icons.check, size: 18),
+                label: Text(l10n.planAdjusted),
+              ),
+            ),
           ],
         ),
       ),
@@ -629,7 +816,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                         return Padding(
                           padding: const EdgeInsets.only(left: 4),
                           child: Text(
-                            '$count topics found',
+                            l10n.topicCountTemplate(count),
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                               color: Theme.of(context).colorScheme.onSurfaceVariant,
                             ),
@@ -684,7 +871,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               ),
               title: Text(goal.subjectTitle.isNotEmpty
                   ? goal.subjectTitle
-                  : goal.subjectId),
+                  : l10n.unknown),
               subtitle: Text(
                   '${goal.targetDays} ${l10n.days} ${l10n.planSummary} · $topicCount ${l10n.topics}'),
               trailing: Column(
@@ -737,6 +924,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   Widget _buildAdherenceBanner(AppLocalizations l10n, PlannerState state) {
     final deviation = state.adherenceDeviation!;
     final missedMinutes = state.plan?.targetMinutesPerDay.toInt() ?? 60;
+    final isAbsence = deviation is AbsenceDeviation;
     return FocusTraversalGroup(
       child: Container(
       padding: ResponsiveUtils.cardPadding(context),
@@ -768,22 +956,30 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 const SizedBox(height: 8),
                 Row(
                   children: [
-                    TextButton.icon(
-                      onPressed: () => ref
-                          .read(plannerProvider.notifier)
-                          .redistributeWorkload(missedMinutes, l10n),
-                      icon: const Icon(Icons.replay, size: 16),
-                      label: Text(l10n.redistribute),
-                    ),
-                    const SizedBox(width: 8),
-                    if (deviation.requiresRegeneration)
+                    if (isAbsence) ...[
+                      TextButton.icon(
+                        onPressed: () => _showCatchUpSheet(l10n, state),
+                        icon: const Icon(Icons.play_arrow, size: 16),
+                        label: Text(l10n.catchUp),
+                      ),
+                    ] else ...[
                       TextButton.icon(
                         onPressed: () => ref
                             .read(plannerProvider.notifier)
-                            .regenerateFromAdherence(l10n),
-                        icon: const Icon(Icons.refresh, size: 16),
-                        label: Text(l10n.regeneratePlan),
+                            .redistributeWorkload(missedMinutes, l10n),
+                        icon: const Icon(Icons.replay, size: 16),
+                        label: Text(l10n.redistribute),
                       ),
+                      const SizedBox(width: 8),
+                      if (deviation.requiresRegeneration)
+                        TextButton.icon(
+                          onPressed: () => ref
+                              .read(plannerProvider.notifier)
+                              .regenerateFromAdherence(l10n),
+                          icon: const Icon(Icons.refresh, size: 16),
+                          label: Text(l10n.regeneratePlan),
+                        ),
+                    ],
                   ],
                 ),
               ],
@@ -792,6 +988,132 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ],
       ),
       ),
+    );
+  }
+
+  Future<void> _showCatchUpSheet(AppLocalizations l10n, PlannerState state) async {
+    final daysAway = state.adherenceDeviation is AbsenceDeviation
+        ? (state.adherenceDeviation as AbsenceDeviation).daysSinceLastActivity
+        : 3;
+    final notifier = ref.read(plannerProvider.notifier);
+
+    if (!mounted) return;
+    await showModalBottomSheet(
+      context: context,
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.catchUpTitle,
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            Text(l10n.catchUpDescription(daysAway),
+                style: Theme.of(context).textTheme.bodyMedium),
+            const SizedBox(height: 24),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  notifier.catchUpWithStrategy('redistribute:all', daysAway, l10n);
+                },
+                icon: const Icon(Icons.replay),
+                label: Text(l10n.catchUpRedistribute),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  notifier.catchUpWithStrategy('extend', daysAway, l10n);
+                },
+                icon: const Icon(Icons.date_range),
+                label: Text(l10n.catchUpExtend(daysAway)),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  notifier.catchUpWithStrategy('regenerate', daysAway, l10n);
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.regeneratePlan),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMissedLessonsSection(
+      AppLocalizations l10n, PlannerState state) {
+    if (state.missedLessons.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            Icon(Icons.check_circle, size: 18, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(l10n.allCaughtUp,
+                  style: Theme.of(context).textTheme.bodyMedium),
+            ),
+          ],
+        ),
+      );
+    }
+    return FocusTraversalGroup(
+      child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.warning_amber,
+                size: 18, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Text(l10n.missedLessonsCount(state.missedLessons.length),
+                style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+        const SizedBox(height: 8),
+        ...state.missedLessons.take(3).map((lesson) {
+          final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
+          final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '';
+          return Card(
+            margin: const EdgeInsets.only(bottom: 4),
+            child: ListTile(
+              dense: true,
+              leading: Icon(Icons.cancel_outlined,
+                  size: 20, color: Theme.of(context).colorScheme.error),
+              title: Text(title,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    decoration: TextDecoration.lineThrough,
+                  )),
+              subtitle: Text(
+                '${l10n.missedLessonLabel} · $time',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          );
+        }),
+        if (state.missedLessons.length > 3)
+          TextButton(
+            onPressed: () {
+              ref.read(plannerProvider.notifier).dismissAllMissed(l10n);
+            },
+            child: Text(l10n.dismissAllMissed),
+          ),
+      ],
+    ),
     );
   }
 
@@ -956,11 +1278,14 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         Text(l10n.yourStudySchedule,
             style: Theme.of(context).textTheme.titleLarge),
         SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-        ...state.plan!.dailyPlans.map(
+          ...state.plan!.dailyPlans.map(
           (day) => DailyPlanCard(
             day: day,
             onStartTutoring: _openTutorMode,
             onScheduleLesson: _openLessonBooking,
+            onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
+                ? () => _showCatchUpSheet(l10n, state)
+                : null,
           ),
         ),
       ],
@@ -969,14 +1294,37 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   }
 
   Widget _buildProgressOverlay() {
+    final l10n = AppLocalizations.of(context)!;
     final progressAsync = ref.watch(planProgressProvider);
     return progressAsync.when(
       data: (data) {
-        if (data.totalPlanDays == 0) return const SizedBox.shrink();
+        if (data.totalPlanDays == 0) {
+          return Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  Icon(Icons.bar_chart, color: Theme.of(context).colorScheme.onSurfaceVariant, size: 20),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(l10n.noDataUploaded,
+                        style: Theme.of(context).textTheme.bodyMedium),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }
         return ProgressOverlayWidget(data: data);
       },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      loading: () => const Padding(
+        padding: EdgeInsets.all(16),
+        child: LoadingIndicator(),
+      ),
+      error: (err, _) => Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text('$err', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+      ),
     );
   }
 
@@ -997,6 +1345,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     }
     return CalendarViewWidget(
       plan: state.plan!,
+      roadmaps: state.roadmaps,
       onDayTap: (topicId, topicTitle, subjectId) {
         _openTutorMode(topicId, topicTitle, subjectId);
       },
@@ -1004,12 +1353,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   }
 
   Widget _buildRoadmapsTab(AppLocalizations l10n, PlannerState state) {
+    final activeRoadmaps = state.roadmaps.where((r) => r.status == 'active').toList();
+    final completedRoadmapsList = state.roadmaps.where((r) => r.status == 'completed').toList();
+
     return FocusTraversalGroup(
       child: Column(
         children: [
           Padding(
             padding: ResponsiveUtils.screenPadding(context),
-            child:             SizedBox(
+            child: SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: _showCreateRoadmapDialog,
@@ -1018,9 +1370,22 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               ),
             ),
           ),
+          if (state.roadmaps.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  l10n.myRoadmaps,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
           if (state.isLoadingRoadmaps)
             const Expanded(
-              child: Center(child: CircularProgressIndicator()),
+              child: LoadingIndicator(),
             )
           else if (state.roadmaps.isEmpty)
             Expanded(
@@ -1048,10 +1413,44 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             Expanded(
               child: ListView.builder(
                 padding: ResponsiveUtils.screenPadding(context),
-                itemCount: state.roadmaps.length,
+                itemCount: (activeRoadmaps.isNotEmpty ? 1 : 0) +
+                    (completedRoadmapsList.isNotEmpty ? 1 : 0) +
+                    state.roadmaps.length,
                 itemBuilder: (context, index) {
+                  var offset = 0;
+                  if (activeRoadmaps.isNotEmpty) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 4, bottom: 4),
+                        child: Text(
+                          '${l10n.activeRoadmaps} (${activeRoadmaps.length})',
+                          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                            color: Theme.of(context).colorScheme.primary,
+                          ),
+                        ),
+                      );
+                    }
+                    offset = 1;
+                  }
+                  if (index == activeRoadmaps.length + offset) {
+                    return Padding(
+                      padding: const EdgeInsets.only(top: 12, bottom: 4),
+                      child: Text(
+                        '${l10n.completedRoadmaps} (${completedRoadmapsList.length})',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: Theme.of(context).colorScheme.tertiary,
+                        ),
+                      ),
+                    );
+                  }
+                  final roadmapIndex = index - offset;
+                  final roadmap = roadmapIndex < activeRoadmaps.length
+                      ? activeRoadmaps[roadmapIndex]
+                      : completedRoadmapsList[roadmapIndex - activeRoadmaps.length];
                   return RoadmapCard(
-                    roadmap: state.roadmaps[index],
+                    roadmap: roadmap,
                     onToggleMilestone: (roadmapId, milestoneId, isCompleted) {
                       ref
                           .read(plannerProvider.notifier)
@@ -1062,6 +1461,8 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                             l10n: l10n,
                           );
                     },
+                    onEdit: () => _showCreateRoadmapDialog(existing: roadmap),
+                    onDelete: () => _confirmDeleteRoadmap(roadmap, l10n),
                   );
                 },
               ),

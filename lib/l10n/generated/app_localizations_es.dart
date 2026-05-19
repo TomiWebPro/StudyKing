@@ -300,7 +300,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get correctAnswers => 'Respuestas Correctas';
 
   @override
-  String get accuracy => 'Precisión';
+  String get accuracy => 'Exactitud';
 
   @override
   String get examConfiguration => 'Configuración del Examen';
@@ -460,7 +460,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get preferredStudyTime => 'Horario de Estudio Preferido';
 
   @override
-  String get preferredStudyTimeHint => 'p. ej., Tarde (6-9 PM)';
+  String get preferredStudyTimeHint => 'p. ej., Tarde (6-9 p. m.)';
 
   @override
   String get accountInformation => 'Información de la Cuenta';
@@ -689,6 +689,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sessionsLabel => 'Sesiones';
+
+  @override
+  String get noActivity => 'Sin actividad — estuvo ausente esta semana.';
 
   @override
   String get questionsLabel => 'Preguntas';
@@ -1093,7 +1096,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String percentComplete(int percent, int completed, int total) {
-    return '$percent% Completado: $completed/$total preguntas generadas';
+    return '$percent % Completado: $completed/$total preguntas generadas';
   }
 
   @override
@@ -1465,7 +1468,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get exportCsv => 'Exportar CSV';
 
   @override
-  String get instrumentation => 'Instrumentación';
+  String get instrumentation => 'Estadísticas de Progreso';
 
   @override
   String get overall => 'General';
@@ -1533,7 +1536,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get weakAreasAccuracy => 'Áreas por mejorar (Precisión < 60%)';
+  String get weakAreasAccuracy => 'Áreas por mejorar (Precisión < 60 %)';
 
   @override
   String get uploadContent => 'Subir Contenido';
@@ -1700,7 +1703,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String planAdjustmentSuggested(int count) {
-    return 'Ha tenido $count días de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return 'Ha tenido $_temp0 de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?';
   }
 
   @override
@@ -2059,7 +2068,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get activeLessonTimer =>
-      'Tienes un temporizador de lección activo. ¿Salir de todas formas?';
+      'Tiene un temporizador de lección activo. ¿Salir de todas formas?';
 
   @override
   String get unknownModelId => 'unknown-model';
@@ -2204,6 +2213,16 @@ class AppLocalizationsEs extends AppLocalizations {
   String get labelJson => 'JSON';
 
   @override
+  String get unsavedChanges => 'Cambios sin guardar';
+
+  @override
+  String get unsavedChangesDescription =>
+      'Tienes cambios sin guardar. ¿Estás seguro de que quieres descartarlos?';
+
+  @override
+  String get discard => 'Descartar';
+
+  @override
   String get goToSettings => 'Ir a Configuración';
 
   @override
@@ -2283,7 +2302,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String paceLabel(int pace) {
-    return '$pace% ritmo';
+    return '$pace % ritmo';
   }
 
   @override
@@ -2378,7 +2397,7 @@ class AppLocalizationsEs extends AppLocalizations {
       '¡Listo! Los cambios se han realizado en su horario.';
 
   @override
-  String get mentorAccuracy => 'Precisión';
+  String get mentorAccuracy => 'Exactitud';
 
   @override
   String get mentorBadges => 'Insignias';
@@ -2491,14 +2510,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noRoadmapsYet => 'Aún no hay roadmaps';
 
   @override
-  String get roadmapOverview => 'Resumen del Roadmap';
-
-  @override
   String get timeline => 'Cronología';
 
   @override
-  String completionOfValue(double value) {
-    return '$value% Completo';
+  String completionOfValue(String value) {
+    return '$value Completo';
   }
 
   @override
@@ -2607,7 +2623,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String allStepsFormat(int count) {
-    return '¡Los $count pasos identificados correctamente!';
+    return '¡Los $count pasos se han identificado correctamente!';
   }
 
   @override
@@ -2994,11 +3010,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notifTitleTimeToReview => '¡Hora de Repasar!';
 
   @override
-  String notifBodyRevision(int days, String topicName) {
-    return 'Han pasado $days días desde que practicó \"$topicName\".';
-  }
-
-  @override
   String get notifTitleTakeBreak => 'Tome un Descanso';
 
   @override
@@ -3024,11 +3035,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notifTitleUpcomingLesson => 'Próxima Lección';
 
   @override
-  String notifBodyLessonReminder(String lessonTitle, String time) {
-    return 'Su lección \"$lessonTitle\" comienza a las $time.';
-  }
-
-  @override
   String get notifTitleTopicsNeedAttention => 'Temas que Requieren Atención';
 
   @override
@@ -3038,11 +3044,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get notifTitleBadgeUnlocked => '¡Insignia Desbloqueada!';
-
-  @override
-  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription) {
-    return '¡Obtuvo la insignia \"$badgeName\": $badgeDescription';
-  }
 
   @override
   String get recommendAccuracyBelow60 =>
@@ -3363,6 +3364,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get failedToUpdateMilestone => 'Error al actualizar el hito';
 
   @override
+  String roadmapCreated(String goal) {
+    return '¡Hoja de ruta \"$goal\" creada!';
+  }
+
+  @override
+  String get roadmapDeleted => 'Hoja de ruta eliminada';
+
+  @override
+  String get roadmapDeleteConfirm => '¿Eliminar esta hoja de ruta?';
+
+  @override
+  String get roadmapUpdated => 'Hoja de ruta actualizada';
+
+  @override
+  String get milestoneUpdated => 'Hito actualizado';
+
+  @override
+  String get enterValidNumber => 'Ingrese un número válido';
+
+  @override
   String get actionAccepted => 'Acción aceptada';
 
   @override
@@ -3395,6 +3416,12 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get failedToRedistributeWorkload =>
       'Error al redistribuir el trabajo pendiente';
+
+  @override
+  String get planAdjusted => 'Ritmo de estudio ajustado exitosamente';
+
+  @override
+  String get failedToAdjustPlan => 'Error al ajustar el ritmo de estudio';
 
   @override
   String get progressOverview => 'Resumen de Progreso';
@@ -3566,7 +3593,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingFocusDesc =>
-      'Mantén el enfoque con sesiones de estudio estilo Pomodoro';
+      'Mantenga el enfoque con sesiones de estudio estilo Pomodoro';
 
   @override
   String get onboardingSettingsDesc =>
@@ -3696,6 +3723,90 @@ class AppLocalizationsEs extends AppLocalizations {
       'Han pasado más de 48 horas desde su última sesión de estudio. ¿Se encuentra bien? ¿Le gustaría programar una revisión corta?';
 
   @override
+  String nudgeInactive7d(int days) {
+    return 'Han pasado $days días. ¡Retomemos con una sesión de repaso corta!';
+  }
+
+  @override
+  String nudgeInactive14d(int days) {
+    return '¡Bienvenido de nuevo! Han pasado $days días. Planeemos su reincorporación.';
+  }
+
+  @override
+  String nudgeInactive30d(int days) {
+    return 'Han pasado $days días desde su última sesión. ¿Le gustaría ayuda para crear un plan de regreso personalizado?';
+  }
+
+  @override
+  String welcomeBackDays(int days) {
+    return '¡Bienvenido de nuevo! Ha estado ausente durante $days días.';
+  }
+
+  @override
+  String get absenceDetectedTitle => 'Ausencia Detectada';
+
+  @override
+  String absenceDetectedBody(int days) {
+    return 'No ha usado StudyKing en $days días. ¿Cómo le gustaría proceder?';
+  }
+
+  @override
+  String extendPlan(int days) {
+    return 'Extender plan de estudio por $days días';
+  }
+
+  @override
+  String get missedLessonLabel => 'Perdida';
+
+  @override
+  String get staleSessionLabel => 'No completada';
+
+  @override
+  String get catchUp => 'Ponerse al día';
+
+  @override
+  String get catchUpTitle => '¿Cómo le gustaría ponerse al día?';
+
+  @override
+  String catchUpDescription(int days) {
+    return 'Estuvo ausente durante $days días. Elija una estrategia:';
+  }
+
+  @override
+  String get catchUpRedistribute => 'Redistribuir en los días restantes';
+
+  @override
+  String catchUpExtend(int days) {
+    return 'Extender plan por $days días';
+  }
+
+  @override
+  String planExtended(int days) {
+    return 'Plan de estudio extendido por $days días';
+  }
+
+  @override
+  String get failedToExtendPlan => 'Error al extender el plan de estudio';
+
+  @override
+  String get failedToCatchUp =>
+      'Error al procesar la estrategia de recuperación';
+
+  @override
+  String get missedDismissed => 'Lecciones perdidas descartadas';
+
+  @override
+  String get failedToDismissMissed => 'Error al descartar lecciones perdidas';
+
+  @override
+  String get dismissAllMissed => 'Descartar todas las perdidas';
+
+  @override
+  String missedLessonsCount(int count) {
+    return 'Lecciones Perdidas ($count)';
+  }
+
+  @override
   String mentorScheduleConflict(String time, String freeSlot) {
     return 'La hora propuesta ($time) entra en conflicto con una lección existente. Espacio libre sugerido: $freeSlot. ¿Lo reservo allí?';
   }
@@ -3760,6 +3871,11 @@ class AppLocalizationsEs extends AppLocalizations {
     String adaptivePace,
   ) {
     return 'Resuma lo cubierto en esta lección sobre \"$topicTitle\".\nIncluya:\n1. Conceptos clave explicados\n2. Preguntas respondidas ($exerciseCount ejercicios, $correctCount correctas)\n3. Nivel de comprensión aparente del estudiante (confianza: $confidencePercent%)\n4. Ritmo adaptativo utilizado (${adaptivePace}x)\n5. Recomendaciones para la próxima lección\n\nManténgalo conciso y constructivo.';
+  }
+
+  @override
+  String languageInstruction(String localeName) {
+    return 'IMPORTANTE: Responda en el mismo idioma que el estudiante (locale: $localeName). No use inglés a menos que el estudiante lo haga.';
   }
 
   @override
@@ -3837,7 +3953,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noQuestionsPracticeHint =>
-      'Aún no tienes preguntas de práctica. Sube materiales de estudio para generar preguntas.';
+      'Aún no tiene preguntas de práctica. Suba materiales de estudio para generar preguntas.';
 
   @override
   String get uploadMaterials => 'Subir Materiales';
@@ -3864,7 +3980,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get confirmExitPracticeBody =>
-      'Tu progreso en esta sesión se guardará, pero saldrás antes de completar todas las preguntas.';
+      'Su progreso en esta sesión se guardará, pero saldrá antes de completar todas las preguntas.';
 
   @override
   String get stay => 'Quedarse';
@@ -3881,7 +3997,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get confirmExitFocusBody =>
-      'Tienes una sesión de enfoque activa. Al finalizarla temprano se guardará tu progreso hasta ahora.';
+      'Tiene una sesión de enfoque activa. Al finalizarla temprano se guardará su progreso hasta ahora.';
 
   @override
   String get endSession => 'Finalizar Sesión';
@@ -3927,11 +4043,23 @@ class AppLocalizationsEs extends AppLocalizations {
   String get sessionType => 'Tipo';
 
   @override
+  String get sessionTypePractice => 'Práctica';
+
+  @override
+  String get sessionTypeFocus => 'Enfoque';
+
+  @override
+  String get sessionTypeTutoring => 'Tutoría';
+
+  @override
+  String get sessionTypeManual => 'Manual';
+
+  @override
   String get addCourseSubject => 'Agregar Curso/Materia';
 
   @override
   String hoursPerDayAbbrev(String hours) {
-    return '$hours/Días';
+    return '$hours h/día';
   }
 
   @override
@@ -4183,7 +4311,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get deleteQuestionConfirm =>
-      '¿Estás seguro de que quieres eliminar esta pregunta?';
+      '¿Está seguro de que desea eliminar esta pregunta?';
 
   @override
   String get deleteQuestions => 'Eliminar preguntas';
@@ -4196,7 +4324,7 @@ class AppLocalizationsEs extends AppLocalizations {
       other: '$count preguntas',
       one: '1 pregunta',
     );
-    return '¿Estás seguro de que quieres eliminar $_temp0?';
+    return '¿Está seguro de que desea eliminar $_temp0?';
   }
 
   @override
@@ -4655,4 +4783,195 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get tutorImageAnalysisSystemPrompt =>
       'El estudiante ha enviado este trabajo. Analiza y proporciona retroalimentación.';
+
+  @override
+  String dependenciesTitle(String topic) {
+    return '$topic — Dependencias';
+  }
+
+  @override
+  String get prerequisites => 'Requisitos previos';
+
+  @override
+  String get noTopicsForPrerequisites =>
+      'No hay otros temas disponibles como requisitos previos.';
+
+  @override
+  String get noDescription => 'Sin descripción';
+
+  @override
+  String masteryThreshold(String percent) {
+    return 'Umbral de Dominio: $percent%';
+  }
+
+  @override
+  String get requiredTopic => 'Tema Requerido';
+
+  @override
+  String get requiredTopicOn => 'El estudiante debe dominar este tema';
+
+  @override
+  String get requiredTopicOff => 'Tema opcional — puede omitirse';
+
+  @override
+  String syllabusWeight(String weight) {
+    return 'Peso del Temario: $weight';
+  }
+
+  @override
+  String get parentTopic => 'Tema Padre';
+
+  @override
+  String get rootTopic => 'Ninguno (Tema Raíz)';
+
+  @override
+  String sortOrderValue(int order) {
+    return 'Orden: $order';
+  }
+
+  @override
+  String topicCreated(String title) {
+    return 'Tema \"$title\" creado';
+  }
+
+  @override
+  String topicCreateFailed(String error) {
+    return 'Error al crear tema: $error';
+  }
+
+  @override
+  String get editTopicTitle => 'Editar Tema';
+
+  @override
+  String topicUpdated(String title) {
+    return 'Tema \"$title\" actualizado';
+  }
+
+  @override
+  String topicUpdateFailed(String error) {
+    return 'Error al actualizar tema: $error';
+  }
+
+  @override
+  String get dependenciesUpdated => 'Dependencias actualizadas';
+
+  @override
+  String dependenciesUpdateFailed(String error) {
+    return 'Error al actualizar dependencias: $error';
+  }
+
+  @override
+  String get deleteTopicTitle => 'Eliminar Tema';
+
+  @override
+  String deleteTopicConfirm(String topic) {
+    return '¿Eliminar \"$topic\"? Esto lo eliminará de todas las listas de dependencias.';
+  }
+
+  @override
+  String get topicDeleted => 'Tema eliminado';
+
+  @override
+  String topicDeleteFailed(String error) {
+    return 'Error al eliminar tema: $error';
+  }
+
+  @override
+  String get topicTitleLabel => 'Título del Tema';
+
+  @override
+  String get topicTitleHint => 'p. ej., Estructura Atómica';
+
+  @override
+  String get topicDescriptionLabel => 'Descripción del Tema';
+
+  @override
+  String get topicDescriptionHint => 'Describa el alcance del tema';
+
+  @override
+  String get syllabusTextLabel => 'Texto del Plan de Estudios';
+
+  @override
+  String get syllabusTextHint => 'Puntos del plan de estudios cubiertos';
+
+  @override
+  String get addTopicTitle => 'Agregar Tema';
+
+  @override
+  String topicCountTemplate(int count) {
+    return '$count temas';
+  }
+
+  @override
+  String get dependenciesNav => 'Dependencias';
+
+  @override
+  String prerequisitesCount(int count) {
+    return '$count requisitos previos';
+  }
+
+  @override
+  String downstreamCount(int count) {
+    return '$count dependientes';
+  }
+
+  @override
+  String get hasParent => 'Tiene padre';
+
+  @override
+  String get addTopicTooltip => 'Agregar Tema';
+
+  @override
+  String downstreamTopicWarning(int count) {
+    return '⚠ $count tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización.';
+  }
+
+  @override
+  String get prerequisitesNotMet => 'Prerrequisitos no cumplidos';
+
+  @override
+  String get practicePrerequisites => 'Practicar Prerrequisitos';
+
+  @override
+  String prerequisiteMasteryRequired(String topicNames) {
+    return 'Este tema requiere dominio de: $topicNames. ¿Desea practicar esos primero?';
+  }
+
+  @override
+  String get inlinePracticeSubtitle =>
+      'Practique directamente en modo de enfoque — el temporizador sigue corriendo';
+
+  @override
+  String get fullPracticeSubtitle =>
+      'Navegar a la pantalla de práctica completa';
+
+  @override
+  String get generateLessonFromContent => 'Generar lección desde este material';
+
+  @override
+  String get generateLessonFromContentHint =>
+      'Crea una lección generada por IA con diapositivas, ejercicios y bloques de resumen';
+
+  @override
+  String subjectNoTopics(String subjectName) {
+    return '$subjectName no tiene temas. Agregue temas primero o suba un programa de estudios.';
+  }
+
+  @override
+  String get noActivityShort => '—';
+
+  @override
+  String courseNotFound(String courseName) {
+    return 'Curso \'$courseName\' no encontrado. Créelo primero en la pestaña Temas, o seleccione de las materias existentes usando el modo multi-programa.';
+  }
+
+  @override
+  String get planSubjectHint =>
+      'Ingrese el nombre de una materia existente para basar el plan en su programa de estudios';
+
+  @override
+  String get chat => 'Chat';
+
+  @override
+  String get slides => 'Diapositivas';
 }

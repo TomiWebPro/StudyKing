@@ -2,7 +2,12 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
+import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/utils/clock.dart';
 
 Question _q({
   required String id,
@@ -269,4 +274,97 @@ void main() {
       expect(result.wasSkipped, isTrue);
     });
   });
+
+  group('ExamSessionService error-state', () {
+    test('finishExam handles session save failure gracefully', () async {
+      final failingRepo = _FailingSessionRepository();
+      final studentIdService = StudentIdService();
+      final service = ExamSessionService(
+        sessionRepo: failingRepo,
+        studentIdService: studentIdService,
+        clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+
+      final config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+
+      final result = await service.finishExam(
+        config: config,
+        questionResults: [
+          ExamQuestionResult(
+            question: _q(id: 'q1', text: 'Q'),
+            isCorrect: true,
+            timeSpentMs: 100,
+          ),
+        ],
+      );
+      expect(result, isA<ExamResult>());
+      expect(result.totalCorrect, 1);
+      service.dispose();
+    });
+
+    test('isTimeUp returns false for fresh exam', () {
+      final failingRepo = _FailingSessionRepository();
+      final studentIdService = StudentIdService();
+      final service = ExamSessionService(
+        sessionRepo: failingRepo,
+        studentIdService: studentIdService,
+        clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+      expect(service.isTimeUp(), isFalse);
+      service.dispose();
+    });
+
+    test('cancelExam clears state', () async {
+      final repo = _FailingSessionRepository();
+      final studentIdService = StudentIdService();
+      final service = ExamSessionService(
+        sessionRepo: repo,
+        studentIdService: studentIdService,
+        clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+
+      final config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+      expect(service.isActive, isTrue);
+
+      service.cancelExam();
+      expect(service.isActive, isFalse);
+      service.dispose();
+    });
+  });
+}
+
+class _FailingSessionRepository extends SessionRepository {
+  _FailingSessionRepository() : super(clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)));
+
+  @override
+  Future<Result<void>> save(String key, Session item) async {
+    return Result.failure('Save failed');
+  }
+
+  @override
+  Future<Result<Session?>> get(String key) async {
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success([]);
+  }
+}
+
+class _FixedClock implements Clock {
+  final DateTime fixed;
+  _FixedClock(this.fixed);
+  @override
+  DateTime now() => fixed;
 }

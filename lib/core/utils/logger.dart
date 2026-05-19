@@ -45,6 +45,7 @@ class Logger {
   static bool shouldLog(LogLevel level) {
     if (level == LogLevel.error) return true;
     if (level == LogLevel.warn) return true;
+    if (level == LogLevel.info) return true;
     return _verbose;
   }
 }

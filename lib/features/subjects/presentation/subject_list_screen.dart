@@ -3,11 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 
 class SubjectListScreen extends ConsumerWidget {
   const SubjectListScreen({super.key});
@@ -33,10 +35,27 @@ class SubjectListScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: subjectsAsync.when(
-        data: (repository) => _buildSubjectList(context, ref, repository),
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, stack) => Center(child: Text(l10n.errorWithMessage(error.toString()))),
+      body: RefreshIndicator(
+        onRefresh: () async {
+          ref.invalidate(subjectsRepositoryProvider);
+        },
+        child: subjectsAsync.when(
+          data: (repository) => _buildSubjectList(context, ref, repository),
+          loading: () => const Center(child: LoadingIndicator()),
+          error: (error, stack) {
+            const Logger('SubjectListScreen').e('Error loading subjects', error, stack);
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: ErrorRetryWidget(
+                  message: l10n.somethingWentWrong,
+                  retryLabel: l10n.retry,
+                  onRetry: () => ref.invalidate(subjectsRepositoryProvider),
+                ),
+              ),
+            );
+          },
+        ),
       ),
     );
   }
@@ -48,45 +67,27 @@ class SubjectListScreen extends ConsumerWidget {
       future: repository.getAll().then((r) => r.data ?? []),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingIndicator();
         }
 
         if (snapshot.hasError) {
-          return Center(child: Text(l10n.errorWithMessage('${snapshot.error}')));
+          const Logger('SubjectListScreen').e('Error in subject list builder', snapshot.error);
+          return ErrorRetryWidget(
+            message: l10n.somethingWentWrong,
+            retryLabel: l10n.retry,
+            onRetry: () => ref.invalidate(subjectsRepositoryProvider),
+          );
         }
 
         final subjects = snapshot.data ?? [];
 
         if (subjects.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                  Icon(
-                    Icons.school_outlined,
-                    size: ResponsiveUtils.emptyStateIconSize(context),
-                    color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5),
-                  ),
-                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 1.5),
-                Text(
-                  l10n.noSubjectsYet,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-                Text(
-                  l10n.addFirstSubject,
-                  style: Theme.of(context).textTheme.bodyMedium,
-                ),
-                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.subjectSelection);
-                  },
-                  icon: const Icon(Icons.add),
-                  label: Text(l10n.addSubject),
-                ),
-              ],
-            ),
+          return EmptyStateWidget(
+            icon: Icons.school_outlined,
+            title: l10n.noSubjectsYet,
+            subtitle: l10n.addFirstSubject,
+            actionLabel: l10n.addSubject,
+            onAction: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
           );
         }
 
@@ -106,6 +107,7 @@ class SubjectListScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     return Semantics(
       label: subject.name,
+      button: true,
       child: Card(
         margin: const EdgeInsets.only(bottom: 12),
         child: InkWell(
@@ -113,12 +115,7 @@ class SubjectListScreen extends ConsumerWidget {
             Navigator.pushNamed(
               context,
               AppRoutes.subjectDetail,
-              arguments: SubjectDetailArgs(
-                subjectId: subject.id,
-                subjectName: subject.name,
-                subjectColor: subject.color,
-                topicIds: [],
-              ),
+              arguments: subject,
             );
           },
           borderRadius: BorderRadius.circular(12),

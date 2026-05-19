@@ -5,6 +5,7 @@ import '../utils/study_utils.dart';
 import '../utils/time_utils.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -194,11 +195,13 @@ class PersonalLearningPlanService {
       dependencyMap: dependencyMap,
       completedTopicIds: completedTopicIds,
       learningLevels: learningLevels,
+      courseName: courseName,
     );
 
     final linkedPlans = await _linkQuestionsToDailyPlans(dailyPlans);
     final totalSyllabusTopics = allTopics.length;
-    final summary = _generateSummary(linkedPlans, recommendations, totalSyllabusTopics: totalSyllabusTopics);
+    final summary = _generateSummary(linkedPlans, recommendations,
+        totalSyllabusTopics: totalSyllabusTopics, courseName: courseName);
 
     final metadata = syllabusGoals != null
         ? <String, dynamic>{
@@ -236,10 +239,44 @@ class PersonalLearningPlanService {
     final dailyPlans = <DailyPlan>[];
     final totalDays = config.planDurationDays;
 
-    final defaultTopicCount = (totalDays / 7).ceil().clamp(3, 20);
+    String? resolvedSubjectId;
+    final realTopics = <Topic>[];
+    try {
+      final subjectRepo = SubjectRepository();
+      await subjectRepo.init();
+      final subjectsResult = await subjectRepo.getAll();
+      if (subjectsResult.isSuccess) {
+        final matchingSubject = (subjectsResult.data ?? []).where(
+          (s) => s.name.toLowerCase() == courseName.toLowerCase(),
+        ).firstOrNull;
+        if (matchingSubject != null) {
+          resolvedSubjectId = matchingSubject.id;
+          await _topicRepository.init();
+          final topicsResult = await _topicRepository.getBySubject(matchingSubject.id);
+          if (topicsResult.isSuccess) {
+            realTopics.addAll(topicsResult.data ?? []);
+          }
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to resolve subject/topics for empty mastery plan', e);
+    }
+
+    final bool useRealTopics = resolvedSubjectId != null && realTopics.isNotEmpty;
+
+    final defaultTopicCount = useRealTopics
+        ? realTopics.length
+        : (totalDays / 7).ceil().clamp(3, 20);
+
     final topicNames = <String>[];
-    for (var i = 1; i <= defaultTopicCount; i++) {
-      topicNames.add('$courseName - Topic $i');
+    if (useRealTopics) {
+      for (final topic in realTopics) {
+        topicNames.add(topic.title);
+      }
+    } else {
+      for (var i = 1; i <= defaultTopicCount; i++) {
+        topicNames.add('$courseName - Topic $i');
+      }
     }
 
     for (var day = 1; day <= totalDays; day++) {
@@ -261,12 +298,16 @@ class PersonalLearningPlanService {
       }
 
       final topicIndex = (day - 1) % topicNames.length;
+      final topicId = useRealTopics
+          ? realTopics[topicIndex].id
+          : 'generated_${day}_$studentId';
+      final effectiveSubjectId = resolvedSubjectId ?? '';
       dailyPlans.add(DailyPlan(
         date: now.add(Duration(days: day - 1)),
         dayNumber: day,
         priorityTopics: [
           PlannedTopic(
-            topicId: 'generated_${day}_$studentId',
+            topicId: topicId,
             topicTitle: topicNames[topicIndex],
             priority: 1.0,
             reason: 'New topic from $courseName',
@@ -275,7 +316,7 @@ class PersonalLearningPlanService {
             estimatedQuestions: config.targetQuestionsPerDay,
             estimatedMinutes: config.targetMinutesPerDay.toInt(),
             reasons: ['Part of $courseName curriculum'],
-            subjectId: '',
+            subjectId: effectiveSubjectId,
           ),
         ],
         reviewQuestionIds: [],
@@ -291,7 +332,7 @@ class PersonalLearningPlanService {
       totalMinutes: (config.targetMinutesPerDay * totalDays).round(),
       newTopics: topicNames.length,
       reviewTopics: 0,
-      estimatedCoverage: 0.3,
+      estimatedCoverage: useRealTopics ? 0.5 : 0.3,
       focusAreas: topicNames.take(3).toList(),
     );
 
@@ -530,23 +571,35 @@ class PersonalLearningPlanService {
 
   Future<void> redistributeMissedWorkloadForStudent(
     String studentId,
-    int missedMinutes,
-  ) async {
+    int missedMinutes, {
+    String strategy = 'days:3',
+  }) async {
     await _planRepository.init();
     final planResult = await _planRepository.loadPlan(studentId);
     final plan = planResult.data;
     if (plan == null) return;
-    await redistributeMissedWorkload(studentId, missedMinutes, plan);
+    await redistributeMissedWorkload(studentId, missedMinutes, plan, strategy: strategy);
   }
 
   Future<void> redistributeMissedWorkload(
     String studentId,
     int missedMinutes,
-    PersonalLearningPlan plan,
-  ) async {
+    PersonalLearningPlan plan, {
+    String strategy = 'days:3',
+  }) async {
     final now = DateTime.now();
     final todayStart = now.dateOnly;
-    final redistributeDays = 3;
+
+    int redistributeDays;
+    if (strategy == 'all') {
+      redistributeDays = plan.dailyPlans.length;
+    } else if (strategy.startsWith('days:')) {
+      final parsed = int.tryParse(strategy.split(':').last);
+      redistributeDays = (parsed ?? 3).clamp(1, plan.dailyPlans.length);
+    } else {
+      redistributeDays = 3;
+    }
+
     final extraPerDay = (missedMinutes / redistributeDays).ceil();
 
     final updatedPlans = plan.dailyPlans.map((day) {
@@ -569,6 +622,42 @@ class PersonalLearningPlanService {
     }
   }
 
+  Future<void> extendPlan(String studentId, int extraDays) async {
+    await _planRepository.init();
+    final planResult = await _planRepository.loadPlan(studentId);
+    final plan = planResult.data;
+    if (plan == null) return;
+
+    final lastDay = plan.dailyPlans.last.date;
+    final newPlans = <DailyPlan>[];
+    var nextDayNumber = plan.dailyPlans.length + 1;
+
+    for (var i = 1; i <= extraDays; i++) {
+      final date = lastDay.add(Duration(days: i));
+      newPlans.add(DailyPlan(
+        date: date,
+        dayNumber: nextDayNumber++,
+        priorityTopics: [],
+        reviewQuestionIds: [],
+        stretchGoalQuestionIds: [],
+        targetQuestions: plan.targetQuestionsPerDay,
+        targetMinutes: plan.targetMinutesPerDay.round(),
+        focus: 'Extended study day',
+      ));
+    }
+
+    final updated = plan.copyWith(
+      dailyPlans: [...plan.dailyPlans, ...newPlans],
+      planDurationDays: plan.planDurationDays + extraDays,
+    );
+
+    try {
+      await _planRepository.savePlan(updated);
+    } catch (e) {
+      _logger.w('Failed to save extended plan', e);
+    }
+  }
+
   int? _getPlanDayNumber(PersonalLearningPlan plan, DateTime date) {
     for (final day in plan.dailyPlans) {
       if (day.date.year == date.year &&
@@ -587,6 +676,7 @@ class PersonalLearningPlanService {
     required Map<String, TopicDependency> dependencyMap,
     required Set<String> completedTopicIds,
     List<List<String>>? learningLevels,
+    String courseName = '',
   }) async {
     final dailyPlans = <DailyPlan>[];
     final now = DateTime.now();
@@ -697,7 +787,7 @@ class PersonalLearningPlanService {
         stretchGoalQuestionIds: stretchGoalQuestionIds,
         targetQuestions: questionsToday,
         targetMinutes: minutesToday.round(),
-        focus: _generateFocus(priorityTopics),
+        focus: _generateFocus(priorityTopics, courseName: courseName),
       ));
     }
 
@@ -768,23 +858,25 @@ class PersonalLearningPlanService {
 
   String _getStudentId() => StudentIdService().getStudentId();
 
-  String _generateFocus(List<PlannedTopic> topics) {
+  String _generateFocus(List<PlannedTopic> topics, {String courseName = ''}) {
     final l10n = _l10n;
+    final prefix = courseName.isNotEmpty ? '$courseName: ' : '';
     if (l10n != null) {
-      if (topics.isEmpty) return planFocusLabel(isEmpty: true, weakRatio: 0, l10n: l10n);
+      if (topics.isEmpty) return '$prefix${planFocusLabel(isEmpty: true, weakRatio: 0, l10n: l10n)}';
       final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
-      return planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length, l10n: l10n);
+      return '$prefix${planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length, l10n: l10n)}';
     }
-    if (topics.isEmpty) return 'General review';
+    if (topics.isEmpty) return '${prefix}General review';
     final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
-    if (weakCount > topics.length / 2) return 'Focus on weak areas';
-    return 'Practice and review';
+    if (weakCount > topics.length / 2) return '${prefix}Focus on weak areas';
+    return '${prefix}Practice and review';
   }
 
   PlanSummary _generateSummary(
     List<DailyPlan> dailyPlans,
     List<PlanRecommendation> recommendations, {
     int totalSyllabusTopics = 0,
+    String courseName = '',
   }) {
     final totalQuestions = dailyPlans.fold<int>(0, (sum, d) => sum + d.targetQuestions);
     final totalMinutes = dailyPlans.fold<int>(0, (sum, d) => sum + d.targetMinutes);

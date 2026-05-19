@@ -1,30 +1,19 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/onboarding/onboarding.dart';
+import 'package:studyking/features/onboarding/services/onboarding_service.dart';
+import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 
 void main() {
-  group('Onboarding barrel', () {
+  group('OnboardingService isOnboardingNeeded', () {
     setUp(() {
-      OnboardingService.setTestStorage({});
+      OnboardingService.setStorage(InMemoryOnboardingStorage());
     });
 
     tearDown(() {
-      OnboardingService.setTestStorage(null);
+      OnboardingService.setStorage(HiveOnboardingStorage());
     });
 
-    test('OnboardingService returns true for isOnboardingNeeded initially', () async {
+    test('returns true when no flags are set', () async {
       expect(await OnboardingService.isOnboardingNeeded(), isTrue);
-    });
-
-    test('OnboardingDialog is accessible', () {
-      expect(OnboardingDialog, isA<Type>());
-    });
-
-    test('ApiKeyBanner is accessible', () {
-      expect(ApiKeyBanner, isA<Type>());
-    });
-
-    test('LocalDataNotice is accessible', () {
-      expect(LocalDataNotice, isA<Type>());
     });
   });
 }

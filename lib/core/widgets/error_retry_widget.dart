@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ErrorRetryWidget extends StatelessWidget {
   final String message;
@@ -15,6 +16,7 @@ class ErrorRetryWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -29,7 +31,7 @@ class ErrorRetryWidget extends StatelessWidget {
               FilledButton.tonalIcon(
                 onPressed: onRetry,
                 icon: const Icon(Icons.refresh),
-                label: Text(retryLabel ?? 'Retry'),
+                label: Text(retryLabel ?? l10n.retry),
               ),
             ],
           ],

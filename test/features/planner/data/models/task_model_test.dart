@@ -113,5 +113,48 @@ void main() {
         expect(a.hashCode, a.hashCode);
       });
     });
+
+    group('serialization', () {
+      test('toJson/fromJson round-trip preserves all fields', () {
+        final now = DateTime(2026, 5, 19);
+        final original = TaskModel(
+          id: 'rt-1',
+          title: 'Review Kinematics',
+          description: 'Complete chapter review',
+          status: 'done',
+          assignee: 'student-1',
+          priority: 'high',
+          dueDate: now,
+          createdAt: now,
+          updatedAt: now,
+        );
+        final json = original.toJson();
+        final restored = TaskModel.fromJson(json);
+        expect(restored.id, original.id);
+        expect(restored.title, original.title);
+        expect(restored.description, original.description);
+        expect(restored.status, original.status);
+        expect(restored.assignee, original.assignee);
+        expect(restored.priority, original.priority);
+        expect(restored.dueDate, original.dueDate);
+        expect(restored.createdAt, original.createdAt);
+        expect(restored.updatedAt, original.updatedAt);
+      });
+
+      test('toJson/fromJson round-trip with null optionals', () {
+        final original = TaskModel(
+          id: 'rt-2',
+          title: 'Simple Task',
+          description: 'No optional fields',
+        );
+        final json = original.toJson();
+        final restored = TaskModel.fromJson(json);
+        expect(restored.dueDate, isNull);
+        expect(restored.createdAt, isNull);
+        expect(restored.updatedAt, isNull);
+        expect(restored.assignee, isNull);
+        expect(restored.status, 'todo');
+      });
+    });
   });
 }

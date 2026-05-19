@@ -248,5 +248,23 @@ void main() {
         isFalse,
       );
     });
+
+    test('can be overridden with custom notifier', () {
+      final customNotifier = DashboardLayoutNotifier();
+      customNotifier.toggleCollapsed('override-card');
+
+      final container = ProviderContainer(
+        overrides: [
+          dashboardLayoutPreferencesProvider.overrideWith(
+            (ref) => customNotifier,
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final prefs = container.read(dashboardLayoutPreferencesProvider);
+      expect(prefs.collapsedCards, contains('override-card'));
+      expect(prefs.isCollapsed('override-card'), isTrue);
+    });
   });
 }

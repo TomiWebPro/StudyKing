@@ -1,279 +1,249 @@
-# Internationalisation Master — Full Codebase Audit
+# Internationalisation (i18n) Master Issue — Round 2
 
-**Target:** Spanish (`es`) as primary target locale; findings apply to all future locales.
-**Audit date:** 2026-05-18
-**Scope:** All `.dart` source files, `.arb` files, and l10n config.
-
----
-
-## BLOCKER — App crashes or user cannot proceed
-
-*(None identified. The l10n infrastructure is sound: `AppLocalizations` is wired via `MaterialApp`, `locale_config.dart` resolves variants, and all generated methods compile. No crash-causing gaps found.)*
+**Date:** 2026-05-19  
+**Auditor:** Internationalisation Master  
+**Scope:** Remaining i18n gaps after Round 1 (see `issues/completed/internationalisation_master.md`)  
+**Target Locale:** Spanish (es), patterns generalisable to other locales  
 
 ---
 
-## MAJOR — Feature is broken or misleading for Spanish users
+## BLOCKER
 
-### M1. Hardcoded English strings in subject dependency & topic dialogs
-
-**Files:**
-- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart`
-- `lib/features/subjects/presentation/dialogs/topic_edit_dialog.dart`
-- `lib/features/subjects/presentation/widgets/subject_topics_tab.dart`
-
-**Instances (all will render English regardless of locale):**
-
-| File | Line | String |
-|------|------|--------|
-| `topic_dependency_dialog.dart` | 59 | `'${widget.topic.title} — Dependencies'` |
-| `topic_dependency_dialog.dart` | 67 | `'Prerequisites'` |
-| `topic_dependency_dialog.dart` | 73 | `'No other topics available for prerequisites.'` |
-| `topic_dependency_dialog.dart` | 80 | `'No description'` |
-| `topic_dependency_dialog.dart` | 94 | `'Mastery Threshold: ${...}%'` |
-| `topic_dependency_dialog.dart` | 107 | `'Required Topic'` |
-| `topic_dependency_dialog.dart` | 108-110 | `'Student must master this topic'` / `'Optional topic — can be skipped'` |
-| `topic_dependency_dialog.dart` | 119 | `'Syllabus Weight: ${...}'` |
-| `topic_edit_dialog.dart` | 113 | `'Parent Topic'` |
-| `topic_edit_dialog.dart` | 117 | `'None (Root Topic)'` |
-| `topic_edit_dialog.dart` | 130 | `'Sort Order: $_sortOrder'` |
-| `subject_topics_tab.dart` | 85 | `'Topic "${result.title}" created'` |
-| `subject_topics_tab.dart` | 91 | `'Failed to create topic: $e'` |
-| `subject_topics_tab.dart` | 101 | `'Edit Topic'` |
-| `subject_topics_tab.dart` | 115 | `'Topic "${result.title}" updated'` |
-| `subject_topics_tab.dart` | 121 | `'Failed to update topic: $e'` |
-| `subject_topics_tab.dart` | 146 | `'Dependencies updated'` |
-| `subject_topics_tab.dart` | 152 | `'Failed to update dependencies: $e'` |
-| `subject_topics_tab.dart` | 188-189 | `'Delete Topic'` / `'Delete "${topic.title}"?\n...'` |
-| `subject_topics_tab.dart` | 232 | `'Topic deleted'` |
-| `subject_topics_tab.dart` | 238 | `'Failed to delete topic: $e'` |
-| `subject_topics_tab.dart` | 372 | `'Edit Topic'` (second site) |
-| `subject_topics_tab.dart` | 380 | `'Dependencies'` |
-| `subject_topics_tab.dart` | 389 | `'Delete'` |
-
-**Rationale:** The topic dependency dialog is an internal modeling tool primarily used during content authoring, but it appears as a full-screen dialog. Every string above bypasses `AppLocalizations.of(context)!` and will display in English for es users.
-
-**Acceptance criteria:**
-- Every hardcoded string above is migrated to an `app_en.arb` / `app_es.arb` key pair and accessed via `l10n.keyName`.
-- All `Text(...)`, `SnackBar(content: Text(...))`, `title: Text(...)`, and dialog `content` strings in these three files are localised.
+None identified.
 
 ---
 
-### M2. `toStringAsFixed()` used for user-facing numeric display
+## MAJOR
 
-**Files:**
-- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart:119` — `Text('Syllabus Weight: ${_syllabusWeight.toStringAsFixed(1)}')`
-- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart:129` — `label: _syllabusWeight.toStringAsFixed(1)`
+### M6. Hardcoded user-facing English strings in 5 widget files
 
-**Rationale:** `toStringAsFixed()` always produces a period decimal separator (`"1.5"`). Spanish locale requires comma (`"1,5"`). Project convenion in `AGENTS.md` and `lib/core/utils/number_format_utils.dart` mandates using `formatDecimal()` for all user-facing decimals.
+**Rationale:** These strings are never translated via `AppLocalizations`. A Spanish user will always see English text regardless of their locale setting.
 
-**Acceptance criteria:**
-- `formatDecimal(value, localeName)` replaces `toStringAsFixed()` in both instances.
-- The locale name is obtained from `AppLocalizations.of(context)!.localeName`.
-- The Syllabus Weight label is localised via an `.arb` key (see M1).
+**Affected files and occurrences:**
+
+| # | File | Line | String | Context |
+|---|---|---|---|---|
+| 6a | `lib/features/settings/presentation/settings_screen.dart` | 96 | `'Share'` | `SnackBarAction` label in auto-backup success |
+| 6b | same file | 99 | `'StudyKing Backup — ${...}'` | `Share.shareXFiles` text in auto-backup |
+| 6c | same file | 633 | `'Back Up Now'` | `FilledButton` label in backup dialog |
+| 6d | same file | 654 | `'StudyKing Backup — ${...}'` | `Share.shareXFiles` text in manual backup |
+| 6e | same file | 658 | `'Share last backup'` | `TextButton` label |
+| 6f | `lib/features/dashboard/presentation/widgets/dashboard_header.dart` | 29 | `'Export Reports'` | `Semantics` label |
+| 6g | same file | 32 | `'Export Reports'` | `IconButton` tooltip |
+| 6h | same file | 38 | `'Backup & Restore'` | `Semantics` label |
+| 6i | same file | 41 | `'Backup & Restore'` | `IconButton` tooltip |
+| 6j | `lib/features/teaching/presentation/tutor_screen.dart` | 557 | `'Chat'` / `'Slides'` | `IconButton` tooltip (toggle) |
+| 6k | same file | 563 | `'Voice output'` | `IconButton` tooltip |
+| 6l | `lib/features/teaching/presentation/widgets/chat_bubble.dart` | 85 | `'Read aloud'` | `IconButton` tooltip |
+| 6m | `lib/features/questions/presentation/widgets/question_card_widget.dart` | 341 | `'Upload file'` | `Semantics` label |
+| 6n | same file | 347 | `'File attached'` | Button label (file upload state) |
+| 6o | same file | 347 | `'Upload file'` | Button label (no file state) |
+| 6p | same file | 356 | `'Record audio'` | `Semantics` label |
+| 6q | same file | 362 | `'Recording complete'` | Button label (recording done) |
+| 6r | same file | 362 | `'Start recording'` | Button label (idle state) |
+
+**Acceptance Criteria:**
+- Every string above is replaced with an `AppLocalizations.of(context)!.someKey` call.
+- New ARB keys are added to both `app_en.arb` and `app_es.arb`.
+- The generated Dart code compiles without errors.
+- A Spanish device shows translated strings for each of these UI elements.
+- `scripts/check_i18n_coverage.sh` passes with 100 % key parity.
 
 ---
 
-### M3. `question_bank_screen.dart` hardcoded "None" filter item
+### M7. `lesson_agent_service.dart` uses hardcoded English system prompts instead of ARB
 
-**File:** `lib/features/questions/presentation/question_bank_screen.dart:315`
+**File:** `lib/features/lessons/services/lesson_agent_service.dart`
 
+**Lines 255–265:**
 ```dart
-const DropdownMenuItem(value: '', child: Text('None')),
+String _buildLessonPrompt(String topicTitle, String localeName) {
+  return 'Generate a structured lesson plan for the topic: "$topicTitle". '
+      'Include slides (key concepts), examples, exercises, and a summary. '
+      'Respond in $localeName. '
+      'Format your response as a JSON array of blocks...';
+}
+
+String _lessonSystemPrompt(String localeName) {
+  return 'You are a lesson planning AI. Generate educational content in $localeName. '
+      'Your response must be valid JSON.';
+}
 ```
 
-**Rationale:** The "None" option in the question bank filter dropdown is always English.
+**Rationale:** The `teaching/services/prompts/prompts.dart` file already has a proper pattern — all prompt strings are in ARB and accessed via `lookupAppLocalizations(Locale(localeName))`. This file bypasses that pattern entirely, producing English prompts even when the user's locale is `es`. A Spanish user asking for a lesson will receive a system prompt in English, which means the LLM may produce lesson structure descriptions in English before switching mid-generation.
 
-**Acceptance criteria:**
-- `Text('None')` replaced with `Text(l10n.none)` (key `"none"` exists in both `.arb` files as `"None"` / `"Ninguno"`).
+**Also affected — `question_variant_generator.dart:87-88`:**
+```dart
+String _variantSystemPrompt() {
+  return 'You are a question variant generator. Generate semantically equivalent ...';
+}
+```
+Same pattern — hardcoded English prompt not passed through ARB.
 
----
-
-### M4. Translation quality issues in `app_es.arb`
-
-#### M4a. Mismatched/clipped Spanish badge-unlock notification
-
-**File:** `lib/l10n/app_es.arb`
-
-**Key:** `notifBodyBadgeUnlocked`
-- English: `You earned the "{badgeName}" badge: {badgeDescription}`
-- Spanish: `¡Obtuvo la insignia "{badgeName}": {badgeDescription}`
-
-**Issue:** The `!` is only at the beginning (opening `¡` but no closing `!`). The English has a period. The Spanish should end with matching punctuation.
-
-**Suggested fix:** `¡Obtuvo la insignia "{badgeName}": {badgeDescription}!`
-
-#### M4b. Hardcoded Spanish comma syntax in `allStepsFormat`
-
-**File:** `lib/l10n/app_es.arb`
-
-**Key:** `allStepsFormat`
-- English: `All {count} steps identified correctly!`
-- Spanish: `¡Los {count} pasos identificados correctamente!`
-
-**Issue:** Missing verb — `"han sido"` — makes it read like a newspaper headline. More natural: `"¡Los {count} pasos se han identificado correctamente!"`
-
-#### M4c. Verbosity mismatches in Spanish vs English
-
-Several Spanish translations are significantly longer than their English counterparts. While not a bug per se, this can cause UI truncation in fixed-width layouts (buttons, chips, tab labels). Key examples:
-
-| Key | EN | ES | Ratio |
-|-----|----|----|-------|
-| `focusForMinutes(=plural)` | `Focus for {count} minutes` | `Enfóquese por {count} minutos` | ~1.5x |
-| `scheduledLessons` | `Scheduled Lessons` | `Lecciones Programadas` | ~1.4x |
-| `deleteAccountConfirmation` | `Are you sure...?` | `¿Está seguro de que...?` | ~1.3x |
-| `planAdjustmentSuggested` | `You've had {count} days...` | `Ha tenido {count} días...` | ~1.2x |
-
-**Acceptance criteria:**
-- Check all UI containers that display these strings (buttons, card titles, snackbars) for `overflow: TextOverflow.ellipsis` or text clipping.
-- Add `flexible` / `Expanded` / `FittedBox` / `overflow` handling where needed.
+**Acceptance Criteria:**
+- All prompt strings in `lesson_agent_service.dart` are moved to ARB keys (`lessonSystemPrompt`, `lessonBuildPrompt`).
+- The `_variantSystemPrompt()` in `question_variant_generator.dart` uses `lookupAppLocalizations` or receives the l10n instance.
+- Both EN and ES ARB files contain the new keys.
+- Generated Dart code compiles.
+- A Spanish device triggers lesson generation and the LLM receives a Spanish system prompt.
 
 ---
 
-### M5. Mixed register (formal vs informal) in Spanish translations
+### M8. Locale switch does not trigger rebuild of `AppLocalizations.of(context)`
 
-**File:** `lib/l10n/app_es.arb`
+**Rationale:** When the user changes language in Settings, `ref.read(localeProvider.notifier).state = Locale(value)` is called. This updates a `StateProvider<Locale>`. However, `AppLocalizations.of(context)` is resolved by Flutter's `Localizations` widget ancestor, which does **not** watch `localeProvider`. Screens that call `final l10n = AppLocalizations.of(context)!` inside `build()` **will** see updated strings because Flutter rebuilds the widget tree when `Localizations` changes — but only if the locale change is propagated through `MaterialApp`'s `locale` parameter back to `Localizations`.
 
-The project targets neutral Latin American Spanish with formal `usted` register per `l10n.yaml` line 10:
-> `'es' targets neutral Latin American Spanish (formal "usted" register).`
+**The root cause:** The app likely sets `locale:` on `MaterialApp` from `localeProvider`. If this is a plain `StateProvider<Locale>`, the widget tree rebuilds and `Localizations` re-resolves, so strings refresh. However, `AGENTS.md` explicitly warns about screens that cache `l10n` in a local variable outside `build` — such screens display stale text until re-entered.
 
-However, several strings use informal `tú`:
+**Confirmation needed — investigate:**
+- `lib/main.dart` — how is `locale` wired to `MaterialApp`?
+- Does `MaterialApp` receive `ref.watch(localeProvider)` so it triggers a full rebuild?
+- Are there any `StatefulWidget` screens that assign `l10n` to a field in `initState` / `didChangeDependencies` and read it later without re-reading on rebuild?
 
-| Key | Spanish text | Register |
-|-----|-------------|----------|
-| `noQuestionsPracticeHint` | `Aún no tienes preguntas...` | informal (`tienes`) |
-| `confirmExitPracticeBody` | `Tu progreso ... se guardará, pero saldrás` | informal (`tu`, `saldrás`) |
-| `confirmExitFocusBody` | `Tienes una sesión ... Al finalizarla temprano se guardará tu progreso` | informal (`Tienes`, `tu`) |
-| `deleteQuestionConfirm` | `¿Estás seguro de que quieres eliminar...` | informal (`Estás`, `quieres`) |
-| `deleteQuestionsConfirm` | `¿Estás seguro de que quieres eliminar...` | informal |
-| `questionsDeleted` | `...pregunta eliminada` | acceptable (impersonal) |
-| `onboardingFocusDesc` | `Mantén el enfoque...` | informal imperative (`Mantén`) |
-
-Contrast with formal-`usted` strings:
-- `deleteAccountConfirmation`: `¿Está seguro de que desea eliminar su cuenta?` — formal ✓
-- `fillAllFieldsCorrectly`: `Por favor, complete todos los campos correctamente` — formal ✓
-
-**Acceptance criteria:**
-- All Spanish translations in `app_es.arb` use consistent formal voice (`usted`, `su`, `complete`, `desea`).
-- Fix the 7+ informal strings above to match the project's stated register.
+**Acceptance Criteria:**
+- After switching from English to Spanish in Settings, every visible screen updates its strings (check: dashboard, planner, mentor, tutor, settings).
+- `MaterialApp` watches `localeProvider` via `ref.watch(localeProvider)`.
+- Any `StatefulWidget` that caches `l10n` outside `build` is refactored to re-read on locale change (e.g. via `didChangeDependencies` + `Locale` key check, or `Consumer` wrapping).
+- A test exists that simulates locale switch and verifies string refresh on a representative screen.
 
 ---
 
-## MINOR — Code quality / UX friction / maintainability
+### M9. Spanish ARB uses English-style `(s)` plural notation instead of ICU plural
 
-### m1. Fallback locale-aware strings with English defaults in `time_utils.dart`
+**File:** `lib/l10n/app_es.arb`
 
-**File:** `lib/core/utils/time_utils.dart`
+**Two keys affected:**
 
-The functions `formatDate()` and `_durationPart()` have hardcoded English fallback strings:
+Key `sourcesCountLabel` (line 6044):
+```json
+"sourcesCountLabel": "{count, plural, =1{1 Fuente} other{{count} Fuente(s)}}"
+```
+The `other` branch uses `Fuente(s)` — this is an English convention (adding `(s)` to indicate optional plural). In Spanish the plural should be `fuentes` (lowercase).
+
+Key `downstreamTopicWarning` (line 6513):
+```json
+"downstreamTopicWarning": "⚠ {count} tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización."
+```
+This is not ICU-pluralised at all — it's a plain `{count}` placeholder with English `(s)` appended manually. When `count == 1`, the string reads `"⚠ 1 tema(s) dependiente(s) dependen..."` which is incorrect in both English and Spanish.
+
+**Acceptance Criteria:**
+- `sourcesCountLabel` is changed to `"{count,plural,=1{1 fuente} other{{count} fuentes}}"` in `app_es.arb`.
+- `downstreamTopicWarning` is changed to use ICU plural syntax: `"⚠ {count,plural,=1{1 tema dependiente depende} other{{count} temas dependientes dependen}} de este tema y pueden necesitar actualización."`
+- Generated Dart compiles and displays correctly for count = 1 and count = 5.
+- `scripts/check_i18n_coverage.sh` passes.
+
+---
+
+## MINOR
+
+### m9. `settings_screen.dart` 966–968 — `toStringAsFixed` for user-facing file size
+
+**File:** `lib/features/settings/presentation/settings_screen.dart:965-969`
 
 ```dart
-// line 62
-final unknown = l10n?.unknown ?? 'Unknown';
-// line 68
-return l10n?.today ?? 'Today';
-// line 72
-return l10n?.yesterday ?? 'Yesterday';
-// line 58
-return '$count$fallback';  // fallback like '5d'
+final sizeStr = fileSize > 1048576
+    ? '${(fileSize / 1048576).toStringAsFixed(1)} MB'
+    : fileSize > 1024
+        ? '${(fileSize / 1024).toStringAsFixed(0)} KB'
+        : '$fileSize B';
 ```
 
-**Rationale:** These fallbacks are only reached when `l10n` is null, which should never happen in production since `AppLocalizations.of(context)` is called upstream. However, it's a maintenance hazard — if a caller fails to pass `l10n`, English silently appears.
+**Rationale:** Per AGENTS.md, `toStringAsFixed` must never be used for user-facing numeric displays — it always produces a period decimal separator (`"1.5 MB"`), which is incorrect for Spanish (`"1,5 MB"`). Use `formatDecimal(fileSizeInMb, localeName, maxFractionDigits: 1)` instead.
 
-**Acceptance criteria:**
-- Either remove the null fallbacks and make `l10n` required (breaking change), or leave with a `// covariant: l10n is always non-null in production` comment.
-
-### m2. Notification strings with duplicate/triplicate keys
-
-**File:** `lib/l10n/app_en.arb`
-
-Duplicate/redundant keys covering the same semantic content:
-
-- `notifBodyRevision` (line 3971) and `notificationTimeToReviewBody` (line 4206) — same body text, different key names
-- `notifBodyLessonReminder` (line 4013) and `notificationUpcomingLessonBody` (line 4218) — same concept
-- `notifBodyBadgeUnlocked` (line 4042) and `notificationBadgeUnlockedBody` (line 4230)
-
-**Rationale:** Two keys for the same notification body means double translation work, potential drift, and confusion about which to use. One should delegate to the other or be removed.
-
-**Acceptance criteria:**
-- Consolidate each pair into a single key; the duplicate becomes an alias or is removed.
-
-### m3. No RTL locale support in infrastructure
-
-**Current state:** The codebase has 20+ `Directionality.of(context)` usages for chevron flipping (left/right arrows), which is good. But `AppLocale` enum (`locale_config.dart`) only has `en` and `es`. No RTL locales (Arabic `ar`, Hebrew `he`, Urdu `ur`, Persian `fa`) are supported.
-
-RTL layout issues that would surface if RTL were added:
-- `chat_bubble.dart:27` checks `TextDirection.rtl` — but no RTL locale exists to trigger it
-- `canvas_drawing_widget.dart:94` and `practice_mode_card.dart:78` pass `Directionality.of(context)` for text direction in `TextPainter` — correct but untested
-- All `MainAxisAlignment.start` / `MainAxisAlignment.end` usages rely on `Directionality` resolving correctly (they do in Flutter)
-
-**Acceptance criteria:**
-- Not an actionable fix for this sprint, but document that before adding an RTL locale (`ar`, `he`):
-  1. Add the locale to `AppLocale` in `locale_config.dart`
-  2. Create `app_ar.arb` (right-to-left marker `"@@locale": "ar"`)
-  3. Run `scripts/check_i18n_coverage.sh` to validate 100% key parity
-  4. Test all screens with `Directionality` — especially `chat_bubble.dart`, `canvas_drawing_widget.dart`, and all chevron-flipping logic
-
-### m4. `questionTypeDefault` inconsistency
-
-**File:** `lib/l10n/app_en.arb`
-- Key: `questionTypeDefault` — value: `"Question"`
-- File: `lib/l10n/app_es.arb`
-- Key: `questionTypeDefault` — value: `"Pregunta"`
-
-But `lib/features/mentor/services/mentor_service.dart` imports `question_type_localizer.dart` which likely uses a different mechanism for question type display names.
-
-**Acceptance criteria:**
-- Audit all usages of question type display names. Ensure they funnel through a single localisation path (either `question_type_localizer.dart` or `.arb` keys, not both).
-
-### m5. `lib/features/questions/presentation/question_bank_screen.dart:315` — `Text('None')`
-
-Already listed in M3. This is a minor quick-fix item but categorised as MAJOR because it appears in a filter dropdown the user interacts with.
+**Acceptance Criteria:**
+- Replace with `formatDecimal(fileSize / 1048576, localeName, maxFractionDigits: 1)` + `" MB"` (or move the unit into ARB).
+- Spanish display shows `"1,5 MB"`, not `"1.5 MB"`.
 
 ---
 
-## Summary of required `.arb` key additions
+### m10. RTL: Hardcoded `EdgeInsets.only(left:)` in `planner_screen.dart`
 
-To fix M1, the following new keys are needed in both `app_en.arb` and `app_es.arb`:
+**File:** `lib/features/planner/presentation/planner_screen.dart:788`
 
-| Key | EN value | ES value |
-|-----|----------|----------|
-| `dependenciesTitle` | `"{topic} — Dependencies"` | `"{topic} — Dependencias"` |
-| `prerequisites` | `Prerequisites` | `Requisitos previos` |
-| `noTopicsForPrerequisites` | `No other topics available for prerequisites.` | `No hay otros temas disponibles como requisitos previos.` |
-| `noDescription` | `No description` | `Sin descripción` |
-| `masteryThreshold` | `Mastery Threshold: {percent}%` | `Umbral de Dominio: {percent}%` |
-| `requiredTopic` | `Required Topic` | `Tema Requerido` |
-| `requiredTopicOn` | `Student must master this topic` | `El estudiante debe dominar este tema` |
-| `requiredTopicOff` | `Optional topic — can be skipped` | `Tema opcional — puede omitirse` |
-| `syllabusWeight` | `Syllabus Weight: {weight}` | `Peso del Temario: {weight}` |
-| `parentTopic` | `Parent Topic` | `Tema Padre` |
-| `rootTopic` | `None (Root Topic)` | `Ninguno (Tema Raíz)` |
-| `sortOrderValue` | `Sort Order: {order}` | `Orden: {order}` |
-| `topicCreated` | `Topic "{title}" created` | `Tema "{title}" creado` |
-| `topicCreateFailed` | `Failed to create topic: {error}` | `Error al crear tema: {error}` |
-| `editTopicTitle` | `Edit Topic` | `Editar Tema` |
-| `topicUpdated` | `Topic "{title}" updated` | `Tema "{title}" actualizado` |
-| `topicUpdateFailed` | `Failed to update topic: {error}` | `Error al actualizar tema: {error}` |
-| `dependenciesUpdated` | `Dependencies updated` | `Dependencias actualizadas` |
-| `dependenciesUpdateFailed` | `Failed to update dependencies: {error}` | `Error al actualizar dependencias: {error}` |
-| `deleteTopicTitle` | `Delete Topic` | `Eliminar Tema` |
-| `deleteTopicConfirm` | `Delete "{topic}"? This will remove it from all dependency lists.` | `¿Eliminar "{topic}"? Esto lo eliminará de todas las listas de dependencias.` |
-| `topicDeleted` | `Topic deleted` | `Tema eliminado` |
-| `topicDeleteFailed` | `Failed to delete topic: {error}` | `Error al eliminar tema: {error}` |
+```dart
+padding: const EdgeInsets.only(left: 4),
+```
 
-**Total: 24 new key pairs required for M1 fix.**
+**Rationale:** Hardcoded `left` padding does not flip for RTL locales. Should use `EdgeInsetsDirectional.only(start: 4)`.
+
+**Acceptance Criteria:**
+- Changed to `const EdgeInsetsDirectional.only(start: 4)`.
+- Visual verification: the spacing appears on the correct side when text direction is RTL.
 
 ---
 
-## Actionable Fix Plan
+### m11. RTL: Hardcoded `EdgeInsets.only(left:)` in `subject_topics_tab.dart`
 
-1. **Create 24 new `.arb` key pairs** (EN + ES) in `app_en.arb` and `app_es.arb`.
-2. **Replace hardcoded strings** in `topic_dependency_dialog.dart`, `topic_edit_dialog.dart`, `subject_topics_tab.dart`, and `question_bank_screen.dart` with `l10n.keyName` calls.
-3. **Fix `toStringAsFixed`** → `formatDecimal` + locale name in `topic_dependency_dialog.dart:119,129`.
-4. **Fix Spanish register** — change informal `tú` forms to formal `usted` in `app_es.arb`.
-5. **Fix `notifBodyBadgeUnlocked`** punctuation in `app_es.arb`.
-6. **Consolidate duplicate notification keys** in `app_en.arb`.
-7. **Run `scripts/check_i18n_coverage.sh`** to validate no keys are missed.
-8. **Run `scripts/validate_arb_no_duplicates.dart`** to catch any key conflicts.
-9. **Run `flutter gen-l10n`** to regenerate `AppLocalizations`.
-10. **Verify** `flutter analyze` passes with no new i18n-related warnings.
+**File:** `lib/features/subjects/presentation/widgets/subject_topics_tab.dart:365`
+
+```dart
+margin: EdgeInsets.only(bottom: 4, left: indentation * 16.0),
+```
+
+**Rationale:** `left:` is direction-fixed and does not flip for RTL. Should use `EdgeInsetsDirectional.only(bottom: 4, start: indentation * 16.0)`.
+
+**Acceptance Criteria:**
+- Changed to `EdgeInsetsDirectional.only(bottom: 4, start: indentation * 16.0)`.
+- Indentation appears on the correct side for RTL.
+
+---
+
+### m12. `durationMinutes` abbreviation mismatch between EN and ES
+
+**File:** `lib/l10n/app_en.arb:144` vs `lib/l10n/app_es.arb:144`
+
+| Locale | Value |
+|---|---|
+| `en` | `{count, plural, =1{1m} other{{count}m}}` |
+| `es` | `{count, plural, =1{1min} other{{count}min}}` |
+
+**Rationale:** The Spanish version uses the longer `min` abbreviation while English uses `m`. This causes inconsistent layout widths — a planner screen using these values may render `5min` in Spanish where English shows `5m`, potentially breaking tight layouts or grid alignments. Either both should converge on the same abbreviation, or the layout must accommodate the wider string.
+
+**Also note:** The same inconsistency exists for `durationSeconds` and `durationHours` — verify these are consistent.
+
+**Acceptance Criteria:**
+- Either change ES to `m` (matching EN) or EN to `min` (matching ES) — not both.
+- Visual check on a Spanish planner screen that duration labels fit within their containers.
+
+---
+
+### m13. Badge labels in `settings_screen.dart` use raw integer instead of locale-aware format
+
+**File:** `lib/features/settings/presentation/settings_screen.dart`
+
+- Line 1754: `label: Text('$_failedCount'),` — Badge showing failure count
+- Line 1797: `label: Text('$total'),` — Badge showing total active+failed count
+
+**Rationale:** These raw integers are not formatted with locale-aware `NumberFormat`. While Arabic numerals (0-9) are universally understood, `NumberFormat.decimalPattern(localeName)` should be used for consistency and future locale support. More critically, `$_failedCount` and `$total` are just numbers — they should ideally use `l10n.failedCount(_failedCount)` if a pluralised ARB key exists.
+
+**Acceptance Criteria:**
+- Replace with `formatDecimal(count.toDouble(), localeName, maxFractionDigits: 0)` or equivalent.
+- Verify that the Badge displays correctly for count values 0, 1, 99.
+
+---
+
+### m14. LLM-facing `mentor_service.dart` has hardcoded English strings in diagnostics
+
+**File:** `lib/features/mentor/services/mentor_service.dart:291-294`
+
+```dart
+buffer.writeln('${bullet}Sessions today: ${todaySessions.length}');
+...
+buffer.writeln('${bullet}WARNING: ${lateNight.length} session(s) started after 10 PM (late-night study detected)');
+```
+
+**Rationale:** These strings are injected into the LLM prompt context. While LLM-facing strings can be in invariant English (per AGENTS.md), the `session(s)` pattern with English-only `(s)` plural is inconsistent with the rest of the codebase. The content might affect LLM comprehension for Spanish — the LLM may interpret `session(s)` differently when the preceding context is in Spanish.
+
+**Acceptance Criteria:**
+- Either extract these to ARB `mentorDiagnosticSessionsToday` and `mentorDiagnosticLateNight` keys, or add a comment explaining why they are intentionally invariant.
+- If ARB keys are added, provide Spanish translations.
+
+---
+
+## Summary
+
+| Severity | Count | Key themes |
+|---|---|---|
+| BLOCKER | 0 | |
+| MAJOR | 4 | Hardcoded English UI strings (M6), LLM prompts bypassing ARB (M7), locale-switch staleness (M8), English `(s)` plurals in ES ARB (M9) |
+| MINOR | 6 | `toStringAsFixed` in file size (m9), RTL hardcoded left padding ×2 (m10–m11), duration abbreviation mismatch (m12), raw integer badge labels (m13), hardcoded mentor diagnostics (m14) |

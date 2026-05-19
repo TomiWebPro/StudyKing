@@ -5,6 +5,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class PrerequisiteCheckResult {
   final bool isReady;
@@ -84,7 +85,7 @@ class PrerequisiteCheckService {
       ));
     } catch (e) {
       _logger.e('Failed to check prerequisites', e);
-      return Result.success(const PrerequisiteCheckResult(isReady: true));
+      return Result.failure('Prerequisite check failed: $e');
     }
   }
 
@@ -93,23 +94,21 @@ class PrerequisiteCheckService {
     required List<Topic> unmetTopics,
     VoidCallback? onPracticePrerequisites,
   }) async {
+    final l10n = AppLocalizations.of(context)!;
     final topicNames = unmetTopics.map((t) => t.title).join(', ');
     final result = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Prerequisites Not Met'),
-        content: Text(
-          'This topic requires mastery of: $topicNames. '
-          'Would you like to practice those first?',
-        ),
+        title: Text(l10n.prerequisitesNotMet),
+        content: Text(l10n.prerequisiteMasteryRequired(topicNames)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Continue Anyway'),
+            child: Text(l10n.continueAnyway),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Practice Prerequisites'),
+            child: Text(l10n.practicePrerequisites),
           ),
         ],
       ),

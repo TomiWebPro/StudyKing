@@ -8,6 +8,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 

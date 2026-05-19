@@ -10,11 +10,12 @@ class _FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<void> create(PendingActionModel action) async {
+  Future<Result<void>> create(PendingActionModel action) async {
     _storage[action.id] = action;
+    return Result.success(null);
   }
 
   @override
@@ -23,27 +24,29 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
-    return _storage.values
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(_storage.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
         .toList()
-      ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
+      ..sort((a, b) => b.createdAt.compareTo(a.createdAt)));
   }
 
   @override
-  Future<void> markCompleted(String id) async {
+  Future<Result<void>> markCompleted(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'completed');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> markRejected(String id) async {
+  Future<Result<void>> markRejected(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'rejected');
     }
+    return Result.success(null);
   }
 
   @override
@@ -53,19 +56,20 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> clearAll(String studentId) async {
+  Future<Result<void>> clearAll(String studentId) async {
     final actions = _storage.values
         .where((a) => a.studentId == studentId)
         .toList();
     for (final action in actions) {
       _storage.remove(action.id);
     }
+    return Result.success(null);
   }
 
   @override
-  Future<bool> hasPending(String studentId) async {
-    return _storage.values
-        .any((a) => a.studentId == studentId && a.status == 'pending');
+  Future<Result<bool>> hasPending(String studentId) async {
+    return Result.success(_storage.values
+        .any((a) => a.studentId == studentId && a.status == 'pending'));
   }
 }
 
@@ -138,7 +142,7 @@ void main() {
           id: 'a2', studentId: 's1', createdAt: later));
         await repository.create(createTestAction(
           id: 'a3', studentId: 's1', status: 'completed'));
-        final result = await repository.getPending('s1');
+        final result = (await repository.getPending('s1')).data!;
         expect(result.length, 2);
         expect(result.first.id, 'a2');
       });
@@ -146,11 +150,11 @@ void main() {
       test('returns empty when no pending actions', () async {
         await repository.create(createTestAction(
           id: 'a1', studentId: 's1', status: 'completed'));
-        expect(await repository.getPending('s1'), isEmpty);
+        expect((await repository.getPending('s1')).data, isEmpty);
       });
 
       test('returns empty for student with no actions', () async {
-        expect(await repository.getPending('none'), isEmpty);
+        expect((await repository.getPending('none')).data, isEmpty);
       });
     });
 
@@ -211,17 +215,17 @@ void main() {
     group('hasPending', () {
       test('returns true when student has pending actions', () async {
         await repository.create(createTestAction(id: 'a1', studentId: 's1'));
-        expect(await repository.hasPending('s1'), isTrue);
+        expect((await repository.hasPending('s1')).data, isTrue);
       });
 
       test('returns false when no pending actions exist', () async {
         await repository.create(createTestAction(
           id: 'a1', studentId: 's1', status: 'completed'));
-        expect(await repository.hasPending('s1'), isFalse);
+        expect((await repository.hasPending('s1')).data, isFalse);
       });
 
       test('returns false for student with no actions', () async {
-        expect(await repository.hasPending('none'), isFalse);
+        expect((await repository.hasPending('none')).data, isFalse);
       });
     });
   });

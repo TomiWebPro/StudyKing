@@ -1,20 +1,31 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
-import '../../../../../l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'milestone_timeline.dart';
 
 class RoadmapCard extends StatelessWidget {
   final RoadmapModel roadmap;
   final void Function(String roadmapId, String milestoneId, bool isCompleted)?
       onToggleMilestone;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const RoadmapCard({
     super.key,
     required this.roadmap,
     this.onToggleMilestone,
+    this.onEdit,
+    this.onDelete,
   });
+
+  String _formatTopicNames(List<String> topicIds) {
+    if (topicIds.isEmpty) return '';
+    if (topicIds.length <= 2) return topicIds.join(', ');
+    return '${topicIds.take(2).join(', ')}, +${topicIds.length - 2} more';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,7 +40,7 @@ class RoadmapCard extends StatelessWidget {
     final statusColor = roadmap.status == 'active'
         ? theme.colorScheme.primary
         : roadmap.status == 'completed'
-            ? theme.colorScheme.primary
+            ? theme.colorScheme.tertiary
             : theme.colorScheme.error;
     final statusLabel = switch (roadmap.status) {
       'active' => l10n.inProgress,
@@ -73,6 +84,37 @@ class RoadmapCard extends StatelessWidget {
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                if (onEdit != null || onDelete != null)
+                  PopupMenuButton<String>(
+                    onSelected: (value) {
+                      if (value == 'edit') onEdit?.call();
+                      if (value == 'delete') onDelete?.call();
+                    },
+                    itemBuilder: (ctx) => [
+                      if (onEdit != null)
+                        PopupMenuItem(
+                          value: 'edit',
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit, size: 18, color: theme.colorScheme.primary),
+                              const SizedBox(width: 8),
+                              Text(l10n.edit),
+                            ],
+                          ),
+                        ),
+                      if (onDelete != null)
+                        PopupMenuItem(
+                          value: 'delete',
+                          child: Row(
+                            children: [
+                              Icon(Icons.delete, size: 18, color: theme.colorScheme.error),
+                              const SizedBox(width: 8),
+                              Text(l10n.delete),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
               ],
             ),
             const SizedBox(height: 12),
@@ -89,7 +131,7 @@ class RoadmapCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  l10n.completionOfValue(progress * 100),
+                  l10n.completionOfValue(formatPercent(progress * 100, l10n.localeName)),
                   style: theme.textTheme.bodySmall,
                 ),
                 Text(
@@ -112,7 +154,7 @@ class RoadmapCard extends StatelessWidget {
               const Divider(height: 1),
               const SizedBox(height: 8),
               ...roadmap.milestones.map((milestone) => SizedBox(
-                    height: 48,
+                    height: 56,
                     child: CheckboxListTile(
                       contentPadding: EdgeInsets.zero,
                       title: Text(milestone.title,
@@ -126,18 +168,20 @@ class RoadmapCard extends StatelessWidget {
                           )),
                       subtitle: milestone.topicsCovered.isNotEmpty
                           ? Text(
-                              l10n.topicCount(milestone.topicsCovered.length),
-                              style: theme.textTheme.bodySmall,
+                              _formatTopicNames(milestone.topicsCovered),
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             )
                           : null,
                       value: milestone.isCompleted,
-                      onChanged: milestone.isCompleted
-                          ? null
-                          : (val) => onToggleMilestone!(
-                                roadmap.id,
-                                milestone.id,
-                                val ?? false,
-                              ),
+                      onChanged: (val) => onToggleMilestone!(
+                            roadmap.id,
+                            milestone.id,
+                            val ?? false,
+                          ),
                     ),
                   )),
             ],

@@ -41,6 +41,30 @@ class EngagementNudgeModel extends HiveObject {
     this.actedUponAt,
   }) : sentAt = sentAt ?? DateTime.now();
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'studentId': studentId,
+    'nudgeType': nudgeType,
+    'message': message,
+    'severity': severity,
+    'topicId': topicId,
+    'sentAt': sentAt.toIso8601String(),
+    'wasActedUpon': wasActedUpon,
+    'actedUponAt': actedUponAt?.toIso8601String(),
+  };
+
+  factory EngagementNudgeModel.fromJson(Map<String, dynamic> json) => EngagementNudgeModel(
+    id: json['id'] as String,
+    studentId: json['studentId'] as String,
+    nudgeType: json['nudgeType'] as String,
+    message: json['message'] as String,
+    severity: json['severity'] as String? ?? 'medium',
+    topicId: json['topicId'] as String?,
+    sentAt: json['sentAt'] != null ? DateTime.parse(json['sentAt'] as String) : null,
+    wasActedUpon: json['wasActedUpon'] as bool? ?? false,
+    actedUponAt: json['actedUponAt'] != null ? DateTime.parse(json['actedUponAt'] as String) : null,
+  );
+
   EngagementNudgeModel copyWith({
     String? id,
     String? studentId,

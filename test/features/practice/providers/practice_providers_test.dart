@@ -14,8 +14,8 @@ import 'package:studyking/features/practice/services/mistake_review_service.dart
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -24,13 +24,9 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-
-class _FakeStudentIdService extends StudentIdService {
-  @override
-  String getStudentId() => 'test-student';
-  @override
-  Future<void> init() async {}
-}
+import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/services/student_id_service.dart';
+import '../../../helpers/fakes.dart';
 
 void main() {
   group('PracticeProviders', () {
@@ -211,6 +207,33 @@ void main() {
       expect(a, same(b));
     });
 
+    test('examSessionServiceProvider can be overridden', () {
+      final fakeService = FakeExamSessionService();
+      final container = ProviderContainer(
+        overrides: [
+          examSessionServiceProvider.overrideWithValue(fakeService),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = container.read(examSessionServiceProvider);
+      expect(result, same(fakeService));
+    });
+
+    test('examSessionServiceProvider is singleton', () {
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final a = container.read(examSessionServiceProvider);
+      final b = container.read(examSessionServiceProvider);
+      expect(a, same(b));
+    });
+
   });
 
   group('PracticeProviders behavioral assertions', () {
@@ -359,6 +382,214 @@ void main() {
       );
       expect(mistakes, isEmpty);
     });
+
+    test('examSessionServiceProvider wired to overridden dependencies', () {
+      final fakeSessionRepo = FakeSessionRepository();
+      final fakeStudentId = FakeStudentIdService();
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeSessionRepo),
+          studentIdServiceProvider.overrideWithValue(fakeStudentId),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+      expect(examService, isA<ExamSessionService>());
+    });
+
+    test('examSessionServiceProvider selectQuestions filters by subject and respects count', () {
+      final now = DateTime(2026, 5, 1);
+      final questions = [
+        Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 2, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q2', subjectId: 'sub-2', topicId: 't-2', text: 'q2', type: QuestionType.typedAnswer, difficulty: 3, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q3', subjectId: 'sub-1', topicId: 't-1', text: 'q3', type: QuestionType.typedAnswer, difficulty: 4, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+      final config = ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 2);
+      final selected = examService.selectQuestions(pool: questions, config: config);
+
+      expect(selected.length, 2);
+      expect(selected.every((q) => q.subjectId == 'sub-1'), isTrue);
+    });
+
+    test('examSessionServiceProvider selectQuestions respects topicIds filter', () {
+      final now = DateTime(2026, 5, 1);
+      final questions = [
+        Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 2, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q2', subjectId: 'sub-1', topicId: 't-2', text: 'q2', type: QuestionType.typedAnswer, difficulty: 3, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q3', subjectId: 'sub-1', topicId: 't-3', text: 'q3', type: QuestionType.typedAnswer, difficulty: 4, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+      final config = ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 3, topicIds: ['t-1', 't-3']);
+      final selected = examService.selectQuestions(pool: questions, config: config);
+
+      expect(selected.length, 2);
+      expect(selected.every((q) => q.topicId == 't-1' || q.topicId == 't-3'), isTrue);
+    });
+
+    test('examSessionServiceProvider selectQuestions handles difficulty distribution', () {
+      final now = DateTime(2026, 5, 1);
+      final questions = [
+        Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 1, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q2', subjectId: 'sub-1', topicId: 't-1', text: 'q2', type: QuestionType.typedAnswer, difficulty: 1, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q3', subjectId: 'sub-1', topicId: 't-1', text: 'q3', type: QuestionType.typedAnswer, difficulty: 3, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q4', subjectId: 'sub-1', topicId: 't-1', text: 'q4', type: QuestionType.typedAnswer, difficulty: 5, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+      ];
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+      final config = ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 3, easyCount: 1, mediumCount: 1, hardCount: 1);
+      final selected = examService.selectQuestions(pool: questions, config: config);
+
+      expect(selected.length, 3);
+    });
+
+    test('examSessionServiceProvider startExam activates and cancelExam deactivates', () {
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+
+      expect(examService.isActive, isFalse);
+      expect(examService.examActiveNotifier.value, isFalse);
+
+      examService.startExam(ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 1));
+
+      expect(examService.isActive, isTrue);
+      expect(examService.examActiveNotifier.value, isTrue);
+
+      examService.cancelExam();
+
+      expect(examService.isActive, isFalse);
+      expect(examService.examActiveNotifier.value, isFalse);
+      expect(examService.timeRemainingNotifier.value, Duration.zero);
+    });
+
+    test('examSessionServiceProvider finishExam saves session to repository', () async {
+      final fakeSessionRepo = FakeSessionRepository();
+      final fakeStudentId = FakeStudentIdService();
+      fakeStudentId.setStudentId('test-student');
+      final now = DateTime(2026, 5, 1);
+
+      final container = ProviderContainer(
+        overrides: [
+          sessionRepositoryProvider.overrideWithValue(fakeSessionRepo),
+          studentIdServiceProvider.overrideWithValue(fakeStudentId),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final examService = container.read(examSessionServiceProvider);
+      examService.startExam(ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 1));
+
+      final question = Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 2, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now);
+      final config = ExamConfig(subjectId: 'sub-1', durationMinutes: 60, questionCount: 1);
+      final questionResults = [
+        ExamQuestionResult(question: question, isCorrect: true, timeSpentMs: 5000),
+      ];
+
+      final result = await examService.finishExam(config: config, questionResults: questionResults);
+
+      expect(result.accuracy, 1.0);
+      expect(result.totalCorrect, 1);
+      expect(result.questionResults.length, 1);
+
+      final allSessionsResult = await fakeSessionRepo.getAll();
+      expect(allSessionsResult.isSuccess, isTrue);
+      expect(allSessionsResult.data!.length, 1);
+      expect(allSessionsResult.data!.first.subjectId, 'sub-1');
+      expect(allSessionsResult.data!.first.completed, isTrue);
+    });
+
+    test('readinessScorerProvider scoreQuestions uses seeded mastery data', () async {
+      final now = DateTime(2026, 5, 1);
+      final topicMastery = MasteryState.initial(studentId: 'test-student', topicId: 't-1');
+      final questionMastery = QuestionMasteryState.initial(
+        studentId: 'test-student',
+        questionId: 'q1',
+        now: now,
+      );
+      final seededService = _SeededMasteryGraphService(
+        topicMastery: [topicMastery],
+        questionMastery: [questionMastery],
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          masteryGraphServiceProvider.overrideWithValue(seededService),
+          studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final scorer = container.read(readinessScorerProvider);
+      final question = Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 2, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now);
+
+      final scored = await scorer.scoreQuestions([question]);
+
+      expect(scored.length, 1);
+      expect(scored.first.question.id, 'q1');
+      expect(scored.first.score, greaterThanOrEqualTo(0.0));
+      expect(scored.first.score, lessThanOrEqualTo(1.0));
+    });
+
+    test('spacedRepetitionEngineProvider maps confidence to grade correctly', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final engine = container.read(spacedRepetitionEngineProvider);
+
+      expect(engine.mapConfidenceToGrade(isCorrect: true, confidence: 5), 5);
+      expect(engine.mapConfidenceToGrade(isCorrect: true, confidence: 1), 3);
+      expect(engine.mapConfidenceToGrade(isCorrect: false, confidence: 0), 0);
+      expect(engine.mapConfidenceToGrade(isCorrect: false, confidence: 5), 2);
+    });
+
+    test('spacedRepetitionEngineProvider scheduleReview computes correct intervals', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final engine = container.read(spacedRepetitionEngineProvider);
+      final now = DateTime(2026, 5, 1);
+
+      final result = engine.scheduleReview(
+        questionId: 'q1',
+        grade: 5,
+        now: now,
+      );
+
+      expect(result.nextReview, now.add(const Duration(days: 1)));
+      expect(result.updatedData.repetitions, 1);
+      expect(result.updatedData.easeFactor, greaterThan(2.5));
+    });
   });
 }
 
@@ -441,7 +672,7 @@ class FakeExamSessionService extends ExamSessionService {
   FakeExamSessionService()
       : super(
           sessionRepo: SessionRepository(),
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
 }
 
@@ -457,8 +688,34 @@ class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
   FakeCrossFeatureIntegrator()
       : super(
           sessionRepo: SessionRepository(),
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
+}
+
+class _SeededMasteryGraphService extends MasteryGraphService {
+  final List<MasteryState> _topicMastery;
+  final List<QuestionMasteryState> _questionMastery;
+
+  _SeededMasteryGraphService({
+    List<MasteryState>? topicMastery,
+    List<QuestionMasteryState>? questionMastery,
+  })  : _topicMastery = topicMastery ?? [],
+        _questionMastery = questionMastery ?? [],
+        super();
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    return Result.success(_topicMastery);
+  }
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(
+      String studentId) async {
+    return Result.success(_questionMastery);
+  }
 }
 
 class _FailingAttemptRepository extends AttemptRepository {

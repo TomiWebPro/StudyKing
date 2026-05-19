@@ -5,19 +5,23 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planAdapterProvider;
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planOrchestratorProvider;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
+import 'package:studyking/features/focus_mode/presentation/widgets/inline_practice_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/widgets/loading_indicator.dart';
 
 class FocusTimerScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
@@ -35,7 +39,7 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
   ConsumerState<FocusTimerScreen> createState() => _FocusTimerScreenState();
 }
 
-class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with WidgetsBindingObserver {
+class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
   late final StudyTimerService _service;
 
   bool _initialized = false;
@@ -55,6 +59,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   List<Subject> _subjects = [];
   Map<String, int> _dueCounts = {};
+
+  bool _inlinePracticeActive = false;
+  Subject? _inlinePracticeSubject;
+
+  bool _subjectsError = false;
+  bool _dueCountsError = false;
+  bool _statsError = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -98,7 +112,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
       if (settings.firstFocusVisit) {
         try {
-          ref.read(settingsProvider.notifier).updateFirstFocusVisit();
+          ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(firstFocusVisit: false));
         } catch (e) {
           const Logger('FocusTimerScreen').e('Failed to update first focus visit: $e');
         }
@@ -128,10 +142,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       final result = await subjectRepo.getAll();
       final subjects = result.data ?? [];
       if (mounted) {
-        setState(() => _subjects = subjects);
+        setState(() {
+          _subjects = subjects;
+          _subjectsError = false;
+        });
       }
     } catch (e) {
       const Logger('FocusTimerScreen').e('Failed to load subjects', e);
+      if (mounted) {
+        setState(() => _subjectsError = true);
+      }
     }
   }
 
@@ -146,10 +166,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         dueCounts[subject.id] = questions.length;
       }
       if (mounted) {
-        setState(() => _dueCounts = dueCounts);
+        setState(() {
+          _dueCounts = dueCounts;
+          _dueCountsError = false;
+        });
       }
     } catch (e) {
       const Logger('FocusTimerScreen').e('Failed to load due counts', e);
+      if (mounted) {
+        setState(() => _dueCountsError = true);
+      }
     }
   }
 
@@ -178,15 +204,15 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   Future<void> _recordAdherence(Session session) async {
     try {
-      final planAdapter = ref.read(planAdapterProvider);
+      final planAdapter = ref.read(planOrchestratorProvider);
       final elapsedSeconds = session.actualDurationMs ~/ 1000;
       final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
-      await planAdapter.recordFromFocusSession(
+      await planAdapter.recordActivity(
         studentId: ref.read(studentIdValueProvider),
         actualMinutes: actualMinutes,
       );
     } catch (e) {
-      // Logged internally by PlanAdapter, non-critical for UX
+      // Logged internally by PlanAdherenceOrchestrator, non-critical for UX
     }
   }
 
@@ -225,10 +251,14 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
           _todayStats = stats;
           _weeklyMs = weekly;
           _recentSessions = recent;
+          _statsError = false;
         });
       }
     } catch (e) {
       const Logger('FocusTimerScreen').e('Failed to load stats', e);
+      if (mounted) {
+        setState(() => _statsError = true);
+      }
     }
   }
 
@@ -277,7 +307,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.errorStartingSession(e.toString()))),
+          SnackBar(content: Text(l10n.errorStartingSession(''))),
         );
       }
     }
@@ -408,6 +438,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
     final l10n = AppLocalizations.of(context)!;
@@ -415,7 +446,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     if (!_initialized) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.focusMode)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const LoadingIndicator(),
       );
     }
 
@@ -442,24 +473,56 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
             _buildModeToggle(cs, l10n),
+            if (widget.preselectedTopicId != null || widget.preselectedSubjectId != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  color: cs.primaryContainer.withValues(alpha: 0.5),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.school, size: 14, color: cs.onPrimaryContainer),
+                        const SizedBox(width: 4),
+                        Flexible(
+                          child: Text(
+                            'Lesson Practice${widget.preselectedTopicId != null ? ": ${widget.preselectedTopicId}" : ""}',
+                            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                              color: cs.onPrimaryContainer,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
             const SizedBox(height: 12),
             if (_inBreak && _completedSession != null)
               _buildBreakView(theme, cs, l10n)
             else if (_service.hasActiveSession)
               _buildActiveSessionView(theme, l10n)
+            else if (_inlinePracticeActive && _inlinePracticeSubject != null)
+              _buildInlinePracticeView(theme, cs, l10n)
             else if (!_studyMode)
               _buildSetupView(theme, l10n)
             else
               _buildStudyHubView(theme, cs, l10n),
             const SizedBox(height: 24),
-            SessionSummaryCard(
-              todayStats: _todayStats,
-              weeklyMs: _weeklyMs,
-              recentSessions: _recentSessions,
-            ),
+            if (_statsError)
+              _buildStatsError(theme, cs, l10n)
+            else
+              SessionSummaryCard(
+                todayStats: _todayStats,
+                weeklyMs: _weeklyMs,
+                recentSessions: _recentSessions,
+              ),
           ],
         ),
       ),
@@ -487,7 +550,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             const Spacer(),
             Semantics(
               button: true,
-              label: _studyMode ? 'Switch to timer mode' : 'Switch to study mode',
+              label: _studyMode ? l10n.focusMode : l10n.practice,
               child: Switch(
                 value: _studyMode,
                 onChanged: (_service.hasActiveSession || _inBreak)
@@ -502,6 +565,35 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   }
 
   Widget _buildStudyHubView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
+    if (_subjectsError) {
+      return Card(
+        margin: EdgeInsets.zero,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Icon(Icons.error_outline, size: 48, color: cs.error),
+              const SizedBox(height: 16),
+              Text(l10n.somethingWentWrong, style: theme.textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(l10n.errorOccurred,
+                  style: theme.textTheme.bodyMedium?.copyWith(color: cs.onSurfaceVariant),
+                  textAlign: TextAlign.center),
+              const SizedBox(height: 16),
+              FilledButton.icon(
+                onPressed: () {
+                  setState(() => _subjectsError = false);
+                  _loadSubjects();
+                },
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     if (_subjects.isEmpty) {
       return Card(
         margin: EdgeInsets.zero,
@@ -545,6 +637,26 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             ),
           ),
         ),
+        if (_dueCountsError)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Icon(Icons.error_outline, size: 16, color: cs.error),
+                const SizedBox(width: 8),
+                Text(l10n.errorOccurred, style: theme.textTheme.bodySmall?.copyWith(color: cs.error)),
+                const Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    setState(() => _dueCountsError = false);
+                    _loadDueCounts();
+                  },
+                  icon: const Icon(Icons.refresh, size: 16),
+                  label: Text(l10n.retry, style: const TextStyle(fontSize: 12)),
+                ),
+              ],
+            ),
+          ),
         const SizedBox(height: 16),
         Text(l10n.yourSubjects, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
@@ -571,7 +683,47 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             ),
           ],
         ),
+        if (totalDue > 0) ...[
+          const SizedBox(height: 8),
+          SizedBox(
+            width: double.infinity,
+            child: OutlinedButton.icon(
+              onPressed: () => _startAllSubjectsInlinePractice(),
+              icon: const Icon(Icons.interests, size: 18),
+              label: Text(l10n.reviewDueQuestions, style: const TextStyle(fontSize: 13)),
+            ),
+          ),
+        ],
       ],
+    );
+  }
+
+  Widget _buildStatsError(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            Icon(Icons.error_outline, size: 32, color: cs.error),
+            const SizedBox(height: 8),
+            Text(l10n.somethingWentWrong, style: theme.textTheme.titleSmall),
+            const SizedBox(height: 4),
+            Text(l10n.errorOccurred,
+                style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                textAlign: TextAlign.center),
+            const SizedBox(height: 8),
+            TextButton.icon(
+              onPressed: () {
+                setState(() => _statsError = false);
+                _loadStats();
+              },
+              icon: const Icon(Icons.refresh, size: 16),
+              label: Text(l10n.retry),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -591,36 +743,98 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     final due = _dueCounts[subject.id] ?? 0;
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
-      child: InkWell(
-        borderRadius: BorderRadius.circular(12),
-        onTap: () => _startQuickPractice(subject),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Icon(Icons.menu_book, color: cs.primary, size: 28),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(subject.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
-                    const SizedBox(height: 2),
-                    Text(
-                      due > 0
-                          ? l10n.dueQuestionsCount(due)
-                          : l10n.readyForPractice,
-                      style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
-                    ),
-                  ],
+      child: Semantics(
+        button: true,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: () => _showPracticeOptions(subject),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Row(
+              children: [
+                Icon(Icons.menu_book, color: cs.primary, size: 28),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(subject.name, style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                      const SizedBox(height: 2),
+                      Text(
+                        due > 0
+                            ? l10n.dueQuestionsCount(due)
+                            : l10n.readyForPractice,
+                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-              Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: cs.onSurfaceVariant),
-            ],
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: cs.onSurfaceVariant),
+              ],
+            ),
           ),
         ),
       ),
     );
+  }
+
+  void _showPracticeOptions(Subject subject) {
+    final l10n = AppLocalizations.of(context)!;
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(subject.name, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.quickreply),
+              title: Text(l10n.quickPractice),
+              subtitle: Text(l10n.inlinePracticeSubtitle),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startInlinePractice(subject);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.open_in_new),
+              title: Text(l10n.spacedRepetition),
+              subtitle: Text(l10n.fullPracticeSubtitle),
+              onTap: () {
+                Navigator.pop(ctx);
+                _startQuickPractice(subject);
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _startInlinePractice(Subject subject) {
+    setState(() {
+      _inlinePracticeActive = true;
+      _inlinePracticeSubject = subject;
+    });
+  }
+
+  void _startAllSubjectsInlinePractice() {
+    setState(() {
+      _inlinePracticeActive = true;
+      _inlinePracticeSubject = null;
+    });
+  }
+
+  void _onInlinePracticeComplete(int correct, int total, Map<String, SubjectAccuracy> perSubject) {
+    setState(() {
+      _inlinePracticeActive = false;
+      _inlinePracticeSubject = null;
+    });
+    _loadDueCounts();
   }
 
   Widget _buildBreakView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
@@ -689,6 +903,53 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 setState(() {});
                 _loadStats();
               },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInlinePracticeView(ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
+    final subject = _inlinePracticeSubject;
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: ResponsiveUtils.cardPadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.quickreply, color: cs.primary, size: 20),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(subject != null
+                      ? '${l10n.quickPractice} — ${subject.name}'
+                      : l10n.reviewDueQuestions,
+                    style: theme.textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600)),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: l10n.close,
+                  onPressed: () => setState(() {
+                    _inlinePracticeActive = false;
+                    _inlinePracticeSubject = null;
+                  }),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.6),
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: InlinePracticeWidget(
+                  subjectId: subject?.id,
+                  questionCount: 10,
+                  onComplete: _onInlinePracticeComplete,
+                ),
+              ),
             ),
           ],
         ),

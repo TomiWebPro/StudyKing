@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import '../../../core/providers/llm_providers.dart';
 import '../../../core/services/llm_task_manager.dart';
 import '../../../features/llm_tasks/services/llm_task_service.dart';
+import '../../../core/constants/timeouts.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/number_format_utils.dart';
 import '../../../core/utils/responsive.dart';
@@ -26,6 +27,11 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     super.initState();
     _taskService = ref.read(llmTaskServiceProvider);
     _taskService!.addListener(_onTasksChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
     _onTasksChanged();
   }
 
@@ -48,7 +54,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.aiTaskFailedNotification(task.feature)),
-            duration: const Duration(seconds: 4),
+            duration: Timeouts.animationMedium,
             action: SnackBarAction(
               label: l10n.retry,
               onPressed: () => taskService.retryTask(task.id),

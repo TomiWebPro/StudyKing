@@ -684,6 +684,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sessionsLabel => 'Sessions';
 
   @override
+  String get noActivity => 'No activity — you were away this week.';
+
+  @override
   String get questionsLabel => 'Questions';
 
   @override
@@ -1449,7 +1452,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get exportCsv => 'Export CSV';
 
   @override
-  String get instrumentation => 'Instrumentation';
+  String get instrumentation => 'Progress Analytics';
 
   @override
   String get overall => 'Overall';
@@ -1681,7 +1684,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String planAdjustmentSuggested(int count) {
-    return 'You\'ve had $count days of low plan adherence. Would you like to adjust your study plan?';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return 'You\'ve had $_temp0 of low plan adherence. Would you like to adjust your study plan?';
   }
 
   @override
@@ -2178,6 +2187,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get labelJson => 'JSON';
 
   @override
+  String get unsavedChanges => 'Unsaved Changes';
+
+  @override
+  String get unsavedChangesDescription =>
+      'You have unsaved changes. Are you sure you want to discard them?';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
   String get goToSettings => 'Go to Settings';
 
   @override
@@ -2462,14 +2481,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noRoadmapsYet => 'No roadmaps yet';
 
   @override
-  String get roadmapOverview => 'Roadmap Overview';
-
-  @override
   String get timeline => 'Timeline';
 
   @override
-  String completionOfValue(double value) {
-    return '$value% Complete';
+  String completionOfValue(String value) {
+    return '$value Complete';
   }
 
   @override
@@ -2961,11 +2977,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifTitleTimeToReview => 'Time to Review!';
 
   @override
-  String notifBodyRevision(int days, String topicName) {
-    return 'It\'s been $days days since you practiced \"$topicName\".';
-  }
-
-  @override
   String get notifTitleTakeBreak => 'Take a Break';
 
   @override
@@ -2991,11 +3002,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notifTitleUpcomingLesson => 'Upcoming Lesson';
 
   @override
-  String notifBodyLessonReminder(String lessonTitle, String time) {
-    return 'Your lesson \"$lessonTitle\" starts at $time.';
-  }
-
-  @override
   String get notifTitleTopicsNeedAttention => 'Topics Need Attention';
 
   @override
@@ -3005,11 +3011,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get notifTitleBadgeUnlocked => 'Badge Unlocked!';
-
-  @override
-  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription) {
-    return 'You earned the \"$badgeName\" badge: $badgeDescription';
-  }
 
   @override
   String get recommendAccuracyBelow60 =>
@@ -3326,6 +3327,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToUpdateMilestone => 'Failed to update milestone';
 
   @override
+  String roadmapCreated(String goal) {
+    return 'Roadmap \"$goal\" created!';
+  }
+
+  @override
+  String get roadmapDeleted => 'Roadmap deleted';
+
+  @override
+  String get roadmapDeleteConfirm => 'Delete this roadmap?';
+
+  @override
+  String get roadmapUpdated => 'Roadmap updated';
+
+  @override
+  String get milestoneUpdated => 'Milestone updated';
+
+  @override
+  String get enterValidNumber => 'Enter a valid number';
+
+  @override
   String get actionAccepted => 'Action accepted';
 
   @override
@@ -3357,6 +3378,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get failedToRedistributeWorkload => 'Failed to redistribute workload';
+
+  @override
+  String get planAdjusted => 'Study pace adjusted successfully';
+
+  @override
+  String get failedToAdjustPlan => 'Failed to adjust study pace';
 
   @override
   String get progressOverview => 'Progress Overview';
@@ -3657,6 +3684,89 @@ class AppLocalizationsEn extends AppLocalizations {
       'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?';
 
   @override
+  String nudgeInactive7d(int days) {
+    return 'It\'s been $days days. Let\'s ease back in with a short review session!';
+  }
+
+  @override
+  String nudgeInactive14d(int days) {
+    return 'Welcome back! It\'s been $days days. Let\'s plan your re-engagement.';
+  }
+
+  @override
+  String nudgeInactive30d(int days) {
+    return 'It\'s been $days days since your last session. Would you like help creating a personalized return plan?';
+  }
+
+  @override
+  String welcomeBackDays(int days) {
+    return 'Welcome back! You\'ve been away for $days days.';
+  }
+
+  @override
+  String get absenceDetectedTitle => 'Absence Detected';
+
+  @override
+  String absenceDetectedBody(int days) {
+    return 'You haven\'t used StudyKing in $days days. How would you like to proceed?';
+  }
+
+  @override
+  String extendPlan(int days) {
+    return 'Extend study plan by $days days';
+  }
+
+  @override
+  String get missedLessonLabel => 'Missed';
+
+  @override
+  String get staleSessionLabel => 'Not completed';
+
+  @override
+  String get catchUp => 'Catch Up';
+
+  @override
+  String get catchUpTitle => 'How would you like to catch up?';
+
+  @override
+  String catchUpDescription(int days) {
+    return 'You were away for $days days. Choose a catch-up strategy:';
+  }
+
+  @override
+  String get catchUpRedistribute => 'Redistribute across remaining days';
+
+  @override
+  String catchUpExtend(int days) {
+    return 'Extend plan by $days days';
+  }
+
+  @override
+  String planExtended(int days) {
+    return 'Study plan extended by $days days';
+  }
+
+  @override
+  String get failedToExtendPlan => 'Failed to extend study plan';
+
+  @override
+  String get failedToCatchUp => 'Failed to process catch-up strategy';
+
+  @override
+  String get missedDismissed => 'Missed lessons dismissed';
+
+  @override
+  String get failedToDismissMissed => 'Failed to dismiss missed lessons';
+
+  @override
+  String get dismissAllMissed => 'Dismiss All Missed';
+
+  @override
+  String missedLessonsCount(int count) {
+    return 'Missed Lessons ($count)';
+  }
+
+  @override
   String mentorScheduleConflict(String time, String freeSlot) {
     return 'The proposed time ($time) conflicts with an existing lesson. Suggested free slot: $freeSlot. Shall I book it there?';
   }
@@ -3720,6 +3830,11 @@ class AppLocalizationsEn extends AppLocalizations {
     String adaptivePace,
   ) {
     return 'Summarize what was covered in this lesson about \"$topicTitle\".\nInclude:\n1. Key concepts explained\n2. Questions answered ($exerciseCount exercises, $correctCount correct)\n3. Student\'s apparent understanding level (confidence: $confidencePercent%)\n4. Adaptive pace used (${adaptivePace}x)\n5. Recommendations for next lesson\n\nKeep it concise and constructive.';
+  }
+
+  @override
+  String languageInstruction(String localeName) {
+    return 'IMPORTANT: Respond in the same language as the student (locale: $localeName). Do not use English unless the student does.';
   }
 
   @override
@@ -3885,6 +4000,18 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get sessionType => 'Type';
+
+  @override
+  String get sessionTypePractice => 'Practice';
+
+  @override
+  String get sessionTypeFocus => 'Focus';
+
+  @override
+  String get sessionTypeTutoring => 'Tutoring';
+
+  @override
+  String get sessionTypeManual => 'Manual';
 
   @override
   String get addCourseSubject => 'Add Course/Subject';
@@ -4609,4 +4736,194 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get tutorImageAnalysisSystemPrompt =>
       'The student submitted this work. Analyze and provide feedback.';
+
+  @override
+  String dependenciesTitle(String topic) {
+    return '$topic — Dependencies';
+  }
+
+  @override
+  String get prerequisites => 'Prerequisites';
+
+  @override
+  String get noTopicsForPrerequisites =>
+      'No other topics available for prerequisites.';
+
+  @override
+  String get noDescription => 'No description';
+
+  @override
+  String masteryThreshold(String percent) {
+    return 'Mastery Threshold: $percent%';
+  }
+
+  @override
+  String get requiredTopic => 'Required Topic';
+
+  @override
+  String get requiredTopicOn => 'Student must master this topic';
+
+  @override
+  String get requiredTopicOff => 'Optional topic — can be skipped';
+
+  @override
+  String syllabusWeight(String weight) {
+    return 'Syllabus Weight: $weight';
+  }
+
+  @override
+  String get parentTopic => 'Parent Topic';
+
+  @override
+  String get rootTopic => 'None (Root Topic)';
+
+  @override
+  String sortOrderValue(int order) {
+    return 'Sort Order: $order';
+  }
+
+  @override
+  String topicCreated(String title) {
+    return 'Topic \"$title\" created';
+  }
+
+  @override
+  String topicCreateFailed(String error) {
+    return 'Failed to create topic: $error';
+  }
+
+  @override
+  String get editTopicTitle => 'Edit Topic';
+
+  @override
+  String topicUpdated(String title) {
+    return 'Topic \"$title\" updated';
+  }
+
+  @override
+  String topicUpdateFailed(String error) {
+    return 'Failed to update topic: $error';
+  }
+
+  @override
+  String get dependenciesUpdated => 'Dependencies updated';
+
+  @override
+  String dependenciesUpdateFailed(String error) {
+    return 'Failed to update dependencies: $error';
+  }
+
+  @override
+  String get deleteTopicTitle => 'Delete Topic';
+
+  @override
+  String deleteTopicConfirm(String topic) {
+    return 'Delete \"$topic\"? This will remove it from all dependency lists.';
+  }
+
+  @override
+  String get topicDeleted => 'Topic deleted';
+
+  @override
+  String topicDeleteFailed(String error) {
+    return 'Failed to delete topic: $error';
+  }
+
+  @override
+  String get topicTitleLabel => 'Topic Title';
+
+  @override
+  String get topicTitleHint => 'e.g. Atomic Structure';
+
+  @override
+  String get topicDescriptionLabel => 'Topic Description';
+
+  @override
+  String get topicDescriptionHint => 'Describe the topic scope';
+
+  @override
+  String get syllabusTextLabel => 'Syllabus Text';
+
+  @override
+  String get syllabusTextHint => 'Syllabus points covered';
+
+  @override
+  String get addTopicTitle => 'Add Topic';
+
+  @override
+  String topicCountTemplate(int count) {
+    return '$count topics';
+  }
+
+  @override
+  String get dependenciesNav => 'Dependencies';
+
+  @override
+  String prerequisitesCount(int count) {
+    return '$count prerequisites';
+  }
+
+  @override
+  String downstreamCount(int count) {
+    return '$count downstream';
+  }
+
+  @override
+  String get hasParent => 'Has parent';
+
+  @override
+  String get addTopicTooltip => 'Add Topic';
+
+  @override
+  String downstreamTopicWarning(int count) {
+    return '⚠ $count downstream topic(s) depend on this topic and may need to be updated.';
+  }
+
+  @override
+  String get prerequisitesNotMet => 'Prerequisites Not Met';
+
+  @override
+  String get practicePrerequisites => 'Practice Prerequisites';
+
+  @override
+  String prerequisiteMasteryRequired(String topicNames) {
+    return 'This topic requires mastery of: $topicNames. Would you like to practice those first?';
+  }
+
+  @override
+  String get inlinePracticeSubtitle =>
+      'Practice directly in focus mode — timer keeps running';
+
+  @override
+  String get fullPracticeSubtitle => 'Navigate to full practice session screen';
+
+  @override
+  String get generateLessonFromContent => 'Generate lesson from this material';
+
+  @override
+  String get generateLessonFromContentHint =>
+      'Creates an AI-generated lesson with slides, exercises, and summary blocks';
+
+  @override
+  String subjectNoTopics(String subjectName) {
+    return '$subjectName has no topics. Add topics first or upload a syllabus.';
+  }
+
+  @override
+  String get noActivityShort => '—';
+
+  @override
+  String courseNotFound(String courseName) {
+    return 'Course \'$courseName\' not found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.';
+  }
+
+  @override
+  String get planSubjectHint =>
+      'Enter an existing subject name to base the plan on its syllabus';
+
+  @override
+  String get chat => 'Chat';
+
+  @override
+  String get slides => 'Slides';
 }

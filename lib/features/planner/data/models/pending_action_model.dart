@@ -37,6 +37,28 @@ class PendingActionModel extends HiveObject {
     this.status = 'pending',
   }) : createdAt = createdAt ?? DateTime.now();
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'studentId': studentId,
+    'actionType': actionType,
+    'topicTitle': topicTitle,
+    'sessionId': sessionId,
+    'payload': payload,
+    'createdAt': createdAt.toIso8601String(),
+    'status': status,
+  };
+
+  factory PendingActionModel.fromJson(Map<String, dynamic> json) => PendingActionModel(
+    id: json['id'] as String,
+    studentId: json['studentId'] as String,
+    actionType: json['actionType'] as String,
+    topicTitle: json['topicTitle'] as String? ?? '',
+    sessionId: json['sessionId'] as String?,
+    payload: json['payload'] is Map ? Map<String, dynamic>.from(json['payload'] as Map) : {},
+    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+    status: json['status'] as String? ?? 'pending',
+  );
+
   PendingActionModel copyWith({
     String? id,
     String? studentId,

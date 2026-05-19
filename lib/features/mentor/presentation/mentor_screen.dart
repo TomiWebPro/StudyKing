@@ -3,13 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/constants/app_constants.dart';
-import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, settingsProvider;
-import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
-import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider, mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider;
-import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorServiceProvider;
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -21,7 +18,9 @@ import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/features/mentor/data/models/chat_message_data.dart';
+import 'package:studyking/features/planner/providers/planner_providers.dart';
 
 class MentorScreen extends ConsumerStatefulWidget {
   const MentorScreen({super.key});
@@ -43,7 +42,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _isRetrying = false;
   String _initErrorMessage = '';
   MentorAction? _suggestedAction;
-
+  bool _suggestedActionError = false;
   bool _didInit = false;
 
   @override
@@ -63,25 +62,58 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     }
   }
 
+  Future<void> _loadUnreadNudges() async {
+    try {
+      final recentNudges = await _mentorService.getRecentNudges(limit: 5);
+      if (recentNudges.isNotEmpty && mounted) {
+        setState(() {
+          final nudgeMessages = recentNudges.map((n) => ChatMessageData(
+            message: ConversationMessage(
+              id: 'nudge_${n.id}',
+              sessionId: 'mentor',
+              role: MessageRole.system,
+              type: MessageType.text,
+              content: n.message,
+              timestamp: DateTime.now(),
+            ),
+            isComplete: true,
+          )).toList();
+          if (nudgeMessages.isNotEmpty) {
+            _messages.addAll([
+              ChatMessageData(
+                message: ConversationMessage(
+                  id: 'while_away',
+                  sessionId: 'mentor',
+                  role: MessageRole.system,
+                  type: MessageType.text,
+                  content: '--- While you were away ---',
+                  timestamp: DateTime.now(),
+                ),
+                isComplete: true,
+              ),
+              ...nudgeMessages,
+              ChatMessageData(
+                message: ConversationMessage(
+                  id: 'while_away_end',
+                  sessionId: 'mentor',
+                  role: MessageRole.system,
+                  type: MessageType.text,
+                  content: '--- End of pending messages ---',
+                  timestamp: DateTime.now(),
+                ),
+                isComplete: true,
+              ),
+            ]);
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
   Future<void> _initializeMentor() async {
     try {
-      final llmService = ref.read(llmServiceProvider);
-      final masteryService = ref.read(masteryGraphServiceProvider);
-      final progressTracker = ref.read(mentorProgressTrackerProvider);
       final studentId = StudentIdService().getStudentId();
-      final l10n = AppLocalizations.of(context)!;
-      _mentorService = MentorService(
-        database: ref.read(databaseProvider),
-        llmService: llmService,
-        masteryService: masteryService,
-        progressTracker: progressTracker,
-        plannerService: ref.read(plannerServiceProvider),
-        nudgeRepo: ref.read(mentorEngagementNudgeRepoProvider),
-        sessionRepository: ref.read(mentorSessionRepositoryProvider),
-        modelId: ref.read(mentorModelIdProvider),
-        studentId: studentId,
-        localeName: l10n.localeName,
-      );
+      _mentorService = ref.read(mentorServiceProvider(studentId));
 
       await _mentorService.initialize();
 
@@ -98,7 +130,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           _isRetrying = false;
           _messages.addAll(loadedMessages);
         });
-        if (loadedMessages.isEmpty) {
+        await _loadUnreadNudges();
+        if (loadedMessages.isEmpty && _messages.isEmpty) {
           _sendWelcomeMessage();
         }
         WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCheck());
@@ -109,7 +142,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         setState(() {
           _initError = true;
           _isRetrying = false;
-          _initErrorMessage = l10n.mentorInitFailed(e.toString());
+          _initErrorMessage = l10n.mentorInitFailed('');
         });
       }
     }
@@ -170,10 +203,16 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     try {
       final action = await _mentorService.suggestNextAction();
       if (mounted) {
-        setState(() => _suggestedAction = action);
+        setState(() {
+          _suggestedAction = action;
+          _suggestedActionError = false;
+        });
       }
     } catch (e) {
       _logger.w('Failed to load suggested action', e);
+      if (mounted) {
+        setState(() => _suggestedActionError = true);
+      }
     }
   }
 
@@ -285,6 +324,12 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         await _showScheduleConfirmationDialog(schedule);
       } else if (plan != null) {
         _mentorService.clearPendingPlan();
+        if (!mounted) return;
+        final l10nCtx = AppLocalizations.of(context)!;
+        if (plan.goal != null) {
+          final created = await _showRoadmapConfirmationDialog(plan, l10nCtx);
+          if (created) return;
+        }
         final msg = _mentorService.planDaysMessage(plan.days);
         if (!mounted) return;
         final msgObj = ConversationMessage(
@@ -323,6 +368,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       _loadSuggestedAction();
     } catch (e) {
       _logger.w('Failed to handle post-chat intents', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
+      }
     }
   }
 
@@ -377,6 +427,50 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _scrollToBottom();
       }
     }
+  }
+
+  Future<bool> _showRoadmapConfirmationDialog(PlanProposal plan, AppLocalizations l10nCtx) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10nCtx.createRoadmap),
+        content: Text(l10nCtx.mentorPlanDaysPrompt(plan.days)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10nCtx.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10nCtx.createRoadmap),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && mounted) {
+      await ref.read(plannerProvider.notifier).createRoadmap(
+        goal: plan.goal!,
+        days: plan.days,
+        l10n: l10nCtx,
+        subjectId: plan.subjectId,
+      );
+      final msgObj = ConversationMessage(
+        id: 'roadmap_${DateTime.now().millisecondsSinceEpoch}',
+        sessionId: 'mentor',
+        role: MessageRole.mentor,
+        type: MessageType.text,
+        content: l10nCtx.roadmapCreated(plan.goal!),
+        timestamp: DateTime.now(),
+      );
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessageData(message: msgObj, isComplete: true));
+        });
+        _scrollToBottom();
+      }
+      return true;
+    }
+    return false;
   }
 
   void _scrollToBottom() {
@@ -480,9 +574,13 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           children: [
             if (_initError)
               _buildInitErrorCard(l10n)
+            else if (!_isInitialized)
+              const LoadingIndicator()
             else ...[
               if (_suggestedAction != null)
-                _buildSuggestedActionCard(l10n),
+                _buildSuggestedActionCard(l10n)
+              else if (_suggestedActionError)
+                _buildSuggestedActionError(l10n),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState(l10n)
@@ -635,6 +733,43 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
+  Widget _buildSuggestedActionError(AppLocalizations l10n) {
+    return Padding(
+      padding: ResponsiveUtils.screenPadding(context),
+      child: Card(
+        color: Theme.of(context).colorScheme.errorContainer,
+        child: Padding(
+          padding: ResponsiveUtils.cardPadding(context),
+          child: Row(
+            children: [
+              Icon(Icons.error_outline,
+                  color: Theme.of(context).colorScheme.error),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.errorOccurred,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onErrorContainer,
+                      ),
+                ),
+              ),
+              TextButton.icon(
+                onPressed: () {
+                  setState(() {
+                    _suggestedActionError = false;
+                  });
+                  _loadSuggestedAction();
+                },
+                icon: const Icon(Icons.refresh, size: 18),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageList(bool reduceMotion) {
     return ListView.builder(
       controller: _scrollController,
@@ -642,7 +777,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final chatMsg = _messages[index];
-        return ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion);
+        return _AnimatedMessageItem(
+          key: ValueKey(chatMsg.message.id),
+          reduceMotion: reduceMotion,
+          child: ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion),
+        );
       },
     );
   }
@@ -651,233 +790,238 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     if (!_isInitialized) return;
 
     final l10n = AppLocalizations.of(context)!;
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        title: Row(
-          children: [
-            Icon(Icons.analytics,
-                color: Theme.of(ctx).colorScheme.primary),
-            const SizedBox(width: 8),
-            Text(l10n.progressReport),
-          ],
-        ),
-        content: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircularProgressIndicator(),
-            const SizedBox(width: 16),
-            Text(l10n.generatingReport),
-          ],
-        ),
-      ),
-    );
-
     try {
       final localeName = AppLocalizations.of(context)!.localeName;
       final topicRepo = ref.read(topicRepositoryProvider);
       final report = await _mentorService.getProgressReport();
 
+      final topicTitles = <String, String>{};
+      for (final wt in report.weakTopics) {
+        final result = await topicRepo.get(wt.topicId);
+        topicTitles[wt.topicId] = result.data?.title ?? l10n.unknown;
+      }
+
       if (!mounted) return;
-      Navigator.of(context).pop();
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mentorProgressReportError)),
+        );
+        return;
+      }
+
+      await Future.delayed(const Duration(milliseconds: 50));
+
       if (!mounted) return;
-      showDialog(
-        context: context,
-        builder: (ctx) {
-          final theme = Theme.of(ctx);
-          final l10n = AppLocalizations.of(ctx)!;
-          return AlertDialog(
-            semanticLabel: l10n.progressReport,
-            title: Row(
-              children: [
-                Icon(Icons.analytics,
-                    color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(l10n.progressReport),
-              ],
-            ),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
+      try {
+        showDialog(
+          context: context,
+          builder: (ctx) {
+            final theme = Theme.of(ctx);
+            final l10n = AppLocalizations.of(ctx)!;
+            return AlertDialog(
+              semanticLabel: l10n.progressReport,
+              title: Row(
                 children: [
-                  Semantics(
-                    headingLevel: 3,
-                    child: _reportSectionHeader(
-                      ctx,
-                      Icons.track_changes,
-                      l10n.mentorAccuracy,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(4),
-                    child: LinearProgressIndicator(
-                      value: (report.accuracy / 100).clamp(0.0, 1.0),
-                      minHeight: 8,
-                      backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                      valueColor: AlwaysStoppedAnimation(
-                        report.accuracy >= 70
-                            ? theme.colorScheme.primary
-                            : report.accuracy >= 40
-                                ? theme.colorScheme.tertiary
-                                : theme.colorScheme.error,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${formatPercent(report.accuracy, localeName)} '
-                    '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
-                    '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
-                    '${l10n.mentorCompletedLessons('').split(':').first.trim().toLowerCase()})',
-                    style: theme.textTheme.bodyMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  _reportStatRow(ctx, Icons.timer_outlined,
-                      l10n.mentorTotalStudyTime(formatDecimal(
-                          report.totalStudyTimeHours.toDouble(), localeName,
-                          minFractionDigits: 1, maxFractionDigits: 1))),
-                  const SizedBox(height: 4),
-                  _reportStatRow(ctx, Icons.trending_up,
-                      l10n.mentorWeeklyActivity(
-                          formatDecimal(report.weeklyActivity.toDouble(), localeName))),
-                  const SizedBox(height: 4),
-                  _reportStatRow(ctx, Icons.check_circle_outline,
-                      l10n.mentorCompletedLessons(
-                          formatDecimal(report.completedLessons.toDouble(), localeName))),
-                  const SizedBox(height: 4),
-                  _reportStatRow(ctx, Icons.book_outlined,
-                      l10n.mentorTopicsStudied(
-                          formatDecimal(report.topicsStudied.toDouble(), localeName))),
-                  if (report.weakTopics.isNotEmpty) ...[
-                    const Divider(height: 24),
+                  Icon(Icons.analytics,
+                      color: theme.colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(l10n.progressReport),
+                ],
+              ),
+              content: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
                     Semantics(
                       headingLevel: 3,
                       child: _reportSectionHeader(
                         ctx,
-                        Icons.warning_amber,
-                        l10n.weakAreas,
+                        Icons.track_changes,
+                        l10n.mentorAccuracy,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(4),
+                      child: LinearProgressIndicator(
+                        value: (report.accuracy / 100).clamp(0.0, 1.0),
+                        minHeight: 8,
+                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                        valueColor: AlwaysStoppedAnimation(
+                          report.accuracy >= 70
+                              ? theme.colorScheme.primary
+                              : report.accuracy >= 40
+                                  ? theme.colorScheme.tertiary
+                                  : theme.colorScheme.error,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    ...report.weakTopics.take(3).map((topic) => ListTile(
-                          contentPadding: EdgeInsets.zero,
-                          leading: Icon(Icons.error_outline,
-                              color: theme.colorScheme.error, size: 20),
-                          title: Text(topic.topicId,
-                              style: theme.textTheme.bodyMedium),
-                          trailing: Text(
-                            formatPercent(topic.accuracy * 100, localeName),
-                            style: TextStyle(
-                              color: theme.colorScheme.error,
-                              fontWeight: FontWeight.w600,
+                    Text(
+                      '${formatPercent(report.accuracy, localeName)} '
+                      '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
+                      '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
+                      '${l10n.mentorCompletedLessons('').split(':').first.trim().toLowerCase()})',
+                      style: theme.textTheme.bodyMedium,
+                    ),
+                    const SizedBox(height: 16),
+                    _reportStatRow(ctx, Icons.timer_outlined,
+                        l10n.mentorTotalStudyTime(formatDecimal(
+                            report.totalStudyTimeHours.toDouble(), localeName,
+                            minFractionDigits: 1, maxFractionDigits: 1))),
+                    const SizedBox(height: 4),
+                    _reportStatRow(ctx, Icons.trending_up,
+                        l10n.mentorWeeklyActivity(
+                            formatDecimal(report.weeklyActivity.toDouble(), localeName))),
+                    const SizedBox(height: 4),
+                    _reportStatRow(ctx, Icons.check_circle_outline,
+                        l10n.mentorCompletedLessons(
+                            formatDecimal(report.completedLessons.toDouble(), localeName))),
+                    const SizedBox(height: 4),
+                    _reportStatRow(ctx, Icons.book_outlined,
+                        l10n.mentorTopicsStudied(
+                            formatDecimal(report.topicsStudied.toDouble(), localeName))),
+                    if (report.weakTopics.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      Semantics(
+                        headingLevel: 3,
+                        child: _reportSectionHeader(
+                          ctx,
+                          Icons.warning_amber,
+                          l10n.weakAreas,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      ...report.weakTopics.take(3).map((topic) => ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            leading: Icon(Icons.error_outline,
+                                color: theme.colorScheme.error, size: 20),
+                            title: Text(topicTitles[topic.topicId] ?? l10n.unknown,
+                                style: theme.textTheme.bodyMedium),
+                            trailing: Text(
+                              formatPercent(topic.accuracy * 100, localeName),
+                              style: TextStyle(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
-                          ),
-                          onTap: () async {
-                            final messenger = ScaffoldMessenger.of(context);
-                            final navigator = Navigator.of(context);
-                            Navigator.of(ctx).pop();
-                            try {
-                              final topicResult = await topicRepo.get(topic.topicId);
-                              final subjectId = topicResult.data?.subjectId;
-                              if (subjectId != null && subjectId.isNotEmpty) {
-                                if (!context.mounted) return;
-                                navigator.pushNamed(
-                                  AppRoutes.practiceSession,
-                                  arguments: PracticeSessionArgs(
-                                    subjectId: subjectId,
-                                    topicId: topic.topicId,
-                                  ),
-                                );
-                              } else {
+                            onTap: () async {
+                              final messenger = ScaffoldMessenger.of(context);
+                              final navigator = Navigator.of(context);
+                              Navigator.of(ctx).pop();
+                              try {
+                                final topicResult = await topicRepo.get(topic.topicId);
+                                final subjectId = topicResult.data?.subjectId;
+                                if (subjectId != null && subjectId.isNotEmpty) {
+                                  if (!context.mounted) return;
+                                  navigator.pushNamed(
+                                    AppRoutes.practiceSession,
+                                    arguments: PracticeSessionArgs(
+                                      subjectId: subjectId,
+                                      topicId: topic.topicId,
+                                    ),
+                                  );
+                                } else {
+                                  if (!context.mounted) return;
+                                  messenger.showSnackBar(
+                                    SnackBar(content: Text(l10n.unableToResolveSubject)),
+                                  );
+                                }
+                              } catch (e) {
                                 if (!context.mounted) return;
                                 messenger.showSnackBar(
                                   SnackBar(content: Text(l10n.unableToResolveSubject)),
                                 );
                               }
-                            } catch (e) {
-                              if (!context.mounted) return;
-                              messenger.showSnackBar(
-                                SnackBar(content: Text(l10n.unableToResolveSubject)),
-                              );
-                            }
-                          },
-                        )),
-                  ],
-                  if (report.badges.isNotEmpty) ...[
-                    const Divider(height: 24),
-                    Semantics(
-                      headingLevel: 3,
-                      child: _reportSectionHeader(
-                        ctx,
-                        Icons.emoji_events,
-                        l10n.mentorBadges,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 4,
-                      children: report.badges.map((badge) => Semantics(
-                        label: badge['name'] as String,
-                        child: Chip(
-                          avatar: Icon(Icons.emoji_events,
-                              size: 18, color: theme.colorScheme.secondary),
-                          label: Text(badge['name'] as String,
-                              style: theme.textTheme.bodySmall),
+                            },
+                          )),
+                    ],
+                    if (report.badges.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      Semantics(
+                        headingLevel: 3,
+                        child: _reportSectionHeader(
+                          ctx,
+                          Icons.emoji_events,
+                          l10n.mentorBadges,
                         ),
-                      )).toList(),
-                    ),
-                  ],
-                  if (report.recommendations.isNotEmpty) ...[
-                    const Divider(height: 24),
-                    Semantics(
-                      headingLevel: 3,
-                      child: _reportSectionHeader(
-                        ctx,
-                        Icons.lightbulb_outline,
-                        l10n.mentorRecommendationsSection,
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    ...report.recommendations.take(3).map((rec) => Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(l10n.mentorBulletPoint,
-                                  style: theme.textTheme.bodyMedium),
-                              Expanded(
-                                child: Text(
-                                  rec['message'] as String,
-                                  style: theme.textTheme.bodyMedium,
-                                ),
-                              ),
-                            ],
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 4,
+                        children: report.badges.map((badge) => Semantics(
+                          label: badge['name'] as String,
+                          child: Chip(
+                            avatar: Icon(Icons.emoji_events,
+                                size: 18, color: theme.colorScheme.secondary),
+                            label: Text(badge['name'] as String,
+                                style: theme.textTheme.bodySmall),
                           ),
-                        )),
+                        )).toList(),
+                      ),
+                    ],
+                    if (report.recommendations.isNotEmpty) ...[
+                      const Divider(height: 24),
+                      Semantics(
+                        headingLevel: 3,
+                        child: _reportSectionHeader(
+                          ctx,
+                          Icons.lightbulb_outline,
+                          l10n.mentorRecommendationsSection,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...report.recommendations.take(3).map((rec) => Padding(
+                            padding: const EdgeInsets.only(bottom: 6),
+                            child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(l10n.mentorBulletPoint,
+                                    style: theme.textTheme.bodyMedium),
+                                Expanded(
+                                  child: Text(
+                                    rec['message'] as String,
+                                    style: theme.textTheme.bodyMedium,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )),
+                    ],
                   ],
-                ],
+                ),
               ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.close),
-              ),
-            ],
-          );
-        },
-      );
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text(l10n.close),
+                ),
+              ],
+            );
+          },
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.mentorProgressReportError)),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
-      Navigator.of(context).pop();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context)!.mentorProgressReportError)),
-      );
+      try {
+        Navigator.of(context).pop();
+      } catch (_) {}
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.mentorProgressReportError)),
+        );
+      }
     }
   }
 
@@ -916,6 +1060,59 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _AnimatedMessageItem extends StatefulWidget {
+  final Widget child;
+  final bool reduceMotion;
+
+  const _AnimatedMessageItem({
+    super.key,
+    required this.child,
+    this.reduceMotion = false,
+  });
+
+  @override
+  State<_AnimatedMessageItem> createState() => _AnimatedMessageItemState();
+}
+
+class _AnimatedMessageItemState extends State<_AnimatedMessageItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _animation;
+
+  @override
+  void initState() {
+    super.initState();
+    if (!widget.reduceMotion) {
+      _controller = AnimationController(
+        vsync: this,
+        duration: const Duration(milliseconds: 300),
+      );
+      _animation = CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      );
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    if (!widget.reduceMotion) {
+      _controller.dispose();
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (widget.reduceMotion) return widget.child;
+    return FadeTransition(
+      opacity: _animation,
+      child: widget.child,
     );
   }
 }

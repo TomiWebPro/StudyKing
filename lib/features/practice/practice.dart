@@ -3,7 +3,7 @@ export 'services/spaced_repetition_engine.dart';
 export 'services/mastery_recorder.dart';
 export 'services/mistake_review_service.dart';
 export 'services/readiness_scorer.dart';
-export 'services/difficulty_adapter.dart';
+export 'services/difficulty_controller.dart';
 export 'services/exam_session_service.dart';
 export 'services/practice_session_service.dart';
 export 'services/practice_data_service.dart';

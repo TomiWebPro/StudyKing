@@ -850,6 +850,10 @@
   "@sessionsLabel": {
     "description": "Label for sessions count"
   },
+  "noActivity": "No activity — you were away this week.",
+  "@noActivity": {
+    "description": "Tooltip for gap weeks with zero activity"
+  },
   "questionsLabel": "Questions",
   "@questionsLabel": {
     "description": "Label for questions count"
@@ -1880,9 +1884,9 @@
   "@exportCsv": {
     "description": "Button label to export data as CSV"
   },
-  "instrumentation": "Instrumentation",
+  "instrumentation": "Progress Analytics",
   "@instrumentation": {
-    "description": "Button label for instrumentation export"
+    "description": "Button label for progress analytics export"
   },
   "overall": "Overall",
   "@overall": {
@@ -2220,7 +2224,7 @@
   "@noPlanForToday": {
     "description": "When there is no plan for today"
   },
-  "planAdjustmentSuggested": "You've had {count} days of low plan adherence. Would you like to adjust your study plan?",
+  "planAdjustmentSuggested": "You've had {count,plural,=1{1 day} other{{count} days}} of low plan adherence. Would you like to adjust your study plan?",
   "@planAdjustmentSuggested": {
     "description": "Nudge to adjust plan due to low adherence",
     "placeholders": {
@@ -2882,6 +2886,18 @@
   "@labelJson": {
     "description": "Label for JSON export format"
   },
+  "unsavedChanges": "Unsaved Changes",
+  "@unsavedChanges": {
+    "description": "Title for unsaved changes confirmation dialog"
+  },
+  "unsavedChangesDescription": "You have unsaved changes. Are you sure you want to discard them?",
+  "@unsavedChangesDescription": {
+    "description": "Body text for unsaved changes confirmation dialog"
+  },
+  "discard": "Discard",
+  "@discard": {
+    "description": "Button label to discard unsaved changes"
+  },
   "goToSettings": "Go to Settings",
   "@goToSettings": {
     "description": "Button label to navigate to settings"
@@ -3268,20 +3284,16 @@
   "@noRoadmapsYet": {
     "description": "Empty state for roadmaps"
   },
-  "roadmapOverview": "Roadmap Overview",
-  "@roadmapOverview": {
-    "description": "Title for roadmap detail view"
-  },
   "timeline": "Timeline",
   "@timeline": {
     "description": "Timeline view label"
   },
-  "completionOfValue": "{value}% Complete",
+  "completionOfValue": "{value} Complete",
   "@completionOfValue": {
     "description": "Completion percentage",
     "placeholders": {
       "value": {
-        "type": "double"
+        "type": "String"
       }
     }
   },
@@ -3968,18 +3980,7 @@
   "@notifTitleTimeToReview": {
     "description": "Title for revision reminder notification"
   },
-  "notifBodyRevision": "It's been {days} days since you practiced \"{topicName}\".",
-  "@notifBodyRevision": {
-    "description": "Body for revision reminder notification",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      },
-      "topicName": {
-        "type": "String"
-      }
-    }
-  },
+
   "notifTitleTakeBreak": "Take a Break",
   "@notifTitleTakeBreak": {
     "description": "Title for overwork warning notification"
@@ -4010,18 +4011,7 @@
   "@notifTitleUpcomingLesson": {
     "description": "Title for upcoming lesson notification"
   },
-  "notifBodyLessonReminder": "Your lesson \"{lessonTitle}\" starts at {time}.",
-  "@notifBodyLessonReminder": {
-    "description": "Body for lesson reminder notification",
-    "placeholders": {
-      "lessonTitle": {
-        "type": "String"
-      },
-      "time": {
-        "type": "String"
-      }
-    }
-  },
+
   "notifTitleTopicsNeedAttention": "Topics Need Attention",
   "@notifTitleTopicsNeedAttention": {
     "description": "Title for low mastery warning notification"
@@ -4039,18 +4029,7 @@
   "@notifTitleBadgeUnlocked": {
     "description": "Title for badge unlock notification"
   },
-  "notifBodyBadgeUnlocked": "You earned the \"{badgeName}\" badge: {badgeDescription}",
-  "@notifBodyBadgeUnlocked": {
-    "description": "Body for badge unlock notification",
-    "placeholders": {
-      "badgeName": {
-        "type": "String"
-      },
-      "badgeDescription": {
-        "type": "String"
-      }
-    }
-  },
+
   "recommendAccuracyBelow60": "Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.",
   "@recommendAccuracyBelow60": {
     "description": "Recommendation when accuracy is below 60%"
@@ -4487,6 +4466,35 @@
   "@failedToUpdateMilestone": {
     "description": "Error message when milestone update fails"
   },
+  "roadmapCreated": "Roadmap \"{goal}\" created!",
+  "@roadmapCreated": {
+    "description": "Success message when roadmap is created",
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "roadmapDeleted": "Roadmap deleted",
+  "@roadmapDeleted": {
+    "description": "Snackbar when roadmap is deleted"
+  },
+  "roadmapDeleteConfirm": "Delete this roadmap?",
+  "@roadmapDeleteConfirm": {
+    "description": "Confirmation dialog for roadmap deletion"
+  },
+  "roadmapUpdated": "Roadmap updated",
+  "@roadmapUpdated": {
+    "description": "Success message when roadmap is updated"
+  },
+  "milestoneUpdated": "Milestone updated",
+  "@milestoneUpdated": {
+    "description": "Success message when milestone is toggled"
+  },
+  "enterValidNumber": "Enter a valid number",
+  "@enterValidNumber": {
+    "description": "Validation error for numeric input"
+  },
   "actionAccepted": "Action accepted",
   "@actionAccepted": {
     "description": "Success message when action is accepted"
@@ -4526,6 +4534,14 @@
   "failedToRedistributeWorkload": "Failed to redistribute workload",
   "@failedToRedistributeWorkload": {
     "description": "Error message when workload redistribution fails"
+  },
+  "planAdjusted": "Study pace adjusted successfully",
+  "@planAdjusted": {
+    "description": "Success message when study pace is adjusted"
+  },
+  "failedToAdjustPlan": "Failed to adjust study pace",
+  "@failedToAdjustPlan": {
+    "description": "Error message when pace adjustment fails"
   },
   "progressOverview": "Progress Overview",
   "@progressOverview": {
@@ -4927,6 +4943,120 @@
   "@nudgeInactive48h": {
     "description": "Message when student hasn't studied for 48+ hours"
   },
+  "nudgeInactive7d": "It's been {days} days. Let's ease back in with a short review session!",
+  "@nudgeInactive7d": {
+    "description": "Nudge after 7+ days of inactivity",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "nudgeInactive14d": "Welcome back! It's been {days} days. Let's plan your re-engagement.",
+  "@nudgeInactive14d": {
+    "description": "Nudge after 14+ days of inactivity",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "nudgeInactive30d": "It's been {days} days since your last session. Would you like help creating a personalized return plan?",
+  "@nudgeInactive30d": {
+    "description": "Nudge after 30+ days of inactivity",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "welcomeBackDays": "Welcome back! You've been away for {days} days.",
+  "@welcomeBackDays": {
+    "description": "Welcome back message after absence",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "absenceDetectedTitle": "Absence Detected",
+  "@absenceDetectedTitle": {
+    "description": "Title for absence detection banner"
+  },
+  "absenceDetectedBody": "You haven't used StudyKing in {days} days. How would you like to proceed?",
+  "@absenceDetectedBody": {
+    "description": "Body for absence detection banner",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "extendPlan": "Extend study plan by {days} days",
+  "@extendPlan": {
+    "description": "Button to extend study plan",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "missedLessonLabel": "Missed",
+  "@missedLessonLabel": {
+    "description": "Label for missed lessons"
+  },
+  "staleSessionLabel": "Not completed",
+  "@staleSessionLabel": {
+    "description": "Label for stale sessions"
+  },
+  "catchUp": "Catch Up",
+  "@catchUp": {
+    "description": "Button to catch up after absence"
+  },
+  "catchUpTitle": "How would you like to catch up?",
+  "@catchUpTitle": {
+    "description": "Title for catch-up bottom sheet"
+  },
+  "catchUpDescription": "You were away for {days} days. Choose a catch-up strategy:",
+  "@catchUpDescription": {
+    "description": "Description for catch-up bottom sheet",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "catchUpRedistribute": "Redistribute across remaining days",
+  "@catchUpRedistribute": {
+    "description": "Redistribute workload option in catch-up sheet"
+  },
+  "catchUpExtend": "Extend plan by {days} days",
+  "@catchUpExtend": {
+    "description": "Extend plan option in catch-up sheet",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "planExtended": "Study plan extended by {days} days",
+  "@planExtended": {
+    "description": "Success message after extending plan",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "failedToExtendPlan": "Failed to extend study plan",
+  "@failedToExtendPlan": {
+    "description": "Error message when extending plan fails"
+  },
+  "failedToCatchUp": "Failed to process catch-up strategy",
+  "@failedToCatchUp": {
+    "description": "Error message when catch-up fails"
+  },
+  "missedDismissed": "Missed lessons dismissed",
+  "@missedDismissed": {
+    "description": "Success message after dismissing missed lessons"
+  },
+  "failedToDismissMissed": "Failed to dismiss missed lessons",
+  "@failedToDismissMissed": {
+    "description": "Error message when dismissing missed lessons fails"
+  },
+  "dismissAllMissed": "Dismiss All Missed",
+  "@dismissAllMissed": {
+    "description": "Button to dismiss all missed lessons"
+  },
+  "missedLessonsCount": "Missed Lessons ({count})",
+  "@missedLessonsCount": {
+    "description": "Section header for missed lessons with count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "mentorScheduleConflict": "The proposed time ({time}) conflicts with an existing lesson. Suggested free slot: {freeSlot}. Shall I book it there?",
   "@mentorScheduleConflict": {
     "description": "Message when scheduling conflicts with existing lesson",
@@ -5011,6 +5141,13 @@
       "correctCount": { "type": "int" },
       "confidencePercent": { "type": "int" },
       "adaptivePace": { "type": "String" }
+    }
+  },
+  "languageInstruction": "IMPORTANT: Respond in the same language as the student (locale: {localeName}). Do not use English unless the student does.",
+  "@languageInstruction": {
+    "description": "Instruction for LLM to respond in the student's language",
+    "placeholders": {
+      "localeName": { "type": "String" }
     }
   },
   "evaluationSystemPrompt": "You are an expert academic evaluator. Return only valid JSON.",
@@ -5209,6 +5346,22 @@
   "sessionType": "Type",
   "@sessionType": {
     "description": "Column header for session type in PDF export"
+  },
+  "sessionTypePractice": "Practice",
+  "@sessionTypePractice": {
+    "description": "Label for practice session type"
+  },
+  "sessionTypeFocus": "Focus",
+  "@sessionTypeFocus": {
+    "description": "Label for focus session type"
+  },
+  "sessionTypeTutoring": "Tutoring",
+  "@sessionTypeTutoring": {
+    "description": "Label for tutoring session type"
+  },
+  "sessionTypeManual": "Manual",
+  "@sessionTypeManual": {
+    "description": "Label for manual session type"
   },
   "addCourseSubject": "Add Course/Subject",
   "@addCourseSubject": {
@@ -6170,5 +6323,259 @@
   "tutorImageAnalysisSystemPrompt": "The student submitted this work. Analyze and provide feedback.",
   "@tutorImageAnalysisSystemPrompt": {
     "description": "System prompt for image analysis by the tutor LLM"
+  },
+  "dependenciesTitle": "{topic} — Dependencies",
+  "@dependenciesTitle": {
+    "description": "Dialog title for topic dependencies",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "prerequisites": "Prerequisites",
+  "@prerequisites": {
+    "description": "Label for prerequisites section"
+  },
+  "noTopicsForPrerequisites": "No other topics available for prerequisites.",
+  "@noTopicsForPrerequisites": {
+    "description": "Message when no topics are available"
+  },
+  "noDescription": "No description",
+  "@noDescription": {
+    "description": "Fallback when a topic has no description"
+  },
+  "masteryThreshold": "Mastery Threshold: {percent}%",
+  "@masteryThreshold": {
+    "description": "Label for mastery threshold slider",
+    "placeholders": {
+      "percent": { "type": "String" }
+    }
+  },
+  "requiredTopic": "Required Topic",
+  "@requiredTopic": {
+    "description": "Label for required topic toggle"
+  },
+  "requiredTopicOn": "Student must master this topic",
+  "@requiredTopicOn": {
+    "description": "Description when topic is required"
+  },
+  "requiredTopicOff": "Optional topic — can be skipped",
+  "@requiredTopicOff": {
+    "description": "Description when topic is optional"
+  },
+  "syllabusWeight": "Syllabus Weight: {weight}",
+  "@syllabusWeight": {
+    "description": "Label for syllabus weight slider",
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+  "parentTopic": "Parent Topic",
+  "@parentTopic": {
+    "description": "Label for parent topic dropdown"
+  },
+  "rootTopic": "None (Root Topic)",
+  "@rootTopic": {
+    "description": "Dropdown option for root topic"
+  },
+  "sortOrderValue": "Sort Order: {order}",
+  "@sortOrderValue": {
+    "description": "Label showing sort order value",
+    "placeholders": {
+      "order": { "type": "int" }
+    }
+  },
+  "topicCreated": "Topic \"{title}\" created",
+  "@topicCreated": {
+    "description": "Snackbar message when topic is created",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "topicCreateFailed": "Failed to create topic: {error}",
+  "@topicCreateFailed": {
+    "description": "Error message when topic creation fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "editTopicTitle": "Edit Topic",
+  "@editTopicTitle": {
+    "description": "Popup menu title for edit topic"
+  },
+  "topicUpdated": "Topic \"{title}\" updated",
+  "@topicUpdated": {
+    "description": "Snackbar message when topic is updated",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "topicUpdateFailed": "Failed to update topic: {error}",
+  "@topicUpdateFailed": {
+    "description": "Error message when topic update fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dependenciesUpdated": "Dependencies updated",
+  "@dependenciesUpdated": {
+    "description": "Snackbar message when dependencies are updated"
+  },
+  "dependenciesUpdateFailed": "Failed to update dependencies: {error}",
+  "@dependenciesUpdateFailed": {
+    "description": "Error message when dependency update fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "deleteTopicTitle": "Delete Topic",
+  "@deleteTopicTitle": {
+    "description": "Dialog title for topic deletion"
+  },
+  "deleteTopicConfirm": "Delete \"{topic}\"? This will remove it from all dependency lists.",
+  "@deleteTopicConfirm": {
+    "description": "Confirmation message for topic deletion",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "topicDeleted": "Topic deleted",
+  "@topicDeleted": {
+    "description": "Snackbar message when topic is deleted"
+  },
+  "topicDeleteFailed": "Failed to delete topic: {error}",
+  "@topicDeleteFailed": {
+    "description": "Error message when topic deletion fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "topicTitleLabel": "Topic Title",
+  "@topicTitleLabel": {
+    "description": "Label for topic title input field"
+  },
+  "topicTitleHint": "e.g. Atomic Structure",
+  "@topicTitleHint": {
+    "description": "Hint text for topic title"
+  },
+  "topicDescriptionLabel": "Topic Description",
+  "@topicDescriptionLabel": {
+    "description": "Label for topic description input field"
+  },
+  "topicDescriptionHint": "Describe the topic scope",
+  "@topicDescriptionHint": {
+    "description": "Hint text for topic description"
+  },
+  "syllabusTextLabel": "Syllabus Text",
+  "@syllabusTextLabel": {
+    "description": "Label for syllabus text input field"
+  },
+  "syllabusTextHint": "Syllabus points covered",
+  "@syllabusTextHint": {
+    "description": "Hint text for syllabus text"
+  },
+  "addTopicTitle": "Add Topic",
+  "@addTopicTitle": {
+    "description": "Dialog title for adding a topic"
+  },
+  "topicCountTemplate": "{count} topics",
+  "@topicCountTemplate": {
+    "description": "Label showing number of topics",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dependenciesNav": "Dependencies",
+  "@dependenciesNav": {
+    "description": "Popup menu item for topic dependencies"
+  },
+  "prerequisitesCount": "{count} prerequisites",
+  "@prerequisitesCount": {
+    "description": "Label showing prerequisite count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "downstreamCount": "{count} downstream",
+  "@downstreamCount": {
+    "description": "Label showing downstream topic count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "hasParent": "Has parent",
+  "@hasParent": {
+    "description": "Label indicating a topic has a parent"
+  },
+  "addTopicTooltip": "Add Topic",
+  "@addTopicTooltip": {
+    "description": "Tooltip for add topic button"
+  },
+   "downstreamTopicWarning": "⚠ {count} downstream topic(s) depend on this topic and may need to be updated.",
+   "@downstreamTopicWarning": {
+     "description": "Warning about downstream dependencies when deleting a topic",
+     "placeholders": {
+       "count": { "type": "int" }
+     }
+   },
+   "prerequisitesNotMet": "Prerequisites Not Met",
+   "@prerequisitesNotMet": {
+     "description": "Dialog title when prerequisites are not met"
+   },
+   "practicePrerequisites": "Practice Prerequisites",
+   "@practicePrerequisites": {
+     "description": "Button to practice prerequisite topics"
+   },
+   "prerequisiteMasteryRequired": "This topic requires mastery of: {topicNames}. Would you like to practice those first?",
+   "@prerequisiteMasteryRequired": {
+     "description": "Body text for prerequisite dialog",
+     "placeholders": {
+       "topicNames": { "type": "String" }
+     }
+   },
+   "inlinePracticeSubtitle": "Practice directly in focus mode — timer keeps running",
+   "@inlinePracticeSubtitle": {
+     "description": "Subtitle for inline practice option in focus mode"
+   },
+   "fullPracticeSubtitle": "Navigate to full practice session screen",
+   "@fullPracticeSubtitle": {
+     "description": "Subtitle for full practice session option in focus mode"
+   },
+   "generateLessonFromContent": "Generate lesson from this material",
+   "@generateLessonFromContent": {
+     "description": "Checkbox label to generate AI lesson from uploaded content"
+   },
+   "generateLessonFromContentHint": "Creates an AI-generated lesson with slides, exercises, and summary blocks",
+   "@generateLessonFromContentHint": {
+     "description": "Hint text for generate lesson checkbox"
+   },
+   "subjectNoTopics": "{subjectName} has no topics. Add topics first or upload a syllabus.",
+   "@subjectNoTopics": {
+     "description": "Error message when a subject has no topics",
+     "placeholders": {
+       "subjectName": { "type": "String" }
+     }
+   },
+    "noActivityShort": "—",
+    "@noActivityShort": {
+      "description": "Visual placeholder for weeks with no activity in bar chart"
+    },
+    "courseNotFound": "Course '{courseName}' not found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.",
+    "@courseNotFound": {
+      "description": "Error message when a course/subject name typed by the user does not match any existing subject",
+      "placeholders": {
+        "courseName": { "type": "String" }
+      }
+    },
+    "planSubjectHint": "Enter an existing subject name to base the plan on its syllabus",
+    "@planSubjectHint": {
+      "description": "Helper text explaining that the user should enter a subject name that already exists"
+    },
+    "chat": "Chat",
+    "@chat": {
+      "description": "Tooltip label for chat view in tutor screen"
+    },
+    "slides": "Slides",
+    "@slides": {
+      "description": "Tooltip label for slides view in tutor screen"
+    }
   }
-}

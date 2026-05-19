@@ -7,6 +7,7 @@ class PracticeModeCard extends StatelessWidget {
   final String subtitle;
   final Color color;
   final VoidCallback? onTap;
+  final VoidCallback? onTapDisabled;
   final int? badge;
 
   const PracticeModeCard({
@@ -16,6 +17,7 @@ class PracticeModeCard extends StatelessWidget {
     required this.subtitle,
     required this.color,
     this.onTap,
+    this.onTapDisabled,
     this.badge,
   });
 
@@ -31,7 +33,7 @@ class PracticeModeCard extends StatelessWidget {
         label: semanticLabel,
         enabled: isAvailable,
         child: InkWell(
-          onTap: isAvailable ? onTap : null,
+          onTap: isAvailable ? onTap : onTapDisabled,
           borderRadius: BorderRadius.circular(12),
           child: Stack(
             children: [

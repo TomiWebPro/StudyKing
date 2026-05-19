@@ -1,4 +1,5 @@
 import 'app_build_config.dart';
+import 'timeouts.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 
 class ApiSecrets {
@@ -28,7 +29,7 @@ class ApiSecrets {
   }
 
   factory ApiSecrets.fromEnvironment() {
-    // TODO(v2.0): implement runtime secret injection (keystore/native layer) over compile-time embedding.
+    // TODO: implement runtime secret injection (keystore/native layer) over compile-time embedding. Tracked in issue #arch-runtime-secrets.
     final openRouter = const String.fromEnvironment('OPENROUTER_API_KEY');
     final google = const String.fromEnvironment('GOOGLE_API_KEY');
     final whisper = const String.fromEnvironment('WHISPER_API_KEY');
@@ -73,23 +74,23 @@ class ApiConfig {
       case AppEnvironment.production:
         return ApiConfig(
           openRouterBaseUrl: _openRouterBaseUrl,
-          openRouterRequestTimeout: const Duration(seconds: 45),
+          openRouterRequestTimeout: Timeouts.openRouterTimeoutProduction,
           youtubeBaseUrl: _youtubeBaseUrl,
-          youtubeRequestTimeout: const Duration(seconds: 30),
+          youtubeRequestTimeout: Timeouts.youtubeTimeoutDefault,
         );
       case AppEnvironment.staging:
         return ApiConfig(
           openRouterBaseUrl: _openRouterBaseUrl,
-          openRouterRequestTimeout: const Duration(seconds: 90),
+          openRouterRequestTimeout: Timeouts.openRouterTimeoutStaging,
           youtubeBaseUrl: _youtubeBaseUrl,
-          youtubeRequestTimeout: const Duration(seconds: 30),
+          youtubeRequestTimeout: Timeouts.youtubeTimeoutDefault,
         );
       case AppEnvironment.development:
         return ApiConfig(
           openRouterBaseUrl: _openRouterBaseUrl,
-          openRouterRequestTimeout: const Duration(seconds: 60),
+          openRouterRequestTimeout: Timeouts.openRouterTimeoutDevelopment,
           youtubeBaseUrl: _youtubeBaseUrl,
-          youtubeRequestTimeout: const Duration(seconds: 20),
+          youtubeRequestTimeout: Timeouts.youtubeTimeoutDevelopment,
         );
     }
   }

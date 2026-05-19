@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 class GridPainter extends CustomPainter {
   final Color gridColor;
 
-  GridPainter({this.gridColor = const Color(0xFFE0E0E0)});
+  GridPainter({this.gridColor = const Color(0xFF9E9E9E)});
 
   @override
   void paint(Canvas canvas, Size size) {

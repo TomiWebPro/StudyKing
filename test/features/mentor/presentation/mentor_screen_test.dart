@@ -14,16 +14,17 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider, mentorProgressTrackerProvider;
-import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider, plannerProvider, PlannerNotifier;
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/core/services/plan_adapter.dart' show AdherenceDeviation;
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart' show AdherenceDeviation;
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
@@ -34,6 +35,7 @@ import 'package:studyking/features/subjects/providers/topic_repository_provider.
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSettingsRepository extends SettingsRepository {
@@ -43,31 +45,10 @@ class _FakeSettingsRepository extends SettingsRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
-    if (reduceMotion != null) _store['reduceMotion'] = reduceMotion;
-    if (highContrastEnabled != null) _store['highContrastEnabled'] = highContrastEnabled;
-    if (largeTouchTargets != null) _store['largeTouchTargets'] = largeTouchTargets;
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
+    if (update.reduceMotion != null) _store['reduceMotion'] = update.reduceMotion;
+    if (update.highContrastEnabled != null) _store['highContrastEnabled'] = update.highContrastEnabled;
+    if (update.largeTouchTargets != null) _store['largeTouchTargets'] = update.largeTouchTargets;
     return Result.success(null);
   }
 
@@ -96,6 +77,8 @@ class FakePlannerService extends PlannerService {
   Future<bool> hasSchedulingConflict({required DateTime startTime, required int durationMinutes, String? excludeSessionId}) async => false;
   @override
   Future<bool> scheduleLesson({required String topicId, required String topicTitle, required String subjectId, required DateTime scheduledTime, int durationMinutes = 30}) async => true;
+  @override
+  Future<RoadmapModel?> createRoadmap({required String goal, required int days, required AppLocalizations l10n, String? subjectId}) async => null;
 }
 
 class _FakeNudgeRepo extends EngagementNudgeRepository {
@@ -219,11 +202,55 @@ class _ThrowingNudgeRepo extends EngagementNudgeRepository {
   Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
 }
 
+class _FakeVoiceService extends VoiceService {
+  final bool _available;
+  final bool _listening;
+
+  _FakeVoiceService({bool available = false, bool listening = false})
+      : _available = available,
+        _listening = listening;
+
+  @override
+  bool get isAvailable => _available;
+  @override
+  bool get isListening => _listening;
+}
+
+class _NudgeReturningRepo extends EngagementNudgeRepository {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<Result<void>> create(EngagementNudgeModel nudge) async => Result.success(null);
+  @override
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(String studentId, {int limit = 10}) async {
+    return Result.success([
+      EngagementNudgeModel(
+        id: 'nudge-1',
+        studentId: studentId,
+        nudgeType: 'reminder',
+        message: 'Time to study!',
+        sentAt: DateTime.now(),
+        severity: 'low',
+      ),
+    ]);
+  }
+  @override
+  Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
+}
+
+class _ThrowingProgressTracker extends FakeProgressTracker {
+  @override
+  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
+    throw Exception('Simulated recommendations failure');
+  }
+}
+
 class FakeMasteryGraphService extends MasteryGraphService {
   List<MasteryState> _weakTopics = [];
-  final List<QuestionMasteryState> _atRiskQuestions = [];
+  List<QuestionMasteryState> _atRiskQuestions = [];
 
   void setWeakTopics(List<MasteryState> topics) => _weakTopics = topics;
+  void setAtRiskQuestions(List<QuestionMasteryState> questions) => _atRiskQuestions = questions;
 
   FakeMasteryGraphService() : super();
 
@@ -282,6 +309,7 @@ Widget _buildTestApp({
   FakeProgressTracker? progressTracker,
   EngagementNudgeRepository? nudgeRepo,
   TestNavigatorObserver? navigatorObserver,
+  VoiceService? voiceService,
 }) {
   return ProviderScope(
     overrides: [
@@ -302,6 +330,8 @@ Widget _buildTestApp({
       mentorProgressTrackerProvider.overrideWithValue(
         progressTracker ?? FakeProgressTracker(),
       ),
+      if (voiceService != null)
+        voiceServiceProvider.overrideWithValue(voiceService),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -311,6 +341,75 @@ Widget _buildTestApp({
       home: const MentorScreen(),
     ),
   );
+}
+
+class _FakeTopicRepoNullData extends TopicRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+  @override
+  Future<Result<Topic?>> get(String key) async {
+    return Result.success(null);
+  }
+}
+
+class _FakeControllableVoiceService extends VoiceService {
+  final bool _available;
+  bool _listening = false;
+  final _transcriptionStream = StreamController<String>.broadcast();
+
+  _FakeControllableVoiceService({bool available = true}) : _available = available;
+
+  @override
+  bool get isAvailable => _available;
+
+  @override
+  bool get isListening => _listening;
+
+  @override
+  Future<void> startListening({String? localeName}) async {
+    _listening = true;
+  }
+
+  @override
+  Future<void> stopListening() async {
+    _listening = false;
+  }
+
+  @override
+  Stream<String> get transcribedText => _transcriptionStream.stream;
+}
+
+class _NudgeThrowingRepo extends EngagementNudgeRepository {
+  @override
+  Future<void> init() async {}
+  @override
+  Future<Result<void>> create(EngagementNudgeModel nudge) async => Result.success(null);
+  @override
+  Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(String studentId, {int limit = 10}) async {
+    throw Exception('Nudge fetch failure');
+  }
+  @override
+  Future<Result<int>> getTodayCount(String studentId) async => Result.success(0);
+}
+
+class _FakePlannerNotifier extends PlannerNotifier {
+  bool didCreateRoadmap = false;
+  String? createdGoal;
+  int? createdDays;
+
+  _FakePlannerNotifier() : super(FakePlannerService());
+
+  @override
+  Future<void> createRoadmap({
+    required String goal,
+    required int days,
+    required AppLocalizations l10n,
+    String? subjectId,
+  }) async {
+    didCreateRoadmap = true;
+    createdGoal = goal;
+    createdDays = days;
+  }
 }
 
 void main() {
@@ -735,7 +834,7 @@ void main() {
       final repo = _FakeSettingsRepository();
       await repo.init();
       final ctrl = SettingsController(repo);
-      await ctrl.updateSettings(reduceMotion: true);
+      await ctrl.updateSettings(const SettingsUpdate(reduceMotion: true));
       await tester.pump();
 
       await tester.pumpWidget(
@@ -1526,5 +1625,262 @@ void main() {
       final appBar = tester.widget<AppBar>(find.byType(AppBar));
       expect(appBar.title, isNotNull);
     });
+
+    testWidgets('shows API key missing message when no API key configured', (tester) async {
+      final noKeyService = FakeLlmService(hasApiKey: false);
+
+      await tester.pumpWidget(_buildTestApp(llmService: noKeyService));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Hello');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('AI service not configured.'), findsOneWidget);
+      expect(find.text('Go to Settings'), findsOneWidget);
+    });
+
+    testWidgets('shows voice input button when voice is available', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        voiceService: _FakeVoiceService(available: true),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Voice Input'), findsOneWidget);
+    });
+
+    testWidgets('voice input button hidden when voice not available', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Voice Input'), findsNothing);
+    });
+
+    testWidgets('voice button shows mic icon when listening', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        voiceService: _FakeVoiceService(available: true, listening: true),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+    });
+
+    testWidgets('schedule confirmation dialog confirm schedules lesson', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'schedule a lesson about algebra');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.byType(AlertDialog).evaluate().isNotEmpty) break;
+      }
+
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 200));
+
+      await tester.tap(find.text('Confirm'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Lesson on "algebra" scheduled for'), findsOneWidget);
+    });
+
+    testWidgets('suggested action error card shown when service fails', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        progressTracker: _ThrowingProgressTracker(),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+    });
+
+    testWidgets('loads unread nudges after initialization', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        nudgeRepo: _NudgeReturningRepo(),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('--- While you were away ---'), findsOneWidget);
+      expect(find.text('Time to study!'), findsOneWidget);
+      expect(find.text('--- End of pending messages ---'), findsOneWidget);
+    });
+
+    testWidgets('plan message triggers roadmap confirmation dialog', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'plan for learning calculus in 30 days');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.text('Create Roadmap').evaluate().isNotEmpty) break;
+      }
+
+      expect(find.text('Create Roadmap'), findsOneWidget);
+      expect(find.textContaining('30-day learning roadmap'), findsOneWidget);
+    });
+
+    testWidgets('suggested action error card retry reattempts loading', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        progressTracker: _ThrowingProgressTracker(),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
+
+    testWidgets('progress report shows Unknown for topic with null data', (tester) async {
+      final masteryGraph = FakeMasteryGraphService();
+      final now = DateTime.now();
+      masteryGraph.setWeakTopics([
+        MasteryState(
+          studentId: 'test', topicId: 'null-topic',
+          accuracy: 0.35, lastAttempt: now, lastUpdated: now,
+        ),
+      ]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith(
+              (ref) => SettingsController(_FakeSettingsRepository()),
+            ),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
+            masteryGraphServiceProvider.overrideWithValue(masteryGraph),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepoNullData()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Progress Report'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Unknown'), findsOneWidget);
+    });
+
+    testWidgets('voice button starts listening on tap when available', (tester) async {
+      final voiceService = _FakeControllableVoiceService(available: true);
+
+      await tester.pumpWidget(_buildTestApp(voiceService: voiceService));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
+
+      await tester.tap(find.byTooltip('Voice Input'));
+      await tester.pump();
+
+      expect(voiceService.isListening, isTrue);
+      expect(find.byIcon(Icons.mic), findsOneWidget);
+    });
+
+    testWidgets('voice button stops listening on second tap', (tester) async {
+      final voiceService = _FakeControllableVoiceService(available: true);
+
+      await tester.pumpWidget(_buildTestApp(voiceService: voiceService));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Voice Input'));
+      await tester.pump();
+      expect(voiceService.isListening, isTrue);
+
+      await tester.tap(find.byTooltip('Voice Input'));
+      await tester.pump();
+      expect(voiceService.isListening, isFalse);
+      expect(find.byIcon(Icons.mic_none), findsOneWidget);
+    });
+
+    testWidgets('nudge loading exception does not crash the screen', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        nudgeRepo: _NudgeThrowingRepo(),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.auto_awesome), findsWidgets);
+      expect(find.text('AI Mentor'), findsWidgets);
+    });
+
+    testWidgets('roadmap dialog confirm creates roadmap and shows success', (tester) async {
+      final plannerNotifier = _FakePlannerNotifier();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith(
+              (ref) => SettingsController(_FakeSettingsRepository()),
+            ),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            plannerProvider.overrideWith((ref) => plannerNotifier),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(_FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(_FakeSessionRepo2()),
+            masteryGraphServiceProvider.overrideWithValue(FakeMasteryGraphService()),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'plan for learning calculus in 30 days');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+
+      for (var i = 0; i < 80; i++) {
+        await tester.pump(const Duration(milliseconds: 100));
+        if (find.text('Create Roadmap').evaluate().isNotEmpty) break;
+      }
+
+      expect(find.text('Create Roadmap'), findsOneWidget);
+
+      await tester.tap(find.text('Create Roadmap'));
+      await tester.pumpAndSettle();
+
+      expect(plannerNotifier.didCreateRoadmap, isTrue);
+      expect(plannerNotifier.createdGoal, 'learning calculus');
+      expect(plannerNotifier.createdDays, 30);
+      expect(find.textContaining('Roadmap created'), findsWidgets);
+    });
+
+    testWidgets('plan without goal shows plan days message', (tester) async {
+      await tester.pumpWidget(_buildTestApp());
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'plan 60 days');
+      await tester.pump();
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      for (var i = 0; i < 60; i++) {
+        await tester.pump(const Duration(milliseconds: 50));
+        if (find.textContaining('Mentor response').evaluate().isNotEmpty) break;
+      }
+
+      expect(find.textContaining('Mentor response'), findsOneWidget);
+    });
+
   });
 }

@@ -18,6 +18,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
+  bool shouldThrow = false;
 
   void setAttempts(List<StudentAttempt> attempts) {
     _attempts.clear();
@@ -29,47 +30,56 @@ class FakeAttemptRepository extends AttemptRepository {
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts.where((a) => a.studentId == studentId).toList());
   }
 
   @override
   Future<Result<void>> create(StudentAttempt attempt) async {
+    if (shouldThrow) return Result.failure('repo_error');
     _attempts.add(attempt);
     return Result.success(null);
   }
 
   @override
   Future<Result<StudentAttempt?>> get(String id) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts.where((a) => a.id == id).firstOrNull);
   }
 
   @override
   Future<Result<List<StudentAttempt>>> getAll() async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts);
   }
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts.where((a) => a.studentId == studentId && a.subjectId == subjectId).toList());
   }
 
   @override
   Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts.where((a) => a.questionId == questionId).toList());
   }
 
   @override
   Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success(_attempts.where((a) => a.subjectId == subjectId).toList());
   }
 
   @override
   Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    if (shouldThrow) return Result.failure('repo_error');
     return Result.success({});
   }
 
   @override
   Future<Result<void>> delete(String id) async {
+    if (shouldThrow) return Result.failure('repo_error');
     _attempts.removeWhere((a) => a.id == id);
     return Result.success(null);
   }
@@ -537,6 +547,28 @@ void main() {
         final csv = await tracker.exportQuestionsAndAttemptsCSV('student1');
         expect(csv, contains('Question ID'));
         expect(csv, contains('q1'));
+      });
+    });
+
+    group('error handling', () {
+      test('getOverallStats returns zero values when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final stats = await tracker.getOverallStats('student1');
+        expect(stats['totalAttempts'], equals(0));
+        expect(stats['correctAttempts'], equals(0));
+      });
+
+      test('getTopicProgress returns empty progress when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final progress = await tracker.getTopicProgress('student1', 'topic1');
+        expect(progress['attempts'], equals(0));
+        expect(progress['accuracy'], equals(0.0));
+      });
+
+      test('getRecommendations returns empty list when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final recommendations = await tracker.getRecommendations('student1');
+        expect(recommendations, isEmpty);
       });
     });
 

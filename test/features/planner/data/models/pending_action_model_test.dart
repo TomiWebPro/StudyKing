@@ -108,5 +108,45 @@ void main() {
         expect(a.hashCode, a.hashCode);
       });
     });
+
+    group('serialization', () {
+      test('toJson/fromJson round-trip preserves all fields', () {
+        final now = DateTime(2026, 5, 19);
+        final original = PendingActionModel(
+          id: 'rt-1',
+          studentId: 'student-1',
+          actionType: 'schedule',
+          topicTitle: 'Kinematics',
+          sessionId: 'session-1',
+          payload: {'key': 'value'},
+          createdAt: now,
+          status: 'completed',
+        );
+        final json = original.toJson();
+        final restored = PendingActionModel.fromJson(json);
+        expect(restored.id, original.id);
+        expect(restored.studentId, original.studentId);
+        expect(restored.actionType, original.actionType);
+        expect(restored.topicTitle, original.topicTitle);
+        expect(restored.sessionId, original.sessionId);
+        expect(restored.payload, original.payload);
+        expect(restored.createdAt, original.createdAt);
+        expect(restored.status, original.status);
+      });
+
+      test('toJson/fromJson round-trip with defaults', () {
+        final original = PendingActionModel(
+          id: 'rt-2',
+          studentId: 'student-1',
+          actionType: 'reschedule',
+        );
+        final json = original.toJson();
+        final restored = PendingActionModel.fromJson(json);
+        expect(restored.topicTitle, '');
+        expect(restored.sessionId, isNull);
+        expect(restored.payload, {});
+        expect(restored.status, 'pending');
+      });
+    });
   });
 }

@@ -1,8 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, SettingsController;
+import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, SettingsController, l10nProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
@@ -12,7 +11,10 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakeAttemptRepo extends AttemptRepository {
   final List<StudentAttempt> _attempts;
@@ -51,28 +53,7 @@ class _FakeSettingsRepository extends SettingsRepository {
   Future<Result<void>> saveApiKey({required String service, required String key}) async => Result.success(null);
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async => Result.success(null);
+  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
 }
 
 void main() {
@@ -324,6 +305,36 @@ void main() {
       expect(stats['totalAttempts'], 1);
       expect(stats['correctAttempts'], 1);
       expect(stats['accuracy'], 100);
+    });
+
+    test('mentorProgressTrackerProvider handles l10nProvider changes gracefully', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final tracker = container.read(mentorProgressTrackerProvider);
+      expect(tracker, isA<StudyProgressTracker>());
+
+      container.read(l10nProvider.notifier).state =
+          lookupAppLocalizations(const Locale('es'));
+      await Future<void>.delayed(Duration.zero);
+
+      final trackerAfterUpdate = container.read(mentorProgressTrackerProvider);
+      expect(trackerAfterUpdate, isA<StudyProgressTracker>());
+    });
+
+    test('mentorProgressTrackerProvider l10nProvider reset to null', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      container.read(l10nProvider.notifier).state =
+          lookupAppLocalizations(const Locale('es'));
+      await Future<void>.delayed(Duration.zero);
+
+      container.read(l10nProvider.notifier).state = null;
+      await Future<void>.delayed(Duration.zero);
+
+      final tracker = container.read(mentorProgressTrackerProvider);
+      expect(tracker, isA<StudyProgressTracker>());
     });
   });
 }

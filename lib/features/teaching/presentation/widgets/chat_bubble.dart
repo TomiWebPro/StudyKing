@@ -12,12 +12,14 @@ class ChatBubble extends StatelessWidget {
   final ConversationMessage message;
   final bool showSender;
   final bool reduceMotion;
+  final VoidCallback? onSpeak;
 
   const ChatBubble({
     super.key,
     required this.message,
     this.showSender = true,
     this.reduceMotion = false,
+    this.onSpeak,
   });
 
   @override
@@ -46,11 +48,11 @@ class ChatBubble extends StatelessWidget {
                 color: isStudent
                     ? Theme.of(context).colorScheme.primaryContainer
                     : Theme.of(context).colorScheme.surfaceContainerHighest,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(16),
-                  topRight: const Radius.circular(16),
-                  bottomLeft: Radius.circular(isStudent ? (isRtl ? 4 : 16) : (isRtl ? 16 : 4)),
-                  bottomRight: Radius.circular(isStudent ? (isRtl ? 16 : 4) : (isRtl ? 4 : 16)),
+                borderRadius: BorderRadiusDirectional.only(
+                  topStart: const Radius.circular(16),
+                  topEnd: const Radius.circular(16),
+                  bottomStart: Radius.circular(isStudent ? (isRtl ? 4 : 16) : (isRtl ? 16 : 4)),
+                  bottomEnd: Radius.circular(isStudent ? (isRtl ? 16 : 4) : (isRtl ? 4 : 16)),
                 ),
               ),
               child: Column(
@@ -74,6 +76,18 @@ class ChatBubble extends StatelessWidget {
                       ),
                     ),
                   _buildContent(context),
+                  if (!isStudent && onSpeak != null && !message.isStreaming)
+                    Align(
+                      alignment: AlignmentDirectional.bottomEnd,
+                      child: IconButton(
+                        icon: const Icon(Icons.volume_up, size: 16),
+                        onPressed: onSpeak,
+                        tooltip: 'Read aloud',
+                        visualDensity: VisualDensity.compact,
+                        padding: EdgeInsets.zero,
+                        constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                      ),
+                    ),
                 ],
               ),
             ),

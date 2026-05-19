@@ -1,53 +1,32 @@
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
+import 'onboarding_storage.dart';
 
 class OnboardingService {
-  static const String _onboardingKey = 'onboarding_completed';
-  static const String _dontShowAgainKey = 'onboarding_dont_show_again';
+  static const String onboardingKey = 'onboarding_completed';
+  static const String dontShowAgainKey = 'onboarding_dont_show_again';
 
-  /// Test-only: when set, all operations use this map instead of Hive.
-  static Map<String, dynamic>? _testStorage;
+  static OnboardingStorage _storage = HiveOnboardingStorage();
 
-  /// Inject a test storage map. Set to null to restore Hive-backed behavior.
-  static void setTestStorage(Map<String, dynamic>? storage) {
-    _testStorage = storage;
+  /// Replace the storage backend (used for test injection).
+  static void setStorage(OnboardingStorage storage) {
+    _storage = storage;
   }
 
   static Future<bool> isOnboardingNeeded() async {
-    if (_testStorage != null) {
-      final completed = _testStorage![_onboardingKey] as bool? ?? false;
-      final dontShow = _testStorage![_dontShowAgainKey] as bool? ?? false;
-      return !completed && !dontShow;
-    }
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    final completed = box.get(_onboardingKey, defaultValue: false) as bool;
-    final dontShow = box.get(_dontShowAgainKey, defaultValue: false) as bool;
+    final completed = await _storage.getBool(onboardingKey);
+    final dontShow = await _storage.getBool(dontShowAgainKey);
     return !completed && !dontShow;
   }
 
   static Future<void> markCompleted() async {
-    if (_testStorage != null) {
-      _testStorage![_onboardingKey] = true;
-      return;
-    }
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    await box.put(_onboardingKey, true);
+    await _storage.setBool(onboardingKey, true);
   }
 
   static Future<void> markDontShowAgain() async {
-    if (_testStorage != null) {
-      _testStorage![_dontShowAgainKey] = true;
-      return;
-    }
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    await box.put(_dontShowAgainKey, true);
+    await _storage.setBool(dontShowAgainKey, true);
   }
 
   static Future<bool> isFirstLaunch() async {
-    if (_testStorage != null) {
-      return !(_testStorage![_onboardingKey] as bool? ?? false);
-    }
-    final box = await Hive.openBox(HiveBoxNames.settings);
-    return !(box.get(_onboardingKey, defaultValue: false) as bool);
+    final completed = await _storage.getBool(onboardingKey);
+    return !completed;
   }
 }

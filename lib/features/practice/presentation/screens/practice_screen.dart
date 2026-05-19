@@ -13,6 +13,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
@@ -28,6 +29,7 @@ import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/prerequisite_check_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 
 
 class PracticeScreen extends ConsumerStatefulWidget {
@@ -37,7 +39,8 @@ class PracticeScreen extends ConsumerStatefulWidget {
   ConsumerState<PracticeScreen> createState() => _PracticeScreenState();
 }
 
-class _PracticeScreenState extends ConsumerState<PracticeScreen> {
+class _PracticeScreenState extends ConsumerState<PracticeScreen>
+    with AutomaticKeepAliveClientMixin {
   final Logger _logger = const Logger('PracticeScreen');
   late final PracticeDataService _dataService;
   late final SpacedRepetitionService _srService;
@@ -48,8 +51,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
   String? _loadError;
   Map<String, int> _dueCounts = {};
   bool _isLoadingDueCounts = false;
+  bool _dueCountsLoadFailed = false;
   int _totalQuestionCount = 0;
   int _questionsToday = 0;
+  bool _questionCountLoadFailed = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -102,7 +110,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       });
     } catch (e) {
       _logger.e('Failed to load due counts', e);
-      if (mounted) setState(() => _isLoadingDueCounts = false);
+      if (mounted) {
+        setState(() {
+          _isLoadingDueCounts = false;
+          _dueCountsLoadFailed = true;
+        });
+      }
     }
   }
 
@@ -132,6 +145,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
       });
     } catch (e) {
       _logger.e('Failed to load question count', e);
+      if (mounted) setState(() => _questionCountLoadFailed = true);
     }
   }
 
@@ -568,6 +582,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
@@ -575,20 +590,35 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
         actions: const [],
       ),
       body: _buildBody(),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: _subjects.isEmpty
-            ? null
-            : () {
-                _showSubjectSelector();
-              },
-        backgroundColor: Theme.of(context).colorScheme.primary,
-        icon: const Icon(Icons.play_arrow),
-        label: Flexible(
-          child: Text(
-            _subjects.isEmpty ? l10n.noSubjects : l10n.practice,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+      floatingActionButton: LayoutBuilder(
+        builder: (context, constraints) {
+          final isXs = constraints.maxWidth < 360;
+          if (isXs) {
+            return FloatingActionButton.small(
+              onPressed: _subjects.isEmpty ? null : () => _showSubjectSelector(),
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              child: const Icon(Icons.play_arrow),
+            );
+          }
+          return SizedBox(
+            width: constraints.maxWidth - 64,
+            child: FloatingActionButton.extended(
+              onPressed: _subjects.isEmpty
+                  ? null
+                  : () {
+                      _showSubjectSelector();
+                    },
+              backgroundColor: Theme.of(context).colorScheme.primary,
+              icon: const Icon(Icons.play_arrow),
+              label: Flexible(
+                child: Text(
+                  _subjects.isEmpty ? l10n.noSubjects : l10n.practice,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -649,38 +679,41 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
 
   Widget _buildBody() {
     final l10n = AppLocalizations.of(context)!;
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const LoadingScreen();
     if (_loadError != null) {
       return Center(
         child: Padding(
           padding: ResponsiveUtils.screenPadding(context),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.error_outline, size: 64, color: Theme.of(context).colorScheme.error),
-              const SizedBox(height: 16),
-              Text(
-                l10n.somethingWentWrong,
-                style: Theme.of(context).textTheme.bodyLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 24),
-              FilledButton.icon(
-                onPressed: _retryLoadSubjects,
-                icon: const Icon(Icons.refresh),
-                label: Text(l10n.retry),
-              ),
-            ],
+          child: ErrorRetryWidget(
+            message: l10n.somethingWentWrong,
+            retryLabel: l10n.retry,
+            onRetry: _retryLoadSubjects,
           ),
         ),
       );
     }
-    if (_subjects.isEmpty) return const PracticeEmptyState();
+    if (_subjects.isEmpty) return const Center(child: PracticeEmptyState());
     return RefreshIndicator(
       onRefresh: _loadSubjects,
       child: ListView(
         padding: ResponsiveUtils.listPadding(context),
         children: [
+          if (_dueCountsLoadFailed || _questionCountLoadFailed)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: ErrorRetryWidget(
+                message: l10n.somethingWentWrong,
+                retryLabel: l10n.retry,
+                onRetry: () {
+                  setState(() {
+                    _dueCountsLoadFailed = false;
+                    _questionCountLoadFailed = false;
+                  });
+                  _loadDueCounts();
+                  _loadQuestionCount();
+                },
+              ),
+            ),
           _buildSummaryRow(),
           if (_totalQuestionCount == 0) _buildNoQuestionsBanner() else
           PracticeModeGrid(
@@ -737,15 +770,20 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen> {
     ];
     return Padding(
       padding: ResponsiveUtils.listPadding(context),
-      child: isXs
-          ? Column(
-              children: modeCards,
-            )
-          : Row(
-              children: modeCards
-                  .map((card) => Expanded(child: card))
-                  .toList(),
-            ),
+      child: LayoutBuilder(
+        builder: (context, constraints) => Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: modeCards
+              .map((card) => SizedBox(
+                    width: isXs || constraints.maxWidth < 500
+                        ? constraints.maxWidth
+                        : (constraints.maxWidth - 8) / 2,
+                    child: card,
+                  ))
+              .toList(),
+        ),
+      ),
     );
   }
 

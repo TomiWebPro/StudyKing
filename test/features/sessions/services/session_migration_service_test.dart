@@ -5,7 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/data/session_adapter.dart';
+import 'package:studyking/features/sessions/data/adapters/session_adapter.dart';
 import 'package:studyking/features/sessions/services/session_migration_service.dart';
 
 Map<String, dynamic> createFocusSessionJson({

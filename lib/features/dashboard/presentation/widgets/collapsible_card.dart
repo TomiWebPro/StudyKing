@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class CollapsibleCard extends ConsumerWidget {
@@ -28,6 +29,7 @@ class CollapsibleCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final prefs = ref.watch(dashboardLayoutPreferencesProvider);
     final isCollapsed = prefs.isCollapsed(cardId);
+    final reduceMotion = ref.watch(settingsProvider).reduceMotion;
 
     Widget content;
     if (asyncValue != null) {
@@ -79,29 +81,34 @@ class CollapsibleCard extends ConsumerWidget {
               onTap: () =>
                   ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
               child: Padding(
-                padding: ResponsiveUtils.cardPadding(context),
+                padding: EdgeInsetsDirectional.only(
+                  start: ResponsiveUtils.cardPadding(context).left,
+                  end: ResponsiveUtils.cardPadding(context).right,
+                  top: 12,
+                  bottom: 12,
+                ),
                 child: Row(
                   children: [
                     Expanded(child: title),
-                    Tooltip(
-                      message: isCollapsed
-                          ? AppLocalizations.of(context)!.tapToExpand
-                          : AppLocalizations.of(context)!.tapToCollapse,
-                      child: Icon(
+                    IconButton(
+                      icon: Icon(
                         isCollapsed ? Icons.expand_more : Icons.expand_less,
                         size: 20,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      tooltip: isCollapsed
+                          ? AppLocalizations.of(context)!.tapToExpand
+                          : AppLocalizations.of(context)!.tapToCollapse,
+                      onPressed: () =>
+                          ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
                     ),
                   ],
                 ),
               ),
             ),
           ),
-          AnimatedSize(
-            duration: const Duration(milliseconds: 200),
-            alignment: Alignment.topCenter,
-            child: isCollapsed
+          if (reduceMotion)
+            isCollapsed
                 ? const SizedBox.shrink()
                 : Column(
                     children: [
@@ -111,8 +118,23 @@ class CollapsibleCard extends ConsumerWidget {
                         child: content,
                       ),
                     ],
-                  ),
-          ),
+                  )
+          else
+            AnimatedSize(
+              duration: const Duration(milliseconds: 200),
+              alignment: Alignment.topCenter,
+              child: isCollapsed
+                  ? const SizedBox.shrink()
+                  : Column(
+                      children: [
+                        const Divider(height: 1),
+                        Padding(
+                          padding: ResponsiveUtils.cardPadding(context),
+                          child: content,
+                        ),
+                      ],
+                    ),
+            ),
         ],
       ),
     );

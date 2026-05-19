@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
@@ -110,6 +111,12 @@ class TranscriptionExtractor {
   }
 
   Future<TranscriptionResult> _transcribeFile(String filePath) async {
+    if (kIsWeb) {
+      return const TranscriptionResult(
+        text: '',
+        extractionMethod: 'file_web_unsupported',
+      );
+    }
     try {
       final file = File(filePath);
       if (!file.existsSync()) {

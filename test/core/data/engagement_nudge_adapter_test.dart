@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/core/data/engagement_nudge_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/engagement_nudge_adapter.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import '../../helpers/hive_test_utils.dart';
 

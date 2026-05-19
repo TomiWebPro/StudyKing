@@ -1,289 +1,193 @@
-# Dry-Run Usability Validation: Non-English (Spanish) User Experience
+# Dry-Run Usability Validator — Backup, Restore & Data Portability
 
-**Scenario:** `dry-run-test/scenario_non_english_spanish_user.md`
-**Persona:** María, a Spanish-speaking student in Mexico City learning IB Chemistry
-**Locale tested:** `es` (Spanish), device locale `es_MX`
-**Date:** 2026-05-18
-
----
-
-## Executive Summary
-
-The StudyKing app has excellent localization infrastructure: 100% ARB key parity between English and Spanish, locale-aware number/date formatting throughout the UI, and fully translated onboarding/settings screens. However, **non-English users encounter English text in three critical areas**: (1) all engagement nudges and progress recommendations are always in English, (2) keyword-based state machines in the AI tutor ignore non-English input, and (3) several service-layer components (image analysis, PDF export, backup dialog, topic extraction branching) have hardcoded English. The root cause of the worst failures is architectural: `EngagementScheduler` and all `StudyProgressTracker` instances are created before `runApp()` (or in providers that never pass `l10n`), so `_l10n` is always null.
-
-**Total findings: 7 BLOCKER, 5 MAJOR, 2 MINOR, 1 PARTIAL**
+**Scenario file:** `dry-run-test/scenario_backup_restore_data_portability.md`
+**Date:** 2026-05-19
+**Validator:** Codebase verification against actual source
 
 ---
 
-## BLOCKER Findings
+## Scenario Summary
 
-### B1. Engagement nudges are ALWAYS English (locale ignored)
+A student with 1+ month of StudyKing usage (two subjects, practice data, tutor sessions, focus mode, study plans, roadmaps, Mentor conversations, API key) wants to back up all data before reinstalling, export progress to share with a teacher, restore data after reinstallation, and configure auto-backup. The user discovers that:
 
-**Files:** `lib/core/services/engagement_scheduler.dart:297-364`, `lib/main.dart:100-112`
-
-**Problem:** The `EngagementScheduler` is created in `main()` at line 100-112 **before** `runApp()` (line 127). The `l10n` parameter is never passed. The `_l10n` field (line 47: `AppLocalizations? _l10n`) is null for the entire lifetime of the app. All 4 nudge types fall through to English fallback strings:
-
-| Nudge | Line | Fallback |
-|---|---|---|
-| Overwork warning | 301-304 | `"You have studied $hoursStr hours today..."` |
-| Revision reminder | 318-319 | `"It has been $daysSince days since you practiced..."` |
-| Plan adjustment | 336-337 | `"You have had $consecutiveLow days of low plan adherence..."` |
-| Weekly digest | 357-364 | `"Weekly Digest: $weeklyActivity questions answered..."` |
-
-Additionally, `_l10n` is a `final` field with no setter — even after `runApp()` establishes the locale, there is no way to inject localized strings into the scheduler.
-
-**Acceptance criteria:**
-- `EngagementScheduler` must receive `AppLocalizations` (or equivalent locale context) after `runApp()` establishes it
-- All 4 nudge types must display in the user's selected locale
-- The `_l10n` field should be updatable, or the scheduler should be created after locale is established
+1. The full-backup button ("Export Backup (full)") is a no-op due to a control-flow bug (`null` vs `null` check)
+2. Auto-backup only triggers when the Settings screen initializes — not on app launch or periodically
+3. Auto-backup files go to an inaccessible temp directory with a dead "View in Settings" button
+4. 13+ Hive box types have no typed deserializer on restore
+5. Two Hive boxes (`llmTasks`, `llmUsageRecords`) are silently excluded from all backups
+6. Sign-out doesn't clear data, doesn't offer backup — just clears the API key
+7. App version in About is a hardcoded translation string, not the real build version
 
 ---
 
-### B2. Progress recommendations and mastery labels are ALWAYS English
+## Findings by Severity
 
-**Files:**
-- `lib/core/services/study_progress_tracker.dart:20-28` (constructor), `:170-222` (recommendations), `:265-272` (mastery labels)
-- `lib/main.dart:101` (first instance)
-- `lib/core/providers/app_providers.dart:302` (`engagementTrackerProvider`)
-- `lib/features/dashboard/providers/dashboard_providers.dart:22`
-- `lib/features/mentor/providers/mentor_providers.dart:17`
-- `lib/core/services/dashboard_service.dart:31`
-- `lib/core/services/progress_export_service.dart:28`
-- `lib/core/services/badge_service.dart:18`
+### BLOCKER — App crashes or user cannot proceed
 
-**Problem:** `StudyProgressTracker` has an `AppLocalizations? _l10n` parameter (line 24) that is **never supplied by any of the 7 production callers**. Every instance has `_l10n = null`. Consequences:
+#### Finding B1: "Export Backup (full)" button is a no-op due to null/boolean inversion
 
-1. **All 8 recommendations are ALWAYS English** (lines 179, 180, 187, 196, 197, 205, 207, 215-216):
-   - `_l10n?.recommendAccuracyBelow60 ?? 'Your overall accuracy is below 60%...'`
-   - `_l10n?.recommendConsistency ?? 'You studied less than 1 hour total...'`
-   - `_l10n?.recommendWeakTopics(...) ?? 'You have ... topic(s) that need improvement...'`
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:764-781` — dialog button returns `null` for full export, then line 781 checks `includeSensitive == null` and returns early
+  - `lib/features/settings/presentation/settings_screen.dart:773-776` — `FilledButton` labeled "Export Backup" returns `Navigator.pop(ctx, null)` on press
+  - `lib/features/settings/presentation/settings_screen.dart:764-770` — "Exclude Sensitive Data" `TextButton` returns `Navigator.pop(ctx, true)` (works)
+  - `lib/features/settings/presentation/settings_screen.dart:765-767` — "Cancel" returns `Navigator.pop(ctx, false)` (works)
+- **Rationale:** The dialog has 3 buttons: Cancel (`false`), Exclude Sensitive Data (`true`), Export Backup full (`null`). The guard at line 781 — `if (includeSensitive == null || !mounted) return;` — treats the full-export option (`null`) the same as cancelled, causing an early return with zero user feedback. No snackbar, no file, no error. The primary/filled button is a dead end. The user who wants a full backup (with API keys) cannot create one through the intended UI path.
+- **Acceptance criteria:** Invert the semantics OR change the return values. Options:
+  - Change "Export Backup (full)" to return `false` and "Cancel" to return `null`: `if (includeSensitive == null)` means cancelled, `false` means full export, `true` means exclude sensitive.
+  - Or keep current return values but change line 781 to: `if (includeSensitive == false || !mounted) return;` (treating `false` as cancel, `null` and `true` as proceed).
+  - Must include unit test(s) covering all 3 dialog button paths.
 
-2. **All 5 mastery level labels are ALWAYS English** (lines 266-272):
-   - "Novice" instead of "Novato"
-   - "Browsing" instead of "Explorando"
-   - "Developing" instead of "En desarrollo"
-   - "Proficient" instead of "Competente"
-   - "Expert" instead of "Experto"
+#### Finding B2: Auto-backup only fires when Settings screen initializes
 
-These labels appear in the Dashboard's Mastery Overview card, the Planner's subject progress tabs, and the Mentor's context prompt — the user's locale setting is ignored.
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:57` — `initState` calls `_checkAutoBackup()` via `addPostFrameCallback`
+  - `lib/features/settings/presentation/settings_screen.dart:66-86` — `_checkAutoBackup()` implementation — only runs when called, no timer, no background scheduling
+  - `lib/main.dart:100-150` — app initialization only calls `_initHive()` and renders `MainScreen` — no periodic backup timer
+- **Rationale:** The auto-backup check is tied to `_SettingsScreenState.initState()`. If the user configures weekly auto-backup and never opens the Settings screen again, the backup never runs. The user can use the app daily (Practice, Tutor, Mentor, Focus Mode) for weeks without triggering a single auto-backup. The EngagementScheduler at least runs a periodic timer (though in-process); the backup system has no timer at all outside the Settings screen lifecycle.
+- **Acceptance criteria:** Move the auto-backup check to the app startup flow (in `main.dart` after `_initHive()`) so it fires every time the app launches, not just when Settings is opened. Consider adding a `Timer.periodic(Duration(days: 1))` in the app's root widget for daily checks regardless of screen state.
 
-**Acceptance criteria:**
-- All 7 `StudyProgressTracker` callers must pass `l10n` from the current locale context
-- All 8 recommendations must display in the user's selected locale
-- All 5 mastery level labels must display localized strings from ARB keys
-- The Dashboard's Mastery Overview must show Spanish labels when locale is `es`
+#### Finding B3: Auto-backup stores files in temp directory — user cannot retrieve them
 
----
-
-### B3. AI Tutor keyword lists are English-only — no non-English input supported
-
-**Files:**
-- `lib/features/teaching/services/conversation_manager.dart:154-156` (continue keywords)
-- `lib/features/teaching/services/conversation_manager.dart:280` (exercise keywords)
-
-**Problem:** Two hardcoded English-only keyword lists control phase transitions in the AI tutor:
-
-```dart
-// Line 155 — adaptive review continue detection
-final continueKeywords = ['understand', 'got it', 'i see', 'continue', 'next', 'ok', 'yes'];
-
-// Line 280 — exercise request detection
-final exerciseKeywords = ['exercise', 'practice', 'quiz'];
-```
-
-Spanish equivalents (Entiendo, Siguiente, Continúa, Sí, Ejercicio, Práctica, Examen) are never matched. The adaptive review phase must time out after 3 exchanges rather than responding to the student's Spanish comprehension signal. Students cannot naturally request exercises in Spanish.
-
-The `localeName` field is available on `ConversationManager` (line 44) but is never used to select locale-appropriate keyword lists.
-
-**Acceptance criteria:**
-- Continue keywords must include Spanish equivalents when locale is `es`
-- Exercise keywords must include Spanish equivalents when locale is `es`
-- Approach should be extensible (not hardcoded if/else per language) — use a map of locale → keyword list
-- Unit tests must pass for Spanish keyword detection
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:88-113` — `_performAutoBackup()` calls `backupService.exportAllData()` which saves to `getTemporaryDirectory()`
+  - `lib/features/settings/services/data_backup_service.dart:23-24` — `getTemporaryDirectory()` used — system temp dir
+  - `lib/features/settings/presentation/settings_screen.dart:103-106` — snackbar action `label: l10n.viewInSettings` with `onPressed: () {}` (empty callback)
+- **Rationale:** Auto-backup files are written to `getTemporaryDirectory()` — a system temporary folder that can be cleaned by the OS at any time. The file path is not stored anywhere. The snackbar that appears on backup completion has a "View in Settings" action button, but its `onPressed` is an empty function (`() {}`). The user cannot retrieve, share, or manage their auto-backup files. The feature creates backups that exist for an indeterminate time and then vanish.
+- **Acceptance criteria:** Either (a) save auto-backup files to a persistent, user-accessible location (e.g., app documents directory) and show a "Share" option in the snackbar, or (b) store the file path in the settings box and provide a "Last Auto-Backup" tile that lets users retrieve/share the file. Fix the `viewInSettings` action to actually navigate to Settings or show the backup file. Add auto-backup file management (view, share, delete).
 
 ---
 
-### B4. Image/handwriting analysis prompt is hardcoded English
+### MAJOR — Feature is broken or misleading
 
-**File:** `lib/features/teaching/services/conversation_manager.dart:209-218`
+#### Finding M1: 13+ Hive box types lack typed deserialization on restore
 
-**Problem:** The `processImage()` method sends hardcoded English prompts to the LLM:
-```dart
-final message = 'The student submitted handwritten work / an image. '
-    'Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n'
-    '$imageData';
-final systemPrompt = 'The student submitted this work. Analyze and provide feedback.';
-```
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:1087-1126` — `_deserializeRecord()` only handles `subjects`, `topics`, `questions`, `sources`, `lessons`, `sessionsTyped`, `masteryStates`, `questionMasteryStates`, `questionEvaluations`, `learningPlans`, `planAdherence`, `planAdherenceMetrics`, `masteryImprovementMetrics`, `conversations`, `tutorSessions`, `topicDependencies`, `lessonBlocks` — 17 types
+  - Boxes NOT deserialized (fall through to `default: return json`): `answers`, `attempts`, `badges`, `engagementNudges`, `focusSessions`, `pendingActions`, `progress`, `sessions` (legacy), `tasks`, `settings`, `profile`, `studentAvailability` — 12 types
+  - `lib/features/settings/presentation/settings_screen.dart:994-1040` — `_collectAllBoxData()` lists 28 boxes but HiveBoxNames defines 35
+  - `lib/core/data/hive_box_names.dart:35` — `llmTasks`, `llmUsageRecords` not in collection list
+- **Rationale:** During restore, 12+ box types are stored as raw `Map<String, dynamic>` instead of their typed Hive model. For boxes opened with a generic type parameter (e.g., `Hive.openBox<Session>`), raw maps may fail to load or lose type-specific behavior (field defaults, computed getters). The `llmTasks` and `llmUsageRecords` boxes (tracking LLM token usage and task management) are excluded from `_collectAllBoxData()` entirely — they are lost in any backup/restore cycle. A user who backs up and restores will permanently lose their LLM usage tracking history.
+- **Acceptance criteria:** Add `fromJson()` deserialization for all remaining box types, or confirm that raw-map storage is acceptable (add `// ok: stored as raw map` comments). Add `llmTasks` and `llmUsageRecords` to `_collectAllBoxData()`. Add round-trip tests for each box type verifying that `toJson()` → `fromJson()` → `toJson()` yields identical output.
 
-The `localeName` field (line 44) is available but never used. Even though the LLM may respond in Spanish due to conversation history, the analysis instruction is always English.
+#### Finding M2: No studentId/UUID reconciliation on restore
 
-**Acceptance criteria:**
-- `processImage()` must construct locale-appropriate prompts using `localeName`
-- The system prompt and user message should be in the user's language
-- ARB keys should be added for image analysis prompts
+- **Files:**
+  - `lib/core/services/student_id_service.dart:27` — generates UUID on first install, persists it
+  - `lib/features/settings/presentation/settings_screen.dart:1054-1085` — `_writeBoxData()` / `_writeBoxDataMerge()` — writes all records with their original IDs
+  - `lib/features/settings/presentation/settings_screen.dart:847-929` — `_importBackup()` — no studentId handling anywhere in the restore flow
+- **Rationale:** When a user reinstalls the app, `StudentIdService` generates a NEW UUID. The backup file contains ALL records with the OLD UUID embedded in `studentId` fields across `attempts`, `sessionsTyped`, `tutorSessions`, `conversations`, etc. After restore, the old data still references the old UUID. The `profile` box contains the old UUID. Queries that filter by `studentId` will return empty for the new UUID, making all restored data invisible until the user somehow discovers the mismatch. There is zero user-facing indication of this issue.
+- **Acceptance criteria:** On restore, either (a) detect and warn about UUID mismatch ("This backup was created on a different device/install. Your current student ID will be updated to match the backup."), or (b) provide an option to rewrite all `studentId` fields in restored records to match the current UUID. Store the backup's studentId in the restore summary dialog.
 
----
+#### Finding M3: No post-restore state refresh
 
-### B5. All nudge and recommendation English fallbacks are ALWAYS used
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:912-921` — after `_writeBoxDataMerge()` or `_writeBoxData()`, only a success snackbar is shown
+  - `lib/features/settings/presentation/settings_screen.dart:847-929` — `_importBackup()` — no `ref.invalidate()` calls
+- **Rationale:** After a successful restore, all Hive boxes have new/updated data, but all Riverpod providers still hold their pre-restore state. The user sees the old data (or empty state) on every screen until they restart the app. No UI refresh is triggered. The success snackbar misleadingly implies the restore is complete, but the user navigates to the Dashboard to find nothing changed.
+- **Acceptance criteria:** After restore completes, call `ref.invalidate()` for all data-dependent providers, or at minimum show a dialog: "Data restored successfully. Please restart the app to see your data." Better yet, trigger a hot restart or invalidate key providers.
 
-**Combined finding covering B1 and B2 above.** This pattern of `_l10n?.key ?? 'English fallback'` exists in multiple services and is always resolved to English because `_l10n` is always null:
+#### Finding M4: No backup size preview or record count summary
 
-- `EngagementScheduler._l10n` — null (4 fallback paths)
-- `StudyProgressTracker._l10n` — null across 7 instances (13 fallback paths: 8 recommendations + 5 mastery labels)
-- `BadgeService` — no l10n parameter at all
-- `ProgressExportService` — no l10n parameter
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:742-818` — `_exportBackup()` — the sensitive-data dialog says nothing about what data is in the backup
+  - `lib/features/settings/services/data_backup_service.dart:10-31` — `exportAllData()` — returns only the file path, no metadata
+- **Rationale:** The user sees: "The backup contains sensitive data. You can choose to exclude it." They have no idea how much data is included — how many subjects, questions, sessions, conversations. A user with 50MB of data might be surprised when the share sheet shows a huge file. A user with empty data might not realize their backup is empty. No size estimation, no record count, no "what's included" preview.
+- **Acceptance criteria:** Before showing the share sheet, display a summary dialog: "Backup contains: 2 subjects, 240 questions, 800 attempts, 15 sessions, 4 conversations. File size: ~1.2 MB." Either compute this from `boxData` before passing to `exportAllData()` or have `exportAllData()` return a result with metadata (file size, record counts).
 
-**Root cause:** These "background" services are created during the `main()` initialization phase (before `runApp()`), when `AppLocalizations` is not yet available. Providers replicate this pattern.
+#### Finding M5: No backup encryption — API keys in plaintext
 
-**Acceptance criteria (in addition to B1 and B2):**
-- Audit all services with nullable `_l10n` and ensure they receive localized strings
-- Consider a strategy: either defer service creation until after `runApp()`, or make `_l10n` settable post-construction
-- `BadgeService` and `ProgressExportService` should also support localization
+- **Files:**
+  - `lib/features/settings/services/data_backup_service.dart:15-19` — backup is plain JSON with `JsonEncoder.withIndent`
+  - `lib/features/settings/presentation/settings_screen.dart:783-789` — full export (if the bug were fixed) includes the `settings` box with plaintext API key
+- **Rationale:** If the full-backup option is used (or the B1 bug is fixed), the backup JSON file contains all API keys in plaintext. The file is shared via `Share.shareXFiles`, which means it goes through the system share sheet — potentially uploaded to cloud storage, emailed, sent via messaging apps. There is no encryption, no password protection, no warning that the backup contains credentials. For a local-only app where the API key is the only sensitive credential, this is a significant data leakage risk.
+- **Acceptance criteria:** At minimum, add a clear warning dialog when including the settings box: "Your API keys will be stored in plaintext in this backup file. Anyone with access to this file can use your API keys." Consider implementing optional password-based encryption for backup files.
 
----
+#### Finding M6: Sign-out doesn't clear data, doesn't offer backup — clears only API key
 
-## MAJOR Findings
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:1197-1221` — `_showSignOutDialog()` — only clears `apiKey`, `selectedModel`, and calls `Navigator.popUntil`
+  - `lib/l10n/generated/app_localizations_en.dart` — `signOut` string implies account-level action
+- **Rationale:** The "Sign Out" option is labeled and styled like an account-level action (red text, icon is `Icons.logout`). But it only clears the API key and selected model. All study data (subjects, questions, attempts, sessions, conversations, plans) remains untouched. There is no backup-first prompt. There is no actual user account system — `StudentIdService` uses a fixed UUID. The feature is a misleadingly labeled "clear API key" action. A user who signs out intending to hand the device to someone else leaves all their personal study data accessible.
+- **Acceptance criteria:** Either (a) rename to "Clear API Key" and add a description: "This will remove your API key. Your study data will be preserved.", or (b) implement true sign-out that offers backup first, then clears all local data. Add a warning if study data exists: "You have study data. Would you like to back it up first?"
 
-### M1. Backup dialog shows 20 hardcoded English Hive box names
+#### Finding M7: App version in About dialog is a hardcoded translation string
 
-**File:** `lib/features/settings/presentation/settings_screen.dart:816-838`
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:1225-1235` — `_showAboutDialog()` calls `l10n.aboutVersion` for the version parameter
+  - `lib/l10n/generated/app_localizations_en.dart:4636` — `String get aboutVersion => '1.0.0';`
+  - `lib/l10n/generated/app_localizations_es.dart:4683` — `String get aboutVersion => '1.0.0';`
+- **Rationale:** The displayed version (`"1.0.0"`) is a hardcoded string in ARB translation files. It does NOT change when the app is built at a different version. If the app's `pubspec.yaml` version is bumped to `1.2.0`, the About dialog still shows `"1.0.0"`. The `package_info_plus` package is available in the dependency tree but never used for version display.
+- **Acceptance criteria:** Use `package_info_plus` (or `Platform.version` on web) to read the actual build version from the platform. Fall back to `pubspec.yaml` version via `PackageInfo.fromPlatform()`. The translation strings should be used only for labels, not version values.
 
-**Problem:** The `_boxDisplayName()` method returns hardcoded English names like `'Subjects'`, `'Topics'`, `'Questions'`, `'Lessons'`, etc. in the backup/restore confirmation dialog. A Spanish user sees "Subjects" instead of "Materias".
+#### Finding M8: Two LLM-related Hive boxes silently excluded from backup
 
-**Acceptance criteria:**
-- Box display names should use localized strings from ARB keys instead of hardcoded English
-- Add ARB keys for each box display name (e.g., `backupBoxSubjects: "Materias"`)
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:994-1040` — `_collectAllBoxData()` iterates 28 box names
+  - `lib/core/data/hive_box_names.dart:34-35` — `llmTasks`, `llmUsageRecords` constants defined
+  - `lib/core/services/llm_task_manager.dart:97` — opens `HiveBoxNames.llmTasks`
+  - `lib/core/services/llm_usage_meter.dart:56` — opens `HiveBoxNames.llmUsageRecords`
+- **Rationale:** The `llmTasks` and `llmUsageRecords` boxes store LLM task execution history and token usage records. These are active boxes that maintain state across app restarts. They are not included in `_collectAllBoxData()` and therefore are never backed up. On a full backup/restore cycle, this data is permanently lost. A user relying on the LLM usage meter for cost tracking will see their history reset to zero after restore.
+- **Acceptance criteria:** Add `llmTasks` and `llmUsageRecords` to the `_collectAllBoxData()` box list. Add corresponding entries to `_deserializeRecord()` and `_boxDisplayName()`.
 
----
+#### Finding M9: Export confirmation dialogs give no information about what will be exported
 
-### M2. PDF export header is hardcoded English
+- **Files:**
+  - `lib/features/dashboard/presentation/widgets/export_section.dart:103-123` — `_showExportConfirmation()` — generic title + description, same for all formats
+  - `lib/features/dashboard/presentation/widgets/export_section.dart:127-131` — CSV export passes `l10n.exportCsv` as both title and description content
+- **Rationale:** Before exporting, the user sees a confirmation dialog with the export format name and "Comprehensive report exported" — no information about what data is included. CSV, PDF, and JSON exports contain different data (CSV has attempt-level detail, PDF has formatted tables, JSON has structured data), but the dialog is identical for all three. The user has no way to know which format contains what they need.
+- **Acceptance criteria:** Each export format should show a brief description of its contents: "CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges." — "PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing." — "JSON: structured data export for programmatic analysis."
 
-**File:** `lib/core/services/question_pdf_generator.dart:84`
+#### Finding M10: ProgressExportService bypasses dependency injection
 
-**Problem:** `'Total Questions: ${_questions.length}'` is hardcoded English. Per AGENTS.md: "PDF exports should use the user's locale (they are user-facing documents)."
-
-**Acceptance criteria:**
-- PDF generator must accept a locale parameter or `AppLocalizations`
-- Header labels must use localized strings
-
----
-
-### M3. ConversationManager continue/exercise keywords lack locale-awareness
-
-**File:** `lib/features/teaching/services/conversation_manager.dart:44, 154-156, 280`
-
-**Problem:** As described in B3, two critical keyword lists are English-only. While this is a BLOCKER for Spanish users specifically, the structural issue (no locale-based keyword selection) is a MAJOR architectural deficiency.
-
-**Acceptance criteria:** (same as B3)
-
----
-
-### M4. MentorService topic extraction uses hardcoded `_localeName == 'es'` branch
-
-**File:** `lib/features/mentor/services/mentor_service.dart:265-267, 276-278`
-
-**Problem:** `_extractTopic()` uses:
-```dart
-final keywords = _localeName == 'es'
-    ? Spanish keywords
-    : English keywords;
-final topicKeywords = _localeName == 'es'
-    ? Spanish topic keywords
-    : English topic keywords;
-```
-
-This pattern requires a new `else if` branch for every added language. Does not scale. A `Map<String, List<String>>` keyed by locale would be extensible.
-
-**Acceptance criteria:**
-- Replace if/else with a map-based lookup: `Map<String, List<String>>` keyed by locale
-- Add French, German keyword lists (can be minimal initial implementation)
-- Unit tests should verify correct keywords are used for each locale
+- **Files:**
+  - `lib/core/services/progress_export_service.dart:23-37` — default constructor creates `AttemptRepository()` and `MasteryGraphService()` directly
+- **Rationale:** The default constructor instantiates raw repository objects (`AttemptRepository()`, `MasteryGraphService()`) instead of using provider-injected instances. If these repositories have constructor dependencies (e.g., `AttemptRepository` requires a `Hive` box that isn't initialized at construction time), the export could fail. This also breaks testability — tests must rely on the default internal fakes rather than injected fakes.
+- **Acceptance criteria:** The Dashboard section should pass the already-available `tracker` and `instrumentation` objects to the export service, or the export service should obtain them from providers. Make all constructor parameters required (remove defaults) or obtain them from Riverpod's `ref.read()`.
 
 ---
 
-### M5. FormatCurrency hardcodes `$` symbol
+### MINOR — UX friction
 
-**File:** `lib/core/utils/number_format_utils.dart:52`
+#### Finding N1: Backup is only discoverable via Settings — no Dashboard shortcut
 
-**Problem:** `symbol: '\$'` is always the dollar sign. In Spanish-speaking regions (Mexico, Spain, etc.), users may expect different currency symbols (MX$, €) depending on configuration. The `NumberFormat.simpleCurrency` can infer symbol from locale.
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:315-322` — backup section only in Settings
+  - `lib/features/dashboard/presentation/widgets/export_section.dart:27-100` — Dashboard Export section has no backup option
+- **Rationale:** Users looking for "how do I back up my data?" will naturally look at the Dashboard's Export section, which has "CSV", "PDF", "JSON" labels. These are progress reports, not full data backups. The actual backup feature is two navigation levels deep in Settings. Users may export a progress report thinking it's a backup, then later lose their data on reinstall.
+- **Acceptance criteria:** Add a "Backup All Data" card or button to the Dashboard's Export section, or add a Settings shortcut tile. At minimum, add a note in the Export section: "For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore."
 
-**Acceptance criteria:**
-- `formatCurrency` should infer the currency symbol from the locale, or accept a configurable symbol parameter
-- Default behavior should use locale-appropriate symbol
+#### Finding N2: Two CSV buttons with different scope but similar labels
 
----
+- **Files:**
+  - `lib/features/dashboard/presentation/widgets/export_section.dart:41-44` — `_exportCSV` — comprehensive CSV with stats + mastery + attempts + trend + badges
+  - `lib/features/dashboard/presentation/widgets/export_section.dart:61-70` — `_exportProgressCSV` — different CSV via `StudyProgressTracker.exportProgressCSV()`
+- **Rationale:** Both buttons say "Export CSV" (the smaller one says "Progress CSV"). A user might not understand the difference. Exporting both produces two different CSV formats, which is confusing for a user who expects a single "Export as CSV" action.
+- **Acceptance criteria:** Rename the smaller "Progress CSV" button to clearly distinguish its content: "Stats CSV" or "Summary CSV". Alternatively, merge the two CSV exports into one comprehensive CSV and remove the duplicate.
 
-### M6. English fallback strings in NotificationService
+#### Finding N3: Auto-backup has no manual trigger in its dialog
 
-**File:** `lib/core/services/notification_service.dart:200-292`
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:611-661` — `_showAutoBackupDialog()` — only interval selection options
+- **Rationale:** The auto-backup dialog only lets the user choose an interval (Never/Daily/Weekly). There's no "Back Up Now" button. To manually trigger a backup, the user must leave the dialog, find the "Export Backup" tile, and use that. After configuring auto-backup, the natural next action would be to trigger the first backup immediately.
+- **Acceptance criteria:** Add a "Back Up Now" button at the top of the auto-backup bottom sheet that runs `_performAutoBackup()` immediately. Show a progress indicator and success/failure feedback within the sheet.
 
-**Problem:** 22 hardcoded English fallback strings for notification content. While notifications primarily use nudge messages from `EngagementScheduler` (which has its own BLOCKER issue), direct notification calls also fall through to English.
+#### Finding N4: Export section is at the very bottom of a long Dashboard scroll
 
-**Acceptance criteria:**
-- `NotificationService` should accept locale context or `AppLocalizations`
-- All 22 fallback strings should have corresponding ARB keys
+- **Files:**
+  - `lib/features/dashboard/presentation/screens/dashboard_screen.dart:138-155` — ExportSection is the last widget in the Dashboard column
+- **Rationale:** The Dashboard has ~10+ cards of stats, charts, and metrics before the Export section. On a phone, users must scroll past all 10+ cards to find export. Most users won't scroll that far. The export functionality is functionally invisible for casual users.
+- **Acceptance criteria:** Add an "Export" icon button in the Dashboard's AppBar that scrolls to or opens the export section directly. Or move the export to a more prominent position.
 
----
+#### Finding N5: Backup file has no human-readable description in the share sheet
 
-## MINOR Findings
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:795-797` — `Share.shareXFiles([XFile(file.path)], text: 'StudyKing Backup')`
+- **Rationale:** When sharing the backup file, the share sheet shows "StudyKing Backup" as the text. There's no context about when the backup was created, how large it is, or what data it contains. If a user has multiple backup files, they can't distinguish them without opening each.
+- **Acceptance criteria:** Include the export date and record count in the share text: "StudyKing Backup — 2026-05-19 — 2 subjects, 240 questions, 800 attempts (1.2 MB)". Derive this from the backup data before exporting.
 
-### m1. `AnswerValidationService` and `QuestionAnswerValidator` default to English
+#### Finding N6: Sign-out confirmation doesn't mention what will be cleared
 
-**Files:** 
-- `lib/core/services/answer_validation_service.dart:36, 286, 293, 318, 354, 381, etc.`
-
-**Problem:** Every constructor and static method defaults to `ValidationMessages.english` instead of checking the current locale. Currently this only affects the `validateWithMarkscheme()` static method (which is dead code), but any future code path that creates `AnswerValidationService` without passing localized messages will display English validation feedback.
-
-**Acceptance criteria:**
-- Consider removing the English default and making the `messages` parameter required
-- Or add a runtime locale check that falls back to an appropriate default
-
----
-
-### m2. Locale flicker on startup when saved locale ≠ device locale
-
-**Files:** 
-- `lib/main.dart:153` (initial renders with device locale)
-- `lib/main.dart:163` (post-frame callback overrides with saved locale)
-
-**Problem:** On app launch, the first frame renders with the device locale. A `postFrameCallback` then loads the Hive profile and overrides to the saved locale. If these differ, there's a visible 1-frame flicker.
-
-**Acceptance criteria:**
-- Move locale initialization to be synchronous from Hive (Hive is already open by this point)
-- Or use a splash/loading screen that resolves the locale before rendering the main UI
-
----
-
-### m3. `formatCurrency` locale-awareness gap
-
-**File:** `lib/core/utils/number_format_utils.dart:45-61`
-
-**Problem:** (repeated from M5 — kept here as minor since it's cosmetic)
-
----
-
-## PARTIAL Findings
-
-### P1. Spanish locale startup detection works for same-locale persistence
-
-**Files:** `lib/core/providers/app_providers.dart:283-295`, `lib/main.dart:153-163`
-
-**Detail:** When the device locale is Spanish and no saved profile exists, the first launch correctly renders in Spanish. When the saved language matches the device locale, there is no flicker on subsequent launches. Only cross-locale persistence (saved language ≠ device locale) causes the flicker.
-
----
-
-## Previously Reported but VERIFIED
-
-| Finding | Status |
-|---|---|
-| Onboarding dialog fully localized | VERIFIED PASS |
-| API Key banner localized | VERIFIED PASS |
-| Bottom navigation labels localized | VERIFIED PASS |
-| Number formatting locale-aware | VERIFIED PASS |
-| Language selector shows localized names | VERIFIED PASS |
-| Language switching is immediate | VERIFIED PASS |
-| Mentor Spanish intent detection works | VERIFIED PASS |
-| Mentor Spanish topic extraction works | VERIFIED PASS |
-| `ValidationMessages.fromLocalizations()` IS called (2 callers) | VERIFIED — corrected from earlier draft |
-| Practice/exam validation IS localized | VERIFIED PASS |
-| `EngagementScheduler.updateSettings()` never reads notification prefs | CONFIRMED from scenario_focus_mode_daily_habit |
+- **Files:**
+  - `lib/features/settings/presentation/settings_screen.dart:1199-1213` — `_showSignOutDialog()` content is just `l10n.signOutConfirmation` with no specifics
+- **Rationale:** The sign-out confirmation says "Are you sure you want to sign out?" but doesn't explain what happens: "Your API key and selected model will be cleared. Your study data will be preserved." The user might think sign-out deletes everything or does nothing.
+- **Acceptance criteria:** The confirmation dialog should list exactly what will be cleared and what will be preserved.

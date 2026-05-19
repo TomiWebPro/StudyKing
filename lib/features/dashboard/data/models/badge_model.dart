@@ -48,6 +48,17 @@ class BadgeModel extends HiveObject {
         'unlockedAt': unlockedAt.toIso8601String(),
         'criteria': criteria,
       };
+
+  factory BadgeModel.fromJson(Map<String, dynamic> json) => BadgeModel(
+    id: json['id'] as String,
+    studentId: json['studentId'] as String,
+    name: json['name'] as String,
+    description: json['description'] as String,
+    iconName: json['iconName'] as String? ?? 'emoji_events',
+    category: json['category'] as String? ?? 'general',
+    unlockedAt: json['unlockedAt'] != null ? DateTime.parse(json['unlockedAt'] as String) : null,
+    criteria: json['criteria'] is Map ? Map<String, dynamic>.from(json['criteria'] as Map) : null,
+  );
 }
 
 class BadgeDefinitions {

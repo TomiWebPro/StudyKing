@@ -1,202 +1,345 @@
-# UI/UX Master Audit — Full Codebase Review
+# UI/UX Master Report
 
-**Date:** 2026-05-18  
-**Scope:** All 22 named routes + 6 tab screens + dialog/widget ecosystem  
-**Severity Legend:** 🔴 BLOCKER | 🟠 MAJOR | 🟡 MINOR
-
----
-
-## 🔴 BLOCKER
-
-### B1. PracticeSessionScreen — Empty questions with no graceful exit path
-**File:** `lib/features/practice/presentation/screens/practice_session_screen.dart:148-172`  
-**Context:** When `_loadQuestions()` finds zero questions for the subject/topic, `_showNoQuestionsDialog()` presents a dialog. If the user taps "OK" the dialog closes but the session screen remains showing `CircularProgressIndicator` (line 426) because `_questions` is still `[]` and `_isSessionComplete` is false. There is no back-navigation or "go back" affordance on this stuck state.  
-**Rationale:** User cannot proceed and must force-close the app or use system back (which has its own confirmation dialog).  
-**Acceptance:** After the "no questions" dialog is dismissed, the screen should pop back to the previous screen automatically.
-
-### B2. PracticeSessionScreen — Submit button permanently disabled when answer is null
-**File:** `lib/features/practice/presentation/screens/practice_session_screen.dart:507-512`  
-**Context:** The `FilledButton` for submission is `onPressed: _currentAnswer != null ? _submitAnswer : null`. For question types that don't populate `_currentAnswer` (e.g., drawing/canvas questions that use a different interaction model), the user can never submit and is trapped.  
-**Rationale:** Certain question types lack an answer callback, making the session unfinishable.  
-**Acceptance:** Every question type must wire into `_onAnswerSelected` or provide its own submit pathway. At minimum, a "skip" button should be available when no answer is selected.
+**Generated:** 2026-05-19
+**Scope:** Complete codebase audit — 15 features, 96+ presentation files, navigation flows, accessibility, animations, responsive layout, i18n, and web platform readiness.
 
 ---
 
-## 🟠 MAJOR
+## BLOCKER — App crashes or user cannot proceed
 
-### M1. Screen-by-screen error-state inconsistency — raw `e.toString()` exposed to users
-**Files:**
-- `lib/features/practice/presentation/screens/practice_screen.dart:83` — `_loadError = e.toString()`
-- `lib/features/practice/presentation/screens/practice_screen.dart:554` — renders `_loadError!` directly
-- `lib/features/settings/presentation/settings_screen.dart:286` — `e.toString()` in error card
-- `lib/features/sessions/presentation/session_tracker_screen.dart:95` — `_error = e.toString()`
-- `lib/features/subjects/presentation/subject_list_screen.dart:38` — `error.toString()` in `when()` error
-- `lib/features/subjects/presentation/subject_detail_screen.dart:465` — `_error!` in error widget
-- `lib/features/sessions/presentation/session_history_screen.dart:468` — `_error!` shown directly
+### B1. `dart:io` imports crash the web build
 
-**Context:** Multiple screens display raw exception text to the user. This leaks implementation details (Hive errors, null pointer traces, network error codes) and is not localized.  
-**Rationale:** Error messages are a user-facing surface; raw stack data is confusing and reflects poorly on app quality.  
-**Acceptance:** Every `e.toString()` in a `build` / error-widget path must be replaced with a localized, user-friendly message. The raw error string may be used for logging but never displayed.
+**Severity:** BLOCKER (runtime crash on web)
 
-### M2. Dashboard all-or-nothing error handling hides partial data
-**File:** `lib/features/dashboard/presentation/dashboard_screen.dart:58-87`  
-**Context:** `hasAnyError` is true if *any* of 9+ async providers has an error. When true, the entire dashboard body is replaced with a generic error + retry button, hiding any successfully loaded card data.  
-**Rationale:** If 8 of 9 providers load successfully and only one fails (e.g., `dashboardBadgesProvider`), the user loses visibility into all their stats, weekly trends, and focus time.  
-**Acceptance:** Error state should be per-card (which `CollapsibleCard` already supports via `asyncValue`). Remove the blanket `hasAnyError` override so successful cards remain visible and failed cards show inline error/retry.
+Two presentation files import `dart:io`, which is unsupported on Flutter web and will cause a compile-time or runtime crash:
 
-### M3. TutorScreen phase indicator shows untranslated enum names
-**File:** `lib/features/teaching/presentation/tutor_screen.dart:528`  
-**Context:** `phase.name` is used in the phase indicator label. `ConversationPhase` enum `.name` returns the Dart enum constant string (e.g., `"greeting"`, `"teaching"`, `"closing"`) in English regardless of locale.  
-**Rationale:** Spanish (`es`) users will see English phase labels mixed into their tutor UI.  
-**Acceptance:** Replace `phase.name` with a localized string (`l10n.phaseGreeting`, etc.) for every phase value.
+- `lib/features/settings/presentation/settings_screen.dart:2`
+- `lib/features/dashboard/presentation/widgets/export_section.dart:1`
 
-### M4. MentorScreen progress report shows raw topic IDs instead of names
-**File:** `lib/features/mentor/presentation/mentor_screen.dart:686`  
-**Context:** The weak topics list in the progress report dialog displays `topic.topicId` directly. Topic IDs are UUID-like strings meaningless to users. A `TopicRepository` is available in scope (line 596) but not used to resolve names.  
-**Rationale:** A user seeing "Weak areas: a1b2c3d4..." gets zero actionable information.  
-**Acceptance:** Resolve topic IDs to their human-readable titles using the already-available `topicRepo.get()` before rendering.
+Both use `dart:io` for `File` operations (backup/restore settings, CSV/PDF export). On web, these operations must use `dart:html` or `dart:js` or a platform-abstracted API like `cross_file`.
 
-### M5. SessionHistoryScreen subject filter shows raw `subjectId` instead of subject names
-**File:** `lib/features/sessions/presentation/session_history_screen.dart:632-652`  
-**Context:** The subject filter dialog lists `subjects` which are derived from `_allSessions.map((s) => s.subjectId)` — raw IDs, not resolved to `Subject.name`.  
-**Rationale:** Users can't identify which subject to filter by when they see `"uuid-string-1234"`.  
-**Acceptance:** Resolve each `subjectId` via `SubjectRepository` to show `subject.name` in the filter list.
+Additionally, `path_provider` (used in `export_section.dart`) is not supported on web. The app will crash if a user on web taps "Export CSV/PDF/JSON."
 
-### M6. FocusTimerScreen `_buildSubjectPicker` creates a new `FutureBuilder` on every frame
-**File:** `lib/features/focus_mode/presentation/focus_timer_screen.dart:778-840`  
-**Context:** `_buildSubjectPicker` calls `subjectsAsync.when(data: ...)` which returns a fresh `FutureBuilder` that calls `repo.getAll()` every rebuild. Since this widget is inside the focus screen's `build` (which is called on every timer tick / setState), it triggers a repository network/database call every ~second.  
-**Rationale:** Unnecessary I/O every second degrades performance and battery.  
-**Acceptance:** Cache the subject list with a simple state variable or use a Riverpod `FutureProvider` instead of the nested `FutureBuilder`.
+**Acceptance criteria:**
+- [ ] Remove all `import 'dart:io'` from presentation files
+- [ ] Replace with platform-agnostic file operations (use `cross_file` + `universal_io` or conditional imports)
+- [ ] Add `kIsWeb` guards around web-unsafe file operations
+- [ ] Confirm web export paths work: CSV, PDF, JSON, and instrumentation exports
+- [ ] Verify settings backup/restore works on web
 
-### M7. PlannerScreen calendars — tapping a day opens tutor instead of showing the day's plan
-**File:** `lib/features/planner/presentation/planner_screen.dart:872-875`  
-**Context:** `CalendarViewWidget.onDayTap` opens `_openTutorMode`, jumping directly into a tutoring session for that topic. The user expectation when tapping a calendar day is to see what's scheduled for that day, not to immediately start a lesson.  
-**Rationale:** Destroys the mental model of a planner/calendar. Users lose the ability to review their schedule.  
-**Acceptance:** Add a "tap to view day details" step that shows the daily plan card, then offers a "Start tutoring" CTA within that view.
-
-### M8. No conversation reset affordance in MentorScreen or TutorScreen
-**Files:**
-- `lib/features/mentor/presentation/mentor_screen.dart`
-- `lib/features/teaching/presentation/tutor_screen.dart`
-
-**Context:** Both mentor and tutor chat screens accumulate messages indefinitely with no "clear conversation" or "start fresh" button. If the conversation context becomes confused (which happens with LLM-based systems), the user has no way to reset without leaving the screen and coming back.  
-**Rationale:** Users are stuck with a broken conversation context until they navigate away.  
-**Acceptance:** Add an overflow menu in the AppBar with "Clear conversation" that resets the message list and reinitializes the conversation manager after confirmation.
-
-### M9. `subject_color` used without contrast check for text legibility
-**Files:**
-- `lib/features/subjects/presentation/subject_detail_screen.dart:78-98` — gradient background uses subject color; title text is rendered in `onPrimary` which may have insufficient contrast against arbitrary subject colors
-- `lib/features/subjects/presentation/subject_list_screen.dart:137` — icon container uses the raw subject color
-
-**Context:** Subject colors are user-defined strings parsed by `ColorUtils.stringToColor()`. There is no luminance check before rendering white text (`onPrimary`) on top of these colors. A bright yellow or light green subject color would render white-on-yellow effectively invisible.  
-**Rationale:** Accessibility failure — users who pick light subject colors cannot read the subject title in `SubjectDetailScreen`.  
-**Acceptance:** Compute relative luminance of the subject color and switch between `Colors.white` and `Colors.black` (or use a semi-transparent overlay) to ensure WCAG AA contrast (4.5:1).
-
-### M10. ExamSessionScreen and PracticeSessionScreen share nearly identical logic with no code reuse
-**Files:** `lib/features/practice/presentation/screens/exam_session_screen.dart`, `lib/features/practice/presentation/screens/practice_session_screen.dart`  
-**Context:** The exam session screen duplicates ~80% of the practice session logic (question loading, answer validation, timer, navigation, confidence selector, results). The only differences are timer mode (countdown vs. untimed), question selection strategy, and some UI text.  
-**Rationale:** Violates DRY — any bug fix or UX improvement in one must be manually replicated in the other. The files have already diverged slightly.  
-**Acceptance:** Extract a shared `QuestionSessionScreen` base widget or mixin with parameterization for timed/untimed mode, question selection strategy, and result screen. Both screens become thin wrappers.
+**Affected files:**
+- `lib/features/settings/presentation/settings_screen.dart`
+- `lib/features/dashboard/presentation/widgets/export_section.dart`
+- `lib/core/services/progress_export_service.dart` (uses `File` internally)
 
 ---
 
-## 🟡 MINOR
+## MAJOR — Feature is broken or misleading
 
-### m1. Dashboard skeleton loading doesn't match card layout
-**File:** `lib/features/dashboard/presentation/dashboard_screen.dart:306-340`  
-**Context:** `_buildSkeletonLoading` renders 6 identical placeholder cards (shimmer box + line). The actual dashboard has 10+ cards of varying heights (header row, charts, adherence bars, topic names, badges). The mismatch makes the loading state misleading.  
-**Acceptance:** Match skeleton count and relative sizes to actual card layout, or switch to a single centered `LoadingScreen` during initial load.
+### M1. `SizedBox.shrink()` creates dead-end UI states (14 occurrences)
 
-### m2. All page transitions use the same 200ms fade regardless of direction
-**File:** `lib/core/routes/app_router.dart:293-305`  
-**Context:** `_materialPageRoute` always applies `FadeTransition` identically. Forward and back navigation feel the same. There is no slide gesture, no directional cue.  
-**Acceptance:** Use `SlideTransition` + `FadeTransition` with direction-aware offsets: forward slides left, back slides right. Match iOS/Material design conventions.
+**Severity:** MAJOR (user clicks/taps and nothing happens — no feedback)
 
-### m3. `ConversationInput` lacks send debouncing
-**File:** `lib/core/widgets/conversation_input.dart:110-113`  
-**Context:** `onSubmitted` and the send button icon both invoke `widget.onSend` without debouncing. Rapid taps or pressing Enter multiple times can send the same message multiple times before `_isSending` updates.  
-**Acceptance:** Add a `ValueNotifier<bool>` or use `isLoading` synchronously before calling `onSend`. Alternatively, debounce with a 100ms timer.
+When data is missing or conditions aren't met, 14 widgets silently return `SizedBox.shrink()` with zero visual feedback. The user sees either blank space or nothing at all, with no hint of what went wrong or what to do next.
 
-### m4. PracticeScreen subject cards show "Practice sessions" as static text with no actual count
-**File:** `lib/features/subjects/presentation/subject_list_screen.dart:166-174`  
-**Context:** The `Row` with `Icons.timer` shows `l10n.practiceSessions` as a static label. There is no session count or progress indicator for the subject.  
-**Acceptance:** Show actual practice session count or last-practiced date for the subject by querying the session repository.
+| File | Line | Trigger |
+|---|---|---|
+| `lib/features/practice/presentation/screens/practice_session_screen.dart` | 637 | Feature variant not available |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | 482 | No data in collapsible card |
+| `lib/features/dashboard/presentation/widgets/collapsible_card.dart` | 117 | Card collapsed state |
+| `lib/features/dashboard/presentation/widgets/next_up_card.dart` | 40 | No next-up items |
+| `lib/features/planner/presentation/planner_screen.dart` | 633 | No study plan exists |
+| `lib/features/planner/presentation/planner_screen.dart` | 1030 | No missed lessons |
+| `lib/features/planner/presentation/planner_screen.dart` | 1257 | Zero plan days |
+| `lib/features/planner/presentation/planner_screen.dart` | 1260 | Loading state for plan days |
+| `lib/features/planner/presentation/widgets/milestone_timeline.dart` | 88 | No milestones |
+| `lib/features/planner/presentation/widgets/milestone_timeline.dart` | 113 | Zero duration |
+| `lib/features/planner/presentation/widgets/calendar_view_widget.dart` | 60 | No calendar data |
+| `lib/features/planner/presentation/widgets/progress_overlay_widget.dart` | 103 | Empty weekly progress |
+| `lib/features/teaching/presentation/tutor_screen.dart` | 666 | Conversation manager null |
+| `lib/features/practice/presentation/screens/review_answers_screen.dart` | 32 | Question null |
 
-### m5. `assets/fonts/` directory exists but is empty
-**File:** `pubspec.yaml` likely references fonts, but `assets/fonts/` has no files.  
-**Context:** The project doesn't bundle any custom font files. If the intent was to use a custom typeface, it's missing. If not, the directory should be removed to avoid confusion.  
-**Acceptance:** Either bundle the intended font files or remove the empty `assets/fonts/` directory and any references from `pubspec.yaml`.
+**Rationale:** These silent early-returns are particularly harmful in the **Planner screen** (4 instances) — if a user has no study plan, the entire screen section collapses to nothing with no guidance. Same for the **Dashboard** collapsible cards — when data hasn't loaded, there's no skeleton or placeholder at all (the card shows empty). The `collapsible_card.dart` case is the most widespread: when collapsed, the card body is `SizedBox.shrink()`, but this also happens during the **loading** and **error** fallback for generic `asyncValue` widgets.
 
-### m6. Cross-tab navigation loses previous tab scroll position
-**File:** `lib/main.dart:361-368`  
-**Context:** `Offstage` widgets used for inactive tabs cause the widget subtree to be unmounted/rebuilt when `TickerMode` is disabled. This means scroll position, form state, and other ephemeral state in inactive tabs is lost when switching tabs and coming back.  
-**Acceptance:** Use `AutomaticKeepAliveClientMixin` or `IndexedStack` instead of `Offstage` to preserve tab state, or at minimum preserve scroll offset.
+**Acceptance criteria:**
+- [ ] Every `SizedBox.shrink()` replacement shows a user-meaningful widget:
+  - **Loading:** `ShimmerWidget` or skeleton placeholder
+  - **Empty (no data):** Short inline text like `"No items yet"` with an optional action button
+  - **Error:** Inline error text or `ErrorRetryWidget`
+- [ ] Planner screen: when no plan exists, show a "Create your first study plan" CTA
+- [ ] Dashboard collapsible cards: when collapsed, keep a thin visual indicator (not zero-height `SizedBox`)
+- [ ] `next_up_card.dart`: when nothing is next up, show `"All caught up!"` or similar
+- [ ] Verify every collapsible card section has a loading skeleton, not `SizedBox.shrink()` during loading
 
-### m7. UploadScreen lacks real-time processing step labels
-**File:** `lib/features/ingestion/presentation/upload_screen.dart`  
-**Context:** During upload/processing, there's a `LinearProgressIndicator` but no text label showing which step is active ("Extracting text...", "Generating questions...", "Saving..."). Multi-step LLM processing can take 30-60 seconds with no user-facing progress communication.  
-**Acceptance:** Display step name / status text above or below the progress indicator.
+### M2. `SingleChildScrollView` without `AlwaysScrollableScrollPhysics` (32 instances)
 
-### m8. No haptic feedback on key interaction completions
-**Context:** Completing a focus session, submitting a practice answer, and finishing an exam session have no haptic/vibration feedback. This reduces the tactile satisfaction of completing an action.  
-**Acceptance:** Call `HapticFeedback.mediumImpact()` on session complete, `HapticFeedback.lightImpact()` on answer submission, and `HapticFeedback.heavyImpact()` on exam finish.
+**Severity:** MAJOR (content doesn't scroll when viewport is large enough)
 
-### m9. QuestionBankScreen loads all data upfront with no pagination or lazy loading
-**File:** `lib/features/questions/presentation/question_bank_screen.dart:60-87`  
-**Context:** `_load()` fetches all questions, subjects, topics, and sources from Hive at once. For a large question bank (1000+ questions), this causes a visible delay and high memory usage.  
-**Acceptance:** Use `ListView.builder` with lazy loading — fetch and display in pages of 50, or use a `ValueNotifiable` cursor for incremental loading.
+Every `SingleChildScrollView` in the project uses default physics (`NeverScrollableScrollPhysics`-like), meaning content **cannot be dragged/overscrolled** when it fits within the viewport. On desktop/tablet with large screens or resized windows, users may see clipped content with no scroll affordance.
 
-### m10. FocusTimerScreen `_onElapsedChanged` fires `setState` every second even when timer isn't visible
-**File:** `lib/features/focus_mode/presentation/focus_timer_screen.dart:96-100`  
-**Context:** The `_onElapsedChanged` listener always calls `setState` every second regardless of whether the timer UI is currently displayed (e.g., if the user scrolled down and the timer is off-screen).  
-**Acceptance:** Only rebuild if the timer widget's `TickerMode` is enabled, or use a mounted/visible check.
+**All 22 affected files — 32 scroll views:**
+- `lib/features/mentor/presentation/mentor_screen.dart:786`
+- `lib/features/practice/presentation/screens/practice_results_screen.dart:47`
+- `lib/features/dashboard/presentation/dashboard_screen.dart:114`
+- `lib/features/planner/presentation/planner_screen.dart:278,460`
+- `lib/features/sessions/presentation/session_tracker_screen.dart:307`
+- `lib/features/settings/presentation/settings_screen.dart:946,1145`
+- `lib/features/settings/presentation/profile_screen.dart:356`
+- `lib/features/settings/presentation/api_config_screen.dart:171`
+- `lib/features/ingestion/presentation/upload_screen.dart:384`
+- `lib/features/ingestion/presentation/source_detail_screen.dart:313,415`
+- `lib/features/questions/presentation/question_bank_screen.dart:226,295,694`
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart:474,918`
+- `lib/features/teaching/presentation/tutor_screen.dart:386,838`
+- `lib/features/subjects/presentation/subject_selection_screen.dart:166`
+- `lib/features/ingestion/presentation/content_library_screen.dart:349`
+- `lib/features/lessons/presentation/widgets/lesson_block_card.dart:131`
+- `lib/features/questions/presentation/widgets/graph_drawing_canvas_widget.dart:220`
+- `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart:64`
+- `lib/features/subjects/presentation/dialogs/topic_edit_dialog.dart:71`
+- `lib/features/planner/presentation/widgets/milestone_timeline.dart:122`
+- `lib/features/questions/presentation/widgets/math_input_toolbar.dart:41`
+- `lib/features/practice/presentation/screens/exam_session_screen.dart:486,654`
+- `lib/features/onboarding/presentation/onboarding_dialog.dart:268`
+- `lib/features/practice/presentation/widgets/spaced_repetition_sheet.dart:80`
 
-### m11. SettingsScreen "Sign Out" doesn't actually clear local data
-**File:** `lib/features/settings/presentation/settings_screen.dart:906-927`  
-**Context:** The sign-out action clears `apiKey` and `selectedModel` but leaves all Hive data (subjects, questions, sessions, attempts) intact. This is neither a true sign-out nor a data reset — it's ambiguous.  
-**Acceptance:** Split into two distinct actions: "Clear API key" (current behavior) and "Reset all data" (clears all Hive boxes + resets onboarding). Label the current button clearly.
+**Acceptance criteria:**
+- [ ] Add `physics: const AlwaysScrollableScrollPhysics()` to every `SingleChildScrollView` in presentation files
+- [ ] Verify scroll works correctly on desktop browser (resized window) and tablet
+- [ ] For list-heavy screens (question bank, content library, session history), consider using `ListView` or `CustomScrollView` instead
 
-### m12. Onboarding — "Get Started" button goes to empty subject selection, confusing first-time users
-**File:** `lib/features/onboarding/presentation/onboarding_dialog.dart:88-91`  
-**Context:** The primary CTA "Get Started" navigates directly to `subjectSelection`. A brand-new user lands on an empty screen with no guidance about what to do next. The onboarding journey should have a more guided handoff.  
-**Acceptance:** Show a brief interstitial or overlay explaining: "First, add a subject you're studying" or navigate to a guided subject-creation flow.
+### M3. `AnimatedSwitcher` in tab navigator bypasses reduce motion
 
-### m13. PracticeSession confidence selector uses hardcoded circle size
-**File:** `lib/features/practice/presentation/screens/practice_session_screen.dart:596-597`  
-**Context:** The confidence rating circles use `ResponsiveUtils.minTouchTarget` (48px) for width/height. On small screens, 5 circles × 48px + spacing may overflow the wrap area.  
-**Acceptance:** Use `MediaQuery.sizeOf(context).width / 6` cap as max width, or switch to compact buttons at the `xs` breakpoint.
+**Severity:** MAJOR (accessibility — vestibular disorder trigger)
 
-### m14. `NotFoundScreen` "Go to Dashboard" button doesn't work when navigated from tab's own Navigator
-**File:** `lib/core/widgets/not_found_screen.dart:48-55`  
-**Context:** The go-to-dashboard fallback tries `Navigator.pop()` which may fail if the route was pushed fresh (no history). It doesn't try to push to the dashboard tab's root.  
-**Acceptance:** If `canPop()` is false, use `Navigator.pushNamedAndRemoveUntil(context, AppRoutes.dashboard, (route) => false)`.
+The main tab switcher in `lib/main.dart:429` wraps all tab content in an `AnimatedSwitcher` with a 200ms cross-fade animation. This does NOT check the `reduceMotion` accessibility preference. Users who have enabled "Reduce Motion" in settings or system-wide will still see tab-switching animations, which can trigger discomfort for users with vestibular disorders.
 
-### m15. SessionTrackerScreen "centerTitle" inconsistency
-**File:** `lib/features/sessions/presentation/session_tracker_screen.dart:249,296`  
-**Context:** The loading state AppBar has `centerTitle: false` but the main state AppBar has `centerTitle: true`. This inconsistency causes visual jump when data loads.  
-**Acceptance:** Keep `centerTitle` consistent across all states (prefer `false` per Material 3 guidelines for screens with navigation).
+```dart
+// lib/main.dart:429 — NO reduce motion check
+final bodyContent = AnimatedSwitcher(
+  duration: const Duration(milliseconds: 200),
+  switchInCurve: Curves.easeIn,
+  switchOutCurve: Curves.easeOut,
+  child: KeyedSubtree(
+    key: ValueKey(_selectedIndex),
+    child: RepaintBoundary(child: _tabNavigators[_selectedIndex]),
+  ),
+);
+```
 
-### m16. Dashboard empty state "Take a Practice Quiz" passes empty subjectId
-**File:** `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:31-33`  
-**Context:** The checklist's "Take a Practice Quiz" item navigates with `subjectId: ''`. This will likely result in zero questions being found, showing the "No questions" dialog — a confusing dead end for a "getting started" CTA.  
-**Acceptance:** The empty-state checklist item should first guide the user to upload material or add a subject, not attempt a practice session with no data.
+All other `AnimatedSwitcher` uses (2 instances) respect `reduceMotion`. This is the only gap.
 
-### m17. Weekly chart legend / tooltips not localized
-**File:** `lib/features/dashboard/presentation/widgets/weekly_chart.dart`  
-**Context:** If the weekly chart uses `fl_chart` or similar, axis labels and tooltip text may default to English or raw data formats.  
-**Acceptance:** Pass `l10n.localeName` through to chart formatting, ensure tooltip values use `formatPercent`/`formatDecimal`.
+**Acceptance criteria:**
+- [ ] Read `settingsProvider.reduceMotion` (or `MediaQuery.disableAnimationsOf(context)`) in `MainScreen.build`
+- [ ] When reduce motion is enabled, replace `AnimatedSwitcher` with a plain `KeyedSubtree` (no animation)
+- [ ] Verify the tab content still renders correctly without animation
 
-### m18. ApiKeyBanner uses hardcoded orange icon color
-**File:** `lib/features/onboarding/presentation/onboarding_dialog.dart:155`  
-**Context:** `const Icon(Icons.key, color: Colors.orange)` ignores the theme. In dark mode or high-contrast mode, orange may not provide sufficient contrast.  
-**Acceptance:** Use `theme.colorScheme.error` (with appropriate alpha) or a theme-aware warning color instead of hardcoded `Colors.orange`.
+### M4. Accessibility: 35% of presentation files lack Semantics labels
 
-### m19. Ingestion screen doesn't handle processing errors per-source
-**File:** `lib/features/ingestion/presentation/upload_screen.dart`  
-**Context:** When uploading multiple files or processing one file, if a step fails (OCR, question generation), the only feedback is a generic SnackBar. The source item in the content library may show as `failed` but the user doesn't know why or what to do.  
-**Acceptance:** Show per-source error details in the content library / source detail, with a "Retry processing" button for failed sources.
+**Severity:** MAJOR (screen reader users get no context)
 
-### m20. No pull-to-refresh on QuestionBankScreen
-**File:** `lib/features/questions/presentation/question_bank_screen.dart`  
-**Context:** The question bank is a `ListView.builder` (line 307) inside a `RefreshIndicator`, but the RefreshIndicator's `onRefresh` reloads everything. The outer `Column` layout (search bar + filters) is not scrollable with the list, so pull-to-refresh doesn't work properly when the list is short (content doesn't fill screen).  
-**Acceptance:** Ensure the `RefreshIndicator` wraps the entire scrollable content including filters, or separate the search/filter from the scrollable list.
+34 of 96 presentation files (~35%) have zero `Semantics` or `MergeSemantics` widgets. Key gaps include:
+
+- **Chat/Tutor interface:** `tutor_screen.dart` — entire AI tutor screen has no semantics
+- **Lesson progress bar:** `lesson_progress_bar.dart` — no semantic labels for progress, stats, or controls
+- **Export actions:** `export_section.dart` — export buttons lack screen reader context
+- **Detail widgets:** `lesson_block_card.dart`, `lesson_list_item.dart` — lesson content not labeled
+- **Subject tabs:** `subject_history_tab.dart`, `subject_lessons_tab.dart`, `subject_topics_tab.dart` — tab content not semantic
+- **Review screens:** `review_answers_screen.dart`, `mistake_review_widget.dart` — no review content labels
+- **API config:** `api_config_screen.dart` — API key field, test connection button lack semantics
+- **Ingestion screens:** `content_library_screen.dart`, `source_detail_screen.dart` — source list items not semantic
+- **Quick guide:** `help_dialog.dart`, `message_list_widget.dart` — dialog content not labeled
+- **Practice sheets:** `practice_mode_sheet.dart`, `practice_sheet_template.dart`, `source_practice_sheet.dart`, `topic_selection_sheet.dart` — bottom sheet controls not semantic
+
+**Acceptance criteria:**
+- [ ] Add `Semantics` wrappers to all interactive elements (buttons, cards, list items) in the 34 identified files
+- [ ] Every `IconButton` needs a `Semantics(button: true, label: ...)` or a tooltip (which Flutter auto-exposes to semantics)
+- [ ] Expandable/collapsible sections need `Semantics(expanded: ...)` state
+- [ ] Progress indicators need `Semantics(value: ..., label: ...)`
+- [ ] Verify with TalkBack (Android) or VoiceOver (iOS) that the major screens are navigable
+- [ ] Add `Semantics(header: true)` or `headingLevel` to section titles
+
+### M5. Duplicate `OnboardingStorage` abstraction — code drift risk
+
+**Severity:** MAJOR (duplicate code will diverge)
+
+Two files define the same abstract class and identical implementations:
+
+| File | Classes |
+|---|---|
+| `lib/features/onboarding/services/onboarding_service.dart` | `OnboardingStorage` (abstract), `HiveOnboardingStorage`, `InMemoryOnboardingStorage` |
+| `lib/features/onboarding/services/onboarding_storage.dart` | `OnboardingStorage` (abstract), `HiveOnboardingStorage` (with `implements`), `InMemoryOnboardingStorage` |
+
+The `onboarding_storage.dart` version uses `implements` instead of `extends` and has `try/catch` error handling with `Logger`. The `onboarding_service.dart` version is what `main.dart` imports. These will inevitably diverge as one file is updated and the other is not.
+
+**Acceptance criteria:**
+- [ ] Consolidate into a single file (prefer `onboarding_storage.dart` with error handling)
+- [ ] Update all imports to point to the single source
+- [ ] Remove the duplicated definitions
+- [ ] Verify tests still pass
+
+### M6. PWA manifest uses template defaults — unprofessional first impression
+
+**Severity:** MAJOR (branding failure on installable web app)
+
+The web PWA manifest (`web/manifest.json`) still contains:
+- `"description": "A new Flutter project."` — should say "An adaptive learning platform for students"
+- `"orientation": "portrait-primary"` — locks desktop web to portrait mode, poor UX on wide screens
+
+**Acceptance criteria:**
+- [ ] Update `web/manifest.json` description to match `pubspec.yaml` description
+- [ ] Remove orientation lock or change to `"any"` for desktop web responsiveness
+- [ ] Verify PWA install prompt shows correct metadata
+- [ ] Update `<meta name="description">` in `web/index.html`
+
+---
+
+## MINOR — Code quality / UX friction
+
+### m1. `CollapsibleCard` inner `InkWell` with dead `onTap: () {}`
+
+**Severity:** MINOR (dead code, unintended ink splash)
+
+In `lib/features/dashboard/presentation/widgets/collapsible_card.dart:96`, there is a nested `InkWell` inside the expand/collapse chevron that has `onTap: () {}` (empty callback). This creates an ink splash animation on tap but performs no action. The actual toggle is handled by the parent `InkWell`.
+
+**Acceptance criteria:**
+- [ ] Remove the inner `InkWell` — the `IconButton` or `Semantics` wrapper should handle the tap
+- [ ] If the chevron needs its own tap target, wire it to the same toggle action
+- [ ] Verify expand/collapse still works correctly
+
+### m2. `CollapsibleCard` `AnimatedSize` without reduce motion check
+
+**Severity:** MINOR (accessibility)
+
+`lib/features/dashboard/presentation/widgets/collapsible_card.dart:113` uses `AnimatedSize` for expand/collapse animation with no conditional for reduce motion.
+
+**Acceptance criteria:**
+- [ ] Pass `reduceMotion` from settings provider
+- [ ] When enabled, use a non-animated `SizeTransition` or static widget instead
+- [ ] Verify expand/collapse still works without animation
+
+### m3. Tutor screen has hardcoded tooltip strings
+
+**Severity:** MINOR (i18n gap)
+
+`lib/features/teaching/presentation/tutor_screen.dart:~539`:
+```dart
+tooltip: 'Chat'  // should be l10n.chat or similar
+tooltip: 'Slides' // should be l10n.slides or similar
+```
+
+These tooltips will not localize for Spanish users.
+
+**Acceptance criteria:**
+- [ ] Add `chat` and `slides` keys to `app_en.arb` and `app_es.arb`
+- [ ] Replace hardcoded strings with `l10n.chat` / `l10n.slides`
+
+### m4. `Colors.grey` fallback in session analytics
+
+**Severity:** MINOR (theme inconsistency)
+
+`lib/features/sessions/presentation/widgets/session_analytics.dart:74` uses `Colors.grey` as a fallback color. This may not blend with the active theme (especially dark mode or high-contrast mode).
+
+**Acceptance criteria:**
+- [ ] Replace `Colors.grey` with `theme.colorScheme.onSurfaceVariant` or appropriate theme-derived color
+
+### m5. No URL-based routing for deep linking
+
+**Severity:** MINOR (web UX friction)
+
+The app uses `Navigator 1.0` with `MaterialPageRoute` for all navigation. There is no `go_router` or named-route structure that maps to browser URLs. On web, this means:
+- No browser back/forward button support
+- No deep linking (can't share a URL to a specific screen)
+- Page refreshes lose navigation state
+
+**Acceptance criteria:**
+- [ ] Evaluate if `go_router` or `beamer` can be introduced for web deep linking
+- [ ] At minimum, ensure browser back button closes modals and returns to previous logical state
+- [ ] Not urgent — revisit when web becomes a primary target
+
+### m6. Touch targets not consistently configured
+
+**Severity:** MINOR (accessibility on mobile)
+
+`ResponsiveUtils.minTouchTarget = 48.0` is defined but only used in a handful of places. `materialTapTargetSize` is only configured once in the entire project (in `daily_plan_card.dart`). The Material 3 default `MaterialTapTargetSize.padded` (48dp) is usually adequate, but custom widgets and IconButton replacements may have smaller targets.
+
+**Acceptance criteria:**
+- [ ] Audit custom button/replacements and ensure they meet the 48dp minimum
+- [ ] Consider setting `materialTapTargetSize: MaterialTapTargetSize.padded` globally in the theme
+
+### m7. No onboarding guided walkthrough after dialog
+
+**Severity:** MINOR (first-launch UX)
+
+After the onboarding dialog and `LocalDataNotice`, the user is directed to the Subject Selection screen. But there is no **in-app guided walkthrough** or tooltip overlay. The Subject Selection screen has no onboarding hints, and after that, the user is dumped into the dashboard with 12+ collapsible cards and no "what to do next" guidance beyond the `EmptyDashboardChecklist`.
+
+**Acceptance criteria:**
+- [ ] Add subtle first-launch hints on key screens (e.g., "Tap + to add your first subject," "Swipe to see more options")
+- [ ] Consider a "First steps" indicator that highlights the initial actions a new user should take
+- [ ] The existing `EmptyDashboardChecklist` is well-designed — consider making it more prominent on first launch only
+
+### m8. Subject detail SliverAppBar has inconsistent compressed title
+
+**Severity:** MINOR (visual polish)
+
+`lib/features/subjects/presentation/subject_detail_screen.dart:75` uses a `SliverAppBar` with `pinned: true`. When collapsed, the `flexibleSpace` gradient disappears and the title is clipped to a circle avatar. On some text scales, this can visually overlap with the navigation back button.
+
+**Acceptance criteria:**
+- [ ] Test on large font sizes (accessibility scaling) — ensure the back button and title don't overlap
+- [ ] Consider using a `medium` or `large` Material 3 top app bar style instead of SliverAppBar
+
+### m9. Ingestion screen sorting has no persistent state
+
+**Severity:** MINOR (UX friction)
+
+`lib/features/ingestion/presentation/content_library_screen.dart` allows sorting and filtering sources. The sort/filter state resets each time the screen is entered. A user who filters by subject must re-apply filters on every visit.
+
+**Acceptance criteria:**
+- [ ] Persist the last-used sort/filter state in Hive or query parameters
+- [ ] Or at minimum, restore defaults consistently
+
+### m10. Dashboard weekly chart gap-weeks legend uses non-localized dash character
+
+**Severity:** MINOR (i18n edge case)
+
+`lib/core/widgets/animated_bar_chart.dart` uses `'\u2014'` (em dash) to indicate gap weeks in bar charts. This character is rendered raw and may not be accessible to screen readers. The gap week label is never exposed through the semantics builder for empty/gap bars.
+
+**Acceptance criteria:**
+- [ ] Ensure gap week bars have `Semantics(label: "No activity")` through the `semanticsLabelBuilder`
+- [ ] Confirm the dash character shows correctly across all locales
+
+### m11. `AnimatedBarChart` animations run even when widget is off-screen
+
+**Severity:** MINOR (performance)
+
+The shimmer widget (`shimmer_widget.dart`) and `AnimatedBarChart` (`animated_bar_chart.dart`) both use `AnimationController.repeat()`. These controllers run continuously even when the widgets are scrolled off-screen (in the dashboard's scrollable content). This is wasteful.
+
+**Acceptance criteria:**
+- [ ] Use `AddAutomaticKeepAliveClientMixin` or intersection observer to pause animations when off-screen
+- [ ] Or use `TickerMode` to pause when the tab is not active
+
+---
+
+## Summary
+
+| Severity | Count | Key themes |
+|---|---|---|
+| BLOCKER | 1 | Web platform crash from `dart:io` |
+| MAJOR | 6 | Dead-end UI, scroll behavior, accessibility (reduce motion + semantics), duplicate code, PWA metadata |
+| MINOR | 11 | Polish, dead code, i18n gaps, touch targets, persistent filters, performance, first-launch guidance |
+| **Total** | **18** | |
+
+### Quick wins (can fix in <30 minutes each):
+- m1: Remove dead `InkWell` in `collapsible_card.dart`
+- m2: Add reduce motion check to `CollapsibleCard`
+- m3: Localize tutor tooltip strings
+- m4: Replace `Colors.grey` with theme color
+- m6: Web manifest metadata update
+- m7: PWA orientation fix
+
+### High-impact fixes (invest 1-2 hours each):
+- M1: Replace all `SizedBox.shrink()` with meaningful placeholders
+- M2: Add `AlwaysScrollableScrollPhysics` to all scroll views
+- M3: Add reduce motion check to tab navigator animation
+- M4: Bulk-add Semantics to 34 files (can be parallelized)
+- M5: Consolidate onboarding storage files

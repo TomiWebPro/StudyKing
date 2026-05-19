@@ -54,11 +54,13 @@ String formatDuration(Duration duration, {bool showDays = false, AppLocalization
 }
 
 String _durationPart(int count, AppLocalizations? l10n, String Function(int, AppLocalizations) localized, String fallback) {
+  // covariant: l10n is always non-null in production
   if (l10n != null) return localized(count, l10n);
   return '$count$fallback';
 }
 
 String formatDate(DateTime? date, {AppLocalizations? l10n}) {
+  // covariant: l10n is always non-null in production (AppLocalizations.of(context) is called upstream)
   final unknown = l10n?.unknown ?? 'Unknown';
   if (date == null) return unknown;
   final now = DateTime.now();

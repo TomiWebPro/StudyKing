@@ -2,8 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -167,8 +165,6 @@ void main() {
     });
 
     test('error state propagates from attempt repo', () async {
-      final throwingRepo = _FakeAttemptRepo();
-      // Override to simulate error
       final errorAttemptRepo = _FakeAttemptRepo() as AttemptRepository;
 
       final container = ProviderContainer(

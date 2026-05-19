@@ -85,6 +85,7 @@ class WeeklyTrendEntry {
   final int attempts;
   final int accuracy;
   final double improvement;
+  final bool isGap;
 
   const WeeklyTrendEntry({
     this.week = 0,
@@ -92,6 +93,7 @@ class WeeklyTrendEntry {
     this.attempts = 0,
     this.accuracy = 0,
     this.improvement = 0.0,
+    this.isGap = false,
   });
 
   factory WeeklyTrendEntry.fromMap(Map<String, dynamic> map) {
@@ -101,6 +103,7 @@ class WeeklyTrendEntry {
       attempts: (map['attempts'] as num?)?.toInt() ?? 0,
       accuracy: (map['accuracy'] as num?)?.toInt() ?? 0,
       improvement: (map['improvement'] as num?)?.toDouble() ?? 0.0,
+      isGap: map['isGap'] == true,
     );
   }
 }
@@ -176,6 +179,33 @@ class DueReviewsData {
     required this.totalDue,
     required this.subjectBreakdown,
   });
+}
+
+class ChecklistProgress {
+  final bool hasSubjects;
+  final bool hasSources;
+  final bool hasPracticeSessions;
+  final bool hasScheduledLessons;
+
+  const ChecklistProgress({
+    this.hasSubjects = false,
+    this.hasSources = false,
+    this.hasPracticeSessions = false,
+    this.hasScheduledLessons = false,
+  });
+
+  int get completedCount => [
+    hasSubjects,
+    hasSources,
+    hasPracticeSessions,
+    hasScheduledLessons,
+  ].where((b) => b).length;
+
+  int get totalCount => 4;
+
+  bool get isComplete => completedCount >= totalCount;
+
+  bool get isEmpty => completedCount == 0;
 }
 
 

@@ -97,6 +97,28 @@ void main() {
       const key = SettingsAPIKey(provider: 'p', key: 'k');
       expect(key == Object(), isFalse);
     });
+
+    test('toJson/fromJson round-trip preserves all fields', () {
+      const original = SettingsAPIKey(
+        provider: 'openai',
+        key: 'sk-test-key',
+        password: 'secret-password',
+      );
+      final json = original.toJson();
+      final restored = SettingsAPIKey.fromJson(json);
+      expect(restored.provider, original.provider);
+      expect(restored.key, original.key);
+      expect(restored.password, original.password);
+    });
+
+    test('toJson/fromJson round-trip with null password', () {
+      const original = SettingsAPIKey(provider: 'openrouter', key: 'test-key');
+      final json = original.toJson();
+      final restored = SettingsAPIKey.fromJson(json);
+      expect(restored.provider, 'openrouter');
+      expect(restored.key, 'test-key');
+      expect(restored.password, isNull);
+    });
   });
 
   group('UsageRecord', () {

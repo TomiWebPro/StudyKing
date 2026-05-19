@@ -9,4 +9,5 @@ class NotificationChannelIds {
   static const String lessons = 'studyking_lessons';
   static const String mastery = 'studyking_mastery';
   static const String badges = 'studyking_badges';
+  static const String mentor = 'studyking_mentor';
 }

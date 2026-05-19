@@ -7,6 +7,7 @@ import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/services/student_id_service.dart' show studentIdValueProvider;
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../../core/errors/handlers.dart';
 import '../../lessons/providers/lesson_providers.dart';
 import '../../sessions/providers/session_providers.dart';
@@ -103,7 +104,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const LoadingIndicator();
     if (_lessons.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.args.topicTitle)),

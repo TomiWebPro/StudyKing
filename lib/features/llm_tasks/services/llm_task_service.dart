@@ -44,7 +44,7 @@ class LlmTaskService {
   }
 
   Map<String, double> get costByFeature {
-    const cost = <String, double>{};
+    final cost = <String, double>{};
     for (final task in _manager.tasks) {
       cost[task.feature] = (cost[task.feature] ?? 0) + task.estimatedCost;
     }

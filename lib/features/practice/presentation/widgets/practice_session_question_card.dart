@@ -76,28 +76,33 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
       selected.addAll(currentAnswer!.split('||').map((e) => e.trim()).where((e) => e.isNotEmpty));
     }
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: options.map((option) {
-        final isSelected = selected.contains(option);
-        return CheckboxListTile(
-          value: isSelected,
-          onChanged: isSubmitted
-              ? null
-              : (value) {
-                  final updated = Set<String>.from(selected);
-                  if (value ?? false) {
-                    updated.add(option);
-                  } else {
-                    updated.remove(option);
-                  }
-                  onAnswerSelected(updated.isEmpty ? null : updated.join('||'));
-                },
-          controlAffinity: ListTileControlAffinity.leading,
-          contentPadding: EdgeInsets.zero,
-          title: Text(option, overflow: TextOverflow.ellipsis),
-        );
-      }).toList(),
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.4,
+      ),
+      child: ListView(
+        shrinkWrap: true,
+        children: options.map((option) {
+          final isSelected = selected.contains(option);
+          return CheckboxListTile(
+            value: isSelected,
+            onChanged: isSubmitted
+                ? null
+                : (value) {
+                    final updated = Set<String>.from(selected);
+                    if (value ?? false) {
+                      updated.add(option);
+                    } else {
+                      updated.remove(option);
+                    }
+                    onAnswerSelected(updated.isEmpty ? null : updated.join('||'));
+                  },
+            controlAffinity: ListTileControlAffinity.leading,
+            contentPadding: EdgeInsets.zero,
+            title: Text(option),
+          );
+        }).toList(),
+      ),
     );
   }
 
@@ -193,7 +198,30 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
 
       case QuestionType.fileUpload:
       case QuestionType.audioRecording:
-        return const SizedBox.shrink();
+        return Semantics(
+          liveRegion: true,
+          child: Container(
+            padding: ResponsiveUtils.cardPadding(context),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    AppLocalizations.of(context)!.questionTypeNotSupported,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
     }
   }
 }

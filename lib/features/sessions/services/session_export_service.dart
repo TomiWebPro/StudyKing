@@ -1,7 +1,10 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
+
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:path_provider/path_provider.dart';
@@ -12,6 +15,15 @@ import '../../../core/utils/number_format_utils.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+
+String _localizedSessionType(SessionType type, AppLocalizations l10n) {
+  return switch (type) {
+    SessionType.practice => l10n.sessionTypePractice,
+    SessionType.focus => l10n.sessionTypeFocus,
+    SessionType.tutoring => l10n.sessionTypeTutoring,
+    SessionType.manual => l10n.sessionTypeManual,
+  };
+}
 
 class SessionExportService {
   static String _csvEscape(String value) {
@@ -110,7 +122,7 @@ class SessionExportService {
                   dur,
                   '${s.correctAnswers}/${s.questionsAnswered}',
                   accuracy,
-                  s.type.name,
+                  _localizedSessionType(s.type, l10n),
                 ];
               }).toList(),
               headerStyle: pw.TextStyle(
@@ -121,6 +133,8 @@ class SessionExportService {
               headerDecoration: const pw.BoxDecoration(
                 color: PdfColors.grey300,
               ),
+              // Note: pdf/widgets.dart pw.Alignment only supports centerLeft/centerRight.
+              // For RTL support, this would need centerStart/centerEnd once the library adds it.
               cellAlignments: {
                 0: pw.Alignment.centerLeft,
                 1: pw.Alignment.centerLeft,
@@ -178,6 +192,9 @@ class SessionExportService {
     Directory? directory,
   }) async {
     final csv = sessionsToCSV(sessions);
+    if (kIsWeb) {
+      throw UnsupportedError('File operations are not supported on web');
+    }
     final dir = directory ?? await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.csv');
     await file.writeAsString(csv);
@@ -191,6 +208,9 @@ class SessionExportService {
     Directory? directory,
   }) async {
     final json = jsonEncode(sessionsToJSON(sessions));
+    if (kIsWeb) {
+      throw UnsupportedError('File operations are not supported on web');
+    }
     final dir = directory ?? await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.json');
     await file.writeAsString(json);
@@ -205,6 +225,9 @@ class SessionExportService {
     Directory? directory,
   }) async {
     final pdfBytes = await sessionsToPDF(sessions, l10n);
+    if (kIsWeb) {
+      throw UnsupportedError('File operations are not supported on web');
+    }
     final dir = directory ?? await getTemporaryDirectory();
     final file = File('${dir.path}/$filename.pdf');
     await file.writeAsBytes(pdfBytes);
@@ -216,8 +239,16 @@ class SessionExportService {
     String filename, {
     required AppLocalizations l10n,
   }) async {
-    final file = await writeCSVFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+    if (kIsWeb) {
+      final csv = sessionsToCSV(sessions);
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv')],
+        text: l10n.shareSessionsText,
+      );
+    } else {
+      final file = await writeCSVFile(sessions, filename);
+      await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+    }
   }
 
   static Future<void> shareJSON(
@@ -225,8 +256,16 @@ class SessionExportService {
     String filename, {
     required AppLocalizations l10n,
   }) async {
-    final file = await writeJSONFile(sessions, filename);
-    await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+    if (kIsWeb) {
+      final json = jsonEncode(sessionsToJSON(sessions));
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
+        text: l10n.shareSessionsText,
+      );
+    } else {
+      final file = await writeJSONFile(sessions, filename);
+      await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+    }
   }
 
   static Future<void> sharePDF(
@@ -235,7 +274,15 @@ class SessionExportService {
     AppLocalizations l10n, {
     AppLocalizations? shareL10n,
   }) async {
-    final file = await writePDFFile(sessions, filename, l10n);
-    await Share.shareXFiles([XFile(file.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
+    if (kIsWeb) {
+      final pdfBytes = await sessionsToPDF(sessions, l10n);
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(pdfBytes), name: '$filename.pdf', mimeType: 'application/pdf')],
+        text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
+      );
+    } else {
+      final file = await writePDFFile(sessions, filename, l10n);
+      await Share.shareXFiles([XFile(file.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
+    }
   }
 }

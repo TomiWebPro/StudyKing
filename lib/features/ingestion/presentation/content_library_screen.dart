@@ -348,6 +348,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Row(
           children: [
             _filterChip(
@@ -556,64 +557,68 @@ class _SourceListTile extends StatelessWidget {
         return confirmed == true;
       },
       onDismissed: (_) => onDelete(),
-      child: Card(
-        margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
-        child: ListTile(
-          leading: CircleAvatar(
-            backgroundColor: theme.colorScheme.primaryContainer,
-            child: Icon(typeIcon, color: theme.colorScheme.primary, size: 20),
-          ),
-          title: Text(source.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-          subtitle: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (subjectName != null)
-                Text(subjectName!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
-              const SizedBox(height: 2),
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: statusColor.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      statusLabel,
-                      style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                  if (source.statusEnum == ProcessingStatus.failed) ...[
-                    const SizedBox(width: 8),
-                    Icon(Icons.error_outline, size: 14, color: theme.colorScheme.error),
-                  ],
-                ],
-              ),
-              if (source.createdAt != null) ...[
+      child: Semantics(
+        button: true,
+        label: '${source.title}${subjectName != null ? ", $subjectName" : ""}, $statusLabel',
+        child: Card(
+          margin: const EdgeInsets.symmetric(horizontal: 0, vertical: 4),
+          child: ListTile(
+            leading: CircleAvatar(
+              backgroundColor: theme.colorScheme.primaryContainer,
+              child: Icon(typeIcon, color: theme.colorScheme.primary, size: 20),
+            ),
+            title: Text(source.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            subtitle: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (subjectName != null)
+                  Text(subjectName!, style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
                 const SizedBox(height: 2),
-                Text(
-                  formatDateFromContext(context, source.createdAt!),
-                  style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: statusColor.withValues(alpha: 0.15),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        statusLabel,
+                        style: theme.textTheme.labelSmall?.copyWith(color: statusColor, fontWeight: FontWeight.w500),
+                      ),
+                    ),
+                    if (source.statusEnum == ProcessingStatus.failed) ...[
+                      const SizedBox(width: 8),
+                      Icon(Icons.error_outline, size: 14, color: theme.colorScheme.error),
+                    ],
+                  ],
                 ),
+                if (source.createdAt != null) ...[
+                  const SizedBox(height: 2),
+                  Text(
+                    formatDateFromContext(context, source.createdAt!),
+                    style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
+                  ),
+                ],
               ],
-            ],
+            ),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (source.statusEnum == ProcessingStatus.failed)
+                  IconButton(
+                    icon: Icon(Icons.refresh, size: 20, color: theme.colorScheme.error),
+                    tooltip: l10n.reprocess,
+                    onPressed: () {
+                      Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: source.id);
+                    },
+                  ),
+                const SizedBox(width: 4),
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
+              ],
+            ),
+            onTap: onTap,
           ),
-          trailing: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (source.statusEnum == ProcessingStatus.failed)
-                IconButton(
-                  icon: Icon(Icons.refresh, size: 20, color: theme.colorScheme.error),
-                  tooltip: l10n.reprocess,
-                  onPressed: () {
-                    Navigator.pushNamed(context, AppRoutes.sourceDetail, arguments: source.id);
-                  },
-                ),
-              const SizedBox(width: 4),
-              Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
-            ],
-          ),
-          onTap: onTap,
         ),
       ),
     );

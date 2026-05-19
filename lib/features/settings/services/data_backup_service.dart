@@ -1,5 +1,6 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:path_provider/path_provider.dart';
 import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
@@ -10,7 +11,11 @@ class DataBackupService {
   Future<Result<String>> exportAllData({
     required Map<String, List<Map<String, dynamic>>> boxData,
     String? filename,
+    String? outputDir,
   }) async {
+    if (kIsWeb) {
+      return Result.failure('Backup/restore is not supported on web');
+    }
     try {
       final backup = {
         'version': 1,
@@ -19,7 +24,9 @@ class DataBackupService {
       };
 
       final json = const JsonEncoder.withIndent('  ').convert(backup);
-      final dir = await getTemporaryDirectory();
+      final dir = outputDir == 'persistent'
+          ? await getApplicationDocumentsDirectory()
+          : await getTemporaryDirectory();
       final file = File('${dir.path}/${filename ?? 'studyking_backup'}.json');
       await file.writeAsString(json);
       _logger.i('Backup exported to ${file.path} (${json.length} bytes)');
@@ -43,6 +50,9 @@ class DataBackupService {
   Future<Result<Map<String, List<Map<String, dynamic>>>>> restoreData(
     String filePath,
   ) async {
+    if (kIsWeb) {
+      return Result.failure('Backup/restore is not supported on web');
+    }
     try {
       final file = File(filePath);
       if (!await file.exists()) {

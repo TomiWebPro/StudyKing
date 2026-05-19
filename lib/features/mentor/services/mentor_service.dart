@@ -9,7 +9,8 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
@@ -45,8 +46,10 @@ class ScheduleProposal {
 
 class PlanProposal {
   final int days;
+  final String? goal;
+  final String? subjectId;
 
-  PlanProposal({this.days = 30});
+  PlanProposal({this.days = 30, this.goal, this.subjectId});
 }
 
 class MentorService {
@@ -196,6 +199,7 @@ class MentorService {
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = await _getDailyCapMinutes();
     final consecutiveDays = await _getConsecutiveStudyDays();
+    final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final bullet = l10n.mentorBulletPoint;
 
@@ -218,6 +222,13 @@ class MentorService {
         if (adherenceDeviation.consecutiveLowDays > 0) {
           buffer.writeln('${bullet}Low adherence for ${adherenceDeviation.consecutiveLowDays} consecutive days');
         }
+      }
+    }
+
+    if (daysSinceLastActivity >= 0) {
+      buffer.writeln('${bullet}Days since last activity: $daysSinceLastActivity');
+      if (daysSinceLastActivity >= 3) {
+        buffer.writeln('IMPORTANT: The student is returning after a $daysSinceLastActivity-day absence. Provide a warm welcome-back and suggest specific catch-up steps.');
       }
     }
 
@@ -387,7 +398,9 @@ class MentorService {
       if (allResult.isFailure) return 0;
       final all = allResult.data!;
       if (all.isEmpty) return 0;
-      final studyDays = all.where((s) => s.completed).map((s) =>
+      final studyDays = all.where((s) =>
+        s.completed || s.actualDurationMs > 0
+      ).map((s) =>
         s.startTime.dateOnly
       ).toSet().toList()..sort((a, b) => b.compareTo(a));
       int consecutive = 0;
@@ -476,7 +489,37 @@ class MentorService {
             return prev;
           });
         if (lastStudy != null && DateTime.now().difference(lastStudy).inHours >= 48) {
-          final msg = lookupAppLocalizations(Locale(_localeName)).nudgeInactive48h;
+          final l10nCtx = lookupAppLocalizations(Locale(_localeName));
+          final hoursSince = DateTime.now().difference(lastStudy).inHours;
+          final daysSince = hoursSince ~/ 24;
+          String msg;
+          String nudgeType;
+          String severity;
+          if (daysSince >= 30) {
+            msg = l10nCtx.nudgeInactive30d(daysSince);
+            nudgeType = NudgeType.overwork.name;
+            severity = NudgeSeverity.high.name;
+          } else if (daysSince >= 14) {
+            msg = l10nCtx.nudgeInactive14d(daysSince);
+            nudgeType = NudgeType.overwork.name;
+            severity = NudgeSeverity.high.name;
+          } else if (daysSince >= 7) {
+            msg = l10nCtx.nudgeInactive7d(daysSince);
+            nudgeType = NudgeType.planAdjustment.name;
+            severity = NudgeSeverity.medium.name;
+          } else {
+            msg = l10nCtx.nudgeInactive48h;
+            nudgeType = NudgeType.planAdjustment.name;
+            severity = NudgeSeverity.medium.name;
+          }
+          final nudge = EngagementNudgeModel(
+            id: 'inactive_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
+            studentId: _studentId,
+            nudgeType: nudgeType,
+            message: msg,
+            severity: severity,
+          );
+          await _nudgeRepo.create(nudge);
           messages.add(msg);
         }
       }
@@ -500,8 +543,8 @@ class MentorService {
   };
 
   static const Map<String, List<String>> _planKeywordsByLocale = {
-    'en': ['plan', 'roadmap'],
-    'es': ['plan', 'planificar', 'hoja de ruta'],
+    'en': ['plan', 'roadmap', 'milestone'],
+    'es': ['plan', 'planificar', 'hoja de ruta', 'hito'],
   };
 
   void _checkAndHandlePlanningIntent(String originalMessage) {
@@ -538,9 +581,12 @@ class MentorService {
   }
 
   PlanProposal _extractPlanProposal(String originalMessage) {
-    final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(originalMessage.toLowerCase());
+    final lower = originalMessage.toLowerCase();
+    final daysMatch = RegExp(r'(\d+)\s*days?').firstMatch(lower);
     final days = daysMatch != null ? int.parse(daysMatch.group(1)!) : 30;
-    return PlanProposal(days: days);
+    final goalMatch = RegExp(r'(?:roadmap|hoja de ruta|plan|planificar)\s+(?:for|de|para|to|of|por)\s+(.+?)(?:\.|$|in\s+\d|\s+with\s+)', caseSensitive: false).firstMatch(originalMessage);
+    final goal = goalMatch?.group(1)?.trim();
+    return PlanProposal(days: days, goal: goal);
   }
 
   Future<String> confirmSchedule(ScheduleProposal proposal) async {

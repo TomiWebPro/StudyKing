@@ -5,7 +5,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/engagement_scheduler.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
@@ -129,10 +129,10 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   void addRecord(PlanAdherenceModel m) => _records.add(m);
 }
 
-class _FakePlanAdapter extends PlanAdapter {
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   final _FakeAdherenceRepo adherenceRepo;
 
-  _FakePlanAdapter({required this.adherenceRepo}) : super(adherenceRepository: adherenceRepo);
+  _FakePlanAdherenceOrchestrator({required this.adherenceRepo}) : super(adherenceRepository: adherenceRepo);
 
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
@@ -170,14 +170,14 @@ void main() {
   group('EngagementScheduler', () {
     late _FakeNudgeRepository nudgeRepo;
     late _FakeAdherenceRepo adherenceRepo;
-    late _FakePlanAdapter planAdapter;
+    late _FakePlanAdherenceOrchestrator planOrchestrator;
     late _FakeMasteryForScheduler masteryService;
     late EngagementScheduler scheduler;
 
     setUp(() async {
       nudgeRepo = _FakeNudgeRepository();
       adherenceRepo = _FakeAdherenceRepo();
-      planAdapter = _FakePlanAdapter(adherenceRepo: adherenceRepo);
+      planOrchestrator = _FakePlanAdherenceOrchestrator(adherenceRepo: adherenceRepo);
       masteryService = _FakeMasteryForScheduler();
 
       scheduler = EngagementScheduler(
@@ -186,7 +186,7 @@ void main() {
         notificationService: NotificationService(),
         nudgeRepository: nudgeRepo,
         adherenceRepository: adherenceRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         sessionRepository: _FakeSessionRepo(),
         config: const EngagementSchedulerConfig(
           checkHour: 9,
@@ -241,7 +241,7 @@ void main() {
       });
     });
 
-    group('auto-regeneration via PlanAdapter', () {
+    group('auto-regeneration via PlanAdherenceOrchestrator', () {
       test('plan adapter detects low adherence', () async {
         for (var i = 0; i < 3; i++) {
           adherenceRepo.addRecord(PlanAdherenceModel(
@@ -252,7 +252,7 @@ void main() {
           ));
         }
 
-        final deviation = await planAdapter.checkAdherence('test-student');
+        final deviation = await planOrchestrator.checkAdherence('test-student');
         expect(deviation.isSuccess, true);
         expect(deviation.data!.consecutiveLowDays, 3);
         expect(deviation.data!.requiresRegeneration, true);
@@ -268,7 +268,7 @@ void main() {
           ));
         }
 
-        final deviation = await planAdapter.checkAdherence('test-student');
+        final deviation = await planOrchestrator.checkAdherence('test-student');
         expect(deviation.isSuccess, true);
         expect(deviation.data!.consecutiveLowDays, 7);
         expect(deviation.data!.requiresEscalation, true);
@@ -283,7 +283,7 @@ void main() {
           adherenceScore: 0.9,
         ));
 
-        final deviation = await planAdapter.checkAdherence('test-student');
+        final deviation = await planOrchestrator.checkAdherence('test-student');
         expect(deviation.data!.requiresRegeneration, false);
         expect(deviation.data!.requiresEscalation, false);
       });

@@ -1214,6 +1214,12 @@ abstract class AppLocalizations {
   /// **'Sessions'**
   String get sessionsLabel;
 
+  /// Tooltip for gap weeks with zero activity
+  ///
+  /// In en, this message translates to:
+  /// **'No activity — you were away this week.'**
+  String get noActivity;
+
   /// Label for questions count
   ///
   /// In en, this message translates to:
@@ -2594,10 +2600,10 @@ abstract class AppLocalizations {
   /// **'Export CSV'**
   String get exportCsv;
 
-  /// Button label for instrumentation export
+  /// Button label for progress analytics export
   ///
   /// In en, this message translates to:
-  /// **'Instrumentation'**
+  /// **'Progress Analytics'**
   String get instrumentation;
 
   /// Label for overall stat
@@ -2969,7 +2975,7 @@ abstract class AppLocalizations {
   /// Nudge to adjust plan due to low adherence
   ///
   /// In en, this message translates to:
-  /// **'You\'ve had {count} days of low plan adherence. Would you like to adjust your study plan?'**
+  /// **'You\'ve had {count,plural,=1{1 day} other{{count} days}} of low plan adherence. Would you like to adjust your study plan?'**
   String planAdjustmentSuggested(int count);
 
   /// Button to adjust study plan
@@ -3800,6 +3806,24 @@ abstract class AppLocalizations {
   /// **'JSON'**
   String get labelJson;
 
+  /// Title for unsaved changes confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Unsaved Changes'**
+  String get unsavedChanges;
+
+  /// Body text for unsaved changes confirmation dialog
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Are you sure you want to discard them?'**
+  String get unsavedChangesDescription;
+
+  /// Button label to discard unsaved changes
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discard;
+
   /// Button label to navigate to settings
   ///
   /// In en, this message translates to:
@@ -4202,12 +4226,6 @@ abstract class AppLocalizations {
   /// **'No roadmaps yet'**
   String get noRoadmapsYet;
 
-  /// Title for roadmap detail view
-  ///
-  /// In en, this message translates to:
-  /// **'Roadmap Overview'**
-  String get roadmapOverview;
-
   /// Timeline view label
   ///
   /// In en, this message translates to:
@@ -4217,8 +4235,8 @@ abstract class AppLocalizations {
   /// Completion percentage
   ///
   /// In en, this message translates to:
-  /// **'{value}% Complete'**
-  String completionOfValue(double value);
+  /// **'{value} Complete'**
+  String completionOfValue(String value);
 
   /// Milestone with deadline
   ///
@@ -5102,12 +5120,6 @@ abstract class AppLocalizations {
   /// **'Time to Review!'**
   String get notifTitleTimeToReview;
 
-  /// Body for revision reminder notification
-  ///
-  /// In en, this message translates to:
-  /// **'It\'s been {days} days since you practiced \"{topicName}\".'**
-  String notifBodyRevision(int days, String topicName);
-
   /// Title for overwork warning notification
   ///
   /// In en, this message translates to:
@@ -5138,12 +5150,6 @@ abstract class AppLocalizations {
   /// **'Upcoming Lesson'**
   String get notifTitleUpcomingLesson;
 
-  /// Body for lesson reminder notification
-  ///
-  /// In en, this message translates to:
-  /// **'Your lesson \"{lessonTitle}\" starts at {time}.'**
-  String notifBodyLessonReminder(String lessonTitle, String time);
-
   /// Title for low mastery warning notification
   ///
   /// In en, this message translates to:
@@ -5161,12 +5167,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Badge Unlocked!'**
   String get notifTitleBadgeUnlocked;
-
-  /// Body for badge unlock notification
-  ///
-  /// In en, this message translates to:
-  /// **'You earned the \"{badgeName}\" badge: {badgeDescription}'**
-  String notifBodyBadgeUnlocked(String badgeName, String badgeDescription);
 
   /// Recommendation when accuracy is below 60%
   ///
@@ -5666,6 +5666,42 @@ abstract class AppLocalizations {
   /// **'Failed to update milestone'**
   String get failedToUpdateMilestone;
 
+  /// Success message when roadmap is created
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmap \"{goal}\" created!'**
+  String roadmapCreated(String goal);
+
+  /// Snackbar when roadmap is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmap deleted'**
+  String get roadmapDeleted;
+
+  /// Confirmation dialog for roadmap deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this roadmap?'**
+  String get roadmapDeleteConfirm;
+
+  /// Success message when roadmap is updated
+  ///
+  /// In en, this message translates to:
+  /// **'Roadmap updated'**
+  String get roadmapUpdated;
+
+  /// Success message when milestone is toggled
+  ///
+  /// In en, this message translates to:
+  /// **'Milestone updated'**
+  String get milestoneUpdated;
+
+  /// Validation error for numeric input
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid number'**
+  String get enterValidNumber;
+
   /// Success message when action is accepted
   ///
   /// In en, this message translates to:
@@ -5725,6 +5761,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Failed to redistribute workload'**
   String get failedToRedistributeWorkload;
+
+  /// Success message when study pace is adjusted
+  ///
+  /// In en, this message translates to:
+  /// **'Study pace adjusted successfully'**
+  String get planAdjusted;
+
+  /// Error message when pace adjustment fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to adjust study pace'**
+  String get failedToAdjustPlan;
 
   /// Title for the progress overview section
   ///
@@ -6170,6 +6218,132 @@ abstract class AppLocalizations {
   /// **'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?'**
   String get nudgeInactive48h;
 
+  /// Nudge after 7+ days of inactivity
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s been {days} days. Let\'s ease back in with a short review session!'**
+  String nudgeInactive7d(int days);
+
+  /// Nudge after 14+ days of inactivity
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back! It\'s been {days} days. Let\'s plan your re-engagement.'**
+  String nudgeInactive14d(int days);
+
+  /// Nudge after 30+ days of inactivity
+  ///
+  /// In en, this message translates to:
+  /// **'It\'s been {days} days since your last session. Would you like help creating a personalized return plan?'**
+  String nudgeInactive30d(int days);
+
+  /// Welcome back message after absence
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome back! You\'ve been away for {days} days.'**
+  String welcomeBackDays(int days);
+
+  /// Title for absence detection banner
+  ///
+  /// In en, this message translates to:
+  /// **'Absence Detected'**
+  String get absenceDetectedTitle;
+
+  /// Body for absence detection banner
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t used StudyKing in {days} days. How would you like to proceed?'**
+  String absenceDetectedBody(int days);
+
+  /// Button to extend study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Extend study plan by {days} days'**
+  String extendPlan(int days);
+
+  /// Label for missed lessons
+  ///
+  /// In en, this message translates to:
+  /// **'Missed'**
+  String get missedLessonLabel;
+
+  /// Label for stale sessions
+  ///
+  /// In en, this message translates to:
+  /// **'Not completed'**
+  String get staleSessionLabel;
+
+  /// Button to catch up after absence
+  ///
+  /// In en, this message translates to:
+  /// **'Catch Up'**
+  String get catchUp;
+
+  /// Title for catch-up bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'How would you like to catch up?'**
+  String get catchUpTitle;
+
+  /// Description for catch-up bottom sheet
+  ///
+  /// In en, this message translates to:
+  /// **'You were away for {days} days. Choose a catch-up strategy:'**
+  String catchUpDescription(int days);
+
+  /// Redistribute workload option in catch-up sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Redistribute across remaining days'**
+  String get catchUpRedistribute;
+
+  /// Extend plan option in catch-up sheet
+  ///
+  /// In en, this message translates to:
+  /// **'Extend plan by {days} days'**
+  String catchUpExtend(int days);
+
+  /// Success message after extending plan
+  ///
+  /// In en, this message translates to:
+  /// **'Study plan extended by {days} days'**
+  String planExtended(int days);
+
+  /// Error message when extending plan fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to extend study plan'**
+  String get failedToExtendPlan;
+
+  /// Error message when catch-up fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to process catch-up strategy'**
+  String get failedToCatchUp;
+
+  /// Success message after dismissing missed lessons
+  ///
+  /// In en, this message translates to:
+  /// **'Missed lessons dismissed'**
+  String get missedDismissed;
+
+  /// Error message when dismissing missed lessons fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to dismiss missed lessons'**
+  String get failedToDismissMissed;
+
+  /// Button to dismiss all missed lessons
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss All Missed'**
+  String get dismissAllMissed;
+
+  /// Section header for missed lessons with count
+  ///
+  /// In en, this message translates to:
+  /// **'Missed Lessons ({count})'**
+  String missedLessonsCount(int count);
+
   /// Message when scheduling conflicts with existing lesson
   ///
   /// In en, this message translates to:
@@ -6251,6 +6425,12 @@ abstract class AppLocalizations {
     int confidencePercent,
     String adaptivePace,
   );
+
+  /// Instruction for LLM to respond in the student's language
+  ///
+  /// In en, this message translates to:
+  /// **'IMPORTANT: Respond in the same language as the student (locale: {localeName}). Do not use English unless the student does.'**
+  String languageInstruction(String localeName);
 
   /// System prompt for answer evaluation
   ///
@@ -6521,6 +6701,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Type'**
   String get sessionType;
+
+  /// Label for practice session type
+  ///
+  /// In en, this message translates to:
+  /// **'Practice'**
+  String get sessionTypePractice;
+
+  /// Label for focus session type
+  ///
+  /// In en, this message translates to:
+  /// **'Focus'**
+  String get sessionTypeFocus;
+
+  /// Label for tutoring session type
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get sessionTypeTutoring;
+
+  /// Label for manual session type
+  ///
+  /// In en, this message translates to:
+  /// **'Manual'**
+  String get sessionTypeManual;
 
   /// Button label to add a course or subject
   ///
@@ -7708,6 +7912,306 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The student submitted this work. Analyze and provide feedback.'**
   String get tutorImageAnalysisSystemPrompt;
+
+  /// Dialog title for topic dependencies
+  ///
+  /// In en, this message translates to:
+  /// **'{topic} — Dependencies'**
+  String dependenciesTitle(String topic);
+
+  /// Label for prerequisites section
+  ///
+  /// In en, this message translates to:
+  /// **'Prerequisites'**
+  String get prerequisites;
+
+  /// Message when no topics are available
+  ///
+  /// In en, this message translates to:
+  /// **'No other topics available for prerequisites.'**
+  String get noTopicsForPrerequisites;
+
+  /// Fallback when a topic has no description
+  ///
+  /// In en, this message translates to:
+  /// **'No description'**
+  String get noDescription;
+
+  /// Label for mastery threshold slider
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Threshold: {percent}%'**
+  String masteryThreshold(String percent);
+
+  /// Label for required topic toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Required Topic'**
+  String get requiredTopic;
+
+  /// Description when topic is required
+  ///
+  /// In en, this message translates to:
+  /// **'Student must master this topic'**
+  String get requiredTopicOn;
+
+  /// Description when topic is optional
+  ///
+  /// In en, this message translates to:
+  /// **'Optional topic — can be skipped'**
+  String get requiredTopicOff;
+
+  /// Label for syllabus weight slider
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus Weight: {weight}'**
+  String syllabusWeight(String weight);
+
+  /// Label for parent topic dropdown
+  ///
+  /// In en, this message translates to:
+  /// **'Parent Topic'**
+  String get parentTopic;
+
+  /// Dropdown option for root topic
+  ///
+  /// In en, this message translates to:
+  /// **'None (Root Topic)'**
+  String get rootTopic;
+
+  /// Label showing sort order value
+  ///
+  /// In en, this message translates to:
+  /// **'Sort Order: {order}'**
+  String sortOrderValue(int order);
+
+  /// Snackbar message when topic is created
+  ///
+  /// In en, this message translates to:
+  /// **'Topic \"{title}\" created'**
+  String topicCreated(String title);
+
+  /// Error message when topic creation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create topic: {error}'**
+  String topicCreateFailed(String error);
+
+  /// Popup menu title for edit topic
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Topic'**
+  String get editTopicTitle;
+
+  /// Snackbar message when topic is updated
+  ///
+  /// In en, this message translates to:
+  /// **'Topic \"{title}\" updated'**
+  String topicUpdated(String title);
+
+  /// Error message when topic update fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update topic: {error}'**
+  String topicUpdateFailed(String error);
+
+  /// Snackbar message when dependencies are updated
+  ///
+  /// In en, this message translates to:
+  /// **'Dependencies updated'**
+  String get dependenciesUpdated;
+
+  /// Error message when dependency update fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to update dependencies: {error}'**
+  String dependenciesUpdateFailed(String error);
+
+  /// Dialog title for topic deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Topic'**
+  String get deleteTopicTitle;
+
+  /// Confirmation message for topic deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Delete \"{topic}\"? This will remove it from all dependency lists.'**
+  String deleteTopicConfirm(String topic);
+
+  /// Snackbar message when topic is deleted
+  ///
+  /// In en, this message translates to:
+  /// **'Topic deleted'**
+  String get topicDeleted;
+
+  /// Error message when topic deletion fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to delete topic: {error}'**
+  String topicDeleteFailed(String error);
+
+  /// Label for topic title input field
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Title'**
+  String get topicTitleLabel;
+
+  /// Hint text for topic title
+  ///
+  /// In en, this message translates to:
+  /// **'e.g. Atomic Structure'**
+  String get topicTitleHint;
+
+  /// Label for topic description input field
+  ///
+  /// In en, this message translates to:
+  /// **'Topic Description'**
+  String get topicDescriptionLabel;
+
+  /// Hint text for topic description
+  ///
+  /// In en, this message translates to:
+  /// **'Describe the topic scope'**
+  String get topicDescriptionHint;
+
+  /// Label for syllabus text input field
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus Text'**
+  String get syllabusTextLabel;
+
+  /// Hint text for syllabus text
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus points covered'**
+  String get syllabusTextHint;
+
+  /// Dialog title for adding a topic
+  ///
+  /// In en, this message translates to:
+  /// **'Add Topic'**
+  String get addTopicTitle;
+
+  /// Label showing number of topics
+  ///
+  /// In en, this message translates to:
+  /// **'{count} topics'**
+  String topicCountTemplate(int count);
+
+  /// Popup menu item for topic dependencies
+  ///
+  /// In en, this message translates to:
+  /// **'Dependencies'**
+  String get dependenciesNav;
+
+  /// Label showing prerequisite count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} prerequisites'**
+  String prerequisitesCount(int count);
+
+  /// Label showing downstream topic count
+  ///
+  /// In en, this message translates to:
+  /// **'{count} downstream'**
+  String downstreamCount(int count);
+
+  /// Label indicating a topic has a parent
+  ///
+  /// In en, this message translates to:
+  /// **'Has parent'**
+  String get hasParent;
+
+  /// Tooltip for add topic button
+  ///
+  /// In en, this message translates to:
+  /// **'Add Topic'**
+  String get addTopicTooltip;
+
+  /// Warning about downstream dependencies when deleting a topic
+  ///
+  /// In en, this message translates to:
+  /// **'⚠ {count} downstream topic(s) depend on this topic and may need to be updated.'**
+  String downstreamTopicWarning(int count);
+
+  /// Dialog title when prerequisites are not met
+  ///
+  /// In en, this message translates to:
+  /// **'Prerequisites Not Met'**
+  String get prerequisitesNotMet;
+
+  /// Button to practice prerequisite topics
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Prerequisites'**
+  String get practicePrerequisites;
+
+  /// Body text for prerequisite dialog
+  ///
+  /// In en, this message translates to:
+  /// **'This topic requires mastery of: {topicNames}. Would you like to practice those first?'**
+  String prerequisiteMasteryRequired(String topicNames);
+
+  /// Subtitle for inline practice option in focus mode
+  ///
+  /// In en, this message translates to:
+  /// **'Practice directly in focus mode — timer keeps running'**
+  String get inlinePracticeSubtitle;
+
+  /// Subtitle for full practice session option in focus mode
+  ///
+  /// In en, this message translates to:
+  /// **'Navigate to full practice session screen'**
+  String get fullPracticeSubtitle;
+
+  /// Checkbox label to generate AI lesson from uploaded content
+  ///
+  /// In en, this message translates to:
+  /// **'Generate lesson from this material'**
+  String get generateLessonFromContent;
+
+  /// Hint text for generate lesson checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Creates an AI-generated lesson with slides, exercises, and summary blocks'**
+  String get generateLessonFromContentHint;
+
+  /// Error message when a subject has no topics
+  ///
+  /// In en, this message translates to:
+  /// **'{subjectName} has no topics. Add topics first or upload a syllabus.'**
+  String subjectNoTopics(String subjectName);
+
+  /// Visual placeholder for weeks with no activity in bar chart
+  ///
+  /// In en, this message translates to:
+  /// **'—'**
+  String get noActivityShort;
+
+  /// Error message when a course/subject name typed by the user does not match any existing subject
+  ///
+  /// In en, this message translates to:
+  /// **'Course \'{courseName}\' not found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.'**
+  String courseNotFound(String courseName);
+
+  /// Helper text explaining that the user should enter a subject name that already exists
+  ///
+  /// In en, this message translates to:
+  /// **'Enter an existing subject name to base the plan on its syllabus'**
+  String get planSubjectHint;
+
+  /// Tooltip label for chat view in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Chat'**
+  String get chat;
+
+  /// Tooltip label for slides view in tutor screen
+  ///
+  /// In en, this message translates to:
+  /// **'Slides'**
+  String get slides;
 }
 
 class _AppLocalizationsDelegate

@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/quickguide/quickguide.dart';
 
@@ -21,6 +22,39 @@ void main() {
 
     test('quickguide.dart exports showQuickGuideHelpDialog', () {
       expect(showQuickGuideHelpDialog, isA<Function>());
+    });
+
+    test('QuickGuideScreen can be const-constructed', () {
+      const screen = QuickGuideScreen();
+      expect(screen.defaultModelId, '');
+      expect(screen.showModeNavigation, true);
+    });
+
+    test('ModeNavigationWidget can be const-constructed', () {
+      const widget = ModeNavigationWidget();
+      expect(widget, isNotNull);
+    });
+
+    test('MessageListWidget stores messages', () {
+      final widget = MessageListWidget(
+        messages: [],
+        scrollController: ScrollController(),
+      );
+      expect(widget.messages, isEmpty);
+      expect(widget.reduceMotion, false);
+    });
+
+    test('SuggestedPromptsWidget stores prompts', () {
+      final widget = SuggestedPromptsWidget(
+        prompts: ['Explain', 'Quiz'],
+        onSelectPrompt: (s) {},
+      );
+      expect(widget.prompts, ['Explain', 'Quiz']);
+    });
+
+    test('QuickGuideHelpDialog can be const-constructed', () {
+      const dialog = QuickGuideHelpDialog();
+      expect(dialog, isNotNull);
     });
   });
 }

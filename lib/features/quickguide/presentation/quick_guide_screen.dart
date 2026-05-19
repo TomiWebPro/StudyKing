@@ -3,12 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider, Timeouts;
 import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/core/widgets/empty_state_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/mode_navigation_widget.dart';
@@ -123,37 +125,45 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     try {
       final llm = _getLlmService();
       if (llm.config.apiKey.isEmpty) {
-        final response = _fallbackResponse(text);
-        buffer.write(response);
-      } else {
         final l10n = AppLocalizations.of(context)!;
-        final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
-        final savedModel = ref.read(selectedModelProvider);
-        final provider = ref.read(llmProviderProvider);
-        final effectiveModelId = savedModel.isNotEmpty
-            ? savedModel
-            : (widget.defaultModelId.isNotEmpty
-                ? widget.defaultModelId
-                : defaultModelForProvider(provider));
-
-        await for (final chunk in llm.chatStream(
-          message: text,
-          modelId: effectiveModelId,
-          memory: _memory,
-          systemPrompt: effectiveSystem,
-        )) {
-          buffer.write(chunk);
-          if (mounted) {
-            final idx = _messages.length - 1;
-            setState(() {
-              _messages[idx] = _messages[idx].copyWith(
-                content: buffer.toString(),
-                isStreaming: true,
-              );
-            });
-          }
-          _scrollToBottom();
+        await _showNoApiKeyMessage(l10n);
+        if (mounted) {
+          final idx = _messages.length - 1;
+          setState(() {
+            _messages[idx] = _messages[idx].copyWith(isStreaming: false);
+          });
         }
+        _isStreaming = false;
+        return;
+      }
+
+      final l10n = AppLocalizations.of(context)!;
+      final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
+      final savedModel = ref.read(selectedModelProvider);
+      final provider = ref.read(llmProviderProvider);
+      final effectiveModelId = savedModel.isNotEmpty
+          ? savedModel
+          : (widget.defaultModelId.isNotEmpty
+              ? widget.defaultModelId
+              : defaultModelForProvider(provider));
+
+      await for (final chunk in llm.chatStream(
+        message: text,
+        modelId: effectiveModelId,
+        memory: _memory,
+        systemPrompt: effectiveSystem,
+      )) {
+        buffer.write(chunk);
+        if (mounted) {
+          final idx = _messages.length - 1;
+          setState(() {
+            _messages[idx] = _messages[idx].copyWith(
+              content: buffer.toString(),
+              isStreaming: true,
+            );
+          });
+        }
+        _scrollToBottom();
       }
     } catch (e) {
       _logger.e('QuickGuide error', e);
@@ -182,6 +192,28 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     if (lower.contains('quiz') || lower.contains('question')) return l10n.fallbackQuizResponse;
     if (lower.contains('math') || lower.contains('calculate')) return l10n.fallbackMathResponse;
     return l10n.fallbackGeneralResponse;
+  }
+
+  Future<void> _showNoApiKeyMessage(AppLocalizations l10n) async {
+    final idx = _messages.length - 1;
+    if (mounted) {
+      setState(() {
+        _messages[idx] = _messages[idx].copyWith(
+          content: l10n.apiKeyNeeded,
+          isStreaming: false,
+        );
+      });
+    }
+    final configureMsg = ConversationMessage(
+      id: _uuid.v4(),
+      sessionId: 'quickguide',
+      role: MessageRole.tutor,
+      type: MessageType.text,
+      content: '${l10n.pleaseConfigureApiKey}\n\n[${l10n.configureNow}](/settings/api-config)',
+      timestamp: DateTime.now(),
+    );
+    setState(() => _messages.add(configureMsg));
+    _scrollToBottom();
   }
 
   void _scrollToBottom() {
@@ -238,6 +270,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final reduceMotion = ref.watch(settingsProvider).reduceMotion;
 
     return Scaffold(
@@ -269,6 +302,8 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         child: FocusTraversalGroup(
           child: Column(
           children: [
+            if (_getLlmService().config.apiKey.isEmpty)
+              _buildApiKeyBanner(l10n, theme),
             if (_showSuggestions && !_hasInteracted && widget.showModeNavigation)
               const ModeNavigationWidget(),
             Expanded(
@@ -309,26 +344,38 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   }
 
   Widget _buildEmptyState(AppLocalizations l10n) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+    return EmptyStateWidget(
+      icon: Icons.auto_awesome,
+      title: l10n.quickGuide,
+      subtitle: l10n.askAnything,
+    );
+  }
+
+  Widget _buildApiKeyBanner(AppLocalizations l10n, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+      child: Row(
         children: [
-          Icon(
-            Icons.auto_awesome,
-            size: 64,
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.quickGuide,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.askAnything,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+          Icon(Icons.key, color: theme.colorScheme.error, size: 20),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.apiKeyRequired,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
             ),
+          ),
+          TextButton(
+            style: TextButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              minimumSize: Size.zero,
+              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+            onPressed: () => Navigator.pushNamed(context, AppRoutes.apiConfig),
+            child: Text(l10n.configureNow, style: const TextStyle(fontSize: 12)),
           ),
         ],
       ),

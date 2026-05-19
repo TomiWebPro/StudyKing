@@ -1,140 +1,79 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
+import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
-import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 
-class FakeMasteryGraphRepository extends MasteryGraphRepository {
-  FakeMasteryGraphRepository();
+class FakeMasteryStateRepo extends MasteryStateRepository {
   final Map<String, MasteryState> _masteryStates = {};
-  final Map<String, QuestionMasteryState> _questionMasteryStates = {};
-  final Map<String, QuestionEvaluation> _evaluations = {};
-  bool failOnGetMasteryState = false;
-  bool failOnUpdateMasteryState = false;
-  bool failOnGetQuestionMasteryState = false;
+  bool failOnGet = false;
+  bool failOnUpdate = false;
   String? failureMessage;
 
   @override
   Future<void> init() async {}
 
-  void addMasteryState(MasteryState state) {
-    _masteryStates['${state.studentId}_${state.topicId}'] = state;
-  }
-
-  void addQuestionMasteryState(QuestionMasteryState state) {
-    _questionMasteryStates['${state.studentId}_${state.questionId}'] = state;
-  }
-
-  void addEvaluation(QuestionEvaluation evaluation) {
-    _evaluations[evaluation.questionId] = evaluation;
-  }
-
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
-    if (failOnGetMasteryState) {
-      return Result.failure(failureMessage ?? 'getMasteryState failed');
-    }
+    if (failOnGet) return Result.failure(failureMessage ?? 'getMasteryState failed');
     final key = '${studentId}_$topicId';
-    if (_masteryStates.containsKey(key)) {
-      return Result.success(_masteryStates[key]!);
-    }
-    final newState = MasteryState.initial(studentId: studentId, topicId: topicId);
-    _masteryStates[key] = newState;
-    return Result.success(newState);
+    final state = _masteryStates[key];
+    if (state != null) return Result.success(state);
+    return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
   }
 
   @override
   Future<Result<void>> updateMasteryState(MasteryState state) async {
-    if (failOnUpdateMasteryState) {
-      return Result.failure(failureMessage ?? 'updateMasteryState failed');
-    }
-    final key = '${state.studentId}_${state.topicId}';
-    _masteryStates[key] = state;
+    if (failOnUpdate) return Result.failure(failureMessage ?? 'updateMasteryState failed');
+    _masteryStates['${state.studentId}_${state.topicId}'] = state;
     return Result.success(null);
   }
 
-  @override
-  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
-    final states = _masteryStates.values
-        .where((s) => s.studentId == studentId)
-        .toList();
-    return Result.success(states);
+  void addMasteryState(MasteryState state) {
+    _masteryStates['${state.studentId}_${state.topicId}'] = state;
   }
+}
+
+class FakeQuestionMasteryStateRepo extends QuestionMasteryStateRepository {
+  final Map<String, QuestionMasteryState> _states = {};
+  bool failOnGet = false;
+
+  @override
+  Future<void> init() async {}
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
-    if (failOnGetQuestionMasteryState) {
-      return Result.failure(failureMessage ?? 'getQuestionMasteryState failed');
-    }
+    if (failOnGet) return Result.failure('getQuestionMasteryState failed');
     final key = '${studentId}_$questionId';
-    if (_questionMasteryStates.containsKey(key)) {
-      return Result.success(_questionMasteryStates[key]!);
-    }
-    final newState = QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now());
-    _questionMasteryStates[key] = newState;
-    return Result.success(newState);
+    if (_states.containsKey(key)) return Result.success(_states[key]!);
+    return Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
   }
 
   @override
   Future<Result<void>> updateQuestionMasteryState(QuestionMasteryState state) async {
-    final key = '${state.studentId}_${state.questionId}';
-    _questionMasteryStates[key] = state;
+    _states['${state.studentId}_${state.questionId}'] = state;
     return Result.success(null);
   }
 
-  @override
-  Future<Result<List<QuestionMasteryState>>> getDueQuestions(String studentId, {DateTime? asOf}) async {
-    return Result.success([]);
+  void addState(QuestionMasteryState state) {
+    _states['${state.studentId}_${state.questionId}'] = state;
   }
+}
+
+class FakeQuestionEvaluationRepo extends QuestionEvaluationRepository {
+  final Map<String, QuestionEvaluation> _evaluations = {};
 
   @override
-  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(String studentId, {double threshold = 0.5}) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async {
-    return Result.success({
-      'totalTopics': 10,
-      'masteredTopics': 5,
-    });
-  }
-
-  @override
-  Future<Result<void>> migrateFromLegacy({
-    required String questionId,
-    String? markscheme,
-    String? correctAnswer,
-    List<String>? options,
-    String? explanation,
-  }) async {
-    return Result.success(null);
-  }
+  Future<void> init() async {}
 
   @override
   Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {
-    if (_evaluations.containsKey(questionId)) {
-      return Result.success(_evaluations[questionId]!);
-    }
-    final eval = QuestionEvaluation(
-      questionId: questionId,
-      correctAnswer: '42',
-      evaluationType: EvaluationType.exactMatch,
-    );
-    return Result.success(eval);
+    if (_evaluations.containsKey(questionId)) return Result.success(_evaluations[questionId]!);
+    return Result.failure('Not found');
   }
 
   @override
@@ -142,31 +81,24 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
     _evaluations[evaluation.questionId] = evaluation;
     return Result.success(null);
   }
-
-  @override
-  Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
-    return Result.success(TopicDependency(topicId: topicId));
-  }
-
-  @override
-  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async {
-    return Result.success(null);
-  }
 }
 
 void main() {
   group('MasteryGraphService', () {
     late MasteryGraphService service;
-    late FakeMasteryGraphRepository mockRepo;
+    late FakeMasteryStateRepo mockMasteryStateRepo;
+    late FakeQuestionMasteryStateRepo mockQuestionMasteryRepo;
+    late FakeQuestionEvaluationRepo mockEvalRepo;
 
     setUp(() {
-      mockRepo = FakeMasteryGraphRepository();
-      service = MasteryGraphService(repository: mockRepo);
+      mockMasteryStateRepo = FakeMasteryStateRepo();
+      mockQuestionMasteryRepo = FakeQuestionMasteryStateRepo();
+      mockEvalRepo = FakeQuestionEvaluationRepo();
+      service = MasteryGraphService(
+        masteryStateRepo: mockMasteryStateRepo,
+        questionMasteryRepo: mockQuestionMasteryRepo,
+        questionEvaluationRepo: mockEvalRepo,
+      );
     });
 
     group('init', () {
@@ -343,7 +275,7 @@ void main() {
       });
 
       test('returns failure when repo fails', () async {
-        mockRepo.failOnGetMasteryState = true;
+        mockMasteryStateRepo.failOnGet = true;
         final result = await service.getReviewUrgency('student1', 'topic1');
         expect(result.isFailure, isTrue);
       });
@@ -351,7 +283,7 @@ void main() {
 
     group('error propagation', () {
       test('recordAttempt returns failure when getMasteryState fails', () async {
-        mockRepo.failOnGetMasteryState = true;
+        mockMasteryStateRepo.failOnGet = true;
         final result = await service.recordAttempt(
           studentId: 's1',
           topicId: 't1',
@@ -364,7 +296,7 @@ void main() {
       });
 
       test('recordAttempt returns failure when updateMasteryState fails', () async {
-        mockRepo.failOnUpdateMasteryState = true;
+        mockMasteryStateRepo.failOnUpdate = true;
         final result = await service.recordAttempt(
           studentId: 's1',
           topicId: 't1',
@@ -377,7 +309,7 @@ void main() {
       });
 
       test('getReadinessScore returns failure when repo fails', () async {
-        mockRepo.failOnGetMasteryState = true;
+        mockMasteryStateRepo.failOnGet = true;
         final result = await service.getReadinessScore('s1', 't1');
         expect(result.isFailure, isTrue);
       });
@@ -395,7 +327,7 @@ void main() {
       });
 
       test('getTopicMastery returns pre-set state values', () async {
-        mockRepo.addMasteryState(
+        mockMasteryStateRepo.addMasteryState(
           MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
             accuracy: 0.85,
             totalAttempts: 20,
@@ -415,10 +347,10 @@ void main() {
       });
 
       test('getAllTopicMastery returns correct count', () async {
-        mockRepo.addMasteryState(
+        mockMasteryStateRepo.addMasteryState(
           MasteryState.initial(studentId: 's1', topicId: 't1'),
         );
-        mockRepo.addMasteryState(
+        mockMasteryStateRepo.addMasteryState(
           MasteryState.initial(studentId: 's1', topicId: 't2'),
         );
         final result = await service.getAllTopicMastery('s1');
@@ -459,7 +391,7 @@ void main() {
       });
 
       test('getReadinessScore returns correct value', () async {
-        mockRepo.addMasteryState(
+        mockMasteryStateRepo.addMasteryState(
           MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
             accuracy: 0.9,
             currentStreak: 10,
@@ -471,7 +403,7 @@ void main() {
       });
 
       test('getReviewUrgency returns correct value', () async {
-        mockRepo.addMasteryState(
+        mockMasteryStateRepo.addMasteryState(
           MasteryState.initial(studentId: 's1', topicId: 't1').copyWith(
             reviewUrgency: 0.8,
           ),

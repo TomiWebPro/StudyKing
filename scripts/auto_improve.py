@@ -8,6 +8,7 @@ import datetime
 import os
 import random
 import re
+import fcntl
 import shutil
 import signal
 import subprocess
@@ -207,6 +208,28 @@ MASTERS = [
             "- This is a non-delete zone: never delete previous dry-run test files."
         ),
     },
+    {
+        "id": "dry_run_result_validator",
+        "title": "Dry-Run Result Validator",
+        "focus": "",
+        "timeout": 900,
+        "recurring": True,
+        "scenario_prompt": (
+            "You are the Dry-Run Result Validator for the StudyKing project. "
+            "Your job is NOT to edit source code. "
+            "First read agent_must_read.md to understand the full product vision. "
+            "Then read the scenario file `dry-run-test/{chosen_file}` and "
+            "trace through the actual source code to check each step. "
+            "For each step, determine if it is now completed in the current code "
+            "(COMPLETED / NOT_COMPLETED / PARTIAL) and what is still missing. "
+            "Update `{chosen_file}` with the validation results: append a section "
+            "at the bottom showing each step's completion status and code references. "
+            "If ALL steps are COMPLETED or the scenario is largely done (>80%), "
+            "delete the scenario file `{chosen_file}` — it is no longer needed. "
+            "If any NOT_COMPLETED or PARTIAL steps remain, write an issue file at "
+            "`issues/open/{issue_file}` documenting what still needs to be fixed."
+        ),
+    },
 ]
 os.makedirs(REPORT_DIR, exist_ok=True)
 os.makedirs(ISSUES_OPEN_DIR, exist_ok=True)
@@ -214,6 +237,10 @@ os.makedirs(ISSUES_COMPLETED_DIR, exist_ok=True)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(SCRIPT_DIR, "auto_improve.log")
+
+LOCK_FILE = "/tmp/studyking-auto-improve.lock"
+CHILD_PIDS = []
+SHUTDOWN_REQUESTED = False
 
 
 def log(msg, level="INFO"):
@@ -257,14 +284,24 @@ def _run_process_simple(cmd, cwd, timeout_seconds, input_data=None):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE if input_data is not None else None,
+        preexec_fn=os.setsid,
     )
+    CHILD_PIDS.append(proc.pid)
     try:
         stdout, stderr = proc.communicate(input=input_data, timeout=timeout_seconds)
         output = ((stdout or b"").decode() + "\n" + (stderr or b"").decode()).strip()
+        try:
+            CHILD_PIDS.remove(proc.pid)
+        except ValueError:
+            pass
         return proc.returncode, output
     except subprocess.TimeoutExpired:
         proc.kill()
         proc.wait()
+        try:
+            CHILD_PIDS.remove(proc.pid)
+        except ValueError:
+            pass
         return -1, "TIMEOUT"
 
 
@@ -284,7 +321,9 @@ def _run_process_monitored(cmd, cwd, timeout_seconds, input_data=None, idle_time
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         stdin=subprocess.PIPE if input_data is not None else None,
+        preexec_fn=os.setsid,
     )
+    CHILD_PIDS.append(proc.pid)
 
     output_lines = []
     lock = threading.Lock()
@@ -333,6 +372,10 @@ def _run_process_monitored(cmd, cwd, timeout_seconds, input_data=None, idle_time
             with lock:
                 output = "".join(output_lines).strip()
                 ce = flag_connection_error[0]
+            try:
+                CHILD_PIDS.remove(proc.pid)
+            except ValueError:
+                pass
             return (-2 if ce else ret, output)
 
         elapsed = time.time() - start_time
@@ -343,18 +386,30 @@ def _run_process_monitored(cmd, cwd, timeout_seconds, input_data=None, idle_time
 
         if ce:
             _terminate()
+            try:
+                CHILD_PIDS.remove(proc.pid)
+            except ValueError:
+                pass
             with lock:
                 output = "".join(output_lines).strip()
             return -2, output
 
         if idle > idle_timeout:
             _terminate()
+            try:
+                CHILD_PIDS.remove(proc.pid)
+            except ValueError:
+                pass
             with lock:
                 output = "".join(output_lines).strip()
             return -2, output + "\nIDLE_TIMEOUT"
 
         if elapsed > timeout_seconds:
             _terminate()
+            try:
+                CHILD_PIDS.remove(proc.pid)
+            except ValueError:
+                pass
             with lock:
                 output = "".join(output_lines).strip()
             return -1, output + "\nTIMEOUT"
@@ -677,14 +732,73 @@ def should_retry(rc):
     return rc != 0
 
 
+def pick_oldest_unvalidated_scenario():
+    dry_run_dir = os.path.join(PROJECT_DIR, "dry-run-test")
+    if not os.path.isdir(dry_run_dir):
+        return None
+    files = sorted(
+        [f for f in os.listdir(dry_run_dir) if f.endswith(".md")],
+        key=lambda f: os.path.getmtime(os.path.join(dry_run_dir, f))
+    )
+    for f in files:
+        path = os.path.join(dry_run_dir, f)
+        with open(path) as fh:
+            content = fh.read()
+        if "# Validation Results" not in content:
+            return f
+    return None
+
+
+def pick_oldest_failing_scenario():
+    dry_run_dir = os.path.join(PROJECT_DIR, "dry-run-test")
+    if not os.path.isdir(dry_run_dir):
+        return None
+    files = sorted(
+        [f for f in os.listdir(dry_run_dir) if f.endswith(".md")],
+        key=lambda f: os.path.getmtime(os.path.join(dry_run_dir, f))
+    )
+    for f in files:
+        path = os.path.join(dry_run_dir, f)
+        with open(path) as fh:
+            content = fh.read()
+        if "# Validation Results" in content and ("NOT_COMPLETED" in content or "PARTIAL" in content):
+            return f
+    return None
+
+
 def run_master_once(master):
     open_file = master_issue_file(master["id"])
     is_scenario = bool(master.get("scenario_prompt"))
-    if not is_scenario and os.path.exists(open_file):
+    is_recurring = master.get("recurring", False)
+    if not is_scenario and not is_recurring and os.path.exists(open_file):
         return False
 
     if is_scenario:
-        prompt = master["scenario_prompt"]
+        if master["id"] == "dry_run_result_validator":
+            chosen = pick_oldest_failing_scenario()
+            if chosen is None:
+                chosen = pick_oldest_unvalidated_scenario()
+                if chosen is None:
+                    log("No dry-run scenarios need validation.")
+                    return False
+            topic = chosen.replace("scenario_", "").replace(".md", "")
+            issue_file = f"dry_run_result_{topic}.md"
+            issue_path = os.path.join(ISSUES_OPEN_DIR, issue_file)
+            if os.path.exists(issue_path):
+                log(f"Issue already exists for {chosen}: {issue_file}")
+                return False
+            log(f"Re-validating scenario: {chosen}")
+        else:
+            chosen = pick_oldest_unvalidated_scenario()
+            if chosen is None:
+                log("All dry-run scenarios already validated; nothing to do.")
+                return False
+            log(f"Validating scenario: {chosen}")
+        fmt = {"chosen_file": chosen}
+        if master["id"] == "dry_run_result_validator":
+            topic = chosen.replace("scenario_", "").replace(".md", "")
+            fmt["issue_file"] = f"dry_run_result_{topic}.md"
+        prompt = master["scenario_prompt"].format(**fmt)
         timeout = master.get("timeout", SCENARIO_TIMEOUT_SECONDS)
     else:
         prompt = (
@@ -715,7 +829,8 @@ def master_worker(master):
     log(f"Starting background worker: {master['title']}")
     while True:
         try:
-            if os.path.exists(master_issue_file(master["id"])):
+            is_recurring = master.get("recurring", False)
+            if not is_recurring and os.path.exists(master_issue_file(master["id"])):
                 time.sleep(MASTER_LOOP_DELAY_SECONDS)
                 continue
             run_master_once(master)
@@ -733,6 +848,71 @@ def start_master_workers():
     return threads
 
 
+def kill_orphan_opencode_children():
+    current_pid = os.getpid()
+    killed = 0
+    try:
+        for entry in os.listdir("/proc"):
+            if not entry.isdigit():
+                continue
+            pid = int(entry)
+            if pid in (current_pid, 1):
+                continue
+            try:
+                with open(f"/proc/{entry}/cmdline", "rb") as f:
+                    cmdline = f.read().replace(b'\0', b' ').decode(errors='replace').strip()
+                if "opencode" not in cmdline or " run " not in cmdline:
+                    continue
+                with open(f"/proc/{entry}/status") as f:
+                    status = f.read()
+                ppid_line = [l for l in status.split("\n") if l.startswith("PPid:")]
+                if not ppid_line:
+                    continue
+                ppid = ppid_line[0].split()[1]
+                if ppid == "1":
+                    os.kill(pid, signal.SIGTERM)
+                    killed += 1
+                    log(f"Killed orphaned opencode process {pid}")
+            except (ProcessLookupError, PermissionError, OSError, IOError):
+                continue
+    except Exception as e:
+        log(f"Error killing orphan children: {e}", "WARN")
+    if killed:
+        time.sleep(2)
+    return killed
+
+
+def signal_handler(signum, frame):
+    global SHUTDOWN_REQUESTED
+    log(f"Received signal {signum}, shutting down after current operation...")
+    SHUTDOWN_REQUESTED = True
+
+
+def cleanup():
+    if not CHILD_PIDS:
+        return
+    log(f"Cleaning up {len(CHILD_PIDS)} child process(es)...")
+    for pid in list(CHILD_PIDS):
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGTERM)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                os.kill(pid, signal.SIGTERM)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+    time.sleep(3)
+    for pid in list(CHILD_PIDS):
+        try:
+            os.killpg(os.getpgid(pid), signal.SIGKILL)
+        except (ProcessLookupError, PermissionError, OSError):
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except (ProcessLookupError, PermissionError, OSError):
+                pass
+    CHILD_PIDS.clear()
+    log("Cleanup complete")
+
+
 def main_loop():
     global CONSECUTIVE_FAILS, CYCLE_COUNT
 
@@ -747,6 +927,9 @@ def main_loop():
     log("=" * 60)
 
     while True:
+        if SHUTDOWN_REQUESTED:
+            log("Shutdown requested, exiting main loop")
+            break
         CYCLE_COUNT += 1
         log("=" * 60)
         log(f"CYCLE #{CYCLE_COUNT} starting at {datetime.datetime.now()}")
@@ -820,14 +1003,26 @@ def main_loop():
 
 
 if __name__ == "__main__":
+    lock_fd = open(LOCK_FILE, "w")
+    try:
+        fcntl.flock(lock_fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except IOError:
+        log("Another instance is already running (lock held). Exiting.", "FATAL")
+        sys.exit(1)
+
+    log("Singleton lock acquired")
+    kill_orphan_opencode_children()
+    signal.signal(signal.SIGTERM, signal_handler)
+
     try:
         main_loop()
     except KeyboardInterrupt:
         log("")
         log("Bot stopped by user (Ctrl+C)")
-        sys.exit(0)
     except Exception as e:
         log(f"FATAL ERROR: {e}", "FATAL")
         import traceback
         traceback.print_exc()
-        sys.exit(1)
+    finally:
+        cleanup()
+        sys.exit(0)

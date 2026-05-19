@@ -104,6 +104,13 @@ void main() {
         expect(csv, contains('s2'));
       });
 
+      test('CSV header is invariant English (m3)', () {
+        final csv = SessionExportService.sessionsToCSV([]);
+        final firstLine = csv.split('\n').first;
+        expect(firstLine, 'Session ID,Student ID,Subject,Type,Start Time,End Time,'
+            'Duration (min),Planned Duration (min),Questions Answered,Correct,Accuracy (%)');
+      });
+
       test('calculates accuracy correctly', () {
         final sessions = [
           createSession(start: startTime, questionsAnswered: 10, correctAnswers: 7),

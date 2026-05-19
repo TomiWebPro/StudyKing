@@ -11,6 +11,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
+import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -28,6 +29,7 @@ class ContentPipeline {
   SourceRepository get sourceRepository => _sourceRepository;
   final TopicRepository _topicRepository;
   final QuestionRepository _questionRepository;
+  final LessonAgentService? _lessonAgentService;
   final DocumentExtractor _documentExtractor;
   final WebScraper _webScraper;
   final String _localeName;
@@ -38,6 +40,7 @@ class ContentPipeline {
     required SourceRepository sourceRepository,
     required TopicRepository topicRepository,
     required QuestionRepository questionRepository,
+    LessonAgentService? lessonAgentService,
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
     required String modelId,
@@ -46,6 +49,7 @@ class ContentPipeline {
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
+        _lessonAgentService = lessonAgentService,
         _documentExtractor =
             documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId),
         _webScraper = webScraper ?? WebScraper(),
@@ -100,6 +104,7 @@ class ContentPipeline {
     String language = '',
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
+    bool generateLessons = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
@@ -211,6 +216,19 @@ class ContentPipeline {
         updated = _updateStatus(updated, ProcessingStatus.completed);
       }
 
+      if (generateLessons && _lessonAgentService != null && updated.topicId.isNotEmpty) {
+        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating lesson from content...');
+        final textForLesson = updated.extractedText.isNotEmpty ? updated.extractedText : content;
+        await _lessonAgentService.generateLessonFromSource(
+          subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
+          topicId: updated.topicId,
+          topicTitle: title,
+          sourceContent: textForLesson,
+          localeName: _localeName,
+        );
+        _logger.d('Stage 5 complete: lesson generated from source');
+      }
+
       onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
       updated = _updateStatus(updated, ProcessingStatus.completed);
       await _sourceRepository.save(updated.id, updated);
@@ -237,6 +255,7 @@ class ContentPipeline {
     required String modelId,
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
+    bool generateLessons = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
@@ -256,6 +275,7 @@ class ContentPipeline {
       language: source.language,
       possibleTopics: possibleTopics,
       generateQuestions: generateQuestions,
+      generateLessons: generateLessons,
       validator: validator,
       allowedQuestionTypes: allowedQuestionTypes,
       onProgress: onProgress,

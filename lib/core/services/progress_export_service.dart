@@ -1,9 +1,7 @@
 import 'dart:convert';
-import 'dart:io';
+import 'dart:typed_data';
 
-import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
@@ -12,7 +10,6 @@ import 'package:studyking/features/practice/data/models/mastery_state_model.dart
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ProgressExportService {
@@ -21,20 +18,12 @@ class ProgressExportService {
   final AttemptRepository _attemptRepo;
 
   ProgressExportService({
-    StudyProgressTracker? tracker,
-    MasteryGraphService? masteryService,
-    AttemptRepository? attemptRepo,
-    SessionRepository? sessionRepo,
-    AppLocalizations? l10n,
-  })  : _tracker = tracker ??
-            StudyProgressTracker(
-              attemptRepo: AttemptRepository(),
-              masteryService: MasteryGraphService(),
-              sessionRepo: sessionRepo,
-              l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
-            ),
-        _masteryService = masteryService ?? MasteryGraphService(),
-        _attemptRepo = attemptRepo ?? AttemptRepository();
+    required StudyProgressTracker tracker,
+    required MasteryGraphService masteryService,
+    required AttemptRepository attemptRepo,
+  })  : _tracker = tracker,
+        _masteryService = masteryService,
+        _attemptRepo = attemptRepo;
 
   Future<String> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
     final overallStats = await _tracker.getOverallStats(studentId);
@@ -331,11 +320,8 @@ class ProgressExportService {
     AppLocalizations l10n,
   ) async {
     final csv = await exportComprehensiveCSV(studentId, l10n: l10n);
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.csv');
-    await file.writeAsString(csv);
     await Share.shareXFiles(
-      [XFile(file.path)],
+      [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv')],
       text: l10n.pdfProgressReport,
     );
   }
@@ -368,11 +354,8 @@ class ProgressExportService {
       'badges': badges,
     });
 
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.json');
-    await file.writeAsString(json);
     await Share.shareXFiles(
-      [XFile(file.path)],
+      [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
       text: l10n.pdfProgressReport,
     );
   }
@@ -383,11 +366,8 @@ class ProgressExportService {
     AppLocalizations l10n,
   ) async {
     final pdfBytes = await exportComprehensivePDF(studentId, l10n);
-    final dir = await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.pdf');
-    await file.writeAsBytes(pdfBytes);
     await Share.shareXFiles(
-      [XFile(file.path)],
+      [XFile.fromData(Uint8List.fromList(pdfBytes), name: '$filename.pdf', mimeType: 'application/pdf')],
       text: l10n.pdfProgressReport,
     );
   }

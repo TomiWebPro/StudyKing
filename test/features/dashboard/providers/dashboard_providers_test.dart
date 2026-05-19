@@ -1,36 +1,14 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show attemptRepositoryProvider;
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-
-class _FakeTopicRepository extends TopicRepository {
-  @override
-  Future<Result<void>> save(String key, Topic item) async => Result.success(null);
-  @override
-  Future<Result<Topic?>> get(String key) async => Result.success(null);
-  @override
-  Future<Result<List<Topic>>> getAll() async => Result.success([]);
-  @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
-}
-
-class _FakeAttemptRepository extends AttemptRepository {
-  @override
-  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
-  @override
-  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
-  @override
-  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
-  @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
-}
 
 class _SeededAttemptRepo extends AttemptRepository {
   final List<StudentAttempt> _attempts;
@@ -72,33 +50,8 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
 
 void main() {
   group('DashboardProviders', () {
-    test('dashboardTopicRepositoryProvider creates TopicRepository', () {
+    test('dashboardStudyProgressTrackerProvider creates StudyProgressTracker', () {
       final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardTopicRepositoryProvider),
-        isA<TopicRepository>(),
-      );
-    });
-
-    test('dashboardAttemptRepositoryProvider creates AttemptRepository', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardAttemptRepositoryProvider),
-        isA<AttemptRepository>(),
-      );
-    });
-
-    test('dashboardStudyProgressTrackerProvider is wired to dashboardAttemptRepositoryProvider', () {
-      final overrideAttempt = AttemptRepository();
-      final container = ProviderContainer(
-        overrides: [
-          dashboardAttemptRepositoryProvider.overrideWithValue(overrideAttempt),
-        ],
-      );
       addTearDown(container.dispose);
 
       final tracker = container.read(dashboardStudyProgressTrackerProvider);
@@ -112,61 +65,6 @@ void main() {
       expect(
         container.read(dashboardInstrumentationServiceProvider),
         isA<InstrumentationService>(),
-      );
-    });
-
-    test('dashboardAdherenceRepositoryProvider creates PlanAdherenceRepository', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardAdherenceRepositoryProvider),
-        isA<PlanAdherenceRepository>(),
-      );
-    });
-
-    test('override propagation: dashboardTopicRepositoryProvider can be overridden with fake', () {
-      final fakeRepo = _FakeTopicRepository();
-      final container = ProviderContainer(
-        overrides: [
-          dashboardTopicRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardTopicRepositoryProvider),
-        same(fakeRepo),
-      );
-    });
-
-    test('override propagation: dashboardAttemptRepositoryProvider can be overridden with fake', () {
-      final fakeRepo = _FakeAttemptRepository();
-      final container = ProviderContainer(
-        overrides: [
-          dashboardAttemptRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardAttemptRepositoryProvider),
-        same(fakeRepo),
-      );
-    });
-
-    test('override propagation: dashboardAdherenceRepositoryProvider can be overridden', () {
-      final fakeRepo = PlanAdherenceRepository();
-      final container = ProviderContainer(
-        overrides: [
-          dashboardAdherenceRepositoryProvider.overrideWithValue(fakeRepo),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      expect(
-        container.read(dashboardAdherenceRepositoryProvider),
-        same(fakeRepo),
       );
     });
 
@@ -192,7 +90,7 @@ void main() {
       final seededRepo = _SeededAttemptRepo(seededAttempts);
       final container = ProviderContainer(
         overrides: [
-          dashboardAttemptRepositoryProvider.overrideWithValue(seededRepo),
+          attemptRepositoryProvider.overrideWithValue(seededRepo),
         ],
       );
       addTearDown(container.dispose);
@@ -211,7 +109,7 @@ void main() {
       final failingRepo = _FailingAttemptRepo();
       final container = ProviderContainer(
         overrides: [
-          dashboardAttemptRepositoryProvider.overrideWithValue(failingRepo),
+          attemptRepositoryProvider.overrideWithValue(failingRepo),
         ],
       );
       addTearDown(container.dispose);
@@ -225,11 +123,11 @@ void main() {
       expect(stats['accuracy'], 0.0);
     });
 
-    test('dashboardInstrumentationServiceProvider is wired to dashboardAdherenceRepositoryProvider', () {
+    test('dashboardInstrumentationServiceProvider uses shared adherence repo', () {
       final fakeAdherenceRepo = _FakeAdherenceRepo();
       final container = ProviderContainer(
         overrides: [
-          dashboardAdherenceRepositoryProvider.overrideWithValue(fakeAdherenceRepo),
+          engagementAdherenceRepoProvider.overrideWithValue(fakeAdherenceRepo),
         ],
       );
       addTearDown(container.dispose);

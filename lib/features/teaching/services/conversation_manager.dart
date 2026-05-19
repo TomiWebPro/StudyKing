@@ -8,6 +8,7 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../core/services/llm/llm_chat_service.dart';
+import '../../../core/services/voice_service.dart';
 import '../../../core/utils/clock.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/number_format_utils.dart';
@@ -26,6 +27,8 @@ class ConversationManager {
   final ExerciseEvaluator _exerciseEvaluator;
   final ConversationPromptSet _prompts;
   final Clock _clock;
+  final VoiceService? _voiceService;
+  bool enableVoiceOutput = false;
 
   final String studentId;
   final String topicTitle;
@@ -59,12 +62,14 @@ class ConversationManager {
     ConversationPromptSet? prompts,
     Clock? clock,
     required this.localeName,
+    VoiceService? voiceService,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
         _exerciseEvaluator = exerciseEvaluator,
         _prompts = prompts ?? ConversationPromptSet(localeName: localeName),
         _clock = clock ?? SystemClock(),
+        _voiceService = voiceService,
         sessionStartTime = (clock ?? SystemClock()).now(),
         _memory = ConversationMemory(
           maxTurns: 30,
@@ -196,7 +201,18 @@ class ConversationManager {
       _pendingExerciseQuestionCapture = false;
     }
 
+    if (enableVoiceOutput) {
+      _speakResponse(assistantContent);
+    }
+
     _detectExerciseRequest(content);
+  }
+
+  Future<void> _speakResponse(String text) async {
+    final vs = _voiceService;
+    if (enableVoiceOutput && vs != null && text.isNotEmpty) {
+      await vs.speak(text, localeName: localeName);
+    }
   }
 
   Stream<String> processImage(String base64Image) async* {
@@ -227,6 +243,7 @@ class ConversationManager {
     final assistantContent = buffer.toString();
     totalTokensUsed += assistantContent.length ~/ 4;
     _memory.addAssistantMessage(assistantContent);
+    _speakResponse(assistantContent);
   }
 
   Stream<String> _buildAdaptiveChunks(String fullContent) async* {

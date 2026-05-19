@@ -18,7 +18,7 @@ import 'package:studyking/features/planner/data/repositories/pending_action_repo
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
@@ -195,13 +195,13 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
-    return _storage.values
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(_storage.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
-        .toList();
+        .toList());
   }
 
   @override
@@ -210,19 +210,21 @@ class _FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> markCompleted(String id) async {
+  Future<Result<void>> markCompleted(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'completed');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> markRejected(String id) async {
+  Future<Result<void>> markRejected(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'rejected');
     }
+    return Result.success(null);
   }
 
   @override
@@ -243,10 +245,10 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   }
 }
 
-class _FakePlanAdapter extends PlanAdapter {
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   AdherenceDeviation? customDeviation;
 
-  _FakePlanAdapter({AdherenceDeviation? adherenceDeviation})
+  _FakePlanAdherenceOrchestrator({AdherenceDeviation? adherenceDeviation})
       : customDeviation = adherenceDeviation;
 
   @override
@@ -260,13 +262,7 @@ class _FakePlanAdapter extends PlanAdapter {
   }
 
   @override
-  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
 
   @override
   Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
@@ -281,7 +277,7 @@ Widget _buildTestApp({
   RoadmapRepository? roadmapRepository,
   SessionRepository? sessionRepository,
   PendingActionRepository? pendingActionRepository,
-  PlanAdapter? planAdapter,
+  PlanAdherenceOrchestrator? planOrchestrator,
   PlanAdherenceRepository? planAdherenceRepository,
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
@@ -291,13 +287,13 @@ Widget _buildTestApp({
   final repo = masteryGraphRepository ?? _FakeMasteryGraphRepository();
   final svc = PlannerService(
     planRepo: planRepository ?? _FakePlanRepository(),
-    masteryService: MasteryGraphService(repository: repo),
+    masteryService: MasteryGraphService(),
     repository: repo,
     topicRepository: topicRepository ?? _FakeTopicRepository(),
     roadmapRepo: roadmapRepository ?? _FakeRoadmapRepository(),
     sessionRepo: sessionRepository ?? _FakeSessionRepository(),
     pendingActionRepo: pendingActionRepository ?? _FakePendingActionRepository(),
-    planAdapter: planAdapter ?? _FakePlanAdapter(),
+    planOrchestrator: planOrchestrator ?? _FakePlanAdherenceOrchestrator(),
     adherenceRepo: planAdherenceRepository ?? _FakeAdherenceRepo(),
     fixedStudentId: id,
   );
@@ -1629,7 +1625,7 @@ void main() {
         );
         await planRepo.savePlan(existingPlan);
 
-        final deviationPlanAdapter = _FakePlanAdapter(
+        final deviationPlanAdherenceOrchestrator = _FakePlanAdherenceOrchestrator(
           adherenceDeviation: const AdherenceDeviation(
             requiresRegeneration: true,
             requiresEscalation: false,
@@ -1639,7 +1635,7 @@ void main() {
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
-          planAdapter: deviationPlanAdapter,
+          planOrchestrator: deviationPlanAdherenceOrchestrator,
           fixedStudentId: 'test-student',
         ));
         await tester.pumpAndSettle();
@@ -1666,7 +1662,7 @@ void main() {
         );
         await planRepo.savePlan(existingPlan);
 
-        final deviationPlanAdapter = _FakePlanAdapter(
+        final deviationPlanAdherenceOrchestrator = _FakePlanAdherenceOrchestrator(
           adherenceDeviation: const AdherenceDeviation(
             requiresRegeneration: true,
             requiresEscalation: true,
@@ -1676,7 +1672,7 @@ void main() {
 
         await tester.pumpWidget(_buildTestApp(
           planRepository: planRepo,
-          planAdapter: deviationPlanAdapter,
+          planOrchestrator: deviationPlanAdherenceOrchestrator,
           fixedStudentId: 'test-student',
         ));
         await tester.pumpAndSettle();

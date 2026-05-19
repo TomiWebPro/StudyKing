@@ -72,6 +72,15 @@ class SummaryRow extends StatelessWidget {
                 accent: Theme.of(context).colorScheme.secondary,
               ),
             ),
+            SizedBox(
+              width: itemWidth,
+              child: MetricCard(
+                icon: Icons.quiz,
+                value: formatCompactNumber(stats.totalAttempts, l10n.localeName),
+                label: l10n.totalQuestions,
+                accent: Theme.of(context).colorScheme.tertiary,
+              ),
+            ),
           ],
         );
       },

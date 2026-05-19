@@ -71,7 +71,7 @@ class SessionAnalyticsWidget extends StatelessWidget {
   }
 
   Color _bodySmallColor(ThemeData theme) =>
-      theme.textTheme.bodySmall?.color ?? Colors.grey;
+      theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurfaceVariant;
 
   Widget _buildSectionHeader(String title, IconData icon, ThemeData theme) {
     return MergeSemantics(

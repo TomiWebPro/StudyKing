@@ -3,16 +3,19 @@ import 'package:intl/intl.dart' hide TextDirection;
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class CalendarViewWidget extends StatefulWidget {
   final PersonalLearningPlan plan;
+  final List<RoadmapModel> roadmaps;
   final void Function(String topicId, String topicTitle, String subjectId)?
       onDayTap;
 
   const CalendarViewWidget({
     super.key,
     required this.plan,
+    this.roadmaps = const [],
     this.onDayTap,
   });
 
@@ -146,11 +149,23 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
     );
   }
 
+  Set<DateTime> _getMilestoneDates() {
+    final dates = <DateTime>{};
+    for (final r in widget.roadmaps) {
+      for (final m in r.milestones) {
+        dates.add(m.deadline.dateOnly);
+      }
+    }
+    return dates;
+  }
+
   Widget _buildDayCell(
       BuildContext context, ThemeData theme, AppLocalizations l10n, DateTime date, int day) {
     final now = DateTime.now();
     final today = now.dateOnly;
     final isToday = date == today;
+    final milestoneDates = _getMilestoneDates();
+    final hasMilestone = milestoneDates.contains(date);
 
     final dailyPlan = widget.plan.dailyPlans.where((p) {
       final d = p.date.dateOnly;
@@ -207,6 +222,16 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
                     l10n.minutesCountMetric(dailyPlan.targetMinutes),
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                if (hasMilestone)
+                  Container(
+                    margin: const EdgeInsets.only(top: 2),
+                    width: 6,
+                    height: 6,
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.tertiary,
+                      shape: BoxShape.circle,
                     ),
                   ),
               ],

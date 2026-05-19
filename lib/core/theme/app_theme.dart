@@ -267,6 +267,20 @@ class AppTheme {
     return Theme.of(context).colorScheme.primary;
   }
 
+  static ButtonStyle destructiveButtonStyle(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
+    return FilledButton.styleFrom(
+      backgroundColor: cs.error,
+      foregroundColor: cs.onError,
+      disabledBackgroundColor: cs.onSurface.withValues(alpha: 0.12),
+      disabledForegroundColor: cs.onSurface.withValues(alpha: 0.38),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(8),
+      ),
+    );
+  }
+
   static Color statusColor(LlmTaskStatus status, BuildContext context) {
     final cs = Theme.of(context).colorScheme;
     return switch (status) {

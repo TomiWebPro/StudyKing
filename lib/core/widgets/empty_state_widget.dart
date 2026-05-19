@@ -25,12 +25,19 @@ class EmptyStateWidget extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            ExcludeSemantics(
+              child: Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
-            Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            Semantics(
+              headingLevel: 1,
+              child: Text(title, style: theme.textTheme.titleMedium, textAlign: TextAlign.center),
+            ),
             if (subtitle != null) ...[
               const SizedBox(height: 8),
-              Text(subtitle!, style: theme.textTheme.bodyMedium, textAlign: TextAlign.center),
+              Text(subtitle!, style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ), textAlign: TextAlign.center),
             ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),

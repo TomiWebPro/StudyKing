@@ -355,6 +355,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

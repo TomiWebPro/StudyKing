@@ -1,5 +1,6 @@
 import 'dart:async';
-import 'dart:io';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -12,8 +13,11 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
@@ -24,10 +28,19 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
+import 'package:studyking/features/focus_mode/data/focus_session_model.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/student_availability_model.dart';
+import 'package:studyking/features/planner/data/models/task_model.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
@@ -35,9 +48,11 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/app_providers.dart'
-    show apiKeyProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
+    show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
 import 'package:studyking/features/settings/providers/settings_providers.dart';
+import 'package:package_info_plus/package_info_plus.dart';
+import 'package:studyking/core/widgets/loading_indicator.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -46,41 +61,16 @@ class SettingsScreen extends ConsumerStatefulWidget {
   ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticKeepAliveClientMixin {
   final TextEditingController _modelSearchController = TextEditingController();
 
   @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _checkAutoBackup());
-  }
+  bool get wantKeepAlive => true;
 
   @override
   void dispose() {
     _modelSearchController.dispose();
     super.dispose();
-  }
-
-  Future<void> _checkAutoBackup() async {
-    try {
-      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return;
-      final box = Hive.box(HiveBoxNames.settings);
-      final intervalDays = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
-      if (intervalDays <= 0) return;
-      final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
-      if (lastBackupStr.isEmpty) {
-        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
-        return;
-      }
-      final lastBackup = DateTime.tryParse(lastBackupStr);
-      if (lastBackup == null) return;
-      final nextBackup = lastBackup.add(Duration(days: intervalDays));
-      if (DateTime.now().isAfter(nextBackup)) {
-        _performAutoBackup();
-      }
-    } catch (e) {
-      const Logger('SettingsScreen').e('Auto-backup check failed', e);
-    }
   }
 
   Future<void> _performAutoBackup() async {
@@ -90,17 +80,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       // Exclude sensitive data from auto-backup
       boxData.remove(HiveBoxNames.settings);
       final backupService = ref.read(dataBackupServiceProvider);
-      final result = await backupService.exportAllData(boxData: boxData);
+      final result = await backupService.exportAllData(
+        boxData: boxData,
+        outputDir: 'persistent',
+      );
       if (result.isSuccess) {
         if (!mounted) return;
         final box = Hive.box(HiveBoxNames.settings);
+        final filePath = result.data!;
         box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+        box.put('lastAutoBackupPath', filePath);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(l10n.backupCompleted),
             action: SnackBarAction(
-              label: l10n.viewInSettings,
-              onPressed: () {},
+              label: 'Share',
+              onPressed: () => Share.shareXFiles(
+                [XFile(filePath)],
+                text: 'StudyKing Backup — ${DateTime.now().toIso8601String().substring(0, 10)}',
+              ),
             ),
           ),
         );
@@ -112,17 +110,20 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = AppLocalizations.of(context)!;
     try {
       final settings = ref.watch(settingsProvider);
       final apiKey = ref.watch(apiKeyProvider);
-      return _buildSettingsBody(context, l10n, settings, apiKey);
+      final llmProvider = ref.watch(llmProviderProvider);
+      final apiBaseUrl = ref.watch(apiBaseUrlProvider);
+      return _buildSettingsBody(context, l10n, settings, apiKey, llmProvider, apiBaseUrl);
     } catch (e) {
       return _buildSettingsError(context, l10n, e);
     }
   }
 
-  Widget _buildSettingsBody(BuildContext context, AppLocalizations l10n, SettingsBox settings, String apiKey) {
+  Widget _buildSettingsBody(BuildContext context, AppLocalizations l10n, SettingsBox settings, String apiKey, LlmProvider llmProvider, String apiBaseUrl) {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: FocusTraversalGroup(
@@ -138,6 +139,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   () => Navigator.pushNamed(context, AppRoutes.quickGuide)),
             ]),
             _section(l10n.contentManagement, [
+              _tile(l10n.uploadMaterial, l10n.uploadMaterialDesc, Icons.cloud_upload,
+                  () => Navigator.pushNamed(context, AppRoutes.upload)),
               _tile(l10n.myUploads, l10n.viewMyUploads, Icons.source,
                   () => Navigator.pushNamed(context, AppRoutes.contentLibrary)),
               _tile(l10n.questionBank, l10n.browseAndManageQuestions, Icons.quiz,
@@ -157,7 +160,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(l10n.highContrastDescription),
                 value: settings.highContrastEnabled,
                 onChanged: (value) =>
-                    ref.read(settingsProvider.notifier).updateHighContrast(value),
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(highContrastEnabled: value)),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.touch_app),
@@ -165,7 +168,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(l10n.largeTouchTargetsDescription),
                 value: settings.largeTouchTargets,
                 onChanged: (value) =>
-                    ref.read(settingsProvider.notifier).updateLargeTouchTargets(value),
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(largeTouchTargets: value)),
               ),
               SwitchListTile(
                 secondary: const Icon(Icons.animation),
@@ -173,14 +176,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(l10n.reduceMotionDescription),
                 value: settings.reduceMotion,
                 onChanged: (value) =>
-                    ref.read(settingsProvider.notifier).updateReduceMotion(value),
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(reduceMotion: value)),
               ),
             ]),
             _section(l10n.aiConfiguration, [
               _tile(l10n.apiKeys, apiKey.isNotEmpty ? l10n.configured : l10n.notConfigured,
                   Icons.key, () => Navigator.pushNamed(context, AppRoutes.apiConfig)),
               _tile(l10n.aiModel, _getAiModelLabel(settings.selectedModel), Icons.chat,
-                  () => _showAiModelSelection(settings.selectedModel, apiKey)),
+                  () => _showAiModelSelection(settings.selectedModel, apiKey, llmProvider, apiBaseUrl)),
               _tile(l10n.requestTimeout, l10n.secondsValue(settings.requestTimeoutSeconds),
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
               _AiTaskMonitorTile(),
@@ -192,7 +195,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 subtitle: Text(l10n.enableNotificationAlerts),
                 value: settings.studyRemindersEnabled,
                 onChanged: (value) =>
-                    ref.read(settingsProvider.notifier).updateStudyReminders(value),
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(studyRemindersEnabled: value)),
               ),
               if (settings.studyRemindersEnabled) ...[
                 SwitchListTile(
@@ -201,7 +204,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   subtitle: Text(l10n.dailyReminderDescription),
                   value: settings.dailyReminderEnabled,
                   onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateDailyReminderEnabled(value),
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(dailyReminderEnabled: value)),
                 ),
                 if (settings.dailyReminderEnabled)
                   _tile(
@@ -217,28 +220,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   title: Text(l10n.revisionReminders),
                   value: settings.revisionRemindersEnabled,
                   onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateRevisionReminders(value),
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(revisionRemindersEnabled: value)),
                 ),
                 SwitchListTile(
                   secondary: const Icon(Icons.school),
                   title: Text(l10n.notifChannelLessons),
                   value: settings.lessonNotificationsEnabled,
                   onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateLessonNotifications(value),
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(lessonNotificationsEnabled: value)),
                 ),
                 SwitchListTile(
                   secondary: const Icon(Icons.warning_amber),
                   title: Text(l10n.overworkAlerts),
                   value: settings.overworkAlertsEnabled,
                   onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updateOverworkAlerts(value),
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(overworkAlertsEnabled: value)),
                 ),
                 SwitchListTile(
                   secondary: const Icon(Icons.tune),
                   title: Text(l10n.planAdjustmentNotifications),
                   value: settings.planAdjustmentNotificationsEnabled,
                   onChanged: (value) =>
-                      ref.read(settingsProvider.notifier).updatePlanAdjustmentNotifications(value),
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(planAdjustmentNotificationsEnabled: value)),
                 ),
               ],
               ListTile(
@@ -346,7 +349,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                e.toString(),
+                l10n.errorOccurred,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),
@@ -421,7 +424,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           leading: const Icon(Icons.light_mode),
           selected: currentMode == ThemeMode.light,
           onTap: () {
-            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.light);
+            ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(themeMode: ThemeMode.light));
             Navigator.pop(context);
           },
         ),
@@ -430,7 +433,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           leading: const Icon(Icons.dark_mode),
           selected: currentMode == ThemeMode.dark,
           onTap: () {
-            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.dark);
+            ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(themeMode: ThemeMode.dark));
             Navigator.pop(context);
           },
         ),
@@ -439,7 +442,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           leading: const Icon(Icons.settings_brightness),
           selected: currentMode == ThemeMode.system,
           onTap: () {
-            ref.read(settingsProvider.notifier).updateTheme(ThemeMode.system);
+            ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(themeMode: ThemeMode.system));
             Navigator.pop(context);
           },
         ),
@@ -473,7 +476,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     onChanged: (value) {
                       final validSize = value.clamp(10.0, 30.0).toDouble();
                       setInnerState(() => localSize = validSize);
-                      ref.read(settingsProvider.notifier).updateFontSize(validSize);
+                      ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(fontSize: validSize));
                     },
                   ),
                 ),
@@ -485,9 +488,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     );
   }
 
-  Future<void> _showAiModelSelection(String currentModel, String apiKey) async {
+  Future<void> _showAiModelSelection(String currentModel, String apiKey, LlmProvider llmProvider, String apiBaseUrl) async {
     final l10n = AppLocalizations.of(context)!;
-    if (apiKey.isEmpty) {
+    if (apiKey.isEmpty && llmProvider != LlmProvider.ollama) {
       showDialog(
         context: context,
         builder: (_) => AlertDialog(
@@ -514,8 +517,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         apiKey: apiKey,
         currentModel: currentModel,
         searchController: _modelSearchController,
+        llmProvider: llmProvider,
+        apiBaseUrl: apiBaseUrl,
         onModelSelected: (modelId) {
-          ref.read(settingsProvider.notifier).updateModel(modelId);
+          ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(selectedModel: modelId));
           ref.read(selectedModelProvider.notifier).state = modelId;
         },
       ),
@@ -551,7 +556,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               onPressed: () {
                 ref
                     .read(settingsProvider.notifier)
-                    .updateRequestTimeout(selected.round());
+                    .updateSettings(SettingsUpdate(requestTimeoutSeconds: selected.round()));
                 Navigator.pop(ctx);
               },
               child: Text(l10n.save),
@@ -614,19 +619,46 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       final box = Hive.box(HiveBoxNames.settings);
       final current = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
       final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
+      final lastBackupPath = box.get('lastAutoBackupPath', defaultValue: '') as String;
 
       showModalBottomSheet(
         context: context,
-        builder: (_) => ListView(
+        builder: (ctx) => ListView(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              child: FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  _performAutoBackup();
+                },
+                icon: const Icon(Icons.backup, size: 18),
+                label: const Text('Back Up Now'),
+              ),
+            ),
+            const Divider(),
             if (lastBackupStr.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
                 child: Text(
                   '${l10n.lastBackup}: ${DateFormat.yMd(l10n.localeName).format(DateTime.parse(lastBackupStr))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
+                ),
+              ),
+            if (lastBackupPath.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                child: TextButton.icon(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    Share.shareXFiles([XFile(lastBackupPath)],
+                      text: 'StudyKing Backup — ${lastBackupStr.substring(0, 10)}',
+                    );
+                  },
+                  icon: const Icon(Icons.share, size: 16),
+                  label: Text('Share last backup', style: Theme.of(context).textTheme.bodySmall),
                 ),
               ),
             ...options.map((opt) {
@@ -642,7 +674,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
                   }
                   (context as Element).markNeedsBuild();
-                  Navigator.pop(context);
+                  Navigator.pop(ctx);
                 },
               );
             }),
@@ -663,7 +695,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       helpText: l10n.dailyReminderTimeHelp,
     );
     if (picked != null) {
-      await ref.read(settingsProvider.notifier).updateDailyReminderTime(picked.hour, picked.minute);
+      await ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(dailyReminderHour: picked.hour, dailyReminderMinute: picked.minute));
       final notifService = NotificationService();
       await notifService.init();
       await notifService.showDailyReminder(
@@ -688,7 +720,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                       : null,
                   onTap: () {
-                    ref.read(settingsProvider.notifier).updateBreakDuration(s);
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(breakDurationSeconds: s));
                     Navigator.pop(context);
                   },
                 ))
@@ -710,7 +742,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                       : null,
                   onTap: () {
-                    ref.read(settingsProvider.notifier).updateSessionDuration(m);
+                    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(sessionDurationMinutes: m));
                     Navigator.pop(context);
                   },
                 ))
@@ -726,8 +758,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (_) => Padding(
         padding: ResponsiveUtils.screenPadding(context),
         child: Column(mainAxisSize: MainAxisSize.min, children: [
-          ListTile(title: Text(l10n.sessionsLabel), subtitle: Text('${settings.totalSessionCount}')),
-          ListTile(title: Text(l10n.questionsLabel), subtitle: Text('${settings.totalQuestions}')),
+          ListTile(title: Text(l10n.sessionsLabel), subtitle: Text(formatCompactNumber(settings.totalSessionCount, l10n.localeName))),
+          ListTile(title: Text(l10n.questionsLabel), subtitle: Text(formatCompactNumber(settings.totalQuestions, l10n.localeName))),
         ]),
       ),
     );
@@ -746,18 +778,53 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(l10n.backupContainsSensitiveData),
-            const SizedBox(height: 16),
+            const SizedBox(height: 8),
             Text(
               l10n.sensitiveDataWillBeExcluded,
               style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
                 color: Theme.of(ctx).colorScheme.onSurfaceVariant,
               ),
             ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.errorContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber, size: 20, color: Theme.of(ctx).colorScheme.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.sensitiveDataWillBeExcluded,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your API keys will be readable as plaintext in the backup file. '
+                    'Anyone with access to this file can use your API keys.',
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ],
         ),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
+            onPressed: () => Navigator.pop(ctx, null),
             child: Text(l10n.cancel),
           ),
           TextButton(
@@ -765,13 +832,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(l10n.excludeSensitiveData),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, null),
+            onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.exportBackup),
           ),
         ],
       ),
     );
 
+    // null = cancelled, false = full export, true = exclude sensitive
     if (includeSensitive == null || !mounted) return;
 
     var boxData = _collectAllBoxData();
@@ -780,15 +848,139 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (includeSensitive == true) {
       // Remove settings box from backup (it contains API key)
       boxData.remove(HiveBoxNames.settings);
+    } else {
+      // Full export warning for sensitive data
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.exportBackup),
+          content: Text(l10n.backupContainsSensitiveData),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.exportBackup),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+      // Re-collect to ensure fresh data after dialog
+      boxData = _collectAllBoxData();
     }
 
     final backupService = ref.read(dataBackupServiceProvider);
     try {
+      // Compute backup summary
+      int totalRecords = 0;
+      for (final records in boxData.values) {
+        totalRecords += records.length;
+      }
+      final boxCount = boxData.length;
+
+      // Show backup summary dialog (M4)
+      final boxSummaries = boxData.entries
+          .where((e) => e.value.isNotEmpty)
+          .map((e) => '${_boxDisplayName(e.key)}: ${l10n.recordCount(e.value.length)}')
+          .toList()
+        ..sort();
+      final proceed = await showDialog<bool>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.exportBackup),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.recordCount(totalRecords)),
+              const SizedBox(height: 8),
+              Text(
+                '$boxCount boxes',
+                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              if (includeSensitive == false) ...[
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Theme.of(ctx).colorScheme.errorContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.warning_amber, size: 16, color: Theme.of(ctx).colorScheme.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Your API keys will be stored in plaintext. Anyone with this file can use your API keys.',
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
+              if (boxSummaries.length <= 20)
+                ...boxSummaries.take(20).map((s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
+                ))
+              else ...[
+                ...boxSummaries.take(19).map((s) => Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 1),
+                  child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
+                )),
+                Text(
+                  '... and ${boxSummaries.length - 19} more',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: Text(l10n.exportBackup),
+            ),
+          ],
+        ),
+      );
+      if (proceed != true || !mounted) return;
+
       final result = await backupService.exportAllData(boxData: boxData);
       if (result.isSuccess) {
-        final file = File(result.data!);
-        await Share.shareXFiles([XFile(file.path)],
-            text: 'StudyKing Backup');
+        final filePath = result.data!;
+        late String sizeStr;
+        if (kIsWeb) {
+          sizeStr = '0 B';
+        } else {
+          final fileSize = await File(filePath).length();
+          sizeStr = fileSize > 1048576
+              ? '${(fileSize / 1048576).toStringAsFixed(1)} MB'
+              : fileSize > 1024
+                  ? '${(fileSize / 1024).toStringAsFixed(0)} KB'
+                  : '$fileSize B';
+        }
+        final shareText = l10n.exportBackup;
+        await Share.shareXFiles(
+          [XFile(filePath)],
+          text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)}'
+              ' — ${l10n.recordCount(totalRecords)}, $sizeStr',
+        );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text(l10n.backupExported)),
@@ -834,6 +1026,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case HiveBoxNames.topicDependencies: return l10n.backupBoxTopicDependencies;
       case HiveBoxNames.settings: return l10n.backupBoxSettings;
       case HiveBoxNames.profile: return l10n.backupBoxProfile;
+      case HiveBoxNames.answers: return 'Answers';
+      case HiveBoxNames.attempts: return 'Attempts';
+      case HiveBoxNames.badges: return 'Badges';
+      case HiveBoxNames.engagementNudges: return 'Engagement Nudges';
+      case HiveBoxNames.focusSessions: return 'Focus Sessions';
+      case HiveBoxNames.pendingActions: return 'Pending Actions';
+      case HiveBoxNames.progress: return 'Progress';
+      case HiveBoxNames.tasks: return 'Tasks';
+      case HiveBoxNames.studentAvailability: return 'Student Availability';
+      case HiveBoxNames.roadmaps: return 'Roadmaps';
+      case HiveBoxNames.llmTasks: return 'LLM Tasks';
+      case HiveBoxNames.llmUsageRecords: return 'LLM Usage Records';
       default: return boxName;
     }
   }
@@ -903,14 +1107,93 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
       if (restoreMethod == null || !mounted) return;
 
+      // Check for studentId mismatch (M2)
+      String? backupStudentId;
+      for (final records in filteredData.values) {
+        for (final record in records) {
+          if (record.containsKey('studentId') && record['studentId'] is String) {
+            backupStudentId = record['studentId'] as String;
+            break;
+          }
+        }
+        if (backupStudentId != null) break;
+      }
+      final currentStudentId = StudentIdService().getStudentId();
+      final idMismatch = backupStudentId != null && backupStudentId != currentStudentId;
+
+      if (idMismatch) {
+        final reconcileStudentId = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.importConfirmTitle),
+            content: Text(
+              '${l10n.importPreview(1, 1)}\n\n'
+              'Student ID mismatch detected. '
+              'Current: $currentStudentId\n'
+              'Backup: $backupStudentId\n\n'
+              'Update student records to match current ID?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.importBackup),
+              ),
+            ],
+          ),
+        );
+        if (reconcileStudentId != true || !mounted) return;
+
+        // Rewrite all studentId fields to current ID
+        for (final records in filteredData.values) {
+          for (final record in records) {
+            if (record.containsKey('studentId') && record['studentId'] is String) {
+              record['studentId'] = currentStudentId;
+            }
+          }
+        }
+      }
+
       if (restoreMethod == 'merge') {
         await _writeBoxDataMerge(filteredData);
       } else {
         await _writeBoxData(filteredData);
       }
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.importSuccess)),
+        // Invalidate key providers to refresh UI after restore (M3)
+        ref.invalidate(settingsProvider);
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.importSuccess),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.importPreview(1, 1)),
+                const SizedBox(height: 12),
+                Text(
+                  'Data restored successfully. A restart may be needed for all changes to appear.',
+                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.of(context).popUntil((route) => route.isFirst);
+                },
+                child: Text(l10n.close),
+              ),
+            ],
+          ),
         );
       }
     } catch (e) {
@@ -933,6 +1216,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         builder: (ctx, setInnerState) => AlertDialog(
           title: Text(l10n.selectBoxesToRestore),
           content: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1018,6 +1302,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       HiveBoxNames.topicDependencies,
       HiveBoxNames.settings,
       HiveBoxNames.profile,
+      HiveBoxNames.llmTasks,
+      HiveBoxNames.llmUsageRecords,
     ];
 
     for (final boxName in boxNames) {
@@ -1103,8 +1389,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       case HiveBoxNames.planAdherence:
         return PlanAdherenceModel.fromJson(json);
       case HiveBoxNames.planAdherenceMetrics:
+        // ok: stored as raw Map<String, dynamic> — metric aggregates
         return json;
       case HiveBoxNames.masteryImprovementMetrics:
+        // ok: stored as raw Map<String, dynamic> — metric aggregates
         return json;
       case HiveBoxNames.conversations:
         return ConversationMessage.fromJson(json);
@@ -1114,6 +1402,37 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         return TopicDependency.fromJson(json);
       case HiveBoxNames.lessonBlocks:
         return LessonBlock.fromJson(json);
+      case HiveBoxNames.attempts:
+        return StudentAttempt.fromJson(json);
+      case HiveBoxNames.badges:
+        return BadgeModel.fromJson(json);
+      case HiveBoxNames.engagementNudges:
+        return EngagementNudgeModel.fromJson(json);
+      case HiveBoxNames.focusSessions:
+        return FocusSession.fromJson(json);
+      case HiveBoxNames.pendingActions:
+        return PendingActionModel.fromJson(json);
+      case HiveBoxNames.tasks:
+        return TaskModel.fromJson(json);
+      case HiveBoxNames.settings:
+        return SettingsBox.fromJson(json);
+      case HiveBoxNames.profile:
+        return UserProfile.fromJson(json);
+      case HiveBoxNames.studentAvailability:
+        return StudentAvailabilityModel.fromJson(json);
+      case HiveBoxNames.llmTasks:
+        return LlmTask.fromJson(json);
+      case HiveBoxNames.llmUsageRecords:
+        return LlmUsageRecord.fromJson(json);
+      case HiveBoxNames.answers:
+        // Answers are stored as raw Map<String, dynamic>
+        return json;
+      case HiveBoxNames.progress:
+        // Progress stats stored as raw Map<String, dynamic>
+        return json;
+      case HiveBoxNames.sessions:
+        // Legacy sessions stored as raw Map<String, dynamic>
+        return json;
       default:
         return json;
     }
@@ -1132,6 +1451,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.tokenUsageSummary),
         content: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -1194,7 +1514,54 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.signOut),
-        content: Text(l10n.signOutConfirmation),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.signOutConfirmation),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.info_outline, size: 16, color: Theme.of(ctx).colorScheme.tertiary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'What will be cleared:',
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• API key\n• Selected AI model',
+                    style: Theme.of(ctx).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.check_circle_outline, size: 16, color: Theme.of(ctx).colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Your study data will be preserved.',
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(ctx).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
           ElevatedButton(
@@ -1208,7 +1575,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed != true) return;
     ref.read(apiKeyProvider.notifier).state = '';
     ref.read(selectedModelProvider.notifier).state = '';
-    ref.read(settingsProvider.notifier).updateSettings(apiKey: '', selectedModel: '');
+    ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(apiKey: '', selectedModel: ''));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.signOutComplete)));
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -1216,28 +1583,42 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
 }
 
-void _showAboutDialog(BuildContext context) {
+void _showAboutDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
+  String version = l10n.aboutVersion;
+  try {
+    final info = await getPackageInfo();
+    if (info.version.isNotEmpty) {
+      version = '${info.version}+${info.buildNumber}';
+    }
+  } catch (_) {}
+  if (!context.mounted) return;
   showDialog(
     context: context,
     builder: (_) => AboutDialog(
       applicationName: l10n.aboutApplicationName,
-      applicationVersion: l10n.aboutVersion,
+      applicationVersion: version,
       applicationLegalese: l10n.aboutLegalese,
     ),
   );
 }
 
+Future<PackageInfo> getPackageInfo() => PackageInfo.fromPlatform();
+
 class _AiModelLoadingSheet extends StatefulWidget {
   final String apiKey;
   final String currentModel;
   final TextEditingController searchController;
+  final LlmProvider llmProvider;
+  final String apiBaseUrl;
   final void Function(String modelId) onModelSelected;
 
   const _AiModelLoadingSheet({
     required this.apiKey,
     required this.currentModel,
     required this.searchController,
+    required this.llmProvider,
+    this.apiBaseUrl = '',
     required this.onModelSelected,
   });
 
@@ -1258,7 +1639,11 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
 
   Future<void> _loadModels() async {
     try {
-      final modelService = ModelListingService(apiKey: widget.apiKey);
+      final modelService = ModelListingService(
+        apiKey: widget.apiKey,
+        baseUrl: widget.apiBaseUrl,
+        provider: widget.llmProvider,
+      );
       final models = await modelService.fetchAvailableModels().timeout(
         const Duration(seconds: 10),
       );
@@ -1287,7 +1672,7 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
     if (_isLoading) {
       return Container(
         padding: const EdgeInsets.all(48),
-        child: const Center(child: CircularProgressIndicator()),
+        child: const LoadingIndicator(),
       );
     }
 

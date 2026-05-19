@@ -109,6 +109,26 @@ void main() {
         final boxes = decoded['boxes'] as Map;
         expect(boxes.length, equals(3));
       });
+
+      test('export with persistent outputDir succeeds', () async {
+        final result = await service.exportAllData(
+          boxData: {'test': [{'k': 'v'}]},
+          outputDir: 'persistent',
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isA<String>());
+      });
+
+      test('export with custom filename includes the name', () async {
+        final result = await service.exportAllData(
+          boxData: {'test': [{'k': 'v'}]},
+          filename: 'custom_name',
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('custom_name'));
+      });
     });
 
     group('exportSingleBox', () {

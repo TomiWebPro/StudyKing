@@ -4,7 +4,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/dashboard/services/dashboard_service.dart';
@@ -22,6 +22,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   final bool _failInit;
   final bool _failAllMastery;
   final bool _failSnapshot;
+
 
   _FakeMasteryGraphService({
     List<MasteryState> allMastery = const [],
@@ -100,11 +101,12 @@ class _FakeProgressTracker extends StudyProgressTracker {
 }
 
 class _FakeSessionRepo extends SessionRepository {
-  final List<Session> _sessions;
+  final List<Session>? _sessions;
   final bool _throwOnGetByDate;
+  final bool _returnNullData;
 
-  _FakeSessionRepo({List<Session> sessions = const [], bool throwOnGetByDate = false})
-      : _sessions = sessions, _throwOnGetByDate = throwOnGetByDate;
+  _FakeSessionRepo({List<Session>? sessions, bool throwOnGetByDate = false, bool returnNullData = false})
+      : _sessions = sessions, _throwOnGetByDate = throwOnGetByDate, _returnNullData = returnNullData;
 
   @override
   Future<void> init() async {}
@@ -112,7 +114,8 @@ class _FakeSessionRepo extends SessionRepository {
   @override
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     if (_throwOnGetByDate) throw Exception('getByDate error');
-    return Result.success(_sessions);
+    if (_returnNullData) return Result.success(<Session>[]);
+    return Result.success(_sessions ?? []);
   }
 }
 
@@ -134,11 +137,12 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
 }
 
 class _FakeTopicRepo extends TopicRepository {
-  final List<Topic> _topics;
+  final List<Topic>? _topics;
   final bool _failGetAll;
+  final bool _returnNullData;
 
-  _FakeTopicRepo({List<Topic> topics = const [], bool failGetAll = false})
-      : _topics = topics, _failGetAll = failGetAll;
+  _FakeTopicRepo({List<Topic>? topics, bool failGetAll = false, bool returnNullData = false})
+      : _topics = topics, _failGetAll = failGetAll, _returnNullData = returnNullData;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -146,7 +150,8 @@ class _FakeTopicRepo extends TopicRepository {
   @override
   Future<Result<List<Topic>>> getAll() async {
     if (_failGetAll) return Result.failure('fail');
-    return Result.success(_topics);
+    if (_returnNullData) return Result.success(<Topic>[]);
+    return Result.success(_topics ?? []);
   }
 }
 
@@ -175,7 +180,7 @@ void main() {
         final sessionRepo = _FakeSessionRepo();
         final adherenceRepo = _FakePlanAdherenceRepo();
         final topicRepo = _FakeTopicRepo();
-        final planAdapter = PlanAdapter(
+        final planOrchestrator = PlanAdherenceOrchestrator(
           adherenceRepository: adherenceRepo,
           planRepository: null,
           planService: null,
@@ -184,7 +189,7 @@ void main() {
         );
         final service = DashboardService(
           masteryService: mastery,
-          planAdapter: planAdapter,
+          planOrchestrator: planOrchestrator,
           sessionRepo: sessionRepo,
           adherenceRepo: adherenceRepo,
           topicRepo: topicRepo,
@@ -509,6 +514,116 @@ void main() {
         expect(badges[0].name, '');
         expect(badges[0].description, '');
         expect(badges[0].category, 'general');
+      });
+
+      test('handles badge with missing category key', () async {
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          progressTracker: _FakeProgressTracker(badges: [
+            <String, dynamic>{'name': 'Test', 'description': 'Test'},
+          ]),
+        );
+        final badges = await service.getBadges('s1');
+        expect(badges.length, 1);
+        expect(badges[0].name, 'Test');
+        expect(badges[0].category, 'general');
+      });
+
+      test('handles badge with full data including category', () async {
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          progressTracker: _FakeProgressTracker(badges: [
+            {'name': 'A', 'description': 'B', 'category': 'milestone'},
+          ]),
+        );
+        final badges = await service.getBadges('s1');
+        expect(badges[0].category, 'milestone');
+      });
+    });
+
+    group('getFocusStats null data', () {
+      test('handles null data from session repo', () async {
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          sessionRepo: _FakeSessionRepo(returnNullData: true),
+        );
+        final stats = await service.getFocusStats();
+        expect(stats, isNull);
+      });
+    });
+
+    group('getAdherenceData edge cases', () {
+      test('handles very high adherence values', () async {
+        final now = DateTime.now();
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          adherenceRepo: _FakePlanAdherenceRepo(
+            avgAdherence: 1.0,
+            weekly: [
+              PlanAdherenceModel(id: 'w1', studentId: 's1', date: now, adherenceScore: 1.0),
+              PlanAdherenceModel(id: 'w2', studentId: 's1', date: now, adherenceScore: 0.95),
+            ],
+          ),
+        );
+        final data = await service.getAdherenceData('s1');
+        expect(data.averageAdherence, 1.0);
+        expect(data.weeklyAdherence, closeTo(0.975, 0.001));
+        expect(data.isEmpty, isFalse);
+      });
+
+      test('handles zero adherence values', () async {
+        final now = DateTime.now();
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          adherenceRepo: _FakePlanAdherenceRepo(
+            avgAdherence: 0.0,
+            weekly: [
+              PlanAdherenceModel(id: 'w1', studentId: 's1', date: now, adherenceScore: 0.0),
+            ],
+          ),
+        );
+        final data = await service.getAdherenceData('s1');
+        expect(data.averageAdherence, 0.0);
+        expect(data.weeklyAdherence, 0.0);
+        expect(data.isEmpty, isTrue);
+      });
+
+      test('handles single weekly record', () async {
+        final now = DateTime.now();
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          adherenceRepo: _FakePlanAdherenceRepo(
+            avgAdherence: 0.5,
+            weekly: [
+              PlanAdherenceModel(id: 'w1', studentId: 's1', date: now, adherenceScore: 0.5),
+            ],
+          ),
+        );
+        final data = await service.getAdherenceData('s1');
+        expect(data.weeklyAdherence, 0.5);
+      });
+    });
+
+    group('getTopicNamesMap edge cases', () {
+      test('handles null data from topic repo', () async {
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(),
+          topicRepo: _FakeTopicRepo(returnNullData: true),
+        );
+        final map = await service.getTopicNamesMap('s1');
+        expect(map, isEmpty);
+      });
+
+      test('handles null topic data with existing mastery states', () async {
+        final now = DateTime.now();
+        final service = DashboardService(
+          masteryService: _FakeMasteryGraphService(allMastery: [
+            MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now),
+          ]),
+          topicRepo: _FakeTopicRepo(returnNullData: true),
+        );
+        final map = await service.getTopicNamesMap('s1');
+        expect(map['t1'], 't1');
       });
     });
   });

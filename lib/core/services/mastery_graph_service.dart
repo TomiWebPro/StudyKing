@@ -1,5 +1,4 @@
 import '../errors/result.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
@@ -14,29 +13,26 @@ class MasteryGraphService {
   final QuestionMasteryStateRepository questionMasteryRepo;
   final TopicDependencyRepository topicDependencyRepo;
   final QuestionEvaluationRepository questionEvaluationRepo;
-  final MasteryGraphRepository _repository;
   final MasteryCalculationService _calculationService;
 
   MasteryGraphService({
-    MasteryGraphRepository? repository,
     MasteryStateRepository? masteryStateRepo,
     QuestionMasteryStateRepository? questionMasteryRepo,
     TopicDependencyRepository? topicDependencyRepo,
     QuestionEvaluationRepository? questionEvaluationRepo,
     MasteryCalculationService? calculationService,
-  })  : _repository = repository ?? MasteryGraphRepository(
-          masteryStateRepo: masteryStateRepo ?? MasteryStateRepository(),
-          questionMasteryRepo: questionMasteryRepo ?? QuestionMasteryStateRepository(),
-          topicDependencyRepo: topicDependencyRepo ?? TopicDependencyRepository(),
-          questionEvaluationRepo: questionEvaluationRepo ?? QuestionEvaluationRepository(),
-        ),
-        masteryStateRepo = masteryStateRepo ?? MasteryStateRepository(),
+  })  : masteryStateRepo = masteryStateRepo ?? MasteryStateRepository(),
         questionMasteryRepo = questionMasteryRepo ?? QuestionMasteryStateRepository(),
         topicDependencyRepo = topicDependencyRepo ?? TopicDependencyRepository(),
         questionEvaluationRepo = questionEvaluationRepo ?? QuestionEvaluationRepository(),
         _calculationService = calculationService ?? MasteryCalculationService();
 
-  Future<void> init() => _repository.init();
+  Future<void> init() async {
+    await masteryStateRepo.init();
+    await questionMasteryRepo.init();
+    await topicDependencyRepo.init();
+    await questionEvaluationRepo.init();
+  }
 
   Future<Result<void>> recordAttempt({
     required String studentId,

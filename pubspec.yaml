@@ -13,6 +13,7 @@ dependencies:
   flutter_localizations:
     sdk: flutter
   flutter_riverpod: ^2.4.11
+  meta: ^1.16.0
 
   # Database
   hive: ^2.2.3
@@ -48,6 +49,9 @@ dependencies:
 
   # Sharing
   share_plus: ^9.0.0
+
+  # App version info
+  package_info_plus: ^8.0.0
 
   # Notifications
   flutter_local_notifications: ^17.2.1

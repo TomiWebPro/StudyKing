@@ -5,6 +5,7 @@ import '../../../core/data/models/topic_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../subjects/providers/topic_repository_provider.dart';
 
 class TopicListScreen extends ConsumerStatefulWidget {
@@ -53,7 +54,7 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (_isLoading) return const Center(child: CircularProgressIndicator());
+    if (_isLoading) return const LoadingIndicator();
     if (_topics.isEmpty) {
       return Center(child: Text(l10n.noTopicsYetAddSome));
     }
@@ -63,7 +64,7 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
       itemBuilder: (context, index) {
         final t = _topics[index];
         return Semantics(
-          label: '${t.title}, ${t.description}',
+          label: '${l10n.topicTitleLabel}: ${t.title}, ${l10n.topicDescriptionLabel}: ${t.description}',
           button: true,
           child: Card(
             margin: EdgeInsets.only(

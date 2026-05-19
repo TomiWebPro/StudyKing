@@ -1,4 +1,9 @@
+import 'dart:convert';
+import 'dart:io' show File;
+import 'package:flutter/foundation.dart' show kIsWeb;
+import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -6,6 +11,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/generated/app_localizations.dart';
 import 'core/config/locale_config.dart';
 import 'core/utils/logger.dart';
+import 'core/utils/error_boundary.dart';
 import 'core/theme/app_theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/app_providers.dart';
@@ -13,7 +19,6 @@ import 'core/constants/app_constants.dart';
 import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
-import 'package:studyking/core/data/session_adapter.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
@@ -30,7 +35,7 @@ import 'core/routes/tab_navigator.dart';
 import 'core/services/engagement_scheduler.dart';
 import 'core/services/study_progress_tracker.dart';
 import 'core/services/mastery_graph_service.dart';
-import 'core/services/plan_adapter.dart';
+import 'core/services/plan_adherence_orchestrator.dart';
 import 'features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'features/planner/data/repositories/plan_adherence_repository.dart';
 import 'features/planner/services/planner_service.dart';
@@ -51,8 +56,87 @@ EngagementScheduler? _engagementScheduler;
 
 EngagementScheduler? getEngagementScheduler() => _engagementScheduler;
 
+Future<void> _runAutoBackupCheck() async {
+  try {
+    if (!Hive.isBoxOpen(HiveBoxNames.settings)) return;
+    final box = Hive.box(HiveBoxNames.settings);
+    final intervalDays = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
+    if (intervalDays <= 0) return;
+    final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
+    if (lastBackupStr.isEmpty) {
+      box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+      return;
+    }
+    final lastBackup = DateTime.tryParse(lastBackupStr);
+    if (lastBackup == null) return;
+    final nextBackup = lastBackup.add(Duration(days: intervalDays));
+    if (DateTime.now().isAfter(nextBackup)) {
+      final boxData = <String, List<Map<String, dynamic>>>{};
+      final boxNames = [
+        HiveBoxNames.subjects, HiveBoxNames.topics, HiveBoxNames.questions,
+        HiveBoxNames.answers, HiveBoxNames.sources, HiveBoxNames.attempts,
+        HiveBoxNames.lessons, HiveBoxNames.lessonBlocks, HiveBoxNames.sessions,
+        HiveBoxNames.sessionsTyped, HiveBoxNames.progress, HiveBoxNames.tasks,
+        HiveBoxNames.conversations, HiveBoxNames.tutorSessions,
+        HiveBoxNames.masteryStates, HiveBoxNames.questionMasteryStates,
+        HiveBoxNames.questionEvaluations, HiveBoxNames.learningPlans,
+        HiveBoxNames.planAdherence, HiveBoxNames.planAdherenceMetrics,
+        HiveBoxNames.masteryImprovementMetrics, HiveBoxNames.roadmaps,
+        HiveBoxNames.pendingActions, HiveBoxNames.engagementNudges,
+        HiveBoxNames.badges, HiveBoxNames.focusSessions,
+        HiveBoxNames.studentAvailability, HiveBoxNames.topicDependencies,
+        HiveBoxNames.profile, HiveBoxNames.llmTasks, HiveBoxNames.llmUsageRecords,
+      ];
+      for (final boxName in boxNames) {
+        if (!Hive.isBoxOpen(boxName)) continue;
+        final hiveBox = Hive.box(boxName);
+        final records = <Map<String, dynamic>>[];
+        for (final value in hiveBox.values) {
+          if (value == null) continue;
+          if (value is Map<String, dynamic>) {
+            records.add(value);
+          } else {
+            try {
+              final obj = value as dynamic;
+              records.add(obj.toJson() as Map<String, dynamic>);
+            } catch (_) {}
+          }
+        }
+        if (records.isNotEmpty) boxData[boxName] = records;
+      }
+      boxData.remove(HiveBoxNames.settings);
+      final backup = {
+        'version': 1,
+        'exportedAt': DateTime.now().toIso8601String(),
+        'boxes': boxData,
+      };
+      final json = const JsonEncoder.withIndent('  ').convert(backup);
+      if (kIsWeb) {
+        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+        _mainLogger.i('Auto-backup skipped: not supported on web');
+      } else {
+        final dir = await getApplicationDocumentsDirectory();
+        final file = File('${dir.path}/studyking_backup.json');
+        await file.writeAsString(json);
+        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+        box.put('lastAutoBackupPath', file.path);
+        _mainLogger.i('Auto-backup completed at startup: ${file.path}');
+      }
+    }
+  } catch (e) {
+    _mainLogger.e('Auto-backup check at startup failed', e);
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  ErrorWidget.builder = AppErrorWidgetBuilder.build;
+
+  PlatformDispatcher.instance.onError = (error, stack) {
+    _mainLogger.e('Unhandled platform error', error, stack);
+    return true;
+  };
   
   try {
     SecurityConfig.enforceStartupGuards();
@@ -65,7 +149,6 @@ void main() async {
     Hive.registerAdapter(AccessibilityPreferencesAdapter());
     Hive.registerAdapter(UserProfileAdapter());
     Hive.registerAdapter(MasteryImprovementMetricAdapter());
-    Hive.registerAdapter(SessionAdapter());
     
       // Run database migrations and open all boxes
     await HiveInitializer.initialize();
@@ -112,6 +195,7 @@ void main() async {
     // Initialize student ID service (generates UUID on first launch)
     StudentIdService(); // ensure singleton is initialized
     await StudentIdService().init();
+    await StudentIdService().updateLastActivity();
 
     try {
       final masteryService = MasteryGraphService();
@@ -126,7 +210,7 @@ void main() async {
         masteryService: masteryService,
         nudgeRepository: EngagementNudgeRepository(),
         adherenceRepository: PlanAdherenceRepository(),
-        planAdapter: PlanAdapter(),
+        planOrchestrator: PlanAdherenceOrchestrator(),
         sessionRepository: mainDb.sessionRepository,
         plannerService: PlannerService(),
         l10n: defaultL10n,
@@ -144,7 +228,10 @@ void main() async {
     } else {
       _mainLogger.e('Error loading initial settings: ${settingsResult.error}');
     }
-    
+
+    // Run auto-backup check on startup (moved from SettingsScreen initState)
+    _runAutoBackupCheck();
+
     runApp(StudyKingApp());
   } catch (e, stackTrace) {
     _mainLogger.e('Error during initialization', e, stackTrace);
@@ -154,6 +241,59 @@ void main() async {
 class _CloseDialogIntent extends Intent {
   const _CloseDialogIntent();
 }
+
+class DestinationData {
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final String tooltip;
+
+  const DestinationData({
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    required this.tooltip,
+  });
+}
+
+List<DestinationData> _buildDestinations(AppLocalizations l10n) => [
+  DestinationData(
+    icon: Icons.dashboard_outlined,
+    selectedIcon: Icons.dashboard,
+    label: l10n.dashboard,
+    tooltip: l10n.dashboard,
+  ),
+  DestinationData(
+    icon: Icons.school_outlined,
+    selectedIcon: Icons.school,
+    label: l10n.subjects,
+    tooltip: l10n.subjects,
+  ),
+  DestinationData(
+    icon: Icons.play_arrow_outlined,
+    selectedIcon: Icons.play_arrow,
+    label: l10n.practice,
+    tooltip: l10n.practice,
+  ),
+  DestinationData(
+    icon: Icons.auto_awesome_outlined,
+    selectedIcon: Icons.auto_awesome,
+    label: l10n.mentor,
+    tooltip: l10n.mentor,
+  ),
+  DestinationData(
+    icon: Icons.menu_book_outlined,
+    selectedIcon: Icons.menu_book,
+    label: l10n.focusMode,
+    tooltip: l10n.focusMode,
+  ),
+  DestinationData(
+    icon: Icons.settings_outlined,
+    selectedIcon: Icons.settings,
+    label: l10n.settings,
+    tooltip: l10n.settings,
+  ),
+];
 
 class StudyKingApp extends ConsumerStatefulWidget {
   const StudyKingApp({super.key});
@@ -273,6 +413,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   int _selectedIndex = 0;
   bool _showApiKeyBanner = false;
   bool _apiKeyBannerDismissed = false;
+  static const String _bannerDismissedTimeKey = 'apiKeyBannerDismissedTime';
 
   final _navigatorKeys = List.generate(6, (_) => GlobalKey<NavigatorState>());
   late final List<Widget> _tabNavigators;
@@ -305,7 +446,10 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       if (mounted) {
         final settingsBox = await Hive.openBox('settings');
         final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
-        if (apiKey.isEmpty) {
+        final dismissedTime = settingsBox.get(_bannerDismissedTimeKey) as int?;
+        final shouldShow = apiKey.isEmpty && (dismissedTime == null ||
+            DateTime.now().millisecondsSinceEpoch - dismissedTime > 7 * 24 * 60 * 60 * 1000);
+        if (shouldShow) {
           setState(() => _showApiKeyBanner = true);
         }
       }
@@ -353,24 +497,31 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final isWideScreen = ResponsiveUtils.breakpointOf(context).isTablet;
+    final reduceMotion = ref.watch(settingsProvider).reduceMotion;
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _engagementScheduler?.updateLocalization(l10n);
       ref.read(l10nProvider.notifier).state = l10n;
     });
 
-    final bodyContent = Stack(
-      children: [
-        for (int i = 0; i < _navigatorKeys.length; i++)
-          Offstage(
-            offstage: i != _selectedIndex,
-            child: TickerMode(
-              enabled: i == _selectedIndex,
-              child: _tabNavigators[i],
+    final bodyContent = reduceMotion
+        ? KeyedSubtree(
+            key: ValueKey(_selectedIndex),
+            child: RepaintBoundary(
+              child: _tabNavigators[_selectedIndex],
             ),
-          ),
-      ],
-    );
+          )
+        : AnimatedSwitcher(
+            duration: const Duration(milliseconds: 200),
+            switchInCurve: Curves.easeIn,
+            switchOutCurve: Curves.easeOut,
+            child: KeyedSubtree(
+              key: ValueKey(_selectedIndex),
+              child: RepaintBoundary(
+                child: _tabNavigators[_selectedIndex],
+              ),
+            ),
+          );
 
     return Semantics(
       explicitChildNodes: true,
@@ -378,9 +529,20 @@ class _MainScreenState extends ConsumerState<MainScreen> {
         body: Column(
           children: [
             if (_showApiKeyBanner && !_apiKeyBannerDismissed)
-              ApiKeyBanner(onDismiss: () {
-                setState(() => _apiKeyBannerDismissed = true);
-              }),
+              ApiKeyBanner(
+                onDismiss: () {
+                  setState(() => _apiKeyBannerDismissed = true);
+                  Hive.openBox('settings').then((box) {
+                    box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
+                  });
+                },
+                onDontShowAgain: () {
+                  setState(() => _apiKeyBannerDismissed = true);
+                  Hive.openBox('settings').then((box) {
+                    box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
+                  });
+                },
+              ),
             Expanded(
               child: isWideScreen
                   ? Row(
@@ -393,38 +555,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             });
                           },
                           labelType: NavigationRailLabelType.all,
-                          destinations: [
-                            NavigationRailDestination(
-                              icon: Icon(Icons.dashboard_outlined),
-                              selectedIcon: Icon(Icons.dashboard),
-                              label: Text(l10n.dashboard),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.school_outlined),
-                              selectedIcon: Icon(Icons.school),
-                              label: Text(l10n.subjects),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.play_arrow_outlined),
-                              selectedIcon: Icon(Icons.play_arrow),
-                              label: Text(l10n.practice),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.auto_awesome_outlined),
-                              selectedIcon: Icon(Icons.auto_awesome),
-                              label: Text(l10n.mentor),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.menu_book_outlined),
-                              selectedIcon: Icon(Icons.menu_book),
-                              label: Text(l10n.focusMode),
-                            ),
-                            NavigationRailDestination(
-                              icon: Icon(Icons.settings_outlined),
-                              selectedIcon: Icon(Icons.settings),
-                              label: Text(l10n.settings),
-                            ),
-                          ],
+                          destinations: _buildDestinations(l10n).map((d) {
+                            return NavigationRailDestination(
+                              icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
+                              selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                              label: Text(d.label),
+                            );
+                          }).toList(),
                         ),
                         const VerticalDivider(width: 1, thickness: 1),
                         Expanded(child: bodyContent),
@@ -443,38 +580,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     _selectedIndex = index;
                   });
                 },
-                destinations: [
-                  NavigationDestination(
-                    icon: Icon(Icons.dashboard_outlined),
-                    selectedIcon: Icon(Icons.dashboard),
-                    label: l10n.dashboard,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.school_outlined),
-                    selectedIcon: Icon(Icons.school),
-                    label: l10n.subjects,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.play_arrow_outlined),
-                    selectedIcon: Icon(Icons.play_arrow),
-                    label: l10n.practice,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.auto_awesome_outlined),
-                    selectedIcon: Icon(Icons.auto_awesome),
-                    label: l10n.mentor,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.menu_book_outlined),
-                    selectedIcon: Icon(Icons.menu_book),
-                    label: l10n.focusMode,
-                  ),
-                  NavigationDestination(
-                    icon: Icon(Icons.settings_outlined),
-                    selectedIcon: Icon(Icons.settings),
-                    label: l10n.settings,
-                  ),
-                ],
+                destinations: _buildDestinations(l10n).map((d) {
+                  return NavigationDestination(
+                    icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
+                    selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                    label: d.label,
+                  );
+                }).toList(),
               ),
       ),
     );

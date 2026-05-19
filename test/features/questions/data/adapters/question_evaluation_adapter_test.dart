@@ -14,6 +14,7 @@ void main() {
     test('hashCode and equality', () {
       expect(QuestionEvaluationAdapter().hashCode, QuestionEvaluationAdapter().hashCode);
       expect(QuestionEvaluationAdapter() == QuestionEvaluationAdapter(), isTrue);
+      expect(QuestionEvaluationAdapter() == Object(), isFalse);
     });
 
     test('write/read round-trip', () {

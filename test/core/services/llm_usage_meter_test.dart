@@ -50,6 +50,47 @@ void main() {
       );
       expect(record.totalTokens, equals(280));
     });
+
+    test('toJson/fromJson round-trip preserves all fields', () {
+      final now = DateTime(2026, 5, 19);
+      final original = LlmUsageRecord(
+        id: 'rt-1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        inputTokens: 150,
+        outputTokens: 75,
+        cost: 0.002,
+        timestamp: now,
+        success: true,
+      );
+      final json = original.toJson();
+      final restored = LlmUsageRecord.fromJson(json);
+      expect(restored.id, original.id);
+      expect(restored.feature, original.feature);
+      expect(restored.modelId, original.modelId);
+      expect(restored.inputTokens, original.inputTokens);
+      expect(restored.outputTokens, original.outputTokens);
+      expect(restored.cost, original.cost);
+      expect(restored.timestamp, original.timestamp);
+      expect(restored.success, original.success);
+    });
+
+    test('toJson/fromJson round-trip with success=false', () {
+      final original = LlmUsageRecord(
+        id: 'rt-2',
+        feature: 'embedding',
+        modelId: 'ada',
+        inputTokens: 0,
+        outputTokens: 0,
+        cost: 0.0,
+        timestamp: DateTime(2026, 1, 1),
+        success: false,
+      );
+      final json = original.toJson();
+      final restored = LlmUsageRecord.fromJson(json);
+      expect(restored.success, isFalse);
+      expect(restored.cost, 0.0);
+    });
   });
 
   group('LlmUsageMeter', () {
@@ -179,6 +220,22 @@ void main() {
 
     test('getTotalTokensPerFeature returns empty map when no records', () {
       expect(meter.getTotalTokensPerFeature(), isEmpty);
+    });
+
+    test('getRecords with non-existent feature returns empty', () {
+      expect(meter.getRecords(feature: 'nonexistent'), isEmpty);
+    });
+
+    test('getRecords with limit 0 returns empty list', () {
+      meter.recordUsage(id: 'r1', feature: 'chat', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5);
+      expect(meter.getRecords(limit: 0), isEmpty);
+    });
+
+    test('enforces 1000 record cap', () {
+      for (int i = 0; i < 1005; i++) {
+        meter.recordUsage(id: 'r$i', feature: 'chat', modelId: 'gpt-4', inputTokens: 1, outputTokens: 1);
+      }
+      expect(meter.getRecords().length, lessThanOrEqualTo(1000));
     });
   });
 }

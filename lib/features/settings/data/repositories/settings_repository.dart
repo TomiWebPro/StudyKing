@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import '../../../../core/constants/app_api_config.dart';
 import '../models/settings_box.dart';
+import '../models/settings_update.dart';
 import '../models/user_profile_model.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 
@@ -176,54 +176,33 @@ class SettingsRepository {
     }
   }
 
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     try {
       final box = _requireSettingsBox();
       final currentResult = await getSettings();
       if (currentResult.isFailure) return Result.failure(currentResult.error);
 
       final updated = currentResult.data!.copyWith(
-        apiKey: apiKey,
-        apiBaseUrl: apiBaseUrl,
-        selectedModel: selectedModel,
-        themeModeEnum: themeMode,
-        fontSize: fontSize,
-        studyRemindersEnabled: studyRemindersEnabled,
-        requestTimeoutSeconds: requestTimeoutSeconds,
-        sessionDurationMinutes: sessionDurationMinutes,
-        highContrastEnabled: highContrastEnabled,
-        largeTouchTargets: largeTouchTargets,
-        reduceMotion: reduceMotion,
-        revisionRemindersEnabled: revisionRemindersEnabled,
-        lessonNotificationsEnabled: lessonNotificationsEnabled,
-        overworkAlertsEnabled: overworkAlertsEnabled,
-        planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled,
-        breakDurationSeconds: breakDurationSeconds,
-        dailyReminderHour: dailyReminderHour,
-        dailyReminderMinute: dailyReminderMinute,
-        firstFocusVisit: firstFocusVisit,
-        dailyReminderEnabled: dailyReminderEnabled,
+        apiKey: update.apiKey,
+        apiBaseUrl: update.apiBaseUrl,
+        selectedModel: update.selectedModel,
+        themeModeEnum: update.themeMode,
+        fontSize: update.fontSize,
+        studyRemindersEnabled: update.studyRemindersEnabled,
+        requestTimeoutSeconds: update.requestTimeoutSeconds,
+        sessionDurationMinutes: update.sessionDurationMinutes,
+        highContrastEnabled: update.highContrastEnabled,
+        largeTouchTargets: update.largeTouchTargets,
+        reduceMotion: update.reduceMotion,
+        revisionRemindersEnabled: update.revisionRemindersEnabled,
+        lessonNotificationsEnabled: update.lessonNotificationsEnabled,
+        overworkAlertsEnabled: update.overworkAlertsEnabled,
+        planAdjustmentNotificationsEnabled: update.planAdjustmentNotificationsEnabled,
+        breakDurationSeconds: update.breakDurationSeconds,
+        dailyReminderHour: update.dailyReminderHour,
+        dailyReminderMinute: update.dailyReminderMinute,
+        firstFocusVisit: update.firstFocusVisit,
+        dailyReminderEnabled: update.dailyReminderEnabled,
       );
 
       await box.put(_settingsKey, updated.toJson());

@@ -47,15 +47,10 @@ class QuestionPDFGenerator {
     };
   }
 
-  /// Generate PDF (placeholder - would use dart_pdf package)
-  /// Returns base64 encoded PDF
+  /// Generate PDF
+  /// Note: PDF generation requires dart_pdf package.
+  /// Returns a text representation as fallback.
   Future<String> generate() async {
-    // This is a placeholder implementation
-    // In production, use:
-    // - dart_pdf package for actual PDF generation
-    // - LaTeX rendering for math expressions
-    // - Proper formatting
-    
     return _generatePlaceholderPDF();
   }
 

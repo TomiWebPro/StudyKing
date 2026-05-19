@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'loading_indicator.dart';
 
 class LoadingScreen extends StatelessWidget {
   final double strokeWidth;
@@ -19,31 +20,11 @@ class LoadingScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final effectiveLabel = semanticsLabel ?? message ?? l10n.loading;
-    final theme = Theme.of(context);
 
     return Semantics(
       label: effectiveLabel,
       liveRegion: true,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            CircularProgressIndicator(
-              strokeWidth: strokeWidth,
-              color: color,
-            ),
-            if (message != null) ...[
-              const SizedBox(height: 16),
-              Text(
-                message!,
-                style: theme.textTheme.bodyMedium?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ],
-        ),
-      ),
+      child: LoadingIndicator(message: message),
     );
   }
 }

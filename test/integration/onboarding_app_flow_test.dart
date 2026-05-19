@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
 import 'package:studyking/features/onboarding/services/onboarding_service.dart';
+import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp({NavigatorObserver? observer}) {
@@ -26,11 +27,11 @@ Widget _buildTestApp({NavigatorObserver? observer}) {
 void main() {
   group('Onboarding → App flow', () {
     setUp(() {
-      OnboardingService.setTestStorage({});
+      OnboardingService.setStorage(InMemoryOnboardingStorage());
     });
 
     tearDown(() {
-      OnboardingService.setTestStorage(null);
+      OnboardingService.setStorage(HiveOnboardingStorage());
     });
 
     testWidgets('completing onboarding via Get Started persists completed flag',

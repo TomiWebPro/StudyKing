@@ -33,6 +33,26 @@ class StudentAvailabilityModel extends HiveObject {
     this.blackoutDates = const [],
   });
 
+  Map<String, dynamic> toJson() => {
+    'studentId': studentId,
+    'preferredStudyDays': preferredStudyDays,
+    'preferredStartHour': preferredStartHour,
+    'preferredEndHour': preferredEndHour,
+    'maxSessionsPerDay': maxSessionsPerDay,
+    'defaultSessionDurationMinutes': defaultSessionDurationMinutes,
+    'blackoutDates': blackoutDates.map((d) => d.toIso8601String()).toList(),
+  };
+
+  factory StudentAvailabilityModel.fromJson(Map<String, dynamic> json) => StudentAvailabilityModel(
+    studentId: json['studentId'] as String,
+    preferredStudyDays: json['preferredStudyDays'] is List ? List<int>.from(json['preferredStudyDays'] as List) : const [1, 2, 3, 4, 5, 6, 7],
+    preferredStartHour: json['preferredStartHour'] as int? ?? 9,
+    preferredEndHour: json['preferredEndHour'] as int? ?? 21,
+    maxSessionsPerDay: json['maxSessionsPerDay'] as int? ?? 3,
+    defaultSessionDurationMinutes: json['defaultSessionDurationMinutes'] as int? ?? 30,
+    blackoutDates: json['blackoutDates'] is List ? (json['blackoutDates'] as List).map((d) => DateTime.parse(d as String)).toList() : const [],
+  );
+
   StudentAvailabilityModel copyWith({
     String? studentId,
     List<int>? preferredStudyDays,

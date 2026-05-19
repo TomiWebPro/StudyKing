@@ -385,6 +385,14 @@ void main() {
         expect(eval.isMatch('Marseille'), isFalse);
       });
 
+      test('fuzzyMatch with matching ratio > 0.7 returns true', () {
+        final eval = QuestionEvaluation(
+          questionId: questionId, correctAnswer: 'one two three four',
+          evaluationType: EvaluationType.fuzzyMatch,
+        );
+        expect(eval.isMatch('one two three different'), isTrue);
+      });
+
       test('fuzzyMatch with low matching ratio returns false', () {
         final eval = QuestionEvaluation(
           questionId: questionId, correctAnswer: 'one two three four',

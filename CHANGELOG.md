@@ -1,6 +1,195 @@
 # Changelog
 
-- 2026-05-18: Test Coverage & Quality Audit (test_master.md) — fixed subject_topics_tab_test (removed Hive.init, added NavigatorObserver, behavioral assertions), spaced_repetition_service_fake_repo_test (removed Hive.init test groups), subject_form_widgets_test (fixed NavigatorObserver import path), topic_edit/dependency_dialog tests (fixed slider/dropdown assertions), tutor_session_repository_test (fixed error propagation test), focus_practice_service_test/lesson_agent_service_test/settings_providers_test/llm_task_providers_test (fixed Question createdAt/updatedAt, containsPair API, block count), practice_mastery_dashboard_integration_test (fixed Question createdAt/updatedAt); all 207 tests pass
+- 2026-05-19: Dry-Run Result Fixes — First Launch IB Chemistry (dry_run_result_first_launch_ib_chemistry.md):
+  - **Critical:** Fixed Upload pipeline (4.1, 4.2, 4.5) — UploadScreen now reads `contentPipelineProvider` when `widget.pipeline` is null; "Upload & Analyze" no longer falls through to bare source creation
+  - **Critical:** Fixed QuickGuide silent fallback (5.1) — Added API key banner warning when no key configured; `_sendMessage` now shows actionable message instead of silently returning canned responses
+  - **Critical/H5.3:** Fixed `LlmChatService.chatStream()` — yields error string instead of silently returning empty stream when API key is empty
+  - **High:** Fixed empty-mastery plan (3.1, 3.2) — `_buildEmptyMasteryPlan` now looks up real subjects/topics from DB; uses real topic IDs and subject IDs when available
+  - **High:** Added syllabus autocomplete (2.1, 2.2) — Subject form now uses `Autocomplete` widgets for both subject name and syllabus fields with 90+ common curricula (IB, A-Levels, AP, GCSE, SAT)
+  - **Medium:** Added AI Features onboarding page (1.1, 5.2) — New page between Mentor and Focus Mode notifies users that AI features require an API key
+  - **Medium:** Fixed course name ignored when mastery data exists (3.3) — `courseName` passed to `_generateDailyPlans` and `_generateFocus`; included in focus descriptions
+  - **Medium:** Added checklist progress tracking (7.1) — Created `ChecklistProgress` model and `dashboardChecklistProgressProvider`; checklist now shows "X of 4" counter, checkmarks, and strikethrough for completed items
+  - **Low:** Fixed binary dashboard state transition (7.3) — Partial-progress checklist shown alongside data cards when not all items are complete
+  - **Low:** Fixed Settings "My Uploads" (4.4) — Changed to navigate to Upload screen; added separate "Content Library" tile
+  - **Low:** Added planner topic guidance (3.4) — "No topics" snackbar now has "Add Topic" action button navigating to subject detail
+
+- 2026-05-19: Code Refactor Master — New Findings (code_refactor_master.md):
+  - M1: Removed misleading @Deprecated annotations from Markscheme and MarkSchemeStep (migration never completed — annotations were dangerous)
+  - M3: Replaced SubjectDetailArgs DTO with direct Subject model passing — removed DTO class, updated router, screen, list screen, and all tests
+  - M5: Changed 18 `logger.e()` → `logger.w()` in PlannerNotifier (recoverable errors)
+  - M4: Changed 9 `logger.e()` → `logger.w()` in PlannerService (recoverable errors)
+  - M6: Fixed core/data/data.dart barrel — added missing exports (database_migration, hive_type_ids), removed exports for moved adapters
+  - M7: Moved 4 feature-specific Hive adapters from core/data/ to their respective features: source_adapter → ingestion, session_adapter → sessions, student_availability_adapter + engagement_nudge_adapter → planner
+  - M7: Created registerIngestionAdapters() and registerSessionAdapters() registration functions; updated hive_initializer.dart and main.dart
+  - m5: Removed 2 dead files (question_variant_generator.dart, graph_drawing_canvas_widget.dart) and their test files — no production imports
+- 2026-05-19: UI/UX Master Audit — implemented ui_ux_master.md remaining items:
+  - B1: Removed `dart:io` imports from `main.dart` and `progress_export_service.dart` — refactored share methods to use `XFile.fromData()` on all platforms
+  - M1: Replaced 8 `SizedBox.shrink()` dead-end states with meaningful placeholders (dashboard, planner, next_up_card, milestone_timeline, progress_overlay)
+  - M2: Added `AlwaysScrollableScrollPhysics()` to all 32 `SingleChildScrollView` instances across 24 presentation files
+  - M4: Added Semantics labels to 7 key presentation files (tutor_screen, lesson_progress_bar, export_section, review_answers_screen, api_config_screen, content_library_screen, source_detail_screen)
+  - m3: Replaced hardcoded 'Voice output' tooltip with `l10n.voiceInput` in tutor_screen.dart
+  - m10: Added gap-week awareness to animated_bar_chart.dart semantics label — gap weeks now report "No activity" instead of "X sessions"
+  - m11: Added TickerMode-aware pause/resume to ShimmerWidget animation controller — animations pause when off-screen or reduce-motion enabled
+- 2026-05-19: Future Functionality Planner Round 5 — implemented future_functionality_planner.md:
+  - M7 (MAJOR): Wired TTS voice output into ConversationManager — VoiceService injected; auto-speaks tutor responses when toggled; added voice output toggle button + per-bubble speaker icon in TutorScreen
+  - M8 (MAJOR): Proactive mentor engagement — added MentorService integration into EngagementScheduler daily checks; added showMentorMessage() to NotificationService with `open_mentor` deep-link; added mentor notification channel; "While you were away" section loads recent nudges on mentor open; mentor check-in frequency configurable via settings
+  - m13: Post-lesson practice now offers FocusTimerScreen (with preselected subject/topic) as an alternative to standalone PracticeSession; "Lesson Practice" label shown on FocusTimerScreen
+  - m14: Enqueued "Next topic lesson prep" background task in IdleExecutor after tutor session ends (generates lesson stub for next weak topic)
+  - m1/m15: Deleted deprecated VoiceController (voice_controller.dart); removed voiceServiceProvider_ alias from teaching_providers.dart; cleaned up barrel export and tests
+  - m5: Fixed SessionTrackerScreen hardcoded subjectId='all' — added subject picker dropdown; selected subject is used when creating manual sessions
+  - m8: Fixed DOCX/EPUB raw byte encoding — detects ZIP magic bytes (PK\x03\x04) and returns format-hinted message instead of garbled UTF-8 decode
+- 2026-05-19: Code Refactor Master — implemented code_refactor_master.md:
+  - M5: Replaced manual `_buildEmptyState` in quick_guide_screen.dart with shared `EmptyStateWidget`
+  - M7: Removed redundant `SessionPlanAdherenceService` + `PlanAdherenceContract` (dead code, unused in production)
+  - M8: Inlined and removed `SessionQueryContract` (single impl → SessionRepository), removed `ActionPlanner` (single impl → PlannerService)
+  - M10: Migrated PendingActionRepository methods from raw `void`/`List`/`bool` to `Result<T>` return types
+  - Removed associated test files for deleted abstractions (4 test files)
+- 2026-05-19: UI/UX Master Audit — remaining fixes (ui_ux_master.md):
+  - B2: Fixed question_pdf_generator.dart placeholder comment; removed misleading production references
+  - M2: Replaced raw `?? id` fallbacks with `?? l10n.unknown` in dashboard WorkloadCard, WeakAreasCard, TopicBreakdownCard
+  - M5: Migrated 8 raw CircularProgressIndicator instances to LoadingIndicator (subject_topics_tab, subject_stats_tab, subject_lessons_tab, exam_session_screen, lesson_list_screen, lesson_detail_screen, source_detail_screen, inline_practice_widget)
+  - M6: Replaced hardcoded 'View Library' → l10n.contentLibrary, 'Error:'/'Success:' semantics labels → l10n.errorOccurred/l10n.uploaded in upload_screen.dart
+  - M14: Replaced remaining fixed SizedBox(height: 24) with ResponsiveUtils.verticalSpacing in dashboard header
+  - M17: Fixed practice results flash behind mistake-review bottom sheet — _completeSession() now pops immediately after review dismissal
+  - m3: Added missing Semantics(button: true) to empty_dashboard_checklist.dart checklist items
+  - m14: Replaced 5 hardcoded Colors with theme-aware colors (exam_session_screen difficulty sliders, source_practice_sheet status colors, subject_detail_screen gradient, practice_session_screen mic indicator, grid_painter default)
+  - m18: Added help/quick-guide IconButton to DashboardHeader
+- 2026-05-19: Dry-Run Result Validator fixes (dry_run_result_validator.md):
+  - M-1: Provider dropdown now updates Riverpod providers in-memory immediately; unsaved-changes warning dialog added via PopScope; added `unsavedChanges`, `unsavedChangesDescription`, `discard` l10n keys
+  - M-2: Base URL auto-fill made conditional (only when empty or matching a known default); updated test to match new behavior
+  - m-1: Added primary "Export Full Report" FilledButton (PDF) to Dashboard ExportSection
+  - m-2: Renamed "Instrumentation" button to "Progress Analytics" in all locale files; fixed dialog title in export handler
+  - m-3: Added PDF, JSON, comprehensive PDF, comprehensive JSON export options to SessionHistoryScreen bottom sheet; wired handlers via SessionExportService/ProgressExportService
+  - m-4: Added 5th MetricCard for total questions attempted in SummaryRow using formatCompactNumber
+- 2026-05-19: Internationalisation Master Audit fix round 2:
+  - M1: Replaced hardcoded strings with l10n keys in 4 files: prerequisite_check_service.dart, focus_timer_screen.dart, upload_screen.dart, planner_screen.dart; added 10 new ARB key pairs
+  - M2: Replaced toStringAsFixed(0) with formatPercent() in inline_practice_widget.dart
+  - M3: Replaced raw '${number}' interpolation with formatDecimal/formatCompactNumber in inline_practice_widget.dart and settings_screen.dart
+  - m4: Replaced EdgeInsets.only(left/right) with EdgeInsetsDirectional.only(start/end) in subject_topics_tab.dart and planner_screen.dart
+  - m5: Replaced BorderRadius.only with BorderRadiusDirectional.only in chat_bubble.dart
+  - m7: Changed ListTileControlAffinity.leading to ListTileControlAffinity.platform in upload_screen.dart
+  - m8: Fixed es.arb translation quality: "Precisión" → "Exactitud", "PM" → "p. m." per RAE convention
+  - m9: Replaced hardcoded '~' with em dash (—) in animated_bar_chart.dart for better international understanding
+  - m10: Added i18n Locale Switching Gotcha section to AGENTS.md
+
+- 2026-05-19: Test Coverage & Convention Audit (test_master.md) — M3/M4/M5/C2/m1 completed audit sweep:
+  - M3: Removed remaining `isA<TutorService>()` construction-only test from `tutorServiceProvider` group; merged into singleton + wiring tests; removed unused import
+  - M4: Verified `study_progress_provider_test.dart` meets PA (behavioral wiring + error-state + singleton) — no changes needed
+  - M5: Verified all 3 integration tests exist (QuickGuide+Teaching, LLM Tasks+Ingestion, Questions+Practice) plus onboarding+settings flow — no changes needed
+  - C2: Verified all 6 C2 service files have error-state coverage (difficulty_controller, onboarding_service, llm_task_service, readiness_scorer, mistake_review_service, exam_session_service) — no changes needed
+  - m1: Verified both `onboarding_dialog_test.dart` (barrel) and `onboarding_dialog_widget_test.dart` (widget) exist — no changes needed
+  - Verified all 18 provider test files across the codebase contain ≥1 behavioral assertion beyond construction checks
+
+- 2026-05-19: Test Coverage & Convention Audit (test_master.md) — M3, M2, m4:
+  - M3: Split Hive integration tests from `question_repository_test.dart` into `question_repository_hive_test.dart` per AGENTS.md convention (Hive persistence tests in `_hive_test.dart` suffix)
+  - M2: Added behavioral assertions to barrel tests (`questions_data_test.dart`, `practice_data_test.dart`, `subjects_data_test.dart`, `teaching_data_test.dart`) — model construction, toJson/fromJson round-trips, method calls with realistic inputs
+  - m4: Created `scripts/check_test_conventions.sh` — CI gate that enforces: no mockito/mocktail imports, no mixed test()/testWidgets() files, no Hive.init() outside `_hive_test.dart` files, missing test file detection
+
+- 2026-05-19: Implemented Future Functionality Planner Round 4 — stabilization, lesson generation fix, cross-subject practice, presentation mode, and post-lesson practice:
+  - BLOCKER-1: Fixed 10 lib compile errors (`lint/utils/l10n.dart`, `graph_drawing_canvas_widget.dart` GridPainter params, `question_variant_generator.dart` removed Question constructor params, removed dead `inline_practice_panel.dart`)
+  - BLOCKER-2: Fixed fire-and-forget lesson generation — `scheduleLesson()` now awaits `generateLesson()`, marks `lessonReady=false` on failure, saves lesson ID to Session; `LessonDetailScreen` shows generating indicator for empty blocks
+  - BLOCKER-3: Fixed all test file compile errors (138 → 0) — updated `FakeSettingsRepository.updateSettings` to accept `SettingsUpdate` in 7 test helper files, fixed service/planner provider tests, removed deleted class tests
+  - M1: Added lesson block slides view to TutorScreen with PageView navigation, toggle between chat/slide views
+  - M2: Added post-lesson practice flow — summary dialog includes "Practice Again" options (quick 5-min / full session)
+  - M3: Extended inline practice for cross-subject — `InlinePracticeWidget.subjectId` now nullable (all subjects when null); "Review Due Questions" button in focus hub launches all-subjects practice
+  - M4: Cross-linked Session and Lesson records — added `sessionId` field to Lesson model, `lessonReady` to Session, populated `lessonIds` during `scheduleLesson()`
+  - M5: Fixed quiz block evaluation — added `answerKey` field to `LessonBlock`; `_submitQuiz()` uses exact match against answer key instead of naive substring `contains()`
+  - M6: Enhanced slide presentation mode — fullscreen dialog uses PageView with swipe navigation, slide counter, prev/next buttons
+  - m1: Deprecated `VoiceController` (thin wrapper around `VoiceService`); removed from barrel export
+  - m3: Removed dead `InlinePracticePanel` widget and its test file
+  - m4: YouTube URLs now map to `SourceType.video` via `_inferSourceType()` YouTube detection
+  - m5: Fixed SessionTrackerScreen `subjectId` (reverted to `'all'` — subject picker TBD)
+
+- 2026-05-18: Implemented Dry-Run Usability Validator roadmap fixes:
+  - M7/m7: Removed dead PlannerNotifier.linkDailyPlanToRoadmap() method (service layer handles auto-completion directly)
+  - m5: Removed dead roadmapOverview l10n key from app_en.arb and app_es.arb; updated test to match
+  - M10: Pre-filled days field with "30" in create-roadmap dialog so default is visible to user
+
+- 2026-05-18: Implemented Test Coverage & Convention Audit fixes (test_master.md):
+  - M4: Added error-state tests to conversation_manager_test.dart (LLM stream failure, evaluator failure, generateSummary failure, persistence repo failure, processImage failure) — 10 new tests
+  - M5: Replaced 9 duplicate _FakeStudentIdService/FakeStudentIdService definitions with shared import from test/helpers/fakes.dart
+  - M1: Removed unnecessary Hive.init() from planner_service_test.dart setUp; injected fake adherence repo into PlannerService and PersonalLearningPlanService
+  - m4: Added wiring override verification test to dashboard_layout_providers_test.dart
+- 2026-05-18: Implemented Dry-Run Result Validator fixes:
+  - Finding 3c: Made fetchAvailableModels() query correct API endpoint based on LlmProvider (Ollama /api/tags, OpenAI /models, OpenRouter /models)
+  - Finding 3d: Bypassed empty API key guard for Ollama in api_config_screen.dart — allows saving without key
+  - Finding 3a: Pass selectedModel: '' to updateSettings() on provider switch so Settings UI clears the old model label
+  - Finding 3b: Skipped API key guard for Ollama model selection in settings_screen.dart; passed provider and baseUrl to ModelListingService
+  - Finding 7a: Added confirmation dialog before each export (CSV, PDF, JSON, Progress CSV, Instrumentation) in export_section.dart
+  - Finding 7b: Moved ExportSection from bottom of dashboard to after SummaryRow for prominent visibility
+  - Finding 2a: Added in-place pace adjustment UI (Slider for hours per day with Apply button) on PlannerScreen Study Plan tab; adjustPace() added to PlannerService and PlannerNotifier
+  - Added planAdjusted/failedToAdjustPlan l10n strings to en/es locales
+
+- 2026-05-18: Implemented UI/UX Master Audit comprehensive fixes:
+  - B1: Added ErrorWidget.builder override and PlatformDispatcher.onError handler in main.dart for global error boundary; created ErrorBoundary widget in core/utils
+  - B2: Fixed mentor progress report dialog potential crash with captured scaffoldContext, post-frame delay, and try-catch fallback
+  - B3: Mapped raw error.toString() to localized l10n.somethingWentWrong in subject_list_screen with Logger logging
+  - M1: Improved dashboard skeleton logic — shows skeleton when no data and loading, not only when ALL providers are loading simultaneously
+  - M2: Added RefreshIndicator to SubjectListScreen with provider invalidation
+  - M3: Persisted API key banner dismissal timestamp to Hive SettingsBox with 7-day re-show window and "Don't show again" button
+  - M4: Added disabled card tap handling in PracticeModeGrid — tapping a disabled card shows dialog with explanation and call-to-action
+  - M5: Replaced 9-item PopupMenuButton in session_history_screen with simplified bottom sheet (CSV export + Comprehensive report)
+  - M6: Replaced text-list onboarding dialog with swipeable PageView, page indicator, skip button, and minimal text
+  - M7: Updated PracticeEmptyState to use EmptyStateWidget internally; consistent icon/sizing/button pattern
+  - m1: Added AppTheme.destructiveButtonStyle() static method; applied to session delete confirmation
+  - m2: Added Semantics(button: true) to dashboard navigation cards (planner, question bank, session history)
+  - m3: Replaced bare CircularProgressIndicator with LoadingScreen/LoadingIndicator in practice and session screens
+  - m4: Wrapped multi-choice options in ConstrainedBox+ListView to prevent overflow
+  - m5: Applied semi-transparent scrim overlay on FlexibleSpaceBar subject detail background; used onSurface for title color
+  - m6: Increased CollapsibleCard InkWell tap target to 48px minimum; added 48x48 tap target on collapse icon
+  - m7: Added LoadingScreen with localized messages and cancel button to tutor screen initialization
+  - m8: Constrained FAB width to screen width - 64; uses FloatingActionButton.small on xs (<360px) breakpoints
+  - m9: Created shared DestinationData list; both NavigationRail and NavigationBar iterate same list; added tooltips to navigation icons
+  - m10: Replaced SizedBox.shrink() in dashboard workload/weak_areas cards with localized "No data yet" messages
+  - m11: High-contrast mode uses solid color (no gradient) for subject detail background
+  - m12: Added Tooltip wrappers on all navigation rail icons via shared DestinationData
+  - m13: Added Semantics label and liveRegion to ConversationInput loading spinner
+  - m14: Added QuestionReviewData model and "Review answers" button to PracticeResultsScreen with per-question dialog
+
+- 2026-05-18: Internationalisation Master Audit — full codebase localisation fixes:
+  - M1: Added 24 new EN/ES ARB key pairs for subject/topic dialogs; replaced all hardcoded strings in topic_dependency_dialog.dart, topic_edit_dialog.dart, and subject_topics_tab.dart with l10n calls
+  - M2: Replaced toStringAsFixed() with formatDecimal() (locale-aware) in topic_dependency_dialog.dart
+  - M3: Replaced hardcoded Text('None') with l10n.none in question_bank_screen.dart
+  - M4a: Fixed notifBodyBadgeUnlocked Spanish punctuation (missing closing !)
+  - M4b: Fixed allStepsFormat Spanish grammar (missing verb "se han")
+  - M5: Fixed 7+ informal tú register strings to formal usted in app_es.arb (noQuestionsPracticeHint, confirmExitPracticeBody, confirmExitFocusBody, deleteQuestionConfirm, deleteQuestionsConfirm, onboardingFocusDesc, activeLessonTimer)
+  - m1: Added covariant comments to time_utils.dart fallback strings
+  - m2: Removed 3 unused duplicate notification ARB keys (notifBodyRevision, notifBodyLessonReminder, notifBodyBadgeUnlocked); updated test references to canonical notificationXxx keys
+
+- 2026-05-18: Implemented Future Functionality Planner Round 3 — agent framework activation, lesson content pipeline, focus inline Q&A, dependency visualizer, background tasks, post-ingestion lesson generation, VoiceController removal, mentorServiceProvider:
+  - B1: Passed `llmAgent` to `MentorService` in `MentorScreen._initializeMentor()` — reads `llmAgentProvider(studentId)` and passes as `agent:` param; unlocks entire agent framework (6 tools, memory, idle executor)
+  - B2: Wired `LessonAgentService.generateLesson()` into `PlannerService.scheduleLesson()` — after session creation, auto-generates lesson content for the scheduled topic; lessonAgentService injected through `plannerServiceProvider`
+  - M1: Added inline Q&A practice mode to focus screen — `InlinePracticeWidget` renders questions directly in `FocusTimerScreen` with answer validation, feedback, and per-subject accuracy tracking; tap subject card to choose inline vs full practice
+  - M1: `SessionSummaryCard` now receives inline practice results (questions answered, accuracy)
+  - M2: Added `generateLessons` parameter to `ContentPipeline.processFullPipeline()` and `reprocessSource()` — when enabled, calls `LessonAgentService.generateLessonFromSource()` after question generation to create lesson materials from uploaded content
+  - M2: Added "Generate lesson from this material" toggle to `UploadScreen`; `lessonAgentService` wired into `contentPipelineProvider`
+  - M3: Added `getDependencyGraph()`, `getTopologicalOrder()`, and `getDownstreamTopicIds()` to `TopicRepository` for dependency visualization and topological sorting
+  - M3: Enhanced topic list in `SubjectTopicsTab` with prerequisite indentation and lock icons; delete confirmation warns about downstream dependent topics
+  - M4: Deprecated redundant `VoiceController` — `VoiceBar` now accepts `VoiceService` directly; `voiceControllerProvider` replaced with `voiceServiceProvider`; `VoiceController` can be deleted after migration
+  - M5: Wired background tasks via `IdleExecutor` — `TutorService.endLesson()` now enqueues post-lesson adherence check and weak topic reanalysis through `LlmAgent.enqueueBackgroundTask()`
+  - M5: `TutorService.llmAgent` setter added; agent wired into tutor screen from `llmAgentProvider`
+  - m4: Created `mentorServiceProvider` in `mentor_providers.dart` — `MentorScreen` now reads from provider instead of constructing `MentorService` manually; all dependencies injected through Riverpod (including llmAgent)
+  - B1: Added lastActivityAt timestamp to StudentIdService (persisted to Hive) with getDaysSinceLastActivity() helper
+  - B1/B2: Added AbsenceDeviation (extends AdherenceDeviation) to PlanAdapter; checkAdherence() now returns AbsenceDeviation when daysSinceLastActivity >= 3
+  - B3/M6: Added extendPlan(days) to PersonalLearningPlanService; updated redistributeMissedWorkload() with strategy parameter (days:3, days:7, all)
+  - B3/M6: Added Catch Up bottom sheet on PlannerScreen with redistribute/extend/regenerate options
+  - B5: Added time-based filtering to getScheduledLessons() (excludes sessions >1h past); added getMissedLessons() and dismissAllMissed() to PlannerService
+  - M1/m2: Added isGap marking to StudyProgressTracker.getWeeklyTrend(); WeeklyChart renders gap weeks with dashed outline and "No activity" tooltip
+  - M2: Added isCompleted field to DailyPlan; DailyPlanCard now shows green checkmark (completed), MISSED badge (past+incomplete), "Today" pill badge, and Catch Up button on missed past days
+  - M3: Added daysSinceLastActivity to mentor LLM context prompt with absence-aware system instruction
+  - M4: Added graduated nudge thresholds to MentorService: 48h, 7+, 14+, 30+ days with distinct messages and severity levels
+  - M5: Added stale session detection to SessionHistoryScreen (endTime==null + >1h old) with stale badge and dismiss action
+  - m1: Added 20+ localized strings to app_en.arb and app_es.arb (welcome back, absences, catch-up, stale sessions, graduated nudges)
+  - m3: _getConsecutiveStudyDays() now counts sessions with actualDurationMs>0 regardless of completed flag
+  - M7: PlanAdapter.getAdherenceReport() returns null for averageAdherence when no adherence records exist
+  - Updated PlannerNotifier/PlannerScreen with missed lessons section, extendPlan, and catchUpWithStrategy methods
+  - Updated main.dart to call StudentIdService.updateLastActivity() on app startup
+- 2026-05-18: Test Coverage & Quality Audit (test_master.md):
+  - M2b: Rewrote llm_task_providers_test.dart (20 tests) with seeded-data tests, filteredTasksProvider.family, error propagation, and override wiring assertions
+  - M2b: Fixed `const cost = <String, double>{}` bug in LlmTaskService.costByFeature (unmodifiable map error)
+  - M3/m1: Refactored subject_topics_tab.dart to use TopicDependencyRepository instead of direct Hive access; removed Hive.init/Hive.openBox calls from test; all 12 widget tests pass without Hive I/O
+  - m2: Deleted orphaned spaced_repetition_repository_test.dart (replaced by spaced_repetition_service_fake_repo_test.dart)
+  - m4: Fixed AGENTS.md model path from `lib/features/*/models/` to `lib/features/*/data/models/`
 - 2026-05-18: Internationalisation Master Issue — replaced hardcoded `localeName == 'es'` branching in ConversationManager.processImage() with locale-aware ARB keys (`tutorImageAnalysisUserPrompt`, `tutorImageAnalysisSystemPrompt`) in both app_en.arb and app_es.arb; Verified all M1-M7/m1-m12 items are fully implemented across the codebase (plural ARB keys, RTL chevrons, locale-aware validation messages, locale-aware service constructors, locale-specific chatbot keyword maps, no hardcoded English defaults remain in production code)
 - 2026-05-18: Implemented Code Quality & Refactoring Master Issue fixes:
   - B1: Removed duplicate `@HiveType(typeId: 26)` ingestion Source model; canonical source lives in core/data/models/source_model.dart; created manual SourceAdapter; registered in hive_initializer.dart
@@ -101,4 +290,12 @@
    - m-10: Removed misleading "Orphaned" comment from session_providers.dart
    - m-12: Extracted hardcoded targetQuestionsPerDay: 15 to PlanDefaults.targetQuestionsPerDay and _breakDuration: 300 to FocusTimerDefaults.breakDurationSeconds in app_runtime_config.dart
    - m-13: Changed _trimRepository call from unawaited to .catchError to handle errors properly
-   - m-14: Made EngagementSchedulerConfig.studentId required (no more 'default' default); scheduler fetches from StudentIdService when no config provided
+    - m-14: Made EngagementSchedulerConfig.studentId required (no more 'default' default); scheduler fetches from StudentIdService when no config provided
+
+- 2026-05-18: Code refactor master implementation — dashboard, planner, and service-layer quality improvements:
+    - M-8: Removed implicit lazy ActionExecutor creation from PlannerService; constructor now accepts optional ActionExecutor with lazy fallback using the ActionPlanner interface; no stack-overflow risk
+    - M-10: Removed duplicate MasteryGraphRepository facade from MasteryGraphService; init() now calls individual repo init() methods directly; removed _repository field
+    - M-12: Removed dashboardAdherenceRepositoryProvider (duplicate PlanAdherenceRepository instance); dashboard now uses shared engagementAdherenceRepoProvider from app_providers.dart
+    - M-20: Deleted duplicate test/features/onboarding/onboarding_store_test.dart (identical to onboarding_service_test.dart)
+    - m-2: Added TODO comment to SpacedRepetitionQueries documenting its uncertain status
+    - m-5: Refactored OnboardingService from raw Map setTestStorage to typed OnboardingStorage interface with setStorage(); added InMemoryOnboardingStorage for tests

@@ -222,6 +222,41 @@ void main() {
       });
     });
 
+    group('error handling', () {
+      test('handles zero timeSpentMs gracefully', () {
+        final state = initialState('t1');
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 3,
+          timeSpentMs: 0,
+        );
+        expect(updated.averageTimeMs, 0.0);
+        expect(updated.totalAttempts, 1);
+      });
+
+      test('handles zero confidence without crashing', () {
+        final state = initialState('t1');
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: false,
+          confidence: 0,
+          timeSpentMs: 10000,
+        );
+        expect(updated.recentConfidence, contains(0));
+      });
+
+      test('updateAccuracy with zero totalAttempts returns 0.0', () {
+        final state = initialState('t1');
+        expect(state.accuracy, 0.0);
+      });
+
+      test('confidenceTrend defaults to 0.5 with no recent data', () {
+        final state = initialState('t1');
+        expect(state.confidenceTrend, 0.5);
+      });
+    });
+
     group('initial state transitions', () {
       test('novice with no attempts', () {
         final state = initialState('t1');

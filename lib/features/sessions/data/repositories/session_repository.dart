@@ -1,5 +1,4 @@
 import 'package:studyking/core/constants/app_constants.dart';
-import 'package:studyking/core/data/contracts/session_query_contract.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/repository.dart';
@@ -8,14 +7,12 @@ import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
-class SessionRepository extends Repository<Session>
-    implements SessionQueryContract {
+class SessionRepository extends Repository<Session> {
   final Logger _logger = const Logger('SessionRepository');
   final Clock _clock;
 
   SessionRepository({Clock? clock}) : _clock = clock ?? SystemClock();
 
-  @override
   Future<void> init() async {
     await openBox(HiveBoxNames.sessionsTyped);
   }
@@ -34,7 +31,6 @@ class SessionRepository extends Repository<Session>
     }, context: 'getAll');
   }
 
-  @override
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     return Result.capture(() async {
       final start = date.dateOnly;
@@ -54,7 +50,6 @@ class SessionRepository extends Repository<Session>
     }, context: 'getByType');
   }
 
-  @override
   Future<Result<List<Session>>> getByStudent(String studentId) async {
     return Result.capture(() async {
       final all = box.values.toList();
@@ -107,14 +102,12 @@ class SessionRepository extends Repository<Session>
     }, context: 'getActive');
   }
 
-  @override
   Future<Result<int>> getTodayDurationMs() async {
     final todayResult = await getByDate(_clock.now());
     if (todayResult.isFailure) return Result.failure(todayResult.error);
     return Result.success(todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
   }
 
-  @override
   Future<bool> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,
@@ -141,7 +134,6 @@ class SessionRepository extends Repository<Session>
     }
   }
 
-  @override
   Future<List<Session>> getScheduledLessons() async {
     try {
       final all = box.values.toList();
@@ -208,6 +200,19 @@ class SessionRepository extends Repository<Session>
       'totalCorrect': totalCorrect,
       'avgScore': totalQuestions > 0 ? (totalCorrect / totalQuestions * 100) : 0.0,
     });
+  }
+
+  Future<Result<List<Session>>> getStaleOrphaned() async {
+    return Result.capture(() async {
+      final now = DateTime.now();
+      final all = box.values.toList();
+      return all
+          .where((s) =>
+              s.endTime == null &&
+              !s.completed &&
+              s.startTime.isBefore(now.subtract(const Duration(hours: 1))))
+          .toList();
+    }, context: 'getStaleOrphaned');
   }
 
   Future<Result<void>> clearAll() async {

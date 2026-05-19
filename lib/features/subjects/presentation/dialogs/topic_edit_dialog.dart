@@ -69,6 +69,7 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
     return AlertDialog(
       title: Text(widget.title),
       content: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -76,8 +77,8 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
             TextField(
               controller: _titleController,
               decoration: InputDecoration(
-                labelText: 'Topic Title',
-                hintText: 'e.g. Atomic Structure',
+                labelText: l10n.topicTitleLabel,
+                hintText: l10n.topicTitleHint,
                 border: const OutlineInputBorder(),
               ),
               textCapitalization: TextCapitalization.sentences,
@@ -87,8 +88,8 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
             TextField(
               controller: _descriptionController,
               decoration: InputDecoration(
-                labelText: 'Topic Description',
-                hintText: 'Describe the topic scope',
+                labelText: l10n.topicDescriptionLabel,
+                hintText: l10n.topicDescriptionHint,
                 border: const OutlineInputBorder(),
               ),
               maxLines: 2,
@@ -98,8 +99,8 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
             TextField(
               controller: _syllabusController,
               decoration: InputDecoration(
-                labelText: 'Syllabus Text',
-                hintText: 'Syllabus points covered',
+                labelText: l10n.syllabusTextLabel,
+                hintText: l10n.syllabusTextHint,
                 border: const OutlineInputBorder(),
               ),
               maxLines: 3,
@@ -109,12 +110,12 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 initialValue: _parentId.isEmpty ? null : _parentId,
-                decoration: const InputDecoration(
-                  labelText: 'Parent Topic',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l10n.parentTopic,
+                  border: const OutlineInputBorder(),
                 ),
                 items: [
-                  const DropdownMenuItem(value: '', child: Text('None (Root Topic)')),
+                  DropdownMenuItem(value: '', child: Text(l10n.rootTopic)),
                   ...widget.existingTopics
                     .where((t) => t.id != widget.topic?.id)
                     .map((t) => DropdownMenuItem(
@@ -127,7 +128,7 @@ class _TopicEditDialogState extends State<TopicEditDialog> {
             ],
             if (_isEditing) ...[
               const SizedBox(height: 16),
-              Text('Sort Order: $_sortOrder',
+              Text(l10n.sortOrderValue(_sortOrder),
                 style: theme.textTheme.bodySmall),
             ],
           ],

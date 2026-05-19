@@ -15,7 +15,8 @@ class QuestionRepository extends Repository<Question> {
 
   Future<Result<void>> create(Question question) async {
     try {
-      await save(question.id, question);
+      final result = await save(question.id, question);
+      if (result.isFailure) return Result.failure(result.error);
       return Result.success(null);
     } catch (e) {
       _logger.e('Error creating question', e);

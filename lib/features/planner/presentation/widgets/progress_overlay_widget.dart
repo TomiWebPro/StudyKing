@@ -100,7 +100,15 @@ class ProgressOverlayWidget extends StatelessWidget {
   }
 
   Widget _buildWeeklyChart(BuildContext context, ThemeData theme, AppLocalizations l10n) {
-    if (data.weeklyProgress.isEmpty) return const SizedBox.shrink();
+    if (data.weeklyProgress.isEmpty) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(l10n.noDataUploaded,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            )),
+      );
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

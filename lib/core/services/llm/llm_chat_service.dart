@@ -82,6 +82,7 @@ class LlmService {
     String feature = 'general',
   }) async* {
     if (config.apiKey.isEmpty) {
+      yield 'API key not configured. Please set up an API key in Settings to use AI features.';
       return;
     }
 

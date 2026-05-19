@@ -7,6 +7,7 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -58,67 +59,46 @@ class FakeSettingsRepository extends SettingsRepository {
   Future<Result<SettingsBox>> getSettings() async => Result.success(_box);
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     final current = _box;
     _box = SettingsBox(
-      apiKey: apiKey ?? current.apiKey,
-      apiBaseUrl: apiBaseUrl ?? current.apiBaseUrl,
-      selectedModel: selectedModel ?? current.selectedModel,
-      themeMode: themeMode?.index ?? current.themeMode,
-      fontSize: fontSize ?? current.fontSize,
+      apiKey: update.apiKey ?? current.apiKey,
+      apiBaseUrl: update.apiBaseUrl ?? current.apiBaseUrl,
+      selectedModel: update.selectedModel ?? current.selectedModel,
+      themeMode: update.themeMode?.index ?? current.themeMode,
+      fontSize: update.fontSize ?? current.fontSize,
       totalSessionCount: current.totalSessionCount,
       totalStudyTimeMs: current.totalStudyTimeMs,
       totalQuestions: current.totalQuestions,
       studyRemindersEnabled:
-          studyRemindersEnabled ?? current.studyRemindersEnabled,
+          update.studyRemindersEnabled ?? current.studyRemindersEnabled,
       requestTimeoutSeconds:
-          requestTimeoutSeconds ?? current.requestTimeoutSeconds,
+          update.requestTimeoutSeconds ?? current.requestTimeoutSeconds,
       sessionDurationMinutes:
-          sessionDurationMinutes ?? current.sessionDurationMinutes,
+          update.sessionDurationMinutes ?? current.sessionDurationMinutes,
       highContrastEnabled:
-          highContrastEnabled ?? current.highContrastEnabled,
-      largeTouchTargets: largeTouchTargets ?? current.largeTouchTargets,
-      reduceMotion: reduceMotion ?? current.reduceMotion,
+          update.highContrastEnabled ?? current.highContrastEnabled,
+      largeTouchTargets: update.largeTouchTargets ?? current.largeTouchTargets,
+      reduceMotion: update.reduceMotion ?? current.reduceMotion,
       revisionRemindersEnabled:
-          revisionRemindersEnabled ?? current.revisionRemindersEnabled,
+          update.revisionRemindersEnabled ?? current.revisionRemindersEnabled,
       lessonNotificationsEnabled:
-          lessonNotificationsEnabled ?? current.lessonNotificationsEnabled,
+          update.lessonNotificationsEnabled ?? current.lessonNotificationsEnabled,
       overworkAlertsEnabled:
-          overworkAlertsEnabled ?? current.overworkAlertsEnabled,
+          update.overworkAlertsEnabled ?? current.overworkAlertsEnabled,
       planAdjustmentNotificationsEnabled:
-          planAdjustmentNotificationsEnabled ??
+          update.planAdjustmentNotificationsEnabled ??
               current.planAdjustmentNotificationsEnabled,
       breakDurationSeconds:
-          breakDurationSeconds ?? current.breakDurationSeconds,
+          update.breakDurationSeconds ?? current.breakDurationSeconds,
       dailyReminderHour:
-          dailyReminderHour ?? current.dailyReminderHour,
+          update.dailyReminderHour ?? current.dailyReminderHour,
       dailyReminderMinute:
-          dailyReminderMinute ?? current.dailyReminderMinute,
+          update.dailyReminderMinute ?? current.dailyReminderMinute,
       firstFocusVisit:
-          firstFocusVisit ?? current.firstFocusVisit,
+          update.firstFocusVisit ?? current.firstFocusVisit,
       dailyReminderEnabled:
-          dailyReminderEnabled ?? current.dailyReminderEnabled,
+          update.dailyReminderEnabled ?? current.dailyReminderEnabled,
     );
     return Result.success(null);
   }

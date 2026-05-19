@@ -11,12 +11,14 @@ import 'package:studyking/features/practice/services/spaced_repetition_service.d
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/errors/result.dart' show Result;
 import 'package:studyking/features/settings/data/models/settings_box.dart' show SettingsBox;
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart' show SettingsRepository;
 
 class FakeQuestionRepository extends QuestionRepository {
@@ -66,29 +68,7 @@ class FakeSettingsRepository extends SettingsRepository {
   }
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    dynamic llmProvider,
-    dynamic themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     return Result.success(null);
   }
 }

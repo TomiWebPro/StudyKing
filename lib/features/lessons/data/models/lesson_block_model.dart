@@ -21,6 +21,9 @@ class LessonBlock extends HiveObject {
   @HiveField(5)
   final int order;
 
+  @HiveField(6, defaultValue: '')
+  final String answerKey;
+
   LessonBlock({
     required this.id,
     required this.subjectId,
@@ -28,6 +31,7 @@ class LessonBlock extends HiveObject {
     required this.type,
     required this.content,
     this.order = 0,
+    this.answerKey = '',
   });
 
   Map<String, dynamic> toJson() => {
@@ -37,6 +41,7 @@ class LessonBlock extends HiveObject {
     'type': type.index,
     'content': content,
     'order': order,
+    'answerKey': answerKey,
   };
 
   factory LessonBlock.fromJson(Map<String, dynamic> json) => LessonBlock(
@@ -46,6 +51,7 @@ class LessonBlock extends HiveObject {
     type: LessonBlockType.values[json['type']],
     content: json['content'],
     order: json['order'] ?? 0,
+    answerKey: json['answerKey'] ?? '',
   );
 
   LessonBlock copyWith({
@@ -55,6 +61,7 @@ class LessonBlock extends HiveObject {
     LessonBlockType? type,
     String? content,
     int? order,
+    String? answerKey,
   }) {
     return LessonBlock(
       id: id ?? this.id,
@@ -63,6 +70,7 @@ class LessonBlock extends HiveObject {
       type: type ?? this.type,
       content: content ?? this.content,
       order: order ?? this.order,
+      answerKey: answerKey ?? this.answerKey,
     );
   }
 }

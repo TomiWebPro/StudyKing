@@ -99,6 +99,12 @@ class NotificationService {
         description: l10n.notifChannelBadgesDesc,
         importance: Importance.defaultImportance,
       ),
+      AndroidNotificationChannel(
+        NotificationChannelIds.mentor,
+        'Mentor Messages',
+        description: 'Proactive mentor check-ins and nudges',
+        importance: Importance.high,
+      ),
     ];
 
     for (final channel in channels) {
@@ -292,6 +298,38 @@ class NotificationService {
       payload: 'badge_$badgeName',
       channelId: NotificationChannelIds.badges,
       channelName: l10n.notifChannelBadges,
+    );
+  }
+
+  Future<void> showLessonReady({
+    required int id,
+    required String topicTitle,
+    required String lessonId,
+  }) async {
+    final l10n = _l10n;
+    if (l10n == null) return;
+    await showNotification(
+      id: id,
+      title: 'Ready to continue learning?',
+      body: '$topicTitle has a lesson ready',
+      payload: 'lesson_$lessonId',
+      channelId: NotificationChannelIds.lessons,
+      channelName: l10n.notifChannelLessons,
+    );
+  }
+
+  Future<void> showMentorMessage({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    await showNotification(
+      id: id,
+      title: title,
+      body: body,
+      payload: 'open_mentor',
+      channelId: NotificationChannelIds.mentor,
+      channelName: 'Mentor Messages',
     );
   }
 

@@ -353,10 +353,10 @@
   "@correctAnswers": {
     "description": "Label for correct answers stat in results"
   },
-  "accuracy": "Precisión",
-  "@accuracy": {
-    "description": "Label for accuracy stat"
-  },
+   "accuracy": "Exactitud",
+   "@accuracy": {
+     "description": "Label for accuracy stat"
+   },
   "examConfiguration": "Configuración del Examen",
   "@examConfiguration": {
     "description": "Heading for exam configuration screen"
@@ -565,7 +565,7 @@
   "@preferredStudyTime": {
     "description": "Label for preferred study time input field"
   },
-  "preferredStudyTimeHint": "p. ej., Tarde (6-9 PM)",
+   "preferredStudyTimeHint": "p. ej., Tarde (6-9 p. m.)",
   "@preferredStudyTimeHint": {
     "description": "Hint text for preferred study time input field"
   },
@@ -848,7 +848,11 @@
   },
   "sessionsLabel": "Sesiones",
   "@sessionsLabel": {
-    "description": "Label for sessions count"
+    "description": "Etiqueta para el conteo de sesiones"
+  },
+  "noActivity": "Sin actividad — estuvo ausente esta semana.",
+  "@noActivity": {
+    "description": "Tooltip para semanas sin actividad por ausencia"
   },
   "questionsLabel": "Preguntas",
   "@questionsLabel": {
@@ -1385,7 +1389,7 @@
   "@lessonProgress": {
     "description": "Section title for lesson progress"
   },
-  "percentComplete": "{percent}% Completado: {completed}/{total} preguntas generadas",
+  "percentComplete": "{percent} % Completado: {completed}/{total} preguntas generadas",
   "@percentComplete": {
     "description": "Progress message showing completion percentage",
     "placeholders": {
@@ -1880,9 +1884,9 @@
   "@exportCsv": {
     "description": "Button label to export CSV"
   },
-  "instrumentation": "Instrumentación",
+  "instrumentation": "Estadísticas de Progreso",
   "@instrumentation": {
-    "description": "Button label for instrumentation export"
+    "description": "Etiqueta del botón para exportar estadísticas de progreso"
   },
   "overall": "General",
   "@overall": {
@@ -1967,7 +1971,7 @@
       }
     }
   },
-  "weakAreasAccuracy": "Áreas por mejorar (Precisión < 60%)",
+  "weakAreasAccuracy": "Áreas por mejorar (Precisión < 60 %)",
   "@weakAreasAccuracy": {
     "description": "Section title for weak areas with accuracy threshold"
   },
@@ -2220,7 +2224,7 @@
   "@noPlanForToday": {
     "description": "When there is no plan for today"
   },
-  "planAdjustmentSuggested": "Ha tenido {count} días de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?",
+  "planAdjustmentSuggested": "Ha tenido {count,plural,=1{1 día} other{{count} días}} de bajo cumplimiento del plan. ¿Desea ajustar su plan de estudio?",
   "@planAdjustmentSuggested": {
     "description": "Nudge to adjust plan due to low adherence",
     "placeholders": {
@@ -2709,7 +2713,7 @@
   "@aboutLegalese": {
     "description": "Copyright notice for About dialog"
   },
-  "activeLessonTimer": "Tienes un temporizador de lección activo. ¿Salir de todas formas?",
+  "activeLessonTimer": "Tiene un temporizador de lección activo. ¿Salir de todas formas?",
   "@activeLessonTimer": {
     "description": "Title for exit confirmation when lesson timer is active"
   },
@@ -2880,7 +2884,19 @@
   },
   "labelJson": "JSON",
   "@labelJson": {
-    "description": "Label for JSON export format"
+    "description": "Etiqueta para formato de exportación JSON"
+  },
+  "unsavedChanges": "Cambios sin guardar",
+  "@unsavedChanges": {
+    "description": "Título del diálogo de confirmación de cambios sin guardar"
+  },
+  "unsavedChangesDescription": "Tienes cambios sin guardar. ¿Estás seguro de que quieres descartarlos?",
+  "@unsavedChangesDescription": {
+    "description": "Texto del cuerpo del diálogo de confirmación de cambios sin guardar"
+  },
+  "discard": "Descartar",
+  "@discard": {
+    "description": "Etiqueta del botón para descartar cambios sin guardar"
   },
   "goToSettings": "Ir a Configuración",
   "@goToSettings": {
@@ -2966,7 +2982,7 @@
       }
     }
   },
-  "paceLabel": "{pace}% ritmo",
+  "paceLabel": "{pace} % ritmo",
   "@paceLabel": {
     "description": "Label showing adaptive pace percentage",
     "placeholders": {
@@ -3091,10 +3107,10 @@
   "@mentorChangesDone": {
     "description": "Generic confirmation after schedule changes"
   },
-  "mentorAccuracy": "Precisión",
-  "@mentorAccuracy": {
-    "description": "Section header for accuracy in progress report"
-  },
+   "mentorAccuracy": "Exactitud",
+   "@mentorAccuracy": {
+     "description": "Section header for accuracy in progress report"
+   },
   "mentorBadges": "Insignias",
   "@mentorBadges": {
     "description": "Section header for badges in progress report"
@@ -3268,20 +3284,16 @@
   "@noRoadmapsYet": {
     "description": "Empty state for roadmaps"
   },
-  "roadmapOverview": "Resumen del Roadmap",
-  "@roadmapOverview": {
-    "description": "Title for roadmap detail view"
-  },
   "timeline": "Cronología",
   "@timeline": {
     "description": "Timeline view label"
   },
-  "completionOfValue": "{value}% Completo",
+  "completionOfValue": "{value} Completo",
   "@completionOfValue": {
     "description": "Completion percentage",
     "placeholders": {
       "value": {
-        "type": "double"
+        "type": "String"
       }
     }
   },
@@ -3428,7 +3440,7 @@
       }
     }
   },
-  "allStepsFormat": "¡Los {count} pasos identificados correctamente!",
+  "allStepsFormat": "¡Los {count} pasos se han identificado correctamente!",
   "@allStepsFormat": {
     "description": "Feedback when all required steps are identified",
     "placeholders": {
@@ -3968,18 +3980,7 @@
   "@notifTitleTimeToReview": {
     "description": "Title for revision reminder notification"
   },
-  "notifBodyRevision": "Han pasado {days} días desde que practicó \"{topicName}\".",
-  "@notifBodyRevision": {
-    "description": "Body for revision reminder notification",
-    "placeholders": {
-      "days": {
-        "type": "int"
-      },
-      "topicName": {
-        "type": "String"
-      }
-    }
-  },
+
   "notifTitleTakeBreak": "Tome un Descanso",
   "@notifTitleTakeBreak": {
     "description": "Title for overwork warning notification"
@@ -4010,18 +4011,7 @@
   "@notifTitleUpcomingLesson": {
     "description": "Title for upcoming lesson notification"
   },
-  "notifBodyLessonReminder": "Su lección \"{lessonTitle}\" comienza a las {time}.",
-  "@notifBodyLessonReminder": {
-    "description": "Body for lesson reminder notification",
-    "placeholders": {
-      "lessonTitle": {
-        "type": "String"
-      },
-      "time": {
-        "type": "String"
-      }
-    }
-  },
+
   "notifTitleTopicsNeedAttention": "Temas que Requieren Atención",
   "@notifTitleTopicsNeedAttention": {
     "description": "Title for low mastery warning notification"
@@ -4039,18 +4029,7 @@
   "@notifTitleBadgeUnlocked": {
     "description": "Title for badge unlock notification"
   },
-  "notifBodyBadgeUnlocked": "¡Obtuvo la insignia \"{badgeName}\": {badgeDescription}",
-  "@notifBodyBadgeUnlocked": {
-    "description": "Body for badge unlock notification",
-    "placeholders": {
-      "badgeName": {
-        "type": "String"
-      },
-      "badgeDescription": {
-        "type": "String"
-      }
-    }
-  },
+
   "recommendAccuracyBelow60": "Su precisión general está por debajo del 60%. Concéntrese en repasar conceptos fundamentales.",
   "@recommendAccuracyBelow60": {
     "description": "Recommendation when accuracy is below 60%"
@@ -4487,6 +4466,35 @@
   "@failedToUpdateMilestone": {
     "description": "Error message when milestone update fails"
   },
+  "roadmapCreated": "¡Hoja de ruta \"{goal}\" creada!",
+  "@roadmapCreated": {
+    "description": "Success message when roadmap is created",
+    "placeholders": {
+      "goal": {
+        "type": "String"
+      }
+    }
+  },
+  "roadmapDeleted": "Hoja de ruta eliminada",
+  "@roadmapDeleted": {
+    "description": "Snackbar when roadmap is deleted"
+  },
+  "roadmapDeleteConfirm": "¿Eliminar esta hoja de ruta?",
+  "@roadmapDeleteConfirm": {
+    "description": "Confirmation dialog for roadmap deletion"
+  },
+  "roadmapUpdated": "Hoja de ruta actualizada",
+  "@roadmapUpdated": {
+    "description": "Success message when roadmap is updated"
+  },
+  "milestoneUpdated": "Hito actualizado",
+  "@milestoneUpdated": {
+    "description": "Success message when milestone is toggled"
+  },
+  "enterValidNumber": "Ingrese un número válido",
+  "@enterValidNumber": {
+    "description": "Validation error for numeric input"
+  },
   "actionAccepted": "Acción aceptada",
   "@actionAccepted": {
     "description": "Success message when action is accepted"
@@ -4526,6 +4534,14 @@
   "failedToRedistributeWorkload": "Error al redistribuir el trabajo pendiente",
   "@failedToRedistributeWorkload": {
     "description": "Error message when workload redistribution fails"
+  },
+  "planAdjusted": "Ritmo de estudio ajustado exitosamente",
+  "@planAdjusted": {
+    "description": "Success message when study pace is adjusted"
+  },
+  "failedToAdjustPlan": "Error al ajustar el ritmo de estudio",
+  "@failedToAdjustPlan": {
+    "description": "Error message when pace adjustment fails"
   },
   "progressOverview": "Resumen de Progreso",
   "@progressOverview": {
@@ -4781,7 +4797,7 @@
   "@onboardingMentorDesc": {
     "description": "Mentor tab description in onboarding"
   },
-  "onboardingFocusDesc": "Mantén el enfoque con sesiones de estudio estilo Pomodoro",
+  "onboardingFocusDesc": "Mantenga el enfoque con sesiones de estudio estilo Pomodoro",
   "@onboardingFocusDesc": {
     "description": "Focus mode description in onboarding"
   },
@@ -4927,6 +4943,120 @@
   "@nudgeInactive48h": {
     "description": "Message when student hasn't studied for 48+ hours"
   },
+  "nudgeInactive7d": "Han pasado {days} días. ¡Retomemos con una sesión de repaso corta!",
+  "@nudgeInactive7d": {
+    "description": "Notificación después de 7+ días de inactividad",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "nudgeInactive14d": "¡Bienvenido de nuevo! Han pasado {days} días. Planeemos su reincorporación.",
+  "@nudgeInactive14d": {
+    "description": "Notificación después de 14+ días de inactividad",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "nudgeInactive30d": "Han pasado {days} días desde su última sesión. ¿Le gustaría ayuda para crear un plan de regreso personalizado?",
+  "@nudgeInactive30d": {
+    "description": "Notificación después de 30+ días de inactividad",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "welcomeBackDays": "¡Bienvenido de nuevo! Ha estado ausente durante {days} días.",
+  "@welcomeBackDays": {
+    "description": "Mensaje de bienvenida después de una ausencia",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "absenceDetectedTitle": "Ausencia Detectada",
+  "@absenceDetectedTitle": {
+    "description": "Título para el banner de detección de ausencia"
+  },
+  "absenceDetectedBody": "No ha usado StudyKing en {days} días. ¿Cómo le gustaría proceder?",
+  "@absenceDetectedBody": {
+    "description": "Cuerpo para el banner de detección de ausencia",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "extendPlan": "Extender plan de estudio por {days} días",
+  "@extendPlan": {
+    "description": "Botón para extender el plan de estudio",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "missedLessonLabel": "Perdida",
+  "@missedLessonLabel": {
+    "description": "Etiqueta para lecciones perdidas"
+  },
+  "staleSessionLabel": "No completada",
+  "@staleSessionLabel": {
+    "description": "Etiqueta para sesiones obsoletas"
+  },
+  "catchUp": "Ponerse al día",
+  "@catchUp": {
+    "description": "Botón para ponerse al día después de una ausencia"
+  },
+  "catchUpTitle": "¿Cómo le gustaría ponerse al día?",
+  "@catchUpTitle": {
+    "description": "Título para la hoja de ponerse al día"
+  },
+  "catchUpDescription": "Estuvo ausente durante {days} días. Elija una estrategia:",
+  "@catchUpDescription": {
+    "description": "Descripción para la hoja de ponerse al día",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "catchUpRedistribute": "Redistribuir en los días restantes",
+  "@catchUpRedistribute": {
+    "description": "Opción de redistribuir carga de trabajo"
+  },
+  "catchUpExtend": "Extender plan por {days} días",
+  "@catchUpExtend": {
+    "description": "Opción de extender el plan",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "planExtended": "Plan de estudio extendido por {days} días",
+  "@planExtended": {
+    "description": "Mensaje de éxito después de extender el plan",
+    "placeholders": {
+      "days": { "type": "int" }
+    }
+  },
+  "failedToExtendPlan": "Error al extender el plan de estudio",
+  "@failedToExtendPlan": {
+    "description": "Mensaje de error al extender el plan"
+  },
+  "failedToCatchUp": "Error al procesar la estrategia de recuperación",
+  "@failedToCatchUp": {
+    "description": "Mensaje de error cuando falla la recuperación"
+  },
+  "missedDismissed": "Lecciones perdidas descartadas",
+  "@missedDismissed": {
+    "description": "Mensaje de éxito después de descartar lecciones perdidas"
+  },
+  "failedToDismissMissed": "Error al descartar lecciones perdidas",
+  "@failedToDismissMissed": {
+    "description": "Mensaje de error al descartar lecciones perdidas"
+  },
+  "dismissAllMissed": "Descartar todas las perdidas",
+  "@dismissAllMissed": {
+    "description": "Botón para descartar todas las lecciones perdidas"
+  },
+  "missedLessonsCount": "Lecciones Perdidas ({count})",
+  "@missedLessonsCount": {
+    "description": "Encabezado de sección para lecciones perdidas con conteo",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "mentorScheduleConflict": "La hora propuesta ({time}) entra en conflicto con una lección existente. Espacio libre sugerido: {freeSlot}. ¿Lo reservo allí?",
   "@mentorScheduleConflict": {
     "description": "Message when scheduling conflicts with existing lesson",
@@ -5011,6 +5141,13 @@
       "correctCount": { "type": "int" },
       "confidencePercent": { "type": "int" },
       "adaptivePace": { "type": "String" }
+    }
+  },
+  "languageInstruction": "IMPORTANTE: Responda en el mismo idioma que el estudiante (locale: {localeName}). No use inglés a menos que el estudiante lo haga.",
+  "@languageInstruction": {
+    "description": "Instruction for LLM to respond in the student's language",
+    "placeholders": {
+      "localeName": { "type": "String" }
     }
   },
   "evaluationSystemPrompt": "Usted es un evaluador académico experto. Devuelva solo JSON válido.",
@@ -5098,7 +5235,7 @@
   "@uploadMaterialsToCreateQuestions": {
     "description": "Subtitle shown when no questions exist yet"
   },
-  "noQuestionsPracticeHint": "Aún no tienes preguntas de práctica. Sube materiales de estudio para generar preguntas.",
+  "noQuestionsPracticeHint": "Aún no tiene preguntas de práctica. Suba materiales de estudio para generar preguntas.",
   "@noQuestionsPracticeHint": {
     "description": "Hint shown on practice tab when there are no questions"
   },
@@ -5130,7 +5267,7 @@
   "@confirmExitPractice": {
     "description": "Title for exit confirmation dialog"
   },
-  "confirmExitPracticeBody": "Tu progreso en esta sesión se guardará, pero saldrás antes de completar todas las preguntas.",
+  "confirmExitPracticeBody": "Su progreso en esta sesión se guardará, pero saldrá antes de completar todas las preguntas.",
   "@confirmExitPracticeBody": {
     "description": "Body for exit confirmation dialog"
   },
@@ -5150,7 +5287,7 @@
   "@confirmExitFocus": {
     "description": "Title for focus session exit confirmation dialog"
   },
-  "confirmExitFocusBody": "Tienes una sesión de enfoque activa. Al finalizarla temprano se guardará tu progreso hasta ahora.",
+  "confirmExitFocusBody": "Tiene una sesión de enfoque activa. Al finalizarla temprano se guardará su progreso hasta ahora.",
   "@confirmExitFocusBody": {
     "description": "Body for focus session exit confirmation dialog"
   },
@@ -5210,11 +5347,27 @@
   "@sessionType": {
     "description": "Column header for session type in PDF export"
   },
+  "sessionTypePractice": "Práctica",
+  "@sessionTypePractice": {
+    "description": "Label for practice session type"
+  },
+  "sessionTypeFocus": "Enfoque",
+  "@sessionTypeFocus": {
+    "description": "Label for focus session type"
+  },
+  "sessionTypeTutoring": "Tutoría",
+  "@sessionTypeTutoring": {
+    "description": "Label for tutoring session type"
+  },
+  "sessionTypeManual": "Manual",
+  "@sessionTypeManual": {
+    "description": "Label for manual session type"
+  },
   "addCourseSubject": "Agregar Curso/Materia",
   "@addCourseSubject": {
     "description": "Button label to add a course or subject"
   },
-  "hoursPerDayAbbrev": "{hours}/Días",
+  "hoursPerDayAbbrev": "{hours} h/día",
   "@hoursPerDayAbbrev": {
     "description": "Hours per day abbreviation with separator",
     "placeholders": {
@@ -5561,7 +5714,7 @@
   "@deleteQuestion": {
     "description": "Title for delete question confirmation dialog"
   },
-  "deleteQuestionConfirm": "¿Estás seguro de que quieres eliminar esta pregunta?",
+  "deleteQuestionConfirm": "¿Está seguro de que desea eliminar esta pregunta?",
   "@deleteQuestionConfirm": {
     "description": "Body for delete question confirmation dialog"
   },
@@ -5569,7 +5722,7 @@
   "@deleteQuestions": {
     "description": "Title for delete multiple questions dialog"
   },
-  "deleteQuestionsConfirm": "¿Estás seguro de que quieres eliminar {count,plural,=1{1 pregunta} other{{count} preguntas}}?",
+  "deleteQuestionsConfirm": "¿Está seguro de que desea eliminar {count,plural,=1{1 pregunta} other{{count} preguntas}}?",
   "@deleteQuestionsConfirm": {
     "description": "Body for delete multiple questions confirmation",
     "placeholders": {
@@ -6170,5 +6323,259 @@
   "tutorImageAnalysisSystemPrompt": "El estudiante ha enviado este trabajo. Analiza y proporciona retroalimentación.",
   "@tutorImageAnalysisSystemPrompt": {
     "description": "System prompt for image analysis by the tutor LLM"
+  },
+  "dependenciesTitle": "{topic} — Dependencias",
+  "@dependenciesTitle": {
+    "description": "Dialog title for topic dependencies",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "prerequisites": "Requisitos previos",
+  "@prerequisites": {
+    "description": "Label for prerequisites section"
+  },
+  "noTopicsForPrerequisites": "No hay otros temas disponibles como requisitos previos.",
+  "@noTopicsForPrerequisites": {
+    "description": "Message when no topics are available"
+  },
+  "noDescription": "Sin descripción",
+  "@noDescription": {
+    "description": "Fallback when a topic has no description"
+  },
+  "masteryThreshold": "Umbral de Dominio: {percent}%",
+  "@masteryThreshold": {
+    "description": "Label for mastery threshold slider",
+    "placeholders": {
+      "percent": { "type": "String" }
+    }
+  },
+  "requiredTopic": "Tema Requerido",
+  "@requiredTopic": {
+    "description": "Label for required topic toggle"
+  },
+  "requiredTopicOn": "El estudiante debe dominar este tema",
+  "@requiredTopicOn": {
+    "description": "Description when topic is required"
+  },
+  "requiredTopicOff": "Tema opcional — puede omitirse",
+  "@requiredTopicOff": {
+    "description": "Description when topic is optional"
+  },
+  "syllabusWeight": "Peso del Temario: {weight}",
+  "@syllabusWeight": {
+    "description": "Label for syllabus weight slider",
+    "placeholders": {
+      "weight": { "type": "String" }
+    }
+  },
+  "parentTopic": "Tema Padre",
+  "@parentTopic": {
+    "description": "Label for parent topic dropdown"
+  },
+  "rootTopic": "Ninguno (Tema Raíz)",
+  "@rootTopic": {
+    "description": "Dropdown option for root topic"
+  },
+  "sortOrderValue": "Orden: {order}",
+  "@sortOrderValue": {
+    "description": "Label showing sort order value",
+    "placeholders": {
+      "order": { "type": "int" }
+    }
+  },
+  "topicCreated": "Tema \"{title}\" creado",
+  "@topicCreated": {
+    "description": "Snackbar message when topic is created",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "topicCreateFailed": "Error al crear tema: {error}",
+  "@topicCreateFailed": {
+    "description": "Error message when topic creation fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "editTopicTitle": "Editar Tema",
+  "@editTopicTitle": {
+    "description": "Popup menu title for edit topic"
+  },
+  "topicUpdated": "Tema \"{title}\" actualizado",
+  "@topicUpdated": {
+    "description": "Snackbar message when topic is updated",
+    "placeholders": {
+      "title": { "type": "String" }
+    }
+  },
+  "topicUpdateFailed": "Error al actualizar tema: {error}",
+  "@topicUpdateFailed": {
+    "description": "Error message when topic update fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "dependenciesUpdated": "Dependencias actualizadas",
+  "@dependenciesUpdated": {
+    "description": "Snackbar message when dependencies are updated"
+  },
+  "dependenciesUpdateFailed": "Error al actualizar dependencias: {error}",
+  "@dependenciesUpdateFailed": {
+    "description": "Error message when dependency update fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "deleteTopicTitle": "Eliminar Tema",
+  "@deleteTopicTitle": {
+    "description": "Dialog title for topic deletion"
+  },
+  "deleteTopicConfirm": "¿Eliminar \"{topic}\"? Esto lo eliminará de todas las listas de dependencias.",
+  "@deleteTopicConfirm": {
+    "description": "Confirmation message for topic deletion",
+    "placeholders": {
+      "topic": { "type": "String" }
+    }
+  },
+  "topicDeleted": "Tema eliminado",
+  "@topicDeleted": {
+    "description": "Snackbar message when topic is deleted"
+  },
+  "topicDeleteFailed": "Error al eliminar tema: {error}",
+  "@topicDeleteFailed": {
+    "description": "Error message when topic deletion fails",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "topicTitleLabel": "Título del Tema",
+  "@topicTitleLabel": {
+    "description": "Label for topic title input field"
+  },
+  "topicTitleHint": "p. ej., Estructura Atómica",
+  "@topicTitleHint": {
+    "description": "Hint text for topic title"
+  },
+  "topicDescriptionLabel": "Descripción del Tema",
+  "@topicDescriptionLabel": {
+    "description": "Label for topic description input field"
+  },
+  "topicDescriptionHint": "Describa el alcance del tema",
+  "@topicDescriptionHint": {
+    "description": "Hint text for topic description"
+  },
+  "syllabusTextLabel": "Texto del Plan de Estudios",
+  "@syllabusTextLabel": {
+    "description": "Label for syllabus text input field"
+  },
+  "syllabusTextHint": "Puntos del plan de estudios cubiertos",
+  "@syllabusTextHint": {
+    "description": "Hint text for syllabus text"
+  },
+  "addTopicTitle": "Agregar Tema",
+  "@addTopicTitle": {
+    "description": "Dialog title for adding a topic"
+  },
+  "topicCountTemplate": "{count} temas",
+  "@topicCountTemplate": {
+    "description": "Label showing number of topics",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "dependenciesNav": "Dependencias",
+  "@dependenciesNav": {
+    "description": "Popup menu item for topic dependencies"
+  },
+  "prerequisitesCount": "{count} requisitos previos",
+  "@prerequisitesCount": {
+    "description": "Label showing prerequisite count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "downstreamCount": "{count} dependientes",
+  "@downstreamCount": {
+    "description": "Label showing downstream topic count",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "hasParent": "Tiene padre",
+  "@hasParent": {
+    "description": "Label indicating a topic has a parent"
+  },
+  "addTopicTooltip": "Agregar Tema",
+  "@addTopicTooltip": {
+    "description": "Tooltip for add topic button"
+  },
+   "downstreamTopicWarning": "⚠ {count} tema(s) dependiente(s) dependen de este tema y pueden necesitar actualización.",
+   "@downstreamTopicWarning": {
+     "description": "Warning about downstream dependencies when deleting a topic",
+     "placeholders": {
+       "count": { "type": "int" }
+     }
+   },
+   "prerequisitesNotMet": "Prerrequisitos no cumplidos",
+   "@prerequisitesNotMet": {
+     "description": "Dialog title when prerequisites are not met"
+   },
+   "practicePrerequisites": "Practicar Prerrequisitos",
+   "@practicePrerequisites": {
+     "description": "Button to practice prerequisite topics"
+   },
+   "prerequisiteMasteryRequired": "Este tema requiere dominio de: {topicNames}. ¿Desea practicar esos primero?",
+   "@prerequisiteMasteryRequired": {
+     "description": "Body text for prerequisite dialog",
+     "placeholders": {
+       "topicNames": { "type": "String" }
+     }
+   },
+   "inlinePracticeSubtitle": "Practique directamente en modo de enfoque — el temporizador sigue corriendo",
+   "@inlinePracticeSubtitle": {
+     "description": "Subtitle for inline practice option in focus mode"
+   },
+   "fullPracticeSubtitle": "Navegar a la pantalla de práctica completa",
+   "@fullPracticeSubtitle": {
+     "description": "Subtitle for full practice session option in focus mode"
+   },
+   "generateLessonFromContent": "Generar lección desde este material",
+   "@generateLessonFromContent": {
+     "description": "Checkbox label to generate AI lesson from uploaded content"
+   },
+   "generateLessonFromContentHint": "Crea una lección generada por IA con diapositivas, ejercicios y bloques de resumen",
+   "@generateLessonFromContentHint": {
+     "description": "Hint text for generate lesson checkbox"
+   },
+   "subjectNoTopics": "{subjectName} no tiene temas. Agregue temas primero o suba un programa de estudios.",
+   "@subjectNoTopics": {
+     "description": "Error message when a subject has no topics",
+     "placeholders": {
+       "subjectName": { "type": "String" }
+     }
+   },
+    "noActivityShort": "—",
+    "@noActivityShort": {
+      "description": "Visual placeholder for weeks with no activity in bar chart"
+    },
+    "courseNotFound": "Curso '{courseName}' no encontrado. Créelo primero en la pestaña Temas, o seleccione de las materias existentes usando el modo multi-programa.",
+    "@courseNotFound": {
+      "description": "Error message when a course/subject name typed by the user does not match any existing subject",
+      "placeholders": {
+        "courseName": { "type": "String" }
+      }
+    },
+    "planSubjectHint": "Ingrese el nombre de una materia existente para basar el plan en su programa de estudios",
+    "@planSubjectHint": {
+      "description": "Helper text explaining that the user should enter a subject name that already exists"
+    },
+    "chat": "Chat",
+    "@chat": {
+      "description": "Tooltip label for chat view in tutor screen"
+    },
+    "slides": "Diapositivas",
+    "@slides": {
+      "description": "Tooltip label for slides view in tutor screen"
+    }
   }
-}

@@ -96,6 +96,7 @@ void main() {
     test('hashCode and equality', () {
       expect(MarkSchemeStepAdapter().hashCode, MarkSchemeStepAdapter().hashCode);
       expect(MarkSchemeStepAdapter() == MarkSchemeStepAdapter(), isTrue);
+      expect(MarkSchemeStepAdapter() == Object(), isFalse);
     });
   });
 }

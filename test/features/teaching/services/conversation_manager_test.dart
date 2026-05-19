@@ -38,6 +38,8 @@ class FakeLlmService extends LlmService {
   String chatResponse = '{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}';
   String streamResponse = 'Mock tutor response';
   String summaryResponse = 'Lesson summary mock';
+  bool shouldThrowOnChat = false;
+  bool shouldThrowStream = false;
 
   @override
   Future<Result<String>> chat({
@@ -49,6 +51,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    if (shouldThrowOnChat) return Result.failure('Simulated LLM chat error');
     if (message.contains('Summarize what was covered')) {
       return Result.success(summaryResponse);
     }
@@ -65,11 +68,14 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async* {
+    if (shouldThrowStream) throw Exception('Simulated stream error');
     yield streamResponse;
   }
 }
 
 class FakeExerciseEvaluator extends ExerciseEvaluator {
+  bool shouldThrow = false;
+
   FakeExerciseEvaluator()
       : super(
           llmService: FakeLlmService(),
@@ -86,6 +92,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
     String? systemPrompt,
     String? userPrompt,
   }) async {
+    if (shouldThrow) throw Exception('Simulated evaluator error');
     final lower = studentAnswer.toLowerCase();
     if (lower.contains('correct') || lower.contains('right') || lower.contains('yes')) {
       return EvaluationResult(score: 0.9, explanation: 'Correct answer.');
@@ -196,6 +203,29 @@ void main() {
         expect(plan.goals, isNotEmpty);
         expect(plan.totalDurationMinutes, equals(30));
       });
+
+      test('falls back to default plan when LLM returns failure', () async {
+        llmService.shouldThrowOnChat = true;
+        final plan = await manager.generateLessonPlan(
+          durationMinutes: 45,
+        );
+
+        expect(plan.goals, isNotEmpty);
+        expect(plan.totalDurationMinutes, equals(45));
+        expect(manager.lessonPlan, isNotNull);
+      });
+
+      test('recovers after LLM failure for subsequent plan generation', () async {
+        llmService.shouldThrowOnChat = true;
+        await manager.generateLessonPlan(durationMinutes: 30);
+
+        llmService.shouldThrowOnChat = false;
+        final plan = await manager.generateLessonPlan(durationMinutes: 45);
+
+        expect(plan.goals, isNotEmpty);
+        expect(plan.sections, isNotEmpty);
+        expect(manager.lessonPlan, isNotNull);
+      });
     });
 
     group('sendMessage', () {
@@ -225,6 +255,39 @@ void main() {
         final chunks = await manager.sendMessage('Hello').toList();
 
         expect(chunks.isNotEmpty, isTrue);
+      });
+
+      test('throws when LLM stream fails during sendMessage', () async {
+        llmService.shouldThrowStream = true;
+
+        expect(
+          () => manager.sendMessage('Hello').toList(),
+          throwsA(isA<Exception>()),
+        );
+      });
+
+      test('throws when exercise evaluator fails during exercise phase', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.exercise;
+        exerciseEvaluator.shouldThrow = true;
+
+        expect(
+          () => manager.sendMessage('answer').toList(),
+          throwsA(isA<Exception>()),
+        );
+      });
+
+      test('preserves exercise count after evaluator error during exercise', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.exercise;
+        exerciseEvaluator.shouldThrow = true;
+
+        await expectLater(
+          () => manager.sendMessage('answer').toList(),
+          throwsA(isA<Exception>()),
+        );
+
+        expect(manager.exerciseCount, equals(1));
       });
     });
 
@@ -401,6 +464,26 @@ void main() {
         final summary = await manager.generateSummary();
 
         expect(summary, equals('Lesson summary mock'));
+      });
+
+      test('returns empty string when LLM service fails', () async {
+        await manager.initialize();
+        llmService.shouldThrowOnChat = true;
+
+        final summary = await manager.generateSummary();
+
+        expect(summary, equals(''));
+      });
+
+      test('recovers after LLM error on subsequent call', () async {
+        await manager.initialize();
+        llmService.shouldThrowOnChat = true;
+        final firstSummary = await manager.generateSummary();
+        expect(firstSummary, equals(''));
+
+        llmService.shouldThrowOnChat = false;
+        final secondSummary = await manager.generateSummary();
+        expect(secondSummary, equals('Lesson summary mock'));
       });
     });
 
@@ -621,6 +704,27 @@ void main() {
     });
 
     group('persistence repo integration', () {
+      test('handles repo failure gracefully on initialize', () async {
+        final failingRepo = FakeConversationRepo();
+        final m = ConversationManager(
+          llmService: llmService,
+          modelId: 'test-model',
+          sessionId: 'fail-session',
+          studentId: 'student-123',
+          topicTitle: 'Test',
+          subjectId: 'test',
+          topicId: 't1',
+          exerciseEvaluator: exerciseEvaluator,
+          persistenceRepo: failingRepo,
+          localeName: 'en',
+        );
+
+        await m.initialize();
+
+        expect(m.messages, isEmpty);
+        expect(m.phase, equals(ConversationPhase.greeting));
+      });
+
       test('loads persisted messages on initialize when repo is provided', () async {
         final persistedMessages = [
           ConversationMessage(
@@ -664,6 +768,37 @@ void main() {
         expect(m.messages.length, equals(2));
         expect(m.messages[0].content, equals('Welcome back!'));
         expect(m.messages[1].content, equals('Hello again!'));
+      });
+    });
+
+    group('processImage', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('processes image and adds messages', () async {
+        final chunks = await manager.processImage('fakeBase64Data').toList();
+
+        expect(chunks.isNotEmpty, isTrue);
+        expect(manager.messages.length, equals(2));
+        expect(manager.messages[0].content, contains('Image submitted'));
+      });
+
+      test('transitions to teaching when image is submitted during greeting', () async {
+        expect(manager.phase, equals(ConversationPhase.greeting));
+
+        await manager.processImage('fakeBase64Data').toList();
+
+        expect(manager.phase, equals(ConversationPhase.teaching));
+      });
+
+      test('throws when LLM stream fails during processImage', () async {
+        llmService.shouldThrowStream = true;
+
+        expect(
+          () => manager.processImage('fakeBase64Data').toList(),
+          throwsA(isA<Exception>()),
+        );
       });
     });
 

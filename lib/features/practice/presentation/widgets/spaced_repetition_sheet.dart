@@ -78,6 +78,7 @@ class SpacedRepetitionSheet extends StatelessWidget {
       shape: AppTheme.bottomSheetShape,
       builder: (sheetContext) => SafeArea(
         child: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Container(
             padding: ResponsiveUtils.screenPadding(sheetContext),
             child: Column(

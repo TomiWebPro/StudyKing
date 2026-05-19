@@ -1,76 +1,76 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/teaching/services/voice_controller.dart';
+import 'package:studyking/core/services/voice_service.dart';
 
 void main() {
-  group('VoiceController', () {
-    late VoiceController controller;
+  group('VoiceService', () {
+    late VoiceService service;
 
     setUp(() {
-      controller = VoiceController();
+      service = VoiceService();
     });
 
     tearDown(() {
-      controller.dispose();
+      service.dispose();
     });
 
     test('initial state is not listening and not speaking', () {
-      expect(controller.isListening, isFalse);
-      expect(controller.isSpeaking, isFalse);
-      expect(controller.isAvailable, isFalse);
+      expect(service.isListening, isFalse);
+      expect(service.isSpeaking, isFalse);
+      expect(service.isAvailable, isFalse);
     });
 
     test('startListening does nothing when not available', () async {
-      await controller.startListening();
-      expect(controller.isListening, isFalse);
+      await service.startListening();
+      expect(service.isListening, isFalse);
     });
 
     test('stopListening does nothing when not listening', () async {
-      await controller.stopListening();
-      expect(controller.isListening, isFalse);
+      await service.stopListening();
+      expect(service.isListening, isFalse);
     });
 
     test('speak completes without error when not available', () async {
-      await controller.speak('Hello');
-      expect(controller.isSpeaking, isFalse);
+      await service.speak('Hello');
+      expect(service.isSpeaking, isFalse);
     });
 
     test('stopSpeaking does nothing', () async {
-      await controller.stopSpeaking();
-      expect(controller.isSpeaking, isFalse);
+      await service.stopSpeaking();
+      expect(service.isSpeaking, isFalse);
     });
 
     test('transcribedText stream is available', () {
-      expect(controller.transcribedText, isA<Stream<String>>());
+      expect(service.transcribedText, isA<Stream<String>>());
     });
 
     test('listeningState stream is available', () {
-      expect(controller.listeningState, isA<Stream<bool>>());
+      expect(service.listeningState, isA<Stream<bool>>());
     });
 
     test('requestPermission returns false in test environment', () async {
-      final granted = await controller.requestPermission();
+      final granted = await service.requestPermission();
       expect(granted, isFalse);
     });
 
     test('dispose can be called without error', () {
-      controller.dispose();
-      expect(controller.isListening, isFalse);
-      expect(controller.isSpeaking, isFalse);
+      service.dispose();
+      expect(service.isListening, isFalse);
+      expect(service.isSpeaking, isFalse);
     });
 
     test('multiple dispose calls do not throw', () {
-      controller.dispose();
-      controller.dispose();
+      service.dispose();
+      service.dispose();
     });
 
     test('startListening accepts localeName parameter', () async {
-      await controller.startListening(localeName: 'es');
-      expect(controller.isListening, isFalse);
+      await service.startListening(localeName: 'es');
+      expect(service.isListening, isFalse);
     });
 
     test('speak accepts localeName parameter', () async {
-      await controller.speak('Hola', localeName: 'es');
-      expect(controller.isSpeaking, isFalse);
+      await service.speak('Hola', localeName: 'es');
+      expect(service.isSpeaking, isFalse);
     });
   });
 }

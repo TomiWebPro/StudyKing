@@ -183,5 +183,43 @@ void main() {
       expect(copy.studentId, 'STU001');
     });
     });
+
+    group('serialization', () {
+      test('toJson/fromJson round-trip preserves all fields', () {
+        final original = UserProfile(
+          id: 'rt-1',
+          name: 'Test User',
+          studentId: 'STU-RT-001',
+          avatarIcon: 'avatar_icon',
+          learningGoal: 'Master Physics',
+          preferredStudyTime: 'Morning',
+          notificationsEnabled: false,
+          language: 'es',
+          accessibilityPrefs: AccessibilityPreferences(highContrast: true, reduceMotion: true),
+        );
+        final json = original.toJson();
+        final restored = UserProfile.fromJson(json);
+        expect(restored.id, original.id);
+        expect(restored.name, original.name);
+        expect(restored.studentId, original.studentId);
+        expect(restored.avatarIcon, original.avatarIcon);
+        expect(restored.learningGoal, original.learningGoal);
+        expect(restored.preferredStudyTime, original.preferredStudyTime);
+        expect(restored.notificationsEnabled, original.notificationsEnabled);
+        expect(restored.language, original.language);
+        expect(restored.accessibilityPrefs?.highContrast, original.accessibilityPrefs?.highContrast);
+        expect(restored.accessibilityPrefs?.reduceMotion, original.accessibilityPrefs?.reduceMotion);
+      });
+
+      test('toJson/fromJson round-trip with defaults', () {
+        final original = UserProfile(id: 'rt-2', name: 'Minimal');
+        final json = original.toJson();
+        final restored = UserProfile.fromJson(json);
+        expect(restored.notificationsEnabled, isTrue);
+        expect(restored.language, 'en');
+        expect(restored.accessibilityPrefs, isNull);
+        expect(restored.studentId, isNull);
+      });
+    });
   });
 }

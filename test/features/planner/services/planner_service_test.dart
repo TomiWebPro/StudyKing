@@ -17,8 +17,9 @@ import 'package:studyking/features/planner/data/repositories/roadmap_repository.
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';
@@ -158,39 +159,42 @@ class _FakePendingActionRepository extends PendingActionRepository {
   bool throwOnMarkRejected = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
-    return _actions.values
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(_actions.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
-        .toList();
+        .toList());
   }
 
   @override
   Future<Result<PendingActionModel?>> get(String id) async => Result.success(_actions[id]);
 
   @override
-  Future<void> markCompleted(String id) async {
+  Future<Result<void>> markCompleted(String id) async {
     if (throwOnMarkCompleted) throw Exception('mark completed error');
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'completed');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> markRejected(String id) async {
+  Future<Result<void>> markRejected(String id) async {
     if (throwOnMarkRejected) throw Exception('mark rejected error');
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'rejected');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> create(PendingActionModel action) async {
+  Future<Result<void>> create(PendingActionModel action) async {
     _actions[action.id] = action;
+    return Result.success(null);
   }
 
   void addAction(PendingActionModel action) => _actions[action.id] = action;
@@ -206,8 +210,8 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   }
 }
 
-class _FakePlanAdapter extends PlanAdapter {
-  _FakePlanAdapter() : super();
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  _FakePlanAdherenceOrchestrator() : super();
 
   bool returnFailureForAdherence = false;
   bool returnFailureForCheck = false;
@@ -234,13 +238,7 @@ class _FakePlanAdapter extends PlanAdapter {
   }
 
   @override
-  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
 }
 
 void main() {
@@ -251,19 +249,28 @@ void main() {
   late _FakeRoadmapRepository roadmapRepo;
   late _FakeSessionRepository sessionRepo;
   late _FakePendingActionRepository pendingActionRepo;
-  late _FakePlanAdapter planAdapter;
+  late _FakePlanAdherenceOrchestrator planOrchestrator;
   late AppLocalizations l10n;
 
   setUp(() {
-    Hive.init(Directory.systemTemp.createTempSync('planner_svc_test_').path);
     masteryRepo = _FakeMasteryGraphRepository();
     topicRepo = _FakeTopicRepository();
     planRepo = _FakePlanRepository();
     roadmapRepo = _FakeRoadmapRepository();
     sessionRepo = _FakeSessionRepository();
     pendingActionRepo = _FakePendingActionRepository();
-    planAdapter = _FakePlanAdapter();
+    planOrchestrator = _FakePlanAdherenceOrchestrator();
     l10n = AppLocalizationsEn();
+
+    final fakeAdherenceRepo = _FakeAdherenceRepo();
+    final planService = PersonalLearningPlanService(
+      masteryService: MasteryGraphService(),
+      repository: masteryRepo,
+      topicRepository: topicRepo,
+      planRepository: planRepo,
+      adherenceRepository: fakeAdherenceRepo,
+      roadmapRepository: roadmapRepo,
+    );
 
     final syllabusResolver = SyllabusResolver(
       topicRepository: topicRepo,
@@ -271,14 +278,16 @@ void main() {
     );
 
     service = PlannerService(
-      masteryService: MasteryGraphService(repository: masteryRepo),
+      masteryService: MasteryGraphService(),
       repository: masteryRepo,
       topicRepository: topicRepo,
       planRepo: planRepo,
       roadmapRepo: roadmapRepo,
       sessionRepo: sessionRepo,
       pendingActionRepo: pendingActionRepo,
-      planAdapter: planAdapter,
+      planOrchestrator: planOrchestrator,
+      planService: planService,
+      adherenceRepo: fakeAdherenceRepo,
       syllabusResolver: syllabusResolver,
       fixedStudentId: 'test-student',
     );
@@ -389,6 +398,10 @@ void main() {
   });
 
   group('generatePlanFromSyllabus', () {
+    setUp(() {
+      Hive.init(Directory.systemTemp.createTempSync('planner_genplan_').path);
+    });
+
     test('generates plan from syllabus goals', () async {
       topicRepo.addTopic(Topic(
         id: 'topic-1',
@@ -722,13 +735,13 @@ void main() {
 
       final service2 = PlannerService(
         planRepo: planRepo,
-        masteryService: MasteryGraphService(repository: masteryRepo),
+        masteryService: MasteryGraphService(),
         repository: masteryRepo,
         topicRepository: topicRepo,
         roadmapRepo: roadmapRepo,
         sessionRepo: sessionRepo2,
         pendingActionRepo: pendingActionRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         fixedStudentId: 'test-student',
       );
 
@@ -751,13 +764,13 @@ void main() {
     });
 
     test('getAdherenceReport returns empty map on failure', () async {
-      planAdapter.returnFailureForAdherence = true;
+      planOrchestrator.returnFailureForAdherence = true;
       final report = await service.getAdherenceReport();
       expect(report, isEmpty);
     });
 
     test('checkAdherence returns null on failure', () async {
-      planAdapter.returnFailureForCheck = true;
+      planOrchestrator.returnFailureForCheck = true;
       final deviation = await service.checkAdherence();
       expect(deviation, isNull);
     });
@@ -775,12 +788,12 @@ void main() {
     });
   });
 
-  group('createRoadmapFromGoal', () {
+  group('createRoadmap', () {
     test('creates roadmap with milestones', () async {
-      final roadmap = await service.createRoadmapFromGoal(
-        'Learn Physics',
-        14,
-        l10n,
+      final roadmap = await service.createRoadmap(
+        goal: 'Learn Physics',
+        days: 14,
+        l10n: l10n,
       );
       expect(roadmap, isNotNull);
       expect(roadmap!.goal, 'Learn Physics');
@@ -795,10 +808,10 @@ void main() {
         description: 'Motion',
         syllabusText: 'IB Physics topic',
       ));
-      final roadmap = await service.createRoadmapFromGoal(
-        'Learn Physics',
-        14,
-        l10n,
+      final roadmap = await service.createRoadmap(
+        goal: 'Learn Physics',
+        days: 14,
+        l10n: l10n,
         subjectId: 'sub_physics',
       );
       expect(roadmap, isNotNull);
@@ -942,13 +955,13 @@ void main() {
 
       final service2 = PlannerService(
         planRepo: planRepo,
-        masteryService: MasteryGraphService(repository: masteryRepo),
+        masteryService: MasteryGraphService(),
         repository: masteryRepo,
         topicRepository: topicRepo,
         roadmapRepo: roadmapRepo,
         sessionRepo: sessionRepo2,
         pendingActionRepo: pendingActionRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         fixedStudentId: 'test-student',
       );
 
@@ -991,13 +1004,13 @@ void main() {
 
       final service2 = PlannerService(
         planRepo: planRepo,
-        masteryService: MasteryGraphService(repository: masteryRepo),
+        masteryService: MasteryGraphService(),
         repository: masteryRepo,
         topicRepository: topicRepo,
         roadmapRepo: roadmapRepo,
         sessionRepo: sessionRepo2,
         pendingActionRepo: pendingActionRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         fixedStudentId: 'test-student',
       );
 
@@ -1057,7 +1070,7 @@ void main() {
         ),
         recommendations: [],
       );
-      planAdapter.setRegeneratedPlan(testPlan);
+      planOrchestrator.setRegeneratedPlan(testPlan);
       final plan = await service.regeneratePlanFromAdherence();
       expect(plan, isNotNull);
       expect(plan!.studentId, 'test-student');
@@ -1072,6 +1085,7 @@ void main() {
     });
 
     test('aggregates adherence metrics across records', () async {
+      Hive.init(Directory.systemTemp.createTempSync('planner_svc_adh_').path);
       registerPlannerAdapters();
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day);
@@ -1093,13 +1107,13 @@ void main() {
 
       final service2 = PlannerService(
         planRepo: planRepo,
-        masteryService: MasteryGraphService(repository: masteryRepo),
+        masteryService: MasteryGraphService(),
         repository: masteryRepo,
         topicRepository: topicRepo,
         roadmapRepo: roadmapRepo,
         sessionRepo: sessionRepo,
         pendingActionRepo: pendingActionRepo,
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         adherenceRepo: adherenceRepo2,
         fixedStudentId: 'test-student',
       );
@@ -1182,13 +1196,13 @@ void main() {
       final mockAdherenceRepo = _FakeAdherenceRepo();
       final freshService = PlannerService(
         planRepo: _FakePlanRepository(),
-        masteryService: MasteryGraphService(repository: _FakeMasteryGraphRepository()),
+        masteryService: MasteryGraphService(),
         repository: _FakeMasteryGraphRepository(),
         topicRepository: _FakeTopicRepository(),
         roadmapRepo: _FakeRoadmapRepository(),
         sessionRepo: _FakeSessionRepository(),
         pendingActionRepo: _FakePendingActionRepository(),
-        planAdapter: planAdapter,
+        planOrchestrator: planOrchestrator,
         adherenceRepo: mockAdherenceRepo,
         fixedStudentId: 'test-student',
       );

@@ -115,5 +115,34 @@ void main() {
         expect(a.hashCode, a.hashCode);
       });
     });
+
+    group('serialization', () {
+      test('toJson/fromJson round-trip preserves all fields', () {
+        final original = StudentAvailabilityModel(
+          studentId: 'student-1',
+          preferredStudyDays: [1, 3, 5],
+          preferredStartHour: 6,
+          preferredEndHour: 20,
+          maxSessionsPerDay: 2,
+          defaultSessionDurationMinutes: 45,
+          blackoutDates: [DateTime(2026, 6, 1), DateTime(2026, 6, 15)],
+        );
+        final json = original.toJson();
+        final restored = StudentAvailabilityModel.fromJson(json);
+        expect(restored.studentId, original.studentId);
+        expect(restored.preferredStudyHoursPerDay, original.preferredStudyHoursPerDay);
+        expect(restored.preferredStudyDays, original.preferredStudyDays);
+        expect(restored.blackoutDates, original.blackoutDates);
+      });
+
+      test('toJson/fromJson round-trip with defaults', () {
+        final original = StudentAvailabilityModel(studentId: 'student-1');
+        final json = original.toJson();
+        final restored = StudentAvailabilityModel.fromJson(json);
+        expect(restored.preferredStudyHoursPerDay, 12);
+        expect(restored.preferredStudyDays, isEmpty);
+        expect(restored.blackoutDates, isEmpty);
+      });
+    });
   });
 }

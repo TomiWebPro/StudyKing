@@ -8,11 +8,13 @@ import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
@@ -301,7 +303,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     if (_isLoadingConfig) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.practiceMode)),
-        body: const Center(child: CircularProgressIndicator()),
+        body: const LoadingIndicator(),
       );
     }
 
@@ -483,6 +485,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         children: [
           SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -558,19 +561,19 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           label: l10n.easyQuestions,
           value: _easyCount,
           onChanged: (v) => setState(() => _easyCount = v),
-          color: Colors.green,
+          color: Theme.of(context).colorScheme.primary,
         ),
         _buildDifficultySlider(
           label: l10n.mediumQuestions,
           value: _mediumCount,
           onChanged: (v) => setState(() => _mediumCount = v),
-          color: Colors.orange,
+          color: Theme.of(context).colorScheme.tertiary,
         ),
         _buildDifficultySlider(
           label: l10n.hardQuestions,
           value: _hardCount,
           onChanged: (v) => setState(() => _hardCount = v),
-          color: Colors.red,
+          color: Theme.of(context).colorScheme.error,
         ),
         SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
         Text(
@@ -651,6 +654,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       appBar: AppBar(title: Text(l10n.sessionResults)),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

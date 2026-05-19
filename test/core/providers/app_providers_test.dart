@@ -6,6 +6,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 
@@ -111,26 +112,26 @@ void main() {
 
     group('updateSettings', () {
       test('updates api key', () async {
-        await controller.updateSettings(apiKey: 'new-key');
+        await controller.updateSettings(SettingsUpdate(apiKey: 'new-key'));
         expect(controller.currentState.apiKey, equals('new-key'));
       });
 
       test('updates theme mode', () async {
-        await controller.updateSettings(themeMode: ThemeMode.dark);
+        await controller.updateSettings(SettingsUpdate(themeMode: ThemeMode.dark));
         expect(controller.currentState.themeModeEnum, equals(ThemeMode.dark));
       });
 
       test('updates font size', () async {
-        await controller.updateSettings(fontSize: 18.0);
+        await controller.updateSettings(SettingsUpdate(fontSize: 18.0));
         expect(controller.currentState.fontSize, equals(18.0));
       });
 
       test('updates multiple fields at once', () async {
-        await controller.updateSettings(
+        await controller.updateSettings(SettingsUpdate(
           apiKey: 'key',
           fontSize: 20.0,
           studyRemindersEnabled: true,
-        );
+        ));
         expect(controller.currentState.apiKey, equals('key'));
         expect(controller.currentState.fontSize, equals(20.0));
         expect(controller.currentState.studyRemindersEnabled, isTrue);
@@ -138,7 +139,7 @@ void main() {
 
       test('handles errors gracefully', () async {
         fakeRepo.shouldThrow = true;
-        await controller.updateSettings(apiKey: 'key');
+        await controller.updateSettings(SettingsUpdate(apiKey: 'key'));
         expect(controller.currentState.apiKey, isEmpty);
       });
     });
@@ -156,59 +157,6 @@ void main() {
       });
     });
 
-    group('updateTheme', () {
-      test('updates theme mode', () async {
-        await controller.updateTheme(ThemeMode.dark);
-        expect(controller.currentState.themeModeEnum, equals(ThemeMode.dark));
-      });
-
-      test('handles errors gracefully', () async {
-        fakeRepo.shouldThrow = true;
-        await controller.updateTheme(ThemeMode.dark);
-        expect(controller.currentState.themeModeEnum, equals(ThemeMode.system));
-      });
-    });
-
-    group('updateFontSize', () {
-      test('updates font size', () async {
-        await controller.updateFontSize(22.0);
-        expect(controller.currentState.fontSize, equals(22.0));
-      });
-    });
-
-    group('updateModel', () {
-      test('updates selected model', () async {
-        await controller.updateModel('gpt-4');
-        expect(controller.currentState.selectedModel, equals('gpt-4'));
-      });
-    });
-
-    group('updateStudyReminders', () {
-      test('enables study reminders', () async {
-        await controller.updateStudyReminders(true);
-        expect(controller.currentState.studyRemindersEnabled, isTrue);
-      });
-
-      test('disables study reminders', () async {
-        await controller.updateStudyReminders(false);
-        expect(controller.currentState.studyRemindersEnabled, isFalse);
-      });
-    });
-
-    group('updateRequestTimeout', () {
-      test('updates timeout seconds', () async {
-        await controller.updateRequestTimeout(60);
-        expect(controller.currentState.requestTimeoutSeconds, equals(60));
-      });
-    });
-
-    group('updateSessionDuration', () {
-      test('updates session duration', () async {
-        await controller.updateSessionDuration(45);
-        expect(controller.currentState.sessionDurationMinutes, equals(45));
-      });
-    });
-
     group('updateStats', () {
       test('updates session count', () async {
         await controller.updateStats(sessionCount: 10);
@@ -220,55 +168,6 @@ void main() {
 
       test('updates questions count', () async {
         await controller.updateStats(questions: 50);
-      });
-    });
-
-    group('updateHighContrast', () {
-      test('enables high contrast', () async {
-        await controller.updateHighContrast(true);
-        expect(controller.currentState.highContrastEnabled, isTrue);
-      });
-    });
-
-    group('updateLargeTouchTargets', () {
-      test('enables large touch targets', () async {
-        await controller.updateLargeTouchTargets(true);
-        expect(controller.currentState.largeTouchTargets, isTrue);
-      });
-    });
-
-    group('updateReduceMotion', () {
-      test('enables reduce motion', () async {
-        await controller.updateReduceMotion(true);
-        expect(controller.currentState.reduceMotion, isTrue);
-      });
-    });
-
-    group('updateRevisionReminders', () {
-      test('enables revision reminders', () async {
-        await controller.updateRevisionReminders(true);
-        expect(controller.currentState.revisionRemindersEnabled, isTrue);
-      });
-    });
-
-    group('updateLessonNotifications', () {
-      test('enables lesson notifications', () async {
-        await controller.updateLessonNotifications(true);
-        expect(controller.currentState.lessonNotificationsEnabled, isTrue);
-      });
-    });
-
-    group('updateOverworkAlerts', () {
-      test('enables overwork alerts', () async {
-        await controller.updateOverworkAlerts(true);
-        expect(controller.currentState.overworkAlertsEnabled, isTrue);
-      });
-    });
-
-    group('updatePlanAdjustmentNotifications', () {
-      test('enables plan adjustment notifications', () async {
-        await controller.updatePlanAdjustmentNotifications(true);
-        expect(controller.currentState.planAdjustmentNotificationsEnabled, isTrue);
       });
     });
   });
@@ -288,50 +187,29 @@ class _FakeSettingsRepository implements SettingsRepository {
   }
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     if (shouldThrow) return Result.failure('update error');
     _settings = _settings.copyWith(
-      apiKey: apiKey,
-      apiBaseUrl: apiBaseUrl,
-      selectedModel: selectedModel,
-      themeModeEnum: themeMode,
-      fontSize: fontSize,
-      studyRemindersEnabled: studyRemindersEnabled,
-      requestTimeoutSeconds: requestTimeoutSeconds,
-      sessionDurationMinutes: sessionDurationMinutes,
-      highContrastEnabled: highContrastEnabled,
-      largeTouchTargets: largeTouchTargets,
-      reduceMotion: reduceMotion,
-      revisionRemindersEnabled: revisionRemindersEnabled,
-      lessonNotificationsEnabled: lessonNotificationsEnabled,
-      overworkAlertsEnabled: overworkAlertsEnabled,
-      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled,
-      breakDurationSeconds: breakDurationSeconds,
-      dailyReminderHour: dailyReminderHour,
-      dailyReminderMinute: dailyReminderMinute,
-      firstFocusVisit: firstFocusVisit,
-      dailyReminderEnabled: dailyReminderEnabled,
+      apiKey: update.apiKey,
+      apiBaseUrl: update.apiBaseUrl,
+      selectedModel: update.selectedModel,
+      themeModeEnum: update.themeMode,
+      fontSize: update.fontSize,
+      studyRemindersEnabled: update.studyRemindersEnabled,
+      requestTimeoutSeconds: update.requestTimeoutSeconds,
+      sessionDurationMinutes: update.sessionDurationMinutes,
+      highContrastEnabled: update.highContrastEnabled,
+      largeTouchTargets: update.largeTouchTargets,
+      reduceMotion: update.reduceMotion,
+      revisionRemindersEnabled: update.revisionRemindersEnabled,
+      lessonNotificationsEnabled: update.lessonNotificationsEnabled,
+      overworkAlertsEnabled: update.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: update.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: update.breakDurationSeconds,
+      dailyReminderHour: update.dailyReminderHour,
+      dailyReminderMinute: update.dailyReminderMinute,
+      firstFocusVisit: update.firstFocusVisit,
+      dailyReminderEnabled: update.dailyReminderEnabled,
     );
     return Result.success(null);
   }

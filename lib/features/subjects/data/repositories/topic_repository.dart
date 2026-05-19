@@ -50,4 +50,84 @@ class TopicRepository extends Repository<Topic> {
       }
     }, context: 'addParent');
   }
+
+  Future<Result<Map<String, List<String>>>> getDependencyGraph(
+    List<String> topicIds,
+    Map<String, List<String>> dependencies,
+  ) async {
+    return Result.captureSync(() {
+      final graph = <String, List<String>>{};
+      for (final id in topicIds) {
+        graph[id] = dependencies[id] ?? [];
+      }
+      return graph;
+    }, context: 'getDependencyGraph');
+  }
+
+  Future<Result<List<String>>> getTopologicalOrder(
+    List<String> topicIds,
+    Map<String, List<String>> dependencies,
+  ) async {
+    return Result.captureSync(() {
+      final inDegree = <String, int>{};
+      final adj = <String, List<String>>{};
+
+      for (final id in topicIds) {
+        inDegree[id] = 0;
+        adj[id] = [];
+      }
+
+      for (final entry in dependencies.entries) {
+        final prereqs = entry.value;
+        for (final prereq in prereqs) {
+          adj.putIfAbsent(prereq, () => []).add(entry.key);
+          inDegree[entry.key] = (inDegree[entry.key] ?? 0) + 1;
+        }
+      }
+
+      final queue = <String>[];
+      for (final id in topicIds) {
+        if ((inDegree[id] ?? 0) == 0) {
+          queue.add(id);
+        }
+      }
+
+      final order = <String>[];
+      while (queue.isNotEmpty) {
+        final node = queue.removeAt(0);
+        order.add(node);
+        for (final neighbor in adj[node] ?? []) {
+          inDegree[neighbor] = (inDegree[neighbor] ?? 1) - 1;
+          if ((inDegree[neighbor] ?? 0) == 0) {
+            queue.add(neighbor);
+          }
+        }
+      }
+
+      return order;
+    }, context: 'getTopologicalOrder');
+  }
+
+  Future<Result<List<String>>> getDownstreamTopicIds(
+    String topicId,
+    Map<String, List<String>> dependencies,
+  ) async {
+    return Result.captureSync(() {
+      final visited = <String>{};
+      final downstream = <String>[];
+
+      void dfs(String current) {
+        for (final entry in dependencies.entries) {
+          if (entry.value.contains(current) && !visited.contains(entry.key)) {
+            visited.add(entry.key);
+            downstream.add(entry.key);
+            dfs(entry.key);
+          }
+        }
+      }
+
+      dfs(topicId);
+      return downstream;
+    }, context: 'getDownstreamTopicIds');
+  }
 }

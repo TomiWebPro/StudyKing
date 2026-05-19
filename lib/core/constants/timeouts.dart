@@ -11,6 +11,13 @@ class Timeouts {
   static const Duration week = Duration(days: 7);
   static const Duration apiCall = Duration(seconds: 15);
   static const Duration apiHealthCheck = Duration(seconds: 10);
+  // OpenRouter request timeouts by environment
+  static const Duration openRouterTimeoutProduction = Duration(seconds: 45);
+  static const Duration openRouterTimeoutStaging = Duration(seconds: 90);
+  static const Duration openRouterTimeoutDevelopment = Duration(seconds: 60);
+  // YouTube request timeouts by environment
+  static const Duration youtubeTimeoutDefault = Duration(seconds: 30);
+  static const Duration youtubeTimeoutDevelopment = Duration(seconds: 20);
 
   // Booking horizon for scheduling lessons (90 days out)
   static const Duration bookingHorizon = Duration(days: 90);
@@ -25,6 +32,8 @@ class Timeouts {
   static const Duration dashboardAnimation = Duration(milliseconds: 1500);
   // Bar chart animation duration
   static const Duration barChartAnimation = Duration(milliseconds: 300);
+  // Animation duration for LLM task manager
+  static const Duration animationMedium = Duration(seconds: 4);
   // Voice listen duration
   static const Duration voiceListen = Duration(seconds: 60);
   // Voice pause duration

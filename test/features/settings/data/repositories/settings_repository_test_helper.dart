@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 
@@ -38,7 +39,7 @@ void sharedUninitializedTests() {
 
     test('returns failure when calling updateSettings before init', () async {
       final repo = SettingsRepository();
-      final result = await repo.updateSettings();
+      final result = await repo.updateSettings(SettingsUpdate());
       expect(result.isFailure, isTrue);
     });
 
@@ -140,12 +141,12 @@ void sharedSettingsRepositoryTests({
 
     test('returns persisted settings after update', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         apiKey: 'sk-persisted-key',
         apiBaseUrl: 'https://custom.api.com',
         themeMode: ThemeMode.dark,
         fontSize: 20.0,
-      );
+      ));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;

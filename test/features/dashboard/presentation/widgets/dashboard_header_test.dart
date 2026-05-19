@@ -28,5 +28,39 @@ void main() {
       expect(find.text('Study Dashboard'), findsOneWidget);
       expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
+
+    testWidgets('renders export icon button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+    });
+
+    testWidgets('renders backup icon button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.backup_outlined), findsOneWidget);
+    });
+
+    testWidgets('renders help icon button', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    });
+
+    testWidgets('export icon button has semantics label', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpAndSettle();
+
+      final exportButton = find.byIcon(Icons.file_download_outlined);
+      expect(exportButton, findsOneWidget);
+
+      expect(
+        tester.getSemantics(find.byIcon(Icons.file_download_outlined)),
+        matchesSemantics(label: 'Export Reports'),
+      );
+    });
   });
 }

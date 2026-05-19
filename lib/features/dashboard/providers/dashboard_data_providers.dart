@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
@@ -7,15 +8,19 @@ import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider, questionRepositoryProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 
 final dashboardInitProvider = FutureProvider<void>((ref) async {
   await Future.wait([
     ref.watch(masteryGraphServiceProvider).init(),
     ref.watch(dashboardInstrumentationServiceProvider).init(),
-    ref.watch(dashboardTopicRepositoryProvider).init(),
-    ref.watch(dashboardAdherenceRepositoryProvider).init(),
+    ref.watch(topicRepositoryProvider).init(),
+    ref.watch(engagementAdherenceRepoProvider).init(),
   ]);
 });
 
@@ -77,7 +82,7 @@ final dashboardFocusStatsProvider =
 final dashboardAdherenceDataProvider =
     FutureProvider.family<AdherenceData, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final adherenceRepo = ref.watch(dashboardAdherenceRepositoryProvider);
+  final adherenceRepo = ref.watch(engagementAdherenceRepoProvider);
   final averageAdherence = await adherenceRepo.getAverageAdherence(studentId);
   final weeklyRecords = await adherenceRepo.getWeekly(studentId);
   final weeklyAdherence = weeklyRecords.isEmpty
@@ -93,7 +98,7 @@ final dashboardAdherenceDataProvider =
 final dashboardTopicNamesProvider =
     FutureProvider.family<Map<String, String>, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
-  final topicRepo = ref.watch(dashboardTopicRepositoryProvider);
+  final topicRepo = ref.watch(topicRepositoryProvider);
   final allMastery = await ref.watch(dashboardAllMasteryProvider(studentId).future);
   final allTopicsResult = await topicRepo.getAll();
   final allTopics = allTopicsResult.data ?? [];
@@ -201,6 +206,40 @@ final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, st
   } catch (e) {
     const Logger('dashboardSourceCountProvider').e('Failed to get source count', e);
     return 0;
+  }
+});
+
+final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgress, String>((ref, studentId) async {
+  try {
+    final subjectRepo = SubjectRepository();
+    await subjectRepo.init();
+    final subjectsResult = await subjectRepo.getAll();
+    final hasSubjects = (subjectsResult.data ?? []).isNotEmpty;
+
+    final sourceRepo = SourceRepository();
+    await sourceRepo.init();
+    final sourcesResult = await sourceRepo.getByStudent(studentId);
+    final hasSources = sourcesResult.isNotEmpty;
+
+    final sessionRepo = ref.watch(sessionRepositoryProvider);
+    await sessionRepo.init();
+    final allSessionsResult = await sessionRepo.getAll();
+    final sessions = allSessionsResult.data ?? [];
+    final hasPracticeSessions = sessions.any((s) => s.type == SessionType.practice);
+
+    final plannerService = ref.watch(plannerServiceProvider);
+    final lessons = await plannerService.getScheduledLessons();
+    final hasScheduledLessons = lessons.isNotEmpty;
+
+    return ChecklistProgress(
+      hasSubjects: hasSubjects,
+      hasSources: hasSources,
+      hasPracticeSessions: hasPracticeSessions,
+      hasScheduledLessons: hasScheduledLessons,
+    );
+  } catch (e) {
+    const Logger('dashboardChecklistProgressProvider').e('Failed to get checklist progress', e);
+    return const ChecklistProgress();
   }
 });
 

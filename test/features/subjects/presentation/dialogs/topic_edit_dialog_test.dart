@@ -23,7 +23,7 @@ void main() {
       ),
     ];
 
-    Widget _buildTestApp(Widget dialog) {
+    Widget buildTestApp(Widget dialog) {
       return MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -37,7 +37,7 @@ void main() {
     }
 
     testWidgets('displays title field', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Add Topic',
           existingTopics: existingTopics,
@@ -54,7 +54,7 @@ void main() {
 
     testWidgets('title, description and syllabus text fields accept input',
         (tester) async {
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Add Topic',
           existingTopics: existingTopics,
@@ -77,7 +77,7 @@ void main() {
     });
 
     testWidgets('save button is disabled when title is empty', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Add Topic',
           existingTopics: existingTopics,
@@ -176,7 +176,7 @@ void main() {
         syllabusText: 'Trig syllabus',
       );
 
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Edit Topic',
           topic: existingTopic,
@@ -196,7 +196,7 @@ void main() {
 
     testWidgets('parent topic dropdown is shown when other topics exist',
         (tester) async {
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Add Topic',
           existingTopics: existingTopics,
@@ -216,7 +216,7 @@ void main() {
     });
 
     testWidgets('parent topic dropdown filters correctly', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
+      await tester.pumpWidget(buildTestApp(
         TopicEditDialog(
           title: 'Add Topic',
           existingTopics: existingTopics,

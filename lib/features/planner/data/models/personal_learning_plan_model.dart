@@ -167,6 +167,8 @@ class DailyPlan extends HiveObject {
   @HiveField(8)
   final bool isRestDay;
 
+  final bool isCompleted;
+
   DailyPlan({
     required this.date,
     required this.dayNumber,
@@ -177,6 +179,7 @@ class DailyPlan extends HiveObject {
     required this.targetMinutes,
     this.focus,
     this.isRestDay = false,
+    this.isCompleted = false,
   });
 
   DailyPlan copyWith({
@@ -189,6 +192,7 @@ class DailyPlan extends HiveObject {
     int? targetMinutes,
     String? focus,
     bool? isRestDay,
+    bool? isCompleted,
   }) {
     return DailyPlan(
       date: date ?? this.date,
@@ -200,6 +204,7 @@ class DailyPlan extends HiveObject {
       targetMinutes: targetMinutes ?? this.targetMinutes,
       focus: focus ?? this.focus,
       isRestDay: isRestDay ?? this.isRestDay,
+      isCompleted: isCompleted ?? this.isCompleted,
     );
   }
 

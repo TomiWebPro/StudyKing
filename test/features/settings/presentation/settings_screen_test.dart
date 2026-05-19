@@ -14,6 +14,7 @@ import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -25,52 +26,31 @@ class FakeSettingsRepository implements SettingsRepository {
   Future<Result<SettingsBox>> getSettings() async => Result.success(_settings);
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-    int? breakDurationSeconds,
-    int? dailyReminderHour,
-    int? dailyReminderMinute,
-    bool? firstFocusVisit,
-    bool? dailyReminderEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     _settings = SettingsBox(
-      apiKey: apiKey ?? _settings.apiKey,
-      apiBaseUrl: apiBaseUrl ?? _settings.apiBaseUrl,
-      selectedModel: selectedModel ?? _settings.selectedModel,
-      themeMode: themeMode?.index ?? _settings.themeMode,
-      fontSize: fontSize ?? _settings.fontSize,
+      apiKey: update.apiKey ?? _settings.apiKey,
+      apiBaseUrl: update.apiBaseUrl ?? _settings.apiBaseUrl,
+      selectedModel: update.selectedModel ?? _settings.selectedModel,
+      themeMode: update.themeMode?.index ?? _settings.themeMode,
+      fontSize: update.fontSize ?? _settings.fontSize,
       totalSessionCount: _settings.totalSessionCount,
       totalStudyTimeMs: _settings.totalStudyTimeMs,
       totalQuestions: _settings.totalQuestions,
-      studyRemindersEnabled: studyRemindersEnabled ?? _settings.studyRemindersEnabled,
-      requestTimeoutSeconds: requestTimeoutSeconds ?? _settings.requestTimeoutSeconds,
-      sessionDurationMinutes: sessionDurationMinutes ?? _settings.sessionDurationMinutes,
-      highContrastEnabled: highContrastEnabled ?? _settings.highContrastEnabled,
-      largeTouchTargets: largeTouchTargets ?? _settings.largeTouchTargets,
-      reduceMotion: reduceMotion ?? _settings.reduceMotion,
-      revisionRemindersEnabled: revisionRemindersEnabled ?? _settings.revisionRemindersEnabled,
-      lessonNotificationsEnabled: lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
-      overworkAlertsEnabled: overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
-      planAdjustmentNotificationsEnabled: planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
-      breakDurationSeconds: breakDurationSeconds ?? _settings.breakDurationSeconds,
-      dailyReminderHour: dailyReminderHour ?? _settings.dailyReminderHour,
-      dailyReminderMinute: dailyReminderMinute ?? _settings.dailyReminderMinute,
-      firstFocusVisit: firstFocusVisit ?? _settings.firstFocusVisit,
-      dailyReminderEnabled: dailyReminderEnabled ?? _settings.dailyReminderEnabled,
+      studyRemindersEnabled: update.studyRemindersEnabled ?? _settings.studyRemindersEnabled,
+      requestTimeoutSeconds: update.requestTimeoutSeconds ?? _settings.requestTimeoutSeconds,
+      sessionDurationMinutes: update.sessionDurationMinutes ?? _settings.sessionDurationMinutes,
+      highContrastEnabled: update.highContrastEnabled ?? _settings.highContrastEnabled,
+      largeTouchTargets: update.largeTouchTargets ?? _settings.largeTouchTargets,
+      reduceMotion: update.reduceMotion ?? _settings.reduceMotion,
+      revisionRemindersEnabled: update.revisionRemindersEnabled ?? _settings.revisionRemindersEnabled,
+      lessonNotificationsEnabled: update.lessonNotificationsEnabled ?? _settings.lessonNotificationsEnabled,
+      overworkAlertsEnabled: update.overworkAlertsEnabled ?? _settings.overworkAlertsEnabled,
+      planAdjustmentNotificationsEnabled: update.planAdjustmentNotificationsEnabled ?? _settings.planAdjustmentNotificationsEnabled,
+      breakDurationSeconds: update.breakDurationSeconds ?? _settings.breakDurationSeconds,
+      dailyReminderHour: update.dailyReminderHour ?? _settings.dailyReminderHour,
+      dailyReminderMinute: update.dailyReminderMinute ?? _settings.dailyReminderMinute,
+      firstFocusVisit: update.firstFocusVisit ?? _settings.firstFocusVisit,
+      dailyReminderEnabled: update.dailyReminderEnabled ?? _settings.dailyReminderEnabled,
     );
     return Result.success(null);
   }
@@ -904,6 +884,60 @@ void main() {
 
         expect(find.byType(AboutDialog), findsOneWidget);
         expect(find.text('StudyKing'), findsWidgets);
+      });
+    });
+
+    group('Export Backup Dialog', () {
+      testWidgets('tapping Export Backup opens dialog with 3 buttons', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.tap(find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(find.text('Exclude sensitive data'), findsOneWidget);
+        expect(find.text('Export Backup'), findsWidgets);
+      });
+
+      testWidgets('Cancel button closes the export dialog', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.tap(find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Exclude sensitive data'), findsNothing);
+      });
+
+      testWidgets('Exclude sensitive data button shows preview dialog', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.tap(find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.text('Exclude sensitive data'));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Export Backup'), findsWidgets);
+      });
+
+      testWidgets('Export Backup (full) button shows sensitive data warning dialog', (tester) async {
+        await pumpWithSettings(tester);
+
+        await scrollToWidget(tester, find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.tap(find.widgetWithText(ListTile, 'Export Backup'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(FilledButton, 'Export Backup').last);
+        await tester.pumpAndSettle();
+
+        expect(find.text('Export Backup'), findsWidgets);
+        expect(find.text('Backup contains sensitive data'), findsWidgets);
       });
     });
 

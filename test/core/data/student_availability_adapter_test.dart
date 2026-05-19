@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/core/data/student_availability_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/student_availability_adapter.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 import '../../helpers/hive_test_utils.dart';
 

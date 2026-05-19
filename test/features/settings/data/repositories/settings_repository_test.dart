@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'settings_repository_test_helper.dart';
@@ -10,23 +11,7 @@ import 'settings_repository_test_helper.dart';
 abstract class FakeSettingsRepository {
   Future<Result<void>> init();
   Future<Result<SettingsBox>> getSettings();
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-  });
+  Future<Result<void>> updateSettings(SettingsUpdate update);
   Future<Result<void>> updateStats({
     int? sessionCount,
     int? studyTimeMs,
@@ -85,52 +70,29 @@ class InMemorySettingsRepository implements FakeSettingsRepository {
   }
 
   @override
-  Future<Result<void>> updateSettings({
-    String? apiKey,
-    String? apiBaseUrl,
-    String? selectedModel,
-    ThemeMode? themeMode,
-    double? fontSize,
-    bool? studyRemindersEnabled,
-    int? requestTimeoutSeconds,
-    int? sessionDurationMinutes,
-    bool? highContrastEnabled,
-    bool? largeTouchTargets,
-    bool? reduceMotion,
-    bool? revisionRemindersEnabled,
-    bool? lessonNotificationsEnabled,
-    bool? overworkAlertsEnabled,
-    bool? planAdjustmentNotificationsEnabled,
-  }) async {
+  Future<Result<void>> updateSettings(SettingsUpdate update) async {
     _ensureInitialized();
-    final currentResult = await getSettings();
-    final current = currentResult.data!;
-
-    _settings['apiKey'] = apiKey ?? current.apiKey;
-    _settings['apiBaseUrl'] = apiBaseUrl ?? current.apiBaseUrl;
-    _settings['selectedModel'] = selectedModel ?? current.selectedModel;
-    _settings['themeMode'] = themeMode?.index ?? current.themeMode;
-    _settings['fontSize'] = fontSize ?? current.fontSize;
-    _settings['studyRemindersEnabled'] =
-        studyRemindersEnabled ?? current.studyRemindersEnabled;
-    _settings['requestTimeoutSeconds'] =
-        requestTimeoutSeconds ?? current.requestTimeoutSeconds;
-    _settings['sessionDurationMinutes'] =
-        sessionDurationMinutes ?? current.sessionDurationMinutes;
-    _settings['highContrastEnabled'] =
-        highContrastEnabled ?? current.highContrastEnabled;
-    _settings['largeTouchTargets'] =
-        largeTouchTargets ?? current.largeTouchTargets;
-    _settings['reduceMotion'] =
-        reduceMotion ?? current.reduceMotion;
-    _settings['revisionRemindersEnabled'] =
-        revisionRemindersEnabled ?? current.revisionRemindersEnabled;
-    _settings['lessonNotificationsEnabled'] =
-        lessonNotificationsEnabled ?? current.lessonNotificationsEnabled;
-    _settings['overworkAlertsEnabled'] =
-        overworkAlertsEnabled ?? current.overworkAlertsEnabled;
-    _settings['planAdjustmentNotificationsEnabled'] =
-        planAdjustmentNotificationsEnabled ?? current.planAdjustmentNotificationsEnabled;
+    await getSettings();
+    if (update.apiKey != null) _settings['apiKey'] = update.apiKey;
+    if (update.apiBaseUrl != null) _settings['apiBaseUrl'] = update.apiBaseUrl;
+    if (update.selectedModel != null) _settings['selectedModel'] = update.selectedModel;
+    if (update.themeMode != null) _settings['themeMode'] = update.themeMode!.index;
+    if (update.fontSize != null) _settings['fontSize'] = update.fontSize;
+    if (update.studyRemindersEnabled != null) _settings['studyRemindersEnabled'] = update.studyRemindersEnabled;
+    if (update.requestTimeoutSeconds != null) _settings['requestTimeoutSeconds'] = update.requestTimeoutSeconds;
+    if (update.sessionDurationMinutes != null) _settings['sessionDurationMinutes'] = update.sessionDurationMinutes;
+    if (update.highContrastEnabled != null) _settings['highContrastEnabled'] = update.highContrastEnabled;
+    if (update.largeTouchTargets != null) _settings['largeTouchTargets'] = update.largeTouchTargets;
+    if (update.reduceMotion != null) _settings['reduceMotion'] = update.reduceMotion;
+    if (update.revisionRemindersEnabled != null) _settings['revisionRemindersEnabled'] = update.revisionRemindersEnabled;
+    if (update.lessonNotificationsEnabled != null) _settings['lessonNotificationsEnabled'] = update.lessonNotificationsEnabled;
+    if (update.overworkAlertsEnabled != null) _settings['overworkAlertsEnabled'] = update.overworkAlertsEnabled;
+    if (update.planAdjustmentNotificationsEnabled != null) _settings['planAdjustmentNotificationsEnabled'] = update.planAdjustmentNotificationsEnabled;
+    if (update.breakDurationSeconds != null) _settings['breakDurationSeconds'] = update.breakDurationSeconds;
+    if (update.dailyReminderHour != null) _settings['dailyReminderHour'] = update.dailyReminderHour;
+    if (update.dailyReminderMinute != null) _settings['dailyReminderMinute'] = update.dailyReminderMinute;
+    if (update.firstFocusVisit != null) _settings['firstFocusVisit'] = update.firstFocusVisit;
+    if (update.dailyReminderEnabled != null) _settings['dailyReminderEnabled'] = update.dailyReminderEnabled;
     return Result.success(null);
   }
 
@@ -347,9 +309,9 @@ void main() {
       test('preserves all settings after multiple updates', () async {
         final repo = InMemorySettingsRepository();
         await repo.init();
-        await repo.updateSettings(apiKey: 'key1', fontSize: 18.0);
-        await repo.updateSettings(apiBaseUrl: 'https://url2.com', themeMode: ThemeMode.dark);
-        await repo.updateSettings(selectedModel: 'model3', studyRemindersEnabled: false);
+        await repo.updateSettings(SettingsUpdate(apiKey: 'key1', fontSize: 18.0));
+        await repo.updateSettings(SettingsUpdate(apiBaseUrl: 'https://url2.com', themeMode: ThemeMode.dark));
+        await repo.updateSettings(SettingsUpdate(selectedModel: 'model3', studyRemindersEnabled: false));
         final settingsResult = await repo.getSettings();
         final settings = settingsResult.data!;
         expect(settings.apiKey, equals('key1'));
@@ -364,7 +326,7 @@ void main() {
         final repo = InMemorySettingsRepository();
         await repo.init();
         await repo.updateStats(sessionCount: 10, studyTimeMs: 5000, questions: 50);
-        await repo.updateSettings(fontSize: 20.0);
+        await repo.updateSettings(SettingsUpdate(fontSize: 20.0));
         final settingsResult = await repo.getSettings();
         final settings = settingsResult.data!;
         expect(settings.totalSessionCount, equals(10));
@@ -422,7 +384,7 @@ void main() {
       test('clearing profile does not affect settings data', () async {
         final repo = InMemorySettingsRepository();
         await repo.init();
-        await repo.updateSettings(apiKey: 'sk-profile-test', fontSize: 20.0);
+        await repo.updateSettings(SettingsUpdate(apiKey: 'sk-profile-test', fontSize: 20.0));
         await repo.saveProfileData(UserProfile(id: 'prof2', name: 'Profile Two'));
 
         await repo.clearProfile();
@@ -500,12 +462,12 @@ void main() {
       test('updateSettings with all null preserves existing values', () async {
         final repo = InMemorySettingsRepository();
         await repo.init();
-        await repo.updateSettings(
+        await repo.updateSettings(SettingsUpdate(
           apiKey: 'sk-existing',
           fontSize: 18.0,
           themeMode: ThemeMode.dark,
-        );
-        await repo.updateSettings();
+        ));
+        await repo.updateSettings(SettingsUpdate());
         final settingsResult = await repo.getSettings();
         final settings = settingsResult.data!;
         expect(settings.apiKey, equals('sk-existing'));

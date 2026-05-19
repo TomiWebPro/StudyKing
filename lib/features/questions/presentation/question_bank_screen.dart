@@ -14,6 +14,7 @@ import 'package:studyking/features/subjects/data/repositories/topic_repository.d
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class QuestionBankScreen extends ConsumerStatefulWidget {
@@ -223,6 +224,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.editQuestion),
         content: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -292,6 +294,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         builder: (ctx, setInnerState) => AlertDialog(
           title: Text(l10n.createQuestion),
           content: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -312,7 +315,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                     border: const OutlineInputBorder(),
                   ),
                   items: [
-                    const DropdownMenuItem(value: '', child: Text('None')),
+                    DropdownMenuItem(value: '', child: Text(l10n.none)),
                     ..._subjects.map((s) => DropdownMenuItem(
                       value: s.id,
                       child: Text(s.name),
@@ -385,6 +388,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                               if (optionControllers.length > 2)
                                 IconButton(
                                   icon: Icon(Icons.remove_circle_outline, color: Theme.of(ctx).colorScheme.error, size: 20),
+                                  tooltip: l10n.delete,
                                   onPressed: () {
                                     setInnerState(() {
                                       controller.dispose();
@@ -582,7 +586,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
 
                                   return Card(
                                     margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 0),
-                                    child: InkWell(
+                                    child: Semantics(
+                                      button: true,
+                                      child: InkWell(
                                       onTap: _selectionMode
                                           ? () => setState(() {
                                                 if (isSelected) { _selectedIds.remove(q.id); } else { _selectedIds.add(q.id); }
@@ -649,8 +655,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                         ),
                                       ),
                                     ),
-                                  );
-                                },
+                                  ),
+                                );
+                              },
                               ),
                             ),
                     ),
@@ -688,6 +695,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
           const SizedBox(height: 8),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Row(
               children: [
                 _filterChip(

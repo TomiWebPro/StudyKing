@@ -5,13 +5,10 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -59,29 +56,6 @@ class _IntegrationFakePlanRepository extends PlanRepository {
     _storage.remove(studentId);
     return Result.success(null);
   }
-}
-
-class _IntegrationFakeMasteryGraphRepository extends MasteryGraphRepository {
-  @override
-  Future<void> init() async {}
-
-  @override
-  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success([]);
-  }
-
-  @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
-    return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
-  }
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 class _IntegrationFakeTopicRepository extends TopicRepository {
@@ -180,12 +154,11 @@ void main() {
 
   Widget buildPlannerTestApp({
     required PlanRepository planRepo,
-    required MasteryGraphRepository masteryRepo,
     required TopicRepository topicRepo,
   }) {
     final svc = PlannerService(
       planRepo: planRepo,
-      masteryService: MasteryGraphService(repository: masteryRepo),
+      masteryService: MasteryGraphService(),
       topicRepository: topicRepo,
       fixedStudentId: 'test-student',
     );
@@ -205,11 +178,9 @@ void main() {
   group('Integration - Planner end-to-end', () {
     testWidgets('planner: generate plan with valid data', (tester) async {
       final planRepo = _IntegrationFakePlanRepository();
-      final masteryRepo = _IntegrationFakeMasteryGraphRepository();
 
       await tester.pumpWidget(buildPlannerTestApp(
         planRepo: planRepo,
-        masteryRepo: masteryRepo,
         topicRepo: _IntegrationFakeTopicRepository(),
       ));
       await tester.pumpAndSettle();
@@ -227,11 +198,8 @@ void main() {
     });
 
     testWidgets('planner: shows error when generation fails', (tester) async {
-      final masteryRepo = _IntegrationFakeMasteryGraphRepository();
-
       await tester.pumpWidget(buildPlannerTestApp(
         planRepo: _IntegrationFakePlanRepository(),
-        masteryRepo: masteryRepo,
         topicRepo: _IntegrationFakeTopicRepository(),
       ));
       await tester.pumpAndSettle();

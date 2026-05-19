@@ -7,14 +7,13 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
 
 import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
-import 'package:studyking/features/practice/services/difficulty_adapter.dart';
+import 'package:studyking/features/practice/services/difficulty_controller.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
@@ -28,15 +27,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/utils/clock.dart';
-
-class _FakeStudentIdService extends StudentIdService {
-  @override
-  String getStudentId() => 'test-student';
-  @override
-  void setStudentId(String id) {}
-  @override
-  Future<void> init() async {}
-}
+import '../../../helpers/fakes.dart';
 
 // ============================================================================
 // FAKES
@@ -803,7 +794,7 @@ void main() {
       sessionRepo = _FakeSessionRepo();
       service = ExamSessionService(
         sessionRepo: sessionRepo,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
     });
 
@@ -985,7 +976,7 @@ void main() {
       test('dispose cancels timer and disposes notifiers', () {
         final localService = ExamSessionService(
           sessionRepo: sessionRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
         final config = const ExamConfig(
           durationMinutes: 30,
@@ -1002,7 +993,7 @@ void main() {
       test('ExamSessionService.dispose is safe to call once', () {
         final localService = ExamSessionService(
           sessionRepo: sessionRepo,
-          studentIdService: _FakeStudentIdService(),
+          studentIdService: FakeStudentIdService(),
         );
         localService.dispose();
         // should not throw
@@ -1182,9 +1173,9 @@ void main() {
   // ==========================================================================
   // 6. DIFFICULTY_ADAPTER additional coverage
   // ==========================================================================
-  group('DifficultyAdapter - coverage gaps', () {
+  group('DifficultyController - coverage gaps', () {
     test('reset with value above max clamps to max', () {
-      final adapter = DifficultyAdapter(
+      final adapter = DifficultyController(
         maxDifficulty: 5,
         initialDifficulty: 3,
       );
@@ -1193,7 +1184,7 @@ void main() {
     });
 
     test('reset with value below min clamps to min', () {
-      final adapter = DifficultyAdapter(
+      final adapter = DifficultyController(
         minDifficulty: 1,
         initialDifficulty: 3,
       );
@@ -1202,7 +1193,7 @@ void main() {
     });
 
     test('custom min and max boundaries', () {
-      final adapter = DifficultyAdapter(
+      final adapter = DifficultyController(
         minDifficulty: 2,
         maxDifficulty: 4,
         initialDifficulty: 3,
@@ -1218,7 +1209,7 @@ void main() {
     });
 
     test('consecutive correct after incorrect resets streak', () {
-      final adapter = DifficultyAdapter(
+      final adapter = DifficultyController(
         initialDifficulty: 3,
         correctStreakThreshold: 2,
         incorrectStreakThreshold: 2,
@@ -1235,7 +1226,7 @@ void main() {
 
     test('suggestNextDifficulty does not change when streaks below thresholds',
         () {
-      final adapter = DifficultyAdapter(
+      final adapter = DifficultyController(
         initialDifficulty: 3,
         correctStreakThreshold: 3,
         incorrectStreakThreshold: 3,
@@ -1357,7 +1348,7 @@ void main() {
         srService: _FakeSrService2({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, isEmpty);
@@ -1390,7 +1381,7 @@ void main() {
         srService: _FakeSrService2({}),
         questionRepo: questionRepo,
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
       final topics = await service.loadTopics(questionRepo);
       expect(topics, hasLength(1));
@@ -1403,7 +1394,7 @@ void main() {
         srService: srService,
         questionRepo: _FakeQuestionRepo4([]),
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
       final dueCounts = await service.loadDueCounts([]);
       expect(dueCounts, isEmpty);
@@ -1411,13 +1402,13 @@ void main() {
 
     test('loadWeakAreaQuestions returns empty when getWeakTopics returns empty list',
         () async {
-      _FakeStudentIdService().setStudentId('test-student');
+      FakeStudentIdService().setStudentId('test-student');
       final masteryService = _FakeMasteryGraphSvc2();
       final service = PracticeDataService(
         srService: _FakeSrService2({}),
         questionRepo: _FakeQuestionRepo4([]),
         subjectRepo: _FakeSubjectRepo2([]),
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
       );
       final result = await service.loadWeakAreaQuestions(masteryService);
       expect(result, isEmpty);
@@ -1437,7 +1428,7 @@ void main() {
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
         srService: srService,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1455,7 +1446,7 @@ void main() {
       final service1 = PracticeSessionService(
         sessionRepo: sessionRepo,
         srService: srService,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1465,7 +1456,7 @@ void main() {
       final service2 = PracticeSessionService(
         sessionRepo: sessionRepo,
         srService: srService,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );
@@ -1482,7 +1473,7 @@ void main() {
       final service = PracticeSessionService(
         sessionRepo: sessionRepo,
         srService: srService,
-        studentIdService: _FakeStudentIdService(),
+        studentIdService: FakeStudentIdService(),
         clock: clock,
         subjectId: 'sub1',
       );

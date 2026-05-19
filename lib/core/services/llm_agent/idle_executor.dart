@@ -7,6 +7,7 @@ class IdleTask {
   final String id;
   final String description;
   final DateTime createdAt;
+  final Future<void> Function()? taskFn;
   bool isRunning;
   bool isCompleted;
   String? error;
@@ -15,6 +16,7 @@ class IdleTask {
     required this.id,
     required this.description,
     required this.createdAt,
+    this.taskFn,
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
@@ -48,7 +50,7 @@ class IdleExecutor {
 
   Future<void> enqueue(String description, Future<void> Function() task) async {
     final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
-    _queue.add(IdleTask(id: id, description: description, createdAt: DateTime.now()));
+    _queue.add(IdleTask(id: id, description: description, createdAt: DateTime.now(), taskFn: task));
     if (_queue.length > 50) {
       _queue.removeAt(0);
     }
@@ -86,6 +88,9 @@ class IdleExecutor {
 
   Future<void> _executeTask(IdleTask task) async {
     _logger.d('Executing idle task: ${task.description}');
+    if (task.taskFn != null) {
+      await task.taskFn!();
+    }
   }
 
   final List<VoidCallback> _listeners = [];

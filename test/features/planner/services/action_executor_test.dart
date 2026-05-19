@@ -82,7 +82,7 @@ void main() {
 
     setUp(() {
       plannerService = FakePlannerService();
-      executor = ActionExecutor(actionPlanner: plannerService);
+      executor = ActionExecutor(plannerService: plannerService);
     });
 
     group('execute', () {

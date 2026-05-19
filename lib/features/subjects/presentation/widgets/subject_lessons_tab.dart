@@ -5,6 +5,7 @@ import 'package:studyking/features/lessons/data/repositories/lesson_repository.d
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectLessonsTab extends ConsumerWidget {
@@ -37,7 +38,7 @@ class SubjectLessonsTab extends ConsumerWidget {
       future: loadLessons(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return const LoadingIndicator();
         }
 
         final subjectLessons = snapshot.data ?? [];

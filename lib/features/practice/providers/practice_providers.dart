@@ -15,7 +15,6 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
-export 'package:studyking/features/questions/providers/question_providers.dart';
 
 final subjectRepositoryProvider = Provider<SubjectRepository>((ref) {
   return SubjectRepository();

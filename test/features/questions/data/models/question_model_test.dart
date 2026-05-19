@@ -85,7 +85,7 @@ void main() {
         final json = q.toJson();
         expect(json['id'], 'q1');
         expect(json['text'], 'Test?');
-        expect(json['type'], 'singleChoice');
+        expect(json['type'], 0);
         expect(json['subjectId'], 'sub1');
         expect(json['topicId'], 'topic1');
         expect(json['options'], ['A', 'B']);

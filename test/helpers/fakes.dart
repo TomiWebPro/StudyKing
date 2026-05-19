@@ -4,7 +4,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/plan_adapter.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -219,13 +219,13 @@ class FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PendingActionModel>> getPending(String studentId) async {
-    return _storage.values
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(_storage.values
         .where((a) => a.studentId == studentId && a.status == 'pending')
-        .toList();
+        .toList());
   }
 
   @override
@@ -234,24 +234,26 @@ class FakePendingActionRepository extends PendingActionRepository {
   }
 
   @override
-  Future<void> markCompleted(String id) async {
+  Future<Result<void>> markCompleted(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'completed');
     }
+    return Result.success(null);
   }
 
   @override
-  Future<void> markRejected(String id) async {
+  Future<Result<void>> markRejected(String id) async {
     final action = _storage[id];
     if (action != null) {
       _storage[id] = action.copyWith(status: 'rejected');
     }
+    return Result.success(null);
   }
 }
 
-class FakePlanAdapter extends PlanAdapter {
-  FakePlanAdapter()
+class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  FakePlanAdherenceOrchestrator()
       : super(
           adherenceRepository: null,
           planRepository: null,
@@ -271,13 +273,7 @@ class FakePlanAdapter extends PlanAdapter {
   }
 
   @override
-  Future<void> recordFromFocusSession({required String studentId, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromPracticeSession({required String studentId, required int actualQuestions, required int actualMinutes, String? planId}) async {}
-
-  @override
-  Future<void> recordFromTutorSession({required String studentId, required int actualMinutes, String? planId}) async {}
+  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
 
   @override
   Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {

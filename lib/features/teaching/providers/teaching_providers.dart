@@ -2,10 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, llmProviderProvider, selectedModelProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
-import 'package:studyking/features/teaching/services/voice_controller.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
@@ -26,10 +26,6 @@ final exerciseEvaluatorProvider = Provider<ExerciseEvaluator>((ref) {
   );
 });
 
-final voiceControllerProvider = Provider<VoiceController>((ref) {
-  return VoiceController();
-});
-
 final tutorServiceProvider = Provider<TutorService>((ref) {
   final database = ref.watch(databaseProvider);
   return TutorService(
@@ -39,6 +35,7 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     modelId: ref.watch(teachingModelIdProvider),
     exerciseEvaluator: ref.watch(exerciseEvaluatorProvider),
     conversationRepository: database.conversationRepository,
+    voiceService: ref.watch(voiceServiceProvider),
     clock: ref.watch(clockProvider),
   );
 });

@@ -1,13 +1,8 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/subjects/data/adapters.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_topics_tab.dart';
@@ -17,6 +12,10 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/presentation/dialogs/topic_edit_dialog.dart';
 import 'package:studyking/features/subjects/presentation/dialogs/topic_dependency_dialog.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart'
+    show topicDependencyRepositoryProvider;
 import '../../../../helpers/navigator_observer_helper.dart';
 
 class _FakeTopicRepository extends TopicRepository {
@@ -125,9 +124,37 @@ class _FakeSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   Future<SubjectRepository> build() async => repo;
 }
 
+class _FakeTopicDependencyRepository extends TopicDependencyRepository {
+  final Map<String, TopicDependency> _storage = {};
+
+  void seed(TopicDependency dep) => _storage[dep.topicId] = dep;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
+    return Result.success(
+      _storage[topicId] ?? TopicDependency(topicId: topicId),
+    );
+  }
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async {
+    _storage[dependency.topicId] = dependency;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async {
+    return Result.success(_storage.values.toList());
+  }
+}
+
 Widget _buildTestApp({
   required _FakeTopicRepository topicRepo,
   required _FakeSubjectRepository subjectRepo,
+  _FakeTopicDependencyRepository? depRepo,
   NavigatorObserver? observer,
 }) {
   return ProviderScope(
@@ -136,6 +163,8 @@ Widget _buildTestApp({
       subjectsRepositoryProvider.overrideWith(() {
         return _FakeSubjectsRepositoryNotifier(subjectRepo);
       }),
+      if (depRepo != null)
+        topicDependencyRepositoryProvider.overrideWithValue(depRepo),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -151,29 +180,16 @@ Widget _buildTestApp({
 void main() {
   late _FakeTopicRepository fakeTopicRepo;
   late _FakeSubjectRepository fakeSubjectRepo;
+  late _FakeTopicDependencyRepository fakeDepRepo;
   late Subject testSubject;
-  late String hivePath;
 
-  setUp(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('hive_subject_topics_tab_test_');
-    hivePath = dir.path;
-    Hive.init(hivePath);
-    registerSubjectsAdapters();
-    await Hive.openBox(HiveBoxNames.topics);
-
+  setUp(() {
     fakeTopicRepo = _FakeTopicRepository();
     fakeSubjectRepo = _FakeSubjectRepository();
+    fakeDepRepo = _FakeTopicDependencyRepository();
 
     testSubject = Subject(id: 'sub-1', name: 'Math');
     fakeSubjectRepo.seed(testSubject);
-  });
-
-  tearDown(() async {
-    await Hive.close();
-    if (hivePath.isNotEmpty) {
-      await Directory(hivePath).delete(recursive: true);
-    }
   });
 
   group('SubjectTopicsTab', () {
@@ -181,6 +197,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -191,6 +208,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -219,6 +237,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -240,6 +259,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -256,6 +276,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
         observer: observer,
       ));
       await tester.pumpAndSettle();
@@ -270,6 +291,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -297,6 +319,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -322,6 +345,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -350,6 +374,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -376,6 +401,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 
@@ -402,6 +428,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
         observer: observer,
       ));
       await tester.pumpAndSettle();
@@ -421,6 +448,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         topicRepo: fakeTopicRepo,
         subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
       ));
       await tester.pumpAndSettle();
 

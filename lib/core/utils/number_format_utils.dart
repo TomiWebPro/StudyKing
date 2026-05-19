@@ -58,5 +58,19 @@ String formatCurrency(
     return fmt.format(value);
   }
   final result = fmt.format(value);
+  if (minFractionDigits < maxFractionDigits) {
+    final separator = NumberFormat.decimalPattern(localeName)
+        .format(0.1)
+        .substring(1, 2);
+    final parts = result.split(separator);
+    if (parts.length == 2) {
+      var fraction = parts[1];
+      while (fraction.length > minFractionDigits &&
+          fraction.endsWith('0')) {
+        fraction = fraction.substring(0, fraction.length - 1);
+      }
+      return '${parts[0]}$separator$fraction';
+    }
+  }
   return result;
 }

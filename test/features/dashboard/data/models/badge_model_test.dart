@@ -379,6 +379,45 @@ void main() {
       }
     });
 
+    test('toJson/fromJson round-trip preserves all fields', () {
+      final now = DateTime(2026, 5, 19);
+      final original = BadgeModel(
+        id: 'rt-1',
+        studentId: 'student-1',
+        name: 'Round Trip Badge',
+        description: 'Test round-trip serialization',
+        iconName: 'star',
+        category: 'test',
+        unlockedAt: now,
+        criteria: {'totalAttempts': 50},
+      );
+      final json = original.toJson();
+      final restored = BadgeModel.fromJson(json);
+      expect(restored.id, original.id);
+      expect(restored.studentId, original.studentId);
+      expect(restored.name, original.name);
+      expect(restored.description, original.description);
+      expect(restored.iconName, original.iconName);
+      expect(restored.category, original.category);
+      expect(restored.unlockedAt, original.unlockedAt);
+      expect(restored.criteria, original.criteria);
+    });
+
+    test('toJson/fromJson round-trip with null unlockedAt and criteria', () {
+      final original = BadgeModel(
+        id: 'rt-2',
+        studentId: 'student-1',
+        name: 'Minimal Badge',
+        description: 'Badge with minimal fields',
+      );
+      final json = original.toJson();
+      final restored = BadgeModel.fromJson(json);
+      expect(restored.unlockedAt, isNull);
+      expect(restored.criteria, isNull);
+      expect(restored.iconName, 'emoji_events');
+      expect(restored.category, 'general');
+    });
+
     test('includes first_attempt', () {
       final firstAttempt = BadgeDefinitions.all.firstWhere(
         (b) => b.id == 'first_attempt',

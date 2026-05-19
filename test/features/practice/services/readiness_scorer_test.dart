@@ -222,5 +222,48 @@ void main() {
       expect(result.first.topicMastery, isNotNull);
       expect(result.first.questionMastery, isNotNull);
     });
+
+    group('error-state: edge cases and null safety', () {
+      test('questions with null topicId do not crash', () async {
+        final questions = [
+          _createQuestion(id: 'q1', topicId: 'nonexistent'),
+        ];
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result, hasLength(1));
+        expect(result.first.score, greaterThanOrEqualTo(0));
+      });
+
+      test('null mastery maps use default scoring', () async {
+        final questions = [_createQuestion()];
+        final scorer = ReadinessScorer(
+          topicMasteryMap: <String, MasteryState>{},
+          questionMasteryMap: <String, QuestionMasteryState>{},
+        );
+        final result = await scorer.scoreQuestions(questions);
+        expect(result, hasLength(1));
+        expect(result.first.score, greaterThan(0));
+      });
+
+      test('handles questions with extreme difficulty values', () async {
+        final questions = [
+          _createQuestion(id: 'q1', difficulty: 0),
+          _createQuestion(id: 'q2', difficulty: 999),
+        ];
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result, hasLength(2));
+        for (final sq in result) {
+          expect(sq.score, inInclusiveRange(0.0, 1.0));
+        }
+      });
+
+      test('scorer handles large question sets without throwing', () async {
+        final questions = List.generate(100, (i) => _createQuestion(id: 'q$i'));
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result, hasLength(100));
+      });
+    });
   });
 }

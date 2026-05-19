@@ -30,6 +30,22 @@ void main() {
       expect(result.contains('85'), isTrue);
       expect(result.contains(','), isTrue);
     });
+
+    test('accepts 0-100 range: 0 → 0%', () {
+      expect(formatPercent(0, 'en', minFractionDigits: 0, maxFractionDigits: 0), '0%');
+    });
+
+    test('accepts 0-100 range: 100 → 100%', () {
+      expect(formatPercent(100, 'en', minFractionDigits: 0, maxFractionDigits: 0), '100%');
+    });
+
+    test('accepts 0-100 range: 50 → 50%', () {
+      expect(formatPercent(50, 'en', minFractionDigits: 0, maxFractionDigits: 0), '50%');
+    });
+
+    test('accepts 0-100 range: 85.5 → 85.5%', () {
+      expect(formatPercent(85.5, 'en', minFractionDigits: 1, maxFractionDigits: 1), '85.5%');
+    });
   });
 
   group('formatCompactNumber', () {
@@ -74,6 +90,21 @@ void main() {
       final result = formatCurrency(0.0025, 'es', minFractionDigits: 4, maxFractionDigits: 4);
       expect(result.contains(','), isTrue);
       expect(result.contains('0'), isTrue);
+    });
+
+    test('strips trailing zeros when min < max fraction digits (m8)', () {
+      final result = formatCurrency(1.5, 'en', minFractionDigits: 0, maxFractionDigits: 4);
+      expect(result, '\$1.5');
+    });
+
+    test('keeps zeros when value has many fractional digits', () {
+      final result = formatCurrency(1.2345, 'en', minFractionDigits: 2, maxFractionDigits: 4);
+      expect(result, '\$1.2345');
+    });
+
+    test('pads to min fraction digits when value has fewer digits', () {
+      final result = formatCurrency(1.5, 'en', minFractionDigits: 2, maxFractionDigits: 4);
+      expect(result, '\$1.5');
     });
   });
 }

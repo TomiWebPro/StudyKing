@@ -11,8 +11,6 @@ class WeeklyChart extends ConsumerWidget {
 
   const WeeklyChart({super.key, required this.weeklyTrend});
 
-  /// Fallback labels used when [weeklyTrend] is empty.
-  /// Uses locale-aware short day names via DateFormat.E (invariant, OK for chart labels).
   Map<String, int> _fallbackDayLabels(String localeName) {
     final now = DateTime.now();
     final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
@@ -25,13 +23,8 @@ class WeeklyChart extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     final trend = weeklyTrend.take(7).toList();
-    final chartData = <String, int>{};
-    for (var i = 0; i < trend.length; i++) {
-      final item = trend[i];
-      final weekLabel = 'W${trend.length - i}';
-      chartData[weekLabel] = item.attempts;
-    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -40,27 +33,81 @@ class WeeklyChart extends ConsumerWidget {
           padding: const EdgeInsets.only(bottom: 12),
           child: Row(
             children: [
-              Icon(Icons.show_chart, color: Theme.of(context).colorScheme.primary),
+              Icon(Icons.show_chart, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
               Semantics(
                 headingLevel: 3,
                 child: Text(
                   l10n.weeklyActivity,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  style: theme.textTheme.titleMedium,
                 ),
               ),
             ],
           ),
         ),
+        if (trend.isEmpty)
+          AnimatedBarChart(
+            data: _fallbackDayLabels(l10n.localeName),
+            accentColor: theme.colorScheme.primary,
+            reduceMotion: ref.watch(settingsProvider).reduceMotion,
+            semanticsLabelBuilder: (day, count) =>
+                '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
+          )
+        else
+          _buildChart(trend, l10n, theme, ref),
+      ],
+    );
+  }
+
+  Widget _buildChart(
+    List<WeeklyTrendEntry> trend,
+    AppLocalizations l10n,
+    ThemeData theme,
+    WidgetRef ref,
+  ) {
+    final chartData = <String, int>{};
+    final gapWeeks = <String>{};
+    for (var i = 0; i < trend.length; i++) {
+      final item = trend[i];
+      final weekLabel = 'W${trend.length - i}';
+      chartData[weekLabel] = item.attempts;
+      if (item.isGap) {
+        gapWeeks.add(weekLabel);
+      }
+    }
+
+    return Column(
+      children: [
         AnimatedBarChart(
-          data: chartData.isNotEmpty
-              ? chartData
-              : _fallbackDayLabels(l10n.localeName),
-          accentColor: Theme.of(context).colorScheme.primary,
+          data: chartData,
+          accentColor: theme.colorScheme.primary,
           reduceMotion: ref.watch(settingsProvider).reduceMotion,
-          semanticsLabelBuilder: (day, count) =>
-              '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
+          gapWeeks: gapWeeks,
+          semanticsLabelBuilder: (day, count) => gapWeeks.contains(day)
+              ? l10n.noActivity
+              : '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
         ),
+        if (gapWeeks.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Row(
+              children: [
+                Container(
+                  width: 12,
+                  height: 12,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: theme.colorScheme.outlineVariant),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(l10n.noActivity,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    )),
+              ],
+            ),
+          ),
       ],
     );
   }

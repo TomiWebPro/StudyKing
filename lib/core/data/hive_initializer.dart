@@ -5,16 +5,14 @@ import 'database_migration.dart';
 import 'hive_box_names.dart';
 import 'hive_type_ids.dart';
 import 'models/session_model.dart';
+import 'package:studyking/features/ingestion/data/adapters/adapters.dart';
+import 'package:studyking/features/sessions/data/adapters/adapters.dart';
 import 'package:studyking/features/questions/data/questions_data.dart';
 import 'package:studyking/features/practice/data/practice_data.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/planner_data.dart';
 import 'package:studyking/features/subjects/data/subjects_data.dart';
 import 'package:studyking/features/teaching/data/teaching_data.dart';
-import 'package:studyking/core/data/session_adapter.dart';
-import 'package:studyking/core/data/source_adapter.dart';
-import 'package:studyking/core/data/engagement_nudge_adapter.dart';
-import 'package:studyking/core/data/student_availability_adapter.dart';
 import 'package:studyking/features/sessions/services/session_migration_service.dart';
 
 class HiveInitializer {
@@ -56,18 +54,8 @@ class HiveInitializer {
     if (!Hive.isAdapterRegistered(24)) {
       Hive.registerAdapter(StudentAttemptAdapter());
     }
-    if (!Hive.isAdapterRegistered(26)) {
-      Hive.registerAdapter(SourceAdapter());
-    }
-    if (!Hive.isAdapterRegistered(32)) {
-      Hive.registerAdapter(EngagementNudgeModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(35)) {
-      Hive.registerAdapter(StudentAvailabilityModelAdapter());
-    }
-    if (!Hive.isAdapterRegistered(36)) {
-      Hive.registerAdapter(SessionAdapter());
-    }
+    registerIngestionAdapters();
+    registerSessionAdapters();
     registerQuestionAdapters();
     registerPracticeAdapters();
     registerPlannerAdapters();

@@ -1,12 +1,14 @@
 import 'dart:async';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import '../utils/logger.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
-import '../services/plan_adapter.dart';
+import '../services/plan_adherence_orchestrator.dart';
 import '../utils/number_format_utils.dart';
+import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
@@ -41,12 +43,13 @@ class EngagementScheduler {
   final NotificationService _notificationService;
   final EngagementNudgeRepository _nudgeRepository;
   final PlanAdherenceRepository _adherenceRepository;
-  final PlanAdapter? _planAdapter;
+  final PlanAdherenceOrchestrator? _planOrchestrator;
   final SessionRepository? _sessionRepository;
   final EngagementSchedulerConfig _config;
   AppLocalizations _l10n;
   SettingsBox? _settingsBox;
-  final PlannerService? _plannerService;
+  final   PlannerService? _plannerService;
+  final MentorService? _mentorService;
 
   Timer? _dailyTimer;
   Timer? _lessonCheckTimer;
@@ -59,23 +62,25 @@ class EngagementScheduler {
     NotificationService? notificationService,
     EngagementNudgeRepository? nudgeRepository,
     PlanAdherenceRepository? adherenceRepository,
-    PlanAdapter? planAdapter,
+    PlanAdherenceOrchestrator? planOrchestrator,
     SessionRepository? sessionRepository,
     EngagementSchedulerConfig? config,
     required AppLocalizations l10n,
     SettingsBox? settingsBox,
     PlannerService? plannerService,
+    MentorService? mentorService,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
         _nudgeRepository = nudgeRepository ?? EngagementNudgeRepository(),
         _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
-        _planAdapter = planAdapter,
+        _planOrchestrator = planOrchestrator,
         _sessionRepository = sessionRepository,
         _config = config ?? const EngagementSchedulerConfig(),
         _l10n = l10n,
         _settingsBox = settingsBox,
-        _plannerService = plannerService;
+        _plannerService = plannerService,
+        _mentorService = mentorService;
 
   void updateSettings(SettingsBox settingsBox) {
     _settingsBox = settingsBox;
@@ -111,6 +116,40 @@ class EngagementScheduler {
   Future<void> _runDailyChecks() async {
     _scheduleDailyCheck();
     await _sendNudgeNotifications(_config.studentId);
+    await _sendMentorNudges();
+  }
+
+  Future<void> _sendMentorNudges() async {
+    final mentorService = _mentorService;
+    if (mentorService == null) return;
+    if (!_isNotificationEnabled('mentor')) return;
+    final frequencyDays = _getMentorCheckinFrequency();
+    if (frequencyDays == 0) return;
+    try {
+      final nudges = await mentorService.checkWellbeingAndGenerateNudges();
+      if (nudges.isNotEmpty) {
+        await _notificationService.showMentorMessage(
+          id: _notificationIdCounter++,
+          title: 'Mentor Check-In',
+          body: nudges.first.length > 120
+              ? '${nudges.first.substring(0, 120)}...'
+              : nudges.first,
+        );
+      }
+    } catch (e) {
+      _logger.w('Failed to send mentor nudges: $e');
+    }
+  }
+
+  int _getMentorCheckinFrequency() {
+    final s = _settingsBox;
+    if (s == null) return 1;
+    try {
+      final box = Hive.box('settings');
+      return box.get('mentorCheckinFrequencyDays', defaultValue: 1) as int;
+    } catch (_) {
+      return 1;
+    }
   }
 
   Future<void> runDailyChecksNow() async {
@@ -254,9 +293,9 @@ class EngagementScheduler {
       }
     }
 
-    if (_planAdapter != null) {
+    if (_planOrchestrator != null) {
       try {
-        final deviation = await _planAdapter.checkAdherence(studentId);
+        final deviation = await _planOrchestrator.checkAdherence(studentId);
         if (deviation.isSuccess && deviation.data!.requiresRegeneration) {
           final model = EngagementNudgeModel(
             id: 'adp_reg_${DateTime.now().millisecondsSinceEpoch}_$studentId',

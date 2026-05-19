@@ -4,6 +4,7 @@ import 'dart:async';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../core/routes/app_router.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/time_utils.dart';
@@ -143,10 +144,41 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     }
     if (_lesson == null) {
       return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+        body: LoadingIndicator(),
       );
     }
     final lesson = _lesson!;
+
+    if (lesson.blocks.isEmpty) {
+      return Scaffold(
+        appBar: AppBar(title: Text(lesson.title)),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.hourglass_top, size: 64, color: Theme.of(context).colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(l10n.generating, style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              Text(
+                l10n.inProgress,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              OutlinedButton.icon(
+                onPressed: _loadLesson,
+                icon: const Icon(Icons.refresh),
+                label: Text(l10n.retry),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return PopScope(
       canPop: _elapsed == Duration.zero,
       onPopInvokedWithResult: (didPop, _) async {

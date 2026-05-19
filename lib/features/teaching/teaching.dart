@@ -8,7 +8,6 @@ export 'services/conversation_manager.dart';
 export 'services/conversation_phase.dart';
 export 'services/exercise_evaluator.dart';
 export 'services/tutor_service.dart';
-export 'services/voice_controller.dart';
 export 'services/prompts/prompts.dart';
 export 'providers/teaching_providers.dart';
 export 'presentation/widgets/chat_bubble.dart';

@@ -9,6 +9,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/presentation/question_bank_screen.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';

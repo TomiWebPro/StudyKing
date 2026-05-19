@@ -5,11 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
+import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/core/services/prerequisite_check_service.dart';
-import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider, voiceControllerProvider;
+import 'package:studyking/features/teaching/providers/teaching_providers.dart' show tutorServiceProvider;
 import '../../../l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../services/conversation_manager.dart';
@@ -19,6 +22,10 @@ import '../data/models/lesson_plan_model.dart';
 import 'widgets/chat_bubble.dart';
 import 'widgets/lesson_progress_bar.dart';
 import 'widgets/voice_bar.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
+import 'package:studyking/features/lessons/presentation/widgets/lesson_block_card.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
@@ -42,19 +49,26 @@ class TutorScreen extends ConsumerStatefulWidget {
   ConsumerState<TutorScreen> createState() => _TutorScreenState();
 }
 
-class _TutorScreenState extends ConsumerState<TutorScreen> {
+class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAliveClientMixin {
   late final TutorService _tutorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
   late final FocusNode _inputFocusNode;
   ConversationManager? _manager;
   bool _isInitialized = false;
+  bool _showSlides = false;
+  int _currentSlideIndex = 0;
+  late final PageController _pageController;
   bool _isSending = false;
   bool _initError = false;
   String _initErrorMessage = '';
   Timer? _timer;
   int _elapsedMinutes = 0;
   LessonPlan? _lessonPlan;
+  bool _voiceOutputEnabled = false;
+
+  @override
+  bool get wantKeepAlive => true;
 
   @override
   void initState() {
@@ -62,6 +76,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     _textController = TextEditingController();
     _scrollController = ScrollController();
     _inputFocusNode = FocusNode();
+    _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _initializeTutor();
     });
@@ -73,6 +88,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     } else {
       _tutorService = ref.read(tutorServiceProvider);
     }
+
+    final studentId = StudentIdService().getStudentId();
+    final agent = ref.read(llmAgentProvider(studentId));
+    _tutorService.llmAgent = agent;
 
     if (widget.topicId.isNotEmpty) {
       final prereqCheck = PrerequisiteCheckService();
@@ -126,6 +145,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
       if (mounted) {
         setState(() {
           _manager = manager;
+          _manager!.enableVoiceOutput = _voiceOutputEnabled;
           _isInitialized = true;
           _initError = false;
         });
@@ -137,7 +157,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
-          _initErrorMessage = l10n.tutorInitFailed(e.toString());
+          _initErrorMessage = l10n.tutorInitFailed('');
         });
       }
     }
@@ -344,6 +364,34 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     return summary;
   }
 
+  Future<void> _startFocusModePractice() async {
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    await Navigator.pushNamed(
+      context,
+      AppRoutes.focusMode,
+      arguments: FocusTimerScreen(
+        preselectedSubjectId: widget.subjectId,
+        preselectedTopicId: widget.topicId,
+        defaultDurationMinutes: 15,
+      ),
+    );
+  }
+
+  Future<void> _startPostLessonPractice({int questionCount = 5}) async {
+    if (!mounted) return;
+    Navigator.of(context).pop();
+    await Navigator.pushNamed(
+      context,
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(
+        subjectId: widget.subjectId,
+        topicId: widget.topicId,
+        questionCount: questionCount,
+      ),
+    );
+  }
+
   void _showSummaryDialog() {
     final l10n = AppLocalizations.of(context)!;
     final manager = _manager;
@@ -354,6 +402,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.lessonComplete),
         content: SingleChildScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
@@ -361,6 +410,35 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
               Text(l10n.lessonSavedMessage),
               const SizedBox(height: 16),
               _buildSummaryStats(ctx),
+              const SizedBox(height: 16),
+              const Divider(),
+              Text(l10n.practiceAgain,
+                style: Theme.of(ctx).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _startFocusModePractice();
+                  },
+                  icon: const Icon(Icons.timer, size: 18),
+                  label: Text('${l10n.quickPractice} (Focus)'),
+                ),
+              ),
+              const SizedBox(height: 8),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: () {
+                    Navigator.of(ctx).pop();
+                    _startPostLessonPractice(questionCount: 20);
+                  },
+                  icon: const Icon(Icons.playlist_add_check, size: 18),
+                  label: Text(l10n.practiceMode),
+                ),
+              ),
             ],
           ),
         ),
@@ -450,16 +528,18 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
     _textController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
+    _pageController.dispose();
     _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    super.build(context);
     final l10n = AppLocalizations.of(context)!;
     final remaining = widget.durationMinutes - _elapsedMinutes;
     final isEnding = remaining <= 0;
-    final voiceController = ref.watch(voiceControllerProvider);
+    final voiceController = ref.watch(voiceServiceProvider);
 
     return PopScope(
       canPop: !_isInitialized,
@@ -471,7 +551,24 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
         appBar: AppBar(
           title: Text(widget.topicTitle),
           actions: [
-            if (_isInitialized)
+            if (_isInitialized && _manager != null) ...[
+              if (_tutorService.currentLessonBlocks != null && _tutorService.currentLessonBlocks!.isNotEmpty)
+                IconButton(
+                  icon: Icon(_showSlides ? Icons.chat_bubble_outline : Icons.slideshow),
+                  tooltip: _showSlides ? l10n.chat : l10n.slides,
+                  onPressed: () => setState(() => _showSlides = !_showSlides),
+                ),
+              if (_isInitialized && _manager != null)
+                IconButton(
+                  icon: Icon(_voiceOutputEnabled ? Icons.volume_up : Icons.volume_off),
+                  tooltip: l10n.voiceInput,
+                  onPressed: () {
+                    setState(() {
+                      _voiceOutputEnabled = !_voiceOutputEnabled;
+                      _manager!.enableVoiceOutput = _voiceOutputEnabled;
+                    });
+                  },
+                ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert),
                 tooltip: l10n.moreOptions,
@@ -501,6 +598,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
                   ),
                 ],
               ),
+            ],
           ],
         ),
         body: Column(
@@ -524,38 +622,72 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
             else
               Expanded(
                 child: _isInitialized && _manager != null
-                    ? _buildMessageList(l10n, isEnding, ref.watch(settingsProvider).reduceMotion)
-                    : const Center(child: CircularProgressIndicator()),
+                    ? (_showSlides && _tutorService.currentLessonBlocks != null && _tutorService.currentLessonBlocks!.isNotEmpty
+                        ? _buildSlidesView()
+                        : _buildMessageList(l10n, isEnding, ref.watch(settingsProvider).reduceMotion))
+                    : _buildInitLoading(l10n),
               ),
             if (isEnding && _isInitialized && _manager != null)
               _buildTimeEndedBanner(l10n),
-            ConversationInput(
-              controller: _textController,
-              focusNode: _inputFocusNode,
-              isEnabled: _isInitialized,
-              isLoading: _isSending,
-              hintText: l10n.typeYourMessage,
-              sendTooltip: l10n.send,
-              onSend: _sendMessage,
-              leading: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  VoiceBar(
-                    controller: voiceController,
-                    onTranscriptionSubmitted: _onTranscriptionSubmitted,
-                    isEnabled: _isInitialized && !_isSending,
-                    reduceMotion: ref.watch(settingsProvider).reduceMotion,
-                  ),
-                  IconButton(
-                    icon: const Icon(Icons.image_outlined),
-                    onPressed: _isInitialized && !_isSending ? _pickImage : null,
-                    tooltip: l10n.captureImage,
-                  ),
-                ],
+            if (!_showSlides)
+              ConversationInput(
+                controller: _textController,
+                focusNode: _inputFocusNode,
+                isEnabled: _isInitialized,
+                isLoading: _isSending,
+                hintText: l10n.typeYourMessage,
+                sendTooltip: l10n.send,
+                onSend: _sendMessage,
+                leading: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    VoiceBar(
+                      controller: voiceController,
+                      onTranscriptionSubmitted: _onTranscriptionSubmitted,
+                      isEnabled: _isInitialized && !_isSending,
+                      reduceMotion: ref.watch(settingsProvider).reduceMotion,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.image_outlined),
+                      onPressed: _isInitialized && !_isSending ? _pickImage : null,
+                      tooltip: l10n.captureImage,
+                    ),
+                  ],
+                ),
               ),
-            ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildInitLoading(AppLocalizations l10n) {
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const LoadingIndicator(),
+          const SizedBox(height: 24),
+          Text(
+            l10n.startingLesson,
+            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            '${l10n.loading}...',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 32),
+          OutlinedButton.icon(
+            onPressed: () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.close),
+            label: Text(l10n.cancel),
+          ),
+        ],
       ),
     );
   }
@@ -563,32 +695,33 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   Widget _buildPhaseIndicator() {
     if (_manager == null) return const SizedBox.shrink();
     final phase = _manager!.phase;
+    final theme = Theme.of(context);
     IconData icon;
     Color color;
     switch (phase) {
       case ConversationPhase.greeting:
         icon = Icons.waving_hand_outlined;
-        color = Colors.amber;
+        color = theme.colorScheme.tertiary;
         break;
       case ConversationPhase.teaching:
         icon = Icons.school_outlined;
-        color = Colors.green;
+        color = theme.colorScheme.primary;
         break;
       case ConversationPhase.exercise:
         icon = Icons.quiz_outlined;
-        color = Colors.blue;
+        color = theme.colorScheme.secondary;
         break;
       case ConversationPhase.feedback:
         icon = Icons.feedback_outlined;
-        color = Colors.orange;
+        color = theme.colorScheme.tertiary;
         break;
       case ConversationPhase.adaptiveReview:
         icon = Icons.psychology_outlined;
-        color = Colors.purple;
+        color = theme.colorScheme.secondary;
         break;
       case ConversationPhase.closing:
         icon = Icons.summarize_outlined;
-        color = Colors.grey;
+        color = theme.colorScheme.onSurfaceVariant;
         break;
     }
     final l10n = AppLocalizations.of(context)!;
@@ -600,19 +733,23 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
       ConversationPhase.adaptiveReview => l10n.phaseAdaptiveReview,
       ConversationPhase.closing => l10n.phaseClosing,
     };
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
-      child: Row(
-        children: [
-          Icon(icon, size: 14, color: color),
-          const SizedBox(width: 4),
-          Text(
-            phaseLabel,
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: color,
+    return Semantics(
+      label: phaseLabel,
+      header: true,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2),
+        child: Row(
+          children: [
+            Icon(icon, size: 14, color: color),
+            const SizedBox(width: 4),
+            Text(
+              phaseLabel,
+              style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                color: color,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -673,24 +810,27 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
   }
 
   Widget _buildTimeEndedBanner(AppLocalizations l10n) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      color: Theme.of(context).colorScheme.errorContainer,
-      child: Row(
-        children: [
-          Icon(Icons.access_alarm, size: 18, color: Theme.of(context).colorScheme.error),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              l10n.lessonTimeEnded,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onErrorContainer,
-                    fontWeight: FontWeight.w600,
-                  ),
+    return Semantics(
+      label: l10n.lessonTimeEnded,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        color: Theme.of(context).colorScheme.errorContainer,
+        child: Row(
+          children: [
+            Icon(Icons.access_alarm, size: 18, color: Theme.of(context).colorScheme.error),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                l10n.lessonTimeEnded,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onErrorContainer,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -708,8 +848,81 @@ class _TutorScreenState extends ConsumerState<TutorScreen> {
       padding: ResponsiveUtils.listPadding(context),
       itemCount: messages.length,
       itemBuilder: (context, index) {
-        return ChatBubble(message: messages[index], reduceMotion: reduceMotion);
+        final msg = messages[index];
+        final isTutor = msg.role == MessageRole.tutor;
+        final child = ChatBubble(
+          message: msg,
+          reduceMotion: reduceMotion,
+          onSpeak: isTutor && _voiceOutputEnabled && !msg.isStreaming && msg.content.isNotEmpty
+              ? () => ref.read(voiceServiceProvider).speak(msg.content, localeName: l10n.localeName)
+              : null,
+        );
+        if (reduceMotion) return child;
+        return TweenAnimationBuilder<double>(
+          tween: Tween(begin: 0.0, end: 1.0),
+          duration: const Duration(milliseconds: 300),
+          builder: (context, value, child) => Opacity(opacity: value, child: child),
+          child: child,
+        );
       },
+    );
+  }
+
+  List<LessonBlock> get _lessonBlocks => _tutorService.currentLessonBlocks ?? [];
+
+  Widget _buildSlidesView() {
+    final blocks = _lessonBlocks;
+    return Column(
+      children: [
+        Expanded(
+          child: PageView.builder(
+            controller: _pageController,
+            onPageChanged: (i) => setState(() => _currentSlideIndex = i),
+            itemCount: blocks.length,
+            itemBuilder: (context, index) {
+              return SingleChildScrollView(
+                padding: ResponsiveUtils.screenPadding(context),
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: LessonBlockCard(block: blocks[index]),
+              );
+            },
+          ),
+        ),
+        _buildSlideNavigation(blocks.length),
+      ],
+    );
+  }
+
+  Widget _buildSlideNavigation(int total) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          IconButton(
+            icon: const Icon(Icons.chevron_left),
+            tooltip: l10n.previous,
+            onPressed: _currentSlideIndex > 0
+                ? () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    )
+                : null,
+          ),
+          Text('${_currentSlideIndex + 1} / $total'),
+          IconButton(
+            icon: const Icon(Icons.chevron_right),
+            tooltip: l10n.next,
+            onPressed: _currentSlideIndex < total - 1
+                ? () => _pageController.nextPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    )
+                : null,
+          ),
+        ],
+      ),
     );
   }
 }

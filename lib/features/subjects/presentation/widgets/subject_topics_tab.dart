@@ -3,10 +3,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart'
+    show topicDependencyRepositoryProvider;
+import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/subjects/presentation/dialogs/topic_edit_dialog.dart';
 import 'package:studyking/features/subjects/presentation/dialogs/topic_dependency_dialog.dart';
@@ -40,10 +41,11 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       final topics = topicsResult.data ?? [];
 
       List<TopicDependency> deps = [];
-      final allResult = await topicRepo.getAll();
-      if (allResult.isSuccess) {
-        deps = allResult.data!
-            .whereType<TopicDependency>()
+      final depRepo = ref.read(topicDependencyRepositoryProvider);
+      await depRepo.init();
+      final depsResult = await depRepo.getAllDependencies();
+      if (depsResult.isSuccess) {
+        deps = depsResult.data!
             .where((d) => topics.any((t) => t.id == d.topicId))
             .toList();
       }
@@ -62,10 +64,11 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
   }
 
   Future<void> _addTopic() async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<Topic>(
       context: context,
       builder: (ctx) => TopicEditDialog(
-        title: 'Add Topic',
+        title: l10n.addTopicTitle,
         existingTopics: _topics,
         existingDependencies: _dependencies,
       ),
@@ -82,23 +85,24 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       await _loadTopics();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Topic "${result.title}" created')),
+          SnackBar(content: Text(l10n.topicCreated(result.title))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to create topic: $e')),
+          SnackBar(content: Text(l10n.topicCreateFailed(e.toString()))),
         );
       }
     }
   }
 
   Future<void> _editTopic(Topic topic) async {
+    final l10n = AppLocalizations.of(context)!;
     final result = await showDialog<Topic>(
       context: context,
       builder: (ctx) => TopicEditDialog(
-        title: 'Edit Topic',
+        title: l10n.editTopicTitle,
         topic: topic,
         existingTopics: _topics,
         existingDependencies: _dependencies,
@@ -112,19 +116,20 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       await _loadTopics();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Topic "${result.title}" updated')),
+          SnackBar(content: Text(l10n.topicUpdated(result.title))),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update topic: $e')),
+          SnackBar(content: Text(l10n.topicUpdateFailed(e.toString()))),
         );
       }
     }
   }
 
   Future<void> _editDependencies(Topic topic) async {
+    final l10n = AppLocalizations.of(context)!;
     final dep = _dependencies.where((d) => d.topicId == topic.id).firstOrNull;
     final result = await showDialog<TopicDependency>(
       context: context,
@@ -137,33 +142,37 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
     if (result == null || !mounted) return;
 
     try {
-      final depBox = await Hive.openBox(HiveBoxNames.topics);
-      await depBox.put(result.topicId, result);
+      final depRepo = ref.read(topicDependencyRepositoryProvider);
+      await depRepo.updateTopicDependency(result);
       _updateDownstreamDeps(topic.id, result.prerequisites);
       await _loadTopics();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Dependencies updated')),
+          SnackBar(content: Text(l10n.dependenciesUpdated)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update dependencies: $e')),
+          SnackBar(content: Text(l10n.dependenciesUpdateFailed(e.toString()))),
         );
       }
     }
   }
 
   Future<void> _updateDownstreamDeps(String topicId, List<String> newPrereqs) async {
-    final depBox = await Hive.openBox(HiveBoxNames.topics);
-    final allItems = depBox.values.toList();
-    final existingDeps = allItems.whereType<TopicDependency>().toList();
+    final depRepo = ref.read(topicDependencyRepositoryProvider);
+    final depsResult = await depRepo.getAllDependencies();
+    final existingDeps = depsResult.data ?? [];
 
     for (final otherId in _topics.map((t) => t.id)) {
       if (otherId == topicId) continue;
       final existingDep = existingDeps.where((d) => d.topicId == otherId).firstOrNull;
-      if (existingDep == null) continue;
+      if (existingDep == null) {
+        final defaultDep = TopicDependency(topicId: otherId);
+        await depRepo.updateTopicDependency(defaultDep);
+        continue;
+      }
 
       List<String> updatedDownstream = existingDep.downstreamTopics;
       if (newPrereqs.contains(otherId)) {
@@ -175,18 +184,29 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
       if (updatedDownstream.length != existingDep.downstreamTopics.length ||
           !updatedDownstream.every((id) => existingDep.downstreamTopics.contains(id))) {
-        await depBox.put(otherId, existingDep.copyWith(downstreamTopics: updatedDownstream));
+        await depRepo.updateTopicDependency(
+          existingDep.copyWith(downstreamTopics: updatedDownstream),
+        );
       }
     }
   }
 
   Future<void> _deleteTopic(Topic topic) async {
     final l10n = AppLocalizations.of(context)!;
+
+    final dep = _dependencies.where((d) => d.topicId == topic.id).firstOrNull;
+    final downstreamCount = dep?.downstreamTopics.length ?? 0;
+
+    String warning = l10n.deleteTopicConfirm(topic.title);
+    if (downstreamCount > 0) {
+      warning += '\n\n${l10n.downstreamTopicWarning(downstreamCount)}';
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Topic'),
-        content: Text('Delete "${topic.title}"?\nThis will remove it from all dependency lists.'),
+        title: Text(l10n.deleteTopicTitle),
+        content: Text(warning),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
@@ -197,7 +217,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
             style: ElevatedButton.styleFrom(
               backgroundColor: Theme.of(ctx).colorScheme.error,
             ),
-            child: const Text('Delete'),
+            child: Text(l10n.delete),
           ),
         ],
       ),
@@ -208,9 +228,9 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       final topicRepo = ref.read(topicRepositoryProvider);
       await topicRepo.delete(topic.id);
 
-      final depBox = await Hive.openBox(HiveBoxNames.topics);
-      final allItems = depBox.values.toList();
-      final existingDeps = allItems.whereType<TopicDependency>().toList();
+      final depRepo = ref.read(topicDependencyRepositoryProvider);
+      final depsResult = await depRepo.getAllDependencies();
+      final existingDeps = depsResult.data ?? [];
 
       for (final other in _topics) {
         if (other.id == topic.id) continue;
@@ -220,7 +240,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
           prerequisites: existingDep.prerequisites.where((id) => id != topic.id).toList(),
           downstreamTopics: existingDep.downstreamTopics.where((id) => id != topic.id).toList(),
         );
-        await depBox.put(other.id, updated);
+        await depRepo.updateTopicDependency(updated);
       }
 
       final subjectRepoResult = await ref.read(subjectsRepositoryProvider.future);
@@ -229,13 +249,13 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       await _loadTopics();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Topic deleted')),
+          SnackBar(content: Text(l10n.topicDeleted)),
         );
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to delete topic: $e')),
+          SnackBar(content: Text(l10n.topicDeleteFailed(e.toString()))),
         );
       }
     }
@@ -268,7 +288,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return const Center(child: CircularProgressIndicator());
+      return const LoadingIndicator();
     }
 
     return Column(
@@ -279,7 +299,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
             children: [
               Expanded(
                 child: Text(
-                  '${_topics.length} topics',
+                  l10n.topicCountTemplate(_topics.length),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -287,7 +307,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
               ),
               IconButton(
                 icon: const Icon(Icons.add_circle_outline),
-                tooltip: 'Add Topic',
+                tooltip: l10n.addTopicTooltip,
                 onPressed: _addTopic,
               ),
             ],
@@ -332,22 +352,49 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
                 final downstreamCount = dep?.downstreamTopics.length ?? 0;
 
                 final subtitleParts = <String>[];
-                if (prereqCount > 0) subtitleParts.add('$prereqCount prerequisites');
-                if (downstreamCount > 0) subtitleParts.add('$downstreamCount downstream');
-                if (topic.parentId != null) subtitleParts.add('Has parent');
+                if (prereqCount > 0) subtitleParts.add(l10n.prerequisitesCount(prereqCount));
+                if (downstreamCount > 0) subtitleParts.add(l10n.downstreamCount(downstreamCount));
+                if (topic.parentId != null) subtitleParts.add(l10n.hasParent);
+
+                final indentation = dep != null && dep.prerequisites.isNotEmpty
+                    ? dep.prerequisites.length
+                    : 0;
 
                 return Card(
                   key: ValueKey(topic.id),
-                  margin: const EdgeInsets.only(bottom: 4),
+                  margin: EdgeInsets.only(bottom: 4, left: indentation * 16.0),
                   child: ListTile(
                     leading: ReorderableDragStartListener(
                       index: index,
-                      child: const Icon(Icons.drag_handle),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (dep != null && dep.prerequisites.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsetsDirectional.only(end: 4),
+                              child: Icon(Icons.subdirectory_arrow_right,
+                                size: 16, color: theme.colorScheme.primary.withValues(alpha: 0.6)),
+                            ),
+                          const Icon(Icons.drag_handle),
+                        ],
+                      ),
                     ),
-                    title: Text(topic.title,
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w500,
-                      )),
+                    title: Row(
+                      children: [
+                        if (dep != null && dep.prerequisites.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsetsDirectional.only(end: 6),
+                            child: Icon(Icons.lock_outline, size: 14,
+                              color: theme.colorScheme.onSurfaceVariant),
+                          ),
+                        Flexible(
+                          child: Text(topic.title,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              fontWeight: FontWeight.w500,
+                            )),
+                        ),
+                      ],
+                    ),
                     subtitle: subtitleParts.isNotEmpty
                         ? Text(subtitleParts.join(' · '), style: theme.textTheme.bodySmall)
                         : null,
@@ -366,18 +413,18 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
                         }
                       },
                       itemBuilder: (ctx) => [
-                        const PopupMenuItem(value: 'edit',
+                        PopupMenuItem(value: 'edit',
                           child: ListTile(
                             leading: Icon(Icons.edit, size: 18),
-                            title: Text('Edit Topic'),
+                            title: Text(l10n.editTopicTitle),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
                         ),
-                        const PopupMenuItem(value: 'dependencies',
+                        PopupMenuItem(value: 'dependencies',
                           child: ListTile(
                             leading: Icon(Icons.account_tree, size: 18),
-                            title: Text('Dependencies'),
+                            title: Text(l10n.dependenciesNav),
                             dense: true,
                             contentPadding: EdgeInsets.zero,
                           ),
@@ -386,7 +433,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
                           child: ListTile(
                             leading: Icon(Icons.delete, size: 18,
                               color: theme.colorScheme.error),
-                            title: Text('Delete',
+                            title: Text(l10n.delete,
                               style: TextStyle(color: theme.colorScheme.error)),
                             dense: true,
                             contentPadding: EdgeInsets.zero,

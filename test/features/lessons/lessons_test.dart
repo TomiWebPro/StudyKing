@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/features/lessons/lessons.dart';
 
 void main() {
@@ -11,5 +12,13 @@ void main() {
     test('exports lessonServiceProvider', () => expect(lessonServiceProvider, isNotNull));
     test('exports LessonBlockCard', () => expect(LessonBlockCard, isNotNull));
     test('exports LessonListItem', () => expect(LessonListItem, isNotNull));
+
+    test('lessonServiceProvider is a Provider<LessonSessionService>', () {
+      expect(lessonServiceProvider, isA<Provider<LessonSessionService>>());
+    });
+
+    test('LessonSessionService is a class type', () {
+      expect(LessonSessionService, isA<Type>());
+    });
   });
 }

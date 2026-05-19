@@ -106,6 +106,7 @@ class Session {
   final String? sourceId;
   final List<String> sourceIds;
   final List<String> lessonIds;
+  final bool lessonReady;
   final List<String> tags;
   final DateTime createdAt;
   final String? tutorSessionId;
@@ -128,6 +129,7 @@ class Session {
     this.sourceId,
     this.sourceIds = const [],
     this.lessonIds = const [],
+    this.lessonReady = true,
     this.tags = const [],
     DateTime? createdAt,
     this.tutorSessionId,
@@ -160,6 +162,7 @@ class Session {
     'status': status.name,
     'sourceIds': sourceIds,
     'lessonIds': lessonIds,
+    'lessonReady': lessonReady,
     'tags': tags,
     'createdAt': createdAt.toIso8601String(),
     'tutorMetadata': tutorMetadata?.toJson(),
@@ -191,6 +194,7 @@ class Session {
         : SessionStatus.planned,
     sourceIds: json['sourceIds'] != null ? List<String>.from(json['sourceIds']) : [],
     lessonIds: json['lessonIds'] != null ? List<String>.from(json['lessonIds']) : [],
+    lessonReady: json['lessonReady'] as bool? ?? true,
     tags: json['tags'] != null ? List<String>.from(json['tags']) : [],
     createdAt: json['createdAt'] != null
         ? DateTime.parse(json['createdAt'])
@@ -218,6 +222,7 @@ class Session {
     SessionStatus? status,
     List<String>? sourceIds,
     List<String>? lessonIds,
+    bool? lessonReady,
     List<String>? tags,
     DateTime? createdAt,
     TutorMetadata? tutorMetadata,
@@ -249,6 +254,7 @@ class Session {
       status: status ?? this.status,
       sourceIds: sourceIds ?? this.sourceIds,
       lessonIds: lessonIds ?? this.lessonIds,
+      lessonReady: lessonReady ?? this.lessonReady,
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       tutorMetadata: clearTutorMetadata ? null : (tutorMetadata ?? this.tutorMetadata),

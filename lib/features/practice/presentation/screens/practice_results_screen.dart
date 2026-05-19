@@ -2,12 +2,28 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+
+class QuestionReviewData {
+  final Question question;
+  final String? userAnswer;
+  final String? correctAnswer;
+  final bool isCorrect;
+
+  const QuestionReviewData({
+    required this.question,
+    this.userAnswer,
+    this.correctAnswer,
+    required this.isCorrect,
+  });
+}
 
 class PracticeResultsScreen extends StatelessWidget {
   final int totalQuestions;
   final int correctAnswers;
   final VoidCallback onPracticeAgain;
   final Map<String, double> topicBreakdown;
+  final List<QuestionReviewData>? reviewQuestions;
 
   const PracticeResultsScreen({
     super.key,
@@ -15,6 +31,7 @@ class PracticeResultsScreen extends StatelessWidget {
     required this.correctAnswers,
     required this.onPracticeAgain,
     this.topicBreakdown = const {},
+    this.reviewQuestions,
   });
 
   @override
@@ -29,6 +46,7 @@ class PracticeResultsScreen extends StatelessWidget {
       body: FocusTraversalGroup(
         child: SingleChildScrollView(
           padding: ResponsiveUtils.screenPadding(context),
+          physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -61,6 +79,19 @@ class PracticeResultsScreen extends StatelessWidget {
                   formatPercent(e.value * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 )),
               ],
+              if (reviewQuestions != null && reviewQuestions!.isNotEmpty) ...[
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                Center(
+                  child: Semantics(
+                    label: l10n.reviewMistakes,
+                    child: OutlinedButton.icon(
+                      onPressed: () => _showReviewDialog(context),
+                      icon: const Icon(Icons.rate_review_outlined),
+                      label: Text(l10n.reviewMistakes),
+                    ),
+                  ),
+                ),
+              ],
               SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               Center(
                 child: FocusTraversalOrder(
@@ -78,6 +109,90 @@ class PracticeResultsScreen extends StatelessWidget {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  void _showReviewDialog(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        semanticLabel: l10n.reviewMistakes,
+        title: Text(l10n.reviewMistakes),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView.builder(
+            shrinkWrap: true,
+            itemCount: reviewQuestions!.length,
+            itemBuilder: (ctx, i) {
+              final item = reviewQuestions![i];
+              return Card(
+                margin: const EdgeInsets.only(bottom: 12),
+                child: Padding(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            item.isCorrect ? Icons.check_circle : Icons.cancel,
+                            color: item.isCorrect
+                                ? Theme.of(ctx).colorScheme.primary
+                                : Theme.of(ctx).colorScheme.error,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              '${l10n.correctAnswers} ${i + 1}',
+                              style: Theme.of(ctx).textTheme.titleSmall?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        item.question.text,
+                        style: Theme.of(ctx).textTheme.bodyMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      if (item.userAnswer != null && item.userAnswer!.isNotEmpty)
+                        Text(
+                          '${l10n.yourAnswer}: ${item.userAnswer}',
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: item.isCorrect
+                                ? Theme.of(ctx).colorScheme.primary
+                                : Theme.of(ctx).colorScheme.error,
+                          ),
+                        ),
+                      if (!item.isCorrect && item.correctAnswer != null)
+                        Padding(
+                          padding: const EdgeInsets.only(top: 4),
+                          child: Text(
+                            '${l10n.correctAnswer}: ${item.correctAnswer}',
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(ctx).colorScheme.primary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
       ),
     );
   }

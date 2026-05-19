@@ -6,6 +6,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/constants/app_api_config.dart';
@@ -28,24 +29,58 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   bool _isTesting = false;
   bool _obscureApiKey = true;
 
+  String _initialApiKey = '';
+  String _initialBaseUrl = '';
+  LlmProvider _initialProvider = LlmProvider.openRouter;
+  bool _hasUnsavedChanges = false;
+
+  static const _knownDefaultUrls = [
+    ApiConfig.openRouterBaseUrlString,
+    ApiConfig.ollamaDefaultUrl,
+    ApiConfig.openAIDefaultUrl,
+  ];
+
   @override
   void initState() {
     super.initState();
     _loadCurrentValues();
+    _apiKeyController.addListener(_onFieldChanged);
+    _baseUrlController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
+    _apiKeyController.removeListener(_onFieldChanged);
+    _baseUrlController.removeListener(_onFieldChanged);
     _apiKeyController.dispose();
     _baseUrlController.dispose();
     super.dispose();
   }
 
-  void _loadCurrentValues() {
+  void _onFieldChanged() {
+    _updateUnsavedChanges();
+  }
+
+  void _updateUnsavedChanges() {
     setState(() {
-      _apiKeyController.text = ref.read(apiKeyProvider);
-      _baseUrlController.text = ref.read(apiBaseUrlProvider);
-      _selectedProvider = ref.read(llmProviderProvider);
+      _hasUnsavedChanges = _apiKeyController.text != _initialApiKey ||
+          _baseUrlController.text != _initialBaseUrl ||
+          _selectedProvider != _initialProvider;
+    });
+  }
+
+  void _loadCurrentValues() {
+    final apiKey = ref.read(apiKeyProvider);
+    final baseUrl = ref.read(apiBaseUrlProvider);
+    final provider = ref.read(llmProviderProvider);
+    setState(() {
+      _apiKeyController.text = apiKey;
+      _baseUrlController.text = baseUrl;
+      _selectedProvider = provider;
+      _initialApiKey = apiKey;
+      _initialBaseUrl = baseUrl;
+      _initialProvider = provider;
+      _hasUnsavedChanges = false;
     });
   }
 
@@ -53,7 +88,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     final l10n = AppLocalizations.of(context)!;
     final errorColor = Theme.of(context).colorScheme.error;
     final successColor = Theme.of(context).colorScheme.primary;
-    if (_apiKeyController.text.trim().isEmpty) {
+    if (_apiKeyController.text.trim().isEmpty && _selectedProvider != LlmProvider.ollama) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.apiKeyCannotBeEmpty),
@@ -71,13 +106,15 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       ref.read(apiKeyProvider.notifier).state = apiKey;
       ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
       ref.read(llmProviderProvider.notifier).state = _selectedProvider;
+      ref.read(selectedModelProvider.notifier).state = '';
       await ref.read(settingsProvider.notifier).updateSettings(
-            apiKey: apiKey,
-            apiBaseUrl: baseUrl,
+            SettingsUpdate(
+              apiKey: apiKey,
+              apiBaseUrl: baseUrl,
+              selectedModel: '',
+            ),
             llmProvider: _selectedProvider,
           );
-
-      ref.read(selectedModelProvider.notifier).state = '';
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -88,6 +125,12 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       );
 
       if (!mounted) return;
+      setState(() {
+        _initialApiKey = apiKey;
+        _initialBaseUrl = baseUrl;
+        _initialProvider = _selectedProvider;
+        _hasUnsavedChanges = false;
+      });
       Navigator.pop(context);
     } catch (e) {
       _logger.w('Failed to save API config', e);
@@ -160,20 +203,56 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     }
   }
 
+  Future<bool> _onWillPop() async {
+    if (!_hasUnsavedChanges) return true;
+    final l10n = AppLocalizations.of(context)!;
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.unsavedChanges),
+        content: Text(l10n.unsavedChangesDescription),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.cancel),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.discard),
+          ),
+        ],
+      ),
+    );
+    return result ?? false;
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
+    return PopScope(
+      canPop: !_hasUnsavedChanges,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final shouldPop = await _onWillPop();
+        if (shouldPop && context.mounted) {
+          Navigator.of(context).pop();
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(title: Text(l10n.apiConfiguration)),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              l10n.configureApiKeys,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.configureApiKeys,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             Text(
@@ -230,6 +309,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           ],
         ),
       ),
+      ),
     );
   }
 
@@ -244,10 +324,13 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontWeight: FontWeight.bold,
+        Semantics(
+          header: true,
+          child: Text(
+            title,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ),
         const SizedBox(height: 8),
@@ -285,11 +368,14 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          l10n.aiModel,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                fontWeight: FontWeight.bold,
-              ),
+        Semantics(
+          header: true,
+          child: Text(
+            l10n.aiModel,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+          ),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<LlmProvider>(
@@ -317,20 +403,30 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           }).toList(),
           onChanged: (value) {
             if (value == null) return;
+
+            ref.read(llmProviderProvider.notifier).state = value;
+
             setState(() {
               _selectedProvider = value;
-              switch (value) {
-                case LlmProvider.openRouter:
-                  _baseUrlController.text = ApiConfig.openRouterBaseUrlString;
-                  break;
-                case LlmProvider.ollama:
-                  _baseUrlController.text = ApiConfig.ollamaDefaultUrl;
-                  break;
-                case LlmProvider.openAI:
-                  _baseUrlController.text = ApiConfig.openAIDefaultUrl;
-                  break;
+
+              final currentUrl = _baseUrlController.text;
+              if (currentUrl.isEmpty || _knownDefaultUrls.contains(currentUrl)) {
+                switch (value) {
+                  case LlmProvider.openRouter:
+                    _baseUrlController.text = ApiConfig.openRouterBaseUrlString;
+                    break;
+                  case LlmProvider.ollama:
+                    _baseUrlController.text = ApiConfig.ollamaDefaultUrl;
+                    break;
+                  case LlmProvider.openAI:
+                    _baseUrlController.text = ApiConfig.openAIDefaultUrl;
+                    break;
+                }
               }
+
+              ref.read(apiBaseUrlProvider.notifier).state = _baseUrlController.text;
             });
+            _updateUnsavedChanges();
           },
         ),
         const SizedBox(height: 4),

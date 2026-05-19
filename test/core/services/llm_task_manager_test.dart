@@ -37,6 +37,63 @@ void main() {
       expect(updated.feature, 'chat');
       expect(updated.id, 'task_1');
     });
+
+    test('toJson/fromJson round-trip preserves all fields', () {
+      final original = LlmTask(
+        id: 'rt-1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        status: LlmTaskStatus.running,
+        startTime: DateTime(2026, 5, 19, 10, 0, 0),
+        endTime: DateTime(2026, 5, 19, 10, 0, 30),
+        tokensUsed: 500,
+        estimatedCost: 0.01,
+        error: null,
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.id, original.id);
+      expect(restored.feature, original.feature);
+      expect(restored.modelId, original.modelId);
+      expect(restored.status, original.status);
+      expect(restored.startTime, original.startTime);
+      expect(restored.endTime, original.endTime);
+      expect(restored.tokensUsed, original.tokensUsed);
+      expect(restored.estimatedCost, original.estimatedCost);
+      expect(restored.error, original.error);
+    });
+
+    test('toJson/fromJson round-trip with null endTime and error', () {
+      final original = LlmTask(
+        id: 'rt-2',
+        feature: 'ingestion',
+        modelId: 'claude-3',
+        status: LlmTaskStatus.failed,
+        startTime: DateTime(2026, 1, 1),
+        tokensUsed: 0,
+        estimatedCost: 0.0,
+        error: 'Connection timeout',
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.endTime, isNull);
+      expect(restored.error, 'Connection timeout');
+      expect(restored.status, LlmTaskStatus.failed);
+    });
+
+    test('toJson/fromJson round-trip for cancelled status', () {
+      final original = LlmTask(
+        id: 'rt-3',
+        feature: 'tutor',
+        modelId: 'gpt-4',
+        status: LlmTaskStatus.cancelled,
+        startTime: DateTime(2026, 3, 15),
+        endTime: DateTime(2026, 3, 15, 0, 0, 5),
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.status, LlmTaskStatus.cancelled);
+    });
   });
 
   group('LlmTaskManager', () {

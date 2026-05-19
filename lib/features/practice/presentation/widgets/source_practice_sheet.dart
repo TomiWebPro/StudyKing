@@ -84,11 +84,12 @@ class SourcePracticeSheet extends StatelessWidget {
                   separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (context, index) {
                     final source = sources[index];
+                    final cs = Theme.of(context).colorScheme;
                     final statusColor = source.status == ProcessingStatus.completed
-                        ? Colors.green
+                        ? cs.primary
                         : source.status == ProcessingStatus.failed
-                            ? Colors.red
-                            : Colors.orange;
+                            ? cs.error
+                            : cs.tertiary;
                     return ListTile(
                       leading: CircleAvatar(
                         backgroundColor: Theme.of(context).colorScheme.primaryContainer,

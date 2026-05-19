@@ -52,6 +52,30 @@ class TaskModel extends HiveObject {
         createdAt = null,
         updatedAt = null;
 
+  Map<String, dynamic> toJson() => {
+    'id': id,
+    'title': title,
+    'description': description,
+    'status': status,
+    'assignee': assignee,
+    'priority': priority,
+    'dueDate': dueDate?.toIso8601String(),
+    'createdAt': createdAt?.toIso8601String(),
+    'updatedAt': updatedAt?.toIso8601String(),
+  };
+
+  factory TaskModel.fromJson(Map<String, dynamic> json) => TaskModel(
+    id: json['id'] as String,
+    title: json['title'] as String,
+    description: json['description'] as String? ?? '',
+    status: json['status'] as String? ?? 'todo',
+    assignee: json['assignee'] as String?,
+    priority: json['priority'] as String? ?? 'medium',
+    dueDate: json['dueDate'] != null ? DateTime.parse(json['dueDate'] as String) : null,
+    createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : null,
+    updatedAt: json['updatedAt'] != null ? DateTime.parse(json['updatedAt'] as String) : null,
+  );
+
   TaskModel copyWith({
     String? id,
     String? title,

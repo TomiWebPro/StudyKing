@@ -22,7 +22,7 @@ class MetricCard extends StatelessWidget {
     final padding = ResponsiveUtils.cardPadding(context);
 
     return Semantics(
-      label: '$label: $value',
+      label: '$label $value',
       child: GradientContainer(
       accent: accent,
       padding: padding,

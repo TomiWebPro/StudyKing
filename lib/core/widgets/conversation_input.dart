@@ -125,27 +125,37 @@ class _ConversationInputState extends State<ConversationInput> {
                   if (widget.trailing != null)
                     ...widget.trailing!
                   else
-                    IconButton.filled(
-                      icon: widget.isLoading
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : const Icon(Icons.send_rounded),
-                      onPressed: widget.isEnabled && !widget.isLoading && !_isSendingInternal
-                          ? _debouncedSend
-                          : null,
-                      tooltip: widget.isLoading
+                    Semantics(
+                      label: widget.isLoading
                           ? AppLocalizations.of(context)!.sending
                           : widget.sendTooltip,
-                      style: IconButton.styleFrom(
-                        backgroundColor: colorScheme.primary,
-                        foregroundColor: colorScheme.onPrimary,
-                        minimumSize: const Size(48, 48),
+                      button: !widget.isLoading,
+                      child: IconButton.filled(
+                        icon: widget.isLoading
+                            ? Semantics(
+                                liveRegion: true,
+                                label: AppLocalizations.of(context)!.sending,
+                                      child: SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: colorScheme.onPrimary,
+                                        ),
+                                      ),
+                              )
+                            : const Icon(Icons.send_rounded),
+                        onPressed: widget.isEnabled && !widget.isLoading && !_isSendingInternal
+                            ? _debouncedSend
+                            : null,
+                        tooltip: widget.isLoading
+                            ? AppLocalizations.of(context)!.sending
+                            : widget.sendTooltip,
+                        style: IconButton.styleFrom(
+                          backgroundColor: colorScheme.primary,
+                          foregroundColor: colorScheme.onPrimary,
+                          minimumSize: const Size(48, 48),
+                        ),
                       ),
                     ),
                 ],

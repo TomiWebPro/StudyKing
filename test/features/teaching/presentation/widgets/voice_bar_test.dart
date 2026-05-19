@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/teaching/presentation/widgets/voice_bar.dart';
-import 'package:studyking/features/teaching/services/voice_controller.dart';
+import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class FakeVoiceController extends VoiceController {
+class FakeVoiceService extends VoiceService {
   bool _fakeIsListening = false;
   final bool _fakeIsAvailable = true;
   final StreamController<String> _transcriptionCtrl =
@@ -63,11 +63,11 @@ Widget wrapApp(Widget child) {
 
 void main() {
   group('VoiceBar', () {
-    late FakeVoiceController controller;
+    late FakeVoiceService controller;
     late List<String> submitted;
 
     setUp(() {
-      controller = FakeVoiceController();
+      controller = FakeVoiceService();
       submitted = [];
     });
 

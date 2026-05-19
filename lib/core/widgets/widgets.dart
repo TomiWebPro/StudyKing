@@ -7,3 +7,4 @@ export 'loading_indicator.dart';
 export 'loading_screen.dart';
 export 'metric_card.dart';
 export 'not_found_screen.dart';
+export 'shimmer_widget.dart';
