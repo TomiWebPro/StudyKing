@@ -1,56 +1,120 @@
-import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class FocusPracticeService {
   static final Logger _logger = const Logger('FocusPracticeService');
-  final DatabaseService _database;
+  final SpacedRepetitionService _srService;
+  final MasteryGraphService _masteryGraphService;
   final SessionRepository _sessionRepository;
-  final AttemptRepository _attemptRepository;
+  final QuestionRepository _questionRepository;
 
   FocusPracticeService({
-    required DatabaseService database,
+    required SpacedRepetitionService srService,
+    required MasteryGraphService masteryGraphService,
     required SessionRepository sessionRepository,
-    required AttemptRepository attemptRepository,
-  })  : _database = database,
+    required QuestionRepository questionRepository,
+  })  : _srService = srService,
+        _masteryGraphService = masteryGraphService,
         _sessionRepository = sessionRepository,
-        _attemptRepository = attemptRepository;
+        _questionRepository = questionRepository;
 
   Future<List<Question>> getDueQuestions({
     required String studentId,
     List<String>? subjectIds,
     int limit = 20,
   }) async {
-    final questions = <Question>[];
     try {
-      final allResult = await _database.questionRepository.getAll();
-      if (allResult.isFailure || allResult.data == null) return [];
+      final dueResult = await _srService.getQuestionsDueForReview();
+      if (dueResult.isFailure || dueResult.data == null) return [];
 
-      var allQuestions = allResult.data!;
+      var dueQuestions = dueResult.data!;
+
       if (subjectIds != null && subjectIds.isNotEmpty) {
-        allQuestions = allQuestions.where((q) => subjectIds.contains(q.subjectId)).toList();
+        dueQuestions = dueQuestions.where((q) => subjectIds.contains(q.subjectId)).toList();
       }
 
-      // Get recent attempts to determine which questions are due for review
-      final attemptsResult = await _attemptRepository.getByStudent(studentId);
-      final attempts = attemptsResult.data ?? [];
-      final attemptedQuestionIds = attempts.map((a) => a.questionId).toSet();
-
-      // Prioritize questions not yet attempted, then questions needing review
-      final unattempted = allQuestions.where((q) => !attemptedQuestionIds.contains(q.id)).toList();
-      final attempted = allQuestions.where((q) => attemptedQuestionIds.contains(q.id)).toList();
-
-      questions.addAll(unattempted.take(limit));
-      if (questions.length < limit) {
-        questions.addAll(attempted.take(limit - questions.length));
+      final weakResult = await _masteryGraphService.getWeakTopics(studentId);
+      if (weakResult.isSuccess && weakResult.data != null && weakResult.data!.isNotEmpty) {
+        final weakTopicIds = weakResult.data!.map((s) => s.topicId).toSet();
+        final weakQuestions = dueQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
+        final otherQuestions = dueQuestions.where((q) => !weakTopicIds.contains(q.topicId)).toList();
+        weakQuestions.shuffle();
+        otherQuestions.shuffle();
+        dueQuestions = [...weakQuestions, ...otherQuestions];
+      } else {
+        dueQuestions.shuffle();
       }
+
+      return dueQuestions.take(limit).toList();
     } catch (e) {
       _logger.w('Failed to get due questions for focus practice', e);
+      return [];
     }
-    return questions.take(limit).toList();
+  }
+
+  Future<List<Question>> getWeakAreaQuestions({
+    required String studentId,
+    List<String>? subjectIds,
+    int limit = 20,
+  }) async {
+    try {
+      final weakResult = await _masteryGraphService.getWeakTopics(studentId);
+      if (weakResult.isFailure || weakResult.data == null || weakResult.data!.isEmpty) {
+        return [];
+      }
+
+      final weakTopicIds = weakResult.data!.map((s) => s.topicId).toSet();
+      final allResult = await _questionRepository.getAll();
+      final allQuestions = allResult.data ?? [];
+
+      var filtered = allQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
+      if (subjectIds != null && subjectIds.isNotEmpty) {
+        filtered = filtered.where((q) => subjectIds.contains(q.subjectId)).toList();
+      }
+
+      filtered.shuffle();
+      return filtered.take(limit).toList();
+    } catch (e) {
+      _logger.w('Failed to get weak area questions for focus practice', e);
+      return [];
+    }
+  }
+
+  Future<List<Question>> getQuestionsForSessionType({
+    required FocusSessionType sessionType,
+    required String studentId,
+    List<String>? subjectIds,
+    int limit = 20,
+  }) async {
+    switch (sessionType) {
+      case FocusSessionType.quickPractice:
+        final allResult = await _questionRepository.getAll();
+        var all = allResult.data ?? [];
+        if (subjectIds != null && subjectIds.isNotEmpty) {
+          all = all.where((q) => subjectIds.contains(q.subjectId)).toList();
+        }
+        all.shuffle();
+        return all.take(limit).toList();
+      case FocusSessionType.weakAreaAttack:
+        return getWeakAreaQuestions(
+          studentId: studentId,
+          subjectIds: subjectIds,
+          limit: limit,
+        );
+      case FocusSessionType.spacedRepetition:
+      case FocusSessionType.freeFocus:
+        return getDueQuestions(
+          studentId: studentId,
+          subjectIds: subjectIds,
+          limit: limit,
+        );
+    }
   }
 
   Future<Session> startPracticeSession({

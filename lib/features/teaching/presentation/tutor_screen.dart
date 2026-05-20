@@ -164,7 +164,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
-          _initErrorMessage = l10n.tutorInitFailed('');
+          _initErrorMessage = l10n.tutorInitFailed(e.toString());
         });
       }
     }

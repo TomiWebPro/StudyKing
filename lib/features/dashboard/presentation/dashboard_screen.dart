@@ -123,6 +123,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final showSkeleton = !hasAnyData && isLoading;
 
+    final checklistProgress = checklistProgressAsync.valueOrNull ?? const ChecklistProgress();
+
+    final isFirstRun = !checklistProgress.isComplete && !hasAnyData;
+
     final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
 
     final asyncSnapshot =
@@ -130,8 +134,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final syllabusGoalsAsync = ref.watch(dashboardSyllabusProgressProvider(studentId));
     final syllabusGoals = syllabusGoalsAsync.valueOrNull ?? [];
-
-    final checklistProgress = checklistProgressAsync.valueOrNull ?? const ChecklistProgress();
 
     final vs = ResponsiveUtils.verticalSpacing(context);
 
@@ -162,306 +164,323 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               SizedBox(height: vs),
               _buildSourcesCard(context, asyncSnapshot),
               SizedBox(height: vs),
-              _buildQuestionBankCard(context),
-              SizedBox(height: vs),
-              _buildSessionHistoryCard(context),
-              SizedBox(height: vs),
-              if (showSkeleton)
-                _buildSkeletonLoading(context)
-              else ...[
-                CollapsibleCard(
-                  cardId: 'summary',
-                  asyncValue: overallStatsAsync,
-                  onRetry:
-                      _onRetry(dashboardOverallStatsProvider(studentId)),
-                  title:
-                      _cardTitle(context, Icons.summarize, l10n.summary),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+              if (isFirstRun) ...[
+                SizedBox(height: vs),
+                Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 24),
+                    child: Text(
+                      l10n.statsAppearAfterLearning,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        fontStyle: FontStyle.italic,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                _buildQuestionBankCard(context),
+                SizedBox(height: vs),
+                _buildSessionHistoryCard(context),
+                SizedBox(height: vs),
+                if (showSkeleton)
+                  _buildSkeletonLoading(context)
+                else ...[
+                  CollapsibleCard(
+                    cardId: 'summary',
+                    asyncValue: overallStatsAsync,
                     onRetry:
                         _onRetry(dashboardOverallStatsProvider(studentId)),
+                    title:
+                        _cardTitle(context, Icons.summarize, l10n.summary),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardOverallStatsProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: SummaryRow(overallStats: overallStatsData),
                   ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: SummaryRow(overallStats: overallStatsData),
-                ),
-                SizedBox(height: vs),
-                Card(
-                  key: _exportSectionKey,
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: ExportSection(studentId: studentId),
+                  SizedBox(height: vs),
+                  Card(
+                    key: _exportSectionKey,
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: ExportSection(studentId: studentId),
+                    ),
                   ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'focus',
-                  asyncValue: focusStatsAsync,
-                  onRetry:
-                      _onRetry(dashboardFocusStatsProvider(studentId)),
-                  title: _cardTitle(context, Icons.timer, l10n.focusTime),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'focus',
+                    asyncValue: focusStatsAsync,
                     onRetry:
                         _onRetry(dashboardFocusStatsProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: Semantics(
-                    button: true,
-                    label: l10n.focusMode,
-                    child: InkWell(
-                      onTap: () =>
-                          Navigator.pushNamed(context, AppRoutes.focusMode),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: SessionSummaryCard(
-                              todayStats: focusStatsData != null
-                                  ? {
-                                      'totalSeconds':
-                                          focusStatsData.totalSeconds,
-                                      'completedSessions':
-                                          focusStatsData.completedSessions,
-                                      'totalSessions':
-                                          focusStatsData.totalSessions,
-                                      'plannedMinutes':
-                                          focusStatsData.plannedMinutes,
-                                      'hours': formatHours(
-                                          focusStatsData.totalSeconds
-                                              .toDouble(),
-                                          l10n.localeName),
-                                    }
-                                  : null,
+                    title: _cardTitle(context, Icons.timer, l10n.focusTime),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardFocusStatsProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: Semantics(
+                      button: true,
+                      label: l10n.focusMode,
+                      child: InkWell(
+                        onTap: () =>
+                            Navigator.pushNamed(context, AppRoutes.focusMode),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: SessionSummaryCard(
+                                todayStats: focusStatsData != null
+                                    ? {
+                                        'totalSeconds':
+                                            focusStatsData.totalSeconds,
+                                        'completedSessions':
+                                            focusStatsData.completedSessions,
+                                        'totalSessions':
+                                            focusStatsData.totalSessions,
+                                        'plannedMinutes':
+                                            focusStatsData.plannedMinutes,
+                                        'hours': formatHours(
+                                            focusStatsData.totalSeconds
+                                                .toDouble(),
+                                            l10n.localeName),
+                                      }
+                                    : null,
+                              ),
                             ),
-                          ),
-                          Icon(
-                            Directionality.of(context) == TextDirection.rtl
-                                ? Icons.chevron_left
-                                : Icons.chevron_right,
-                            color: Theme.of(context)
-                                .colorScheme
-                                .onSurfaceVariant,
-                          ),
-                        ],
+                            Icon(
+                              Directionality.of(context) == TextDirection.rtl
+                                  ? Icons.chevron_left
+                                  : Icons.chevron_right,
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'weekly_chart',
-                  asyncValue: weeklyTrendAsync,
-                  onRetry:
-                      _onRetry(dashboardWeeklyTrendProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.show_chart, l10n.weeklyActivity),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'weekly_chart',
+                    asyncValue: weeklyTrendAsync,
                     onRetry:
                         _onRetry(dashboardWeeklyTrendProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.show_chart, l10n.weeklyActivity),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardWeeklyTrendProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: WeeklyChart(weeklyTrend: weeklyTrendData),
                   ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: WeeklyChart(weeklyTrend: weeklyTrendData),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'adherence',
-                  asyncValue: adherenceAsync,
-                  onRetry:
-                      _onRetry(dashboardAdherenceDataProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.event_note, l10n.planAdherence),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'adherence',
+                    asyncValue: adherenceAsync,
                     onRetry:
                         _onRetry(dashboardAdherenceDataProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.event_note, l10n.planAdherence),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardAdherenceDataProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: PlanAdherenceCard(
+                      averageAdherence: adherenceData.averageAdherence,
+                      weeklyAdherence: adherenceData.weeklyAdherence,
+                      daysSinceLastActivity: daysSinceLastActivity,
+                    ),
                   ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: PlanAdherenceCard(
-                    averageAdherence: adherenceData.averageAdherence,
-                    weeklyAdherence: adherenceData.weeklyAdherence,
-                    daysSinceLastActivity: daysSinceLastActivity,
-                  ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'mastery',
-                  asyncValue: snapshotAsync,
-                  onRetry:
-                      _onRetry(dashboardMasterySnapshotProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.analytics, l10n.masteryOverview),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
-                    onRetry: _onRetry(
-                        dashboardMasterySnapshotProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: MasteryProgressCard(snapshot: snapshotData),
-                ),
-                if (syllabusGoals.isNotEmpty) ...[
                   SizedBox(height: vs),
-                  _buildSyllabusProgress(context, syllabusGoals, studentId),
-                ],
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'workload',
-                  asyncValue: workloadAsync,
-                  onRetry:
-                      _onRetry(dashboardWorkloadProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.trending_up, l10n.remainingWorkload),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+                  CollapsibleCard(
+                    cardId: 'mastery',
+                    asyncValue: snapshotAsync,
+                    onRetry:
+                        _onRetry(dashboardMasterySnapshotProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.analytics, l10n.masteryOverview),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry: _onRetry(
+                          dashboardMasterySnapshotProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: MasteryProgressCard(snapshot: snapshotData),
+                  ),
+                  if (syllabusGoals.isNotEmpty) ...[
+                    SizedBox(height: vs),
+                    _buildSyllabusProgress(context, syllabusGoals, studentId),
+                  ],
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'workload',
+                    asyncValue: workloadAsync,
                     onRetry:
                         _onRetry(dashboardWorkloadProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: workloadData != null
-                      ? WorkloadCard(
-                          workload: workloadData,
-                          resolveTopicName: (id) =>
-                              topicNamesData[id] ?? l10n.unknown,
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              l10n.noSessionsYet,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
+                    title: _cardTitle(
+                        context, Icons.trending_up, l10n.remainingWorkload),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardWorkloadProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: workloadData != null
+                        ? WorkloadCard(
+                            workload: workloadData,
+                            resolveTopicName: (id) =>
+                                topicNamesData[id] ?? l10n.unknown,
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Center(
+                              child: Text(
+                                l10n.noSessionsYet,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
                             ),
                           ),
+                  ),
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'due_reviews',
+                    asyncValue: dueReviewsAsync,
+                    onRetry:
+                        _onRetry(dashboardDueReviewsProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.autorenew, l10n.dueForReview),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry: _onRetry(
+                          dashboardDueReviewsProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: dueReviewsData != null &&
+                            dueReviewsData.totalDue > 0
+                        ? DueReviewsCard(data: dueReviewsData)
+                        : Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Center(
+                              child: Text(
+                                l10n.allCaughtUp,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'weak_areas',
+                    asyncValue: allMasteryAsync,
+                    onRetry:
+                        _onRetry(dashboardAllMasteryProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.warning_amber, l10n.weakAreas),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry: _onRetry(
+                          dashboardAllMasteryProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: allMasteryData.isNotEmpty
+                        ? WeakAreasCard(
+                            allMastery: allMasteryData,
+                            resolveTopicName: (id) =>
+                                topicNamesData[id] ?? l10n.unknown,
+                            onTopicTap: (topicId) => Navigator.pushNamed(
+                              context,
+                              AppRoutes.topicDetail,
+                              arguments: TopicDetailArgs(
+                                topicId: topicId,
+                                studentId: studentId,
+                              ),
+                            ),
+                          )
+                        : Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Center(
+                              child: Text(
+                                l10n.noWeakAreasFound,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodyMedium
+                                    ?.copyWith(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .onSurfaceVariant,
+                                    ),
+                              ),
+                            ),
+                          ),
+                  ),
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'topic_breakdown',
+                    asyncValue: allMasteryAsync,
+                    onRetry:
+                        _onRetry(dashboardAllMasteryProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.pie_chart, l10n.topicPerformance),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry: _onRetry(
+                          dashboardAllMasteryProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: TopicBreakdownCard(
+                      allMastery: allMasteryData,
+                      resolveTopicName: (id) =>
+                          topicNamesData[id] ?? l10n.unknown,
+                      onTopicTap: (topicId) => Navigator.pushNamed(
+                        context,
+                        AppRoutes.topicDetail,
+                        arguments: TopicDetailArgs(
+                          topicId: topicId,
+                          studentId: studentId,
                         ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'due_reviews',
-                  asyncValue: dueReviewsAsync,
-                  onRetry:
-                      _onRetry(dashboardDueReviewsProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.autorenew, l10n.dueForReview),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
-                    onRetry: _onRetry(
-                        dashboardDueReviewsProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: dueReviewsData != null &&
-                          dueReviewsData.totalDue > 0
-                      ? DueReviewsCard(data: dueReviewsData)
-                      : Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              l10n.allCaughtUp,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                        ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'weak_areas',
-                  asyncValue: allMasteryAsync,
-                  onRetry:
-                      _onRetry(dashboardAllMasteryProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.warning_amber, l10n.weakAreas),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
-                    onRetry: _onRetry(
-                        dashboardAllMasteryProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: allMasteryData.isNotEmpty
-                      ? WeakAreasCard(
-                          allMastery: allMasteryData,
-                          resolveTopicName: (id) =>
-                              topicNamesData[id] ?? l10n.unknown,
-                          onTopicTap: (topicId) => Navigator.pushNamed(
-                            context,
-                            AppRoutes.topicDetail,
-                            arguments: TopicDetailArgs(
-                              topicId: topicId,
-                              studentId: studentId,
-                            ),
-                          ),
-                        )
-                      : Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Center(
-                            child: Text(
-                              l10n.noWeakAreasFound,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium
-                                  ?.copyWith(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .onSurfaceVariant,
-                                  ),
-                            ),
-                          ),
-                        ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'topic_breakdown',
-                  asyncValue: allMasteryAsync,
-                  onRetry:
-                      _onRetry(dashboardAllMasteryProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.pie_chart, l10n.topicPerformance),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
-                    onRetry: _onRetry(
-                        dashboardAllMasteryProvider(studentId)),
-                  ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: TopicBreakdownCard(
-                    allMastery: allMasteryData,
-                    resolveTopicName: (id) =>
-                        topicNamesData[id] ?? l10n.unknown,
-                    onTopicTap: (topicId) => Navigator.pushNamed(
-                      context,
-                      AppRoutes.topicDetail,
-                      arguments: TopicDetailArgs(
-                        topicId: topicId,
-                        studentId: studentId,
                       ),
                     ),
                   ),
-                ),
-                SizedBox(height: vs),
-                CollapsibleCard(
-                  cardId: 'badges',
-                  asyncValue: badgesAsync,
-                  onRetry:
-                      _onRetry(dashboardBadgesProvider(studentId)),
-                  title: _cardTitle(
-                      context, Icons.emoji_events, l10n.achievements),
-                  errorWidget: ErrorRetryWidget(
-                    message: l10n.somethingWentWrong,
+                  SizedBox(height: vs),
+                  CollapsibleCard(
+                    cardId: 'badges',
+                    asyncValue: badgesAsync,
                     onRetry:
                         _onRetry(dashboardBadgesProvider(studentId)),
+                    title: _cardTitle(
+                        context, Icons.emoji_events, l10n.achievements),
+                    errorWidget: ErrorRetryWidget(
+                      message: l10n.somethingWentWrong,
+                      onRetry:
+                          _onRetry(dashboardBadgesProvider(studentId)),
+                    ),
+                    loadingSkeleton: _cardSkeleton(context),
+                    body: BadgesCard(badges: badgesData),
                   ),
-                  loadingSkeleton: _cardSkeleton(context),
-                  body: BadgesCard(badges: badgesData),
-                ),
+                ],
               ],
             ],
           ),

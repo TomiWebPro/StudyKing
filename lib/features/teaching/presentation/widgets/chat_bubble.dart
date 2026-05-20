@@ -123,7 +123,7 @@ class ChatBubble extends StatelessWidget {
       return _TypingIndicator(reduceMotion: reduceMotion);
     }
 
-    if (message.type == MessageType.feedback || _isEvaluationMessage(content)) {
+    if (message.type == MessageType.feedback || message.isEvaluation) {
       return _buildEvaluationContent(context, content);
     }
 
@@ -147,16 +147,6 @@ class ChatBubble extends StatelessWidget {
       label: message.content,
       child: textWidget,
     );
-  }
-
-  bool _isEvaluationMessage(String content) {
-    try {
-      final data = jsonDecode(content) as Map<String, dynamic>;
-      return data['type'] == 'evaluation';
-    } catch (e) {
-      _logger.w('Failed to parse evaluation message', e);
-      return false;
-    }
   }
 
   String _evaluationSemanticLabel(BuildContext context, double score) {

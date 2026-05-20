@@ -14,7 +14,7 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
-import 'package:studyking/core/services/plan_adherence_orchestrator.dart' show AdherenceDeviation;
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -161,6 +161,22 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 }
 
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  _FakePlanAdherenceOrchestrator()
+      : super(
+          adherenceRepository: null,
+          planRepository: null,
+          planService: null,
+          masteryService: null,
+          l10n: null,
+        );
+
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    return Result.success(const AdherenceDeviation());
+  }
+}
+
 class FakePlannerService extends PlannerService {
   PersonalLearningPlan? _plan;
   List<RoadmapModel> _roadmaps = [];
@@ -172,6 +188,12 @@ class FakePlannerService extends PlannerService {
   int scheduleCallCount = 0;
   String? lastScheduledTopicTitle;
   String? lastScheduledTopicId;
+
+  FakePlannerService()
+      : super(
+          planOrchestrator: _FakePlanAdherenceOrchestrator(),
+          fixedStudentId: 'test-student',
+        );
 
   void setPlan(PersonalLearningPlan? plan) => _plan = plan;
   void setRoadmaps(List<RoadmapModel> roadmaps) => _roadmaps = roadmaps;
@@ -193,7 +215,8 @@ class FakePlannerService extends PlannerService {
   @override
   Future<Result<List<Session>>> getScheduledLessons() async => Result.success(_scheduledLessons);
 
-  Future<AdherenceDeviation?> checkAdherence() async => _deviation;
+  @override
+  Future<Result<List<Session>>> getMissedLessons() async => Result.success([]);
 
   @override
   Future<Result<bool>> hasSchedulingConflict({
@@ -595,7 +618,7 @@ void main() {
             m.content.contains('Algebra')), isTrue);
       });
 
-      test('does nothing when session not found', () async {
+      test('adds not-found message when session does not exist', () async {
         final tutorRepo = FakeTutorSessionRepository();
         final fakePending = FakePendingActionRepository();
         final db = DatabaseService(
@@ -615,7 +638,9 @@ void main() {
 
         await service.suggestReschedule('nonexistent');
         final history = service.memory.getHistory();
-        expect(history.where((m) => m.role == MessageRole.system), isEmpty);
+        expect(history.any((m) =>
+            m.role == MessageRole.system &&
+            m.content.contains('Could not find')), isTrue);
       });
 
       test('adds system message about rescheduling to memory', () async {
@@ -740,22 +765,24 @@ void main() {
         expect(service.pendingPlanProposal, isNotNull);
       });
 
-      test('programar keyword (Portuguese) creates schedule proposal', () async {
+      test('programar keyword (Spanish) creates schedule proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
+          localeName: 'es',
         );
         await service.chat('programar estudos de matematica').toList();
         expect(service.pendingScheduleProposal, isNotNull);
         expect(fakePlanner.scheduleCallCount, equals(0));
       });
 
-      test('reprogramar keyword (Portuguese) creates schedule proposal', () async {
+      test('agendar keyword (Spanish) creates schedule proposal', () async {
         final service = createMentorService(
           llmService: llm,
           plannerService: fakePlanner,
+          localeName: 'es',
         );
-        await service.chat('reprogramar sessoes').toList();
+        await service.chat('agendar sessoes').toList();
         expect(service.pendingScheduleProposal, isNotNull);
         expect(fakePlanner.scheduleCallCount, equals(0));
       });
@@ -1209,7 +1236,7 @@ void main() {
       test('extracts days and goal from plan message', () async {
         final llm = FakeLlmService();
         final service = createMentorService(llmService: llm);
-        await service.chat('plan a 60-day roadmap for organic chemistry').toList();
+        await service.chat('plan a 60 day roadmap for organic chemistry').toList();
         expect(service.pendingPlanProposal, isNotNull);
         expect(service.pendingPlanProposal!.days, equals(60));
         expect(service.pendingPlanProposal!.goal, contains('organic chemistry'));
@@ -1222,6 +1249,171 @@ void main() {
         expect(service.pendingPlanProposal, isNotNull);
         expect(service.pendingPlanProposal!.days, equals(30));
         expect(service.pendingPlanProposal!.goal, isNull);
+      });
+    });
+
+    group('chat - duration extraction', () {
+      late FakeLlmService llm;
+
+      setUp(() {
+        llm = FakeLlmService();
+      });
+
+      test('extracts minutes duration from schedule message', () async {
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule 30 min math').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.durationMinutes, equals(30));
+      });
+
+      test('extracts hours duration from schedule message', () async {
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule 1 hour physics').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.durationMinutes, equals(60));
+      });
+
+      test('extracts decimal hours duration', () async {
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule 1.5 hours chemistry').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.durationMinutes, equals(90));
+      });
+
+      test('uses default duration when no duration in message', () async {
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule math').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.durationMinutes, equals(30));
+      });
+
+      test('ignores duration exceeding 480 minutes', () async {
+        final service = createMentorService(llmService: llm);
+        await service.chat('schedule 500 min math').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.durationMinutes, equals(30));
+      });
+
+      test('extracts Spanish minutes duration', () async {
+        final esService = createMentorService(llmService: llm, localeName: 'es');
+        await esService.chat('programar 45 minutos matematicas').toList();
+        expect(esService.pendingScheduleProposal, isNotNull);
+        expect(esService.pendingScheduleProposal!.durationMinutes, equals(45));
+      });
+
+      test('extracts Spanish hours duration', () async {
+        final esService = createMentorService(llmService: llm, localeName: 'es');
+        await esService.chat('programar 2 horas fisica').toList();
+        expect(esService.pendingScheduleProposal, isNotNull);
+        expect(esService.pendingScheduleProposal!.durationMinutes, equals(120));
+      });
+
+      test('extracts topic using Spanish acerca keyword', () async {
+        final esService = createMentorService(llmService: llm, localeName: 'es');
+        await esService.chat('programar acerca de algebra lineal').toList();
+        expect(esService.pendingScheduleProposal, isNotNull);
+        expect(esService.pendingScheduleProposal!.topicTitle, equals('algebra lineal'));
+      });
+
+
+    });
+
+    group('chat - reschedule intent', () {
+      late FakeLlmService llm;
+      late FakePlannerService fakePlanner;
+
+      setUp(() {
+        llm = FakeLlmService();
+        fakePlanner = FakePlannerService();
+      });
+
+      test('sets pending reschedule session id when matching topic found', () async {
+        fakePlanner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2)), tutorMetadata: const TutorMetadata(topicTitle: 'Algebra')),
+          Session(id: 'session-2', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 4))),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('reschedule algebra lesson').toList();
+        expect(service.pendingRescheduleSessionId, equals('session-1'));
+      });
+
+      test('uses first lesson when no specific topic match', () async {
+        fakePlanner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('reschedule something').toList();
+        expect(service.pendingRescheduleSessionId, equals('session-1'));
+      });
+
+      test('does not set pending reschedule when no lessons', () async {
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('reschedule math').toList();
+        expect(service.pendingRescheduleSessionId, isNull);
+      });
+
+      test('matches rescheduled topic by topicId', () async {
+        fakePlanner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', topicId: 'topic-french', startTime: DateTime.now().add(const Duration(hours: 2))),
+          Session(id: 'session-2', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 4))),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('reschedule french lesson').toList();
+        expect(service.pendingRescheduleSessionId, equals('session-1'));
+      });
+    });
+
+    group('chat - no meaningful data', () {
+      test('returns mentorNoSubjects message when no data', () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setStats({
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'avgTimePerQuestion': 0,
+          'totalStudyTimeHours': 0,
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        });
+        final service = createMentorService(progressTracker: tracker);
+        final chunks = await service.chat('hello').toList();
+        expect(chunks, isNotEmpty);
+        expect(chunks.first, contains("haven't added any subjects"));
+      });
+    });
+
+    group('getUpcomingLessons', () {
+      test('returns empty list when no lessons', () async {
+        final service = createMentorService();
+        final lessons = await service.getUpcomingLessons();
+        expect(lessons, isEmpty);
+      });
+
+      test('returns lessons from planner service', () async {
+        final planner = FakePlannerService();
+        planner.setScheduledLessons([
+          Session(id: 's1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
+        ]);
+        final service = createMentorService(plannerService: planner);
+        final lessons = await service.getUpcomingLessons();
+        expect(lessons.length, equals(1));
+        expect(lessons.first.id, equals('s1'));
+      });
+    });
+
+    group('clearPendingReschedule', () {
+      test('clearPendingReschedule sets pending reschedule to null', () async {
+        final llm = FakeLlmService();
+        final planner = FakePlannerService();
+        planner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: planner);
+        await service.chat('reschedule algebra').toList();
+        expect(service.pendingRescheduleSessionId, isNotNull);
+        service.clearPendingReschedule();
+        expect(service.pendingRescheduleSessionId, isNull);
       });
     });
   });

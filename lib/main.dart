@@ -53,10 +53,17 @@ import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
 import 'features/onboarding/providers/onboarding_providers.dart';
 import 'features/onboarding/presentation/onboarding_dialog.dart';
+import 'core/widgets/splash_screen.dart';
 
 final Logger _mainLogger = const Logger('App');
 
 EngagementScheduler? _engagementScheduler;
+final _appInitNotifier = ValueNotifier<bool>(false);
+
+/// Whether app initialization (Hive, DB, etc.) has completed.
+/// Widgets can listen to this to switch from splash to main screen.
+bool get isAppInitialized => _appInitNotifier.value;
+ValueNotifier<bool> get appInitNotifier => _appInitNotifier;
 
 EngagementScheduler? getEngagementScheduler() => _engagementScheduler;
 
@@ -143,22 +150,25 @@ void main() async {
     _mainLogger.e('Unhandled platform error', error, stack);
     return true;
   };
-  
-  try {
-    SecurityConfig.enforceStartupGuards();
-    AppConstants.initialize();
 
-    // Initialize Hive database
-    Hive.initFlutter();
-    
-    // Register adapters
-    Hive.registerAdapter(AccessibilityPreferencesAdapter());
-    Hive.registerAdapter(UserProfileAdapter());
-    Hive.registerAdapter(MasteryImprovementMetricAdapter());
-    
-      // Run database migrations and open all boxes
+  SecurityConfig.enforceStartupGuards();
+  AppConstants.initialize();
+
+  Hive.initFlutter();
+
+  Hive.registerAdapter(AccessibilityPreferencesAdapter());
+  Hive.registerAdapter(UserProfileAdapter());
+  Hive.registerAdapter(MasteryImprovementMetricAdapter());
+
+  // Show splash screen immediately; run heavy init after first frame
+  runApp(StudyKingApp());
+}
+
+Future<void> _runAppInitialization(StudyKingApp appEntry) async {
+  try {
+    // Run database migrations and open all boxes
     await HiveInitializer.initialize();
-    
+
     // Initialize all repositories through DatabaseService
     final mainDb = DatabaseService(
       topicRepository: TopicRepository(),
@@ -174,7 +184,7 @@ void main() async {
     if (dbInitResult.isFailure) {
       _mainLogger.w('Failed to init database: ${dbInitResult.error}');
     }
-    
+
     // Initialize settings repository
     final initSettingsRepo = SettingsRepository();
     initSettingsRepository(initSettingsRepo);
@@ -183,7 +193,7 @@ void main() async {
       _mainLogger.w('Failed to init settings: ${initResult.error}');
     }
 
-    // Load saved locale before runApp to prevent locale flicker
+    // Load saved locale
     try {
       final initProfileResult = await initSettingsRepo.getProfileData();
       if (initProfileResult.isSuccess) {
@@ -198,8 +208,8 @@ void main() async {
       _mainLogger.w('Error loading profile locale', e, stackTrace);
     }
 
-    // Initialize student ID service (generates UUID on first launch)
-    StudentIdService(); // ensure singleton is initialized
+    // Initialize student ID service
+    StudentIdService();
     await StudentIdService().init();
     await StudentIdService().updateLastActivity();
 
@@ -226,8 +236,8 @@ void main() async {
     } catch (e) {
       _mainLogger.w('Failed to init EngagementScheduler: $e');
     }
-    
-    // Load initial settings to sync with providers
+
+    // Load initial settings
     final settingsResult = await initSettingsRepo.getSettings();
     if (settingsResult.isSuccess) {
       _engagementScheduler?.updateSettings(settingsResult.data!);
@@ -235,12 +245,13 @@ void main() async {
       _mainLogger.w('Error loading initial settings: ${settingsResult.error}');
     }
 
-    // Run auto-backup check on startup (moved from SettingsScreen initState)
+    // Run auto-backup check
     _runAutoBackupCheck();
 
-    runApp(StudyKingApp());
+    _appInitNotifier.value = true;
   } catch (e, stackTrace) {
     _mainLogger.w('Error during initialization', e, stackTrace);
+    _appInitNotifier.value = true;
   }
 }
 
@@ -301,8 +312,7 @@ List<DestinationData> _buildDestinations(AppLocalizations l10n, {bool isWideScre
       tooltip: l10n.settings,
     ),
   ];
-  if (isWideScreen) return all;
-  return all.where((d) => d.label != l10n.focusMode).toList();
+  return all;
 }
 
 class StudyKingApp extends ConsumerStatefulWidget {
@@ -314,9 +324,27 @@ class StudyKingApp extends ConsumerStatefulWidget {
 
 class _StudyKingAppState extends ConsumerState<StudyKingApp> {
   bool _providersInited = false;
+  bool _initialized = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _runAppInitialization(const StudyKingApp()).then((_) {
+        if (mounted) setState(() => _initialized = true);
+      });
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (!_initialized) {
+      return MaterialApp(
+        debugShowCheckedModeBanner: false,
+        home: SplashScreen(message: 'Loading...'),
+      );
+    }
+
     final settings = ref.watch(settingsProvider);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _engagementScheduler?.updateSettings(settings);
@@ -455,6 +483,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
   bool _showApiKeyBanner = false;
   bool _apiKeyBannerDismissed = false;
   static const String _bannerDismissedTimeKey = 'apiKeyBannerDismissedTime';
+  static const String _bannerPermanentlyDismissedKey = 'apiKeyBannerPermanentlyDismissed';
 
   final _navigatorKeys = List.generate(6, (_) => GlobalKey<NavigatorState>());
   late final List<Widget> _tabNavigators;
@@ -476,21 +505,17 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           barrierDismissible: false,
           builder: (_) => const OnboardingDialog(),
         );
-
-        if (mounted) {
-          await showDialog(
-            context: context,
-            builder: (_) => const LocalDataNotice(),
-          );
-        }
       }
 
       if (mounted) {
         final settingsBox = await Hive.openBox(HiveBoxNames.settings);
         final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
+        final permanentlyDismissed = settingsBox.get(_bannerPermanentlyDismissedKey, defaultValue: false) as bool;
         final dismissedTime = settingsBox.get(_bannerDismissedTimeKey) as int?;
-        final shouldShow = apiKey.isEmpty && (dismissedTime == null ||
-            DateTime.now().millisecondsSinceEpoch - dismissedTime > Timeouts.week.inMilliseconds);
+        final shouldShow = apiKey.isEmpty &&
+            !permanentlyDismissed &&
+            (dismissedTime == null ||
+                DateTime.now().millisecondsSinceEpoch - dismissedTime > Timeouts.week.inMilliseconds);
         if (shouldShow) {
           setState(() => _showApiKeyBanner = true);
         }
@@ -671,7 +696,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 onDontShowAgain: () {
                   setState(() => _apiKeyBannerDismissed = true);
                   Hive.openBox(HiveBoxNames.settings).then((box) {
-                    box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
+                    box.put(_bannerPermanentlyDismissedKey, true);
                   });
                 },
               ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
@@ -221,6 +222,58 @@ void main() {
       ));
 
       expect(find.text('1h 30m 0s / 1h 30m 0s'), findsOneWidget);
+    });
+
+    testWidgets('shows practice performance section when lastPracticeSession provided', (tester) async {
+      final focusSession = FocusSession(
+        id: 'fs1',
+        studentId: 'student-1',
+        startTime: DateTime(2026, 5, 14, 10, 0),
+        endTime: DateTime(2026, 5, 14, 10, 30),
+        durationMinutes: 30,
+        questionsAnswered: 10,
+        correctAnswers: 7,
+        accuracy: 0.7,
+        subjectIds: ['sub-1'],
+      );
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(
+          lastPracticeSession: focusSession,
+        ),
+      ));
+
+      expect(find.text('Practice'), findsOneWidget);
+      expect(find.text('10'), findsOneWidget);
+      expect(find.text('7/10'), findsOneWidget);
+    });
+
+    testWidgets('hides practice performance when no lastPracticeSession', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const SessionSummaryCard(),
+      ));
+
+      expect(find.text('Practice'), findsNothing);
+    });
+
+    testWidgets('shows practice performance with zero questions', (tester) async {
+      final focusSession = FocusSession(
+        id: 'fs1',
+        studentId: 'student-1',
+        startTime: DateTime(2026, 5, 14, 10, 0),
+        durationMinutes: 25,
+        questionsAnswered: 0,
+        correctAnswers: 0,
+        accuracy: 0.0,
+      );
+
+      await tester.pumpWidget(_buildTestApp(
+        SessionSummaryCard(
+          lastPracticeSession: focusSession,
+        ),
+      ));
+
+      expect(find.text('Practice'), findsNothing);
     });
 
     testWidgets('shows session start time correctly', (tester) async {

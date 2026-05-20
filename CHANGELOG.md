@@ -1,5 +1,11 @@
 # Changelog
 
+- 2026-05-20: Focus Mode Analytics — created reusable `PracticePerformanceCard` widget (B2 improvements from `future_functionality_planner.md`):
+  - **B2:** Created `PracticePerformanceCard` in `lib/core/widgets/` — reusable widget showing practice accuracy, topic breakdown, and mastery delta with compact/full display modes
+  - **B2:** Refactored `SessionSummaryCard._buildPracticePerformance()` to delegate to `PracticePerformanceCard`, removing 100+ lines of duplicated rendering logic
+  - **B2:** Fixed `InlinePracticeWidget._loadQuestions()` fallback — changed from loading ALL questions to filtering by `SpacedRepetitionService.getQuestionsDueForReview()`, only falling back for `weakAreaAttack` sessions (other session types respect due-date filtering)
+  - **B2:** Removed unused `questionRepositoryProvider` import from `inline_practice_widget.dart`
+
 - 2026-05-20: Code Refactor Master & Quality — implemented 15+ fixes from `code_refactor_master.md`:
   - **B1:** Broke circular dependency `app_providers.dart` ↔ `mentor_providers.dart` by extracting shared providers (`llmProviderProvider`, `settingsProvider`, `l10nProvider`, `databaseProvider`, etc.) into `core/providers/shared_providers.dart`
   - **B7/B8:** Replaced hardcoded `15`/`30` defaults with `defaultQuestionsPerDay`/`defaultSessionDurationMinutes` constants from `study_utils.dart` across `planner_service.dart`, `planner_providers.dart`, `mentor_schedule_handler.dart`
@@ -672,3 +678,43 @@
   - m1: Replaced real Hive I/O with `FakeLlmTaskManager` in `llm_task_manager_screen_test.dart`; removed `Hive.init()` from `practice_screen_additional_test.dart` and `practice_session_screen_additional_test.dart`
   - m2: Moved `Hive.init()` to `setUpAll` with `tearDownAll` cleanup in `planner_service_test.dart`, `planner_providers_test.dart`, `topic_repository_provider_test.dart`, `subjects_repository_provider_test.dart`
   - m3: Narrowed import to `show studentIdValueProvider` in `tutor_screen_test.dart`
+
+- 2026-05-20: Test Coverage Master — Round 3 finalisation:
+  - B1: Verified 3 mentor service test files exist (`mentor_schedule_handler_test`, `mentor_wellbeing_service_test`, `mentor_context_builder_test`) with comprehensive fake-based coverage
+  - B2: Verified `syllabus_progress_card_test.dart` exists with progress (0%, partial, 100%) and loading/error state tests
+  - B3: Verified `subject_repository_provider_test.dart` exists with singleton, override, and error propagation tests
+  - M1: Verified core utils/constants tests exist (`answer_comparator_test`, `date_utils_test`, `spaced_repetition_config_test`)
+  - M2: Extracted `TopicDetailArgs` unit test from `topic_detail_screen_test.dart` into separate `topic_detail_screen_unit_test.dart` (fixes mixed unit+widget violation)
+  - M3: Created symlinks at `test/core/data/models/` and `test/core/data/repositories/` pointing to correct test locations for coverage discoverability
+  - M4: Added `NavigatorObserver` import + wiring + clarifying comments to 8 widget test files (plan_summary_card, calendar_view_widget, plan_adherence_card, due_reviews_card, mastery_progress_card, workload_card, topic_breakdown_card, badges_card)
+  - m1: Added `HiveTestHelper` class to `test/helpers/hive_test_utils.dart` with `initHive()`, `cleanHive()`, and `setSetting()` utilities
+  - m2: Verified `pending_action_model_test.dart` has comprehensive `toJson`/`fromJson` round-trip + `copyWith` + equality tests
+  - m3: Verified `export_section` unit/widget test split is correct with no duplication
+
+- 2026-05-20: UI/UX Master Issue — comprehensive audit fixes from `ui_ux_master.md`:
+  - **B1:** Removed Focus Mode filter from mobile bottom navigation — focus tab now visible on all screen sizes
+  - **B2:** Fixed `exportFailed('')` and `failedToDeleteSession('')` — now pass actual error message via `e.toString()`
+  - **B3:** Fixed `mentorInitFailed('')` and `tutorInitFailed('')` — now pass actual error message via `e.toString()`
+  - **M1:** Dead navigation taps in `NextUpCard` now show `l10n.addSubjectFirst` snackbar when no subjects exist
+  - **M2:** Replaced hardcoded 'Mastery Level'/'Best Streak' with `l10n.masteryLevel`/`l10n.bestStreak`; replaced hardcoded hex colors in `_accuracyColor`/`_levelColor` with `AppTheme.progressColor`/`masteryColor`; made `_DetailSparklinePainter` accept theme-aware colour
+  - **M3:** Replaced hardcoded English error messages with `l10n.insufficientAttemptsForWeakAreas` in practice screen
+  - **M4:** Added defence at UI layer for planner errors — raw error codes fall back to `l10n.somethingWentWrong`
+  - **M5:** Added `theme.colorScheme.onSurface` as ultimate fallback in `session_history_screen.dart` color chain
+  - **M6:** Added initial loading state (`CircularProgressIndicator`) and `LinearProgressIndicator` while plan is generating
+  - **M8:** Changed `_AiTaskMonitorTile` subtitle to `l10n.noActiveAiTasks` when zero active tasks
+  - **M9:** Changed `_featureLabel` default case to return `l10n.unknown` instead of raw feature key
+  - **M10:** Added `FilledButton` with `l10n.createStudyPlan` in planner calendar tab empty state, switching to tab index 0
+  - **M11:** Added `TextButton.icon` with `l10n.uploadMaterials` navigating to `/upload` in workload card empty state
+  - **M13/m8:** Replaced `theme.primaryColor` with `theme.colorScheme.primary` in `session_tracker_screen.dart` (6 locations)
+  - **m1:** Fixed `_completeOnboarding` — no longer silently converts "don't show again" failure to "completed"
+  - **m2:** Changed `Ctrl+Enter` shortcut to `Shift+Enter` no-op in `conversation_input.dart`
+  - **m3:** Removed hardcoded 'Loading' fallback in `shimmer_widget.dart` — now uses empty string
+  - **m4:** Added `l10n.keepPracticingToUnlock` guidance subtitle to badges card empty state
+  - **m5:** Replaced raw `level.name` fallback with static `MasteryLevel`→string map in `topic_breakdown_card.dart`
+  - **m6:** Simplified redundant null coalescing — extracted `widget.args.subjectId` to local variable in `lesson_detail_screen.dart`
+  - **m7:** Added inline error snackbar with retry action when subjects fail to load in `session_tracker_screen.dart`
+  - **m9:** Wrapped `IconButton` with `Semantics(explicitChildNodes: true)` in `collapsible_card.dart` to remove duplicate accessibility target
+  - **m10:** Unified colour-coding to use `AppTheme.progressColor`/`masteryColor` in topic detail screen (replacing hardcoded hex); practice screen already uses theme colors
+  - **m11:** Added `isEvaluation` field to `ConversationMessage` — cached at creation time via `_computeIsEvaluation()`; replaced O(n) per-build `jsonDecode` in `ChatBubble._isEvaluationMessage()` with precomputed field
+  - **m12:** Added persistent help icon (`Icons.help_outline`) in focus timer app bar that shows onboarding content in dialog
+  - **Chore:** Added `masteryLevel`, `bestStreak`, `noActiveAiTasks`, `addSubjectFirst`, `failedToLoadSubjects`, `insufficientAttemptsForWeakAreas` ARB keys (EN/ES) and generated l10n

@@ -324,6 +324,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicBreakdown => 'Topic Breakdown';
 
   @override
+  String get masteryDelta => 'Mastery Change';
+
+  @override
   String startingPractice(String mode) {
     return 'Starting $mode...';
   }
@@ -1502,6 +1505,12 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get masteryLevelExpert => 'Expert';
+
+  @override
+  String get masteryLevel => 'Mastery Level';
+
+  @override
+  String get bestStreak => 'Best Streak';
 
   @override
   String progressCsvGenerated(int length) {
@@ -3710,6 +3719,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'View active AI inference tasks and token usage';
 
   @override
+  String get noActiveAiTasks => 'No active AI tasks';
+
+  @override
+  String get addSubjectFirst => 'Add a subject first to start practicing';
+
+  @override
+  String get failedToLoadSubjects => 'Failed to load subjects';
+
+  @override
+  String insufficientAttemptsForWeakAreas(String subjectName, int minAttempts) {
+    return 'Need at least $minAttempts attempted questions for $subjectName to identify weak areas';
+  }
+
+  @override
   String get endLessonConfirmation =>
       'End your lesson? Your progress will be saved.';
 
@@ -5662,4 +5685,97 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get responseInterrupted => 'Response interrupted. Please try again.';
+
+  @override
+  String get whatIsApiKey => 'What is an API key?';
+
+  @override
+  String get whatIsApiKeyDescription =>
+      'An API key lets StudyKing use AI services like generating questions and tutoring. You can get one for free from providers like OpenRouter or OpenAI, or run a local model with Ollama.';
+
+  @override
+  String get statsAppearAfterLearning =>
+      'You\'ll see your stats here once you start learning!';
+
+  @override
+  String get topicsCreatedTitle => 'Topics Created';
+
+  @override
+  String get topicsCreatedDescription =>
+      'Topics were automatically created based on our standard curriculum. You can review and edit them anytime.';
+
+  @override
+  String get reviewAndEdit => 'Review & Edit';
+
+  @override
+  String topicSubtopicsCount(int count) {
+    return '$count subtopics';
+  }
+
+  @override
+  String get apiKeyRequiredForUploadTitle => 'API Key Required';
+
+  @override
+  String get apiKeyRequiredForUpload =>
+      'You\'ll need to configure an API key first to upload and process content. Would you like to configure it now?';
+
+  @override
+  String get configureApiKey => 'Configure API Key';
+
+  @override
+  String get maybeLater => 'Maybe Later';
+
+  @override
+  String get recommended => 'Recommended';
+
+  @override
+  String get openRouterSetupGuide =>
+      'Visit openrouter.ai/keys → Create account → Copy API key → Paste here';
+
+  @override
+  String get ollamaSetupGuide =>
+      'Download Ollama from ollama.ai → Run locally → Use default URL';
+
+  @override
+  String get openAiSetupGuide =>
+      'Visit platform.openai.com/api-keys → Create new key → Copy here';
+
+  @override
+  String get firstPracticeBanner =>
+      'First time practicing? Quick Practice is a great place to start!';
+
+  @override
+  String get recommendedForBeginners => 'Recommended for beginners';
+
+  @override
+  String get letsCreatePlanTitle => 'Let\'s create your study plan!';
+
+  @override
+  String get letsCreatePlanDesc =>
+      'Tell me what you want to learn and for how long. I\'ll create a personalized plan.';
+
+  @override
+  String get quickPlan => 'Quick Plan';
+
+  @override
+  String get startPracticing => 'Start Practicing';
+
+  @override
+  String get setupCompleteTitle => 'Great job setting up!';
+
+  @override
+  String get setupCompleteDesc =>
+      'You\'re ready to start learning. Here\'s what you can do next:';
+
+  @override
+  String get suggestedNextActions => 'Suggested next actions';
+
+  @override
+  String providerSetupGuide(String providerName) {
+    return 'How to get started with $providerName:';
+  }
+
+  @override
+  String get curriculumBasedTopics =>
+      'These topics are based on our standard curriculum. You can edit them anytime.';
 }

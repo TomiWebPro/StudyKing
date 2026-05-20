@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'Topic Breakdown'**
   String get topicBreakdown;
 
+  /// Heading for mastery change/delta section in session results
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Change'**
+  String get masteryDelta;
+
   /// Dialog text shown when starting practice
   ///
   /// In en, this message translates to:
@@ -2701,6 +2707,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Expert'**
   String get masteryLevelExpert;
+
+  /// Label for mastery level section heading
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery Level'**
+  String get masteryLevel;
+
+  /// Label for best streak stat
+  ///
+  /// In en, this message translates to:
+  /// **'Best Streak'**
+  String get bestStreak;
 
   /// Snackbar when CSV is generated
   ///
@@ -6284,6 +6302,30 @@ abstract class AppLocalizations {
   /// **'View active AI inference tasks and token usage'**
   String get viewActiveAiTasks;
 
+  /// Subtitle for AI tasks tile when there are no active tasks
+  ///
+  /// In en, this message translates to:
+  /// **'No active AI tasks'**
+  String get noActiveAiTasks;
+
+  /// Snackbar message when user tries to practice without subjects
+  ///
+  /// In en, this message translates to:
+  /// **'Add a subject first to start practicing'**
+  String get addSubjectFirst;
+
+  /// Error message when subjects fail to load
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load subjects'**
+  String get failedToLoadSubjects;
+
+  /// Message shown when user has too few attempts to determine weak areas
+  ///
+  /// In en, this message translates to:
+  /// **'Need at least {minAttempts} attempted questions for {subjectName} to identify weak areas'**
+  String insufficientAttemptsForWeakAreas(String subjectName, int minAttempts);
+
   /// Confirmation dialog text when ending a lesson
   ///
   /// In en, this message translates to:
@@ -9284,6 +9326,162 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Response interrupted. Please try again.'**
   String get responseInterrupted;
+
+  /// Expandable section title in onboarding asking what an API key is
+  ///
+  /// In en, this message translates to:
+  /// **'What is an API key?'**
+  String get whatIsApiKey;
+
+  /// Explanation of what an API key is for onboarding
+  ///
+  /// In en, this message translates to:
+  /// **'An API key lets StudyKing use AI services like generating questions and tutoring. You can get one for free from providers like OpenRouter or OpenAI, or run a local model with Ollama.'**
+  String get whatIsApiKeyDescription;
+
+  /// Placeholder shown in empty dashboard cards for first-time users
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll see your stats here once you start learning!'**
+  String get statsAppearAfterLearning;
+
+  /// Dialog title showing auto-created topics
+  ///
+  /// In en, this message translates to:
+  /// **'Topics Created'**
+  String get topicsCreatedTitle;
+
+  /// Dialog description for auto-created topics
+  ///
+  /// In en, this message translates to:
+  /// **'Topics were automatically created based on our standard curriculum. You can review and edit them anytime.'**
+  String get topicsCreatedDescription;
+
+  /// Button label to review and edit auto-created topics
+  ///
+  /// In en, this message translates to:
+  /// **'Review & Edit'**
+  String get reviewAndEdit;
+
+  /// Label showing count of subtopics for a topic
+  ///
+  /// In en, this message translates to:
+  /// **'{count} subtopics'**
+  String topicSubtopicsCount(int count);
+
+  /// Dialog title when API key is needed for upload
+  ///
+  /// In en, this message translates to:
+  /// **'API Key Required'**
+  String get apiKeyRequiredForUploadTitle;
+
+  /// Dialog message when user tries to upload without API key
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ll need to configure an API key first to upload and process content. Would you like to configure it now?'**
+  String get apiKeyRequiredForUpload;
+
+  /// Button label to go to API configuration
+  ///
+  /// In en, this message translates to:
+  /// **'Configure API Key'**
+  String get configureApiKey;
+
+  /// Button label to postpone an action
+  ///
+  /// In en, this message translates to:
+  /// **'Maybe Later'**
+  String get maybeLater;
+
+  /// Badge label for recommended option
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get recommended;
+
+  /// Setup guide for OpenRouter API key
+  ///
+  /// In en, this message translates to:
+  /// **'Visit openrouter.ai/keys → Create account → Copy API key → Paste here'**
+  String get openRouterSetupGuide;
+
+  /// Setup guide for Ollama
+  ///
+  /// In en, this message translates to:
+  /// **'Download Ollama from ollama.ai → Run locally → Use default URL'**
+  String get ollamaSetupGuide;
+
+  /// Setup guide for OpenAI API key
+  ///
+  /// In en, this message translates to:
+  /// **'Visit platform.openai.com/api-keys → Create new key → Copy here'**
+  String get openAiSetupGuide;
+
+  /// Hint banner shown on practice screen for new users
+  ///
+  /// In en, this message translates to:
+  /// **'First time practicing? Quick Practice is a great place to start!'**
+  String get firstPracticeBanner;
+
+  /// Badge text for beginner-friendly options
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended for beginners'**
+  String get recommendedForBeginners;
+
+  /// Welcome card title on planner for first-time visitors
+  ///
+  /// In en, this message translates to:
+  /// **'Let\'s create your study plan!'**
+  String get letsCreatePlanTitle;
+
+  /// Welcome card description on planner
+  ///
+  /// In en, this message translates to:
+  /// **'Tell me what you want to learn and for how long. I\'ll create a personalized plan.'**
+  String get letsCreatePlanDesc;
+
+  /// Button to auto-generate a study plan with defaults
+  ///
+  /// In en, this message translates to:
+  /// **'Quick Plan'**
+  String get quickPlan;
+
+  /// Checklist item label for taking a practice quiz
+  ///
+  /// In en, this message translates to:
+  /// **'Start Practicing'**
+  String get startPracticing;
+
+  /// Celebration title when checklist completes
+  ///
+  /// In en, this message translates to:
+  /// **'Great job setting up!'**
+  String get setupCompleteTitle;
+
+  /// Celebration description when checklist completes
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re ready to start learning. Here\'s what you can do next:'**
+  String get setupCompleteDesc;
+
+  /// Label for suggested next actions after setup
+  ///
+  /// In en, this message translates to:
+  /// **'Suggested next actions'**
+  String get suggestedNextActions;
+
+  /// Provider-specific setup guide header
+  ///
+  /// In en, this message translates to:
+  /// **'How to get started with {providerName}:'**
+  String providerSetupGuide(String providerName);
+
+  /// Hint text shown with auto-created topics
+  ///
+  /// In en, this message translates to:
+  /// **'These topics are based on our standard curriculum. You can edit them anytime.'**
+  String get curriculumBasedTopics;
 }
 
 class _AppLocalizationsDelegate

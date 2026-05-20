@@ -1650,7 +1650,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       case 'general':
         return l10n.featureLabelGeneral;
       default:
-        return feature;
+        return l10n.unknown;
     }
   }
 
@@ -1971,7 +1971,7 @@ class _AiTaskMonitorTileState extends ConsumerState<_AiTaskMonitorTile> {
       title: Text(l10n.aiTaskMonitor),
       subtitle: Text(_activeCount > 0 || _failedCount > 0
           ? l10n.viewActiveAiTasks
-          : l10n.viewActiveAiTasks),
+          : l10n.noActiveAiTasks),
       trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
       onTap: () => Navigator.pushNamed(context, AppRoutes.llmTasks),
     );

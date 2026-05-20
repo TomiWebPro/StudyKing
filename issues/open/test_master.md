@@ -1,181 +1,136 @@
-# Test Master: Comprehensive Test Coverage Audit
+# Test Master — Coverage & Convention Audit
 
-**Generated:** 2026-05-20
-**Scope:** All `lib/features/*/` and `lib/core/*/` vs `test/` — cross-referenced against AGENTS.md conventions.
-
----
-
-## BLOCKER — Missing Test Files (untested production code)
-
-### B1: Mentor services — 3 source files have zero test coverage
-
-| Source file | Missing test |
-|---|---|
-| `lib/features/mentor/services/mentor_schedule_handler.dart` | `test/features/mentor/services/mentor_schedule_handler_test.dart` |
-| `lib/features/mentor/services/mentor_wellbeing_service.dart` | `test/features/mentor/services/mentor_wellbeing_service_test.dart` |
-| `lib/features/mentor/services/mentor_context_builder.dart` | `test/features/mentor/services/mentor_context_builder_test.dart` |
-
-**Rationale:** The `mentor/` feature has one of the most detailed dependency-injection docs in AGENTS.md (the `MentorService Dependencies` table), yet three core service files are completely uncovered. `MentorScheduleHandler` orchestrates lesson scheduling, `MentorWellbeingService` handles proactive engagement nudges, and `MentorContextBuilder` constructs the LLM prompt context. Any refactor to these will go undetected.
-
-**Acceptance criteria:**
-- [ ] `mentor_schedule_handler_test.dart` created with fake `PlannerService`, fakes for `SessionRepository`/`EngagementNudgeRepository`. Tests cover: `scheduleLesson` success, scheduling conflict detection, adherence check, and error propagation.
-- [ ] `mentor_wellbeing_service_test.dart` created with fakes for `EngagementNudgeRepository`/`SessionRepository`. Tests cover: `checkWellbeingAndGenerateNudges` with low/high activity, nudge creation, today-count limits, and service-thrown errors.
-- [ ] `mentor_context_builder_test.dart` created. Tests cover: context assembly from `MasteryGraphService`/`PlannerService`/`SessionRepository` outputs, empty state handling, and provider-thrown errors.
+Audit date: 2026-05-20  
+Scope: `lib/` (features + core) vs `test/`, cross-referenced against `AGENTS.md`
 
 ---
 
-### B2: Planner — syllabus_progress_card missing test
+## BLOCKER
 
-| Source file | Missing test |
-|---|---|
-| `lib/features/planner/presentation/widgets/syllabus_progress_card.dart` | `test/features/planner/presentation/widgets/syllabus_progress_card_test.dart` |
+### B1 — 4 source files have zero test coverage
 
-**Rationale:** This widget renders a visual syllabus completion bar on the planner screen. No test exists to verify rendering with 0%, partial, or 100% progress, or with an empty syllabus.
-
-**Acceptance criteria:**
-- [ ] Test file created with `ProviderScope` + overrides for syllabus providers.
-- [ ] Tests verify: empty progress, partial progress (e.g. 3/10 topics mastered), full progress, and loading/error states.
-
----
-
-### B3: Subjects — subject_repository_provider missing test
-
-| Source file | Missing test |
-|---|---|
-| `lib/features/subjects/providers/subject_repository_provider.dart` | `test/features/subjects/providers/subject_repository_provider_test.dart` |
-
-**Rationale:** This provider wires the `SubjectRepository` into the Riverpod graph. No test verifies that it provides a singleton, that it can be overridden, or that an init failure propagates.
-
-**Acceptance criteria:**
-- [ ] Provider test file created. Tests: singleton behavior (same instance across reads), override injection via `ProviderScope`, error handling (if repo init throws).
-
----
-
-## MAJOR — Insufficient Test Quality
-
-### M1: Core utilities and constants with no test coverage
-
-| Source file | Missing test |
-|---|---|
-| `lib/core/utils/answer_comparator.dart` | `test/core/utils/answer_comparator_test.dart` |
-| `lib/core/utils/date_utils.dart` | `test/core/utils/date_utils_test.dart` |
-| `lib/core/constants/mentor_keywords.dart` | `test/core/constants/mentor_keywords_test.dart` |
-| `lib/core/constants/spaced_repetition_config.dart` | `test/core/constants/spaced_repetition_config_test.dart` |
-
-**Rationale:** `answer_comparator` is used during practice evaluation — incorrect comparison logic would silently mark answers right/wrong. `date_utils` is used across scheduling and planning. Both constants files drive LLM keyword detection and SR algorithm tuning. Zero coverage means regressions go undetected.
-
-**Acceptance criteria:**
-- [ ] `answer_comparator_test.dart`: tests for exact match, whitespace-tolerant match, empty/null input, numeric comparison edge cases.
-- [ ] `date_utils_test.dart`: tests for all exported functions — date range generation, week start/end, formatting edge cases (leap year, DST).
-- [ ] `mentor_keywords_test.dart`: tests that keyword lists contain expected entries, are non-empty.
-- [ ] `spaced_repetition_config_test.dart`: tests default config values, config boundaries.
-
----
-
-### M2: Mixed unit + widget tests in one file
-
-**Affected file:** `test/features/dashboard/presentation/screens/topic_detail_screen_test.dart`
-
-**Finding:** Contains 23 `testWidgets` blocks and 1 `test(...)` block (`"constructs with topicId and studentId"` at line 637). This violates the AGENTS.md rule: *"Keep unit tests and widget tests in separate files — never mix them in the same file."*
-
-**Acceptance criteria:**
-- [ ] The unit test (`constructs with topicId and studentId`) is extracted into a separate file `test/features/dashboard/presentation/screens/topic_detail_screen_unit_test.dart` (or appended to an existing unit file).
-- [ ] The original file contains only `testWidgets` calls.
-
----
-
-### M3: Core model tests located in feature test directory
-
-**Affected files:**
-
-| Source (lib/core/data/models/) | Test location (should be test/core/data/models/) | Actual test location |
+| Source | Expected test location | File type |
 |---|---|---|
-| `mastery_state_model.dart` | `test/core/data/models/mastery_state_model_test.dart` | `test/features/practice/data/models/mastery_state_model_test.dart` |
-| `mastery_improvement_metric_model.dart` | `test/core/data/models/...` | `test/features/practice/data/models/...` |
-| `question_mastery_state_model.dart` | `test/core/data/models/...` | `test/features/practice/data/models/...` |
-| `attempt_repository.dart` | `test/core/data/repositories/...` | `test/features/practice/data/repositories/attempt_repository_test.dart` |
+| `lib/core/widgets/splash_screen.dart` | `test/core/widgets/splash_screen_test.dart` | Widget (navigation entry point) |
+| `lib/core/providers/shared_providers.dart` | `test/core/providers/shared_providers_test.dart` | Provider (wires shared state) |
+| `lib/core/providers/service_providers.dart` | `test/core/providers/service_providers_test.dart` | Provider (wires core services) |
+| `lib/features/dashboard/presentation/widgets/absence_banner.dart` | `test/features/dashboard/presentation/widgets/absence_banner_test.dart` | Widget (renders absence warning) |
 
-**Rationale:** Models defined in `lib/core/data/models/` are shared across features. Having their tests buried in `test/features/practice/` means they are not discoverable via the convention mapping. Also means CI scoped to `test/core/` would miss these tests.
+**Rationale**: Splash screen is the app entry point — untested means startup failures are silent. `shared_providers.dart` and `service_providers.dart` wire core services together; a miswiring causes cascading failures. The `absence_banner` is shown to users on the dashboard.
 
-**Acceptance criteria:**
-- [ ] Test files are symlinked OR moved to `test/core/data/models/` and `test/core/data/repositories/` respectively.
-- [ ] Import paths are updated.
+**Acceptance**: Each file gets a corresponding test file. Provider tests must include behavioural assertions (dependency wiring, fallback, or error-state). Widget tests must use `NavigatorObserver` for navigation checks.
 
 ---
 
-### M4: Widget tests missing NavigatorObserver for navigation verification
+### B2 — Exact duplicate widget test files waste CI time and cause maintenance drift
 
-**Finding:** The following widget tests exercise screens/widgets that trigger navigation but do not use `NavigatorObserver` to verify the route:
+**Files** (identical content, 0 lines differ):
+- `test/core/services/prerequisite_check_widget_test.dart`
+- `test/core/services/prerequisite_check_service_widget_test.dart`
 
-| Test file | Widget under test | Navigates? |
+**Impact**: Both files run the same 3 widget tests in CI, doubling execution time for no benefit. Updates to one are not reflected in the other.
+
+**Acceptance**: Keep the correctly-named file (`prerequisite_check_service_widget_test.dart` — matched to the source service name) and delete the duplicate.
+
+---
+
+## MAJOR
+
+### M1 — 11 test files live in wrong directories (violate AGENTS.md §Test File Placement)
+
+| Source (lib/) | Current test (wrong) | Expected location |
 |---|---|---|
-| `test/features/planner/presentation/widgets/plan_summary_card_test.dart` | PlanSummaryCard | Yes (lesson detail) |
-| `test/features/planner/presentation/widgets/calendar_view_widget_test.dart` | CalendarViewWidget | Yes (day tap) |
-| `test/features/dashboard/presentation/widgets/plan_adherence_card_test.dart` | PlanAdherenceCard | Yes (details) |
-| `test/features/dashboard/presentation/widgets/due_reviews_card_test.dart` | DueReviewsCard | Yes (review) |
-| `test/features/dashboard/presentation/widgets/mastery_progress_card_test.dart` | MasteryProgressCard | Yes (detail) |
-| `test/features/dashboard/presentation/widgets/workload_card_test.dart` | WorkloadCard | Yes (detail) |
-| `test/features/dashboard/presentation/widgets/weak_areas_card_test.dart` | WeakAreasCard | Yes (detail) |
-| `test/features/dashboard/presentation/widgets/topic_breakdown_card_test.dart` | TopicBreakdownCard | Yes (detail) |
-| `test/features/dashboard/presentation/widgets/badges_card_test.dart` | BadgesCard | Yes (badge list) |
-| `test/features/sessions/presentation/session_tracker_screen_test.dart` | SessionTrackerScreen | Yes (history) |
+| `core/data/repositories/session_repository.dart` | `test/features/sessions/data/repositories/session_repository_test.dart` | `test/core/data/repositories/session_repository_test.dart` |
+| `core/data/repositories/engagement_nudge_repository.dart` | `test/features/planner/data/repositories/engagement_nudge_repository_test.dart` | `test/core/data/repositories/engagement_nudge_repository_test.dart` |
+| `core/data/repositories/plan_adherence_repository.dart` | `test/features/planner/data/repositories/plan_adherence_repository_test.dart` | `test/core/data/repositories/plan_adherence_repository_test.dart` |
+| `core/data/repositories/attempt_repository.dart` | `test/features/practice/data/repositories/attempt_repository_test.dart` | `test/core/data/repositories/attempt_repository_test.dart` |
+| `core/data/repositories/topic_repository.dart` | `test/features/subjects/data/repositories/topic_repository_test.dart` | `test/core/data/repositories/topic_repository_test.dart` |
+| `core/data/repositories/question_mastery_state_repository.dart` | `test/features/practice/data/repositories/question_mastery_state_repository_test.dart` | `test/core/data/repositories/question_mastery_state_repository_test.dart` |
+| `core/data/repositories/mastery_state_repository.dart` | `test/features/practice/data/repositories/mastery_state_repository_test.dart` | `test/core/data/repositories/mastery_state_repository_test.dart` |
+| `core/data/models/mastery_state_model.dart` | `test/features/practice/data/models/mastery_state_model_test.dart` | `test/core/data/models/mastery_state_model_test.dart` |
+| `core/data/models/question_mastery_state_model.dart` | `test/features/practice/data/models/question_mastery_state_model_test.dart` | `test/core/data/models/question_mastery_state_model_test.dart` |
+| `core/data/models/mastery_improvement_metric_model.dart` | `test/features/practice/data/models/mastery_improvement_metric_model_test.dart` | `test/core/data/models/mastery_improvement_metric_model_test.dart` |
+| `core/utils/difficulty_controller.dart` | `test/features/practice/services/difficulty_controller_test.dart` | `test/core/utils/difficulty_controller_test.dart` |
 
-**Rationale:** Without `NavigatorObserver`, these tests cannot verify that the correct route is pushed. A future regression that breaks navigation links would not be caught. AGENTS.md says *"Use `NavigatorObserver` for verifying navigation behavior."*
+**Rationale**: Violates the explicit mapping table in AGENTS.md. Convention exists so every developer can immediately locate tests without guessing which feature "owns" core code. Discovery tools (`glob`, IDE navigation) also fail to find these tests.
 
-**Acceptance criteria:**
-- [ ] Each file above injects a `TestNavigatorObserver` via `navigatorObservers`.
-- [ ] At least one test per file verifies the pushed route name/arguments after the navigation-triggering interaction.
-
----
-
-## MINOR — Code Quality / Test Hygiene
-
-### m1: Widespread Hive I/O dependency in tests (~40+ test files)
-
-**Finding:** Many repository, adapter, and service tests perform real Hive operations (`Hive.init`, `Hive.openBox`, `Hive.registerAdapter`, `Hive.deleteBoxFromDisk`) instead of using fake repositories/in-memory boxes.
-
-**Affected area examples:** All `test/features/planner/data/repositories/*`, `test/features/practice/data/repositories/*`, `test/features/ingestion/data/repositories/*`, `test/features/lessons/data/repositories/*`, `test/features/questions/data/repositories/*`, `test/features/sessions/data/repositories/*`, plus several adapter tests.
-
-**Rationale:** Real Hive I/O makes tests slower, leaves temp directories on disk, and fragments cross-test state if cleanup is partial. The AGENTS.md docs recommend `fixedStudentId` as an alternative and favours hand-written fakes. True, many repository tests unavoidably test Hive storage (get/put/delete against a real box), and using `Hive.init` with a temp dir is the standard pattern for Hive unit tests. However, the setup/teardown ceremony is error-prone — missing `deleteBoxFromDisk` can cause test pollution.
-
-**Acceptance criteria:**
-- [ ] All repository tests use `setUp`/`tearDown` that initializes and cleans up a temp Hive directory.
-- [ ] No test file misses `Hive.deleteBoxFromDisk` after tests complete.
-- [ ] Consider extracting a shared `HiveTestHelper` utility (e.g. `initHive`, `cleanHive`, `registerAllAdapters`) to reduce boilerplate.
+**Acceptance**: Move each test file to the expected location (or create a forwarding symlink if both `core/` and `features/` consumers are expected). Update any package import paths inside the moved files. Ensure `import` paths reference the correct source location (e.g. `../../../../core/...` for `test/core/` tests).
 
 ---
 
-### m2: Construction-only assertions in model tests
+### M2 — 7 service test files have zero or near-zero error-state coverage
 
-**Finding:** Some model tests rely on `isA<Type>()` or `isNotNull` without behavioral round-trip verification (e.g., `pending_action_model_test.dart` line 24 has `isA<DateTime>()`).
+Per AGENTS.md §Error Handling Conventions, public repository/service methods return `Result<T>`. Error paths must be tested.
 
-**Affected files with weak assertions:**
-- `test/features/planner/data/models/pending_action_model_test.dart` — one `isA<DateTime>()` assertion
+| File | Gap |
+|---|---|
+| `test/features/sessions/services/session_export_service_test.dart` | No tests for file write failures, nonexistent directories, invalid session data, or I/O errors. All 385 lines are happy-path. |
+| `test/features/teaching/services/exercise_evaluator_test.dart` | No tests for invalid evaluation parameters, LLM failures, or malformed responses. |
+| `test/features/teaching/services/conversation_phase_test.dart` | Tests state transitions only — no dependency-throws or error-return scenarios. |
+| `test/features/practice/services/question_type_localizer_test.dart` | No tests for null/invalid question types or edge cases in locale resolution. |
+| `test/features/ingestion/services/extraction_result_test.dart` | No failure-path tests for extraction errors or malformed chunk data. |
+| `test/features/sessions/services/session_migration_service_test.dart` | No tests for migration failure, data corruption, or invalid JSON in old format. |
+| `test/features/focus_mode/services/focus_practice_service_test.dart` | Only tests error path for `getDueQuestions`. Missing: `startPracticeSession` repo failure, `endPracticeSession` save failure. |
 
-**Rationale:** While not critical, the AGENTS.md convention expects behavioral assertions. Model tests should include `toJson`/`fromJson` round trips, copyWith, equality, etc.
+**Examples of well-covered files to follow**: `test/features/practice/services/mistake_review_service_test.dart` (dedicated `error-state: repository failures` group), `test/features/planner/services/planner_service_test.dart`, `test/features/ingestion/services/web_scraper_test.dart`.
 
-**Acceptance criteria:**
-- [ ] Each model test includes at least one round-trip test: `final decoded = T.fromJson(encoded.toJson()); expect(decoded, equals(original))`.
-
----
-
-### m3: Duplicate / orphaned test file
-
-**Finding:** `test/features/dashboard/presentation/widgets/export_section_widget_test.dart` tests the same source (`export_section.dart`) as `export_section_test.dart`. The two files are kept separate (unit vs widget, which is correct per convention), but the naming is inconsistent with the rest of the project (all other split files use `_test` and `_widget_test` suffixes respectively).
-
-**Acceptance criteria:**
-- [ ] Both files remain (splitting is correct), but `export_section_widget_test.dart` should be verified to not duplicate test logic from `export_section_test.dart`. Update naming for consistency if needed, or merge widget-specific assertions into a single widget-only file.
+**Acceptance**: Each file gains at least one error-group with tests like "returns failure when dependency throws", "handles malformed input", "returns fallback on error". Use `catch`-friendly fake classes that can be configured to throw or return `Result.failure(...)`.
 
 ---
 
-## Summary Table
+### M3 — 4 widget test files depend on real Hive I/O instead of `fixedStudentId` + fake repos
 
-| Severity | Count | Key items |
+Convention (AGENTS.md §Test Patterns): "Prefer `fixedStudentId` over `StudentIdService` singleton in widget tests."
+
+| File | Hive I/O usage |
+|---|---|
+| `test/features/practice/presentation/screens/exam_session_screen_additional_test.dart` | `Hive.init('/tmp/hive_test')` + `Hive.deleteFromDisk()` (lines 170-175). Uses `_FakeStudentIdService` but still initialises real Hive. |
+| `test/features/planner/presentation/planner_screen_test.dart` | 5+ `Hive.init()` calls scattered across setUp/helpers |
+| `test/features/planner/presentation/widgets/syllabus_progress_card_test.dart` | `Hive.init(hivePath)` (line 16) |
+| `test/main_screen_test.dart` | `Hive.init(dir.path)` (line 192) — integration test, but still couples to disk I/O |
+
+**Rationale**: Real Hive I/O makes tests slower, flaky (temp directory cleanup races), and introduces a dependency on the Hive binary format. The project convention explicitly prefers `fixedStudentId`/fake repos.
+
+**Acceptance**: Eliminate `Hive.init()` and `Hive.deleteFromDisk()` from all widget tests. Use `ProviderScope` overrides with fake repositories and `fixedStudentId` where applicable. For `main_screen_test.dart`, document why Hive is acceptable if unavoidable, or refactor to an integration test pattern with explicit Hive boxing.
+
+---
+
+## MINOR
+
+### m1 — `not_found_screen_test.dart` does not verify navigation via `NavigatorObserver`
+
+**File**: `test/core/widgets/not_found_screen_test.dart`  
+**Issue**: The screen has a `FilledButton` labelled "Go to Dashboard", but the test only asserts the button exists (`findsOneWidget`). It does NOT verify that pressing the button triggers navigation.
+
+AGENTS.md: "Use `NavigatorObserver` for verifying navigation behavior."
+
+**Acceptance**: Add a `TestNavigatorObserver`, tap the button, and assert `observer.pushedRoutes` contains the expected dashboard route.
+
+### m2 — `coverage_gaps_integration_test.dart` is misnamed and misplaced
+
+**File**: `test/features/practice/services/coverage_gaps_integration_test.dart`  
+**Issue**: Despite the name, this file contains pure unit tests (no `pumpWidget`, no UI) for 9 different classes across 4 features. It tests `SpacedRepetitionService`, `SpacedRepetitionEngine`, `MasteryRecorder`, `ExamSessionService`, `MistakeReviewService`, `DifficultyController`, `ReadinessScorer`, `PracticeDataService`, and `PracticeSessionService` — all in one bloated 1600+ line file.  
+
+It is a **test gap patch**, not an integration test. The name is misleading for CI triage.
+
+**Acceptance**: Split into individual focused test files placed in each class's correct test directory. Retain error-state edge cases that the main test files miss. Update the CI/squad configuration if this file is listed anywhere.
+
+### m3 — `session_export_service_test.dart` uses `toStringAsFixed()` for locale-invariant assertions
+
+**File**: `test/features/sessions/services/session_export_service_test.dart`  
+**Issue**: The test asserts `expect(csv, contains('70.0'))` and `expect(csv, contains('0.0'))` (lines 119, 127). CSV is explicitly allowed to use invariant `en` format per AGENTS.md §i18n, so this is *technically* correct. However, the test also checks `expect(csv, contains('61.0'))` (line 178) which comes from `Session.durationMinutes` computed via `toStringAsFixed(1)`. If that method is ever locale-wrapped, the test would break.  
+**Severity**: Low — but worth documenting that CSV tests must remain invariant-en only.
+
+**Acceptance**: Add a comment explaining why the decimal format assertions are correct for CSV, or extract a CSV decimal formatter to keep locale separation explicit.
+
+---
+
+## Summary
+
+| Priority | Count | Key action required |
 |---|---|---|
-| **BLOCKER** | 3 | Missing tests: mentor (3 services), syllabus_progress_card, subject_repository_provider |
-| **MAJOR** | 4 | Core untested (4 files), mixed test type, model location mismatch, missing NavigatorObserver (~10 files) |
-| **MINOR** | 3 | Hive I/O boilerplate (~40 files), weak assertions (1 file), duplicate test naming (1 file) |
+| BLOCKER | 2 (B1, B2) | Create 4 missing test files; delete 1 duplicate |
+| MAJOR | 3 (M1–M3) | Move 11 files to correct dirs; add error-state coverage to 7 files; remove Hive I/O from 4 widget tests |
+| MINOR | 3 (m1–m3) | Add NavigatorObserver to 1 file; split 1 bloated file; document CSV locale invariant |
 
----
-
-*This issue was generated by Test Master automation. Each finding has concrete acceptance criteria so the issue is actionable upon assignment.*
+**Total actionable items**: 8 groups covering 25+ files.

@@ -2,24 +2,39 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'dart:io';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
 
 class _FakeTopicDependencyBox implements Box<TopicDependency> {
   final Map<String, TopicDependency> _storage = {};
+  bool _shouldThrow = false;
+
+  void throwOnNextCall() => _shouldThrow = true;
 
   @override
-  Iterable<TopicDependency> get values => _storage.values;
+  Iterable<TopicDependency> get values {
+    _checkThrow();
+    return _storage.values;
+  }
 
   @override
-  TopicDependency? get(dynamic key, {TopicDependency? defaultValue}) =>
-      _storage[key] ?? defaultValue;
+  TopicDependency? get(dynamic key, {TopicDependency? defaultValue}) {
+    _checkThrow();
+    return _storage[key] ?? defaultValue;
+  }
 
   @override
   Future<void> put(dynamic key, TopicDependency value) async {
+    _checkThrow();
     _storage[key.toString()] = value;
+  }
+
+  void _checkThrow() {
+    if (_shouldThrow) {
+      _shouldThrow = false;
+      throw Exception('simulated box error');
+    }
   }
 
   @override
@@ -41,7 +56,7 @@ class _FakeTopicDependencyBox implements Box<TopicDependency> {
   bool get isOpen => true;
 
   @override
-  String get name => 'topicDependencies';
+  String get name => 'topic_dependencies';
 
   @override
   bool get isNotEmpty => _storage.isNotEmpty;
@@ -59,46 +74,15 @@ class _FakeTopicDependencyBox implements Box<TopicDependency> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeTopicDependencyRepository extends TopicDependencyRepository {
-  final Box<TopicDependency> _fakeBox;
-
-  _FakeTopicDependencyRepository(this._fakeBox);
-
-  @override
-  void attachBox(Box<TopicDependency> box) {}
-
-  @override
-  Future<Result<TopicDependency>> getTopicDependency(String topicId) async {
-    final dep = _fakeBox.get(topicId);
-    if (dep != null) {
-      return Result.success(dep);
-    }
-    final newDep = TopicDependency(topicId: topicId);
-    await _fakeBox.put(topicId, newDep);
-    return Result.success(newDep);
-  }
-
-  @override
-  Future<Result<void>> updateTopicDependency(
-      TopicDependency dependency) async {
-    await _fakeBox.put(dependency.topicId, dependency);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<List<TopicDependency>>> getAllDependencies() async {
-    return Result.success(_fakeBox.values.toList());
-  }
-}
-
 void main() {
   group('TopicDependencyRepository', () {
     late _FakeTopicDependencyBox box;
-    late _FakeTopicDependencyRepository repository;
+    late TopicDependencyRepository repository;
 
     setUp(() {
       box = _FakeTopicDependencyBox();
-      repository = _FakeTopicDependencyRepository(box);
+      repository = TopicDependencyRepository();
+      repository.attachBox(box);
     });
 
     group('getTopicDependency', () {
@@ -127,6 +111,12 @@ void main() {
         expect(result1.data?.topicId, 't1');
         expect(result2.data?.topicId, 't2');
       });
+
+      test('returns failure on box error', () async {
+        box.throwOnNextCall();
+        final result = await repository.getTopicDependency('t1');
+        expect(result.isFailure, isTrue);
+      });
     });
 
     group('updateTopicDependency', () {
@@ -152,6 +142,13 @@ void main() {
         final result = await repository.getTopicDependency('t1');
         expect(result.data?.prerequisites, ['new']);
       });
+
+      test('returns failure on box error', () async {
+        box.throwOnNextCall();
+        final result = await repository.updateTopicDependency(
+          TopicDependency(topicId: 't1'));
+        expect(result.isFailure, isTrue);
+      });
     });
 
     group('getAllDependencies', () {
@@ -168,6 +165,12 @@ void main() {
       test('returns empty list when no dependencies', () async {
         final result = await repository.getAllDependencies();
         expect(result.data, isEmpty);
+      });
+
+      test('returns failure on box error', () async {
+        box.throwOnNextCall();
+        final result = await repository.getAllDependencies();
+        expect(result.isFailure, isTrue);
       });
     });
   });

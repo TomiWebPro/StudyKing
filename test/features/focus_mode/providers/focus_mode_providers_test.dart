@@ -2,9 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/app_providers.dart' show notificationServiceProvider;
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/focus_mode/services/focus_practice_service.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
@@ -347,10 +348,31 @@ void main() {
       expect(sessions.data![0].studentId, 'stu1');
     });
 
+    test('focusPracticeServiceProvider creates FocusPracticeService and is singleton', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final svc1 = container.read(focusPracticeServiceProvider);
+      final svc2 = container.read(focusPracticeServiceProvider);
+      expect(svc1, isA<FocusPracticeService>());
+      expect(svc1, same(svc2));
+    });
+
+    test('focusPracticeServiceProvider resolves without throwing', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      expect(
+        () => container.read(focusPracticeServiceProvider),
+        returnsNormally,
+      );
+    });
+
     test('provider container can be disposed safely after reading all providers', () {
       final container = ProviderContainer();
       container.read(sessionRepositoryProvider);
       container.read(studyTimerServiceProvider);
+      container.read(focusPracticeServiceProvider);
       expect(() => container.dispose(), returnsNormally);
     });
   });

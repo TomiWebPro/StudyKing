@@ -328,6 +328,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicBreakdown => 'Desglose por Tema';
 
   @override
+  String get masteryDelta => 'Cambio de Dominio';
+
+  @override
   String startingPractice(String mode) {
     return 'Comenzando $mode...';
   }
@@ -1518,6 +1521,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get masteryLevelExpert => 'Experto';
+
+  @override
+  String get masteryLevel => 'Nivel de Dominio';
+
+  @override
+  String get bestStreak => 'Mejor Racha';
 
   @override
   String progressCsvGenerated(int length) {
@@ -3751,6 +3760,20 @@ class AppLocalizationsEs extends AppLocalizations {
       'Ver tareas activas de inferencia de IA y uso de tokens';
 
   @override
+  String get noActiveAiTasks => 'No hay tareas de IA activas';
+
+  @override
+  String get addSubjectFirst => 'Añade una materia primero para empezar a practicar';
+
+  @override
+  String get failedToLoadSubjects => 'Error al cargar las materias';
+
+  @override
+  String insufficientAttemptsForWeakAreas(String subjectName, int minAttempts) {
+    return 'Se necesitan al menos $minAttempts preguntas intentadas para $subjectName para identificar áreas débiles';
+  }
+
+  @override
   String get endLessonConfirmation =>
       '¿Finalizar tu lección? Tu progreso se guardará.';
 
@@ -5717,4 +5740,97 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get responseInterrupted => 'Respuesta interrumpida. Intente de nuevo.';
+
+  @override
+  String get whatIsApiKey => '¿Qué es una clave API?';
+
+  @override
+  String get whatIsApiKeyDescription =>
+      'Una clave API permite a StudyKing usar servicios de IA como generar preguntas y tutoría. Puede obtener una gratis de proveedores como OpenRouter u OpenAI, o ejecutar un modelo local con Ollama.';
+
+  @override
+  String get statsAppearAfterLearning =>
+      '¡Verás tus estadísticas aquí una vez que empieces a aprender!';
+
+  @override
+  String get topicsCreatedTitle => 'Temas Creados';
+
+  @override
+  String get topicsCreatedDescription =>
+      'Los temas se crearon automáticamente según nuestro plan de estudios estándar. Puede revisarlos y editarlos en cualquier momento.';
+
+  @override
+  String get reviewAndEdit => 'Revisar y Editar';
+
+  @override
+  String topicSubtopicsCount(int count) {
+    return '$count subtemas';
+  }
+
+  @override
+  String get apiKeyRequiredForUploadTitle => 'Clave API Requerida';
+
+  @override
+  String get apiKeyRequiredForUpload =>
+      'Necesitará configurar una clave API primero para cargar y procesar contenido. ¿Desea configurarla ahora?';
+
+  @override
+  String get configureApiKey => 'Configurar Clave API';
+
+  @override
+  String get maybeLater => 'Quizás Después';
+
+  @override
+  String get recommended => 'Recomendado';
+
+  @override
+  String get openRouterSetupGuide =>
+      'Visite openrouter.ai/keys → Cree una cuenta → Copie la clave API → Péguela aquí';
+
+  @override
+  String get ollamaSetupGuide =>
+      'Descargue Ollama de ollama.ai → Ejecútelo localmente → Use la URL predeterminada';
+
+  @override
+  String get openAiSetupGuide =>
+      'Visite platform.openai.com/api-keys → Cree una nueva clave → Cópiela aquí';
+
+  @override
+  String get firstPracticeBanner =>
+      '¿Es la primera vez que practicas? ¡Practica Rápida es un excelente lugar para comenzar!';
+
+  @override
+  String get recommendedForBeginners => 'Recomendado para principiantes';
+
+  @override
+  String get letsCreatePlanTitle => '¡Creemos tu plan de estudio!';
+
+  @override
+  String get letsCreatePlanDesc =>
+      'Dime qué quieres aprender y por cuánto tiempo. Crearé un plan personalizado.';
+
+  @override
+  String get quickPlan => 'Plan Rápido';
+
+  @override
+  String get startPracticing => 'Comenzar a Practicar';
+
+  @override
+  String get setupCompleteTitle => '¡Gran trabajo de configuración!';
+
+  @override
+  String get setupCompleteDesc =>
+      'Estás listo para empezar a aprender. Esto es lo que puedes hacer a continuación:';
+
+  @override
+  String get suggestedNextActions => 'Acciones sugeridas';
+
+  @override
+  String providerSetupGuide(String providerName) {
+    return 'Cómo comenzar con $providerName:';
+  }
+
+  @override
+  String get curriculumBasedTopics =>
+      'Estos temas se basan en nuestro plan de estudios estándar. Puedes editarlos en cualquier momento.';
 }

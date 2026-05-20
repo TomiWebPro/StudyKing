@@ -53,8 +53,8 @@ class _ConversationInputState extends State<ConversationInput> {
 
     return CallbackShortcuts(
       bindings: {
-        const SingleActivator(LogicalKeyboardKey.enter, control: true):
-            widget.onSend,
+        const SingleActivator(LogicalKeyboardKey.enter, shift: true):
+            () {},
       },
       child: FocusTraversalGroup(
         child: Column(

@@ -471,17 +471,39 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
 
   Widget _buildProviderSection() {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Semantics(
-          header: true,
-          child: Text(
-            l10n.aiModel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
+        Row(
+          children: [
+            Expanded(
+              child: Semantics(
+                header: true,
+                child: Text(
+                  l10n.aiModel,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-          ),
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                l10n.recommended,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: theme.colorScheme.onPrimaryContainer,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 10,
+                ),
+              ),
+            ),
+          ],
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<LlmProvider>(
@@ -504,7 +526,28 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             }
             return DropdownMenuItem(
               value: provider,
-              child: Text(label),
+              child: Row(
+                children: [
+                  Text(label),
+                  if (provider == LlmProvider.openRouter) ...[
+                    const SizedBox(width: 8),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primaryContainer,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        l10n.recommended,
+                        style: theme.textTheme.labelSmall?.copyWith(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontSize: 9,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             );
           }).toList(),
           onChanged: (value) {
@@ -536,6 +579,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             _updateUnsavedChanges();
           },
         ),
+        const SizedBox(height: 8),
+        _buildProviderSetupGuide(l10n, theme),
         const SizedBox(height: 4),
         Text(
           l10n.apiBaseUrlDescription,
@@ -545,8 +590,36 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     );
   }
 
+  Widget _buildProviderSetupGuide(AppLocalizations l10n, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.help_outline, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.providerSetupGuide(_selectedProvider.name),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildBackupProviderSection() {
     final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -554,7 +627,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           header: true,
           child: Text(
             l10n.aiModel,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -607,12 +680,41 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             _updateUnsavedChanges();
           },
         ),
+        const SizedBox(height: 8),
+        _buildBackupSetupGuide(l10n, theme),
         const SizedBox(height: 4),
         Text(
           l10n.backupProviderDescription,
-          style: Theme.of(context).textTheme.bodySmall,
+          style: theme.textTheme.bodySmall,
         ),
       ],
+    );
+  }
+
+  Widget _buildBackupSetupGuide(AppLocalizations l10n, ThemeData theme) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.help_outline, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              l10n.providerSetupGuide(_selectedBackupProvider.name),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

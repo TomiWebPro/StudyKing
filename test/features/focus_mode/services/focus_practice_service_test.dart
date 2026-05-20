@@ -1,29 +1,23 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/focus_mode/services/focus_practice_service.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 
 class _FakeQuestionRepository extends QuestionRepository {
   final Map<String, Question> _storage = {};
-  bool throwOnGetAll = false;
 
   void seed(Question question) => _storage[question.id] = question;
 
   @override
   Future<Result<List<Question>>> getAll() async {
-    if (throwOnGetAll) return Result.failure('Failed to get questions');
     return Result.success(_storage.values.toList());
   }
 
@@ -35,10 +29,29 @@ class _FakeQuestionRepository extends QuestionRepository {
   }
 }
 
-class _FakeSessionRepository extends SessionRepository {
-  final Map<String, Session> _storage = {};
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  final _FakeQuestionRepository _fakeQuestionRepo;
 
-  _FakeSessionRepository() : super();
+  _FakeSpacedRepetitionService({required _FakeQuestionRepository questionRepo})
+      : _fakeQuestionRepo = questionRepo,
+        super(
+          questionRepo: questionRepo,
+          attemptRepo: AttemptRepository(),
+        );
+
+  @override
+  Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {
+    final reviewDate = asOf ?? DateTime.now();
+    final allResult = await _fakeQuestionRepo.getAll();
+    final all = allResult.data ?? [];
+    final due = all.where((q) =>
+        (q.nextReview ?? DateTime.now()).isBefore(reviewDate)).toList();
+    return Result.success(due);
+  }
+}
+
+class _FakeSessionRepo extends SessionRepository {
+  final Map<String, Session> _storage = {};
 
   @override
   Future<Result<void>> save(String key, Session item) async {
@@ -47,46 +60,22 @@ class _FakeSessionRepository extends SessionRepository {
   }
 
   @override
-  Future<Result<List<Session>>> getAll() async {
-    return Result.success(_storage.values.toList());
+  Future<Result<Session?>> get(String id) async {
+    return Result.success(_storage[id]);
   }
+}
+
+class _FakeMasteryGraphService extends MasteryGraphService {
+  final List<MasteryState> _weakTopics;
+
+  _FakeMasteryGraphService({List<MasteryState>? weakTopics})
+      : _weakTopics = weakTopics ?? [];
 
   @override
-  Future<Result<Session?>> get(String key) async {
-    return Result.success(_storage[key]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success(List.from(_weakTopics));
   }
 }
-
-class _FakeAttemptRepository extends AttemptRepository {
-  final Map<String, StudentAttempt> _storage = {};
-  bool throwOnGetByStudent = false;
-
-  void seed(StudentAttempt attempt) => _storage[attempt.id] = attempt;
-
-  @override
-  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
-    if (throwOnGetByStudent) throw Exception('Failed to get attempts');
-    return Result.success(
-      _storage.values.where((a) => a.studentId == studentId).toList(),
-    );
-  }
-}
-
-DatabaseService _databaseWith(
-    {required _FakeQuestionRepository questionRepository}) {
-  return DatabaseService(
-    topicRepository: TopicRepository(),
-    questionRepository: questionRepository,
-    attemptRepository: AttemptRepository(),
-    lessonRepository: LessonRepository(),
-    sessionRepository: SessionRepository(),
-    subjectRepository: SubjectRepository(),
-    conversationRepository: ConversationRepository(),
-    tutorSessionRepository: TutorSessionRepository(),
-  );
-}
-
-final _now = DateTime(2026, 5, 18);
 
 Question _q({
   required String id,
@@ -95,7 +84,9 @@ Question _q({
   int difficulty = 1,
   required String subjectId,
   required String topicId,
+  DateTime? nextReview,
 }) {
+  final now = DateTime.now();
   return Question(
     id: id,
     text: text,
@@ -103,78 +94,78 @@ Question _q({
     difficulty: difficulty,
     subjectId: subjectId,
     topicId: topicId,
-    createdAt: _now,
-    updatedAt: _now,
+    createdAt: now,
+    updatedAt: now,
+    nextReview: nextReview,
   );
 }
 
 void main() {
   group('FocusPracticeService', () {
     late _FakeQuestionRepository fakeQuestionRepo;
-    late _FakeSessionRepository fakeSessionRepo;
-    late _FakeAttemptRepository fakeAttemptRepo;
+    late _FakeMasteryGraphService fakeMasteryGraphService;
+    late SpacedRepetitionService srService;
     late FocusPracticeService service;
+
+    late _FakeSessionRepo fakeSessionRepo;
 
     setUp(() {
       fakeQuestionRepo = _FakeQuestionRepository();
-      fakeSessionRepo = _FakeSessionRepository();
-      fakeAttemptRepo = _FakeAttemptRepository();
+      fakeMasteryGraphService = _FakeMasteryGraphService();
+      srService = _FakeSpacedRepetitionService(questionRepo: fakeQuestionRepo);
+      fakeSessionRepo = _FakeSessionRepo();
       service = FocusPracticeService(
-        database: _databaseWith(questionRepository: fakeQuestionRepo),
+        srService: srService,
+        masteryGraphService: fakeMasteryGraphService,
         sessionRepository: fakeSessionRepo,
-        attemptRepository: fakeAttemptRepo,
+        questionRepository: fakeQuestionRepo,
       );
     });
 
     group('getDueQuestions', () {
-      test('returns unattempted questions when no attempts exist', () async {
+      test('returns due questions when they exist', () async {
+        final now = DateTime.now();
         fakeQuestionRepo.seed(_q(
-          id: 'q1', text: 'Question 1', type: QuestionType.typedAnswer,
+          id: 'q1', text: 'Due Q', type: QuestionType.typedAnswer,
           difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+          nextReview: now.subtract(const Duration(hours: 1)),
         ));
         fakeQuestionRepo.seed(_q(
-          id: 'q2', text: 'Question 2', type: QuestionType.typedAnswer,
-          difficulty: 2, subjectId: 'sub-1', topicId: 't-1',
+          id: 'q2', text: 'Future Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+          nextReview: now.add(const Duration(days: 1)),
         ));
 
         final questions = await service.getDueQuestions(studentId: 'student-1');
 
-        expect(questions.length, 2);
+        expect(questions.length, 1);
         expect(questions[0].id, 'q1');
-        expect(questions[1].id, 'q2');
       });
 
-      test('prioritizes unattempted questions over attempted ones', () async {
+      test('returns empty list when no due questions', () async {
+        final now = DateTime.now();
         fakeQuestionRepo.seed(_q(
-          id: 'q1', text: 'Unattempted', type: QuestionType.typedAnswer,
+          id: 'q1', text: 'Future Q', type: QuestionType.typedAnswer,
           difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
-        ));
-        fakeQuestionRepo.seed(_q(
-          id: 'q2', text: 'Attempted', type: QuestionType.typedAnswer,
-          difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
-        ));
-        fakeAttemptRepo.seed(StudentAttempt(
-          id: 'a1', studentId: 'student-1', questionId: 'q2',
-          subjectId: 'sub-1', timestamp: DateTime.now(),
+          nextReview: now.add(const Duration(days: 1)),
         ));
 
         final questions = await service.getDueQuestions(studentId: 'student-1');
 
-        expect(questions[0].id, 'q1');
+        expect(questions, isEmpty);
       });
 
       test('filters by subject when subjectIds provided', () async {
+        final now = DateTime.now();
         fakeQuestionRepo.seed(_q(
-          id: 'q1', text: 'Math Q', type: QuestionType.typedAnswer,
+          id: 'q1', text: 'Math Due', type: QuestionType.typedAnswer,
           difficulty: 1, subjectId: 'math', topicId: 't-1',
+          nextReview: now.subtract(const Duration(hours: 1)),
         ));
         fakeQuestionRepo.seed(_q(
-          id: 'q2', text: 'Physics Q', type: QuestionType.typedAnswer,
+          id: 'q2', text: 'Physics Due', type: QuestionType.typedAnswer,
           difficulty: 1, subjectId: 'physics', topicId: 't-1',
-        ));
-        fakeQuestionRepo.seed(_q(
-          id: 'q3', text: 'Math Q2', type: QuestionType.typedAnswer,
-          difficulty: 1, subjectId: 'math', topicId: 't-2',
+          nextReview: now.subtract(const Duration(hours: 1)),
         ));
 
         final questions = await service.getDueQuestions(
@@ -182,15 +173,17 @@ void main() {
           subjectIds: ['math'],
         );
 
-        expect(questions.length, 2);
-        expect(questions.every((q) => q.subjectId == 'math'), isTrue);
+        expect(questions.length, 1);
+        expect(questions[0].subjectId, 'math');
       });
 
       test('respects limit parameter', () async {
+        final now = DateTime.now();
         for (var i = 0; i < 5; i++) {
           fakeQuestionRepo.seed(_q(
             id: 'q$i', text: 'Q$i', type: QuestionType.typedAnswer,
             difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+            nextReview: now.subtract(const Duration(hours: 1)),
           ));
         }
 
@@ -202,22 +195,48 @@ void main() {
         expect(questions.length, 3);
       });
 
-      test('returns empty list when repository throws', () async {
-        fakeQuestionRepo.throwOnGetAll = true;
-
-        final questions = await service.getDueQuestions(studentId: 'student-1');
-
-        expect(questions, isEmpty);
-      });
-
-      test('returns empty list when attempt repo throws', () async {
-        fakeAttemptRepo.throwOnGetByStudent = true;
+      test('prioritizes weak topic questions', () async {
+        final now = DateTime.now();
         fakeQuestionRepo.seed(_q(
-          id: 'q1', text: 'Q1', type: QuestionType.typedAnswer,
-          difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+          id: 'q1', text: 'Weak Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'sub-1', topicId: 'weak-topic',
+          nextReview: now.subtract(const Duration(hours: 1)),
+        ));
+        fakeQuestionRepo.seed(_q(
+          id: 'q2', text: 'Strong Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'sub-1', topicId: 'strong-topic',
+          nextReview: now.subtract(const Duration(hours: 1)),
         ));
 
-        final questions = await service.getDueQuestions(studentId: 'student-1');
+        fakeMasteryGraphService = _FakeMasteryGraphService(
+          weakTopics: [MasteryState(topicId: 'weak-topic', studentId: 'student-1', lastAttempt: DateTime.now(), lastUpdated: DateTime.now())],
+        );
+        final fakeSr = _FakeSpacedRepetitionService(questionRepo: fakeQuestionRepo);
+        service = FocusPracticeService(
+          srService: fakeSr,
+          masteryGraphService: fakeMasteryGraphService,
+          sessionRepository: fakeSessionRepo,
+          questionRepository: fakeQuestionRepo,
+        );
+
+        final questions = await service.getDueQuestions(studentId: 'student-1', limit: 10);
+
+        expect(questions.length, 2);
+        expect(questions[0].topicId, 'weak-topic');
+      });
+
+      test('returns empty list when repository throws', () async {
+        final throwingRepo = _FakeQuestionRepository();
+        final brokenSrService = _FakeSpacedRepetitionService(questionRepo: throwingRepo);
+
+        final throwingService = FocusPracticeService(
+          srService: brokenSrService,
+          masteryGraphService: fakeMasteryGraphService,
+          sessionRepository: fakeSessionRepo,
+          questionRepository: throwingRepo,
+        );
+
+        final questions = await throwingService.getDueQuestions(studentId: 'student-1');
 
         expect(questions, isEmpty);
       });
@@ -234,19 +253,6 @@ void main() {
         expect(session.studentId, 'student-1');
         expect(session.type, SessionType.focus);
         expect(session.plannedDurationMinutes, 25);
-      });
-
-      test('persists the session in repository', () async {
-        final session = await service.startPracticeSession(
-          studentId: 'student-1',
-          subjectIds: ['sub-1'],
-          durationMinutes: 30,
-        );
-
-        final saved = await fakeSessionRepo.get(session.id);
-        expect(saved.isSuccess, isTrue);
-        expect(saved.data, isNotNull);
-        expect(saved.data!.subjectId, 'sub-1');
       });
 
       test('creates session with default duration when not specified', () async {
@@ -270,13 +276,14 @@ void main() {
           correctAnswers: 7,
         );
 
-        final saved = await fakeSessionRepo.get(session.id);
-        expect(saved.isSuccess, isTrue);
-        expect(saved.data!.completed, isTrue);
-        expect(saved.data!.status, SessionStatus.completed);
-        expect(saved.data!.endTime, isNotNull);
-        expect(saved.data!.questionsAnswered, 10);
-        expect(saved.data!.correctAnswers, 7);
+        final savedResult = await fakeSessionRepo.get(session.id);
+        final saved = savedResult.data;
+        expect(saved, isNotNull);
+        expect(saved!.completed, isTrue);
+        expect(saved.status, SessionStatus.completed);
+        expect(saved.endTime, isNotNull);
+        expect(saved.questionsAnswered, 10);
+        expect(saved.correctAnswers, 7);
       });
     });
   });

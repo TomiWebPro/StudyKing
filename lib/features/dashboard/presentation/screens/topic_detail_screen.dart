@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -128,19 +129,19 @@ class _TopicDetailBody extends StatelessWidget {
         children: [
           _buildStatCard(context, l10n.accuracy,
               formatPercent(state.accuracy * 100, l10n.localeName, minFractionDigits: 0),
-              _accuracyColor(state.accuracy)),
+              _accuracyColor(state.accuracy, context)),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(child: _buildStatBox(context, l10n.totalQuestions, '${state.totalAttempts}',
-                  _levelColor(state.masteryLevel))),
+                  _levelColor(state.masteryLevel, context))),
               const SizedBox(width: 8),
               Expanded(child: _buildStatBox(context, l10n.correctAnswers, '${state.correctAttempts}',
                   cs.primary)),
               const SizedBox(width: 8),
-              Expanded(child: _buildStatBox(context, 'Mastery Level',
+              Expanded(child: _buildStatBox(context, l10n.masteryLevel,
                   _masteryLevelLabel(l10n, state.masteryLevel),
-                  _levelColor(state.masteryLevel))),
+                  _levelColor(state.masteryLevel, context))),
             ],
           ),
           const SizedBox(height: 12),
@@ -149,7 +150,7 @@ class _TopicDetailBody extends StatelessWidget {
               Expanded(child: _buildStatBox(context, l10n.currentStreak, '${state.currentStreak}',
                   cs.tertiary)),
               const SizedBox(width: 8),
-              Expanded(child: _buildStatBox(context, 'Best Streak', '${state.bestStreak}',
+              Expanded(child: _buildStatBox(context, l10n.bestStreak, '${state.bestStreak}',
                   cs.primary)),
               const SizedBox(width: 8),
               Expanded(child: _buildStatBox(context, l10n.readiness,
@@ -199,23 +200,25 @@ class _TopicDetailBody extends StatelessWidget {
     );
   }
 
-  Color _accuracyColor(double accuracy) {
-    if (accuracy >= 0.8) return const Color(0xFF4CAF50);
-    if (accuracy >= 0.6) return const Color(0xFFFF9800);
-    return const Color(0xFFF44336);
+  Color _accuracyColor(double accuracy, BuildContext context) {
+    return AppTheme.progressColor(accuracy, context);
   }
 
-  Color _levelColor(MasteryLevel level) {
+  Color _levelColor(MasteryLevel level, BuildContext context) {
+    return AppTheme.masteryColor(_masteryValue(level), context);
+  }
+
+  double _masteryValue(MasteryLevel level) {
     switch (level) {
       case MasteryLevel.novice:
       case MasteryLevel.browsing:
-        return const Color(0xFFF44336);
+        return 0.0;
       case MasteryLevel.developing:
-        return const Color(0xFFFF9800);
+        return 0.4;
       case MasteryLevel.proficient:
-        return const Color(0xFF2196F3);
+        return 0.7;
       case MasteryLevel.expert:
-        return const Color(0xFF4CAF50);
+        return 1.0;
     }
   }
 
@@ -299,7 +302,7 @@ class _TopicDetailBody extends StatelessWidget {
           height: 120,
           child: CustomPaint(
             size: Size.infinite,
-            painter: _DetailSparklinePainter(data: data),
+            painter: _DetailSparklinePainter(data: data, color: AppTheme.progressColor(state.accuracy, context)),
           ),
         ),
       ),
@@ -309,14 +312,15 @@ class _TopicDetailBody extends StatelessWidget {
 
 class _DetailSparklinePainter extends CustomPainter {
   final List<double> data;
+  final Color color;
 
-  _DetailSparklinePainter({required this.data});
+  _DetailSparklinePainter({required this.data, required this.color});
 
   @override
   void paint(Canvas canvas, Size size) {
     if (data.length < 2) return;
     final paint = Paint()
-      ..color = const Color(0xFF4CAF50)
+      ..color = color
       ..strokeWidth = 2
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round;
@@ -325,8 +329,8 @@ class _DetailSparklinePainter extends CustomPainter {
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
         colors: [
-          const Color(0xFF4CAF50).withValues(alpha: 0.3),
-          const Color(0xFF4CAF50).withValues(alpha: 0.0),
+          color.withValues(alpha: 0.3),
+          color.withValues(alpha: 0.0),
         ],
       ).createShader(Rect.fromLTWH(0, 0, size.width, size.height));
     final path = Path();

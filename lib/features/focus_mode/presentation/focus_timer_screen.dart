@@ -13,6 +13,8 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/inline_practice_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
@@ -52,6 +54,8 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Timer? _breakTimer;
   String _selectedSubjectId = '';
   bool _studyMode = true;
+  FocusSessionType _sessionType = FocusSessionType.spacedRepetition;
+  Map<String, double> _masteryBeforeValues = {};
 
   Map<String, dynamic>? _todayStats;
   int _weeklyMs = 0;
@@ -65,6 +69,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   bool _inlinePracticeActive = false;
   Subject? _inlinePracticeSubject;
+  FocusSession? _lastFocusSession;
 
   bool _subjectsError = false;
   bool _dueCountsError = false;
@@ -365,6 +370,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         }
         return;
       }
+      if (_sessionType != FocusSessionType.freeFocus) {
+        await _captureMasteryBefore();
+      }
       if (mounted) {
         setState(() {});
       }
@@ -375,6 +383,23 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
           SnackBar(content: Text(l10n.errorStartingSession(''))),
         );
       }
+    }
+  }
+
+  Future<void> _captureMasteryBefore() async {
+    try {
+      final studentId = ref.read(studentIdValueProvider);
+      final masteryService = ref.read(masteryGraphServiceProvider);
+      final weakResult = await masteryService.getWeakTopics(studentId);
+      if (weakResult.isSuccess && weakResult.data != null) {
+        final beforeValues = <String, double>{};
+        for (final topic in weakResult.data!) {
+          beforeValues[topic.topicId] = topic.accuracy;
+        }
+        _masteryBeforeValues = beforeValues;
+      }
+    } catch (e) {
+      _logger.w('Failed to capture mastery before values', e);
     }
   }
 
@@ -530,6 +555,23 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         title: Text(l10n.focusMode),
         actions: [
           IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: l10n.help,
+            onPressed: () => showDialog(
+              context: context,
+              builder: (_) => AlertDialog(
+                title: Text(l10n.focusMode),
+                content: Text(l10n.focusFirstVisitHelp),
+                actions: [
+                  FilledButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: Text(l10n.gotIt),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _loadStats,
             tooltip: l10n.refreshStats,
@@ -593,6 +635,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 todayStats: _todayStats,
                 weeklyMs: _weeklyMs,
                 recentSessions: _recentSessions,
+                lastPracticeSession: _lastFocusSession,
               ),
           ],
         ),
@@ -949,11 +992,63 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     });
   }
 
-  void _onInlinePracticeComplete(int correct, int total, Map<String, SubjectAccuracy> perSubject) {
-    setState(() {
-      _inlinePracticeActive = false;
-      _inlinePracticeSubject = null;
-    });
+  Future<void> _onInlinePracticeComplete(int correct, int total, Map<String, SubjectAccuracy> perSubject) async {
+    final studentId = ref.read(studentIdValueProvider);
+    final now = DateTime.now();
+    final subjectIds = perSubject.keys.toList();
+    final accuracy = total > 0 ? correct / total : 0.0;
+
+    Map<String, double> masteryChanges = {};
+    Map<String, TopicPerformance> topicBreakdown = {};
+
+    try {
+      final masteryService = ref.read(masteryGraphServiceProvider);
+
+      for (final entry in perSubject.entries) {
+        final subjectId = entry.key;
+        final subjAccuracy = entry.value;
+        final topicPerformance = TopicPerformance(
+          topicId: subjectId,
+          correct: subjAccuracy.correct,
+          total: subjAccuracy.total,
+          accuracyPercent: subjAccuracy.accuracyPercent,
+        );
+        topicBreakdown[subjectId] = topicPerformance;
+      }
+
+      final currentWeakTopics = await masteryService.getWeakTopics(studentId);
+      if (currentWeakTopics.isSuccess && currentWeakTopics.data != null) {
+        for (final topic in currentWeakTopics.data!) {
+          final topicId = topic.topicId;
+          final beforeValue = _masteryBeforeValues[topicId] ?? 0.0;
+          final afterValue = topic.accuracy;
+          masteryChanges[topicId] = afterValue - beforeValue;
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to compute mastery changes', e);
+    }
+
+    if (mounted) {
+      setState(() {
+        _inlinePracticeActive = false;
+        _inlinePracticeSubject = null;
+        _lastFocusSession = FocusSession(
+          id: 'focus_${now.millisecondsSinceEpoch}',
+          studentId: studentId,
+          startTime: now.subtract(const Duration(minutes: 5)),
+          endTime: now,
+          durationMinutes: 5,
+          questionsAnswered: total,
+          correctAnswers: correct,
+          accuracy: accuracy,
+          subjectIds: subjectIds,
+          masteryChanges: masteryChanges,
+          sessionType: _sessionType,
+          topicBreakdown: topicBreakdown,
+        );
+      });
+    }
     _loadDueCounts();
   }
 
@@ -1067,6 +1162,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 child: InlinePracticeWidget(
                   subjectId: subject?.id,
                   questionCount: 10,
+                  sessionType: _sessionType,
                   onComplete: _onInlinePracticeComplete,
                 ),
               ),
@@ -1098,6 +1194,8 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 ),
               ],
             ),
+            const SizedBox(height: 16),
+            _buildSessionTypeSelector(theme, l10n),
             const SizedBox(height: 16),
             _buildSubjectPicker(),
             const SizedBox(height: 16),
@@ -1154,6 +1252,72 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         ),
       ),
     );
+  }
+
+  Widget _buildSessionTypeSelector(ThemeData theme, AppLocalizations l10n) {
+    final types = FocusSessionType.values;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.sessionType,
+          style: theme.textTheme.titleSmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: types.map((type) {
+            final selected = _sessionType == type;
+            return Semantics(
+              button: true,
+              selected: selected,
+              child: ChoiceChip(
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(_iconForSessionType(type), size: 16),
+                    const SizedBox(width: 6),
+                    Text(_labelForSessionType(type, l10n)),
+                  ],
+                ),
+                selected: selected,
+                onSelected: (v) => setState(() => _sessionType = type),
+                visualDensity: VisualDensity.adaptivePlatformDensity,
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+
+  IconData _iconForSessionType(FocusSessionType type) {
+    switch (type) {
+      case FocusSessionType.quickPractice:
+        return Icons.quickreply;
+      case FocusSessionType.spacedRepetition:
+        return Icons.replay;
+      case FocusSessionType.weakAreaAttack:
+        return Icons.psychology;
+      case FocusSessionType.freeFocus:
+        return Icons.timer;
+    }
+  }
+
+  String _labelForSessionType(FocusSessionType type, AppLocalizations l10n) {
+    switch (type) {
+      case FocusSessionType.quickPractice:
+        return l10n.quickPractice;
+      case FocusSessionType.spacedRepetition:
+        return l10n.spacedRepetition;
+      case FocusSessionType.weakAreaAttack:
+        return l10n.weakAreas;
+      case FocusSessionType.freeFocus:
+        return l10n.focus;
+    }
   }
 
   Widget _buildSubjectPicker() {

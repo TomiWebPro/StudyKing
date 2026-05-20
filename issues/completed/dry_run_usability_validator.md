@@ -1,273 +1,357 @@
-# Dry-Run Issue: Uploading Study Materials & First AI Processing — The Content Pipeline Journey
+# Dry-Run Usability Validator — First-Time Onboarding Experience
 
-**Source scenario:** `dry-run-test/scenario_content_upload_pipeline.md`
-**Audit date:** 2026-05-19
-**Status:** 1 PASS, 2 BLOCKER, 9 MAJOR, 3 MINOR — below 80% threshold
-
----
-
-## BLOCKER — User Cannot Proceed
-
-### Issue 1: Save-Only Upload Path Is Dead Code — Users Without API Key Cannot Upload Anything
-
-**File:** `lib/features/ingestion/presentation/upload_screen.dart:184, 214, 612-613`
-
-**Root cause:** The "Upload & Analyze" button at line 612-613 always calls `_submitContent(fullPipeline: true)`. At line 214, the check `if (fullPipeline || _generateQuestions || _generateLessons)` is always true because `fullPipeline` is hardcoded to `true`. This means the `else` branch at line 272 calling `pipeline.processUpload()` (the save-only path) is **dead code — completely unreachable**.
-
-When the user has no API key configured, the model check at lines 218-224 errors out: `if ((_generateQuestions || _generateLessons) && resolvedModelId.isEmpty)`. Since the pipeline path is always entered, this error always fires when there's no model.
-
-**Impact:** A user who just installed the app, has no API key yet, but wants to upload content just to save it for later processing, is completely blocked. They must cancel the upload, configure the API key, and come back. There is no way to save a source record without AI processing.
-
-**Acceptance criteria:**
-1. Add a "Save Only" button or mode that calls `processUpload()` directly without the AI pipeline.
-2. When `fullPipeline: true` is passed but model is empty, either: fall through to `processUpload()` instead of erroring, or offer the user a choice: "Configure API key now / Save without AI processing."
-3. The `else` branch in `_submitContent()` should be reachable through a user-accessible UI path.
+**Scenario:** `scenario_first_launch_onboarding_experience.md`
+**Validator:** Dry-Run Usability Validator
+**Date:** 2026-05-20
 
 ---
 
-### Issue 2: Pipeline Error Details Lost on Navigation — Source Model Has No Error Field
+## Scenario Summary
+
+A brand-new user installs StudyKing and opens it for the first time. They want to learn IB Chemistry but have no prior context about the app, API keys, AI providers, or how the system works. The scenario traces the complete journey: first launch → onboarding → dashboard empty state → subject creation → API key config → content upload → first practice → plan creation → first tutor lesson.
+
+---
+
+## Findings
+
+### BLOCKER: None identified
+
+All navigation paths are reachable; no crashes or complete dead-ends were found in the first-launch flow.
+
+---
+
+### MAJOR FAIL: #1 — No Splash Screen or Loading Indicator During App Initialization
+
+**Files:** `lib/main.dart:134-238`
+
+**Description:** The `main()` function runs Hive initialization (~25 boxes), database setup, StudentIdService, and EngagementScheduler synchronously before `runApp()` is called. During this 2-5 second period (longer on slower devices), the user sees a blank white screen with zero feedback — no splash screen, no CircularProgressIndicator, no branding, no text.
+
+**Rationale:** First impressions matter. A blank screen on first launch suggests the app is frozen or broken. Most users expect either a splash screen with branding or at minimum a loading indicator.
+
+**Acceptance Criteria:**
+- [ ] Add a `SplashScreen` widget (with branding/logo) that renders immediately when the app starts
+- [ ] Show a loading indicator or progress bar during Hive/database initialization
+- [ ] Transition to `MainScreen` only after all initialization completes
+- [ ] OR restructure `main()` to defer non-critical initialization to after the first frame
+
+---
+
+### MAJOR FAIL: #2 — Onboarding Does Not Explain What an API Key Is or Where to Get One
 
 **Files:**
-- `lib/core/data/models/source_model.dart:60-79` — no `errorMessage` field
-- `lib/features/ingestion/services/content_pipeline.dart:238-250` — error not persisted on Source
-- `lib/features/ingestion/presentation/source_detail_screen.dart:327-349` — generic error banner
+- `lib/features/onboarding/presentation/onboarding_dialog.dart:163-168` (page 4 text)
+- `lib/l10n/generated/app_localizations_en.dart:3628-3629` (`needApiKeyNotice` string)
+- `lib/features/settings/presentation/api_config_screen.dart` (config screen)
 
-**Root cause:** When the pipeline fails at any stage, `content_pipeline.dart:238-250` catches the error and saves the Source with `processingStatus: ProcessingStatus.failed.name`. But the `Source` model has no `errorMessage` field — the specific error (e.g., "Timeout", "Invalid API key", "PDF parse failure") is only returned in the `Result.failure` and displayed temporarily on the upload screen.
+**Description:** Page 4 of the onboarding carousel shows: "Note: AI features require an API key. Configure one in Settings." A brand-new user who has never heard of "API key" has zero context about:
+- What an API key is
+- Where to obtain one (OpenRouter, OpenAI, Ollama)
+- What the different providers are
+- Which model to choose
+- Whether it costs money
 
-If the user navigates away from the upload screen and returns via Content Library → Source Detail, the error banner at `source_detail_screen.dart:327-349` can only show a generic "Processing failed" message with no details about what went wrong.
+The `ApiConfigScreen` similarly offers no guidance — it has fields for provider, key, URL, and model but no "How to get started" help text, no links to registration pages, no provider comparison.
 
-**Impact:** The specific failure reason is permanently lost once the user leaves the upload screen. Users see a vague "Processing failed" banner with no actionable information. Troubleshooting is impossible without checking application logs.
+**Rationale:** The target audience is students, not developers. Expecting a student to know what an API key is and how to configure it without guidance is a major UX gap. This is the #1 barrier to actually using the app's AI features.
 
-**Acceptance criteria:**
-1. Add `@HiveField(18) String errorMessage = ''` to the `Source` model.
-2. In `content_pipeline.dart:242`, persist the error message on the source before saving as failed.
-3. In `source_detail_screen.dart:327-349`, display the stored error message.
-4. Localize common error types (timeout, rate limit, auth failure, parse error) into user-friendly language.
+**Acceptance Criteria:**
+- [ ] Add a "What is an API key?" expandable section or help icon on page 4 of the onboarding
+- [ ] Add provider-specific guidance text in `ApiConfigScreen` for each provider (e.g., "Visit openrouter.ai/keys to create a free account and get your API key")
+- [ ] Consider adding a link/button that opens the registration URL in a browser
+- [ ] Add a "Recommended for beginners" badge on the simplest provider option
 
 ---
 
-## MAJOR — Feature Broken or UX Misleading
-
-### Issue 3: Pipeline Progress Indication Is Barely Informative
+### MAJOR FAIL: #3 — Dashboard Shows 8-10 Empty/Zero-Data Cards Below the Checklist for First-Time Users
 
 **Files:**
-- `lib/features/ingestion/presentation/upload_screen.dart:626-654` — progress card
-- `lib/features/ingestion/services/content_pipeline.dart:159-161, 175-176` — duplicate status
+- `lib/features/dashboard/presentation/dashboard_screen.dart:149-300+`
+- `lib/features/dashboard/providers/dashboard_data_providers.dart`
 
-**Problems:**
-1. **Always indeterminate:** `LinearProgressIndicator()` at line 636 has no `value` — always spinning. No percentage or step-of-total indication.
-2. **Duplicate status:** `ProcessingStatus.classifying` is used for BOTH topic classification (line 159) AND summary generation (line 175). The UI description text differs but the enum value doesn't — any code checking status enum cannot distinguish these two phases.
-3. **No elapsed time:** No `Stopwatch` or elapsed counter in the upload screen.
-4. **No stage counter:** No "Step 2 of 6" label.
+**Description:** Below the `EmptyDashboardChecklist`, the Dashboard renders the full card layout for every section: Summary (all zeros), Export Section, Focus Time (0 min), Weekly Activity (flatline), Mastery Overview (empty), Weak Areas (no data), Due Reviews (0), Workload (0), Planner Card (no plan), Sources Card (no sources), Session History (no sessions), Question Bank Card (empty).
 
-**Acceptance criteria:**
-1. Calculate overall progress fraction (stage index / total stages) and pass it to `LinearProgressIndicator(value: ...)`.
-2. Add elapsed time counter: "Processing... 45 seconds elapsed."
-3. Use distinct progress statuses for classification vs. summary, or add a stage counter label.
-4. Ensure the progress card shows cumulative meaningful information (e.g., "Extracting text... ✓ Generating summary... ✓ Generating questions... ⟳").
+For a first-time user, at least 8-10 cards all display some form of "empty" or "0" state. This creates overwhelming visual noise directly beneath the checklist that's supposed to guide the user.
 
----
+The `showSkeleton` logic (`!hasAnyData && isLoading`) correctly shows skeletons during loading, but once loading completes with no data, EVERY card renders in its empty state. There is no "first-run minimal mode" that hides low-value empty cards.
 
-### Issue 4: Source Detail Has No "Practice Generated Questions" Button
+**Rationale:** A user who just completed onboarding now faces a wall of zero-data widgets. This undermines the guided experience the checklist tries to provide. The checklist should be the primary focus; empty stats cards add cognitive load without value.
 
-**File:** `lib/features/ingestion/presentation/source_detail_screen.dart:432-485`
-
-**Problem:** The Source Detail screen shows generated questions as a numbered list at lines 432-464, followed by "Reprocess" and "Delete" buttons at lines 466-485. There is no "Practice All Questions" or "Practice from This Source" button. After uploading content and seeing the AI-generated questions, the user must:
-1. Note the subject name
-2. Navigate back to Practice tab
-3. Find Source Practice mode (under "Extra Modes")
-4. Select subject → select source → start practice
-
-This is 4-5 navigational steps for what should be a single tap.
-
-**Acceptance criteria:**
-1. Add a "Practice All Questions" `FilledButton` below the questions list on Source Detail.
-2. The button should navigate to `PracticeSessionScreen` with the source's `sourceId` as a filter, so only this source's questions are practiced.
-3. The button should be disabled when `generatedQuestionIds` is empty, with a hint explaining why.
+**Acceptance Criteria:**
+- [ ] When `checklistProgress.isComplete` is false and `!hasAnyData`, show only the checklist + planner card + sources card (items the user can act on)
+- [ ] Hide summary, focus time, weekly chart, mastery, weak areas, due reviews, workload, and export sections when the user has no data
+- [ ] Add a "You'll see your stats here once you start learning!" placeholder for hidden sections
+- [ ] OR create a dedicated "First Run" dashboard layout with minimal cards
 
 ---
 
-### Issue 5: Reprocessing Orphans Old Questions with No Cleanup
+### MAJOR FAIL: #4 — Checklist Steps Have Hidden Dependencies Not Communicated to the User
 
 **Files:**
-- `lib/features/ingestion/presentation/source_detail_screen.dart:133-201` — `_reprocess()` method
-- `lib/features/ingestion/services/content_pipeline.dart:253-283` — `reprocessSource()`
+- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:34-58` (step definitions)
+- `lib/features/practice/presentation/screens/practice_screen.dart:1077` (empty state shown when `_subjects.isEmpty`)
+- `lib/features/upload/presentation/upload_screen.dart:218-224` (model check blocks upload)
 
-**Problem:** When a source is reprocessed:
-1. `reprocessSource()` calls `processFullPipeline()` which generates new question IDs via `IdGenerator.generate('q')`.
-2. The source's `generatedQuestionIds` is overwritten with the new IDs.
-3. **Old questions are NOT deleted** — they remain in the `QuestionRepository` as orphaned records (no source references them).
-4. After multiple reprocesses, orphaned questions accumulate as database bloat.
-5. `reprocessSource()` at `content_pipeline.dart:253-283` always generates a NEW source ID — the Source Detail screen works around this by merging, but it's fragile.
+**Description:** The 4-step checklist implies a linear progression, but several steps have hidden dependencies:
 
-**Acceptance criteria:**
-1. Before reprocessing, warn the user: "This will regenerate questions. Old questions will be replaced."
-2. On successful reprocess, delete old questions referenced by the previous `generatedQuestionIds`.
-3. Fix `reprocessSource()` to preserve the existing source ID instead of generating a new one.
-4. Consider adding a "Keep old questions" checkbox to the reprocess confirmation dialog.
+- **Step 2 (Upload Material)** requires an API key to be configured. If the user follows the checklist sequentially (Step 1 → Step 2), they hit the upload screen, fill in the form, select a PDF, and get an error "Model not configured." The checklist does not warn about this dependency.
+
+- **Step 3 (Take Practice Quiz)** requires subjects to exist AND questions to exist. If the user has a subject with seed topics but no uploaded source (no questions), the practice screen shows an empty state. The checklist step navigates to `SubjectSelectionScreen`, not to an actual practice session.
+
+- **Step 4 (Schedule AI Tutor)** requires a study plan to exist. The planner screen for a new user shows three empty tabs with no "what to do first" guidance.
+
+**Rationale:** Following the checklist in order should work without unexpected errors. Hidden dependencies that cause the user to hit error screens after filling in forms create frustration and erode trust.
+
+**Acceptance Criteria:**
+- [ ] Each checklist step should show a subtle hint if its dependencies aren't met (e.g., Step 2: "Requires API key — configure in the banner above")
+- [ ] Step 2 (Upload) should check API key existence before navigating and show a clear message if missing
+- [ ] Step 3 should check if subjects exist first. If subjects exist but no questions, show a helpful message asking the user to upload materials
+- [ ] Step 4 should guide the user to create a plan first, then schedule a lesson
 
 ---
 
-### Issue 6: Pipeline Error Messages Are Raw Dart Exceptions
+### MAJOR FAIL: #5 — Auto-Created Topics Are Not Visible After Subject Creation
 
 **Files:**
-- `lib/features/ingestion/presentation/upload_screen.dart:265-269` — error display
-- `lib/features/ingestion/services/content_pipeline.dart:238-250` — exception propagation
+- `lib/features/subjects/presentation/subject_selection_screen.dart:138-144` (SnackBar shows count only)
 
-**Problem:** When the pipeline fails, the error shown to the user is `e.toString()` — a raw Dart exception string. Users see messages like:
-- "Upload failed: TimeoutException after 0:00:30.000000: Future not completed"
-- "Upload failed: HttpException: Connection closed before full response"
-- "Upload failed: FormatException: Unexpected character"
+**Description:** When a user creates "IB Chemistry" (matching seed data), the system auto-creates 9 topics with 27 subtopics in the background. The only feedback is a SnackBar: "Topics auto-created (9)". The user cannot:
+1. See WHAT topics were created
+2. Verify they match the expected syllabus
+3. Edit or remove topics before proceeding
+4. Understand that "Stoichiometric Relationships" now exists as a topic
 
-These are developer-oriented messages with no localization or user-friendly translation.
+The topics are only visible by navigating to: Subjects tab → tap "IB Chemistry" → Topics tab. This is 3 navigation steps away from the creation flow.
 
-**Acceptance criteria:**
-1. Map common exception types to user-friendly localized messages:
-   - Timeout → "The AI service timed out. Check your internet connection or try a different model."
-   - Rate limit (429) → "You've been rate-limited. Please wait a moment and try again."
-   - Auth failure (401) → "Your API key is invalid or expired. Update it in Settings."
-   - Model not found (404) → "The selected model wasn't found. Try a different model."
-   - LLM JSON parse error → "The AI response was malformed. Try reprocessing."
-   - PDF parse failure → "Could not read this file. Make sure it's a valid PDF or document."
-2. Fall through to the raw error only for unclassified exceptions.
-3. Log the original error internally for debugging.
+**Rationale:** The seed topic auto-generation is a powerful feature, but hiding the results undermines user trust. If the seed data is wrong (e.g., missing a topic, using wrong exam board), the user has no way to know until they discover problems later. A "here's what we created for you" summary would build confidence.
+
+**Acceptance Criteria:**
+- [ ] After auto-creating topics, show a dialog or sheet listing the topic names (not just the count)
+- [ ] Include a "Review & Edit" option that navigates to the Subject Topics tab
+- [ ] For each topic, show the number of subtopics
+- [ ] Add a "These topics are based on our standard IB Chemistry curriculum. You can edit them anytime." hint text
 
 ---
 
-### Issue 7: No Model-Capability Check for Image/Audio Content Types
+### MAJOR FAIL: #6 — Upload Prompt After Subject Creation Doesn't Check API Key Readiness
 
 **Files:**
-- `lib/features/ingestion/presentation/upload_screen.dart:208-224` — only checks model ID emptiness
-- `lib/features/ingestion/services/document_extractor.dart:41-64` — routes all types to LLM
+- `lib/features/subjects/presentation/subject_selection_screen.dart:162-178` (upload prompt dialog)
+- `lib/features/upload/presentation/upload_screen.dart:218-224` (model check)
 
-**Problem:** The upload screen checks only `resolvedModelId.isEmpty` before processing. It does not check whether the user's selected model supports:
-- **Vision** (for image/camera uploads — OCR needs vision capabilities)
-- **Audio transcription** (for audio/video uploads)
+**Description:** After creating "IB Chemistry," a dialog appears: "Subject created successfully! Upload material for IB Chemistry?" with "Upload Material" and "No Thanks" buttons. Tapping "Upload Material" takes the user to `UploadScreen`. If the user hasn't configured an API key (which is likely, since ApiKeyBanner may still be visible), the upload will fail with "Model not configured."
 
-If a user uploads a photo with a text-only model (e.g., Llama 3 8B), the `OcrExtractor` sends a vision prompt that the model doesn't understand, producing garbage output or errors. The user has no warning beforehand.
+The dialog should check whether an API key exists before offering upload, or at minimum warn about the requirement.
 
-**Acceptance criteria:**
-1. Add a model capability registry or at minimum a warning dialog before processing image/audio content: "Your selected model may not support image analysis. Proceed anyway?"
-2. If the pipeline produces empty extracted text from an image/audio source, show a helpful error: "No text could be extracted. Your model may not support this content type. Try a different model or upload a text-based file."
-3. Consider adding a user-facing model capability viewer in AI Configuration.
+**Acceptance Criteria:**
+- [ ] Before showing the upload prompt dialog, check if an API key is configured
+- [ ] If no API key, show a modified dialog: "You'll need to configure an API key first to upload and process content. Would you like to configure it now?" with buttons "Configure API Key" and "Maybe Later"
+- [ ] If API key exists, show the current behavior unchanged
 
 ---
 
-### Issue 8: No Duplicate Content Detection
-
-**File:** `lib/features/ingestion/services/content_pipeline.dart:58-92, 94-251`
-
-**Problem:** Uploading the same PDF file twice creates two separate source records with different IDs, two sets of generated questions, and no indication to the user that this content already exists. There is no content hashing, title comparison, or any form of deduplication.
-
-**Acceptance criteria:**
-1. Compute SHA-256 hash (or similar) of uploaded file content before processing.
-2. Check repository for existing sources with the same hash.
-3. If match found, show dialog: "This content appears to already exist as '[title]'. Upload anyway?"
-4. Same check for text pasting and URL content (hash the extracted text).
-
----
-
-### Issue 9: Pipeline Has No Cancel Button and No Back-Navigation Guard
+### MAJOR FAIL: #7 — API Configuration Screen Has No "Where to Get Started" Guidance
 
 **Files:**
-- `lib/features/ingestion/presentation/upload_screen.dart:608-654` — no cancel UI
-- `lib/features/ingestion/services/content_pipeline.dart:94-251` — no cancellation mechanism
+- `lib/features/settings/presentation/api_config_screen.dart` (entire screen)
 
-**Problem:** During pipeline processing:
-- There is no cancel/abort button on the upload screen.
-- There is no `PopScope` preventing back navigation during processing.
-- If the user navigates back, the pipeline continues in the background (it's not bound to widget lifecycle).
-- The `mounted` checks at the upload screen prevent crashes but the pipeline bleeds — consuming API credits and time invisibly.
-- There's no elapsed time counter, so users can't tell if they've been waiting 30 seconds or 5 minutes.
+**Description:** The `ApiConfigScreen` presents a provider dropdown, API key field, base URL, model name, and test connection button. For a new user, none of these are self-explanatory:
 
-**Acceptance criteria:**
-1. Add elapsed time display during processing: "Processing... 1m 23s elapsed."
-2. Add a cancel button that cancels in-flight LLM calls.
-3. Add `PopScope` to show confirmation dialog before allowing back-navigation during processing: "Upload in progress. Cancel and go back?"
-4. For very long operations (>2 minutes), consider showing a notification or estimate.
+- Provider dropdown offers OpenRouter, Ollama, OpenAI — but no explanation of what each is or why to choose one
+- API key field offers no hint about where to register
+- Model field requires knowing the model name string (e.g., "gpt-4o", "claude-3-opus")
+- Base URL is pre-filled but the user doesn't know what it means or when to change it
+- No "What's the difference?" help section
+- No links to provider signup pages
 
----
+**Rationale:** The API config screen is a developer-facing interface. For a student user, it needs to be approachable with clear guidance.
 
-### Issue 10: Generated Questions May Have Empty TopicId Making Them Unfindable
-
-**File:** `lib/features/ingestion/services/content_pipeline.dart:410-475`
-
-**Problem:** At line 454, `_generateQuestions()` creates `Question` objects with `topicId: topicId` where `topicId` comes from the pipeline's parameter. If the source's `topicId` is empty (classification was skipped or failed — no `possibleTopics`, or no match found), all generated questions have `topicId: ''`. These questions are invisible in Topic Focus practice mode and do not contribute to any named topic's mastery score.
-
-**Acceptance criteria:**
-1. After the pipeline completes, if `source.topicId` is empty but questions were generated, show a warning on the Source Detail: "These questions aren't linked to any topic. Use the topic classifier or edit the source's topic to enable topic-specific practice."
-2. Consider providing a fallback: if questions have no topic, create a generic topic for the source.
-3. In the Source Detail screen's topic section, highlight when topic is missing and questions exist.
+**Acceptance Criteria:**
+- [ ] Add a help icon or "?" button next to each field with plain-language explanation
+- [ ] Add "Recommended" badge next to the easiest-to-configure provider (likely OpenRouter)
+- [ ] Add provider-specific help text: "Visit openrouter.ai/keys → Create account → Copy API key → Paste here"
+- [ ] Consider adding a web launch button that opens the provider's API keys page
+- [ ] Add default model suggestions per provider
+- [ ] Consider a simplified "Quick Setup" mode that auto-fills recommended values
 
 ---
 
-### Issue 11: All Processing Stages Use the Same "classifying" Status
-
-**File:** `lib/features/ingestion/services/content_pipeline.dart:159-161, 175-176`
-
-**Problem:** Two distinct pipeline stages — topic classification (line 159-161) and summary generation (line 175-176) — both use `ProcessingStatus.classifying`. This means:
-1. The progress card shows the same status enum twice, making it impossible for UI code to distinguish between "classifying content topic" and "generating summary" by enum alone.
-2. If a user glances at the progress indicator, they see "classifying" for what feels like twice as long as expected.
-3. Any future code that tracks stage-level progress would need to parse the description text instead of checking the enum.
-
-**Acceptance criteria:**
-1. Add a new `ProcessingStatus.summarizing` to the `ProcessingStatus` enum, or
-2. Track stage index separately (not just status enum) to provide accurate stage information to the UI.
-
----
-
-## MINOR — UX Friction
-
-### Issue 12: Content Library Filters Are Single-Select Only
-
-**File:** `lib/features/ingestion/presentation/content_library_screen.dart:139-141`
-
-**Problem:** The status and type filters are single-select (`_statusFilter` and `_typeFilter` are `String`, not `List<String>`). Users cannot view multiple statuses simultaneously (e.g., show both "Completed" AND "Failed" sources). Filter comparison uses fragile enum index comparison at line 140-141: `s.type.index.toString()`.
-
-**Acceptance criteria:**
-1. Change filter variables to `List<String>` to support multi-select.
-2. Replace enum index comparison with stable string comparison (type name or identifier).
-
-### Issue 13: Source Practice Mode Is Hidden Under "Extra Modes"
+### MAJOR FAIL: #8 — Practice Mode Grid Has No New-User Tutorial or Explanation
 
 **Files:**
-- `lib/features/practice/presentation/screens/practice_screen.dart` — mode grid
-- `lib/features/ingestion/presentation/source_detail_screen.dart` — no practice button
+- `lib/features/practice/presentation/screens/practice_screen.dart` (mode grid)
+- `lib/features/practice/presentation/widgets/practice_mode_grid.dart`
+- `lib/features/practice/presentation/widgets/practice_empty_state.dart`
 
-**Problem:** Source Practice mode is in the "Extra Modes" section at the bottom of the Practice tab's mode grid, below the main 6 cards. Users who just uploaded content and want to practice its questions must scroll down, discover Source Practice, select the subject, then find their source. There is no "Recently Uploaded" shortcut or badge indicating new questions are available.
+**Description:** After creating a subject and uploading materials, a new user reaches the Practice tab and sees 6 mode cards: Quick Practice, Spaced Repetition, Topic Focus, Weak Areas, Exam Mode, Source Practice. The subtitles are short ("Practice", "Review", "Focus", etc.) and don't explain:
+- What "spaced repetition" means
+- Why "weak areas" would have data (the user has no performance history)
+- What differentiates Exam Mode from Quick Practice
+- Which mode a beginner should start with
 
-**Acceptance criteria:**
-1. After upload completes, consider showing a "Practice New Questions" option in the success snackbar (alongside "Content Library").
-2. Add a badge/banner to the Practice tab when sources were recently processed.
-3. Consider promoting Source Practice cards with recently-processed sources above other modes.
+There is no tutorial overlay, no "Recommended for you" badge, no onboarding tooltip for the practice screen. Once `PracticeEmptyState` disappears (because there's at least one question), the user is on their own.
 
-### Issue 14: No Post-Upload Guidance for Next Steps
+**Rationale:** The practice screen is the core learning interface. New users need guidance to understand which mode suits their current state. Presenting 6 equally-styled options without differentiation creates choice paralysis.
 
-**File:** `lib/features/ingestion/presentation/upload_screen.dart:306-315`
-
-**Problem:** After successful upload, the snackbar says "Content uploaded successfully" with a "Content Library" action. There is no guidance on what to do next: "You can now practice the generated questions in the Practice tab!" or "View your extracted text in the Content Library."
-
-**Acceptance criteria:**
-1. Enhance the success snackbar to include a secondary action: "Start Practice" (navigating to practice with this source's questions).
-2. Consider showing a brief one-time success dialog after first upload: "Your content has been processed! Tap 'Practice' to start answering questions, or explore the Content Library to see the extracted text and summary."
+**Acceptance Criteria:**
+- [ ] Add a "First practice?" hint banner at the top when the user has <5 practice sessions
+- [ ] Add brief tooltip text to each mode card explaining when to use it
+- [ ] Consider highlighting "Quick Practice" as the recommended starting point for new users
+- [ ] Add a "Recommended for beginners" badge on appropriate modes
+- [ ] Consider a one-time tutorial overlay on the first visit to the practice screen
 
 ---
 
-## Summary of Work Items
+### MAJOR FAIL: #9 — Planner Screen Has No Welcome/Orientation for First-Time Visitors
 
-| Priority | Issue | Effort | Key Files |
+**Files:**
+- `lib/features/planner/presentation/planner_screen.dart` (entire 1510-line screen)
+- `lib/features/planner/providers/planner_providers.dart`
+
+**Description:** When a new user navigates to the Planner (via checklist Step 4 or the nav), they see three empty tabs:
+
+1. **Study Plan** — Shows the multi-syllabus form with fields for Subject Name, Days, Hours Per Day. No explanation of what this form does, no pre-filled values, no example text.
+2. **Calendar** — An empty calendar grid with no events.
+3. **Roadmaps** — "No roadmaps yet" with a "Create Roadmap" button.
+
+There is no welcome message, no "Here's how to create your first study plan" guidance, no suggestion to type "Learn IB Chemistry in 90 days." The user who tapped "Schedule AI Tutor" from the checklist doesn't intuitively know they need to fill in a form to generate a plan first.
+
+**Rationale:** The Planner is one of the most complex screens. Without orientation, a new user will be confused about what to do. The checklist sends them here expecting to schedule a tutor, but the planner requires plan generation as a prerequisite.
+
+**Acceptance Criteria:**
+- [ ] When no plan exists and the user has subjects, show a welcome card: "Let's create your study plan! Tell me what you want to learn and for how long."
+- [ ] Pre-fill the subject dropdown with the user's existing subject(s)
+- [ ] Add example text: "e.g., 90 days, 2 hours per day"
+- [ ] Consider a one-time tutorial overlay on first planner visit
+- [ ] Add a "Not sure? Try Quick Plan" button that auto-generates with sensible defaults
+
+---
+
+### MINOR FAIL: #10 — "Don't Show Again" on ApiKeyBanner Has Identical Behavior to "Dismiss"
+
+**Files:**
+- `lib/main.dart:597-611` (ApiKeyBanner callbacks)
+
+**Description:** The `ApiKeyBanner` has three buttons: "Configure Now," "Don't Show Again," and "Dismiss." The "Don't Show Again" and "Dismiss" buttons both execute identical code:
+```dart
+setState(() => _apiKeyBannerDismissed = true);
+Hive.openBox(HiveBoxNames.settings).then((box) {
+  box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
+});
+```
+Both store a timestamp and re-show the banner after 1 week (`Timeouts.week.inMilliseconds`). The user tapping "Don't Show Again" expects the banner never to return, but it returns after a week — same as "Dismiss."
+
+**Acceptance Criteria:**
+- [ ] "Don't Show Again" should store a permanent flag (e.g., `apiKeyBannerPermanentlyDismissed: true`) that prevents re-show regardless of time elapsed
+- [ ] "Dismiss" should continue the current behavior (re-show after 1 week)
+- [ ] OR remove "Don't Show Again" since it doesn't behave as labeled
+
+---
+
+### MINOR FAIL: #11 — "Take Practice Quiz" Navigates to Mode Selection, Not Direct Practice
+
+**Files:**
+- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:47` (step 3 onTap)
+
+**Description:** Checklist Step 3 is labeled "Take Practice Quiz" and navigates to `AppRoutes.subjectSelection`. After selecting a subject, the user reaches the Practice tab's mode grid — not an actual practice session. The label implies a one-tap quiz experience, but the user must still select a practice mode (and understand what each mode does).
+
+**Acceptance Criteria:**
+- [ ] Step 3 should navigate to the Practice tab with the subject pre-selected and the Quick Practice mode auto-launched
+- [ ] If the user has questions, the practice session should start immediately
+- [ ] Update the label to "Start Practicing" to better reflect the multi-step nature
+
+---
+
+### MINOR FAIL: #12 — No Milestone or Celebration When Checklist Completes
+
+**Files:**
+- `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart:17-23` ("All Caught Up" state)
+
+**Description:** When all 4 checklist steps are complete, the checklist shows an `EmptyStateWidget` with a checklist icon, "All Caught Up" title, and the generic "Getting Started" description. There is no celebration animation, no confetti, no "You're ready to learn!" message, no "Here's what you can explore next" suggestions. The user transitions from a guided checklist to a completely unguided experience with no acknowledgment.
+
+**Acceptance Criteria:**
+- [ ] Show a brief celebration animation or confetti when the last checklist item is completed
+- [ ] Add a personalized success message: "Great job setting up, [User]! You're ready to start learning IB Chemistry."
+- [ ] Below the celebration, show 2-3 suggested next actions: "Take a practice quiz," "Try your first AI tutor lesson," "Ask the Mentor a question"
+- [ ] After dismissal, transition to the normal Dashboard with data cards
+
+---
+
+### MINOR FAIL: #13 — LocalDataNotice Shown Before User Has Any Data
+
+**Files:**
+- `lib/main.dart:457-462` (LocalDataNotice shown in _handleFirstLaunch)
+
+**Description:** After the onboarding dialog, the `LocalDataNotice` dialog appears: "StudyKing stores all your data locally on this device. To avoid data loss, use the Backup & Restore feature in Settings." This is shown BEFORE the user has any data to back up. A first-time user cannot meaningfully act on this information — they just read it and tap "I Understand," adding extra dialog friction at the worst possible time (before they've even seen the main screen).
+
+**Acceptance Criteria:**
+- [ ] Show the LocalDataNotice after the user has created meaningful data (e.g., after first upload, after first practice session, or after closing the app for the first time)
+- [ ] OR replace the dialog with a less intrusive banner/inline notice on the Settings → Backup page
+- [ ] OR keep it but integrate it into the onboarding carousel as a 7th page instead of a separate dialog
+
+---
+
+### PARTIAL: #14 — Plan Generation May Fail for New Users Due to Empty Mastery State
+
+**Files:**
+- `lib/features/planner/services/personal_learning_plan_service.dart:133-144`
+
+**Description:** As noted in `dry_run_result_syllabus_driven_curriculum.md` (Step 3, status: PARTIAL), plan generation for a new user with empty `topicMastery` may produce a broken/empty plan because the `courseName` extraction fails and the empty-mastery bypass at line 133 is skipped. This is an existing known issue, referenced here for completeness.
+
+**Acceptance Criteria:**
+- [ ] See `dry_run_result_syllabus_driven_curriculum.md` for existing acceptance criteria
+
+---
+
+### PASS: #15 — Skeleton Loading During Dashboard Data Fetch
+
+**Files:** `lib/features/dashboard/presentation/dashboard_screen.dart:122, 161-162`
+
+**Description:** During initial loading (before data providers return), `showSkeleton` is `true` and a skeleton loading UI is shown. This provides visual feedback while data loads. Once data arrives, the skeleton transitions to the card layout. ✓
+
+No changes needed.
+
+---
+
+## Summary of Findings
+
+| ID | Severity | Finding | Status |
 |---|---|---|---|
-| **BLOCKER** | Save-only path dead code (API key requirement unnecessary) | Small | `upload_screen.dart:184, 214, 612-613` |
-| **BLOCKER** | Pipeline error details lost — Source needs errorMessage field | Medium | `source_model.dart`, `content_pipeline.dart`, `source_detail_screen.dart` |
-| **MAJOR** | Progress indicator always indeterminate, no stage counter | Small | `upload_screen.dart:626-654`, `content_pipeline.dart` |
-| **MAJOR** | No "Practice Generated Questions" button on Source Detail | Small | `source_detail_screen.dart:432-485` |
-| **MAJOR** | Reprocessing orphans old questions | Medium | `source_detail_screen.dart`, `content_pipeline.dart:253-283` |
-| **MAJOR** | Raw Dart exceptions shown as error messages | Medium | `upload_screen.dart`, `content_pipeline.dart` |
-| **MAJOR** | No model-capability check for image/audio content types | Small | `upload_screen.dart`, `document_extractor.dart` |
-| **MAJOR** | No duplicate content detection | Medium | `content_pipeline.dart` |
-| **MAJOR** | Pipeline has no cancel button or back-navigation guard | Medium | `upload_screen.dart` |
-| **MAJOR** | Generated questions may have empty topicId (unfindable) | Small | `content_pipeline.dart:410-475` |
-| **MAJOR** | Two stages share same "classifying" progress status | Trivial | `content_pipeline.dart:159-176` |
-| **MINOR** | Content Library filters single-select, fragile index comparison | Small | `content_library_screen.dart:139-141` |
-| **MINOR** | Source Practice mode hidden under "Extra Modes" | Small | `practice_screen.dart`, `source_detail_screen.dart` |
-| **MINOR** | No post-upload next-steps guidance | Small | `upload_screen.dart:306-315` |
+| #1 | **MAJOR** | No splash/loading screen during startup — blank screen for 2-5s | NEW |
+| #2 | **MAJOR** | Onboarding doesn't explain what API keys are or where to get them | NEW |
+| #3 | **MAJOR** | Dashboard shows 8-10 empty cards below checklist for new users | NEW |
+| #4 | **MAJOR** | Checklist steps have hidden dependencies not communicated to user | NEW |
+| #5 | **MAJOR** | Auto-created topics only show count, not names — no review option | NEW |
+| #6 | **MAJOR** | Upload prompt after subject creation doesn't check API key readiness | NEW |
+| #7 | **MAJOR** | API Config screen lacks "where to get started" guidance for new users | NEW |
+| #8 | **MAJOR** | Practice mode grid has no tutorial/explanation for new users | NEW |
+| #9 | **MAJOR** | Planner screen has no welcome/orientation for first-time visitors | NEW |
+| #10 | **MINOR** | "Don't Show Again" on ApiKeyBanner behaves identically to "Dismiss" | NEW |
+| #11 | **MINOR** | "Take Practice Quiz" navigates to mode selection, not direct practice | NEW |
+| #12 | **MINOR** | No milestone celebration when checklist completes | NEW |
+| #13 | **MINOR** | LocalDataNotice shown before user has any data (extra friction) | NEW |
+| #14 | **PARTIAL** | Plan generation may fail for new users (known from syllabus scenario) | EXISTING |
+| #15 | **PASS** | Skeleton loading during dashboard data fetch works correctly | — |
+
+**Total new findings: 13 (9 MAJOR, 4 MINOR) + 1 existing PARTIAL + 1 PASS**
+
+## Key Files Referenced
+
+| File | Key Lines | Role |
+|---|---|---|
+| `lib/main.dart` | 134-238, 446-482, 597-611 | Startup, onboarding flow, ApiKeyBanner |
+| `lib/features/onboarding/presentation/onboarding_dialog.dart` | 143-181, 216-271 | 6-page carousel, ApiKeyBanner widget, LocalDataNotice |
+| `lib/features/onboarding/services/onboarding_service.dart` | 16-25, 27-45 | First-launch detection, completion flags |
+| `lib/features/dashboard/presentation/dashboard_screen.dart` | 100-150, 149-300 | Empty state handling, card layout |
+| `lib/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart` | 1-264 | 4-step checklist with navigation |
+| `lib/features/dashboard/data/models/dashboard_models.dart` | 184-209 | ChecklistProgress model |
+| `lib/features/dashboard/providers/dashboard_data_providers.dart` | 255-288 | Checklist progress computation |
+| `lib/features/subjects/presentation/subject_selection_screen.dart` | 66-178, 98-149 | Subject creation, seed topic auto-creation |
+| `lib/features/subjects/data/curriculum_seed_data.dart` | 539-546, 31-537 | Seed data for IB Chemistry (9 topics) |
+| `lib/features/settings/presentation/api_config_screen.dart` | 1-452 | API key, provider, model configuration |
+| `lib/features/practice/presentation/screens/practice_screen.dart` | 1040-1077 | Practice empty state, mode grid |
+| `lib/features/practice/presentation/widgets/practice_empty_state.dart` | 1-32 | Empty practice state widget |
+| `lib/features/planner/presentation/planner_screen.dart` | 1-1510 | Planner tabs, multi-syllabus form |
+| `lib/features/planner/services/personal_learning_plan_service.dart` | 133-144 | Empty mastery handling in plan generation |
+| `lib/features/upload/presentation/upload_screen.dart` | 218-224 | API key check during upload |
+| `lib/core/data/hive_initializer.dart` | 1-79 | Hive box initialization (~25 boxes) |
+| `lib/l10n/generated/app_localizations_en.dart` | 3600-3646 | Onboarding text strings |

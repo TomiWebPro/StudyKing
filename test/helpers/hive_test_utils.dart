@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:hive/hive.dart';
@@ -209,5 +210,51 @@ class TestBinaryReader implements BinaryReader {
   HiveList readHiveList([int? length]) {
     length ??= _cache[_position++] as int? ?? 0;
     throw UnimplementedError('HiveList not supported in test fakes');
+  }
+}
+
+/// Reusable Hive test lifecycle helpers.
+///
+/// Usage in `setUpAll`:
+/// ```dart
+/// setUpAll(() async {
+///   hivePath = await HiveTestHelper.initHive();
+/// });
+/// ```
+///
+/// Usage in `tearDownAll`:
+/// ```dart
+/// tearDownAll(() async {
+///   await HiveTestHelper.cleanHive(hivePath);
+/// });
+/// ```
+class HiveTestHelper {
+  /// Initialises Hive with a temporary directory and returns the path.
+  ///
+  /// Call from `setUpAll` or `setUp`.
+  static Future<String> initHive() async {
+    final path = Directory.systemTemp.createTempSync('hive_test_').path;
+    Hive.init(path);
+    return path;
+  }
+
+  /// Closes all open Hive boxes and deletes the directory at [path].
+  ///
+  /// Call from `tearDownAll` or `tearDown`.
+  static Future<void> cleanHive(String path) async {
+    try {
+      await Hive.close();
+    } catch (_) {}
+    try {
+      await Directory(path).delete(recursive: true);
+    } catch (_) {}
+  }
+
+  /// Opens or reuses the settings box and sets [key] to [value].
+  ///
+  /// This is useful for tests that rely on Hive settings (e.g. daily cap).
+  static Future<void> setSetting(String key, dynamic value) async {
+    final box = await Hive.openBox('settings');
+    await box.put(key, value);
   }
 }

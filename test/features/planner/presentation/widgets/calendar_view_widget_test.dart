@@ -5,12 +5,14 @@ import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/calendar_view_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
-Widget buildApp(Widget widget) {
+Widget buildApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     home: Scaffold(body: widget),
   );
 }
@@ -303,5 +305,8 @@ void main() {
 
       expect(wasCalled, isFalse);
     });
+
+    // CalendarViewWidget uses an onDayTap callback for navigation;
+    // navigation is handled by the parent widget, not internally.
   });
 }

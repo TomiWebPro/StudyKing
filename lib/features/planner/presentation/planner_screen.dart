@@ -436,8 +436,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
     ref.listen<PlannerState>(plannerProvider, (prev, next) {
       if (next.error != null && prev?.error != next.error) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.maybeOf(context)?.showSnackBar(
-          SnackBar(content: Text(next.error!)),
+          SnackBar(content: Text(next.error!.contains('{') || next.error!.contains('Exception')
+              ? l10n.somethingWentWrong
+              : next.error!)),
         );
         ref.read(plannerProvider.notifier).clearMessages();
       }
@@ -524,6 +527,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   }
 
   Widget _buildStudyPlanTab(AppLocalizations l10n, PlannerState state) {
+    if (state.isGenerating && state.plan == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
     return SingleChildScrollView(
       padding: ResponsiveUtils.screenPadding(context),
       physics: const AlwaysScrollableScrollPhysics(),
@@ -531,6 +538,11 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (state.isGenerating)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 16),
+                child: LinearProgressIndicator(),
+              ),
             if (state.pendingActions.isNotEmpty) ...[
               _buildPendingActionsSection(l10n, state),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
@@ -1431,6 +1443,12 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                 color: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.5)),
             const SizedBox(height: 16),
             Text(l10n.noStudyPlanYet, style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 16),
+            FilledButton.icon(
+              onPressed: () => _tabController.animateTo(0),
+              icon: const Icon(Icons.auto_awesome),
+              label: Text(l10n.createStudyPlan),
+            ),
           ],
         ),
       );

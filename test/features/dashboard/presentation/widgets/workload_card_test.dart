@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
-Widget _buildTestApp(Widget widget) {
+Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     home: Scaffold(body: widget),
   );
 }
@@ -141,5 +143,7 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('7 topics need attention'), findsOneWidget);
     });
+
+    // WorkloadCard is a pure rendering widget with no navigation callbacks.
   });
 }

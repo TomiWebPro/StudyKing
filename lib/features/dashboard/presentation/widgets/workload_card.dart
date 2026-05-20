@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -19,14 +20,23 @@ class WorkloadCard extends StatelessWidget {
     if (workload == null || workload!.totalQuestions == 0) {
       return Padding(
         padding: const EdgeInsets.all(16),
-        child: Center(
-          child: Text(
-            l10n.noTopicsYetAddSome,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              l10n.noTopicsYetAddSome,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              textAlign: TextAlign.center,
             ),
-            textAlign: TextAlign.center,
-          ),
+            const SizedBox(height: 12),
+            TextButton.icon(
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.upload),
+              icon: const Icon(Icons.upload_file),
+              label: Text(l10n.uploadMaterials),
+            ),
+          ],
         ),
       );
     }

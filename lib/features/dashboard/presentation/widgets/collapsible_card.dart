@@ -94,17 +94,20 @@ class CollapsibleCard extends ConsumerWidget {
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(
-                    isCollapsed ? Icons.expand_more : Icons.expand_less,
-                    size: 20,
+                Semantics(
+                  explicitChildNodes: true,
+                  child: IconButton(
+                    icon: Icon(
+                      isCollapsed ? Icons.expand_more : Icons.expand_less,
+                      size: 20,
+                    ),
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    tooltip: isCollapsed
+                        ? AppLocalizations.of(context)!.tapToExpand
+                        : AppLocalizations.of(context)!.tapToCollapse,
+                    onPressed: () =>
+                        ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
                   ),
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  tooltip: isCollapsed
-                      ? AppLocalizations.of(context)!.tapToExpand
-                      : AppLocalizations.of(context)!.tapToCollapse,
-                  onPressed: () =>
-                      ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
                 ),
               ],
             ),

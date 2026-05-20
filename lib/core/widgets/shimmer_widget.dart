@@ -62,7 +62,7 @@ class _ShimmerWidgetState extends State<ShimmerWidget>
     final l10n = AppLocalizations.of(context);
     return Semantics(
       liveRegion: true,
-      label: l10n?.loading ?? 'Loading',
+      label: l10n?.loading ?? '',
       child: ExcludeSemantics(
         child: AnimatedBuilder(
           animation: _animation,

@@ -151,7 +151,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         setState(() {
           _initError = true;
           _isRetrying = false;
-          _initErrorMessage = l10n.mentorInitFailed('');
+          _initErrorMessage = l10n.mentorInitFailed(e.toString());
         });
       }
     }

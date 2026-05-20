@@ -187,7 +187,14 @@ class TopicBreakdownCard extends StatelessWidget {
 
   String _masteryLabel(BuildContext context, MasteryLevel level) {
     final l10n = AppLocalizations.of(context);
-    if (l10n == null) return level.name;
+    const fallback = <MasteryLevel, String>{
+      MasteryLevel.novice: 'Novice',
+      MasteryLevel.browsing: 'Browsing',
+      MasteryLevel.developing: 'Developing',
+      MasteryLevel.proficient: 'Proficient',
+      MasteryLevel.expert: 'Expert',
+    };
+    if (l10n == null) return fallback[level] ?? 'Unknown';
     switch (level) {
       case MasteryLevel.novice: return l10n.masteryLevelNovice;
       case MasteryLevel.browsing: return l10n.masteryLevelBrowsing;

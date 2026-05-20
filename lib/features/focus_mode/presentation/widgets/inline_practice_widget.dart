@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
@@ -13,12 +13,14 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class InlinePracticeWidget extends ConsumerStatefulWidget {
   final String? subjectId;
   final String? topicId;
   final int questionCount;
+  final FocusSessionType sessionType;
   final void Function(int correct, int total, Map<String, SubjectAccuracy> perSubjectAccuracies) onComplete;
 
   const InlinePracticeWidget({
@@ -26,8 +28,11 @@ class InlinePracticeWidget extends ConsumerStatefulWidget {
     this.subjectId,
     this.topicId,
     this.questionCount = 10,
+    this.sessionType = FocusSessionType.spacedRepetition,
     required this.onComplete,
   });
+
+  bool get isQuickPractice => sessionType == FocusSessionType.quickPractice;
 
   @override
   ConsumerState<InlinePracticeWidget> createState() => _InlinePracticeWidgetState();
@@ -70,20 +75,34 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
 
   Future<void> _loadQuestions() async {
     try {
-      final questionRepo = ref.read(questionRepositoryProvider);
-      final allResult = await questionRepo.getAll();
-      final all = allResult.data ?? [];
+      final studentId = ref.read(studentIdValueProvider);
+      final focusPracticeService = ref.read(focusPracticeServiceProvider);
+      final subjectIds = widget.subjectId != null && widget.subjectId!.isNotEmpty
+          ? [widget.subjectId!]
+          : null;
 
-      var filtered = all.toList();
-      if (widget.subjectId != null && widget.subjectId!.isNotEmpty) {
-        filtered = filtered.where((q) => q.subjectId == widget.subjectId).toList();
-      }
+      final questions = await focusPracticeService.getQuestionsForSessionType(
+        sessionType: widget.sessionType,
+        studentId: studentId,
+        subjectIds: subjectIds,
+        limit: widget.questionCount,
+      );
+
+      var selected = questions.toList();
       if (widget.topicId != null && widget.topicId!.isNotEmpty) {
-        filtered = filtered.where((q) => q.topicId == widget.topicId).toList();
+        selected = selected.where((q) => q.topicId == widget.topicId).toList();
       }
 
-      filtered.shuffle();
-      final selected = filtered.take(widget.questionCount).toList();
+      if (selected.isEmpty && widget.sessionType == FocusSessionType.weakAreaAttack) {
+        final srService = ref.read(spacedRepetitionServiceProvider);
+        final dueResult = await srService.getQuestionsDueForReview();
+        var fallback = dueResult.data ?? [];
+        if (widget.subjectId != null && widget.subjectId!.isNotEmpty) {
+          fallback = fallback.where((q) => q.subjectId == widget.subjectId).toList();
+        }
+        fallback.shuffle();
+        selected = fallback.take(widget.questionCount).toList();
+      }
 
       if (mounted) {
         setState(() {
@@ -135,22 +154,21 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
   }
 
   Future<void> _nextQuestion() async {
-    if (_isSubmitted && _isCorrect) {
-      try {
-        final question = _questions[_currentIndex];
-        await _masteryRecorder.recordAttempt(
-          questionId: question.id,
-          studentId: StudentIdService().getStudentId(),
-          subjectId: question.subjectId,
-          topicId: question.topicId,
-          isCorrect: true,
-          timeSpentMs: 0,
-          confidence: 3,
-          userAnswer: _currentAnswer ?? '',
-        );
-      } catch (e) {
-        _logger.w('Failed to record attempt in inline practice', e);
-      }
+    try {
+      final question = _questions[_currentIndex];
+      final studentId = ref.read(studentIdValueProvider);
+      await _masteryRecorder.recordAttempt(
+        questionId: question.id,
+        studentId: studentId,
+        subjectId: question.subjectId,
+        topicId: question.topicId,
+        isCorrect: _isCorrect,
+        timeSpentMs: 0,
+        confidence: _isCorrect ? 4 : 2,
+        userAnswer: _currentAnswer ?? '',
+      );
+    } catch (e) {
+      _logger.w('Failed to record attempt in inline practice', e);
     }
 
     if (_currentIndex + 1 >= _questions.length) {
@@ -167,17 +185,6 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
   }
 
   void _finish() {
-    final perSubjectAccuracies = <String, SubjectAccuracy>{};
-    for (final subjectId in _perSubjectTotal.keys) {
-      final total = _perSubjectTotal[subjectId] ?? 0;
-      final correct = _perSubjectCorrect[subjectId] ?? 0;
-      perSubjectAccuracies[subjectId] = SubjectAccuracy(
-        correct: correct,
-        total: total,
-        accuracyPercent: total > 0 ? (correct / total) * 100 : 0,
-      );
-    }
-
     setState(() => _isComplete = true);
   }
 

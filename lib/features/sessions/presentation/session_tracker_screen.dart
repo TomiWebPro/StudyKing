@@ -75,6 +75,17 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       }
     } catch (e) {
       _logger.w('Failed to load subjects in session tracker', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.failedToLoadSubjects),
+            action: SnackBarAction(
+              label: AppLocalizations.of(context)!.retry,
+              onPressed: _loadSubjects,
+            ),
+          ),
+        );
+      }
     }
   }
 
@@ -320,7 +331,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               GradientContainer(
-                accent: theme.primaryColor,
+                accent: theme.colorScheme.primary,
                 borderRadius: 16,
                 padding: ResponsiveUtils.cardPadding(context),
                 child: Column(
@@ -331,13 +342,13 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                         Text(
                           _isTrackingSession ? l10n.currentSession : l10n.noActiveSession,
                           style: theme.textTheme.titleLarge?.copyWith(
-                            color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
-                            fontWeight: FontWeight.bold,
+                          color: _isTrackingSession ? theme.colorScheme.primary : theme.textTheme.bodyMedium?.color,
+                          fontWeight: FontWeight.bold,
                           ),
                         ),
                         Icon(
                           _isTrackingSession ? Icons.timer : Icons.timer_off,
-                          color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
+                          color: _isTrackingSession ? theme.colorScheme.primary : theme.textTheme.bodyMedium?.color,
                         ),
                       ],
                     ),
@@ -352,7 +363,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                         style: theme.textTheme.displayLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                           fontSize: (MediaQuery.sizeOf(context).shortestSide * 0.09).clamp(36.0, 64.0),
-                          color: _isTrackingSession ? theme.primaryColor : theme.textTheme.bodyMedium?.color,
+                          color: _isTrackingSession ? theme.colorScheme.primary : theme.textTheme.bodyMedium?.color,
                         ),
                       ),
                     ),
@@ -527,7 +538,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
                 formatDurationFromContext(context, session.actualDuration),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   fontWeight: FontWeight.bold,
-                  color: theme.primaryColor,
+                  color: theme.colorScheme.primary,
                 ),
               ),
             ),

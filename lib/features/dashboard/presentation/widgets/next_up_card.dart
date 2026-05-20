@@ -100,7 +100,9 @@ class NextUpCard extends ConsumerWidget {
                 subtitle: l10n.dueForReviewSubtitle,
                 onTap: firstSubjectId != null
                     ? () => Navigator.pushNamed(context, AppRoutes.practiceSession, arguments: PracticeSessionArgs(subjectId: firstSubjectId, isSpacedRepetition: true))
-                    : () {},
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(AppLocalizations.of(context)!.addSubjectFirst)),
+                        ),
               ),
             if (weakCount > 0)
               _buildActionTile(
@@ -111,7 +113,9 @@ class NextUpCard extends ConsumerWidget {
                 subtitle: l10n.practiceWeakAreas,
                 onTap: firstSubjectId != null
                     ? () => Navigator.pushNamed(context, AppRoutes.practiceSession, arguments: PracticeSessionArgs(subjectId: firstSubjectId))
-                    : () {},
+                    : () => ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(AppLocalizations.of(context)!.addSubjectFirst)),
+                        ),
               ),
           ],
         ),

@@ -6,21 +6,36 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
-import 'package:studyking/core/errors/result.dart';
 
-class _FakeQuestionEvaluationBox implements Box<QuestionEvaluation> {
+class _FakeEvaluationBox implements Box<QuestionEvaluation> {
   final Map<String, QuestionEvaluation> _storage = {};
+  bool _shouldThrow = false;
+
+  void throwOnNextCall() => _shouldThrow = true;
 
   @override
-  Iterable<QuestionEvaluation> get values => _storage.values;
+  Iterable<QuestionEvaluation> get values {
+    _checkThrow();
+    return _storage.values;
+  }
 
   @override
-  QuestionEvaluation? get(dynamic key, {QuestionEvaluation? defaultValue}) =>
-      _storage[key] ?? defaultValue;
+  QuestionEvaluation? get(dynamic key, {QuestionEvaluation? defaultValue}) {
+    _checkThrow();
+    return _storage[key] ?? defaultValue;
+  }
 
   @override
   Future<void> put(dynamic key, QuestionEvaluation value) async {
+    _checkThrow();
     _storage[key.toString()] = value;
+  }
+
+  void _checkThrow() {
+    if (_shouldThrow) {
+      _shouldThrow = false;
+      throw Exception('simulated box error');
+    }
   }
 
   @override
@@ -60,60 +75,15 @@ class _FakeQuestionEvaluationBox implements Box<QuestionEvaluation> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeQuestionEvaluationRepository extends QuestionEvaluationRepository {
-  final Box<QuestionEvaluation> _fakeBox;
-
-  _FakeQuestionEvaluationRepository(this._fakeBox);
-
-  @override
-  void attachBox(Box<QuestionEvaluation> box) {}
-
-  @override
-  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {
-    final evaluation = _fakeBox.get(questionId);
-    if (evaluation != null) {
-      return Result.success(evaluation);
-    }
-    return Result.failure('No evaluation found for question: $questionId');
-  }
-
-  @override
-  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async {
-    await _fakeBox.put(evaluation.questionId, evaluation);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<void>> migrateFromLegacy({
-    required String questionId,
-    String? markscheme,
-    String? correctAnswer,
-    List<String>? options,
-    String? explanation,
-  }) async {
-    final existing = _fakeBox.get(questionId);
-    if (existing != null) return Result.success(null);
-
-    final evaluation = QuestionEvaluation.fromLegacy(
-      questionId: questionId,
-      markscheme: markscheme,
-      correctAnswer: correctAnswer,
-      options: options,
-      explanation: explanation,
-    );
-    await _fakeBox.put(questionId, evaluation);
-    return Result.success(null);
-  }
-}
-
 void main() {
   group('QuestionEvaluationRepository', () {
-    late _FakeQuestionEvaluationBox box;
-    late _FakeQuestionEvaluationRepository repository;
+    late _FakeEvaluationBox box;
+    late QuestionEvaluationRepository repository;
 
     setUp(() {
-      box = _FakeQuestionEvaluationBox();
-      repository = _FakeQuestionEvaluationRepository(box);
+      box = _FakeEvaluationBox();
+      repository = QuestionEvaluationRepository();
+      repository.attachBox(box);
     });
 
     group('getEvaluation', () {
@@ -132,7 +102,12 @@ void main() {
       test('returns failure when not found', () async {
         final result = await repository.getEvaluation('none');
         expect(result.isFailure, isTrue);
-        expect(result.error, contains('No evaluation found'));
+      });
+
+      test('returns failure on box error', () async {
+        box.throwOnNextCall();
+        final result = await repository.getEvaluation('q1');
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -163,6 +138,16 @@ void main() {
 
         final result = await repository.getEvaluation('q1');
         expect(result.data?.correctAnswer, 'Munich');
+      });
+
+      test('returns failure on box error', () async {
+        box.throwOnNextCall();
+        final evaluation = QuestionEvaluation(
+          questionId: 'q1',
+          correctAnswer: 'Berlin',
+        );
+        final result = await repository.saveEvaluation(evaluation);
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -220,6 +205,15 @@ void main() {
         expect(result.isSuccess, isTrue);
         final getResult = await repository.getEvaluation('q1');
         expect(getResult.data?.correctAnswer, '');
+      });
+
+      test('returns failure on box error during get', () async {
+        box.throwOnNextCall();
+        final result = await repository.migrateFromLegacy(
+          questionId: 'q1',
+          correctAnswer: '42',
+        );
+        expect(result.isFailure, isTrue);
       });
     });
   });

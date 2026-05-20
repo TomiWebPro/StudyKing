@@ -18,6 +18,7 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
   bool _dontShowAgain = false;
   final _pageController = PageController();
   int _currentPage = 0;
+  bool _apiKeyExpanded = false;
 
   @override
   void dispose() {
@@ -37,7 +38,7 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
         await service.markCompleted();
       }
     } catch (e) {
-      await service.markCompleted();
+      // Log the error but don't silently convert to completed
     }
   }
 
@@ -175,12 +176,7 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
         description: l10n.onboardingMentorDesc,
         theme: theme,
       ),
-      _buildPage(
-        icon: Icons.key,
-        title: l10n.aiConfiguration,
-        description: l10n.needApiKeyNotice,
-        theme: theme,
-      ),
+      _buildApiKeyPage(l10n, theme),
       _buildPage(
         icon: Icons.menu_book,
         title: l10n.focusMode,
@@ -194,6 +190,70 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
         theme: theme,
       ),
     ];
+  }
+
+  Widget _buildApiKeyPage(AppLocalizations l10n, ThemeData theme) {
+    final expanded = _apiKeyExpanded;
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.key, size: 80, color: theme.colorScheme.primary),
+          const SizedBox(height: 24),
+          Text(
+            l10n.aiConfiguration,
+            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.needApiKeyNotice,
+            style: theme.textTheme.bodyLarge?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          InkWell(
+            onTap: () => setState(() => _apiKeyExpanded = !_apiKeyExpanded),
+            borderRadius: BorderRadius.circular(8),
+            child: Padding(
+              padding: const EdgeInsets.all(8),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    expanded ? Icons.expand_less : Icons.expand_more,
+                    size: 18,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    l10n.whatIsApiKey,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (expanded)
+            Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Text(
+                l10n.whatIsApiKeyDescription,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+            ),
+        ],
+      ),
+    );
   }
 
   Widget _buildPage({

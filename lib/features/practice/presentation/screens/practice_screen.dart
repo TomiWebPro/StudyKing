@@ -364,7 +364,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
-                '${subject.name}: Need at least $minAttempts attempted questions (30% of this subject) to identify weak areas')));
+                l10n.insufficientAttemptsForWeakAreas(subject.name, minAttempts))));
         return;
       }
 
@@ -379,7 +379,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         if (insufficientData) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  'Need at least $minAttempts attempted questions (30% of this subject). ${l10n.noQuestionsAvailable}')));
+                  l10n.insufficientAttemptsForWeakAreas('', minAttempts))));
         } else {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
@@ -1107,6 +1107,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             dueCounts: _dueCounts,
             totalQuestionCount: _totalQuestionCount,
             hasSubjects: _subjects.isNotEmpty,
+            isNewUser: _practiceStreak < 3 && _weeklyActivity < 10,
             onQuickPractice: _showPracticeModeDialog,
             onSpacedRepetition: _showSpacedRepetitionSubjectSelector,
             onTopicFocus: _showTopicSelector,

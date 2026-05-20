@@ -180,7 +180,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       _logger.w('Export failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.exportFailed(''))),
+          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
         );
       }
     }
@@ -287,7 +287,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.failedToDeleteSession(''))),
+            SnackBar(content: Text(l10n.failedToDeleteSession(e.toString()))),
           );
         }
         return false;
@@ -473,7 +473,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                 ? l10n.noSessionsFoundForFilters
                 : l10n.noSessionsYet,
             style: theme.textTheme.titleMedium?.copyWith(
-              color: theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodySmall?.color,
+              color: theme.textTheme.bodyMedium?.color ?? theme.textTheme.bodySmall?.color ?? theme.colorScheme.onSurface,
             ),
           ),
           const SizedBox(height: 8),

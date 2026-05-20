@@ -1,3 +1,5 @@
+import 'focus_session_type.dart';
+
 class FocusSession {
   final String id;
   final String studentId;
@@ -9,6 +11,8 @@ class FocusSession {
   final double accuracy;
   final List<String> subjectIds;
   final Map<String, double> masteryChanges;
+  final FocusSessionType sessionType;
+  final Map<String, TopicPerformance> topicBreakdown;
 
   FocusSession({
     required this.id,
@@ -21,6 +25,8 @@ class FocusSession {
     this.accuracy = 0.0,
     this.subjectIds = const [],
     this.masteryChanges = const {},
+    this.sessionType = FocusSessionType.spacedRepetition,
+    this.topicBreakdown = const {},
   });
 
   Map<String, dynamic> toJson() => {
@@ -34,6 +40,8 @@ class FocusSession {
     'accuracy': accuracy,
     'subjectIds': subjectIds,
     'masteryChanges': masteryChanges,
+    'sessionType': sessionType.name,
+    'topicBreakdown': topicBreakdown.map((k, v) => MapEntry(k, v.toJson())),
   };
 
   factory FocusSession.fromJson(Map<String, dynamic> json) => FocusSession(
@@ -47,6 +55,13 @@ class FocusSession {
     accuracy: (json['accuracy'] as num?)?.toDouble() ?? 0.0,
     subjectIds: List<String>.from(json['subjectIds'] ?? []),
     masteryChanges: Map<String, double>.from(json['masteryChanges'] ?? {}),
+    sessionType: FocusSessionType.values.firstWhere(
+      (t) => t.name == json['sessionType'],
+      orElse: () => FocusSessionType.spacedRepetition,
+    ),
+    topicBreakdown: (json['topicBreakdown'] as Map<String, dynamic>?)?.map(
+      (k, v) => MapEntry(k, TopicPerformance.fromJson(v as Map<String, dynamic>)),
+    ) ?? {},
   );
 
   FocusSession copyWith({
@@ -60,6 +75,8 @@ class FocusSession {
     double? accuracy,
     List<String>? subjectIds,
     Map<String, double>? masteryChanges,
+    FocusSessionType? sessionType,
+    Map<String, TopicPerformance>? topicBreakdown,
   }) {
     return FocusSession(
       id: id ?? this.id,
@@ -72,6 +89,40 @@ class FocusSession {
       accuracy: accuracy ?? this.accuracy,
       subjectIds: subjectIds ?? this.subjectIds,
       masteryChanges: masteryChanges ?? this.masteryChanges,
+      sessionType: sessionType ?? this.sessionType,
+      topicBreakdown: topicBreakdown ?? this.topicBreakdown,
     );
   }
+}
+
+class TopicPerformance {
+  final String topicId;
+  final int correct;
+  final int total;
+  final double accuracyPercent;
+  final double masteryDelta;
+
+  TopicPerformance({
+    required this.topicId,
+    required this.correct,
+    required this.total,
+    required this.accuracyPercent,
+    this.masteryDelta = 0.0,
+  });
+
+  Map<String, dynamic> toJson() => {
+    'topicId': topicId,
+    'correct': correct,
+    'total': total,
+    'accuracyPercent': accuracyPercent,
+    'masteryDelta': masteryDelta,
+  };
+
+  factory TopicPerformance.fromJson(Map<String, dynamic> json) => TopicPerformance(
+    topicId: json['topicId'],
+    correct: json['correct'],
+    total: json['total'],
+    accuracyPercent: (json['accuracyPercent'] as num).toDouble(),
+    masteryDelta: (json['masteryDelta'] as num?)?.toDouble() ?? 0.0,
+  );
 }

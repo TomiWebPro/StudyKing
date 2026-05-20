@@ -389,6 +389,10 @@
   "@topicBreakdown": {
     "description": "Heading for topic breakdown section in results"
   },
+  "masteryDelta": "Cambio de Dominio",
+  "@masteryDelta": {
+    "description": "Heading for mastery change/delta section in session results"
+  },
   "startingPractice": "Comenzando {mode}...",
   "@startingPractice": {
     "description": "Dialog text shown when starting practice",
@@ -1950,7 +1954,15 @@
   },
   "masteryLevelExpert": "Experto",
   "@masteryLevelExpert": {
-    "description": "Expert mastery level label"
+    "description": "Etiqueta de nivel de dominio para experto"
+  },
+  "masteryLevel": "Nivel de Dominio",
+  "@masteryLevel": {
+    "description": "Etiqueta para el encabezado de la sección de nivel de dominio"
+  },
+  "bestStreak": "Mejor Racha",
+  "@bestStreak": {
+    "description": "Etiqueta para la estadística de mejor racha"
   },
   "progressCsvGenerated": "CSV de progreso generado ({length} caracteres)",
   "@progressCsvGenerated": {
@@ -4978,7 +4990,27 @@
   },
   "viewActiveAiTasks": "Ver tareas activas de inferencia de IA y uso de tokens",
   "@viewActiveAiTasks": {
-    "description": "Subtitle for AI task monitor settings entry"
+    "description": "Subtítulo para el mosaico de monitoreo de tareas de IA en configuración"
+  },
+  "noActiveAiTasks": "No hay tareas de IA activas",
+  "@noActiveAiTasks": {
+    "description": "Subtítulo para el mosaico de tareas de IA cuando no hay tareas activas"
+  },
+  "addSubjectFirst": "Añade una materia primero para empezar a practicar",
+  "@addSubjectFirst": {
+    "description": "Mensaje emergente cuando el usuario intenta practicar sin materias"
+  },
+  "failedToLoadSubjects": "Error al cargar las materias",
+  "@failedToLoadSubjects": {
+    "description": "Mensaje de error cuando falla la carga de materias"
+  },
+  "insufficientAttemptsForWeakAreas": "Se necesitan al menos {minAttempts} preguntas intentadas para {subjectName} para identificar áreas débiles",
+  "@insufficientAttemptsForWeakAreas": {
+    "description": "Mensaje cuando el usuario tiene muy pocos intentos para determinar áreas débiles",
+    "placeholders": {
+      "subjectName": { "type": "String" },
+      "minAttempts": { "type": "int" }
+    }
   },
   "endLessonConfirmation": "¿Finalizar tu lección? Tu progreso se guardará.",
   "@endLessonConfirmation": {
@@ -7519,5 +7551,119 @@
     "responseInterrupted": "Respuesta interrumpida. Intente de nuevo.",
     "@responseInterrupted": {
       "description": "Error message when response is interrupted"
+    },
+    "whatIsApiKey": "¿Qué es una clave API?",
+    "@whatIsApiKey": {
+      "description": "Expandable section title in onboarding asking what an API key is"
+    },
+    "whatIsApiKeyDescription": "Una clave API permite a StudyKing usar servicios de IA como generar preguntas y tutoría. Puede obtener una gratis de proveedores como OpenRouter u OpenAI, o ejecutar un modelo local con Ollama.",
+    "@whatIsApiKeyDescription": {
+      "description": "Explanation of what an API key is for onboarding"
+    },
+    "statsAppearAfterLearning": "¡Verás tus estadísticas aquí una vez que empieces a aprender!",
+    "@statsAppearAfterLearning": {
+      "description": "Placeholder shown in empty dashboard cards for first-time users"
+    },
+    "topicsCreatedTitle": "Temas Creados",
+    "@topicsCreatedTitle": {
+      "description": "Dialog title showing auto-created topics"
+    },
+    "topicsCreatedDescription": "Los temas se crearon automáticamente según nuestro plan de estudios estándar. Puede revisarlos y editarlos en cualquier momento.",
+    "@topicsCreatedDescription": {
+      "description": "Dialog description for auto-created topics"
+    },
+    "reviewAndEdit": "Revisar y Editar",
+    "@reviewAndEdit": {
+      "description": "Button label to review and edit auto-created topics"
+    },
+    "topicSubtopicsCount": "{count} subtemas",
+    "@topicSubtopicsCount": {
+      "description": "Label showing count of subtopics for a topic",
+      "placeholders": {
+        "count": {
+          "type": "int"
+        }
+      }
+    },
+    "apiKeyRequiredForUploadTitle": "Clave API Requerida",
+    "@apiKeyRequiredForUploadTitle": {
+      "description": "Dialog title when API key is needed for upload"
+    },
+    "apiKeyRequiredForUpload": "Necesitará configurar una clave API primero para cargar y procesar contenido. ¿Desea configurarla ahora?",
+    "@apiKeyRequiredForUpload": {
+      "description": "Dialog message when user tries to upload without API key"
+    },
+    "configureApiKey": "Configurar Clave API",
+    "@configureApiKey": {
+      "description": "Button label to go to API configuration"
+    },
+    "maybeLater": "Quizás Después",
+    "@maybeLater": {
+      "description": "Button label to postpone an action"
+    },
+    "recommended": "Recomendado",
+    "@recommended": {
+      "description": "Badge label for recommended option"
+    },
+    "openRouterSetupGuide": "Visite openrouter.ai/keys → Cree una cuenta → Copie la clave API → Péguela aquí",
+    "@openRouterSetupGuide": {
+      "description": "Setup guide for OpenRouter API key"
+    },
+    "ollamaSetupGuide": "Descargue Ollama de ollama.ai → Ejecútelo localmente → Use la URL predeterminada",
+    "@ollamaSetupGuide": {
+      "description": "Setup guide for Ollama"
+    },
+    "openAiSetupGuide": "Visite platform.openai.com/api-keys → Cree una nueva clave → Cópiela aquí",
+    "@openAiSetupGuide": {
+      "description": "Setup guide for OpenAI API key"
+    },
+    "firstPracticeBanner": "¿Es la primera vez que practicas? ¡Practica Rápida es un excelente lugar para comenzar!",
+    "@firstPracticeBanner": {
+      "description": "Hint banner shown on practice screen for new users"
+    },
+    "recommendedForBeginners": "Recomendado para principiantes",
+    "@recommendedForBeginners": {
+      "description": "Badge text for beginner-friendly options"
+    },
+    "letsCreatePlanTitle": "¡Creemos tu plan de estudio!",
+    "@letsCreatePlanTitle": {
+      "description": "Welcome card title on planner for first-time visitors"
+    },
+    "letsCreatePlanDesc": "Dime qué quieres aprender y por cuánto tiempo. Crearé un plan personalizado.",
+    "@letsCreatePlanDesc": {
+      "description": "Welcome card description on planner"
+    },
+    "quickPlan": "Plan Rápido",
+    "@quickPlan": {
+      "description": "Button to auto-generate a study plan with defaults"
+    },
+    "startPracticing": "Comenzar a Practicar",
+    "@startPracticing": {
+      "description": "Checklist item label for taking a practice quiz"
+    },
+    "setupCompleteTitle": "¡Gran trabajo de configuración!",
+    "@setupCompleteTitle": {
+      "description": "Celebration title when checklist completes"
+    },
+    "setupCompleteDesc": "Estás listo para empezar a aprender. Esto es lo que puedes hacer a continuación:",
+    "@setupCompleteDesc": {
+      "description": "Celebration description when checklist completes"
+    },
+    "suggestedNextActions": "Acciones sugeridas",
+    "@suggestedNextActions": {
+      "description": "Label for suggested next actions after setup"
+    },
+    "providerSetupGuide": "Cómo comenzar con {providerName}:",
+    "@providerSetupGuide": {
+      "description": "Provider-specific setup guide header",
+      "placeholders": {
+        "providerName": {
+          "type": "String"
+        }
+      }
+    },
+    "curriculumBasedTopics": "Estos temas se basan en nuestro plan de estudios estándar. Puedes editarlos en cualquier momento.",
+    "@curriculumBasedTopics": {
+      "description": "Hint text shown with auto-created topics"
     }
   }

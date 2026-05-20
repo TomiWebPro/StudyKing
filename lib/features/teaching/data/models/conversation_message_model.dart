@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 
 enum MessageRole { system, tutor, student, mentor }
@@ -45,6 +46,8 @@ class ConversationMessage extends HiveObject {
   @HiveField(12)
   final String? toolResult;
 
+  final bool isEvaluation;
+
   ConversationMessage({
     required this.id,
     required this.sessionId,
@@ -59,7 +62,17 @@ class ConversationMessage extends HiveObject {
     this.toolName,
     this.toolArguments,
     this.toolResult,
-  });
+    bool? isEvaluation,
+  }) : isEvaluation = isEvaluation ?? _computeIsEvaluation(content);
+
+  static bool _computeIsEvaluation(String content) {
+    try {
+      final data = jsonDecode(content) as Map<String, dynamic>;
+      return data['type'] == 'evaluation';
+    } catch (_) {
+      return false;
+    }
+  }
 
   ConversationMessage copyWith({
     String? id,

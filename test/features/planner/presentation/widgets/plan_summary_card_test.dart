@@ -3,13 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/plan_summary_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 void main() {
-  Widget buildApp(Widget widget) {
+  Widget buildApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: Scaffold(body: widget),
     );
   }
@@ -176,6 +178,9 @@ void main() {
       expect(find.text('4 review'), findsOneWidget);
       expect(find.text('85%'), findsOneWidget);
     });
+
+    // PlanSummaryCard is a pure rendering widget with no navigation callbacks,
+    // so no navigation verification test is added here.
   });
 
   group('PlanSummaryCard Spanish locale', () {

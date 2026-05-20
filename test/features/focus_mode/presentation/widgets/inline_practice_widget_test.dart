@@ -4,19 +4,58 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/inline_practice_widget.dart';
+import 'package:studyking/features/focus_mode/services/focus_practice_service.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryRecorderProvider;
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart' show focusPracticeServiceProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryRecorderProvider, spacedRepetitionServiceProvider, masteryGraphServiceProvider;
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class _FakeSessionRepository extends SessionRepository {
+  @override
+  Future<Result<void>> save(String key, Session item) async => Result.success(null);
+
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success([]);
+}
+
+class _FakeAttemptRepository extends AttemptRepository {
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
+}
+
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  final QuestionRepository _fakeQRepo;
+
+  _FakeSpacedRepetitionService({required super.questionRepo})
+      : _fakeQRepo = questionRepo,
+        super(attemptRepo: _FakeAttemptRepository());
+
+  @override
+  Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {
+    final allResult = await _fakeQRepo.getAll();
+    final all = allResult.data ?? [];
+    final reviewDate = asOf ?? DateTime.now();
+    final due = all.where((q) => (q.nextReview ?? DateTime.now()).isBefore(reviewDate)).toList();
+    return Result.success(due);
+  }
+}
 
 class _FakeQuestionRepository extends QuestionRepository {
   final List<Question> _questions;
@@ -27,6 +66,9 @@ class _FakeQuestionRepository extends QuestionRepository {
 }
 
 class _FakeMasteryRecorder extends MasteryRecorder {
+  int recordAttemptCallCount = 0;
+  bool? lastIsCorrect;
+
   _FakeMasteryRecorder()
       : super(
           masteryGraphService: MasteryGraphService(),
@@ -48,7 +90,16 @@ class _FakeMasteryRecorder extends MasteryRecorder {
     required String userAnswer,
     DateTime? timestamp,
   }) async {
+    recordAttemptCallCount++;
+    lastIsCorrect = isCorrect;
     return Result.success(null);
+  }
+}
+
+class _FakeMasteryGraphService extends MasteryGraphService {
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
   }
 }
 
@@ -57,14 +108,26 @@ Widget _buildTestApp(
   QuestionRepository? questionRepo,
   MasteryRecorder? masteryRecorder,
 }) {
+  final fakeQRepo = questionRepo ?? _FakeQuestionRepository([]);
+  final srService = _FakeSpacedRepetitionService(questionRepo: fakeQRepo);
+  final mgService = _FakeMasteryGraphService();
   return ProviderScope(
     overrides: [
-      questionRepositoryProvider.overrideWithValue(
-        questionRepo ?? _FakeQuestionRepository([]),
-      ),
+      questionRepositoryProvider.overrideWithValue(fakeQRepo),
       masteryRecorderProvider.overrideWithValue(
         masteryRecorder ?? _FakeMasteryRecorder(),
       ),
+      spacedRepetitionServiceProvider.overrideWithValue(srService),
+      masteryGraphServiceProvider.overrideWithValue(mgService),
+      focusPracticeServiceProvider.overrideWithValue(
+        FocusPracticeService(
+          srService: srService,
+          masteryGraphService: mgService,
+          sessionRepository: _FakeSessionRepository(),
+          questionRepository: fakeQRepo,
+        ),
+      ),
+      studentIdValueProvider.overrideWithValue('test-student'),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -78,6 +141,7 @@ Question typedQuestion({
   required String id,
   String correctAnswer = 'Paris',
   String explanation = 'Paris is the capital of France.',
+  DateTime? nextReview,
 }) {
   return Question(
     id: id,
@@ -91,6 +155,7 @@ Question typedQuestion({
     ),
     createdAt: DateTime(2026, 5, 19),
     updatedAt: DateTime(2026, 5, 19),
+    nextReview: nextReview,
   );
 }
 
@@ -125,10 +190,26 @@ void main() {
     testWidgets('renders PracticeSessionQuestionCard when questions available', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
+      expect(find.byType(PracticeSessionQuestionCard), findsOneWidget);
+    });
+
+    testWidgets('loads due questions when not quick practice mode', (tester) async {
+      final past = DateTime.now().subtract(const Duration(hours: 2));
+      final future = DateTime.now().add(const Duration(days: 1));
+      final questions = [
+        typedQuestion(id: 'q1', nextReview: past),
+        typedQuestion(id: 'q2', nextReview: future),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.spacedRepetition),
+        questionRepo: _FakeQuestionRepository(questions),
+      ));
+      await tester.pumpAndSettle();
+
       expect(find.byType(PracticeSessionQuestionCard), findsOneWidget);
     });
 
@@ -138,7 +219,7 @@ void main() {
         typedQuestion(id: 'q2'),
       ];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -151,7 +232,7 @@ void main() {
     testWidgets('shows answer count text with correct label', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -161,7 +242,7 @@ void main() {
     testWidgets('shows submit button before answering', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -171,7 +252,7 @@ void main() {
     testWidgets('shows PracticeFeedbackWidget with Correct! after correct answer', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -188,7 +269,7 @@ void main() {
     testWidgets('shows PracticeFeedbackWidget with Incorrect after wrong answer', (tester) async {
       final questions = [typedQuestion(id: 'q1', correctAnswer: 'Berlin')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -205,7 +286,7 @@ void main() {
     testWidgets('shows explanation in feedback widget after correct answer', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -224,7 +305,7 @@ void main() {
         typedQuestion(id: 'q2'),
       ];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -240,7 +321,7 @@ void main() {
     testWidgets('shows Done button on last question after correct answer', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -261,6 +342,7 @@ void main() {
 
       await tester.pumpWidget(_buildTestApp(
         InlinePracticeWidget(
+          sessionType: FocusSessionType.quickPractice,
           onComplete: (correct, total, accuracies) {
             capturedCorrect = correct;
             capturedTotal = total;
@@ -277,6 +359,8 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(find.text('Done'));
       await tester.pumpAndSettle();
+      await tester.tap(find.text('Close'));
+      await tester.pumpAndSettle();
 
       expect(capturedCorrect, 1);
       expect(capturedTotal, 1);
@@ -289,7 +373,7 @@ void main() {
     testWidgets('shows completion card with score after finishing', (tester) async {
       final questions = [typedQuestion(id: 'q1')];
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
@@ -305,6 +389,27 @@ void main() {
       expect(find.text('Correct!'), findsOneWidget);
       expect(find.textContaining('1 / 1'), findsOneWidget);
       expect(find.text('Close'), findsOneWidget);
+    });
+
+    testWidgets('records all attempts (correct and incorrect) via MasteryRecorder', (tester) async {
+      final recorder = _FakeMasteryRecorder();
+      final questions = [typedQuestion(id: 'q1', correctAnswer: 'Berlin')];
+      await tester.pumpWidget(_buildTestApp(
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
+        questionRepo: _FakeQuestionRepository(questions),
+        masteryRecorder: recorder,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'London');
+      await tester.pump();
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Done'));
+      await tester.pumpAndSettle();
+
+      expect(recorder.recordAttemptCallCount, 1);
+      expect(recorder.lastIsCorrect, false);
     });
 
     testWidgets('filters questions by subjectId when provided', (tester) async {
@@ -324,6 +429,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(
         InlinePracticeWidget(
           subjectId: 'sub-2',
+          sessionType: FocusSessionType.quickPractice,
           onComplete: _noopOnComplete,
         ),
         questionRepo: _FakeQuestionRepository(questions),
@@ -337,7 +443,7 @@ void main() {
     testWidgets('uses default questionCount of 10', (tester) async {
       final questions = List.generate(15, (i) => typedQuestion(id: 'q$i'));
       await tester.pumpWidget(_buildTestApp(
-        InlinePracticeWidget(onComplete: _noopOnComplete),
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();

@@ -428,5 +428,83 @@ void main() {
         expect(result.questionsAnswered, isNot(result.correctAnswers));
       });
     });
+
+    group('topicBreakdown', () {
+      test('defaults to empty map when not provided', () {
+        final result = PracticeSessionResult(
+          questionsAnswered: 10,
+          correctAnswers: 7,
+        );
+
+        expect(result.topicBreakdown, isEmpty);
+      });
+
+      test('accepts custom topic breakdown with multiple entries', () {
+        final breakdown = {
+          'algebra': 0.85,
+          'geometry': 0.72,
+          'calculus': 0.91,
+        };
+        final result = PracticeSessionResult(
+          questionsAnswered: 30,
+          correctAnswers: 24,
+          topicBreakdown: breakdown,
+        );
+
+        expect(result.topicBreakdown, hasLength(3));
+        expect(result.topicBreakdown['algebra'], 0.85);
+        expect(result.topicBreakdown['geometry'], 0.72);
+        expect(result.topicBreakdown['calculus'], 0.91);
+      });
+
+      test('accepts empty map explicitly', () {
+        final result = PracticeSessionResult(
+          questionsAnswered: 5,
+          correctAnswers: 3,
+          topicBreakdown: {},
+        );
+
+        expect(result.topicBreakdown, isEmpty);
+      });
+
+      test('accepts single entry', () {
+        final result = PracticeSessionResult(
+          questionsAnswered: 2,
+          correctAnswers: 2,
+          topicBreakdown: {'trigonometry': 1.0},
+        );
+
+        expect(result.topicBreakdown, hasLength(1));
+        expect(result.topicBreakdown['trigonometry'], 1.0);
+      });
+
+      test('accepts fractional and edge values', () {
+        final result = PracticeSessionResult(
+          questionsAnswered: 1,
+          correctAnswers: 0,
+          topicBreakdown: {'physics': 0.0},
+        );
+
+        expect(result.topicBreakdown['physics'], 0.0);
+      });
+
+      test('stores distinct map per instance', () {
+        final result1 = PracticeSessionResult(
+          questionsAnswered: 5,
+          correctAnswers: 3,
+          topicBreakdown: {'topic_a': 0.6},
+        );
+        final result2 = PracticeSessionResult(
+          questionsAnswered: 5,
+          correctAnswers: 3,
+          topicBreakdown: {'topic_b': 0.8},
+        );
+
+        expect(result1.topicBreakdown, hasLength(1));
+        expect(result2.topicBreakdown, hasLength(1));
+        expect(result1.topicBreakdown.keys, contains('topic_a'));
+        expect(result2.topicBreakdown.keys, contains('topic_b'));
+      });
+    });
   });
 }

@@ -3,12 +3,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/due_reviews_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
-Widget _buildTestApp(DueReviewsCard card) {
+Widget _buildTestApp(DueReviewsCard card, {TestNavigatorObserver? navigatorObserver}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     home: Scaffold(body: card),
   );
 }
@@ -95,5 +97,7 @@ void main() {
 
       expect(find.text('Math'), findsNothing);
     });
+
+    // DueReviewsCard is a pure rendering widget with no navigation callbacks.
   });
 }

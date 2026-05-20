@@ -9,6 +9,7 @@ class PracticeModeGrid extends StatelessWidget {
   final Map<String, int> dueCounts;
   final bool hasSubjects;
   final int totalQuestionCount;
+  final bool isNewUser;
   final VoidCallback onQuickPractice;
   final VoidCallback onSpacedRepetition;
   final VoidCallback onTopicFocus;
@@ -20,6 +21,7 @@ class PracticeModeGrid extends StatelessWidget {
     required this.dueCounts,
     required this.hasSubjects,
     this.totalQuestionCount = 0,
+    this.isNewUser = false,
     required this.onQuickPractice,
     required this.onSpacedRepetition,
     required this.onTopicFocus,
@@ -55,6 +57,29 @@ class PracticeModeGrid extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (isNewUser) ...[
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Row(
+                children: [
+                  Icon(Icons.lightbulb_outline, size: 20, color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      l10n.firstPracticeBanner,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.onPrimaryContainer,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        ],
         Text(
           l10n.practiceModes,
           style: Theme.of(context).textTheme.titleLarge?.copyWith(

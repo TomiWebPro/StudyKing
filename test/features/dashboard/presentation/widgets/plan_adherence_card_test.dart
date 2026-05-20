@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
-Widget _buildTestApp(Widget child) {
+Widget _buildTestApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
+    navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
   );
@@ -155,5 +157,7 @@ void main() {
       expect(find.text('39%'), findsOneWidget);
       expect(find.text('35%'), findsOneWidget);
     });
+
+    // PlanAdherenceCard is a pure rendering widget with no navigation callbacks.
   });
 }

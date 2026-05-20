@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';

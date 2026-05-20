@@ -1,22 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
+import 'package:studyking/core/widgets/practice_performance_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SessionSummaryCard extends StatelessWidget {
   final Map<String, dynamic>? todayStats;
   final int weeklyMs;
   final List<Session> recentSessions;
+  final FocusSession? lastPracticeSession;
 
   const SessionSummaryCard({
     super.key,
     this.todayStats,
     this.weeklyMs = 0,
     this.recentSessions = const [],
+    this.lastPracticeSession,
   });
 
   @override
@@ -87,6 +91,10 @@ class SessionSummaryCard extends StatelessWidget {
                 );
               },
             ),
+            if (lastPracticeSession != null && lastPracticeSession!.questionsAnswered > 0) ...[
+              const SizedBox(height: 16),
+              _buildPracticePerformance(context, theme, cs, l10n),
+            ],
             if (recentSessions.isNotEmpty) ...[
               const SizedBox(height: 16),
               Text(
@@ -134,5 +142,9 @@ class SessionSummaryCard extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Widget _buildPracticePerformance(BuildContext context, ThemeData theme, ColorScheme cs, AppLocalizations l10n) {
+    return PracticePerformanceCard(session: lastPracticeSession!);
   }
 }

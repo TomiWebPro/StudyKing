@@ -82,14 +82,15 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
 
   void _openTutorMode() {
     if (!mounted) return;
+    final argsSubjectId = widget.args.subjectId ?? '';
     Navigator.pushNamed(
       context,
       AppRoutes.tutor,
       arguments: TutorArgs(
         topicId: widget.args.topicId,
         topicTitle: widget.args.topicTitle,
-        subjectId: (widget.args.subjectId ?? '').isNotEmpty
-            ? (widget.args.subjectId ?? '')
+        subjectId: argsSubjectId.isNotEmpty
+            ? argsSubjectId
             : _lesson?.subjectId ?? '',
         durationMinutes: _defaultDurationMinutes,
       ),

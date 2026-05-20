@@ -2,23 +2,86 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/widgets/empty_state_widget.dart';
 
-class EmptyDashboardChecklist extends StatelessWidget {
+class EmptyDashboardChecklist extends StatefulWidget {
   final ChecklistProgress progress;
 
   const EmptyDashboardChecklist({super.key, this.progress = const ChecklistProgress()});
+
+  @override
+  State<EmptyDashboardChecklist> createState() => _EmptyDashboardChecklistState();
+}
+
+class _EmptyDashboardChecklistState extends State<EmptyDashboardChecklist> {
+  bool _showCelebration = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.progress.isComplete) {
+      _showCelebration = true;
+    }
+  }
+
+  @override
+  void didUpdateWidget(EmptyDashboardChecklist oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (!oldWidget.progress.isComplete && widget.progress.isComplete) {
+      setState(() => _showCelebration = true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
 
-    if (progress.isComplete) {
-      return EmptyStateWidget(
-        icon: Icons.checklist,
-        title: l10n.allCaughtUp,
-        subtitle: l10n.gettingStartedDesc,
+    if (_showCelebration) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            children: [
+              Icon(Icons.celebration, size: 64, color: theme.colorScheme.primary),
+              const SizedBox(height: 16),
+              Text(
+                l10n.setupCompleteTitle,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: theme.colorScheme.primary,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                l10n.setupCompleteDesc,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 24),
+              Text(
+                l10n.suggestedNextActions,
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              _buildSuggestionChip(context, Icons.quiz, l10n.suggestedPrompts),
+              const SizedBox(height: 8),
+              _buildSuggestionChip(context, Icons.smart_toy, l10n.scheduleAiTutorDesc),
+              const SizedBox(height: 8),
+              _buildSuggestionChip(context, Icons.auto_awesome, l10n.mentor),
+              const SizedBox(height: 24),
+              FilledButton(
+                onPressed: () => setState(() => _showCelebration = false),
+                child: Text(l10n.getStarted),
+              ),
+            ],
+          ),
+        ),
       );
     }
 
@@ -29,31 +92,34 @@ class EmptyDashboardChecklist extends StatelessWidget {
         subtitle: l10n.addSubjectDesc,
         stepNumber: 1,
         onTap: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
-        completed: progress.hasSubjects,
+        completed: widget.progress.hasSubjects,
       ),
       _ChecklistData(
         icon: Icons.upload_file,
         title: l10n.uploadMaterial,
         subtitle: l10n.uploadMaterialDesc,
+        hint: l10n.configureApiKey,
         stepNumber: 2,
         onTap: () => Navigator.pushNamed(context, AppRoutes.upload),
-        completed: progress.hasSources,
+        completed: widget.progress.hasSources,
       ),
       _ChecklistData(
         icon: Icons.quiz,
-        title: l10n.takePracticeQuiz,
+        title: l10n.startPracticing,
         subtitle: l10n.takePracticeQuizDesc,
+        hint: l10n.uploadMaterial,
         stepNumber: 3,
         onTap: () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
-        completed: progress.hasPracticeSessions,
+        completed: widget.progress.hasPracticeSessions,
       ),
       _ChecklistData(
         icon: Icons.smart_toy,
         title: l10n.scheduleAiTutor,
         subtitle: l10n.scheduleAiTutorDesc,
+        hint: l10n.generatePlan,
         stepNumber: 4,
         onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
-        completed: progress.hasScheduledLessons,
+        completed: widget.progress.hasScheduledLessons,
       ),
     ];
 
@@ -75,7 +141,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
                     style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold),
                   ),
                 ),
-                if (!progress.isEmpty)
+                if (!widget.progress.isEmpty)
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
@@ -83,7 +149,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Text(
-                      '${progress.completedCount} / ${progress.totalCount}',
+                      '${widget.progress.completedCount} / ${widget.progress.totalCount}',
                       style: theme.textTheme.labelSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: theme.colorScheme.onPrimaryContainer,
@@ -105,6 +171,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
               final item = entry.value;
               final isFirstIncomplete = i == firstIncompleteIndex;
               final showStepNumber = item.completed;
+              final showHint = !item.completed && item.hint != null && isFirstIncomplete;
 
               return Padding(
                 padding: EdgeInsets.only(bottom: i < items.length - 1 ? 16 : 0),
@@ -206,18 +273,39 @@ class EmptyDashboardChecklist extends StatelessWidget {
                                             ),
                                           ),
                                         ),
-                                      Text(
-                                        item.completed ? l10n.completed : item.subtitle,
-                                        style: theme.textTheme.bodySmall?.copyWith(
-                                          color: item.completed
-                                              ? theme.colorScheme.primary
-                                              : isFirstIncomplete
-                                                  ? theme.colorScheme.primary
-                                                  : theme.colorScheme.onSurfaceVariant,
+                                      Expanded(
+                                        child: Text(
+                                          item.completed ? l10n.completed : item.subtitle,
+                                          style: theme.textTheme.bodySmall?.copyWith(
+                                            color: item.completed
+                                                ? theme.colorScheme.primary
+                                                : isFirstIncomplete
+                                                    ? theme.colorScheme.primary
+                                                    : theme.colorScheme.onSurfaceVariant,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
+                                  if (showHint && item.hint != null)
+                                    Padding(
+                                      padding: const EdgeInsets.only(top: 4),
+                                      child: Row(
+                                        children: [
+                                          Icon(Icons.info_outline, size: 12, color: theme.colorScheme.onSurfaceVariant),
+                                          const SizedBox(width: 4),
+                                          Flexible(
+                                            child: Text(
+                                              item.hint!,
+                                              style: theme.textTheme.labelSmall?.copyWith(
+                                                color: theme.colorScheme.onSurfaceVariant,
+                                                fontStyle: FontStyle.italic,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
                                 ],
                               ),
                             ),
@@ -243,12 +331,36 @@ class EmptyDashboardChecklist extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildSuggestionChip(BuildContext context, IconData icon, String label) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              label,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ChecklistData {
   final IconData icon;
   final String title;
   final String subtitle;
+  final String? hint;
   final int stepNumber;
   final VoidCallback onTap;
   final bool completed;
@@ -257,6 +369,7 @@ class _ChecklistData {
     required this.icon,
     required this.title,
     required this.subtitle,
+    this.hint,
     required this.stepNumber,
     required this.onTap,
     this.completed = false,
