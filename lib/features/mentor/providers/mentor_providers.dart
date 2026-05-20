@@ -12,7 +12,10 @@ import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+final _mentorProvidersLogger = const Logger('MentorProviders');
 
 final mentorAttemptRepositoryProvider = Provider<AttemptRepository>((ref) {
   return AttemptRepository();
@@ -20,7 +23,10 @@ final mentorAttemptRepositoryProvider = Provider<AttemptRepository>((ref) {
 
 final mentorProgressTrackerProvider = Provider<StudyProgressTracker>((ref) {
   final l10n = ref.watch(l10nProvider);
-  final defaultL10n = lookupAppLocalizations(const Locale('en'));
+  final defaultL10n = l10n ?? ((){
+    _mentorProvidersLogger.w('l10nProvider returned null for mentorProgressTrackerProvider, using English fallback');
+    return lookupAppLocalizations(const Locale('en'));
+  })();
   final tracker = StudyProgressTracker(
     attemptRepo: ref.watch(mentorAttemptRepositoryProvider),
     masteryService: ref.watch(masteryGraphServiceProvider),

@@ -125,5 +125,91 @@ void main() {
       final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
       expect(sessionsBox.isEmpty, isTrue);
     });
+
+    test('handles corrupt JSON entry gracefully', () async {
+      await Hive.openBox<String>(HiveBoxNames.focusSessions);
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+      final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+      focusBox.put('corrupt', 'not-valid-json-at-all{{{');
+
+      await SessionMigrationService.migrateIfNeeded();
+
+      final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
+      expect(sessionsBox.isEmpty, isTrue);
+    });
+
+    test('handles missing required fields in JSON gracefully', () async {
+      await Hive.openBox<String>(HiveBoxNames.focusSessions);
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+      final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+      focusBox.put('partial', jsonEncode({
+        'id': 'partial-1',
+        'studentId': 'stu-1',
+      }));
+
+      await SessionMigrationService.migrateIfNeeded();
+
+      final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
+      expect(sessionsBox.length, 1);
+      final migrated = sessionsBox.get('partial-1')!;
+      expect(migrated.id, 'partial-1');
+    });
+
+    test('handles results from second call gracefully (idempotent)', () async {
+      await Hive.openBox<String>(HiveBoxNames.focusSessions);
+      await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+      final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+      focusBox.put('s1', jsonEncode(createFocusSessionJson(id: 'f1')));
+
+      await SessionMigrationService.migrateIfNeeded();
+      await SessionMigrationService.migrateIfNeeded();
+
+      final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
+      expect(sessionsBox.length, 1);
+    });
+
+    group('error-state: result return values', () {
+      test('migrateIfNeeded returns success on clean migration', () async {
+        await Hive.openBox<String>(HiveBoxNames.focusSessions);
+        await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+        final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+        focusBox.put('s1', jsonEncode(createFocusSessionJson(id: 'ok-1')));
+
+        final result = await SessionMigrationService.migrateIfNeeded();
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('migrateIfNeeded returns success for empty focus box', () async {
+        await Hive.openBox<String>(HiveBoxNames.focusSessions);
+        await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+        final result = await SessionMigrationService.migrateIfNeeded();
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('migrateIfNeeded is idempotent at Result level', () async {
+        await Hive.openBox<String>(HiveBoxNames.focusSessions);
+        await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+
+        final result1 = await SessionMigrationService.migrateIfNeeded();
+        final result2 = await SessionMigrationService.migrateIfNeeded();
+
+        expect(result1.isSuccess, isTrue);
+        expect(result2.isSuccess, isTrue);
+      });
+
+      test('migrateIfNeeded returns failure when Hive throws', () async {
+        // Do NOT open boxes - Hive will throw when trying to access them
+        await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
+        // focus_sessions box not opened -> Hive.box will throw
+
+        final result = await SessionMigrationService.migrateIfNeeded();
+        expect(result.isFailure, isTrue);
+      });
+    });
   });
 }

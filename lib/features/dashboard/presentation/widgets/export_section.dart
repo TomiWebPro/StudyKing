@@ -9,7 +9,9 @@ import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/features/settings/providers/settings_providers.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ExportSection extends ConsumerWidget {
@@ -112,7 +114,7 @@ class ExportSection extends ConsumerWidget {
             const SizedBox(width: 16),
             TextButton.icon(
               onPressed: () =>
-                  Navigator.pushNamed(context, AppRoutes.settings),
+                  _exportBackupDirect(context, ref),
               icon: Icon(Icons.backup, size: 16,
                   color: Theme.of(context).colorScheme.primary),
               label: Text(
@@ -277,6 +279,49 @@ class ExportSection extends ConsumerWidget {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
+    }
+  }
+
+  Future<void> _exportBackupDirect(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context)!;
+    final confirmed = await _showExportConfirmation(
+      context,
+      l10n.exportBackup,
+      l10n.comprehensiveReportExported,
+      l10n.exportCsvDetail,
+    );
+    if (!confirmed || !context.mounted) return;
+    try {
+      final backupService = ref.read(dataBackupServiceProvider);
+      final boxData = backupService.collectAllBoxData();
+      final result = await backupService.exportAllData(boxData: boxData);
+      if (result.isSuccess && context.mounted) {
+        final filePath = result.data!;
+        final fileSize = await XFile(filePath).length();
+        final localeName = l10n.localeName;
+        final sizeStr = fileSize > 1048576
+            ? '${formatDecimal(fileSize / 1048576, localeName, maxFractionDigits: 1)} MB'
+            : fileSize > 1024
+                ? '${formatDecimal(fileSize / 1024, localeName, maxFractionDigits: 0)} KB'
+                : '$fileSize B';
+        final shareText = l10n.exportBackup;
+        await Share.shareXFiles(
+          [XFile(filePath)],
+          text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)} — $sizeStr',
+        );
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.backupExported)),
+          );
+        }
+      }
+    } catch (e) {
+      if (context.mounted) {
+        _logger.w('Dashboard backup failed', e);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.backupExportFailedWithError(l10n.somethingWentWrong))),
+        );
+      }
     }
   }
 

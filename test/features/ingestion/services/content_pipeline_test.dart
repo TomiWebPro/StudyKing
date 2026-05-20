@@ -171,6 +171,7 @@ void main() {
       topicRepository: mockTopicRepo,
       questionRepository: mockQuestionRepo,
       modelId: 'test-model',
+      localeName: 'en',
     );
   });
 

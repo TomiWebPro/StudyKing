@@ -33,5 +33,17 @@ void main() {
       expect(a1 == a2, isTrue);
       expect(a1.hashCode, a2.hashCode);
     });
+
+    test('handles adapter already registered', () {
+      if (!Hive.isAdapterRegistered(17)) {
+        Hive.registerAdapter(TopicDependencyAdapter());
+      }
+      expect(() => registerSubjectsAdapters(), returnsNormally);
+    });
+
+    test('registers correct adapter type', () {
+      registerSubjectsAdapters();
+      expect(Hive.isAdapterRegistered(17), isTrue);
+    });
   });
 }

@@ -8,6 +8,7 @@ import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
 import '../services/notification_service.dart';
 import '../services/plan_adherence_orchestrator.dart';
+import '../services/settings_service.dart';
 import '../utils/number_format_utils.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
@@ -41,7 +42,7 @@ class EngagementSchedulerConfig {
 class EngagementScheduler {
   static final Logger _logger = const Logger('EngagementScheduler');
 
-  // TODO(m21): Unify overwork/revision nudge logic with MentorWellbeingService.
+  // TODO: Unify overwork/revision nudge logic with MentorWellbeingService.
   // Both this class and MentorWellbeingService independently check overwork and
   // revision conditions and generate EngagementNudgeModel entries. Consider
   // consolidating into a single wellbeing orchestrator to avoid duplicate nudges.
@@ -183,11 +184,8 @@ class EngagementScheduler {
   }
 
   int _getMentorCheckinFrequency() {
-    final s = _settingsBox;
-    if (s == null) return 1;
     try {
-      final box = Hive.box(HiveBoxNames.settings);
-      return box.get('mentorCheckinFrequencyDays', defaultValue: 1) as int;
+      return SettingsService.getMentorCheckinFrequency();
     } catch (e) {
       _logger.w('Failed to get mentor checkin frequency: $e');
       return 1;
@@ -253,7 +251,7 @@ class EngagementScheduler {
     try {
       final nudges = await getOverworkNudge(studentId);
       for (final nudge in nudges) {
-        await _persistNudge('overwork', studentId, nudge);
+        await _nudgeRepository.create(nudge);
         await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
           hoursStudied: double.tryParse(
@@ -274,7 +272,7 @@ class EngagementScheduler {
     try {
       final nudges = await getRevisionNudges(studentId);
       for (final nudge in nudges) {
-        await _persistNudge('revision', studentId, nudge, topicId: nudge.topicId);
+        await _nudgeRepository.create(nudge);
         if (nudge.topicId != null) {
           final days = _extractInt(nudge.message) ?? 3;
           await _notificationService.showRevisionNudge(
@@ -297,7 +295,7 @@ class EngagementScheduler {
     try {
       final nudges = await getPlanAdjustmentNudge(studentId);
       for (final nudge in nudges) {
-        await _persistNudge('plan', studentId, nudge);
+        await _nudgeRepository.create(nudge);
         final days = _extractInt(nudge.message) ?? 3;
         await _notificationService.showPlanAdjustmentSuggestion(
           id: _notificationIdCounter++,
@@ -380,23 +378,7 @@ class EngagementScheduler {
     return match != null ? int.parse(match.group(1)!) : null;
   }
 
-  Future<void> _persistNudge(
-    String prefix,
-    String studentId,
-    EngagementNudge nudge, {
-    String? topicId,
-  }) async {
-    await _nudgeRepository.create(EngagementNudgeModel(
-      id: '${prefix}_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-      studentId: studentId,
-      nudgeType: nudge.type.name,
-      message: nudge.message,
-      severity: nudge.severity.name,
-      topicId: topicId,
-    ));
-  }
-
-  Future<List<EngagementNudge>> getOverworkNudge(String studentId) async {
+  Future<List<EngagementNudgeModel>> getOverworkNudge(String studentId) async {
     double totalHours = 0;
     final statsResult = await _tracker.getOverallStats(studentId);
     if (statsResult.isSuccess) {
@@ -423,26 +405,30 @@ class EngagementScheduler {
     if (totalHours > Timeouts.overworkThresholdHours) {
       final localeName = _l10n.localeName;
       final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
-      return [EngagementNudge(
-        type: NudgeType.overwork,
+      return [EngagementNudgeModel(
+        id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+        studentId: studentId,
+        nudgeType: NudgeType.overwork.name,
         message: _l10n.nudgeOverwork(hoursStr),
-        severity: NudgeSeverity.medium,
+        severity: NudgeSeverity.medium.name,
       )];
     }
     return [];
   }
 
-  Future<List<EngagementNudge>> getRevisionNudges(String studentId) async {
-    final nudges = <EngagementNudge>[];
+  Future<List<EngagementNudgeModel>> getRevisionNudges(String studentId) async {
+    final nudges = <EngagementNudgeModel>[];
     final weakResult = await _masteryService.getTopicsNeedingReview(studentId);
     if (weakResult.isSuccess) {
       for (final state in weakResult.data!) {
         final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
         if (daysSince >= 3) {
-          nudges.add(EngagementNudge(
-            type: NudgeType.revision,
+          nudges.add(EngagementNudgeModel(
+            id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+            studentId: studentId,
+            nudgeType: NudgeType.revision.name,
             message: _l10n.nudgeRevision(daysSince, state.topicId),
-            severity: daysSince >= 7 ? NudgeSeverity.high : NudgeSeverity.low,
+            severity: daysSince >= 7 ? NudgeSeverity.high.name : NudgeSeverity.low.name,
             topicId: state.topicId,
           ));
         }
@@ -451,15 +437,18 @@ class EngagementScheduler {
     return nudges;
   }
 
-  Future<List<EngagementNudge>> getPlanAdjustmentNudge(String studentId) async {
-    final nudges = <EngagementNudge>[];
+  Future<List<EngagementNudgeModel>> getPlanAdjustmentNudge(String studentId) async {
+    final nudges = <EngagementNudgeModel>[];
     try {
-      final consecutiveLow = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      final consecutiveLowResult = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      final consecutiveLow = consecutiveLowResult.data ?? 0;
       if (consecutiveLow >= 3) {
-        nudges.add(EngagementNudge(
-          type: NudgeType.planAdjustment,
+        nudges.add(EngagementNudgeModel(
+          id: 'plan_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+          studentId: studentId,
+          nudgeType: NudgeType.planAdjustment.name,
           message: _l10n.nudgePlanAdjustment(consecutiveLow),
-          severity: NudgeSeverity.medium,
+          severity: NudgeSeverity.medium.name,
         ));
       }
     } catch (e) {
@@ -501,17 +490,3 @@ class EngagementScheduler {
 }
 
 // NudgeType and NudgeSeverity are imported from engagement_nudge_model.dart
-
-class EngagementNudge {
-  final NudgeType type;
-  final String message;
-  final NudgeSeverity severity;
-  final String? topicId;
-
-  EngagementNudge({
-    required this.type,
-    required this.message,
-    required this.severity,
-    this.topicId,
-  });
-}

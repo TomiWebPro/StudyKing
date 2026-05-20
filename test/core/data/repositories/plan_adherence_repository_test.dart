@@ -11,13 +11,14 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final Map<String, PlanAdherenceModel> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   bool get _isReady => true;
 
   @override
-  Future<void> create(PlanAdherenceModel model) async {
+  Future<Result<void>> create(PlanAdherenceModel model) async {
     _storage[model.id] = model;
+    return Result.success(null);
   }
 
   @override
@@ -26,47 +27,51 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    if (!_isReady) return [];
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    if (!_isReady) return Result.success([]);
     final results = _storage.values
         .where((m) => m.studentId == studentId)
         .toList()
       ..sort((a, b) => b.date.compareTo(a.date));
-    return results;
+    return Result.success(results);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getByDateRange(
+  Future<Result<List<PlanAdherenceModel>>> getByDateRange(
       String studentId, DateTime start, DateTime end) async {
-    if (!_isReady) return [];
-    return _storage.values
+    if (!_isReady) return Result.success([]);
+    return Result.success(_storage.values
         .where((m) =>
             m.studentId == studentId &&
             m.date.isAfter(start) &&
             m.date.isBefore(end))
         .toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+      ..sort((a, b) => b.date.compareTo(a.date)));
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async {
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async {
     final now = DateTime.now();
     final weekAgo = now.subtract(const Duration(days: 7));
     return getByDateRange(studentId, weekAgo, now);
   }
 
   @override
-  Future<double> getAverageAdherence(String studentId) async {
-    final metrics = await getByStudent(studentId);
-    if (metrics.isEmpty) return 0.0;
-    return metrics.fold<double>(0.0, (sum, m) => sum + m.adherenceScore) /
-        metrics.length;
+  Future<Result<double>> getAverageAdherence(String studentId) async {
+    final result = await getByStudent(studentId);
+    if (result.isFailure) return Result.success(0.0);
+    final metrics = result.data!;
+    if (metrics.isEmpty) return Result.success(0.0);
+    return Result.success(metrics.fold<double>(0.0, (sum, m) => sum + m.adherenceScore) /
+        metrics.length);
   }
 
   @override
-  Future<int> getConsecutiveLowAdherenceDays(String studentId,
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId,
       {double threshold = 0.5}) async {
-    final metrics = await getByStudent(studentId);
+    final result = await getByStudent(studentId);
+    if (result.isFailure) return Result.success(0);
+    final metrics = result.data!;
     int consecutive = 0;
     for (final metric in metrics) {
       if (metric.adherenceScore < threshold) {
@@ -75,12 +80,12 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
         break;
       }
     }
-    return consecutive;
+    return Result.success(consecutive);
   }
 
   @override
-  Future<PlanAdherenceModel?> getToday(String studentId) async {
-    if (!_isReady) return null;
+  Future<Result<PlanAdherenceModel?>> getToday(String studentId) async {
+    if (!_isReady) return Result.success(null);
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
     final endOfDay = startOfDay.add(const Duration(days: 1));
@@ -88,7 +93,7 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
         m.studentId == studentId &&
         m.date.isAfter(startOfDay) &&
         m.date.isBefore(endOfDay));
-    return todayMetrics.isNotEmpty ? todayMetrics.first : null;
+    return Result.success(todayMetrics.isNotEmpty ? todayMetrics.first : null);
   }
 
   @override
@@ -98,14 +103,15 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   }
 
   @override
-  Future<void> deleteByStudent(String studentId) async {
-    if (!_isReady) return;
+  Future<Result<void>> deleteByStudent(String studentId) async {
+    if (!_isReady) return Result.success(null);
     final metrics = _storage.values
         .where((m) => m.studentId == studentId)
         .toList();
     for (final m in metrics) {
       _storage.remove(m.id);
     }
+    return Result.success(null);
   }
 }
 
@@ -183,12 +189,12 @@ void main() {
         await repository.create(createTestAdherence(
           id: 'a3', studentId: 's2'));
         final result = await repository.getByStudent('s1');
-        expect(result.length, 2);
-        expect(result.first.id, 'a2');
+        expect(result.data!.length, 2);
+        expect(result.data!.first.id, 'a2');
       });
 
       test('returns empty list for student with no records', () async {
-        expect(await repository.getByStudent('none'), isEmpty);
+        expect((await repository.getByStudent('none')).data, isEmpty);
       });
     });
 
@@ -205,8 +211,8 @@ void main() {
           DateTime(2024, 6, 1),
           DateTime(2024, 7, 1),
         );
-        expect(result.length, 1);
-        expect(result.first.id, 'a2');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.id, 'a2');
       });
 
       test('returns empty when no records in range', () async {
@@ -217,7 +223,7 @@ void main() {
           DateTime(2024, 6, 1),
           DateTime(2024, 7, 1),
         );
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -230,15 +236,15 @@ void main() {
           id: 'a2', studentId: 's1',
           date: DateTime.now().subtract(const Duration(days: 10))));
         final result = await repository.getWeekly('s1');
-        expect(result.length, 1);
-        expect(result.first.id, 'a1');
+        expect(result.data!.length, 1);
+        expect(result.data!.first.id, 'a1');
       });
 
       test('returns empty when no records in last week', () async {
         await repository.create(createTestAdherence(
           id: 'a1', studentId: 's1',
           date: DateTime.now().subtract(const Duration(days: 14))));
-        expect(await repository.getWeekly('s1'), isEmpty);
+        expect((await repository.getWeekly('s1')).data, isEmpty);
       });
     });
 
@@ -248,11 +254,11 @@ void main() {
           id: 'a1', studentId: 's1', adherenceScore: 0.8));
         await repository.create(createTestAdherence(
           id: 'a2', studentId: 's1', adherenceScore: 0.6));
-        expect(await repository.getAverageAdherence('s1'), closeTo(0.7, 0.001));
+        expect((await repository.getAverageAdherence('s1')).data, closeTo(0.7, 0.001));
       });
 
       test('returns 0.0 when no records', () async {
-        expect(await repository.getAverageAdherence('none'), 0.0);
+        expect((await repository.getAverageAdherence('none')).data, 0.0);
       });
     });
 
@@ -268,7 +274,7 @@ void main() {
           id: 'a3', studentId: 's1', date: DateTime(2024, 6, 1),
           adherenceScore: 0.9));
         expect(
-          await repository.getConsecutiveLowAdherenceDays('s1'), 2);
+          (await repository.getConsecutiveLowAdherenceDays('s1')).data, 2);
       });
 
       test('stops counting at first non-low day', () async {
@@ -279,12 +285,12 @@ void main() {
           id: 'a2', studentId: 's1', date: DateTime(2024, 6, 2),
           adherenceScore: 0.3));
         expect(
-          await repository.getConsecutiveLowAdherenceDays('s1'), 0);
+          (await repository.getConsecutiveLowAdherenceDays('s1')).data, 0);
       });
 
       test('returns 0 when no records', () async {
         expect(
-          await repository.getConsecutiveLowAdherenceDays('none'), 0);
+          (await repository.getConsecutiveLowAdherenceDays('none')).data, 0);
       });
     });
 
@@ -293,15 +299,15 @@ void main() {
         await repository.create(createTestAdherence(
           id: 'a1', studentId: 's1', date: DateTime.now()));
         final result = await repository.getToday('s1');
-        expect(result, isNotNull);
-        expect(result?.id, 'a1');
+        expect(result.data, isNotNull);
+        expect(result.data?.id, 'a1');
       });
 
       test('returns null when no today record', () async {
         await repository.create(createTestAdherence(
           id: 'a1', studentId: 's1',
           date: DateTime.now().subtract(const Duration(days: 1))));
-        expect(await repository.getToday('s1'), isNull);
+        expect((await repository.getToday('s1')).data, isNull);
       });
     });
 
@@ -446,8 +452,8 @@ void main() {
         id: 'd3', studentId: 's1', date: DateTime(2025, 7, 1)));
       final result = await repository.getByDateRange(
         's1', DateTime(2025, 6, 5), DateTime(2025, 6, 25));
-      expect(result.length, 1);
-      expect(result.first.id, 'd2');
+      expect(result.data!.length, 1);
+      expect(result.data!.first.id, 'd2');
     });
 
     test('getWeekly returns last 7 days', () async {
@@ -456,15 +462,15 @@ void main() {
       await repository.create(createTestAdherence(
         id: 'w2', studentId: 's1', date: DateTime.now().subtract(const Duration(days: 14))));
       final result = await repository.getWeekly('s1');
-      expect(result.length, 1);
-      expect(result.first.id, 'w1');
+      expect(result.data!.length, 1);
+      expect(result.data!.first.id, 'w1');
     });
 
     test('getAverageAdherence computes average', () async {
       await repository.create(createTestAdherence(id: 'avg1', studentId: 's1', adherenceScore: 0.8));
       await repository.create(createTestAdherence(id: 'avg2', studentId: 's1', adherenceScore: 0.6));
       final avg = await repository.getAverageAdherence('s1');
-      expect(avg, closeTo(0.7, 0.001));
+      expect(avg.data, closeTo(0.7, 0.001));
     });
 
     test('getConsecutiveLowAdherenceDays counts correctly', () async {
@@ -476,14 +482,14 @@ void main() {
       await repository.create(createTestAdherence(
         id: 'c3', studentId: 's1', date: now.subtract(const Duration(days: 2)), adherenceScore: 0.9));
       final consecutive = await repository.getConsecutiveLowAdherenceDays('s1');
-      expect(consecutive, 2);
+      expect(consecutive.data, 2);
     });
 
     test('getToday returns today record', () async {
       await repository.create(createTestAdherence(id: 'td1', studentId: 's1', date: DateTime.now()));
       final today = await repository.getToday('s1');
-      expect(today, isNotNull);
-      expect(today!.id, 'td1');
+      expect(today.data, isNotNull);
+      expect(today.data!.id, 'td1');
     });
 
     test('deleteByStudent removes all records for student', () async {

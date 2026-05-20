@@ -201,4 +201,73 @@ void main() {
       });
     });
   });
+
+  group('DifficultyController - coverage gaps', () {
+    test('reset with value above max clamps to max', () {
+      final adapter = DifficultyController(
+        maxDifficulty: 5,
+        initialDifficulty: 3,
+      );
+      adapter.reset(initialDifficulty: 10);
+      expect(adapter.currentDifficulty, 5);
+    });
+
+    test('reset with value below min clamps to min', () {
+      final adapter = DifficultyController(
+        minDifficulty: 1,
+        initialDifficulty: 3,
+      );
+      adapter.reset(initialDifficulty: -5);
+      expect(adapter.currentDifficulty, 1);
+    });
+
+    test('custom min and max boundaries', () {
+      final adapter = DifficultyController(
+        minDifficulty: 2,
+        maxDifficulty: 4,
+        initialDifficulty: 3,
+        correctStreakThreshold: 1,
+        incorrectStreakThreshold: 1,
+      );
+
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 4);
+
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 3);
+    });
+
+    test('consecutive correct after incorrect resets streak', () {
+      final adapter = DifficultyController(
+        initialDifficulty: 3,
+        correctStreakThreshold: 2,
+        incorrectStreakThreshold: 2,
+      );
+
+      adapter.recordResult(false);
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 2);
+
+      adapter.recordResult(true);
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 3);
+    });
+
+    test('suggestNextDifficulty does not change when streaks below thresholds',
+        () {
+      final adapter = DifficultyController(
+        initialDifficulty: 3,
+        correctStreakThreshold: 3,
+        incorrectStreakThreshold: 3,
+      );
+
+      adapter.recordResult(true);
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 3);
+
+      adapter.recordResult(false);
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 3);
+    });
+  });
 }

@@ -309,106 +309,102 @@ Navigator.of(context).popUntil((route) => route.isFirst);
 
 ---
 
-## Validation Results (2026-05-20)
+## Re-Validation Results (2026-05-20) — Corrected
 
-Each step was traced against the actual source code at `/home/tomi/StudyKing`. Results show what was fixed and what remains.
+Each step was traced against the actual source code at `/home/tomi/StudyKing/lib/`. The previous validation section contained several factual errors (marked **ERR** below). This corrected pass re-verifies every claim.
 
 ### Step 1: Finding the Backup Feature
 **Status: PARTIAL**
-- Code references: `export_section.dart:113-124`, `settings_screen.dart:340-345`
-- The Dashboard export section now has a backup icon (`Icons.backup`) with label `l10n.exportBackup` that navigates directly to Settings. This was NOT mentioned in the original scenario. But backup/restore is still 2 levels deep from the main screen.
+- Code references: `export_section.dart:115-127` (Dashboard button), `settings_screen.dart:341-347` (Settings section)
+- The Dashboard export section has a backup icon (`Icons.backup`) with label `l10n.exportBackup` that directly calls `_exportBackupDirect()` — it performs a full backup immediately from the Dashboard, not just a nav link. This is better than a navigation link. ✓
+- However, the Dashboard backup shortcut skips the sensitive data dialog entirely. It uses generic `_showExportConfirmation()` with `l10n.exportCsvDetail` as detail text (wrong label for backup). It also skips the backup summary dialog (record count preview, size preview).
+- The Settings path remains the proper full-featured path with all dialogs.
 
 ### Step 2: Starting a Full Backup — The Sensitive Data Dialog
-**Status: COMPLETED** (Bug FIXED since scenario was written)
-- Code reference: `settings_screen.dart:970-987`
-- The dialog buttons now correctly return:
-  - Cancel → `Navigator.pop(ctx, null)` → `includeSensitive == null` → early return ✓
-  - Exclude Sensitive Data → `Navigator.pop(ctx, true)` → removes settings box ✓
-  - Export Backup (full) → `Navigator.pop(ctx, false)` → proceeds to second confirmation + full export ✓
-- The `null` return bug on the "Export Backup (full)" button has been fixed. The primary FilledButton now pops with `false`, not `null`.
-- Additionally, a **second confirmation dialog** (lines 997-1013) warns about including sensitive data before proceeding.
-- A **backup summary dialog** (lines 1028-1105) now shows total record count, per-box breakdowns, and file size preview.
+**Status: COMPLETED**
+- Code reference: `settings_screen.dart:915-986`
+- Buttons: Cancel → `null` → early return ✓ | Exclude → `true` → settings box removed ✓ | Full → `false` → proceeds ✓
+- Second confirmation dialog for full backup at lines 997-1015. ✓
+- Backup summary dialog at lines 1036-1107 with per-box counts and total records. ✓
+- File size computed at lines 1113-1123 and included in share text at line 1128. ✓
 
 ### Step 3: Inspecting the Backup File
-**Status: PARTIAL**
-- **Size preview** — NOW EXISTS. Code at `settings_screen.dart:1111-1122` computes file size (B/KB/MB) and includes it in the share text at line 1127: `'...${l10n.recordCount(totalRecords)}, $sizeStr'`. ✓
-- **Record count summary** — NOW EXISTS. Backup summary dialog at lines 1028-1105 shows per-box record counts and total. ✓
-- **Missing boxes (`llmTasks`, `llmUsageRecords`)** — NOW INCLUDED. `_collectAllBoxData()` at lines 1451-1452 now adds both boxes. The total is 32 boxes (was 28 in the scenario). ✓
-- **Still missing from backup** (5 boxes): `agentMemory`, `examResults`, `studentId`, `dashboardLayoutPrefs`, `dbVersion`. These are still excluded from `_collectAllBoxData()`.
-- **No compression** — Still true. Plain JSON with 2-space indent. ✗
-- **No encryption** — Still true. Plaintext API keys if full backup chosen. ✗
+**Status: COMPLETED**
+- **Size preview** — EXISTS at `settings_screen.dart:1113-1123` ✓
+- **Record count summary** — EXISTS at `settings_screen.dart:1024-1035` ✓
+- **Missing boxes** — ALL 37 boxes defined in `HiveBoxNames` are included via `HiveBoxNames.allBackupBoxes` in `data_backup_service.dart:16-30`. **ERR**: The previous validation claimed 5 boxes (`agentMemory`, `examResults`, `studentId`, `dashboardLayoutPrefs`, `dbVersion`) are excluded — this is INCORRECT. All 37 are included.
+- **Compression** — EXISTS. `DataBackupService.exportAllData()` defaults `compress = true` (`data_backup_service.dart:46`). Uses `GZipEncoder` from the `archive` package. Output file extension is `.skbak`. **ERR**: The previous validation claimed "No compression — Still true" — this is INCORRECT.
+- **Encryption** — Not present. API keys in plaintext if full backup chosen. This is a known limitation.
 
 ### Step 4: Reinstalling the App — The Restore Process
-**Status: COMPLETED** (All major issues FIXED)
-- Code references: `settings_screen.dart:1191-1352` (import), `1513-1585` (deserialization)
-- **Deserialization gaps** — FIXED. `_deserializeRecord()` now handles 28+ box types with proper `fromJson()` calls. Only 4 types use raw map (`planAdherenceMetrics`, `masteryImprovementMetrics`, `answers`, `progress`, `sessions`). Scenario claimed 13+ were raw maps — this is incorrect for current code.
-- **StudentId mismatch** — FIXED. Code at lines 1256-1303 explicitly checks for studentId mismatch between backup and current `StudentIdService`, warns the user, and rewrites all `studentId` fields to the current ID before writing.
-- **Post-restore state refresh** — PARTIALLY FIXED. `ref.invalidate(settingsProvider)` at line 1312 is called. A success dialog suggests restarting. Full state tree invalidation is not performed.
-- **Selective restore with per-box counts** — EXISTS in the selective restore dialog (line 1387: record count subtitle). ✓
+**Status: COMPLETED**
+- Code references: `settings_screen.dart:1198-1361` (import), `1465-1537` (deserialization)
+- **Deserialization** — Handles 27 box types with proper `fromJson()`. 5 types return raw maps (`planAdherenceMetrics`, `masteryImprovementMetrics`, `answers`, `progress`, `sessions`). 5 more (`agentMemory`, `examResults`, `studentId`, `dashboardLayoutPrefs`, `dbVersion`) fall to `default: return json;` but these are metadata/config boxes where raw maps are acceptable. ✓
+- **StudentId mismatch** — FIXED at lines 1263-1309. Detects mismatch, warns user, rewrites all studentId fields. ✓
+- **Post-restore state refresh** — `ref.invalidate(settingsProvider)`, `ref.invalidate(databaseProvider)`, `ref.invalidate(subjectListProvider)` called at lines 1319-1321. Success dialog suggests restart. Not a full tree invalidation but functional. PARTIAL.
+- **Selective restore with per-box counts** — EXISTS at line 1396 (`Text(l10n.recordCount(records.length))`). ✓
 
 ### Step 5: Configuring Auto-Backup
-**Status: PARTIAL** (Some fixes applied, core issue remains)
-- Code references: `settings_screen.dart:81-114` (perform), `662-738` (dialog)
-- **Core issue — No background schedule** — Still true. No `Timer.periodic`, no `WorkManager`, no background isolate. Auto-backup only runs when the user clicks "Backup Now" in the dialog. The interval setting tracks when the last backup was made but does NOT trigger automatic backups. ✗
-- **Temp directory** — FIXED. `_performAutoBackup()` passes `outputDir: 'persistent'` → uses `getApplicationDocumentsDirectory()`. ✓
-- **Path stored** — FIXED. `box.put('lastAutoBackupPath', filePath)` at line 97. ✓
-- **Share button** — FIXED. The SnackBar now has a working Share action (lines 103-106). The dialog has a "Share Last Backup" button (lines 706-714). ✓
-- **Manual trigger** — FIXED. "Backup Now" button exists in the dialog (lines 682-689). ✓
-- **Last backup display** — EXISTS. Shows date and file path in dialog. ✓
+**Status: PARTIAL**
+- Code references: `settings_screen.dart:83-116` (perform), `664-741` (dialog)
+- **No background schedule** — The original `_checkAutoBackup()` referenced in the scenario no longer exists. The interval is stored (`autoBackupIntervalDays`) but there is no `Timer.periodic`, `WorkManager`, or background isolate. Auto-backup only runs on explicit "Backup Now" click or sign-out flow. ✗
+- **Temp directory** — FIXED. `outputDir: 'persistent'` → `getApplicationDocumentsDirectory()`. ✓
+- **Path stored** — FIXED. `box.put('lastAutoBackupPath', filePath)` at line 99. ✓
+- **Share button** — FIXED. Working share in SnackBar (lines 103-108) and dialog (lines 708-716). ✓
+- **Manual trigger** — FIXED. "Backup Now" button in dialog (lines 684-692). ✓
+- **Last backup display** — EXISTS. Shows date (lines 694-702) and path. ✓
+- **Bug**: When selecting an interval in the dialog (lines 726-728), `lastAutoBackupDate` is set to `DateTime.now()` before any backup is actually performed. This records a phantom backup that was never created.
 
 ### Step 6: Exporting Progress Reports from the Dashboard
-**Status: PARTIAL**
-- Code references: `export_section.dart:1-338`, `dashboard_providers.dart:38-43`, `progress_export_service.dart:17-28`
-- **`ProgressExportService` DI** — FIXED. The service is created via `dashboardExportServiceProvider` at `dashboard_providers.dart:38-43` using Riverpod providers for all dependencies (`tracker`, `masteryService`, `attemptRepo`). The scenario's claim about default constructor `AttemptRepository()` is INCORRECT for current code. ✓
-- **Two CSV exports** — Still present but have distinct labels (`l10n.exportCsv` vs `l10n.exportProgressCsv`) and are in different visual sections. PARTIAL.
-- **StudentId in JSON** — Still present at `progress_export_service.dart:42`: `'studentId': studentId`. ✗
-- **"What's included?" details** — NOW EXISTS. The `_showExportConfirmation` dialog takes format-specific `details` parameter (e.g., `l10n.exportCsvDetail`, `l10n.exportJsonDetail`). ✓
+**Status: COMPLETED**
+- Code references: `export_section.dart:1-383`, `dashboard_providers.dart:38-44`, `progress_export_service.dart:17-382`
+- **`ProgressExportService` DI** — FIXED. Uses Riverpod provider `dashboardExportServiceProvider` at `dashboard_providers.dart:38-44`. ✓
+- **Two CSV exports** — Present with distinct labels (`l10n.exportCsv` vs `l10n.exportProgressCsv`) and separate visual sections. Intentional. ✓
+- **StudentId in JSON** — NOT present. The `exportComprehensiveJSON()` method at `progress_export_service.dart:40-53` does NOT include `studentId` in the JSON output. It only includes `exportDate`, `overallStats`, `topicMastery`, `attempts`, `badges`. **ERR**: The previous validation claimed "Still present at progress_export_service.dart:42" — this is INCORRECT.
+- **"What's included?" details** — EXISTS. Format-specific `details` parameter in `_showExportConfirmation()`. ✓
 
 ### Step 7: Session History Export
-**Status: COMPLETED** ✓
-- Code references: `session_export_service.dart` (312 lines)
-- CSV, JSON, PDF exports all verified correct.
+**Status: COMPLETED**
+- CSV, JSON, PDF exports verified. Works correctly with locale-aware formatting.
 
 ### Step 8: The About Dialog — Version Info
-**Status: COMPLETED** (FIXED)
-- Code references: `settings_screen.dart:1742-1765`
-- The About dialog now calls `PackageInfo.fromPlatform()` at line 1765 to get the real app version and build number: `'${info.version}+${info.buildNumber}'`. The translated string `l10n.aboutVersion` (`"1.0.0"`) is only used as a fallback if `PackageInfo.fromPlatform()` throws.
-- The scenario's claim that the version is hardcoded is INCORRECT for current code.
+**Status: COMPLETED**
+- Code references: `settings_screen.dart:1741-1764`
+- Uses `PackageInfo.fromPlatform()` at line 1764. Falls back to `l10n.aboutVersion` string only on error. ✓
+- **ERR**: The previous validation agreed with the scenario that "About dialog uses PackageInfo.fromPlatform()" — this is CORRECT.
 
 ### Step 9: Sign Out
-**Status: NOT_COMPLETED**
-- Code references: `settings_screen.dart:1657-1728`
-- Sign-out still only clears API key and model (`apiKeyProvider`, `selectedModelProvider`, `settingsProvider`). ✗
-- No backup prompt before clearing. ✗
-- Study data (subjects, questions, etc.) is preserved — the dialog now explicitly informs the user (`l10n.signOutPreservesStudyData` at line 1699). This transparency is improved, but the feature still doesn't offer a true "sign out and clear all data" option.
-- No multi-user account switching support.
+**Status: COMPLETED**
+- Code references: `settings_screen.dart:1609-1725`
+- The sign-out dialog now offers two optional checkboxes: **"Clear all study data"** (line 1667) and **"Back up before signing out"** (line 1677, conditional on clear being checked). ✓
+- When clear is selected, `HiveBoxNames.allStudyDataBoxes` are all cleared (lines 1709-1717). ✓
+- When backup first is selected, `_performAutoBackup()` is called before clearing (lines 1704-1706). ✓
+- Always clears API key, selected model, and settings (lines 1719-1721). ✓
+- The dialog explicitly informs the user of what will be preserved/cleared. ✓
+- **ERR**: The previous validation claimed "Sign-out still only clears API key and model" and "No backup prompt before clearing" — both are INCORRECT for current code. The sign-out has proper clear/backup options.
+- Multi-user account switching: Out of scope for this feature.
 
-### Summary of Fixes Since Scenario Was Written
+### Summary Table (Corrected)
 
-| # | Status | Change |
-|---|---|---|
-| 2 | FIXED | "Export Backup (full)" button no longer returns `null` — correctly returns `false` |
-| 3a | FIXED | File size preview now shown in share text |
-| 3b | FIXED | Record count summary dialog added before export |
-| 3c | FIXED | `llmTasks` and `llmUsageRecords` boxes included in backup |
-| 4a | FIXED | Full typed deserialization for 28+ box types |
-| 4b | FIXED | StudentId mismatch detection and reconciliation |
-| 4c | PARTIAL | `ref.invalidate(settingsProvider)` added but not full state refresh |
-| 5a | FIXED | Auto-backup saves to persistent storage (not temp) |
-| 5b | FIXED | Auto-backup file path stored and accessible |
-| 5c | FIXED | Share action works in SnackBar and dialog |
-| 5d | FIXED | "Backup Now" manual trigger in dialog |
-| 6a | FIXED | `ProgressExportService` uses DI (Riverpod providers) |
-| 6b | FIXED | Export confirmation dialog shows format-specific details |
-| 8 | FIXED | About dialog uses `PackageInfo.fromPlatform()` for real version |
+| # | Step | Previous Status | Corrected Status | Key Changes |
+|---|---|---|---|---|
+| 1 | Backup discoverability | PARTIAL | PARTIAL | Dashboard has direct backup but skips sensitive-sensitive dialog. Settings is still primary path. |
+| 2 | Sensitive data dialog | COMPLETED | COMPLETED | Button bug fixed. Summary dialog added. |
+| 3 | Backup file contents | PARTIAL | **COMPLETED** | All 37 boxes included (not 32). Gzip compression works (not "no compression"). Size preview & record count exist. Encryption remains absent. |
+| 4 | Restore process | COMPLETED | COMPLETED | Deserialization handles all core types. StudentId reconciliation works. State refresh is reasonable. |
+| 5 | Auto-backup | PARTIAL | PARTIAL | No background scheduler (original `_checkAutoBackup` removed). Manual trigger works. Phantom-backup bug on interval select. |
+| 6 | Dashboard export | PARTIAL | **COMPLETED** | No studentId in JSON (was wrong claim). DI via Riverpod. Two CSV exports intentional. Details dialog exists. |
+| 7 | Session history | COMPLETED | COMPLETED | Verified working. |
+| 8 | About dialog | COMPLETED | COMPLETED | PackageInfo.fromPlatform used correctly. |
+| 9 | Sign-out | NOT_COMPLETED | **COMPLETED** | Clear study data AND backup-first options exist. Multi-user switching out of scope. |
 
-### Remaining Issues
+### Remaining Issues (After Corrected Validation)
 
-| # | Issue | Location |
-|---|---|---|
-| 1 | Backup discoverability could be improved | Dashboard has nav link, but feature is 2 levels deep |
-| 3d | No compression or encryption for backup files | `data_backup_service.dart:26` |
-| 3e | 5 Hive boxes excluded from backup | `settings_screen.dart:1418-1453` — `agentMemory`, `examResults`, `studentId`, `dashboardLayoutPrefs`, `dbVersion` |
-| 5 | No background auto-backup schedule trigger | `settings_screen.dart` — no periodic timer/worker |
-| 6 | StudentId exposed in JSON comprehensive report | `progress_export_service.dart:42` |
-| 9 | Sign-out doesn't clear study data or offer backup | `settings_screen.dart:1722-1724` |
+| # | Issue | Location | Severity |
+|---|---|---|---|
+| 1 | Auto-backup has no background schedule trigger; interval stored but never automatically checked | `settings_screen.dart:664-741` — no periodic check | MEDIUM |
+| 1a | Selecting auto-backup interval sets `lastAutoBackupDate` to now without performing a backup (phantom backup) | `settings_screen.dart:726-728` | MINOR |
+| 2 | Backup files are gzip-compressed but not encrypted; API keys in plaintext when full backup chosen | `data_backup_service.dart` | MEDIUM |
+| 3 | Dashboard backup shortcut (`_exportBackupDirect`) skips sensitive data dialog and uses wrong detail text (`l10n.exportCsvDetail` instead of backup-specific text) | `export_section.dart:285-291` | MINOR |
+| 4 | Post-restore state refresh invalidates key providers but is not a full state tree refresh | `settings_screen.dart:1319-1321` | MINOR |
+| 5 | Backup discoverability requires going to Settings (Dashboard shortcut exists but is incomplete) | Top-level nav | LOW |

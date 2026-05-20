@@ -229,13 +229,14 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   void setThrowOnInit() => _throwOnInit = true;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (_throwOnInit) throw Exception('adherence init error');
+    return Result.success(null);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _records.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_records.where((r) => r.studentId == studentId).toList());
   }
 }
 

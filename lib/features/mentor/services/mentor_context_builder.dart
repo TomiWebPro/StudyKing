@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/utils/date_utils.dart';
@@ -50,7 +49,7 @@ class MentorContextBuilder {
     final missedLessons = (await _loadMissedLessons()).data ?? [];
     final adherenceDeviation = (await _loadAdherence()).data;
     final todayMinutes = await _getTodayStudyMinutes();
-    final dailyCap = await _getDailyCapMinutes();
+    final dailyCap = SettingsService.getDailyCapMinutes();
     final consecutiveDays = await _getConsecutiveStudyDays();
     final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
     final l10n = lookupAppLocalizations(Locale(_localeName));
@@ -219,39 +218,7 @@ class MentorContextBuilder {
     return result.isSuccess ? (result.data! ~/ msPerMinute) : 0;
   }
 
-  Future<int> _getDailyCapMinutes() async {
-    final result = Result.captureSync(() {
-      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return 0;
-      final box = Hive.box(HiveBoxNames.settings);
-      return box.get('dailyCapMinutes', defaultValue: 0) as int;
-    }, context: '_getDailyCapMinutes');
-    return result.data ?? 0;
-  }
-
   Future<int> _getConsecutiveStudyDays() async {
-    final result = await Result.capture(() async {
-      final allResult = await _sessionRepository.getAll();
-      if (allResult.isFailure) return 0;
-      final all = allResult.data!;
-      if (all.isEmpty) return 0;
-      final studyDays = all.where((s) =>
-        s.completed || s.actualDurationMs > 0
-      ).map((s) =>
-        s.startTime.dateOnly
-      ).toSet().toList()..sort((a, b) => b.compareTo(a));
-      int consecutive = 0;
-      final now = DateTime.now();
-      final today = now.dateOnly;
-      for (var i = 0; i < studyDays.length; i++) {
-        final expected = today.subtract(Duration(days: i));
-        if (studyDays[i] == expected) {
-          consecutive++;
-        } else {
-          break;
-        }
-      }
-      return consecutive;
-    }, context: '_getConsecutiveStudyDays');
-    return result.data ?? 0;
+    return _sessionRepository.getConsecutiveStudyDays();
   }
 }

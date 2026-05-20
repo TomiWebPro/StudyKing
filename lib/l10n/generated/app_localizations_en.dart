@@ -5778,4 +5778,7 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get curriculumBasedTopics =>
       'These topics are based on our standard curriculum. You can edit them anytime.';
+
+  @override
+  String get pleaseWait => 'Please wait…';
 }

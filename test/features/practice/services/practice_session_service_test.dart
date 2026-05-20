@@ -291,4 +291,122 @@ void main() {
       });
     });
   });
+
+  group('PracticeSessionService - coverage gaps', () {
+    test('updateNextReview handles exception gracefully', () async {
+      final sessionRepo = _FakeSessionRepo();
+      final srService = _FakeSrService();
+      final clock = _CoverageFakeClock(DateTime(2026, 5, 16));
+      srService.shouldThrow = true;
+
+      final service = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'sub1',
+      );
+
+      await service.updateNextReview('q1', true);
+      service.dispose();
+    });
+
+    test('dispose with active timer and no timer is safe', () async {
+      final sessionRepo = _FakeSessionRepo();
+      final srService = _FakeSrService();
+      final clock = _CoverageFakeClock(DateTime(2026, 5, 16));
+
+      final service1 = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'sub1',
+      );
+      service1.startTimer();
+      service1.dispose();
+
+      final service2 = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'sub1',
+      );
+      service2.dispose();
+    });
+
+    test('autoSaveSession handles exception gracefully', () async {
+      final sessionRepo = _FakeSessionRepo();
+      final srService = _FakeSrService();
+      final clock = _CoverageFakeClock(DateTime(2026, 5, 16));
+
+      sessionRepo.shouldThrow = true;
+
+      final service = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'sub1',
+      );
+
+      await service.autoSaveSession(
+        questionsAnswered: 5,
+        correctAnswers: 3,
+      );
+      service.dispose();
+    });
+  });
+}
+
+class _FakeSessionRepo extends SessionRepository {
+  final List<Session> sessions = [];
+  bool shouldThrow = false;
+
+  @override
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    if (shouldThrow) return Result.failure('Save error');
+    sessions.add(session);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    final idx = sessions.indexWhere((s) => s.id == id);
+    if (idx == -1) return Result.success(null);
+    return Result.success(sessions[idx]);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(sessions);
+  }
+}
+
+class _FakeSrService extends SpacedRepetitionService {
+  bool shouldThrow = false;
+
+  _FakeSrService()
+      : super(
+          questionRepo: QuestionRepository(),
+          attemptRepo: AttemptRepository(),
+        );
+
+  @override
+  Future<Result<void>> updateNextReviewDate(
+      String questionId, double masteryLevel) async {
+    if (shouldThrow) return Result.failure('SR error');
+    return Result.success(null);
+  }
+}
+
+class _CoverageFakeClock implements Clock {
+  final DateTime fixedNow;
+
+  _CoverageFakeClock(this.fixedNow);
+
+  @override
+  DateTime now() => fixedNow;
 }

@@ -94,15 +94,15 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _records.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_records.where((r) => r.studentId == studentId).toList());
   }
 
   @override
-  Future<int> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async {
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async {
     int consecutive = 0;
     for (final m in _records) {
       if (m.adherenceScore < threshold) {
@@ -111,19 +111,19 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
         break;
       }
     }
-    return consecutive;
+    return Result.success(consecutive);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async {
-    return _records.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async {
+    return Result.success(_records.where((r) => r.studentId == studentId).toList());
   }
 
   @override
-  Future<double> getAverageAdherence(String studentId) async {
+  Future<Result<double>> getAverageAdherence(String studentId) async {
     final metrics = _records.where((r) => r.studentId == studentId).toList();
-    if (metrics.isEmpty) return 0.0;
-    return metrics.fold<double>(0.0, (s, m) => s + m.adherenceScore) / metrics.length;
+    if (metrics.isEmpty) return Result.success(0.0);
+    return Result.success(metrics.fold<double>(0.0, (s, m) => s + m.adherenceScore) / metrics.length);
   }
 
   void addRecord(PlanAdherenceModel m) => _records.add(m);
@@ -136,8 +136,10 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
 
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
-    final lowDays = await adherenceRepo.getConsecutiveLowAdherenceDays(studentId);
-    final avg = await adherenceRepo.getAverageAdherence(studentId);
+    final lowDaysResult = await adherenceRepo.getConsecutiveLowAdherenceDays(studentId);
+    final avgResult = await adherenceRepo.getAverageAdherence(studentId);
+    final lowDays = lowDaysResult.data ?? 0;
+    final avg = avgResult.data ?? 0.0;
     if (lowDays >= 7) {
       return Result.success(AdherenceDeviation(
         consecutiveLowDays: lowDays,
@@ -229,7 +231,7 @@ void main() {
 
         final nudges = await scheduler.getPlanAdjustmentNudge('test-student');
         expect(nudges, hasLength(1));
-        expect(nudges.first.type.name, 'planAdjustment');
+        expect(nudges.first.nudgeType, 'planAdjustment');
       });
     });
 

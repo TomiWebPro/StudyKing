@@ -70,6 +70,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   int _elapsedMinutes = 0;
   LessonPlan? _lessonPlan;
   bool _voiceOutputEnabled = false;
+  bool _throttleWasActive = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -197,7 +198,17 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       }
     }
 
-    if (mounted) setState(() => _isSending = false);
+    if (mounted) {
+      setState(() {
+        _isSending = false;
+        _throttleWasActive = _manager?.wasThrottleActive ?? false;
+      });
+      if (_throttleWasActive) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _throttleWasActive = false);
+        });
+      }
+    }
     _scrollToBottom();
   }
 
@@ -244,7 +255,17 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       _scrollToBottom();
     }
 
-    if (mounted) setState(() => _isSending = false);
+    if (mounted) {
+      setState(() {
+        _isSending = false;
+        _throttleWasActive = _manager?.wasThrottleActive ?? false;
+      });
+      if (_throttleWasActive) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _throttleWasActive = false);
+        });
+      }
+    }
     _scrollToBottom();
     _inputFocusNode.requestFocus();
   }
@@ -506,7 +527,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _closingTimer?.cancel();
     _closingTimer = Timer(const Duration(minutes: 3), () {
       if (!mounted || _manager == null) return;
-      _logger.w('Closing grace period expired, auto-ending lesson');
+      _logger.i('Closing grace period expired, auto-ending lesson');
       _endLessonInternal().then((_) {
         if (mounted) _showSummaryDialog();
       });
@@ -785,6 +806,33 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
               _buildTimeEndedBanner(l10n),
             if (_retryMessage != null)
               _buildRetryBanner(l10n),
+            if (_throttleWasActive)
+              Semantics(
+                liveRegion: true,
+                label: l10n.pleaseWait,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                  color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(strokeWidth: 1.5),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        l10n.pleaseWait,
+                        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             if (!_showSlides)
               ConversationInput(
                 controller: _textController,

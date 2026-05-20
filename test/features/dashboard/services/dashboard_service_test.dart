@@ -127,13 +127,13 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
       : _avgAdherence = avgAdherence, _weekly = weekly;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<double> getAverageAdherence(String studentId) async => _avgAdherence;
+  Future<Result<double>> getAverageAdherence(String studentId) async => Result.success(_avgAdherence);
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async => _weekly;
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async => Result.success(_weekly);
 }
 
 class _FakeTopicRepo extends TopicRepository {

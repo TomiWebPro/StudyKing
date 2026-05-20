@@ -35,5 +35,59 @@ void main() {
       final names = ConversationPhase.values.map((e) => e.name).toSet();
       expect(names.length, equals(ConversationPhase.values.length));
     });
+
+    test('next phase can be determined by index + 1', () {
+      expect(ConversationPhase.values[ConversationPhase.greeting.index + 1],
+          equals(ConversationPhase.teaching));
+      expect(ConversationPhase.values[ConversationPhase.teaching.index + 1],
+          equals(ConversationPhase.exercise));
+      expect(ConversationPhase.values[ConversationPhase.exercise.index + 1],
+          equals(ConversationPhase.feedback));
+    });
+
+    test('closing has no next phase (it is the last)', () {
+      expect(ConversationPhase.closing.index, equals(ConversationPhase.values.length - 1));
+    });
+
+    test('all phases can be serialized to name and back', () {
+      for (final phase in ConversationPhase.values) {
+        final parsed = ConversationPhase.values.firstWhere(
+          (p) => p.name == phase.name,
+        );
+        expect(parsed, equals(phase));
+      }
+    });
+
+    test('unknown name string throws StateError', () {
+      expect(
+        () => ConversationPhase.values.firstWhere(
+          (p) => p.name == 'nonexistent',
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    group('error-state: boundary conditions', () {
+      test('accessing out-of-range index throws RangeError', () {
+        expect(
+          () => ConversationPhase.values[ConversationPhase.values.length],
+          throwsA(isA<RangeError>()),
+        );
+      });
+
+      test('accessing negative index throws RangeError', () {
+        expect(
+          () => ConversationPhase.values[-1],
+          throwsA(isA<RangeError>()),
+        );
+      });
+
+      test('empty name does not match any phase', () {
+        expect(
+          ConversationPhase.values.where((p) => p.name.isEmpty),
+          isEmpty,
+        );
+      });
+    });
   });
 }

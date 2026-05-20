@@ -27,6 +27,7 @@ dependencies:
   # Storage
   path_provider: ^2.1.2
   path: ^1.9.1
+  flutter_secure_storage: ^10.2.0
 
   # HTTP
   http: ^1.6.0

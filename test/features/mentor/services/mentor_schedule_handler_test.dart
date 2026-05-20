@@ -21,7 +21,6 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
-import 'package:studyking/core/utils/string_extensions.dart';
 
 class _FakeSessionRepo extends SessionRepository {
   @override

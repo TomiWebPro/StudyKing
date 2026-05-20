@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
@@ -365,6 +366,127 @@ void main() {
       });
     });
   });
+
+
+  group('MistakeReviewService - coverage gaps', () {
+  late _FakeAttemptRepo3 attemptRepo;
+  late _FakeQuestionRepo3 questionRepo;
+  late MistakeReviewService service;
+
+  setUp(() {
+    attemptRepo = _FakeAttemptRepo3();
+    questionRepo = _FakeQuestionRepo3();
+    service = MistakeReviewService(
+      attemptRepo: attemptRepo,
+      questionRepo: questionRepo,
+    );
+  });
+
+  test('getMistakesFromSession skips when question not found', () async {
+    attemptRepo.addAttempt(StudentAttempt(
+      id: 'a1',
+      studentId: 's1',
+      questionId: 'nonexistent',
+      subjectId: 'sub1',
+      isCorrect: false,
+      timestamp: DateTime(2026, 1, 1),
+      userAnswer: 'wrong',
+    ));
+
+    final mistakes = await service.getMistakesFromSession(
+      studentId: 's1',
+      subjectId: 'sub1',
+    );
+
+    expect(mistakes, isEmpty);
+  });
+
+  test('getMistakesFromSession handles exception gracefully', () async {
+    attemptRepo.shouldThrow = true;
+
+    final mistakes = await service.getMistakesFromSession(
+      studentId: 's1',
+      subjectId: 'sub1',
+    );
+
+    expect(mistakes, isEmpty);
+  });
+
+  test('getPendingMistakes handles exception gracefully', () async {
+    attemptRepo.shouldThrow = true;
+
+    final pending = await service.getPendingMistakes(
+      studentId: 's1',
+      subjectId: 'sub1',
+    );
+
+    expect(pending, isEmpty);
+  });
+
+  test('isQuestionCorrected handles exception gracefully', () async {
+    attemptRepo.shouldThrow = true;
+
+    final corrected = await service.isQuestionCorrected('q1');
+    expect(corrected, isFalse);
+  });
+
+  test('extractRedoQuestions returns empty for empty input', () {
+    final result = service.extractRedoQuestions([]);
+    expect(result, isEmpty);
+  });
+
+  test('extractRedoQuestions extracts all questions', () {
+    final mistakes = [
+      MistakeEntry(
+        question: _createQ(id: 'q1'),
+        correctAnswer: 'A',
+      ),
+      MistakeEntry(
+        question: _createQ(id: 'q2'),
+        correctAnswer: 'B',
+      ),
+    ];
+    final result = service.extractRedoQuestions(mistakes);
+    expect(result, hasLength(2));
+    expect(result[0].id, 'q1');
+    expect(result[1].id, 'q2');
+  });
+
+  test('getMistakesFromSession uses markscheme for correct answer', () async {
+    questionRepo.addQuestion(Question(
+      id: 'q1',
+      text: 'Test?',
+      type: QuestionType.singleChoice,
+      subjectId: 'sub1',
+      topicId: 't1',
+      createdAt: DateTime(2026, 1, 1),
+      updatedAt: DateTime(2026, 1, 1),
+      markscheme: Markscheme(
+        questionId: 'q1',
+        correctAnswer: 'Correct Answer',
+        explanation: 'Exp',
+      ),
+    ));
+
+    attemptRepo.addAttempt(StudentAttempt(
+      id: 'a1',
+      studentId: 's1',
+      questionId: 'q1',
+      subjectId: 'sub1',
+      isCorrect: false,
+      timestamp: DateTime(2026, 1, 1),
+      userAnswer: 'wrong',
+    ));
+
+    final mistakes = await service.getMistakesFromSession(
+      studentId: 's1',
+      subjectId: 'sub1',
+    );
+
+    expect(mistakes, hasLength(1));
+    expect(mistakes.data!.first.correctAnswer, 'Correct Answer');
+    expect(mistakes.data!.first.explanation, 'Exp');
+  });
 }
 
 class _FailingAttemptRepository extends AttemptRepository {
@@ -392,4 +514,77 @@ class _FailingQuestionRepository extends QuestionRepository {
   Future<Result<Question?>> get(String id) async {
     return Result.failure('Storage error');
   }
+}
+
+class _FakeAttemptRepo3 extends AttemptRepository {
+  final List<StudentAttempt> _attempts = [];
+  bool shouldThrow = false;
+
+  @override
+  Future<void> init() async {}
+
+  void addAttempt(StudentAttempt attempt) {
+    _attempts.add(attempt);
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    if (shouldThrow) throw Exception('Error');
+    return Result.success(
+        _attempts.where((a) => a.studentId == studentId).toList());
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
+    String studentId,
+    String subjectId,
+  ) async {
+    if (shouldThrow) throw Exception('Error');
+    return Result.success(_attempts
+        .where((a) => a.studentId == studentId && a.subjectId == subjectId)
+        .toList());
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    if (shouldThrow) throw Exception('Error');
+    return Result.success(
+        _attempts.where((a) => a.questionId == questionId).toList());
+  }
+}
+
+class _FakeQuestionRepo3 extends QuestionRepository {
+  final Map<String, Question> _questions = {};
+
+  @override
+  Future<void> init() async {}
+
+  void addQuestion(Question q) {
+    _questions[q.id] = q;
+  }
+
+  @override
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(_questions[id]);
+  }
+}
+
+Question _createQ({
+  String id = 'q1',
+  String subjectId = 'sub1',
+  String topicId = 't1',
+  int difficulty = 1,
+  String? srDataJson,
+}) {
+  return Question(
+    id: id,
+    text: 'Sample question?',
+    type: QuestionType.singleChoice,
+    subjectId: subjectId,
+    topicId: topicId,
+    difficulty: difficulty,
+    createdAt: DateTime(2026, 5, 12),
+    updatedAt: DateTime(2026, 5, 12),
+    srDataJson: srDataJson,
+  );
 }

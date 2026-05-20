@@ -7163,9 +7163,6 @@
     "@exportReports": {
       "description": "Semantics label and tooltip for export reports button"
     },
-    "@backupAndRestore": {
-      "description": "Semantics label and tooltip for backup and restore button"
-    },
     "readAloud": "Read aloud",
     "@readAloud": {
       "description": "Tooltip for read aloud button on chat bubble"
@@ -7269,9 +7266,6 @@
         "count": { "type": "int" }
       }
     },
-    "@voiceInput": {
-      "description": "Tooltip for voice input button when idle"
-    },
     "stopRecording": "Stop recording",
     "@stopRecording": {
       "description": "Tooltip for voice input button when recording"
@@ -7283,12 +7277,6 @@
     "loadingWithEllipsis": "Loading...",
     "@loadingWithEllipsis": {
       "description": "Accessible label for shimmer loading state"
-    },
-    "@exportReports": {
-      "description": "Semantic tooltip for export reports action"
-    },
-    "@backupAndRestore": {
-      "description": "Semantic tooltip for backup and restore action"
     },
     "whileYouWereAway": "--- While you were away ---",
     "@whileYouWereAway": {
@@ -7330,24 +7318,6 @@
     "readyToContinueLearning": "Ready to continue learning?",
     "@readyToContinueLearning": {
       "description": "Notification text to nudge the student to resume learning"
-    },
-    "@readAloud": {
-      "description": "Tooltip for read aloud button on tutor messages"
-    },
-    "@uploadFile": {
-      "description": "Label for upload file button in question card"
-    },
-    "@recordAudio": {
-      "description": "Label for record audio button in question card"
-    },
-    "@fileAttached": {
-      "description": "Label shown when a file is attached to a question"
-    },
-    "@recordingComplete": {
-      "description": "Label shown when audio recording is complete"
-    },
-    "@startRecording": {
-      "description": "Label for starting audio recording"
     },
     "graphCanvas": "Graph canvas",
     "@graphCanvas": {
@@ -7393,9 +7363,6 @@
     "@toolEraser": {
       "description": "Tool name for eraser drawing tool"
     },
-    "@failedToLoadPlan": {
-      "description": "User-facing error message when plan fails to load"
-    },
     "unableToDisplayEvaluation": "Unable to display evaluation result",
     "@unableToDisplayEvaluation": {
       "description": "Fallback message when evaluation JSON cannot be parsed"
@@ -7403,9 +7370,6 @@
     "micPermissionDenied": "Microphone access denied. Please enable it in Settings to use voice input.",
     "@micPermissionDenied": {
       "description": "Snackbar message when microphone permission is denied"
-    },
-    "@scheduleLesson": {
-      "description": "Action button to schedule a lesson"
     },
     "focusTimerLabel": "(Focus)",
     "@focusTimerLabel": {
@@ -7503,9 +7467,6 @@
     "uploadInProgressBody": "An upload is in progress. Cancel and go back?",
     "@uploadInProgressBody": {
       "description": "Dialog body when user tries to navigate away during upload"
-    },
-    "@stay": {
-      "description": "Button label to stay on current screen"
     },
     "selected": "selected",
     "@selected": {
@@ -7686,5 +7647,9 @@
     "curriculumBasedTopics": "These topics are based on our standard curriculum. You can edit them anytime.",
     "@curriculumBasedTopics": {
       "description": "Hint text shown with auto-created topics"
+    },
+    "pleaseWait": "Please wait…",
+    "@pleaseWait": {
+      "description": "Transient indicator shown when a message was rate-limited"
     }
   }

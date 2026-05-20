@@ -6611,7 +6611,7 @@
       "count": { "type": "int" }
     }
   },
-  "mentorContextLateNightWarning": "ADVERTENCIA: {count} sesión(es) iniciada(s) después de las 10 PM (estudio nocturno detectado)",
+  "mentorContextLateNightWarning": "ADVERTENCIA: {count, plural, =1{1 sesión iniciada después de las 10 PM} other{{count} sesiones iniciadas después de las 10 PM}} (estudio nocturno detectado)",
   "@mentorContextLateNightWarning": {
     "description": "Warning about late-night study sessions in mentor context",
     "placeholders": {
@@ -7142,9 +7142,6 @@
     "@exportReports": {
       "description": "Semantics label and tooltip for export reports button"
     },
-    "@backupAndRestore": {
-      "description": "Semantics label and tooltip for backup and restore button"
-    },
     "readAloud": "Leer en voz alta",
     "@readAloud": {
       "description": "Tooltip for read aloud button on chat bubble"
@@ -7248,9 +7245,6 @@
         "count": { "type": "int" }
       }
     },
-    "@voiceInput": {
-      "description": "Tooltip for voice input button when idle"
-    },
     "stopRecording": "Detener grabación",
     "@stopRecording": {
       "description": "Tooltip for voice input button when recording"
@@ -7262,12 +7256,6 @@
     "loadingWithEllipsis": "Cargando...",
     "@loadingWithEllipsis": {
       "description": "Accessible label for shimmer loading state"
-    },
-    "@exportReports": {
-      "description": "Semantic tooltip for export reports action"
-    },
-    "@backupAndRestore": {
-      "description": "Semantic tooltip for backup and restore action"
     },
     "whileYouWereAway": "--- Mientras estabas ausente ---",
     "@whileYouWereAway": {
@@ -7297,24 +7285,6 @@
     "readyToContinueLearning": "¿Listo para seguir aprendiendo?",
     "@readyToContinueLearning": {
       "description": "Notification text to nudge the student to resume learning"
-    },
-    "@readAloud": {
-      "description": "Tooltip for read aloud button on tutor messages"
-    },
-    "@uploadFile": {
-      "description": "Label for upload file button in question card"
-    },
-    "@recordAudio": {
-      "description": "Label for record audio button in question card"
-    },
-    "@fileAttached": {
-      "description": "Label shown when a file is attached to a question"
-    },
-    "@recordingComplete": {
-      "description": "Label shown when audio recording is complete"
-    },
-    "@startRecording": {
-      "description": "Label for starting audio recording"
     },
     "graphCanvas": "Lienzo de gráficos",
     "@graphCanvas": {
@@ -7360,9 +7330,6 @@
     "@toolEraser": {
       "description": "Tool name for eraser drawing tool"
     },
-    "@failedToLoadPlan": {
-      "description": "User-facing error message when plan fails to load"
-    },
     "unableToDisplayEvaluation": "No se puede mostrar el resultado de la evaluación",
     "@unableToDisplayEvaluation": {
       "description": "Fallback message when evaluation JSON cannot be parsed"
@@ -7370,9 +7337,6 @@
     "micPermissionDenied": "Acceso al micrófono denegado. Actívalo en Ajustes para usar la entrada de voz.",
     "@micPermissionDenied": {
       "description": "Snackbar message when microphone permission is denied"
-    },
-    "@scheduleLesson": {
-      "description": "Action button to schedule a lesson"
     },
     "focusTimerLabel": "(Enfoque)",
     "@focusTimerLabel": {
@@ -7482,9 +7446,6 @@
     "uploadInProgressBody": "Hay una subida en progreso. ¿Cancelar y volver atrás?",
     "@uploadInProgressBody": {
       "description": "Dialog body when user tries to navigate away during upload"
-    },
-    "@stay": {
-      "description": "Button label to stay on current screen"
     },
     "selected": "seleccionado(s)",
     "@selected": {
@@ -7665,5 +7626,9 @@
     "curriculumBasedTopics": "Estos temas se basan en nuestro plan de estudios estándar. Puedes editarlos en cualquier momento.",
     "@curriculumBasedTopics": {
       "description": "Hint text shown with auto-created topics"
+    },
+    "pleaseWait": "Espera un momento…",
+    "@pleaseWait": {
+      "description": "Transient indicator shown when a message was rate-limited"
     }
   }

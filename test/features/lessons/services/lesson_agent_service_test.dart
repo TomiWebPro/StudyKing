@@ -150,6 +150,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Algebra Basics',
+          localeName: 'en',
         );
 
         expect(lesson, isNotNull);
@@ -170,6 +171,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Algebra',
+          localeName: 'en',
         );
 
         expect(fakeLessonRepo.lastCreatedId, isNotNull);
@@ -186,6 +188,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Calculus',
+          localeName: 'en',
         );
 
         expect(lesson, isNotNull);
@@ -200,6 +203,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Physics',
+          localeName: 'en',
         );
 
         expect(lesson, isNotNull);
@@ -213,6 +217,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Chemistry',
+          localeName: 'en',
         );
 
         expect(lesson, isNull);
@@ -225,6 +230,7 @@ void main() {
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Biology',
+          localeName: 'en',
         );
 
         expect(lesson, isNull);
@@ -242,6 +248,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'From Source',
           sourceContent: 'Chapter 1 content',
+          localeName: 'en',
         );
 
         expect(lesson, isNotNull);
@@ -257,6 +264,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Failed Source',
           sourceContent: 'Some content',
+          localeName: 'en',
         );
 
         expect(lesson, isNull);
@@ -273,6 +281,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Repo Fail',
           sourceContent: 'Content',
+          localeName: 'en',
         );
 
         expect(lesson, isNull);

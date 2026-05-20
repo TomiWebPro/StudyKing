@@ -40,6 +40,7 @@ class PlannerService {
   final   PlanAdherenceRepository adherenceRepo;
   final LessonAgentService? lessonAgentService;
   final String? fixedStudentId;
+  final String _localeName;
   ActionExecutor? _actionExecutor;
 
   ActionExecutor get actionExecutor {
@@ -62,7 +63,9 @@ class PlannerService {
     ActionExecutor? actionExecutor,
     this.lessonAgentService,
     this.fixedStudentId,
-  })  : planRepo = planRepo ?? PlanRepository(),
+    String localeName = 'en',
+  })  : _localeName = localeName,
+        planRepo = planRepo ?? PlanRepository(),
         masteryService = masteryService ?? MasteryGraphService(),
         topicRepository = topicRepository ?? TopicRepository(),
         roadmapRepo = roadmapRepo ?? RoadmapRepository(),
@@ -333,6 +336,7 @@ class PlannerService {
             subjectId: subjectId,
             topicId: topicId,
             topicTitle: topicTitle,
+            localeName: _localeName,
           );
           if (lesson != null) {
             final sessionWithLesson = session.copyWith(
@@ -508,8 +512,8 @@ class PlannerService {
   Future<Result<List<PlanAdherenceModel>>> getAdherenceRecords() async {
     try {
       await adherenceRepo.init();
-      final records = await adherenceRepo.getByStudent(studentId);
-      return Result.success(records);
+      final result = await adherenceRepo.getByStudent(studentId);
+      return result;
     } catch (e) {
       _logger.w('getAdherenceRecords failed', e);
       return Result.failure(e.toString());
@@ -519,7 +523,8 @@ class PlannerService {
   Future<Result<Map<String, int>>> getAdherenceMetrics() async {
     try {
       await adherenceRepo.init();
-      final records = await adherenceRepo.getByStudent(studentId);
+      final recordsResult = await adherenceRepo.getByStudent(studentId);
+      final records = recordsResult.data ?? [];
       final now = DateTime.now();
       final todayStart = now.dateOnly;
 

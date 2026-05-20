@@ -39,7 +39,6 @@ class ProgressExportService {
 
     final json = jsonEncode({
       'exportDate': DateTime.now().toIso8601String(),
-      'studentId': studentId,
       'overallStats': overallStats,
       'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
       'attempts': attempts.map((a) => {
@@ -351,7 +350,6 @@ class ProgressExportService {
 
     final json = jsonEncode({
       'exportDate': DateTime.now().toIso8601String(),
-      'studentId': studentId,
       'overallStats': overallStats,
       'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
       'attempts': attempts.map((a) => {

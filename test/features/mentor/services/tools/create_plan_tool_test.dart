@@ -62,7 +62,7 @@ void main() {
 
     setUp(() {
       fakePlanner = FakePlannerService();
-      tool = CreatePlanTool(plannerService: fakePlanner);
+      tool = CreatePlanTool(plannerService: fakePlanner, localeName: 'en');
     });
 
     test('name returns create_plan', () {

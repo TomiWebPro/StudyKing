@@ -14,6 +14,12 @@ import '../../../core/data/repositories/topic_repository.dart';
 import '../../../core/data/repositories/attempt_repository.dart';
 import '../data/models/dashboard_models.dart';
 
+AppLocalizations _dashboardServiceDefaultL10n() {
+  const logger = Logger('DashboardService');
+  logger.w('l10n fallback to English in DashboardService constructor');
+  return lookupAppLocalizations(const Locale('en'));
+}
+
 class DashboardService {
   static final Logger _logger = const Logger('DashboardService');
   final MasteryGraphService _masteryService;
@@ -37,7 +43,7 @@ class DashboardService {
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
               sessionRepo: sessionRepo,
-              l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
+              l10n: l10n ?? _dashboardServiceDefaultL10n(),
             ),
         _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
         _sessionRepo = sessionRepo ?? SessionRepository(),
@@ -114,8 +120,10 @@ class DashboardService {
 
   Future<Result<AdherenceData>> getAdherenceData(String studentId) async {
     try {
-      final averageAdherence = await _adherenceRepo.getAverageAdherence(studentId);
-      final weeklyRecords = await _adherenceRepo.getWeekly(studentId);
+      final avgResult = await _adherenceRepo.getAverageAdherence(studentId);
+      final averageAdherence = avgResult.data ?? 0.0;
+      final weeklyResult = await _adherenceRepo.getWeekly(studentId);
+      final weeklyRecords = weeklyResult.data ?? [];
       final weeklyAdherence = weeklyRecords.isEmpty
           ? 0.0
           : weeklyRecords.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /

@@ -145,7 +145,7 @@ void main() {
       });
 
       test('can be overridden with custom DocumentExtractor', () {
-        final fakeExtractor = DocumentExtractor(modelId: 'test-model-id');
+        final fakeExtractor = DocumentExtractor(modelId: 'test-model-id', localeName: 'en');
         final container = ProviderContainer(
           overrides: [
             documentExtractorProvider.overrideWithValue(fakeExtractor),
@@ -435,6 +435,7 @@ void main() {
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
           modelId: 'test-model-id',
+          localeName: 'en',
         );
         final container = ProviderContainer(
           overrides: [

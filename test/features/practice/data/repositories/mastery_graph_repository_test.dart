@@ -492,17 +492,47 @@ void main() {
         final result = await repository.getWeakTopics('s1');
         expect(result.data, isEmpty);
       });
+
+      test('excludes other students weak topics', () async {
+        final now = DateTime.now();
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.5));
+        await repository.updateMasteryState(MasteryState(studentId: 's2', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.3));
+        final result = await repository.getWeakTopics('s1');
+        expect(result.data?.length, 1);
+        expect(result.data?.first.studentId, 's1');
+      });
+
+      test('sorts weak topics by accuracy ascending', () async {
+        final now = DateTime.now();
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.5));
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.3));
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't3', lastAttempt: now, lastUpdated: now, accuracy: 0.6));
+        final result = await repository.getWeakTopics('s1');
+        expect(result.data?.first.accuracy, 0.3);
+        expect(result.data?.last.accuracy, 0.6);
+      });
     });
 
     group('getMasterySnapshot', () {
       test('returns snapshot for student', () async {
         final now = DateTime.now();
-        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.8, masteryLevel: MasteryLevel.proficient, totalAttempts: 10));
-        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.5, masteryLevel: MasteryLevel.developing, totalAttempts: 5));
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.8, masteryLevel: MasteryLevel.proficient, totalAttempts: 10, readinessScore: 0.9, reviewUrgency: 0.2));
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.5, masteryLevel: MasteryLevel.developing, totalAttempts: 5, readinessScore: 0.4, reviewUrgency: 0.7));
         final result = await repository.getMasterySnapshot('s1');
         expect(result.isSuccess, isTrue);
         expect(result.data?['totalTopics'], 2);
         expect(result.data?['totalAttempts'], 15);
+        expect(result.data?['masteredTopics'], 1);
+        expect(result.data?['weakTopics'], 1);
+      });
+
+      test('calculates average readiness and review urgency', () async {
+        final now = DateTime.now();
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.9, masteryLevel: MasteryLevel.expert, totalAttempts: 20, readinessScore: 0.95, reviewUrgency: 0.1));
+        await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.3, masteryLevel: MasteryLevel.novice, totalAttempts: 3, readinessScore: 0.2, reviewUrgency: 0.9));
+        final result = await repository.getMasterySnapshot('s1');
+        expect(result.data?['avgReadiness'], closeTo(0.575, 0.001));
+        expect(result.data?['avgReviewUrgency'], closeTo(0.5, 0.001));
       });
 
       test('returns zeros for student with no states', () async {
@@ -512,6 +542,9 @@ void main() {
         expect(result.data?['totalAttempts'], 0);
         expect(result.data?['averageAccuracy'], 0.0);
         expect(result.data?['avgReadiness'], 0.0);
+        expect(result.data?['avgReviewUrgency'], 0.0);
+        expect(result.data?['masteredTopics'], 0);
+        expect(result.data?['weakTopics'], 0);
       });
     });
   });
@@ -563,6 +596,36 @@ void main() {
       expect(result.data, hasLength(2));
     });
 
+    test('getTopicsNeedingReview works after init', () async {
+      final now = DateTime.now();
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, reviewUrgency: 0.8));
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, reviewUrgency: 0.3));
+      final result = await repository.getTopicsNeedingReview('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.length, 1);
+      expect(result.data?.first.topicId, 't1');
+    });
+
+    test('getWeakTopics works after init', () async {
+      final now = DateTime.now();
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.5));
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.9));
+      final result = await repository.getWeakTopics('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.length, 1);
+      expect(result.data?.first.topicId, 't1');
+    });
+
+    test('getMasterySnapshot works after init', () async {
+      final now = DateTime.now();
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now, accuracy: 0.8, totalAttempts: 10));
+      await repository.updateMasteryState(MasteryState(studentId: 's1', topicId: 't2', lastAttempt: now, lastUpdated: now, accuracy: 0.5, totalAttempts: 5));
+      final result = await repository.getMasterySnapshot('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?['totalTopics'], 2);
+      expect(result.data?['totalAttempts'], 15);
+    });
+
     test('question mastery CRUD works after init', () async {
       final now = DateTime.now();
       final qms = QuestionMasteryState.initial(studentId: 's1', questionId: 'q1', now: now);
@@ -570,6 +633,28 @@ void main() {
       final result = await repository.getQuestionMasteryState('s1', 'q1');
       expect(result.isSuccess, isTrue);
       expect(result.data?.questionId, 'q1');
+    });
+
+    test('getDueQuestions works after init', () async {
+      final past = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime(2020, 1, 1), nextReview: DateTime(2020, 6, 1));
+      final future = QuestionMasteryState(studentId: 's1', questionId: 'q2', lastAttempt: DateTime.now(), nextReview: DateTime(2099, 1, 1));
+      await repository.updateQuestionMasteryState(past);
+      await repository.updateQuestionMasteryState(future);
+      final result = await repository.getDueQuestions('s1', asOf: DateTime(2026, 5, 12));
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.length, 1);
+      expect(result.data?.first.questionId, 'q1');
+    });
+
+    test('getAtRiskQuestions works after init', () async {
+      final low = QuestionMasteryState(studentId: 's1', questionId: 'q1', lastAttempt: DateTime.now(), masteryLevel: 0.3);
+      final high = QuestionMasteryState(studentId: 's1', questionId: 'q2', lastAttempt: DateTime.now(), masteryLevel: 0.8);
+      await repository.updateQuestionMasteryState(low);
+      await repository.updateQuestionMasteryState(high);
+      final result = await repository.getAtRiskQuestions('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.length, 1);
+      expect(result.data?.first.questionId, 'q1');
     });
 
     test('topic dependency CRUD works after init', () async {
@@ -580,12 +665,32 @@ void main() {
       expect(result.data?.prerequisites, ['t0']);
     });
 
+    test('getAllDependencies works after init', () async {
+      await repository.updateTopicDependency(TopicDependency(topicId: 't1'));
+      await repository.updateTopicDependency(TopicDependency(topicId: 't2'));
+      final result = await repository.getAllDependencies();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(2));
+    });
+
     test('evaluation CRUD works after init', () async {
       final eval = QuestionEvaluation(questionId: 'q1', correctAnswer: 'Paris');
       await repository.saveEvaluation(eval);
       final result = await repository.getEvaluation('q1');
       expect(result.isSuccess, isTrue);
       expect(result.data?.correctAnswer, 'Paris');
+    });
+
+    test('migrateFromLegacy works after init', () async {
+      final result = await repository.migrateFromLegacy(
+        questionId: 'q-migrate',
+        correctAnswer: 'Berlin',
+        options: ['Berlin', 'Paris', 'London'],
+      );
+      expect(result.isSuccess, isTrue);
+      final stored = await repository.getEvaluation('q-migrate');
+      expect(stored.data?.correctAnswer, 'Berlin');
+      expect(stored.data?.acceptableAnswers, ['Berlin', 'Paris', 'London']);
     });
   });
 }

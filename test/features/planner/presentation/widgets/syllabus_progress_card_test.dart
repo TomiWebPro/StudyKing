@@ -1,28 +1,11 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/syllabus_progress_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
-  late String hivePath;
-
-  setUpAll(() {
-    hivePath = Directory.systemTemp.createTempSync('syllabus_progress_card_test_').path;
-    Hive.init(hivePath);
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    try {
-      await Directory(hivePath).delete(recursive: true);
-    } catch (_) {}
-  });
-
   final goal = SyllabusGoal(
     subjectId: 'math-101',
     subjectTitle: 'Mathematics',

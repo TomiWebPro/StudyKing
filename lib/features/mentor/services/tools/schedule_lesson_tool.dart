@@ -7,7 +7,7 @@ class ScheduleLessonTool extends AgentTool {
   final PlannerService _plannerService;
   final String _localeName;
 
-  ScheduleLessonTool({required PlannerService plannerService, String localeName = 'en'})
+  ScheduleLessonTool({required PlannerService plannerService, required String localeName})
       : _plannerService = plannerService,
         _localeName = localeName;
 

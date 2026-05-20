@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 
 class StudyTimerService {
@@ -62,8 +61,7 @@ class StudyTimerService {
 
   Future<Result<int>> getDailyCapMinutes() async {
     try {
-      final box = Hive.box(HiveBoxNames.settings);
-      return Result.success(box.get('dailyCapMinutes', defaultValue: 0));
+      return Result.success(SettingsService.getDailyCapMinutes());
     } catch (e) {
       _logger.w('Failed to get daily cap minutes', e);
       return Result.failure(e.toString());

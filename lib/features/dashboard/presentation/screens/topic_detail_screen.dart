@@ -51,7 +51,7 @@ class TopicDetailScreen extends ConsumerWidget {
       ),
       body: allMasteryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('$e')),
+        error: (e, _) => Center(child: Text('${l10n.errorLoadingSource}\n$e')),
         data: (allMastery) {
           final state = allMastery.where((s) => s.topicId == topicId).firstOrNull;
           if (state == null) {

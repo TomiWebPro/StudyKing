@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,6 +11,7 @@ import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart'
     show backupLlmProviderProvider, backupApiKeyProvider, backupBaseUrlProvider, backupModelProvider;
+import 'package:studyking/core/providers/secure_api_key_provider.dart';
 import 'package:studyking/core/constants/app_api_config.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 
@@ -164,6 +164,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             ),
             llmProvider: _selectedProvider,
           );
+
+      final secureService = ref.read(secureApiKeyServiceProvider);
+      await secureService.saveApiKey(apiKey);
+      await secureService.saveBackupApiKey(backupApiKey);
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

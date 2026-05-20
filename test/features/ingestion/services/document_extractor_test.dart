@@ -4,7 +4,7 @@ import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 
 class _FakeOcrExtractor extends OcrExtractor {
-  _FakeOcrExtractor() : super(modelId: 'test');
+  _FakeOcrExtractor() : super(modelId: 'test', localeName: 'en');
 
   @override
   Future<OcrExtractionResult> extractText({
@@ -23,7 +23,7 @@ void main() {
   group('DocumentExtractor', () {
     group('extractText', () {
       test('returns direct text for SourceType.pdf', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'pdf content',
           sourceType: SourceType.pdf,
@@ -33,7 +33,7 @@ void main() {
       });
 
       test('returns direct text for SourceType.document', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'doc content',
           sourceType: SourceType.document,
@@ -42,7 +42,7 @@ void main() {
       });
 
       test('returns direct text for SourceType.textbook', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'textbook content',
           sourceType: SourceType.textbook,
@@ -51,7 +51,7 @@ void main() {
       });
 
       test('returns direct text for SourceType.syllabus', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'syllabus content',
           sourceType: SourceType.syllabus,
@@ -60,7 +60,7 @@ void main() {
       });
 
       test('returns direct text for SourceType.lectureNotes', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'notes content',
           sourceType: SourceType.lectureNotes,
@@ -69,7 +69,7 @@ void main() {
       });
 
       test('returns direct text for SourceType.externalResource', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'resource content',
           sourceType: SourceType.externalResource,
@@ -78,7 +78,7 @@ void main() {
       });
 
       test('strips HTML for SourceType.webPage', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: '<html><body><p>Hello world content here</p></body></html>',
           sourceType: SourceType.webPage,
@@ -88,7 +88,7 @@ void main() {
       });
 
       test('passes through non-HTML for SourceType.webPage', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'plain text content',
           sourceType: SourceType.webPage,
@@ -98,7 +98,7 @@ void main() {
       });
 
       test('returns image file path for SourceType.image with file://', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'file:///path/to/image.png',
           sourceType: SourceType.image,
@@ -109,7 +109,7 @@ void main() {
       });
 
       test('returns image URL for SourceType.image with http URL', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'https://example.com/photo.jpg',
           sourceType: SourceType.image,
@@ -119,7 +119,7 @@ void main() {
       });
 
       test('returns video raw content for SourceType.video', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'transcript content',
           sourceType: SourceType.video,
@@ -129,7 +129,7 @@ void main() {
       });
 
       test('detects YouTube URL for SourceType.video', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'https://youtube.com/watch?v=abc123',
           sourceType: SourceType.video,
@@ -139,7 +139,7 @@ void main() {
       });
 
       test('returns audio raw content for SourceType.audio', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'audio transcript',
           sourceType: SourceType.audio,
@@ -149,7 +149,7 @@ void main() {
       });
 
       test('detects URL for SourceType.audio', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'https://example.com/audio.mp3',
           sourceType: SourceType.audio,
@@ -159,7 +159,7 @@ void main() {
       });
 
       test('populates extraction metadata via toMetaJson', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: 'some content',
           sourceType: SourceType.pdf,
@@ -169,7 +169,7 @@ void main() {
       });
 
       test('handles empty content gracefully', () async {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final result = await extractor.extractText(
           rawContent: '',
           sourceType: SourceType.pdf,
@@ -182,6 +182,7 @@ void main() {
         final extractor = DocumentExtractor(
           modelId: 'test-model',
           ocrExtractor: _FakeOcrExtractor(),
+          localeName: 'en',
         );
         final result = await extractor.extractText(
           rawContent: 'test content',
@@ -194,34 +195,34 @@ void main() {
 
     group('estimateChunkCount', () {
       test('returns 0 for empty string', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         expect(extractor.estimateChunkCount(''), 0);
       });
 
       test('returns 1 for text shorter than chunkSize', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         expect(extractor.estimateChunkCount('hello'), 1);
       });
 
       test('returns 1 for text exactly fitting chunkSize', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final text = 'a' * 2000;
         expect(extractor.estimateChunkCount(text), 1);
       });
 
       test('returns 2 for text at chunkSize boundary + 1', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final text = 'a' * 2001;
         expect(extractor.estimateChunkCount(text), 2);
       });
 
       test('handles single character', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         expect(extractor.estimateChunkCount('x'), 1);
       });
 
       test('handles custom chunkSize', () {
-        final extractor = DocumentExtractor(modelId: 'test-model');
+        final extractor = DocumentExtractor(modelId: 'test-model', localeName: 'en');
         final text = 'a' * 500;
         expect(extractor.estimateChunkCount(text, chunkSize: 100), 5);
       });

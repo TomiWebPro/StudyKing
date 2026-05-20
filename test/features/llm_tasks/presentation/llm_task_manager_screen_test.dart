@@ -118,6 +118,16 @@ class FakeLlmTaskManager extends LlmTaskManager {
     );
   }
 
+  void failTaskWithoutError(String taskId) {
+    final idx = _tasks.indexWhere((t) => t.id == taskId);
+    if (idx == -1) return;
+    _tasks[idx] = _modifyTask(_tasks[idx],
+      status: LlmTaskStatus.failed,
+      endTime: DateTime.now(),
+    );
+    _notify();
+  }
+
   void Function(String feature, String error)? _onTaskFailed;
 
   @override
@@ -930,6 +940,138 @@ void main() {
       await tester.pump();
 
       expect(find.text('pre-existing-task'), findsOneWidget);
+    });
+
+    // =====================
+    // ERROR CONTAINER HIDDEN
+    // =====================
+    testWidgets('hides error container for completed task', (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+
+    testWidgets('hides error container for running task', (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.startTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+
+    testWidgets('hides error container for queued task', (tester) async {
+      manager.createTask(feature: 'chat', modelId: 'gpt-4');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+
+    testWidgets('hides error container for cancelled task', (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.cancelTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.error_outline), findsNothing);
+    });
+
+    // =====================
+    // ERROR CONTAINER HIDDEN (POST-SNACKBAR)
+    // =====================
+    testWidgets('no snackbar for failed task with null error', (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      manager.failTaskWithoutError(id);
+      await tester.pump();
+
+      expect(find.byType(SnackBar), findsNothing);
+    });
+
+    // =====================
+    // PROGRESS INDICATOR EXTREMES
+    // =====================
+    testWidgets('progress indicator at 100% when all tasks completed',
+        (tester) async {
+      final id1 = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.startTask(id1);
+      manager.completeTask(id1, tokensUsed: 500, estimatedCost: 0.025);
+      final id2 = manager.createTask(feature: 'teach', modelId: 'gpt-4');
+      manager.startTask(id2);
+      manager.completeTask(id2, tokensUsed: 300, estimatedCost: 0.015);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, 1.0);
+    });
+
+    testWidgets('progress indicator partially filled with mixed status',
+        (tester) async {
+      final id1 = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.startTask(id1);
+      manager.completeTask(id1, tokensUsed: 500, estimatedCost: 0.025);
+      final id2 = manager.createTask(feature: 'teach', modelId: 'gpt-4');
+      manager.startTask(id2);
+      final id3 = manager.createTask(feature: 'practice', modelId: 'gpt-4');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, closeTo(0.333, 0.001));
+    });
+
+    // =====================
+    // TASK CARD DISPLAY
+    // =====================
+    testWidgets('task card shows model label with model ID', (tester) async {
+      manager.createTask(feature: 'chat', modelId: 'claude-3-opus');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.text('Model: claude-3-opus'), findsOneWidget);
+    });
+
+    // =====================
+    // ACTIVE CHIP TEXT
+    // =====================
+    testWidgets('active chip displays correct count for single active task',
+        (tester) async {
+      manager.createTask(feature: 'chat', modelId: 'gpt-4');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.text('1 active'), findsOneWidget);
+    });
+
+    testWidgets('active chip displays correct count for multiple active tasks',
+        (tester) async {
+      manager.createTask(feature: 'a', modelId: 'm1');
+      manager.createTask(feature: 'b', modelId: 'm2');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.text('2 active'), findsOneWidget);
     });
   });
 }

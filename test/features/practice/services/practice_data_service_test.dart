@@ -279,6 +279,80 @@ void main() {
       expect(result, isEmpty);
     });
   });
+
+
+  group('PracticeDataService - coverage gaps', () {
+  test('loadTopicsWithNames returns empty when questions empty', () async {
+    final questionRepo = _FakeQuestionRepo4([]);
+    final service = PracticeDataService(
+      srService: _FakeSrService2({}),
+      questionRepo: questionRepo,
+      subjectRepo: _FakeSubjectRepo2([]),
+      studentIdService: FakeStudentIdService(),
+    );
+    final topics = await service.loadTopicsWithNames(questionRepo);
+    expect(topics, isEmpty);
+  });
+
+  test('loadTopicsWithNames returns map of topic id to name', () async {
+    final questionRepo = _FakeQuestionRepo4([
+      Question(
+        id: 'q1',
+        text: 'Q',
+        type: QuestionType.singleChoice,
+        subjectId: 's1',
+        topicId: 't1',
+        topic: null,
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      ),
+      Question(
+        id: 'q2',
+        text: 'Q2',
+        type: QuestionType.singleChoice,
+        subjectId: 's1',
+        topicId: 't2',
+        topic: 'Algebra',
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      ),
+    ]);
+    final service = PracticeDataService(
+      srService: _FakeSrService2({}),
+      questionRepo: questionRepo,
+      subjectRepo: _FakeSubjectRepo2([]),
+      studentIdService: FakeStudentIdService(),
+    );
+    final topics = await service.loadTopicsWithNames(questionRepo);
+    expect(topics, hasLength(1));
+    expect(topics['t2'], 'Algebra');
+  });
+
+  test('loadDueCounts handles empty subjects list', () async {
+    final srService = _FakeSrService2({});
+    final service = PracticeDataService(
+      srService: srService,
+      questionRepo: _FakeQuestionRepo4([]),
+      subjectRepo: _FakeSubjectRepo2([]),
+      studentIdService: FakeStudentIdService(),
+    );
+    final dueCounts = await service.loadDueCounts([]);
+    expect(dueCounts, isEmpty);
+  });
+
+  test('loadWeakAreaQuestions returns empty when getWeakTopics returns empty list',
+      () async {
+    FakeStudentIdService().setStudentId('test-student');
+    final masteryService = _FakeMasteryGraphSvc2();
+    final service = PracticeDataService(
+      srService: _FakeSrService2({}),
+      questionRepo: _FakeQuestionRepo4([]),
+      subjectRepo: _FakeSubjectRepo2([]),
+      studentIdService: FakeStudentIdService(),
+    );
+    final result = await service.loadWeakAreaQuestions(masteryService);
+    expect(result, isEmpty);
+  });
 }
 
 class _FakeFailingQuestionRepository extends QuestionRepository {
@@ -310,5 +384,52 @@ class _FakeMasteryGraphServiceFailure extends MasteryGraphService {
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
     return Result.failure('error');
+  }
+}
+
+class _FakeQuestionRepo4 extends QuestionRepository {
+  final List<Question> _questions;
+
+  _FakeQuestionRepo4(this._questions);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
+}
+
+class _FakeSrService2 extends SpacedRepetitionService {
+  final Map<String, int> _dueCounts;
+
+  _FakeSrService2(this._dueCounts)
+      : super(
+          questionRepo: QuestionRepository(),
+          attemptRepo: AttemptRepository(),
+        );
+
+  @override
+  Future<Result<int>> getSubjectDueCount(String subjectId) async {
+    return Result.success(_dueCounts[subjectId] ?? 0);
+  }
+}
+
+class _FakeSubjectRepo2 extends SubjectRepository {
+  final List<Subject> _subjects;
+  _FakeSubjectRepo2(this._subjects);
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+}
+
+class _FakeMasteryGraphSvc2 extends MasteryGraphService {
+  _FakeMasteryGraphSvc2();
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success(<MasteryState>[]);
   }
 }

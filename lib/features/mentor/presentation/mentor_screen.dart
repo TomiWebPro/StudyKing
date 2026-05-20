@@ -42,6 +42,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _isInitialized = false;
   bool _initError = false;
   bool _isRetrying = false;
+  bool _throttleWasActive = false;
   String _initErrorMessage = '';
   String? _pendingRetryText;
   MentorAction? _suggestedAction;
@@ -335,6 +336,16 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         );
         _isSending = false;
       });
+    }
+    if (mounted) {
+      setState(() {
+        _throttleWasActive = _mentorService.wasThrottleActive;
+      });
+      if (_throttleWasActive) {
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) setState(() => _throttleWasActive = false);
+        });
+      }
     }
     _scrollToBottom();
     _inputFocusNode.requestFocus();
@@ -701,6 +712,33 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                     ? _buildEmptyState(l10n)
                     : _buildMessageList(ref.watch(settingsProvider).reduceMotion),
               ),
+              if (_throttleWasActive)
+                Semantics(
+                  liveRegion: true,
+                  label: l10n.pleaseWait,
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.7),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 1.5),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          l10n.pleaseWait,
+                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
             ],
             FocusTraversalOrder(
               order: const NumericFocusOrder(1),
@@ -1272,7 +1310,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       try {
         Navigator.of(context).pop();
       } catch (e) {
-        _logger.w('Failed to pop navigator in error handler', e);
+        _logger.e('Failed to pop navigator in error handler', e);
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

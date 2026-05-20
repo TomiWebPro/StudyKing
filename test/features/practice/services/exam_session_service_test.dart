@@ -341,6 +341,118 @@ void main() {
       service.dispose();
     });
   });
+
+
+  group('ExamSessionService - coverage gaps', () {
+  late ExamSessionService service;
+  late _FakeSessionRepo sessionRepo;
+
+  setUp(() {
+    sessionRepo = _FakeSessionRepo();
+    service = ExamSessionService(
+      sessionRepo: sessionRepo,
+      studentIdService: FakeStudentIdService(),
+    );
+  });
+
+  tearDown(() {
+    service.dispose();
+  });
+
+  group('isTimeUp', () {
+    test('returns true when remaining is zero', () {
+      final config = const ExamConfig(
+        durationMinutes: 30,
+        questionCount: 5,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+      service.cancelExam();
+      expect(service.isTimeUp(), isTrue);
+    });
+
+    test('returns false when time remains', () {
+      final config = const ExamConfig(
+        durationMinutes: 30,
+        questionCount: 5,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+      expect(service.isTimeUp(), isFalse);
+      service.cancelExam();
+    });
+  });
+
+  group('ExamSessionService lifecycle', () {
+    test('finishExam with autoSubmitted sets correct tags', () async {
+      final config = const ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+
+      await service.finishExam(
+        config: config,
+        questionResults: [
+          ExamQuestionResult(
+              question: _createQ(id: 'q1'),
+              isCorrect: true,
+              timeSpentMs: 1000),
+        ],
+        autoSubmitted: true,
+      );
+
+      expect(sessionRepo.sessions.first.tags.contains('auto_submit:true'),
+          isTrue);
+    });
+
+    test('finishExam without autoSubmitted sets correct tags', () async {
+      final config = const ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+
+      await service.finishExam(
+        config: config,
+        questionResults: [
+          ExamQuestionResult(
+              question: _createQ(id: 'q1'),
+              isCorrect: true,
+              timeSpentMs: 1000),
+        ],
+      );
+
+      expect(sessionRepo.sessions.first.tags.contains('auto_submit:false'),
+          isTrue);
+    });
+
+    test('dispose cancels timer and disposes notifiers', () {
+      final localService = ExamSessionService(
+        sessionRepo: sessionRepo,
+        studentIdService: FakeStudentIdService(),
+      );
+      final config = const ExamConfig(
+        durationMinutes: 30,
+        questionCount: 5,
+        subjectId: 'sub1',
+      );
+      localService.startExam(config);
+
+      localService.cancelExam();
+      localService.dispose();
+    });
+
+    test('ExamSessionService.dispose is safe to call once', () {
+      final localService = ExamSessionService(
+        sessionRepo: sessionRepo,
+        studentIdService: FakeStudentIdService(),
+      );
+      localService.dispose();
+    });
+  });
 }
 
 class _FailingSessionRepository extends SessionRepository {
@@ -367,4 +479,49 @@ class _FixedClock implements Clock {
   _FixedClock(this.fixed);
   @override
   DateTime now() => fixed;
+}
+
+class _FakeSessionRepo extends SessionRepository {
+  final List<Session> sessions = [];
+  bool shouldThrow = false;
+
+  @override
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    if (shouldThrow) return Result.failure('Save error');
+    sessions.add(session);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async {
+    final idx = sessions.indexWhere((s) => s.id == id);
+    if (idx == -1) return Result.success(null);
+    return Result.success(sessions[idx]);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    return Result.success(sessions);
+  }
+}
+
+Question _createQ({
+  String id = 'q1',
+  String subjectId = 'sub1',
+  String topicId = 't1',
+  int difficulty = 1,
+  String? srDataJson,
+}) {
+  return Question(
+    id: id,
+    text: 'Sample question?',
+    type: QuestionType.singleChoice,
+    subjectId: subjectId,
+    topicId: topicId,
+    difficulty: difficulty,
+    createdAt: DateTime(2026, 5, 12),
+    updatedAt: DateTime(2026, 5, 12),
+    srDataJson: srDataJson,
+  );
 }

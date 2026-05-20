@@ -4,14 +4,20 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show attemptRepositoryProvider, masteryGraphServiceProvider;
 import 'package:studyking/features/sessions/providers/session_providers.dart' show sessionRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+final _dashboardProvidersLogger = const Logger('DashboardProviders');
+
 final dashboardStudyProgressTrackerProvider = Provider<StudyProgressTracker>((ref) {
   final l10n = ref.watch(l10nProvider);
-  final defaultL10n = lookupAppLocalizations(const Locale('en'));
+  final defaultL10n = l10n ?? ((){
+    _dashboardProvidersLogger.w('l10nProvider returned null for dashboardStudyProgressTrackerProvider, using English fallback');
+    return lookupAppLocalizations(const Locale('en'));
+  })();
   final tracker = StudyProgressTracker(
     attemptRepo: ref.read(attemptRepositoryProvider),
     sessionRepo: ref.read(sessionRepositoryProvider),

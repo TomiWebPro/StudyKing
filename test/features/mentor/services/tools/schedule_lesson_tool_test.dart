@@ -41,7 +41,7 @@ void main() {
 
     setUp(() {
       fakePlanner = FakePlannerService();
-      tool = ScheduleLessonTool(plannerService: fakePlanner);
+      tool = ScheduleLessonTool(plannerService: fakePlanner, localeName: 'en');
     });
 
     test('name returns schedule_lesson', () {

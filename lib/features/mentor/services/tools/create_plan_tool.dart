@@ -7,7 +7,7 @@ class CreatePlanTool extends AgentTool {
   final PlannerService _plannerService;
   final String _localeName;
 
-  CreatePlanTool({required PlannerService plannerService, String localeName = 'en'})
+  CreatePlanTool({required PlannerService plannerService, required String localeName})
       : _plannerService = plannerService,
         _localeName = localeName;
 

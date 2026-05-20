@@ -131,5 +131,60 @@ void main() {
         expect(out, contains('pageStart: 1'));
       });
     });
+
+    group('error path', () {
+      test('isError returns true when errorMessage is set', () {
+        final result = ExtractionResult(
+          text: '',
+          errorMessage: 'Extraction failed: OCR timeout',
+        );
+        expect(result.isError, isTrue);
+      });
+
+      test('isError returns false when no errorMessage', () {
+        final result = ExtractionResult(text: 'success');
+        expect(result.isError, isFalse);
+      });
+
+      test('toMetaJson includes errorMessage when set', () {
+        final result = ExtractionResult(
+          text: '',
+          errorMessage: 'Failed',
+          extractionMethod: 'ocr',
+        );
+        final meta = result.toMetaJson();
+        expect(meta.containsKey('errorMessage'), isTrue);
+        expect(meta['errorMessage'], 'Failed');
+      });
+
+      test('toMetaJson omits errorMessage when not set', () {
+        final result = ExtractionResult(text: 'success');
+        final meta = result.toMetaJson();
+        expect(meta.containsKey('errorMessage'), isFalse);
+      });
+
+      test('handles chunk with empty text gracefully', () {
+        final result = ExtractionResult(
+          text: 'parent',
+          chunks: [
+            SourceChunk(chunkIndex: 0, text: ''),
+            SourceChunk(chunkIndex: 1, text: 'valid'),
+          ],
+        );
+        final out = result.chunksToJson();
+        expect(out, contains('chunkIndex: 1'));
+      });
+
+      test('handles chunk with negative page range', () {
+        final result = ExtractionResult(
+          text: 'test',
+          chunks: [
+            SourceChunk(chunkIndex: 0, text: 'A', pageStart: -1, pageEnd: 0),
+          ],
+        );
+        final out = result.chunksToJson();
+        expect(out, contains('pageStart: -1'));
+      });
+    });
   });
 }

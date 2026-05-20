@@ -1,6 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import '../../../../core/constants/token_pricing_config.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/settings/data/models/llm_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -114,15 +114,9 @@ class UsageRecord {
 
   String priceDisplayWithLocale(String localeName) => formatCurrency(totalCost, localeName, minFractionDigits: 4, maxFractionDigits: 4);
 
-  @Deprecated('Use priceDisplayWithLocale(localeName) instead')
-  String get priceDisplay => priceDisplayWithLocale('en');
-
   String get tokenDisplay => '($inputTokens in / $outputTokens out)';
 
   String formattedTextWithLocale(String localeName) => '${timestamp.toIso8601String().split(' ')[0]}: ${priceDisplayWithLocale(localeName)}, cost/tk: ${formatDecimal(totalCost / totalTokens, localeName, minFractionDigits: 10, maxFractionDigits: 10)}';
-
-  @Deprecated('Use formattedTextWithLocale(localeName) instead')
-  String get formattedText => formattedTextWithLocale('en');
 
   String formattedTextWithL10n(AppLocalizations l10n) => l10n.usageRecordFormat(
     timestamp.toIso8601String().split(' ')[0],
@@ -131,7 +125,7 @@ class UsageRecord {
   );
 
   @override
-  String toString() => 'UsageRecord(\$: $formattedText)';
+  String toString() => 'UsageRecord(\$: ${formattedTextWithLocale('en')})';
 }
 
 class LLMSettingsModel extends ChangeNotifier {

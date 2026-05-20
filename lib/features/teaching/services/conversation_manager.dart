@@ -359,11 +359,17 @@ class ConversationManager {
   };
 
   List<String> _getContinueKeywords() {
+    if (!_continueKeywordsByLocale.containsKey(localeName)) {
+      _logger.w('No continue keywords for locale $localeName, falling back to en');
+    }
     return _continueKeywordsByLocale[localeName] ?? _continueKeywordsByLocale['en']!;
   }
 
   void _detectExerciseRequest(String content) {
     final lower = content.normalized;
+    if (!_exerciseKeywordsByLocale.containsKey(localeName)) {
+      _logger.w('No exercise keywords for locale $localeName, falling back to en');
+    }
     final exerciseKeywords = _exerciseKeywordsByLocale[localeName] ?? _exerciseKeywordsByLocale['en']!;
     if (exerciseKeywords.any((k) => lower.contains(k))) {
       _logTransition(phase, ConversationPhase.exercise, 'keyword detected in student message');

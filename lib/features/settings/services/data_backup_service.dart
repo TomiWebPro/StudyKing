@@ -1,24 +1,56 @@
 import 'dart:convert';
 import 'dart:io' show File;
+import 'dart:typed_data';
+import 'package:archive/archive.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
+import '../../../core/data/hive_box_names.dart';
 import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
 
 class DataBackupService {
   static final Logger _logger = const Logger('DataBackupService');
 
+  /// Collects data from all open Hive boxes into a map of box name → records.
+  Map<String, List<Map<String, dynamic>>> collectAllBoxData() {
+    final data = <String, List<Map<String, dynamic>>>{};
+    final boxNames = HiveBoxNames.allBackupBoxes;
+    for (final boxName in boxNames) {
+      if (!Hive.isBoxOpen(boxName)) continue;
+      final box = Hive.box(boxName);
+      final records = <Map<String, dynamic>>[];
+      for (final value in box.values) {
+        final map = _toMap(value);
+        if (map != null) records.add(map);
+      }
+      if (records.isNotEmpty) data[boxName] = records;
+    }
+    return data;
+  }
+
+  Map<String, dynamic>? _toMap(dynamic value) {
+    if (value == null) return null;
+    if (value is Map<String, dynamic>) return value;
+    try {
+      return (value as dynamic).toJson() as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
+
   Future<Result<String>> exportAllData({
     required Map<String, List<Map<String, dynamic>>> boxData,
     String? filename,
     String? outputDir,
+    bool compress = true,
   }) async {
     if (kIsWeb) {
       return Result.failure('Backup/restore is not supported on web');
     }
     try {
       final backup = {
-        'version': 1,
+        'version': compress ? 2 : 1,
         'exportedAt': DateTime.now().toIso8601String(),
         'boxes': boxData,
       };
@@ -27,9 +59,17 @@ class DataBackupService {
       final dir = outputDir == 'persistent'
           ? await getApplicationDocumentsDirectory()
           : await getTemporaryDirectory();
-      final file = File('${dir.path}/${filename ?? 'studyking_backup'}.json');
-      await file.writeAsString(json);
-      _logger.i('Backup exported to ${file.path} (${json.length} bytes)');
+      final ext = compress ? '.skbak' : '.json';
+      final file = File('${dir.path}/${filename ?? 'studyking_backup'}$ext');
+
+      if (compress) {
+        final compressed = GZipEncoder().encode(utf8.encode(json)) as Uint8List;
+        await file.writeAsBytes(compressed);
+        _logger.i('Backup exported to ${file.path} (${compressed.length} bytes, gzip)');
+      } else {
+        await file.writeAsString(json);
+        _logger.i('Backup exported to ${file.path} (${json.length} bytes)');
+      }
       return Result.success(file.path);
     } catch (e) {
       _logger.w('Failed to export backup', e);
@@ -58,8 +98,17 @@ class DataBackupService {
       if (!await file.exists()) {
         return Result.failure('Backup_not_found: $filePath');
       }
-      final json = await file.readAsString();
-      final data = jsonDecode(json) as Map<String, dynamic>;
+
+      late Map<String, dynamic> data;
+      if (filePath.endsWith('.skbak')) {
+        final bytes = await file.readAsBytes();
+        final decompressed = GZipDecoder().decodeBytes(bytes);
+        final jsonStr = utf8.decode(decompressed);
+        data = jsonDecode(jsonStr) as Map<String, dynamic>;
+      } else {
+        final json = await file.readAsString();
+        data = jsonDecode(json) as Map<String, dynamic>;
+      }
 
       if (!data.containsKey('version') ||
           !data.containsKey('exportedAt') ||

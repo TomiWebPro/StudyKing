@@ -20,6 +20,7 @@ import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -53,7 +54,10 @@ import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dar
 import 'package:studyking/features/onboarding/providers/onboarding_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show databaseProvider;
+import 'package:studyking/features/subjects/providers/subjects_list_provider.dart' show subjectListProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
+import 'package:studyking/core/providers/secure_api_key_provider.dart';
 import 'package:studyking/features/settings/providers/settings_providers.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
@@ -621,8 +625,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 
   String _getDailyCapLabel(AppLocalizations l10n) {
     try {
-      final box = Hive.box(HiveBoxNames.settings);
-      final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
+      final cap = SettingsService.getDailyCapMinutes();
       return cap > 0 ? l10n.minutesValue(cap) : l10n.noLimit;
     } catch (e) {
       _logger.w('Failed to get daily cap label', e);
@@ -632,8 +635,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 
   Future<void> _showDailyCapDialog() async {
     try {
-      final box = Hive.box(HiveBoxNames.settings);
-      final current = box.get('dailyCapMinutes', defaultValue: 0) as int;
+      final current = SettingsService.getDailyCapMinutes();
       final options = [0, 30, 60, 90, 120, 180, 240];
       final l10n = AppLocalizations.of(context)!;
       showModalBottomSheet(
@@ -646,7 +648,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                         ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                         : null,
                     onTap: () {
-                      box.put('dailyCapMinutes', m);
+                      Hive.box(HiveBoxNames.settings).put('dailyCapMinutes', m);
                       ref.invalidate(settingsProvider);
                       Navigator.pop(context);
                     },
@@ -1184,6 +1186,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       case HiveBoxNames.roadmaps: return l10n.backupBoxRoadmaps;
       case HiveBoxNames.llmTasks: return l10n.backupBoxLlmTasks;
       case HiveBoxNames.llmUsageRecords: return l10n.backupBoxLlmUsageRecords;
+      case HiveBoxNames.agentMemory: return 'Agent Memory';
+      case HiveBoxNames.examResults: return 'Exam Results';
+      case HiveBoxNames.studentId: return 'Student ID';
+      case HiveBoxNames.dashboardLayoutPrefs: return 'Dashboard Layout';
+      case HiveBoxNames.dbVersion: return 'DB Version';
       default: return boxName;
     }
   }
@@ -1193,7 +1200,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
     try {
       final pickResult = await FilePicker.platform.pickFiles(
         type: FileType.custom,
-        allowedExtensions: ['json'],
+        allowedExtensions: ['json', 'skbak'],
         dialogTitle: l10n.selectBackupFile,
       );
       if (pickResult == null || pickResult.files.isEmpty) return;
@@ -1308,8 +1315,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         await _writeBoxData(filteredData);
       }
       if (mounted) {
-        // Invalidate key providers to refresh UI after restore (M3)
+        // Invalidate key providers to refresh UI after restore
         ref.invalidate(settingsProvider);
+        ref.invalidate(databaseProvider);
+        ref.invalidate(subjectListProvider);
         showDialog(
           context: context,
           barrierDismissible: false,
@@ -1416,65 +1425,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
   }
 
   Map<String, List<Map<String, dynamic>>> _collectAllBoxData() {
-    final data = <String, List<Map<String, dynamic>>>{};
-    final boxNames = [
-      HiveBoxNames.subjects,
-      HiveBoxNames.topics,
-      HiveBoxNames.questions,
-      HiveBoxNames.answers,
-      HiveBoxNames.sources,
-      HiveBoxNames.attempts,
-      HiveBoxNames.lessons,
-      HiveBoxNames.lessonBlocks,
-      HiveBoxNames.sessions,
-      HiveBoxNames.sessionsTyped,
-      HiveBoxNames.progress,
-      HiveBoxNames.tasks,
-      HiveBoxNames.conversations,
-      HiveBoxNames.tutorSessions,
-      HiveBoxNames.masteryStates,
-      HiveBoxNames.questionMasteryStates,
-      HiveBoxNames.questionEvaluations,
-      HiveBoxNames.learningPlans,
-      HiveBoxNames.planAdherence,
-      HiveBoxNames.planAdherenceMetrics,
-      HiveBoxNames.masteryImprovementMetrics,
-      HiveBoxNames.roadmaps,
-      HiveBoxNames.pendingActions,
-      HiveBoxNames.engagementNudges,
-      HiveBoxNames.badges,
-      HiveBoxNames.focusSessions,
-      HiveBoxNames.studentAvailability,
-      HiveBoxNames.topicDependencies,
-      HiveBoxNames.settings,
-      HiveBoxNames.profile,
-      HiveBoxNames.llmTasks,
-      HiveBoxNames.llmUsageRecords,
-    ];
-
-    for (final boxName in boxNames) {
-      if (!Hive.isBoxOpen(boxName)) continue;
-      final box = Hive.box(boxName);
-      final records = <Map<String, dynamic>>[];
-      for (final value in box.values) {
-        final map = _toMap(value);
-        if (map != null) records.add(map);
-      }
-      if (records.isNotEmpty) data[boxName] = records;
-    }
-    return data;
-  }
-
-  Map<String, dynamic>? _toMap(dynamic value) {
-    if (value == null) return null;
-    if (value is Map<String, dynamic>) return value;
-    try {
-      final obj = value as dynamic;
-      return obj.toJson() as Map<String, dynamic>;
-    } catch (e) {
-      _logger.w('Failed to convert map', e);
-      return null;
-    }
+    final service = ref.read(dataBackupServiceProvider);
+    return service.collectAllBoxData();
   }
 
   Future<void> _writeBoxData(
@@ -1656,72 +1608,118 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 
   Future<void> _showSignOutDialog() async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await showDialog<bool>(
+    var clearData = false;
+    var backupFirst = false;
+
+    final result = await showDialog<_SignOutResult>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.signOut),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.signOutConfirmation),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Theme.of(ctx).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Icon(Icons.info_outline, size: 16, color: Theme.of(ctx).colorScheme.tertiary),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.signOutClearList,
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• ${l10n.signOutClearsApiKey}\n• ${l10n.signOutClearsAiModel}',
-                      style: Theme.of(ctx).textTheme.bodySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        Icon(Icons.check_circle_outline, size: 16, color: Theme.of(ctx).colorScheme.primary),
-                        const SizedBox(width: 8),
-                        Text(
-                          l10n.signOutPreservesStudyData,
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(ctx).colorScheme.primary,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => AlertDialog(
+          title: Text(l10n.signOut),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.signOutConfirmation),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Theme.of(ctx).colorScheme.tertiaryContainer.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.info_outline, size: 16, color: Theme.of(ctx).colorScheme.tertiary),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.signOutClearList,
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.bold),
                           ),
-                        ),
-                      ],
-                    ),
-                  ],
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '• ${l10n.signOutClearsApiKey}\n• ${l10n.signOutClearsAiModel}',
+                        style: Theme.of(ctx).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Icon(Icons.check_circle_outline, size: 16, color: Theme.of(ctx).colorScheme.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            l10n.signOutPreservesStudyData,
+                            style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(ctx).colorScheme.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                ),
               ),
+              const SizedBox(height: 12),
+              const Divider(),
+              CheckboxListTile(
+                title: const Text('Clear all study data'),
+                subtitle: const Text('Removes all subjects, questions, attempts, and progress'),
+                value: clearData,
+                onChanged: (v) => setInnerState(() {
+                  clearData = v!;
+                  if (!clearData) backupFirst = false;
+                }),
+              ),
+              if (clearData)
+                CheckboxListTile(
+                  title: const Text('Back up before signing out'),
+                  subtitle: const Text('Creates a backup file before clearing data'),
+                  value: backupFirst,
+                  onChanged: (v) => setInnerState(() => backupFirst = v!),
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, _SignOutResult.cancelled), child: Text(l10n.cancel)),
+            FilledButton(
+              onPressed: () => Navigator.pop(
+                ctx,
+                clearData
+                    ? (backupFirst ? _SignOutResult.signOutBackupAndClear : _SignOutResult.signOutAndClear)
+                    : _SignOutResult.signOutOnly,
+              ),
+              style: AppTheme.destructiveButtonStyle(ctx),
+              child: Text(l10n.signOut),
             ),
           ],
         ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            style: AppTheme.destructiveButtonStyle(ctx),
-            child: Text(l10n.signOut),
-          ),
-        ],
       ),
     );
-    if (confirmed != true) return;
+    if (result == null || result == _SignOutResult.cancelled) return;
+
+    // Backup first if requested
+    if (result == _SignOutResult.signOutBackupAndClear) {
+      await _performAutoBackup();
+    }
+
+    // Clear all study data if requested
+    if (result == _SignOutResult.signOutAndClear ||
+        result == _SignOutResult.signOutBackupAndClear) {
+      final boxNames = HiveBoxNames.allStudyDataBoxes;
+      for (final boxName in boxNames) {
+        if (Hive.isBoxOpen(boxName)) {
+          await Hive.box(boxName).clear();
+        }
+      }
+    }
+
     ref.read(apiKeyProvider.notifier).state = '';
     ref.read(selectedModelProvider.notifier).state = '';
     ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(apiKey: '', selectedModel: ''));
+    await ref.read(secureApiKeyServiceProvider).clearAll();
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.signOutComplete)));
     Navigator.of(context).popUntil((route) => route.isFirst);
@@ -1738,6 +1736,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
   }
 
 }
+
+enum _SignOutResult { cancelled, signOutOnly, signOutAndClear, signOutBackupAndClear }
 
 void _showAboutDialog(BuildContext context) async {
   final log = const Logger('SettingsScreen');

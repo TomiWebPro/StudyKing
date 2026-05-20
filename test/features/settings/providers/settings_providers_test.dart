@@ -21,6 +21,7 @@ class _FakeDataBackupService extends DataBackupService {
     required Map<String, List<Map<String, dynamic>>> boxData,
     String? filename,
     String? outputDir,
+    bool compress = true,
   }) async {
     return Result.success('/fake/backup/path.json');
   }

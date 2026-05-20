@@ -36,7 +36,7 @@ class TranscriptionExtractor {
     LlmService? llmService,
     required String modelId,
     http.Client? httpClient,
-    String localeName = 'en',
+    required String localeName,
   })  : _llmService = llmService,
         _modelId = modelId,
         _httpClient = httpClient ?? http.Client(),

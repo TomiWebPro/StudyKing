@@ -145,6 +145,7 @@ final localeProvider = StateProvider<Locale>((ref) {
   } catch (e) {
     _localeLogger.w('Failed to get device locale', e);
   }
+  _localeLogger.w('Falling back to en locale');
   return const Locale('en');
 });
 

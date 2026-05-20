@@ -266,4 +266,115 @@ void main() {
       });
     });
   });
+
+  group('ReadinessScorer - coverage gaps', () {
+    group('_computeScore edge cases', () {
+      test('empty confidenceHistory uses default confidence gap', () async {
+        final now = DateTime.now();
+        final questions = [_createQ(id: 'q1')];
+        final qMastery = QuestionMasteryState(
+          studentId: 's1',
+          questionId: 'q1',
+          lastAttempt: now,
+          confidenceHistory: [],
+        );
+        final scorer = ReadinessScorer(
+          questionMasteryMap: {'q1': qMastery},
+        );
+        final result = await scorer.scoreQuestions(questions);
+        expect(result.first.score, greaterThan(0));
+      });
+
+      test('no topic mastery uses default urgency', () async {
+        final questions = [_createQ(id: 'q1', topicId: 'unknown')];
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result.first.score, greaterThan(0));
+      });
+
+      test('no question mastery uses default days score', () async {
+        final questions = [_createQ(id: 'q1')];
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result.first.score, greaterThan(0));
+      });
+
+      test('difficulty contributes to score', () async {
+        final easyQ = _createQ(id: 'q1', difficulty: 1);
+        final hardQ = _createQ(id: 'q2', difficulty: 5);
+        final questions = [easyQ, hardQ];
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions(questions);
+        expect(result[0].question.id, 'q2');
+        expect(result[0].score, greaterThan(result[1].score));
+      });
+
+      test('extreme confidence gap gives high boost', () async {
+        final now = DateTime.now();
+        final questions = [_createQ(id: 'q1')];
+        final qMastery = QuestionMasteryState(
+          studentId: 's1',
+          questionId: 'q1',
+          lastAttempt: now.subtract(const Duration(days: 30)),
+          confidenceHistory: [1],
+        );
+        final scorer = ReadinessScorer(
+          questionMasteryMap: {'q1': qMastery},
+        );
+        final result = await scorer.scoreQuestions(questions);
+        expect(result.first.score, greaterThan(0.5));
+      });
+
+      test('high readiness reduces priority', () async {
+        final now = DateTime.now();
+        final questions = [
+          _createQ(id: 'q1', topicId: 't1'),
+          _createQ(id: 'q2', topicId: 't2'),
+        ];
+        final topicMasteryMap = <String, MasteryState>{
+          't1': MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            lastAttempt: now,
+            lastUpdated: now,
+            readinessScore: 0.9,
+            reviewUrgency: 0.5,
+            accuracy: 0.8,
+          ),
+          't2': MasteryState(
+            studentId: 's1',
+            topicId: 't2',
+            lastAttempt: now,
+            lastUpdated: now,
+            readinessScore: 0.1,
+            reviewUrgency: 0.5,
+            accuracy: 0.2,
+          ),
+        };
+        final scorer = ReadinessScorer(topicMasteryMap: topicMasteryMap);
+        final result = await scorer.scoreQuestions(questions);
+        expect(result.first.question.id, 'q2');
+      });
+    });
+  });
+}
+
+Question _createQ({
+  String id = 'q1',
+  String subjectId = 'sub1',
+  String topicId = 't1',
+  int difficulty = 1,
+  String? srDataJson,
+}) {
+  return Question(
+    id: id,
+    text: 'Sample question?',
+    type: QuestionType.singleChoice,
+    subjectId: subjectId,
+    topicId: topicId,
+    difficulty: difficulty,
+    createdAt: DateTime(2026, 5, 12),
+    updatedAt: DateTime(2026, 5, 12),
+    srDataJson: srDataJson,
+  );
 }

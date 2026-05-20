@@ -105,8 +105,10 @@ final dashboardAdherenceDataProvider =
   await ref.watch(dashboardInitProvider.future);
   try {
     final adherenceRepo = ref.watch(engagementAdherenceRepoProvider);
-    final averageAdherence = await adherenceRepo.getAverageAdherence(studentId);
-    final weeklyRecords = await adherenceRepo.getWeekly(studentId);
+    final avgResult = await adherenceRepo.getAverageAdherence(studentId);
+    final averageAdherence = avgResult.data ?? 0.0;
+    final weeklyResult = await adherenceRepo.getWeekly(studentId);
+    final weeklyRecords = weeklyResult.data ?? [];
     final weeklyAdherence = weeklyRecords.isEmpty
         ? 0.0
         : weeklyRecords.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /

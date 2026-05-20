@@ -196,7 +196,7 @@ void main() {
         expect(record.promptTokens, 1200);
         expect(record.completionTokens, 300);
         expect(record.totalCost, greaterThan(0));
-        expect(record.priceDisplay, startsWith('\$0.'));
+        expect(record.priceDisplayWithLocale('en'), startsWith('\$0.'));
         expect(record.tokenDisplay, '(1200 in / 300 out)');
       });
 
@@ -257,22 +257,22 @@ void main() {
     });
 
     group('display helpers', () {
-      test('priceDisplay formats to 4 decimal places', () {
+      test('priceDisplayWithLocale formats to 4 decimal places', () {
         final record = UsageRecord(
           id: 'test', timestamp: DateTime.now(),
           provider: 'p', modelId: 'm',
           inputTokens: 100, outputTokens: 50, totalCost: 0.01234,
         );
-        expect(record.priceDisplay, '\$0.0123');
+        expect(record.priceDisplayWithLocale('en'), '\$0.0123');
       });
 
-      test('priceDisplay handles zero cost', () {
+      test('priceDisplayWithLocale handles zero cost', () {
         final record = UsageRecord(
           id: 'test', timestamp: DateTime.now(),
           provider: 'p', modelId: 'm',
           inputTokens: 0, outputTokens: 0, totalCost: 0,
         );
-        expect(record.priceDisplay, '\$0.0000');
+        expect(record.priceDisplayWithLocale('en'), '\$0.0000');
       });
 
       test('tokenDisplay formats input and output', () {
@@ -284,13 +284,13 @@ void main() {
         expect(record.tokenDisplay, '(500 in / 250 out)');
       });
 
-      test('formattedText includes date, price, and cost per token', () {
+      test('formattedTextWithLocale includes date, price, and cost per token', () {
         final record = UsageRecord(
           id: 'test', timestamp: DateTime(2026, 5, 11, 10, 30, 0),
           provider: 'openrouter', modelId: 'm1',
           inputTokens: 1000, outputTokens: 500, totalCost: 0.015,
         );
-        final formatted = record.formattedText;
+        final formatted = record.formattedTextWithLocale('en');
         expect(formatted, contains('2026-05-11'));
         expect(formatted, contains('\$0.0150'));
         expect(formatted, contains('cost/tk'));
@@ -304,7 +304,7 @@ void main() {
         inputTokens: 100, outputTokens: 50, totalCost: 0.005,
       );
       expect(record.toString(), contains('UsageRecord'));
-      expect(record.toString(), contains(record.formattedText));
+      expect(record.toString(), contains(record.formattedTextWithLocale('en')));
     });
   });
 

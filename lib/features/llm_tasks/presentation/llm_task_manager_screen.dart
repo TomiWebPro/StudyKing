@@ -21,6 +21,7 @@ class LlmTaskManagerScreen extends ConsumerStatefulWidget {
 class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   LlmTaskService? _taskService;
   final Set<String> _notifiedFailedTaskIds = {};
+  bool _inDidChangeDependencies = false;
 
   @override
   void initState() {
@@ -32,7 +33,9 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
+    _inDidChangeDependencies = true;
     _onTasksChanged();
+    _inDidChangeDependencies = false;
   }
 
   @override
@@ -51,16 +54,34 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
       if (task.status == LlmTaskStatus.failed &&
           task.error != null &&
           _notifiedFailedTaskIds.add(task.id)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.aiTaskFailedNotification(task.feature)),
-            duration: Timeouts.animationMedium,
-            action: SnackBarAction(
-              label: l10n.retry,
-              onPressed: () => taskService.retryTask(task.id),
+        if (_inDidChangeDependencies) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (!mounted) return;
+            final l10n = AppLocalizations.of(context);
+            if (l10n == null) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(l10n.aiTaskFailedNotification(task.feature)),
+                duration: Timeouts.animationMedium,
+                action: SnackBarAction(
+                  label: l10n.retry,
+                  onPressed: () => taskService.retryTask(task.id),
+                ),
+              ),
+            );
+          });
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.aiTaskFailedNotification(task.feature)),
+              duration: Timeouts.animationMedium,
+              action: SnackBarAction(
+                label: l10n.retry,
+                onPressed: () => taskService.retryTask(task.id),
+              ),
             ),
-          ),
-        );
+          );
+        }
         break;
       }
     }
@@ -180,13 +201,13 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
           else
             Row(
               children: [
-                _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName)),
+                Expanded(child: _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName))),
                 const SizedBox(width: 16),
-                _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
+                Expanded(child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4))),
                 const SizedBox(width: 16),
-                _buildUsageStat(context, l10n.done, '$completedTasks'),
+                Expanded(child: _buildUsageStat(context, l10n.done, '$completedTasks')),
                 const SizedBox(width: 16),
-                _buildUsageStat(context, l10n.failed, '$failedTasks'),
+                Expanded(child: _buildUsageStat(context, l10n.failed, '$failedTasks')),
               ],
             ),
           if (totalTokens > 0) ...[
@@ -211,22 +232,20 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   }
 
   Widget _buildUsageStat(BuildContext context, String label, String value) {
-    return Expanded(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-            ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          value,
+          style: Theme.of(context).textTheme.titleSmall?.copyWith(
+            fontWeight: FontWeight.bold,
           ),
-          Text(
-            label,
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
-        ],
-      ),
+        ),
+        Text(
+          label,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
     );
   }
 
@@ -395,7 +414,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
 
   String _formatTime(DateTime dt) {
     final l10n = AppLocalizations.of(context)!;
-    return DateFormat.Hms(l10n.localeName).format(dt);
+    return DateFormat.jm(l10n.localeName).format(dt);
   }
 
   String _llmTaskStatusLabel(LlmTaskStatus status, AppLocalizations l10n) {

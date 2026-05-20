@@ -49,7 +49,7 @@ void main() {
 
     setUp(() {
       fakeService = FakeLessonAgentService();
-      tool = GenerateLessonBlocksTool(lessonAgentService: fakeService);
+      tool = GenerateLessonBlocksTool(lessonAgentService: fakeService, localeName: 'en');
     });
 
     test('name returns generate_lesson_blocks', () {

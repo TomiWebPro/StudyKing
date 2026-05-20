@@ -221,4 +221,31 @@ class SessionRepository extends Repository<Session> {
       await box.clear();
     }, context: 'clearAll');
   }
+
+  Future<int> getConsecutiveStudyDays() async {
+    final result = await Result.capture(() async {
+      final allResult = await getAll();
+      if (allResult.isFailure) return 0;
+      final all = allResult.data!;
+      if (all.isEmpty) return 0;
+      final studyDays = all.where((s) =>
+        s.completed || s.actualDurationMs > 0
+      ).map((s) =>
+        s.startTime.dateOnly
+      ).toSet().toList()..sort((a, b) => b.compareTo(a));
+      int consecutive = 0;
+      final now = _clock.now();
+      final today = now.dateOnly;
+      for (var i = 0; i < studyDays.length; i++) {
+        final expected = today.subtract(Duration(days: i));
+        if (studyDays[i] == expected) {
+          consecutive++;
+        } else {
+          break;
+        }
+      }
+      return consecutive;
+    }, context: 'getConsecutiveStudyDays');
+    return result.data ?? 0;
+  }
 }

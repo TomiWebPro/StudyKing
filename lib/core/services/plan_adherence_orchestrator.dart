@@ -74,8 +74,10 @@ class PlanAdherenceOrchestrator {
         return Result.success(absenceDeviation);
       }
 
-      final lowDays = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
-      final avgAdherence = await _adherenceRepository.getAverageAdherence(studentId);
+      final lowDaysResult = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      final avgAdherenceResult = await _adherenceRepository.getAverageAdherence(studentId);
+      final lowDays = lowDaysResult.data ?? 0;
+      final avgAdherence = avgAdherenceResult.data ?? 0.0;
 
       AdherenceDeviation result;
       if (lowDays >= 7) {
@@ -146,7 +148,8 @@ class PlanAdherenceOrchestrator {
   Future<Result<Map<String, dynamic>>> getAdherenceReport(String studentId) async {
     try {
       await _adherenceRepository.init();
-      final metrics = await _adherenceRepository.getByStudent(studentId);
+      final metricsResult = await _adherenceRepository.getByStudent(studentId);
+      final metrics = metricsResult.data ?? [];
       if (metrics.isEmpty) {
         return Result.success({
           'totalDays': 0,
@@ -158,7 +161,8 @@ class PlanAdherenceOrchestrator {
 
       final avgAdherence = metrics.fold<double>(0.0, (s, m) => s + m.adherenceScore) / metrics.length;
       final lowDays = metrics.where((m) => m.adherenceScore < 0.5).length;
-      final weekly = await _adherenceRepository.getWeekly(studentId);
+      final weeklyResult = await _adherenceRepository.getWeekly(studentId);
+      final weekly = weeklyResult.data ?? [];
       final weeklyTrend = weekly.map((m) => m.adherenceScore).toList();
 
       return Result.success({
@@ -197,7 +201,8 @@ class PlanAdherenceOrchestrator {
         }
       }
 
-      final todayRecords = await _adherenceRepository.getByStudent(studentId);
+      final todayResult = await _adherenceRepository.getByStudent(studentId);
+      final todayRecords = todayResult.data ?? [];
       int actualMinutes = 0;
       int actualQuestions = 0;
       for (final r in todayRecords) {
@@ -260,9 +265,10 @@ class PlanAdherenceOrchestrator {
   Future<double> _calculateAdjustmentFactor(String studentId) async {
     try {
       await _adherenceRepository.init();
-      final avgAdherence = await _adherenceRepository.getAverageAdherence(studentId);
-      if (avgAdherence <= 0.0) return 0.7;
-      return (avgAdherence + 0.3).clamp(0.5, 1.0);
+      final avgResult = await _adherenceRepository.getAverageAdherence(studentId);
+      final avg = avgResult.data ?? 0.0;
+      if (avg <= 0.0) return 0.7;
+      return (avg + 0.3).clamp(0.5, 1.0);
     } catch (e) {
       _logger.w('_calculateAdjustmentFactor failed', e);
       return 0.7;

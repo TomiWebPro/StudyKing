@@ -9,7 +9,7 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
-/// Kept as an initialization coordinator only (m20).
+/// Kept as an initialization coordinator only.
 /// Repositories should be injected individually where needed going forward.
 class DatabaseService {
   static final Logger _logger = const Logger('DatabaseService');

@@ -1,11 +1,10 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -83,12 +82,9 @@ class TutorService {
 
   int _getDefaultDurationMinutes() {
     try {
-      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return 45;
-      final box = Hive.box(HiveBoxNames.settings);
-      final stored = box.get('defaultTeachingDuration', defaultValue: 45) as int;
-      return stored > 0 && stored <= 480 ? stored : 45;
+      return SettingsService.getTeachingDurationMinutes();
     } catch (e) {
-      _logger.w('Failed to read default teaching duration from Hive', e);
+      _logger.w('Failed to read default teaching duration', e);
       return 45;
     }
   }

@@ -74,13 +74,13 @@ class _FakeInstrumentationService extends InstrumentationService {
 
 class _FakeAdherenceRepo extends PlanAdherenceRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<double> getAverageAdherence(String studentId) async => 0.0;
+  Future<Result<double>> getAverageAdherence(String studentId) async => Result.success(0.0);
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async => [];
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async => Result.success([]);
 }
 
 class _FakeQuestionRepo extends QuestionRepository {

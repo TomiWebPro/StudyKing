@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/app_radius.dart';
-import 'package:studyking/core/constants/app_spacing.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';

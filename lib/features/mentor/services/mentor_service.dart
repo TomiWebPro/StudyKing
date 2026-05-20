@@ -120,6 +120,7 @@ class MentorService {
   PlanProposal? get pendingPlanProposal => _pendingPlan;
   String? get pendingRescheduleSessionId => _pendingRescheduleSessionId;
   bool get hasApiKey => _llmService.config.apiKey.isNotEmpty;
+  bool get wasThrottleActive => _llmService.wasThrottleActive;
 
   void clearPendingSchedule() => _pendingSchedule = null;
   void clearPendingPlan() => _pendingPlan = null;

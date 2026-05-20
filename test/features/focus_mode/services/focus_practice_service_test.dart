@@ -13,16 +13,20 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 
 class _FakeQuestionRepository extends QuestionRepository {
   final Map<String, Question> _storage = {};
+  bool failOnGetAll = false;
+  bool failOnGetBySubject = false;
 
   void seed(Question question) => _storage[question.id] = question;
 
   @override
   Future<Result<List<Question>>> getAll() async {
+    if (failOnGetAll) return Result.failure('getAll failed');
     return Result.success(_storage.values.toList());
   }
 
   @override
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
+    if (failOnGetBySubject) return Result.failure('getBySubject failed');
     return Result.success(
       _storage.values.where((q) => q.subjectId == subjectId).toList(),
     );
@@ -52,9 +56,13 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeSessionRepo extends SessionRepository {
   final Map<String, Session> _storage = {};
+  bool shouldThrow = false;
+  final List<Session> savedSessions = [];
 
   @override
   Future<Result<void>> save(String key, Session item) async {
+    savedSessions.add(item);
+    if (shouldThrow) return Result.failure('Save error');
     _storage[key] = item;
     return Result.success(null);
   }
@@ -284,6 +292,162 @@ void main() {
         expect(saved.endTime, isNotNull);
         expect(saved.questionsAnswered, 10);
         expect(saved.correctAnswers, 7);
+      });
+
+      test('handles save failure gracefully', () async {
+        final session = await service.startPracticeSession(
+          studentId: 'student-1',
+        );
+
+        fakeSessionRepo.shouldThrow = true;
+
+        await service.endPracticeSession(
+          session,
+          questionsAnswered: 5,
+          correctAnswers: 3,
+        );
+
+        expect(fakeSessionRepo.savedSessions, hasLength(1));
+      });
+    });
+
+    group('startPracticeSession', () {
+      test('handles save failure gracefully', () async {
+        fakeSessionRepo.shouldThrow = true;
+
+        final session = await service.startPracticeSession(
+          studentId: 'student-1',
+        );
+
+        expect(session, isNotNull);
+        expect(session.studentId, 'student-1');
+      });
+    });
+
+    group('getWeakAreaQuestions', () {
+      test('returns empty list when no weak topics', () async {
+        final questions = await service.getWeakAreaQuestions(
+          studentId: 'student-1',
+        );
+
+        expect(questions, isEmpty);
+      });
+
+      test('returns empty list when repository throws', () async {
+        final questions = await service.getWeakAreaQuestions(
+          studentId: 'student-1',
+          subjectIds: ['sub-1'],
+        );
+
+        expect(questions, isEmpty);
+      });
+    });
+
+    group('error-state: getQuestionsForSessionType', () {
+      test('quickPractice returns empty when getAll fails', () async {
+        fakeQuestionRepo.failOnGetAll = true;
+
+        final questions = await service.getQuestionsForSessionType(
+          sessionType: FocusSessionType.quickPractice,
+          studentId: 'student-1',
+        );
+
+        expect(questions, isEmpty);
+      });
+
+      test('quickPractice filters by subject when provided', () async {
+        final now = DateTime.now();
+        fakeQuestionRepo.seed(_q(
+          id: 'q1', text: 'Math Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'math', topicId: 't-1',
+          nextReview: now,
+        ));
+        fakeQuestionRepo.seed(_q(
+          id: 'q2', text: 'Physics Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'physics', topicId: 't-1',
+          nextReview: now,
+        ));
+
+        final questions = await service.getQuestionsForSessionType(
+          sessionType: FocusSessionType.quickPractice,
+          studentId: 'student-1',
+          subjectIds: ['math'],
+        );
+
+        expect(questions.length, 1);
+        expect(questions[0].subjectId, 'math');
+      });
+
+      test('weakAreaAttack returns empty when no weak topics', () async {
+        final questions = await service.getQuestionsForSessionType(
+          sessionType: FocusSessionType.weakAreaAttack,
+          studentId: 'student-1',
+        );
+
+        expect(questions, isEmpty);
+      });
+
+      test('freeFocus delegates to getDueQuestions', () async {
+        final now = DateTime.now();
+        fakeQuestionRepo.seed(_q(
+          id: 'q1', text: 'Due Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+          nextReview: now.subtract(const Duration(hours: 1)),
+        ));
+
+        final questions = await service.getQuestionsForSessionType(
+          sessionType: FocusSessionType.freeFocus,
+          studentId: 'student-1',
+        );
+
+        expect(questions, isNotEmpty);
+      });
+
+      test('spacedRepetition delegates to getDueQuestions', () async {
+        final now = DateTime.now();
+        fakeQuestionRepo.seed(_q(
+          id: 'q1', text: 'Due Q', type: QuestionType.typedAnswer,
+          difficulty: 1, subjectId: 'sub-1', topicId: 't-1',
+          nextReview: now.subtract(const Duration(hours: 1)),
+        ));
+
+        final questions = await service.getQuestionsForSessionType(
+          sessionType: FocusSessionType.spacedRepetition,
+          studentId: 'student-1',
+        );
+
+        expect(questions, isNotEmpty);
+      });
+    });
+
+    group('error-state: start/end practice session', () {
+      test('startPracticeSession returns session even when save fails', () async {
+        fakeSessionRepo.shouldThrow = true;
+
+        final session = await service.startPracticeSession(
+          studentId: 'student-1',
+        );
+
+        expect(session, isNotNull);
+        expect(session.studentId, 'student-1');
+        expect(session.id, isNotEmpty);
+      });
+
+      test('endPracticeSession does not throw when save fails', () async {
+        final session = await service.startPracticeSession(
+          studentId: 'student-1',
+        );
+
+        fakeSessionRepo.shouldThrow = true;
+
+        await expectLater(
+          service.endPracticeSession(
+            session,
+            questionsAnswered: 5,
+            correctAnswers: 3,
+          ),
+          completes,
+        );
       });
     });
   });

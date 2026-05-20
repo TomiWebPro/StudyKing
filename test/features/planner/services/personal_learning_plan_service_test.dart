@@ -236,17 +236,18 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<void> create(PlanAdherenceModel model) async {
+  Future<Result<void>> create(PlanAdherenceModel model) async {
     _records.add(model);
+    return Result.success(null);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _records.where((m) => m.studentId == studentId).toList()
-      ..sort((a, b) => b.date.compareTo(a.date));
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_records.where((m) => m.studentId == studentId).toList()
+      ..sort((a, b) => b.date.compareTo(a.date)));
   }
 
   List<PlanAdherenceModel> get records => List.unmodifiable(_records);

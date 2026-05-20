@@ -1,5 +1,4 @@
 import 'package:flutter/foundation.dart';
-import 'package:flutter/material.dart';
 import '../utils/logger.dart';
 import 'app_api_config.dart';
 import 'app_build_config.dart';

@@ -263,6 +263,7 @@ class _GraphDrawingWidgetState extends State<GraphDrawingWidget> {
           showAxes: true,
           axisColor: Theme.of(context).colorScheme.onSurface,
           pixelsPerUnit: 20,
+          textDirection: Directionality.of(context),
         ),
       ),
     );

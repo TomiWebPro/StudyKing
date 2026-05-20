@@ -67,6 +67,7 @@ class _FakeContentPipeline extends ContentPipeline {
           topicRepository: _FakeTopicRepo(),
           questionRepository: _FakeQuestionRepo(),
           modelId: 'test-model',
+          localeName: 'en',
         );
 
   bool processUploadCalled = false;

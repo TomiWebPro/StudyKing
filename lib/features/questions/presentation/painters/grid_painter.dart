@@ -9,6 +9,8 @@ class GridPainter extends CustomPainter {
   final double originY;
   final double pixelsPerUnit;
 
+  final TextDirection textDirection;
+
   GridPainter({
     this.gridColor = const Color(0xFF9E9E9E),
     this.showAxes = false,
@@ -16,6 +18,7 @@ class GridPainter extends CustomPainter {
     this.originX = 0,
     this.originY = 0,
     this.pixelsPerUnit = 20,
+    this.textDirection = TextDirection.ltr,
   });
 
   @override
@@ -103,7 +106,7 @@ class GridPainter extends CustomPainter {
   void _drawLabel(Canvas canvas, Offset pos, String text, TextStyle style) {
     final textPainter = TextPainter(
       text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
+      textDirection: textDirection,
     )..layout();
     textPainter.paint(canvas, pos - Offset(textPainter.width / 2, textPainter.height / 2));
   }

@@ -35,7 +35,7 @@ class LessonAgentService {
     required String subjectId,
     required String topicId,
     required String topicTitle,
-    String localeName = 'en',
+    required String localeName,
   }) async {
     final taskId = _taskManager?.createTask(feature: 'lesson_agent', modelId: _modelId) ?? '';
     _taskManager?.startTask(taskId);
@@ -269,7 +269,7 @@ class LessonAgentService {
     required String topicId,
     required String topicTitle,
     required String sourceContent,
-    String localeName = 'en',
+    required String localeName,
   }) async {
     final prompt = lookupAppLocalizations(Locale(localeName)).lessonBuildPromptFromSource(sourceContent, topicTitle, localeName);
 

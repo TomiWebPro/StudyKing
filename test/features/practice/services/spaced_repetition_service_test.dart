@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'dart:convert';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -441,4 +442,375 @@ void main() {
       });
     });
   });
+
+  group('SpacedRepetitionService - coverage gaps', () {
+    late _FakeQuestionBox questionBox;
+    late _FakeAttemptRepo attemptRepo;
+
+    setUp(() {
+      questionBox = _FakeQuestionBox();
+      attemptRepo = _FakeAttemptRepo();
+    });
+
+    test('updateNextReviewDate mastery 0.8 maps to grade 4', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.updateNextReviewDate('q1', 0.8);
+      expect(result.isSuccess, isTrue);
+      final updated = questionBox.get('q1')!;
+      expect(updated.nextReview, isNotNull);
+      final srData = jsonDecode(updated.srDataJson!);
+      expect((srData['ef'] as num).toDouble(), closeTo(2.5, 0.01));
+    });
+
+    test('updateNextReviewDate mastery 0.6 maps to grade 3', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.updateNextReviewDate('q1', 0.6);
+      expect(result.isSuccess, isTrue);
+      final updated = questionBox.get('q1')!;
+      final srData = jsonDecode(updated.srDataJson!);
+      expect((srData['ef'] as num).toDouble(), closeTo(2.36, 0.01));
+    });
+
+    test('updateNextReviewDate mastery 0.4 maps to grade 2 (failing)', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.updateNextReviewDate('q1', 0.4);
+      expect(result.isSuccess, isTrue);
+      final updated = questionBox.get('q1')!;
+      expect(updated.nextReview, isNotNull);
+      final srData = jsonDecode(updated.srDataJson!);
+      expect((srData['r'] as int), 0);
+    });
+
+    test('updateNextReviewDate mastery 0.2 maps to grade 1 (failing)', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.updateNextReviewDate('q1', 0.2);
+      expect(result.isSuccess, isTrue);
+      final updated = questionBox.get('q1')!;
+      final srData = jsonDecode(updated.srDataJson!);
+      expect((srData['r'] as int), 0);
+    });
+
+    test('updateNextReviewDate handles malformed srDataJson gracefully',
+        () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1', srDataJson: 'invalid{json'));
+
+      final result = await service.updateNextReviewDate('q1', 0.9);
+      expect(result.isSuccess, isTrue);
+      final updated = questionBox.get('q1')!;
+      expect(updated.srDataJson, isNotNull);
+      expect(updated.srDataJson, contains('"ef":'));
+    });
+
+    test('updateNextReviewDate handles null srDataJson gracefully', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1', srDataJson: null));
+
+      final result = await service.updateNextReviewDate('q1', 0.9);
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('updateNextReviewDate handles empty srDataJson gracefully', () async {
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1', srDataJson: ''));
+
+      final result = await service.updateNextReviewDate('q1', 0.9);
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('updateNextReviewDate throws exception during save returns failure',
+        () async {
+      final throwingRepo = _ThrowingQuestionRepository(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.updateNextReviewDate('q1', 0.9);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getQuestionsDue exception path returns failure', () async {
+      final throwingBox = _ThrowingBox<Question>();
+      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+
+      final result = await service.getQuestionsDue();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getQuestionDueTimes exception returns failure', () async {
+      attemptRepo.setThrowOnGet();
+      final qRepo = _FakeQuestionRepo(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: qRepo,
+        attemptRepo: attemptRepo,
+      );
+
+      final result = await service.getQuestionDueTimes('q1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getPracticeQuestions exception returns failure', () async {
+      final throwingBox = _ThrowingBox<Question>();
+      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+
+      final result = await service.getPracticeQuestions('sub1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getTopicTimeDue exception returns failure', () async {
+      final throwingBox = _ThrowingBox<Question>();
+      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+
+      final result = await service.getTopicTimeDue('t1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('removeDueQuestions exception returns failure', () async {
+      final throwingRepo = _ThrowingQuestionRepository(questionBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+      questionBox.put('q1', _createQ(id: 'q1'));
+
+      final result = await service.removeDueQuestions('q1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getSubjectDueCount exception returns failure', () async {
+      final throwingBox = _ThrowingBox<Question>();
+      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
+      final service = SpacedRepetitionService(
+        questionRepo: throwingRepo,
+        attemptRepo: attemptRepo,
+      );
+
+      final result = await service.getSubjectDueCount('sub1');
+      expect(result.isFailure, isTrue);
+    });
+  });
+}
+
+class _ThrowingBox<T> implements Box<T> {
+  @override
+  Iterable<T> get values => throw Exception('Box values error');
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'throwing';
+
+  @override
+  bool get isNotEmpty => false;
+
+  @override
+  bool get isEmpty => true;
+
+  @override
+  int get length => 0;
+
+  @override
+  T? get(dynamic key, {T? defaultValue}) => null;
+
+  @override
+  bool containsKey(dynamic key) => false;
+
+  @override
+  Future<void> put(dynamic key, T value) async =>
+      throw Exception('Box put error');
+
+  @override
+  Future<void> delete(dynamic key) async =>
+      throw Exception('Box delete error');
+
+  @override
+  Future<int> clear() async => 0;
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _ThrowingQuestionRepository extends QuestionRepository {
+  final _FakeQuestionBox fakeBox;
+
+  _ThrowingQuestionRepository(this.fakeBox);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Box<Question> get box => fakeBox;
+
+  @override
+  Future<Result<Question?>> get(String id) async {
+    throw Exception('Repo get error');
+  }
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    throw Exception('Repo save error');
+  }
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    throw Exception('Repo delete error');
+  }
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    return Result.failure('create error');
+  }
+}
+
+class _FakeAttemptRepo extends AttemptRepository {
+  final Map<String, StudentAttempt> _storage = {};
+  bool _throwOnGet = false;
+
+  void setThrowOnGet() {
+    _throwOnGet = true;
+  }
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<StudentAttempt?>> get(String id) async {
+    if (_throwOnGet) throw Exception('Attempt get error');
+    return Result.success(_storage[id]);
+  }
+}
+
+class _FakeQuestionRepo extends QuestionRepository {
+  final _FakeQuestionBox fakeBox;
+
+  _FakeQuestionRepo(this.fakeBox);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Box<Question> get box => fakeBox;
+
+  @override
+  Future<Result<Question?>> get(String id) async {
+    return Result.success(fakeBox.get(id));
+  }
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    await fakeBox.put(key, item);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    await fakeBox.delete(key);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    await fakeBox.put(question.id, question);
+    return Result.success(null);
+  }
+}
+
+class _FakeThrowingBoxRepo extends QuestionRepository {
+  final Box<Question> _box;
+
+  _FakeThrowingBoxRepo(this._box);
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Box<Question> get box => _box;
+
+  @override
+  Future<Result<Question?>> get(String id) async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(String key, Question item) async => Result.success(null);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    return Result.success(null);
+  }
+}
+
+Question _createQ({
+  String id = 'q1',
+  String subjectId = 'sub1',
+  String topicId = 't1',
+  int difficulty = 1,
+  String? srDataJson,
+}) {
+  return Question(
+    id: id,
+    text: 'Sample question?',
+    type: QuestionType.singleChoice,
+    subjectId: subjectId,
+    topicId: topicId,
+    difficulty: difficulty,
+    createdAt: DateTime(2026, 5, 12),
+    updatedAt: DateTime(2026, 5, 12),
+    srDataJson: srDataJson,
+  );
 }

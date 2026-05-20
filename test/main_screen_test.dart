@@ -1,9 +1,6 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -186,18 +183,6 @@ Widget _buildTestApp() {
 }
 
 void main() {
-  setUp(() async {
-    TestWidgetsFlutterBinding.ensureInitialized();
-    final dir = await Directory.systemTemp.createTemp('main_screen_test_');
-    Hive.init(dir.path);
-  });
-
-  tearDown(() async {
-    if (Hive.isBoxOpen('student_id')) {
-      await Hive.deleteBoxFromDisk('student_id');
-    }
-  });
-
   group('MainScreen', () {
     Future<void> pumpAndSettleSafe(WidgetTester tester) async {
       await tester.pump();

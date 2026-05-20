@@ -282,9 +282,9 @@ class _FakeDashboardSubjectRepo extends SubjectRepository {
 }
 
 class FakePlanAdherenceRepository extends PlanAdherenceRepository {
+  final List<PlanAdherenceModel> _records;
   final double _average;
   final double _weekly;
-  final List<PlanAdherenceModel> _records;
 
   FakePlanAdherenceRepository({
     double average = 0.0,
@@ -295,21 +295,21 @@ class FakePlanAdherenceRepository extends PlanAdherenceRepository {
         _records = records;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<double> getAverageAdherence(String studentId) async => _average;
+  Future<Result<double>> getAverageAdherence(String studentId) async => Result.success(_average);
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async =>
-      _records.isNotEmpty ? _records : [
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async =>
+      Result.success(_records.isNotEmpty ? _records : [
         PlanAdherenceModel(
           id: 'test',
           studentId: studentId,
           date: DateTime.now(),
           adherenceScore: _weekly,
         ),
-      ];
+      ]);
 }
 
 Widget _buildTestApp(

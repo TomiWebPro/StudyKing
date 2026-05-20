@@ -16,29 +16,31 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   bool failOnInit = false;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (failOnInit) throw Exception('Init failed');
+    return Result.success(null);
   }
 
   @override
-  Future<void> create(PlanAdherenceModel model) async {
+  Future<Result<void>> create(PlanAdherenceModel model) async {
     _storage.add(model);
+    return Result.success(null);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _storage.where((m) => m.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_storage.where((m) => m.studentId == studentId).toList());
   }
 
   @override
-  Future<double> getAverageAdherence(String studentId) async {
+  Future<Result<double>> getAverageAdherence(String studentId) async {
     final metrics = _storage.where((m) => m.studentId == studentId).toList();
-    if (metrics.isEmpty) return 0.0;
-    return metrics.fold<double>(0.0, (s, m) => s + m.adherenceScore) / metrics.length;
+    if (metrics.isEmpty) return Result.success(0.0);
+    return Result.success(metrics.fold<double>(0.0, (s, m) => s + m.adherenceScore) / metrics.length);
   }
 
   @override
-  Future<int> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async {
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async {
     final metrics = _storage.where((m) => m.studentId == studentId).toList();
     int consecutive = 0;
     for (final metric in metrics) {
@@ -48,27 +50,18 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
         break;
       }
     }
-    return consecutive;
+    return Result.success(consecutive);
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async {
-    return _storage.where((m) => m.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async {
+    return Result.success(_storage.where((m) => m.studentId == studentId).toList());
   }
 
   @override
-  Future<PlanAdherenceModel?> getToday(String studentId) async {
-    final today = DateTime.now();
-    final start = DateTime(today.year, today.month, today.day);
-    final end = start.add(const Duration(days: 1));
-    final matches = _storage.where((m) =>
-        m.studentId == studentId &&
-        m.date.isAfter(start) &&
-        m.date.isBefore(end));
-    return matches.isNotEmpty ? matches.first : null;
+  Future<Result<PlanAdherenceModel?>> getToday(String studentId) async {
+    return Result.success(null);
   }
-
-  List<PlanAdherenceModel> get stored => _storage;
 }
 
 class _FakePlanRepository extends PlanRepository {
@@ -241,9 +234,9 @@ void main() {
         );
 
         final all = await adherenceRepo.getByStudent('student-1');
-        expect(all, hasLength(1));
-        expect(all.first.actualMinutes, 25);
-        expect(all.first.actualQuestions, 0);
+        expect(all.data, hasLength(1));
+        expect(all.data!.first.actualMinutes, 25);
+        expect(all.data!.first.actualQuestions, 0);
       });
 
       test('records activity with questions (practice style)', () async {
@@ -254,9 +247,9 @@ void main() {
         );
 
         final all = await adherenceRepo.getByStudent('student-1');
-        expect(all, hasLength(1));
-        expect(all.first.actualQuestions, 15);
-        expect(all.first.actualMinutes, 45);
+        expect(all.data, hasLength(1));
+        expect(all.data!.first.actualQuestions, 15);
+        expect(all.data!.first.actualMinutes, 45);
       });
 
       test('records zero questions by default', () async {
@@ -266,7 +259,7 @@ void main() {
         );
 
         final all = await adherenceRepo.getByStudent('student-1');
-        expect(all.first.actualQuestions, 0);
+        expect(all.data!.first.actualQuestions, 0);
       });
     });
 

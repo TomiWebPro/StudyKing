@@ -127,7 +127,7 @@ class SessionSummaryCard extends StatelessWidget {
                           ),
                         ),
                         Text(
-                          DateFormat.Hm(l10n.localeName).format(s.startTime),
+                          DateFormat.jm(l10n.localeName).format(s.startTime),
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: cs.onSurfaceVariant,
                           ),

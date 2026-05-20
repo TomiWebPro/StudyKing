@@ -100,7 +100,7 @@ void main() {
     group('constructor', () {
       test('accepts empty modelId without throwing', () {
         expect(
-          () => TranscriptionExtractor(modelId: ''),
+          () => TranscriptionExtractor(modelId: '', localeName: 'en'),
           returnsNormally,
         );
       });
@@ -110,6 +110,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         expect(extractor, isNotNull);
         extractor.dispose();
@@ -120,7 +121,7 @@ void main() {
       late TranscriptionExtractor extractor;
 
       setUp(() {
-        extractor = TranscriptionExtractor(modelId: 'test-model');
+        extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
       });
 
       tearDown(() {
@@ -272,6 +273,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           llmService: llm,
           modelId: 'test-model',
+          localeName: 'en',
         );
 
         final result = await extractor.transcribeAudio(
@@ -293,7 +295,7 @@ void main() {
           await file.writeAsBytes([0xFF, 0xFB, 0x90]);
           await Process.run('chmod', ['000', file.path]);
 
-          final extractor = TranscriptionExtractor(modelId: 'test-model');
+          final extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
           final result = await extractor.transcribeAudio(
             rawContent: 'file://${file.path}',
             sourceUrl: null,
@@ -313,7 +315,7 @@ void main() {
           final file = File('${dir.path}/test.mp3');
           await file.writeAsBytes([0xFF, 0xFB, 0x90]);
 
-          final extractor = TranscriptionExtractor(modelId: 'test-model');
+          final extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
           final result = await extractor.transcribeAudio(
             rawContent: 'file://${file.path}',
             sourceUrl: null,
@@ -338,6 +340,7 @@ void main() {
           final extractor = TranscriptionExtractor(
             llmService: llm,
             modelId: 'test-model',
+            localeName: 'en',
           );
           final result = await extractor.transcribeAudio(
             rawContent: 'file://${file.path}',
@@ -356,7 +359,7 @@ void main() {
       late TranscriptionExtractor extractor;
 
       setUp(() {
-        extractor = TranscriptionExtractor(modelId: 'test-model');
+        extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
       });
 
       tearDown(() {
@@ -435,6 +438,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -460,6 +464,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -482,6 +487,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -504,6 +510,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -521,6 +528,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -536,6 +544,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/',
@@ -551,6 +560,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://example.com/watch?v=abc123',
@@ -588,6 +598,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -609,6 +620,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -632,6 +644,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -651,6 +664,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtube.com/watch?v=abc123',
@@ -671,6 +685,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           llmService: llm,
           modelId: 'test-model',
+          localeName: 'en',
         );
 
         final result = await extractor.transcribeVideo(
@@ -692,6 +707,7 @@ void main() {
         final extractor = TranscriptionExtractor(
           llmService: llm,
           modelId: 'test-model',
+          localeName: 'en',
         );
 
         final result = await extractor.transcribeVideo(
@@ -715,6 +731,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
@@ -734,6 +751,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtu.be/dQw4w9WgXcQ',
@@ -753,6 +771,7 @@ void main() {
           llmService: llm,
           modelId: 'test-model',
           httpClient: mockClient,
+          localeName: 'en',
         );
         final result = await extractor.transcribeVideo(
           rawContent: 'https://youtu.be/dQw4w9WgXcQ?t=30',
@@ -768,6 +787,7 @@ void main() {
       test('returns llm_not_available when LLM is null', () async {
         final extractor = TranscriptionExtractor(
           modelId: 'test-model',
+          localeName: 'en',
         );
         final result = await extractor.transcribeAudio(
           rawContent: 'this is some audio content that is longer than 20 characters',
@@ -781,7 +801,7 @@ void main() {
 
     group('dispose', () {
       test('can be called without error', () {
-        final extractor = TranscriptionExtractor(modelId: 'test-model');
+        final extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
         expect(() => extractor.dispose(), returnsNormally);
       });
     });

@@ -19,27 +19,27 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
   void addRecord(PlanAdherenceModel record) => _records.add(record);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _records.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_records.where((r) => r.studentId == studentId).toList());
   }
 
   @override
-  Future<List<PlanAdherenceModel>> getWeekly(String studentId) async {
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async {
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
-    return _records
+    return Result.success(_records
         .where((r) => r.studentId == studentId && r.date.isAfter(weekAgo))
-        .toList();
+        .toList());
   }
 
   @override
-  Future<double> getAverageAdherence(String studentId) async {
-    final records = await getByStudent(studentId);
-    if (records.isEmpty) return 0.0;
-    return records.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
-        records.length;
+  Future<Result<double>> getAverageAdherence(String studentId) async {
+    final records = _records.where((r) => r.studentId == studentId).toList();
+    if (records.isEmpty) return Result.success(0.0);
+    return Result.success(records.fold<double>(0.0, (sum, r) => sum + r.adherenceScore) /
+        records.length);
   }
 }
 

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -166,14 +165,6 @@ Future<void> _goNext(WidgetTester tester) async {
 }
 
 void main() {
-  setUp(() async {
-    Hive.init('/tmp/hive_test');
-  });
-
-  tearDown(() async {
-    await Hive.deleteFromDisk();
-  });
-
   group('ExamSessionScreen - additional coverage', () {
     group('config screen', () {
       testWidgets('shows no questions upload screen when empty', (tester) async {

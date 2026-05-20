@@ -46,14 +46,14 @@ class ContentPipeline {
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
     required String modelId,
-    String localeName = 'en',
+    required String localeName,
   })  : _llmService = llmService,
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
         _lessonAgentService = lessonAgentService,
         _documentExtractor =
-            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId),
+            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
         _webScraper = webScraper ?? WebScraper(),
         _localeName = localeName;
 

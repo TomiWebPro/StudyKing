@@ -182,7 +182,6 @@ class FakePlannerService extends PlannerService {
   List<RoadmapModel> _roadmaps = [];
   List<PendingActionModel> _pendingActions = [];
   List<Session> _scheduledLessons = [];
-  AdherenceDeviation? _deviation;
   bool _hasConflict = false;
   bool _scheduleResult = true;
   int scheduleCallCount = 0;
@@ -199,7 +198,6 @@ class FakePlannerService extends PlannerService {
   void setRoadmaps(List<RoadmapModel> roadmaps) => _roadmaps = roadmaps;
   void setPendingActions(List<PendingActionModel> actions) => _pendingActions = actions;
   void setScheduledLessons(List<Session> lessons) => _scheduledLessons = lessons;
-  void setAdherenceDeviation(AdherenceDeviation? d) => _deviation = d;
   void setHasConflict(bool v) => _hasConflict = v;
   void setScheduleResult(bool v) => _scheduleResult = v;
 

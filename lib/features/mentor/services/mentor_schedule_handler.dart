@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/conversation_memory.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/constants/app_constants.dart';
@@ -76,12 +75,9 @@ class MentorScheduleHandler {
 
   int _getDefaultDurationMinutes() {
     try {
-      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return defaultSessionDurationMinutes;
-      final box = Hive.box(HiveBoxNames.settings);
-      final stored = box.get('defaultScheduleDuration', defaultValue: defaultSessionDurationMinutes) as int;
-      return stored > 0 && stored <= 480 ? stored : defaultSessionDurationMinutes;
+      return SettingsService.getScheduleDurationMinutes();
     } catch (e) {
-      _logger.w('Failed to read default schedule duration from Hive', e);
+      _logger.w('Failed to read default schedule duration', e);
       return defaultSessionDurationMinutes;
     }
   }

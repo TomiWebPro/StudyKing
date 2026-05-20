@@ -300,7 +300,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.outlineVariant)),
       child: CustomPaint(
         size: Size.infinite,
-        painter: GridPainter(gridColor: Theme.of(context).colorScheme.outlineVariant),
+        painter: GridPainter(gridColor: Theme.of(context).colorScheme.outlineVariant, textDirection: Directionality.of(context)),
       ),
     );
   }

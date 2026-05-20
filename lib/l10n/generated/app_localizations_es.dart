@@ -3763,7 +3763,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noActiveAiTasks => 'No hay tareas de IA activas';
 
   @override
-  String get addSubjectFirst => 'Añade una materia primero para empezar a practicar';
+  String get addSubjectFirst =>
+      'Añade una materia primero para empezar a practicar';
 
   @override
   String get failedToLoadSubjects => 'Error al cargar las materias';
@@ -5833,4 +5834,7 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get curriculumBasedTopics =>
       'Estos temas se basan en nuestro plan de estudios estándar. Puedes editarlos en cualquier momento.';
+
+  @override
+  String get pleaseWait => 'Espera un momento…';
 }

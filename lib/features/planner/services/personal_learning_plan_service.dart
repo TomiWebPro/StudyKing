@@ -1044,7 +1044,8 @@ class PersonalLearningPlanService {
   Future<double> getCurrentAdherence(String studentId) async {
     try {
       await _adherenceRepository.init();
-      return _adherenceRepository.getAverageAdherence(studentId);
+      final result = await _adherenceRepository.getAverageAdherence(studentId);
+      return result.data ?? 0.0;
     } catch (e) {
       _logger.w('Failed to get current adherence', e);
       return 0.0;
@@ -1054,7 +1055,8 @@ class PersonalLearningPlanService {
   Future<int> getConsecutiveLowAdherenceDays(String studentId) async {
     try {
       await _adherenceRepository.init();
-      return _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      final result = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+      return result.data ?? 0;
     } catch (e) {
       _logger.w('Failed to get consecutive low adherence days', e);
       return 0;

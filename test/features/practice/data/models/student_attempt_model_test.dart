@@ -551,5 +551,121 @@ void main() {
       expect(adapter1 == Object(), isFalse);
       expect(adapter1 == adapter1, isTrue);
     });
+
+    test('read handles missing optional fields via null-coalescing', () {
+      final adapter = StudentAttemptAdapter();
+      final now = DateTime(2026, 5, 12);
+
+      final cache = <int, dynamic>{
+        0: 5,
+        1: 0,
+        2: 'id-min',
+        3: 1,
+        4: 's1',
+        5: 2,
+        6: 'q1',
+        7: 3,
+        8: 'sub1',
+        9: 7,
+        10: now,
+      };
+      final reader = TestBinaryReader(cache);
+      final restored = adapter.read(reader);
+
+      expect(restored.id, 'id-min');
+      expect(restored.studentId, 's1');
+      expect(restored.questionId, 'q1');
+      expect(restored.subjectId, 'sub1');
+      expect(restored.isCorrect, isFalse);
+      expect(restored.timeSpentMs, 0);
+      expect(restored.confidence, 3);
+      expect(restored.userAnswer, '');
+      expect(restored.markschemeMatch, isNull);
+      expect(restored.lastDueDate, isNull);
+    });
+
+    test('read handles manually constructed binary with all defaults', () {
+      final adapter = StudentAttemptAdapter();
+      final now = DateTime(2026, 5, 12);
+
+      final cache = <int, dynamic>{
+        0: 5,
+        1: 0,
+        2: 'id-defaults',
+        3: 1,
+        4: 's1',
+        5: 2,
+        6: 'q1',
+        7: 3,
+        8: 'sub1',
+        9: 7,
+        10: now,
+      };
+      final reader = TestBinaryReader(cache);
+      final restored = adapter.read(reader);
+
+      expect(restored.isCorrect, isFalse);
+      expect(restored.timeSpentMs, 0);
+      expect(restored.confidence, 3);
+      expect(restored.userAnswer, '');
+    });
+
+    test('round-trip with extreme values', () {
+      final adapter = StudentAttemptAdapter();
+      final now = DateTime(2026, 5, 12);
+      final attempt = StudentAttempt(
+        id: 'a-extreme',
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        isCorrect: true,
+        timeSpentMs: 2147483647,
+        confidence: 1,
+        timestamp: now,
+        userAnswer: 'x' * 5000,
+        markschemeMatch: '',
+        lastDueDate: DateTime(1970, 1, 1),
+      );
+
+      final writeCache = <int, dynamic>{};
+      final writer = TestBinaryWriter(writeCache);
+      adapter.write(writer, attempt);
+
+      final reader = TestBinaryReader(writeCache);
+      final restored = adapter.read(reader);
+
+      expect(restored.id, 'a-extreme');
+      expect(restored.timeSpentMs, 2147483647);
+      expect(restored.confidence, 1);
+      expect(restored.userAnswer, 'x' * 5000);
+      expect(restored.markschemeMatch, '');
+      expect(restored.lastDueDate, DateTime(1970, 1, 1));
+    });
+
+    test('round-trip with boundary confidence value 0', () {
+      final adapter = StudentAttemptAdapter();
+      final now = DateTime(2026, 5, 12);
+      final attempt = StudentAttempt(
+        id: 'a-boundary',
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        timeSpentMs: 0,
+        confidence: 0,
+        timestamp: now,
+        userAnswer: '',
+      );
+
+      final writeCache = <int, dynamic>{};
+      final writer = TestBinaryWriter(writeCache);
+      adapter.write(writer, attempt);
+
+      final reader = TestBinaryReader(writeCache);
+      final restored = adapter.read(reader);
+
+      expect(restored.timeSpentMs, 0);
+      expect(restored.confidence, 0);
+      expect(restored.userAnswer, '');
+    });
   });
 }

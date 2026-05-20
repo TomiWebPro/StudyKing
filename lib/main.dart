@@ -18,6 +18,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/app_providers.dart';
 import 'core/services/llm/llm_chat_service.dart';
 import 'core/providers/llm_providers.dart';
+import 'core/providers/ai_config_provider.dart';
+import 'core/services/secure_api_key_service.dart';
 import 'core/constants/app_constants.dart';
 import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
@@ -58,6 +60,9 @@ import 'core/widgets/splash_screen.dart';
 final Logger _mainLogger = const Logger('App');
 
 EngagementScheduler? _engagementScheduler;
+SecureApiKeyService? _secureApiKeyService;
+String _effectiveApiKey = '';
+String _effectiveBackupApiKey = '';
 final _appInitNotifier = ValueNotifier<bool>(false);
 
 /// Whether app initialization (Hive, DB, etc.) has completed.
@@ -97,6 +102,9 @@ Future<void> _runAutoBackupCheck() async {
         HiveBoxNames.badges, HiveBoxNames.focusSessions,
         HiveBoxNames.studentAvailability, HiveBoxNames.topicDependencies,
         HiveBoxNames.profile, HiveBoxNames.llmTasks, HiveBoxNames.llmUsageRecords,
+        HiveBoxNames.agentMemory, HiveBoxNames.examResults,
+        HiveBoxNames.studentId, HiveBoxNames.dashboardLayoutPrefs,
+        HiveBoxNames.dbVersion,
       ];
       for (final boxName in boxNames) {
         if (!Hive.isBoxOpen(boxName)) continue;
@@ -193,6 +201,10 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
       _mainLogger.w('Failed to init settings: ${initResult.error}');
     }
 
+    // Initialize secure storage for API keys
+    final secureApiKeyService = SecureApiKeyService();
+    _secureApiKeyService = secureApiKeyService;
+
     // Load saved locale
     try {
       final initProfileResult = await initSettingsRepo.getProfileData();
@@ -215,6 +227,7 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
 
     try {
       final masteryService = MasteryGraphService();
+      _mainLogger.w('Using English locale fallback for EngagementScheduler during startup');
       final defaultL10n = lookupAppLocalizations(const Locale('en'));
       final schedulerRef = EngagementScheduler(
         tracker: StudyProgressTracker(
@@ -237,10 +250,19 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
       _mainLogger.w('Failed to init EngagementScheduler: $e');
     }
 
-    // Load initial settings
-    final settingsResult = await initSettingsRepo.getSettings();
+    // Load initial settings, reading API keys from secure storage if available
+    var settingsResult = await initSettingsRepo.getSettings();
     if (settingsResult.isSuccess) {
-      _engagementScheduler?.updateSettings(settingsResult.data!);
+      final settings = settingsResult.data!;
+      final secureKey = await _secureApiKeyService!.getApiKey();
+      final secureBackupKey = await _secureApiKeyService!.getBackupApiKey();
+      if (secureKey.isEmpty && settings.apiKey.isNotEmpty) {
+        await _secureApiKeyService!.saveApiKey(settings.apiKey);
+        _mainLogger.i('Migrated API key from Hive to secure storage');
+      }
+      _effectiveApiKey = secureKey.isNotEmpty ? secureKey : settings.apiKey;
+      _effectiveBackupApiKey = secureBackupKey.isNotEmpty ? secureBackupKey : settings.backupApiKey;
+      _engagementScheduler?.updateSettings(settings);
     } else {
       _mainLogger.w('Error loading initial settings: ${settingsResult.error}');
     }
@@ -322,18 +344,32 @@ class StudyKingApp extends ConsumerStatefulWidget {
   ConsumerState<StudyKingApp> createState() => _StudyKingAppState();
 }
 
-class _StudyKingAppState extends ConsumerState<StudyKingApp> {
+class _StudyKingAppState extends ConsumerState<StudyKingApp> with WidgetsBindingObserver {
   bool _providersInited = false;
   bool _initialized = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runAppInitialization(const StudyKingApp()).then((_) {
         if (mounted) setState(() => _initialized = true);
       });
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _initialized) {
+      _runAutoBackupCheck();
+    }
   }
 
   @override
@@ -350,7 +386,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
       _engagementScheduler?.updateSettings(settings);
       if (!_providersInited) {
         _providersInited = true;
-        ref.read(apiKeyProvider.notifier).state = settings.apiKey;
+        ref.read(apiKeyProvider.notifier).state = _effectiveApiKey.isNotEmpty ? _effectiveApiKey : settings.apiKey;
         ref.read(apiBaseUrlProvider.notifier).state = settings.apiBaseUrl;
         ref.read(selectedModelProvider.notifier).state = settings.selectedModel;
         final providerName = settings.llmProviderName;
@@ -367,8 +403,9 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
             orElse: () => LlmProvider.openRouter,
           );
         }
-        if (settings.backupApiKey.isNotEmpty) {
-          ref.read(backupApiKeyProvider.notifier).state = settings.backupApiKey;
+        final effectiveBackupApiKey = _effectiveBackupApiKey.isNotEmpty ? _effectiveBackupApiKey : settings.backupApiKey;
+        if (effectiveBackupApiKey.isNotEmpty) {
+          ref.read(backupApiKeyProvider.notifier).state = effectiveBackupApiKey;
         }
         if (settings.backupBaseUrl.isNotEmpty) {
           ref.read(backupBaseUrlProvider.notifier).state = settings.backupBaseUrl;
@@ -376,6 +413,7 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
         if (settings.backupModel.isNotEmpty) {
           ref.read(backupModelProvider.notifier).state = settings.backupModel;
         }
+        markAiConfigReady();
       }
     });
     final locale = ref.watch(localeProvider);

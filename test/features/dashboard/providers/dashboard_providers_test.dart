@@ -45,7 +45,7 @@ class _FailingAttemptRepo extends AttemptRepository {
 
 class _FakeAdherenceRepo extends PlanAdherenceRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 void main() {

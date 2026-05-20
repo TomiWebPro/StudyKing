@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 Session _createExportSession({
@@ -67,6 +68,9 @@ void main() {
     }
 
     group('sessionsToCSV', () {
+      // CSV exports use invariant en format (period decimal separator).
+      // Decimal-format assertions (e.g. contains('70.0')) are correct here
+      // per AGENTS.md: "CSV exports should remain in invariant en format".
       test('returns CSV header when sessions is empty', () {
         final csv = SessionExportService.sessionsToCSV([]);
         expect(csv, contains('Session ID'));
@@ -175,6 +179,7 @@ void main() {
         );
         final csv = SessionExportService.sessionsToCSV([session]);
         final rows = csv.split('\n');
+        // CSV uses invariant en format, so period decimal separator is correct
         expect(rows[1], contains('61.0'));
       });
 
@@ -266,6 +271,34 @@ void main() {
         }
       });
 
+      test('returns failure for nonexistent directory', () async {
+        final dir = Directory('/nonexistent/path/that/does/not/exist');
+        final sessions = [
+          createSession(start: startTime, end: endTime),
+        ];
+        final file = await SessionExportService.writeCSVFile(
+          sessions, 'test_export',
+          directory: dir,
+        );
+        expect(file.isFailure, isTrue);
+      });
+
+      test('returns failure when filename is empty', () async {
+        final dir = await Directory.systemTemp.createTemp('csv_empty_name_');
+        try {
+          final sessions = [
+            createSession(start: startTime, end: endTime),
+          ];
+          final file = await SessionExportService.writeCSVFile(
+            sessions, '',
+            directory: dir,
+          );
+          expect(file.data, isNotNull);
+        } finally {
+          await dir.delete(recursive: true);
+        }
+      });
+
       test('writes CSV with empty sessions', () async {
         final dir = await Directory.systemTemp.createTemp('csv_empty_test_');
         try {
@@ -314,6 +347,18 @@ void main() {
         } finally {
           await dir.delete(recursive: true);
         }
+      });
+
+      test('returns failure for nonexistent directory', () async {
+        final dir = Directory('/nonexistent/path/that/does/not/exist');
+        final sessions = [
+          createSession(start: startTime, end: endTime),
+        ];
+        final file = await SessionExportService.writeJSONFile(
+          sessions, 'test_export',
+          directory: dir,
+        );
+        expect(file.isFailure, isTrue);
       });
 
       test('writes JSON with empty sessions', () async {
@@ -365,6 +410,16 @@ void main() {
         }
       });
 
+      test('returns failure for nonexistent directory', () async {
+        final dir = Directory('/nonexistent/path/that/does/not/exist');
+        final session = _createExportSession();
+        final file = await SessionExportService.writePDFFile(
+          [session], 'test-export', l10n,
+          directory: dir,
+        );
+        expect(file.isFailure, isTrue);
+      });
+
       test('writes non-empty PDF bytes', () async {
         final dir = await Directory.systemTemp.createTemp('pdf_bytes_');
         try {
@@ -379,6 +434,39 @@ void main() {
           await dir.delete(recursive: true);
         }
       });
+    });
+
+    group('error-state: file write failures', () {
+      test('writeCSVFile returns failure with error message', () async {
+        final dir = Directory('/nonexistent/path');
+        final sessions = [createSession(start: startTime, end: endTime)];
+        final result = await SessionExportService.writeCSVFile(
+          sessions, 'test', directory: dir,
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+
+      test('writeJSONFile returns failure with error message', () async {
+        final dir = Directory('/nonexistent/path');
+        final sessions = [createSession(start: startTime, end: endTime)];
+        final result = await SessionExportService.writeJSONFile(
+          sessions, 'test', directory: dir,
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+
+      test('writePDFFile returns failure with error message', () async {
+        final dir = Directory('/nonexistent/path');
+        final session = _createExportSession();
+        final result = await SessionExportService.writePDFFile(
+          [session], 'test', AppLocalizationsEn(), directory: dir,
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+
     });
 
   });

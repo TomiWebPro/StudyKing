@@ -5,6 +5,7 @@ import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 
 class FakeLlmForEvaluator extends LlmService {
   String responseJson;
+  bool shouldFail = false;
 
   FakeLlmForEvaluator({this.responseJson = ''})
       : super(
@@ -24,6 +25,7 @@ class FakeLlmForEvaluator extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    if (shouldFail) return Result.failure('LLM failure');
     return Result.success(responseJson);
   }
 }
@@ -113,6 +115,94 @@ void main() {
       );
 
       expect(result.score, equals(1.0));
+    });
+
+    test('returns fallback when LLM returns failure', () async {
+      llmService.responseJson = '';
+      llmService.shouldFail = true;
+
+      final result = await evaluator.evaluate(
+        question: 'Question?',
+        studentAnswer: 'Answer.',
+        subjectId: 'science',
+        topicTitle: 'Topic',
+      );
+
+      expect(result.score, equals(0.5));
+      expect(result.explanation, isNotEmpty);
+    });
+
+    test('handles malformed JSON with missing required fields', () async {
+      llmService.responseJson = '{"score": 0.8}';
+
+      final result = await evaluator.evaluate(
+        question: 'Question?',
+        studentAnswer: 'Answer.',
+        subjectId: 'science',
+        topicTitle: 'Topic',
+      );
+
+      expect(result.score, equals(0.8));
+    });
+
+    group('error-state: edge responses', () {
+      test('handles score at 0.0 boundary', () async {
+        llmService.responseJson =
+            '{"score": 0.0, "explanation": "Completely wrong."}';
+
+        final result = await evaluator.evaluate(
+          question: 'Question?',
+          studentAnswer: 'Wrong answer.',
+          subjectId: 'science',
+          topicTitle: 'Topic',
+        );
+
+        expect(result.score, equals(0.0));
+      });
+
+      test('handles score at 1.0 boundary', () async {
+        llmService.responseJson =
+            '{"score": 1.0, "explanation": "Perfect answer!"}';
+
+        final result = await evaluator.evaluate(
+          question: 'Question?',
+          studentAnswer: 'Correct answer.',
+          subjectId: 'science',
+          topicTitle: 'Topic',
+        );
+
+        expect(result.score, equals(1.0));
+      });
+
+      test('handles extra unknown fields in JSON', () async {
+        llmService.responseJson =
+            '{"score": 0.7, "explanation": "Good.", "unknownField": "value", "extraNested": {"a": 1}}';
+
+        final result = await evaluator.evaluate(
+          question: 'Question?',
+          studentAnswer: 'Answer.',
+          subjectId: 'science',
+          topicTitle: 'Topic',
+        );
+
+        expect(result.score, equals(0.7));
+        expect(result.explanation, equals('Good.'));
+      });
+
+      test('handles explanation with special characters', () async {
+        llmService.responseJson =
+            '{"score": 0.5, "explanation": "Line1\\nLine2\\tTabbed\\\"Quoted\\"\\u00e9"}';
+
+        final result = await evaluator.evaluate(
+          question: 'Question?',
+          studentAnswer: 'Answer.',
+          subjectId: 'science',
+          topicTitle: 'Topic',
+        );
+
+        expect(result.score, equals(0.5));
+        expect(result.explanation, isNotEmpty);
+      });
     });
   });
 }

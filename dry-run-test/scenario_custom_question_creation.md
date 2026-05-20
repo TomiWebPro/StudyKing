@@ -1,5 +1,9 @@
 # Dry-Run Scenario: Creating and Managing Custom Questions — The Self-Made Flashcard Journey
 
+> **Validation run: 2026-05-20**
+> See `issues/open/dry_run_result_custom_question_creation.md` for the full issue document.
+> Overall: **2 COMPLETED, 1 PARTIAL, 1 NOT-APPLICABLE, 15 NOT-COMPLETED** — scenario NOT deleted (< 80%).
+
 ## Persona
 
 I'm a student who has been using StudyKing for a few weeks. I've uploaded my IB Chemistry textbook PDF and the AI generated some practice questions, but they're all multiple-choice and don't cover the specific things I want to memorize. I want to **create my own questions** — like digital flashcards — covering the exact content I'm studying. I also want to share my custom questions with a study partner and see my practice results.
@@ -297,5 +301,45 @@ For 20 questions, this is 80+ form interactions with no way to speed up the proc
 | 17 | Questions can be batch-imported (CSV, etc.) | No batch import — one-at-a-time dialog only | **FAIL (MAJOR)** |
 | 18 | Save dialog supports "Save and add another" | Dialog closes after save — must re-navigate to FAB | **FAIL (MINOR)** |
 | 19 | Custom questions appear in Topic Focus mode | `topic` field is null — string-matching filter misses them | **FAIL (MAJOR)** |
+
+---
+
+## Validation Results (Dry-Run Run 2026-05-20)
+
+Traced against current source code (`lib/features/questions/presentation/question_bank_screen.dart`, `lib/core/data/models/question_model.dart`, `lib/features/practice/presentation/screens/practice_screen.dart`, `practice_session_screen.dart`, `practice_results_screen.dart`, `lib/core/services/mastery_graph_service.dart`, etc.)
+
+| # | Expectation | Original | Validated Status | Code Reference |
+|---|---|---|---|---|
+| 1 | "Create Question" on Practice/Subjects/Dashboard | FAIL (BLOCKER) | **PARTIAL** — Question Bank reachable from Dashboard (1 tap) and Practice → Extra Modes (2 taps), but no direct "Create" button on any main screen. FAB lives only inside Question Bank screen. | `practice_screen.dart:1151-1156` (Question Bank link), `dashboard_screen.dart:684-686` (Question Bank card), `question_bank_screen.dart:549-553` (FAB) |
+| 2 | Multi-choice checkbox works | FAIL (BLOCKER) | **COMPLETED** — `onChanged:` is now properly wired with `setInnerState()`. | `question_bank_screen.dart:382-392` |
+| 3 | Topic selection in create dialog | FAIL (MAJOR) | **NOT_COMPLETED** — `topicId` is still hardcoded to `''` at line 464. No topic selector exists in the dialog. | `question_bank_screen.dart:464` |
+| 4 | Source association in create dialog | FAIL (MAJOR) | **NOT_COMPLETED** — No `sourceIds` in the result map. Dialog has no source selector. | `question_bank_screen.dart:461-471` |
+| 5 | Manual questions tagged as `generatedBy: 'manual'` | FAIL (MAJOR) | **COMPLETED** — `Question` model no longer has `generatedBy`. Uses `model` field instead. Create dialog never sets `model` (defaults to `null`). Chip shows "manual" via `q.model != null ? l10n.aiGenerated : l10n.manual`. | `question_bank_screen.dart:660-663`, `question_model.dart:43-44` |
+| 6 | `reportCount` persists | FAIL (MAJOR) | **NOT-APPLICABLE** — `reportCount` field removed from `Question` model entirely. Flag/report UI also gone from question bank. | `question_model.dart` (no reportCount) |
+| 7 | Edit dialog covers all fields | FAIL (MAJOR) | **NOT_COMPLETED** — `_editQuestion()` still only has `text` and `explanation` fields. Subject, type, options, difficulty, topic, source immutable. | `question_bank_screen.dart:224-278` |
+| 8 | Custom questions exportable/shareable | FAIL (BLOCKER) | **NOT_COMPLETED** — No question export/import service exists. Only full-database backup/restore. | No `exportQuestions` method found |
+| 9 | Custom questions importable individually | FAIL (BLOCKER) | **NOT_COMPLETED** — `DataBackupService` does full database backup/restore only. No selective question import. | `data_backup_service.dart` |
+| 10 | Practice tab has "My Flashcards" mode | FAIL (MAJOR) | **NOT_COMPLETED** — `PracticeModeGrid` only has: Quick Practice, Spaced Repetition, Topic Focus, Weak Areas. No custom questions mode. | `practice_mode_grid.dart:97-156` |
+| 11 | Question bank has `generatedBy` filter | FAIL (MAJOR) | **NOT_COMPLETED** — Filters: subject, type, source, search text only. No manual/AI toggle. | `question_bank_screen.dart:125-136` |
+| 12 | Practice results show custom vs AI breakdown | FAIL (MAJOR) | **NOT_COMPLETED** — `PracticeResultsScreen` shows total/correct/accuracy/topic breakdown only. No breakdown by `model` (manual vs AI). | `practice_results_screen.dart:21-114` |
+| 13 | Practice results can be shared | FAIL (MAJOR) | **NOT_COMPLETED** — Practice Results screen has no share/export button. Export only on Dashboard. | `practice_results_screen.dart:44-113` |
+| 14 | Custom questions contribute to topic mastery | FAIL (MAJOR) | **NOT_COMPLETED** — Custom questions have `topicId: ''`. `MasteryGraphService.recordAttempt` maps attempts to empty-topicId key. They contribute to no named topic's mastery score. | `mastery_graph_service.dart:91-117`, `question_bank_screen.dart:464` |
+| 15 | Options / correct answer editable after creation | FAIL (MAJOR) | **NOT_COMPLETED** — Same as #7; edit dialog is text-only. | `question_bank_screen.dart:224-278` |
+| 16 | Questions creatable during practice session | FAIL (BLOCKER) | **NOT_COMPLETED** — `PracticeSessionScreen` has no question creation mechanism. No "Create" gesture or button during session. | `practice_session_screen.dart` (no create flow) |
+| 17 | Batch import (CSV, etc.) | FAIL (MAJOR) | **NOT_COMPLETED** — No batch import. One-at-a-time dialog only. | `question_bank_screen.dart:280-540` |
+| 18 | "Save and add another" | FAIL (MINOR) | **NOT_COMPLETED** — Dialog closes after save; no "add another" checkbox. | `question_bank_screen.dart:534-539` |
+| 19 | Custom questions appear in Topic Focus | FAIL (MAJOR) | **NOT_COMPLETED** — `_startTopicPractice()` filters by `q.topicId == topicId`. Custom questions have empty `topicId`, never match any topic. | `practice_screen.dart:316-317` |
+
+### Summary
+
+| Category | Count |
+|---|---|
+| COMPLETED | 2 (#2 multi-choice, #5 manual tag) |
+| PARTIAL | 1 (#1 FAB visibility) |
+| NOT-APPLICABLE | 1 (#6 reportCount removed) |
+| NOT_COMPLETED | 15 (all remaining) |
+| **Effective completion** | **~11%** (2 of 18 applicable items) |
+
+**Decision: Scenario NOT deleted** (well below 80% threshold).
 
 (End of file - total 377 lines)

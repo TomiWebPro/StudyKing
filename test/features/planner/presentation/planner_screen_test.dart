@@ -237,11 +237,11 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   void addRecord(PlanAdherenceModel record) => _records.add(record);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return _records.where((r) => r.studentId == studentId).toList();
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.success(_records.where((r) => r.studentId == studentId).toList());
   }
 }
 

@@ -1173,7 +1173,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ),
         const SizedBox(height: 8),
         ...state.missedLessons.take(3).map((lesson) {
-          final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
+          final time = DateFormat.jm(l10n.localeName).format(lesson.startTime);
           final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '';
           return Card(
             margin: const EdgeInsets.only(bottom: 4),
@@ -1221,7 +1221,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ),
         const SizedBox(height: 8),
           ...state.scheduledLessons.take(3).map((lesson) {
-          final time = DateFormat.Hm(l10n.localeName).format(lesson.startTime);
+          final time = DateFormat.jm(l10n.localeName).format(lesson.startTime);
           final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? '';
           final isCompleted = lesson.status == SessionStatus.completed || lesson.completed;
           return Card(

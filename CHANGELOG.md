@@ -1,5 +1,59 @@
 # Changelog
 
+- 2026-05-20: Test Master — Coverage & Convention Audit (test_master.md) — 8 item groups:
+  - **B1 (BLOCKER):** Created 4 missing test files (`splash_screen_test`, `shared_providers_test`, `service_providers_test`, `absence_banner_test`) with behavioral assertions and NavigatorObserver navigation checks
+  - **B2 (BLOCKER):** Removed duplicate `prerequisite_check_widget_test.dart`, keeping correctly-named `prerequisite_check_service_widget_test.dart`
+  - **M1 (MAJOR):** Moved 11 test files from feature-specific directories to `test/core/data/repositories/`, `test/core/data/models/`, and `test/core/utils/` with corrected import paths
+  - **M2 (MAJOR):** Added error-state coverage (file write failures, LLM failures, boundary conditions, extraction errors, migration failures, session failures) to 7 service test files using configurable fake classes returning `Result.failure(...)`
+  - **M3 (MAJOR):** Removed `Hive.init()`/`Hive.deleteFromDisk()` from 4 widget tests, replaced with `fixedStudentId` and `ProviderScope` overrides with fake repositories
+  - **m1 (MINOR):** Added `NavigatorObserver` navigation verification to `not_found_screen_test.dart` for dashboard route
+  - **m2 (MINOR):** Split `coverage_gaps_integration_test.dart` into individual focused test files per class
+  - **m3 (MINOR):** Documented CSV locale invariance in `session_export_service_test.dart` with explanatory comments
+
+- 2026-05-20: Code Refactor Master & Quality — NEW Findings implementation (16 items):
+  - **B-New1 (FIXED — already resolved):** Duplicate `StudyProgressTracker` providers — `engagementTrackerProvider` already removed; `engagementSchedulerProvider` correctly depends on `studyProgressTrackerProvider`
+  - **B-New2 (BLOCKER):** Fixed `PlanAdherenceRepository` callers (`plan_adherence_orchestrator.dart`, `instrumentation_service.dart`, `engagement_scheduler.dart`, `planner_service.dart`, `personal_learning_plan_service.dart`, `dashboard_service.dart`, `dashboard_data_providers.dart`) to properly destructure `Result<T>` types from repository methods; fixed `getWeekly()` double-`Result` wrapping in repository
+  - **M-New1 (MAJOR):** Removed redundant `EngagementNudge` DTO from `engagement_scheduler.dart` — replaced with direct `EngagementNudgeModel` construction; removed `_persistNudge` conversion layer; eliminated 13-line boilerplate class
+  - **M-New2 (MAJOR):** Marked 13 pass-through methods in `MasteryGraphService` with `// proxy:` comments and added class-level doc; Option B approach (52 call sites across 23+ files make Option A impractical)
+  - **M-New3 (MAJOR):** Replaced direct `Hive.box()` accesses with `SettingsService` in 7 locations (`study_timer_service.dart`, `engagement_scheduler.dart`, `mentor_schedule_handler.dart`, `tutor_service.dart`, `settings_screen.dart` x2 daily cap reads); removed Hive imports from 3 files
+  - **M-New4 (MAJOR):** Refactored `_checkWellbeingInner()` (108 lines → 5 focused private methods: `_checkOverwork`, `_checkLateNight`, `_checkRevisionNeeded`, `_checkStreak`, plus the limit guard inlined into `_checkWellbeingInner`)
+  - **M-New5 (MAJOR):** Created `SettingsService` in `lib/core/services/settings_service.dart` with `getDailyCapMinutes()`, `getMentorCheckinFrequency()`, `getScheduleDurationMinutes()`, `getTeachingDurationMinutes()`
+  - **M-New6 (MAJOR):** Added `getConsecutiveStudyDays()` to `SessionRepository`; both `mentor_wellbeing_service.dart` and `mentor_context_builder.dart` now delegate to the shared method
+  - **m-New1 (MINOR):** Changed `_logger.w()` → `_logger.i()` in `tutor_screen.dart` for normal lifecycle event
+  - **m-New2 (MINOR):** Changed `_logger.w()` → `_logger.e()` in `mentor_screen.dart` for error-handler failure
+  - **m-New3 (MINOR):** Removed unused `import 'package:flutter/material.dart'` from `app_config.dart`
+  - **m-New4 (MINOR):** Removed unused `import 'dart:async'` from `quick_guide_screen.dart`
+  - **m-New5 (MINOR):** Removed unused `import 'dart:async'` from `api_config_screen.dart`
+  - **m-New6 (MINOR):** Cleaned stale `(m20)` / `(m21)` tracker references from `database_service.dart` and `engagement_scheduler.dart`
+  - **m-New7 (MINOR):** Added `app_radius.dart`, `app_spacing.dart`, `token_pricing_config.dart` to `app_constants.dart` barrel; updated direct imports in `review_answers_screen.dart` and `settings_model.dart`
+  - **m-New8 (MINOR):** `_getDailyCapMinutes()` return type changed to sync `int` (removed misleading `Future<int>`/`async`)
+
+- 2026-05-20: Internationalisation Master (Round 2) — full codebase i18n audit fix:
+  - **B1 (BLOCKER):** Replaced `DateFormat.Hm`/`Hms` with locale-aware `DateFormat.jm` in 4 call sites (session summary card, planner screen x2, LLM task manager)
+  - **M1 (MAJOR):** Removed `'en'` default values from 10+ service/tool constructors (`ContentPipeline`, `DocumentExtractor`, `LessonAgentService` x2 methods, `GenerateLessonBlocksTool`, `CreatePlanTool`, `ScheduleLessonTool`, `OcrExtractor`, `TranscriptionExtractor`); updated `generate_lesson_blocks_tool.dart` fallback from `'en'` to `_localeName`
+  - **M2 (MAJOR):** Added warning log statements in all 7 provider/files that had silent `Locale('en')` fallbacks (`app_providers.dart` x2, `study_progress_provider.dart`, `shared_providers.dart`, `dashboard_providers.dart`, `dashboard_service.dart`, `mentor_providers.dart`, `main.dart`)
+  - **M3 (MAJOR):** Removed deprecated `priceDisplay` and `formattedText` getters from `settings_model.dart`; updated `toString()` to use `formattedTextWithLocale('en')`; migrated all test references to locale-aware alternatives
+  - **M4a (MAJOR):** Replaced raw `Text('$e')` with localized `Text(l10n.errorLoadingSource)` in `topic_detail_screen.dart`
+  - **M5 (MAJOR):** Added warning logs in `conversation_manager.dart` when keyword locale maps are missing (both `_getContinueKeywords` and `_detectExerciseRequest`)
+  - **M6 (MAJOR):** Removed 13 orphaned annotation-only entries from `app_en.arb` and `app_es.arb` tails (voiceInput, exportReports, backupAndRestore x2, readAloud, uploadFile, recordAudio, fileAttached, recordingComplete, startRecording, failedToLoadPlan, scheduleLesson, stay)
+  - **M7 (MINOR):** Added `textDirection` parameter (default `TextDirection.ltr`) to `GridPainter`; both `graph_drawing_widget.dart` and `canvas_drawing_widget.dart` now pass `Directionality.of(context)`
+  - **m4 (MINOR):** Updated `mentorContextLateNightWarning` Spanish ARB value to use proper ICU plural syntax
+
+- 2026-05-20: AI Provider Failures & Error Recovery — implemented the 2 remaining PARTIAL issues from `dry_run_result_ai_provider_failures_recovery.md`:
+  - **Issue 1 (Rate-limiting throttle UI):** Added `_throttleWasActive` state tracking to `TutorScreen` and `MentorScreen`; both screens now display a transient "Please wait…" indicator (with spinner + `l10n.pleaseWait` text) for 2 seconds after any send that was throttled; added `wasThrottleActive` getter to `MentorService` (delegates to `_llmService.wasThrottleActive`); added `pleaseWait` ARB key (EN: `"Please wait…"`, ES: `"Espera un momento…"`) with generated l10n
+  - **Issue 2.1 (Race condition on startup):** Created `aiConfigReadyProvider` (a `FutureProvider<void>` in `lib/core/providers/ai_config_provider.dart`) that resolves after Hive config is fully synced into Riverpod providers; `markAiConfigReady()` called at the end of the provider sync in `main.dart` post-frame callback; AI-dependent screens can `ref.watch(aiConfigReadyProvider)` to gate their initialization
+  - **Issue 2.2 (Plain-text API key storage):** Added `flutter_secure_storage: ^10.2.0` dependency; created `SecureApiKeyService` wrapper around `FlutterSecureStorage` with `saveApiKey()`, `getApiKey()`, `saveBackupApiKey()`, `getBackupApiKey()`, `clearAll()`, and `migrateFromHive()`; wired into `_runAppInitialization()` — on startup, reads API key from secure storage, migrates from Hive if not yet stored, and uses the secure-storage value to populate `apiKeyProvider` (via `_effectiveApiKey` global); API config save (`api_config_screen.dart`) now also persists to secure storage via `secureApiKeyServiceProvider`; sign-out (`settings_screen.dart`) clears secure storage via `clearAll()`; exposed `secureApiKeyServiceProvider` in `lib/core/providers/secure_api_key_provider.dart`
+
+- 2026-05-20: Dry-Run Result Backup, Restore & Data Portability — implemented all 7 issues:
+  - **Issue 1 (BLOCKER):** Added `WidgetsBindingObserver` to `_StudyKingAppState` in `main.dart` — auto-backup check now runs on app resume (not just startup)
+  - **Issue 2 (MAJOR):** Added 5 missing Hive boxes (`agent_memory`, `exam_results`, `student_id`, `dashboard_layout_prefs`, `db_version`) to `_collectAllBoxData()`, `_runAutoBackupCheck()`, and `_boxDisplayName()`
+  - **Issue 3 (MAJOR):** Added gzip compression to `DataBackupService` — compressed backups use `.skbak` extension; `restoreData` handles both `.json` and `.skbak`; `compress` parameter on `exportAllData()`
+  - **Issue 4 (MAJOR):** Enhanced sign-out dialog with "Clear all study data" checkbox and "Back up before signing out" option; added `allStudyDataBoxes` to `HiveBoxNames`; clears all study data boxes on request
+  - **Issue 5 (MINOR):** Removed `studentId` from JSON comprehensive report in `ProgressExportService.exportComprehensiveJSON()` and `shareComprehensiveJSON()`
+  - **Issue 6 (MINOR):** Post-restore now invalidates `databaseProvider` and `subjectListProvider` in addition to `settingsProvider` so UI reflects restored data without restart
+  - **Issue 7 (ENHANCEMENT):** Dashboard export section backup button now triggers a direct backup via `DataBackupService` instead of navigating to Settings; added `collectAllBoxData()` method to `DataBackupService` for reuse
+  - **Chore:** Refactored `_collectAllBoxData()` in settings screen to use `DataBackupService.collectAllBoxData()`; added `allBackupBoxes` list to `HiveBoxNames`; updated test fake for new `compress` parameter; file picker now accepts `.skbak` files for restore
+
 - 2026-05-20: Focus Mode Analytics — created reusable `PracticePerformanceCard` widget (B2 improvements from `future_functionality_planner.md`):
   - **B2:** Created `PracticePerformanceCard` in `lib/core/widgets/` — reusable widget showing practice accuracy, topic breakdown, and mastery delta with compact/full display modes
   - **B2:** Refactored `SessionSummaryCard._buildPracticePerformance()` to delegate to `PracticePerformanceCard`, removing 100+ lines of duplicated rendering logic

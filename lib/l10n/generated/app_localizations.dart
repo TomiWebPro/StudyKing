@@ -6296,7 +6296,7 @@ abstract class AppLocalizations {
   /// **'AI Task Monitor'**
   String get aiTaskMonitor;
 
-  /// Subtitle for AI task monitor settings entry
+  /// Subtitle for AI tasks monitoring tile in settings
   ///
   /// In en, this message translates to:
   /// **'View active AI inference tasks and token usage'**
@@ -9482,6 +9482,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'These topics are based on our standard curriculum. You can edit them anytime.'**
   String get curriculumBasedTopics;
+
+  /// Transient indicator shown when a message was rate-limited
+  ///
+  /// In en, this message translates to:
+  /// **'Please wait…'**
+  String get pleaseWait;
 }
 
 class _AppLocalizationsDelegate

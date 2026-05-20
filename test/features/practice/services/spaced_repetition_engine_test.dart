@@ -312,4 +312,181 @@ void main() {
       });
     });
   });
+
+  group('SpacedRepetitionEngine - coverage gaps', () {
+    late SpacedRepetitionEngine engine;
+
+    setUp(() {
+      engine = SpacedRepetitionEngine();
+    });
+
+    group('mapConfidenceToGrade complete coverage', () {
+      test('correct confidence 2 maps to grade 3', () {
+        expect(engine.mapConfidenceToGrade(isCorrect: true, confidence: 2), 3);
+      });
+
+      test('correct confidence 4 maps to grade 5', () {
+        expect(engine.mapConfidenceToGrade(isCorrect: true, confidence: 4), 5);
+      });
+
+      test('incorrect confidence 2 maps to grade 0', () {
+        expect(
+            engine.mapConfidenceToGrade(isCorrect: false, confidence: 2), 0);
+      });
+
+      test('incorrect confidence 4 maps to grade 2', () {
+        expect(
+            engine.mapConfidenceToGrade(isCorrect: false, confidence: 4), 2);
+      });
+
+      test('default confidence returns fallback grade', () {
+        // For correct with out-of-range confidence, default is 4
+        expect(engine.mapConfidenceToGrade(isCorrect: true, confidence: 99), 4);
+        // For incorrect with confidence <= 2, grade is 0 (not the default branch)
+        expect(
+            engine.mapConfidenceToGrade(isCorrect: false, confidence: 0), 0);
+      });
+    });
+
+    group('QuestionSRData copyWith', () {
+      test('copyWith with clearPreviousInterval clears the field', () {
+        const data = QuestionSRData(
+          previousInterval: Duration(days: 6),
+          lastReview: null,
+        );
+        final updated = data.copyWith(clearPreviousInterval: true);
+        expect(updated.previousInterval, isNull);
+      });
+
+      test('copyWith with explicit previousInterval overrides', () {
+        const data = QuestionSRData(previousInterval: Duration(days: 6));
+        final updated =
+            data.copyWith(previousInterval: const Duration(days: 10));
+        expect(updated.previousInterval, const Duration(days: 10));
+      });
+
+      test('copyWith with null previousInterval keeps original', () {
+        const data = QuestionSRData(previousInterval: Duration(days: 6));
+        final updated = data.copyWith();
+        expect(updated.previousInterval, const Duration(days: 6));
+      });
+
+      test('copyWith reviewLog replacement', () {
+        const data = QuestionSRData(reviewLog: []);
+        final entry = ReviewLogEntry(
+          questionId: 'q1',
+          timestamp: DateTime(2026, 1, 1),
+          grade: 4,
+          easeFactor: 2.5,
+          interval: const Duration(days: 1),
+          nextReview: DateTime(2026, 1, 2),
+        );
+        final updated = data.copyWith(reviewLog: [entry]);
+        expect(updated.reviewLog, hasLength(1));
+        expect(updated.reviewLog.first.grade, 4);
+      });
+    });
+
+    group('computeRecallProbability edges', () {
+      test('returns 1.0 when interval is zero', () {
+        final data = QuestionSRData(
+          lastReview: DateTime.now().subtract(const Duration(days: 30)),
+          previousInterval: Duration.zero,
+        );
+        expect(engine.computeRecallProbability(data: data), 1.0);
+      });
+
+      test('returns 1.0 when lastReview is null', () {
+        const data = QuestionSRData(previousInterval: Duration(days: 7));
+        expect(engine.computeRecallProbability(data: data), 1.0);
+      });
+
+      test('returns 1.0 when previousInterval is null', () {
+        final data = QuestionSRData(lastReview: DateTime.now());
+        expect(engine.computeRecallProbability(data: data), 1.0);
+      });
+    });
+
+    group('scheduleReview edge cases', () {
+      test('handles null currentData by using defaults', () {
+        final result = engine.scheduleReview(questionId: 'q1', grade: 4);
+        expect(result.updatedData.repetitions, 1);
+        expect(result.updatedData.easeFactor, closeTo(2.5, 0.01));
+      });
+
+      test('review log accumulates across calls', () {
+        final data = QuestionSRData(
+          repetitions: 1,
+          easeFactor: 2.5,
+          previousInterval: const Duration(days: 1),
+          reviewLog: [
+            ReviewLogEntry(
+              questionId: 'q1',
+              timestamp: DateTime(2026, 1, 1),
+              grade: 4,
+              easeFactor: 2.5,
+              interval: const Duration(days: 1),
+              nextReview: DateTime(2026, 1, 2),
+            ),
+          ],
+        );
+        final result = engine.scheduleReview(
+          questionId: 'q1',
+          grade: 4,
+          currentData: data,
+        );
+        expect(result.updatedData.reviewLog, hasLength(2));
+      });
+    });
+
+    group('migrateFromLegacy branch coverage', () {
+      test('legacy interval 3-7 days sets repetitions to max(2, ~attempts/2)',
+          () {
+        final now = DateTime(2026, 5, 16);
+        final legacyNextReview = now.add(const Duration(days: 4));
+        final result = engine.migrateFromLegacy(
+          questionId: 'q1',
+          legacyNextReview: legacyNextReview,
+          legacyLastReview: now.subtract(const Duration(days: 1)),
+          totalAttempts: 5,
+          accuracy: 0.9,
+          now: now,
+        );
+        expect(result.updatedData.repetitions,
+            greaterThanOrEqualTo(2));
+        expect(result.updatedData.easeFactor, 2.2);
+      });
+
+      test('legacy interval 1-3 days sets repetitions to max(1, ~attempts/3)',
+          () {
+        final now = DateTime(2026, 5, 16);
+        final legacyNextReview = now.add(const Duration(days: 2));
+        final result = engine.migrateFromLegacy(
+          questionId: 'q1',
+          legacyNextReview: legacyNextReview,
+          legacyLastReview: now.subtract(const Duration(days: 1)),
+          totalAttempts: 6,
+          accuracy: 0.9,
+          now: now,
+        );
+        expect(result.updatedData.repetitions,
+            greaterThanOrEqualTo(1));
+        expect(result.updatedData.easeFactor, 2.0);
+      });
+
+      test('legacy interval < 1 day resets to 0', () {
+        final now = DateTime(2026, 5, 16);
+        final legacyNextReview = now.add(const Duration(hours: 12));
+        final result = engine.migrateFromLegacy(
+          questionId: 'q1',
+          legacyNextReview: legacyNextReview,
+          legacyLastReview: now.subtract(const Duration(days: 1)),
+          totalAttempts: 10,
+          accuracy: 0.9,
+          now: now,
+        );
+        expect(result.updatedData.repetitions, 0);
+      });
+    });
+  });
 }

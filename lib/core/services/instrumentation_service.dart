@@ -147,13 +147,16 @@ class InstrumentationService {
       int consecutiveLowDays = 0;
 
       if (_adherenceRepository != null) {
-        avgAdherence = await _adherenceRepository.getAverageAdherence(studentId);
-        final weeklyMetrics = await _adherenceRepository.getWeekly(studentId);
+        final avgResult = await _adherenceRepository.getAverageAdherence(studentId);
+        avgAdherence = avgResult.data ?? 0.0;
+        final weeklyResult = await _adherenceRepository.getWeekly(studentId);
+        final weeklyMetrics = weeklyResult.data ?? [];
         weeklyMetricsCount = weeklyMetrics.length;
         weeklyAdherenceAvg = weeklyMetrics.isEmpty
             ? 0.0
             : weeklyMetrics.fold<double>(0.0, (sum, m) => sum + m.adherenceScore) / weeklyMetrics.length;
-        consecutiveLowDays = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+        final lowDaysResult = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+        consecutiveLowDays = lowDaysResult.data ?? 0;
       }
 
       final improvements = _improvementTracker.getRecentImprovements(studentId, days: 7);
@@ -189,7 +192,8 @@ class InstrumentationService {
 
   Future<List<PlanAdherenceModel>> getAdherenceHistory(String studentId) async {
     if (_adherenceRepository == null) return [];
-    return _adherenceRepository.getByStudent(studentId);
+    final result = await _adherenceRepository.getByStudent(studentId);
+    return result.data ?? [];
   }
 
   List<MasteryImprovementMetric> getImprovementHistory(String studentId) {
@@ -202,7 +206,8 @@ class InstrumentationService {
 
       List<Map<String, dynamic>> adherenceData = [];
       if (_adherenceRepository != null) {
-        final adherenceModels = await _adherenceRepository.getByStudent(studentId);
+        final modelsResult = await _adherenceRepository.getByStudent(studentId);
+        final adherenceModels = modelsResult.data ?? [];
         adherenceData = adherenceModels.map((m) => m.toJson()).toList();
       }
 

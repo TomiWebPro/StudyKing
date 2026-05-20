@@ -28,7 +28,7 @@ class OcrExtractor {
   final String _localeName;
   static final Logger _logger = const Logger('OcrExtractor');
 
-  OcrExtractor({LlmService? llmService, required String modelId, String localeName = 'en'})
+  OcrExtractor({LlmService? llmService, required String modelId, required String localeName})
       : _llmService = llmService,
         _modelId = modelId,
         _localeName = localeName {

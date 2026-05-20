@@ -42,13 +42,13 @@ void main() {
     });
   });
 
-  group('UsageRecord.priceDisplay', () {
-    test('formats with en locale by default', () {
-      expect(record.priceDisplay, '\$0.0123');
+  group('UsageRecord.priceDisplayWithLocale', () {
+    test('formats with en locale', () {
+      expect(record.priceDisplayWithLocale('en'), '\$0.0123');
     });
 
     test('handles zero cost', () {
-      expect(zeroRecord.priceDisplay, '\$0.0000');
+      expect(zeroRecord.priceDisplayWithLocale('en'), '\$0.0000');
     });
   });
 
@@ -67,9 +67,9 @@ void main() {
     });
   });
 
-  group('UsageRecord.formattedText', () {
+  group('UsageRecord.formattedTextWithLocale', () {
     test('includes date, price, and cost per token', () {
-      final formatted = record.formattedText;
+      final formatted = record.formattedTextWithLocale('en');
       expect(formatted, contains('2026-05-11'));
       expect(formatted, contains('\$0.0123'));
       expect(formatted, contains('cost/tk'));

@@ -7,7 +7,7 @@ class GenerateLessonBlocksTool extends AgentTool {
   final LessonAgentService _lessonAgentService;
   final String _localeName;
 
-  GenerateLessonBlocksTool({required LessonAgentService lessonAgentService, String localeName = 'en'})
+  GenerateLessonBlocksTool({required LessonAgentService lessonAgentService, required String localeName})
       : _lessonAgentService = lessonAgentService,
         _localeName = localeName;
 
@@ -40,7 +40,7 @@ class GenerateLessonBlocksTool extends AgentTool {
       subjectId: args['subjectId'] as String,
       topicId: args['topicId'] as String,
       topicTitle: args['topicTitle'] as String,
-      localeName: (args['localeName'] as String?) ?? 'en',
+      localeName: (args['localeName'] as String?) ?? _localeName,
     );
 
     final l10n = lookupAppLocalizations(Locale(_localeName));

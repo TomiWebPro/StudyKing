@@ -33,7 +33,7 @@ class DocumentExtractor {
     TranscriptionExtractor? transcriptionExtractor,
     LlmService? llmService,
     required this.modelId,
-    String localeName = 'en',
+    required String localeName,
   })  : _pdfExtractor = pdfExtractor ?? PdfExtractor(),
         _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
         _transcriptionExtractor = transcriptionExtractor ??

@@ -86,14 +86,14 @@ void main() {
     group('constructor', () {
       test('accepts empty modelId without throwing', () {
         expect(
-          () => OcrExtractor(modelId: ''),
+          () => OcrExtractor(modelId: '', localeName: 'en'),
           returnsNormally,
         );
       });
 
       test('accepts valid modelId', () {
         expect(
-          () => OcrExtractor(modelId: 'test-model'),
+          () => OcrExtractor(modelId: 'test-model', localeName: 'en'),
           returnsNormally,
         );
       });
@@ -103,7 +103,7 @@ void main() {
       late OcrExtractor extractor;
 
       setUp(() {
-        extractor = OcrExtractor(modelId: 'test-model');
+        extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
       });
 
       test('returns empty result for file:// path without LLM', () async {
@@ -160,7 +160,7 @@ void main() {
           await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
           await Process.run('chmod', ['000', file.path]);
 
-          final extractor = OcrExtractor(modelId: 'test-model');
+          final extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
           final result = await extractor.extractText(
             rawContent: 'file://${file.path}',
             sourceUrl: null,
@@ -179,7 +179,7 @@ void main() {
           final file = File('${dir.path}/test_image.png');
           await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
 
-          final extractor = OcrExtractor(modelId: 'test-model');
+          final extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
           final result = await extractor.extractText(
             rawContent: 'file://${file.path}',
             sourceUrl: null,
@@ -197,7 +197,7 @@ void main() {
           final file = File('${dir.path}/test_image.png');
           await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
 
-          final extractor = OcrExtractor(modelId: '', llmService: _FakeLlmService());
+          final extractor = OcrExtractor(modelId: '', llmService: _FakeLlmService(), localeName: 'en');
           final result = await extractor.extractText(
             rawContent: 'file://${file.path}',
             sourceUrl: null,
@@ -317,6 +317,7 @@ void main() {
         final extractor = OcrExtractor(
           llmService: llm,
           modelId: 'test-model',
+          localeName: 'en',
         );
 
         final result = await extractor.extractText(
@@ -337,6 +338,7 @@ void main() {
         final extractor = OcrExtractor(
           llmService: llm,
           modelId: 'test-model',
+          localeName: 'en',
         );
 
         final result = await extractor.extractText(
@@ -362,6 +364,7 @@ void main() {
           final extractor = OcrExtractor(
             llmService: llm,
             modelId: 'test-model',
+            localeName: 'en',
           );
 
           final result = await extractor.extractText(
