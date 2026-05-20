@@ -3,6 +3,7 @@ import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
@@ -16,10 +17,12 @@ import 'core/theme/app_theme.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'core/providers/app_providers.dart';
 import 'core/services/llm/llm_chat_service.dart';
+import 'core/providers/llm_providers.dart';
 import 'core/constants/app_constants.dart';
 import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
-import 'core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -329,6 +332,22 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> {
             orElse: () => LlmProvider.openRouter,
           );
         }
+        final backupProviderName = settings.backupLlmProviderName;
+        if (backupProviderName.isNotEmpty) {
+          ref.read(backupLlmProviderProvider.notifier).state = LlmProvider.values.firstWhere(
+            (p) => p.name == backupProviderName,
+            orElse: () => LlmProvider.openRouter,
+          );
+        }
+        if (settings.backupApiKey.isNotEmpty) {
+          ref.read(backupApiKeyProvider.notifier).state = settings.backupApiKey;
+        }
+        if (settings.backupBaseUrl.isNotEmpty) {
+          ref.read(backupBaseUrlProvider.notifier).state = settings.backupBaseUrl;
+        }
+        if (settings.backupModel.isNotEmpty) {
+          ref.read(backupModelProvider.notifier).state = settings.backupModel;
+        }
       }
     });
     final locale = ref.watch(localeProvider);
@@ -480,8 +499,53 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       if (mounted) {
         await _checkOrphanedSessions();
       }
+
+      if (mounted) {
+        await _checkPlanAutoExtension();
+      }
     } catch (e) {
       _mainLogger.w('_handleFirstLaunch failed', e);
+    }
+  }
+
+  Future<void> _checkPlanAutoExtension() async {
+    try {
+      final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
+      if (daysSinceLastActivity < 7) return;
+
+      final l10n = AppLocalizations.of(context);
+      if (l10n == null) return;
+
+      final studentId = StudentIdService().getStudentId();
+      final plannerService = PlannerService();
+      final planResult = await plannerService.loadExistingPlan();
+      final plan = planResult.data;
+      if (plan == null) return;
+
+      if (!mounted) return;
+      final needsExtension = await showDialog<bool>(
+        context: context,
+        builder: (ctx2) => AlertDialog(
+          title: Text(l10n.absenceDetectedTitle),
+          content: Text(l10n.welcomeBackDays(daysSinceLastActivity)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx2, false),
+              child: Text(l10n.noThanks),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx2, true),
+              child: Text(l10n.catchUpExtend(daysSinceLastActivity)),
+            ),
+          ],
+        ),
+      );
+
+      if (needsExtension == true && mounted) {
+        await plannerService.planService.extendPlan(studentId, daysSinceLastActivity);
+      }
+    } catch (e) {
+      _mainLogger.w('Plan auto-extension check failed: $e');
     }
   }
 
@@ -494,9 +558,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
       final session = sessions.first;
       final l10n = AppLocalizations.of(context)!;
-      final hour = session.startTime.hour.toString().padLeft(2, '0');
-      final minute = session.startTime.minute.toString().padLeft(2, '0');
-      final timeStr = '$hour:$minute';
+      final timeStr = DateFormat.jm(l10n.localeName).format(session.startTime.toLocal());
 
       final action = await showDialog<String>(
         context: context,

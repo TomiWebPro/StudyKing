@@ -16,6 +16,7 @@ const int defaultQuestionsPerDay = 15;
 const double defaultMinutesPerDay = 30.0;
 const int defaultMaxQuestionsPerTopic = 10;
 const int defaultSessionDurationMinutes = 30;
+const int lateNightHour = 22;
 const int msPerSecond = 1000;
 const int msPerMinute = 60000;
 

@@ -4,7 +4,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, l10nProvider, databaseProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show llmProviderProvider, settingsProvider, l10nProvider, databaseProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';

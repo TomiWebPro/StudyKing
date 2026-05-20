@@ -25,6 +25,10 @@ class SettingsUpdate {
   final String? llmProviderName;
   final int? lastConnectionTestMs;
   final String? lastLlmError;
+  final String? backupLlmProviderName;
+  final String? backupApiKey;
+  final String? backupBaseUrl;
+  final String? backupModel;
 
   const SettingsUpdate({
     this.apiKey,
@@ -51,6 +55,10 @@ class SettingsUpdate {
     this.llmProviderName,
     this.lastConnectionTestMs,
     this.lastLlmError,
+    this.backupLlmProviderName,
+    this.backupApiKey,
+    this.backupBaseUrl,
+    this.backupModel,
   });
 
   SettingsUpdate copyWith({
@@ -78,6 +86,10 @@ class SettingsUpdate {
     String? llmProviderName,
     int? lastConnectionTestMs,
     String? lastLlmError,
+    String? backupLlmProviderName,
+    String? backupApiKey,
+    String? backupBaseUrl,
+    String? backupModel,
   }) {
     return SettingsUpdate(
       apiKey: apiKey ?? this.apiKey,
@@ -104,6 +116,10 @@ class SettingsUpdate {
       llmProviderName: llmProviderName ?? this.llmProviderName,
       lastConnectionTestMs: lastConnectionTestMs ?? this.lastConnectionTestMs,
       lastLlmError: lastLlmError ?? this.lastLlmError,
+      backupLlmProviderName: backupLlmProviderName ?? this.backupLlmProviderName,
+      backupApiKey: backupApiKey ?? this.backupApiKey,
+      backupBaseUrl: backupBaseUrl ?? this.backupBaseUrl,
+      backupModel: backupModel ?? this.backupModel,
     );
   }
 
@@ -133,6 +149,10 @@ class SettingsUpdate {
     if (llmProviderName != null) map['llmProviderName'] = llmProviderName;
     if (lastConnectionTestMs != null) map['lastConnectionTestMs'] = lastConnectionTestMs;
     if (lastLlmError != null) map['lastLlmError'] = lastLlmError;
+    if (backupLlmProviderName != null) map['backupLlmProviderName'] = backupLlmProviderName;
+    if (backupApiKey != null) map['backupApiKey'] = backupApiKey;
+    if (backupBaseUrl != null) map['backupBaseUrl'] = backupBaseUrl;
+    if (backupModel != null) map['backupModel'] = backupModel;
     return map;
   }
 }

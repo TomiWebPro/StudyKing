@@ -18,7 +18,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';

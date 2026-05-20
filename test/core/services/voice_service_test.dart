@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/voice_service.dart';
 
 void main() {

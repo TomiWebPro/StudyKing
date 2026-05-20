@@ -5,11 +5,13 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class PlanAdherenceCard extends StatelessWidget {
   final double averageAdherence;
   final double weeklyAdherence;
+  final int daysSinceLastActivity;
 
   const PlanAdherenceCard({
     super.key,
     required this.averageAdherence,
     required this.weeklyAdherence,
+    this.daysSinceLastActivity = 0,
   });
 
   @override
@@ -32,6 +34,30 @@ class PlanAdherenceCard extends StatelessWidget {
             ),
           ],
         ),
+        if (daysSinceLastActivity >= 1) ...[
+          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.tertiaryContainer,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.info_outline, size: 14,
+                    color: Theme.of(context).colorScheme.tertiary),
+                const SizedBox(width: 6),
+                Text(
+                  l10n.welcomeBackDays(daysSinceLastActivity),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
         const SizedBox(height: 12),
         Row(
           children: [

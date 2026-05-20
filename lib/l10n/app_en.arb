@@ -898,6 +898,10 @@
   "@backupAndRestore": {
     "description": "Section title for backup & restore in settings"
   },
+  "backupAndRestoreTooltip": "Backup & Restore",
+  "@backupAndRestoreTooltip": {
+    "description": "Semantic tooltip for backup and restore action"
+  },
   "exportBackup": "Export Backup",
   "@exportBackup": {
     "description": "Tile title for exporting backup"
@@ -2870,6 +2874,42 @@
   "readiness": "Readiness",
   "@readiness": {
     "description": "Label for readiness metric"
+  },
+  "confidence": "Confidence",
+  "@confidence": {
+    "description": "Label for confidence stat"
+  },
+  "forgettingRisk": "Forgetting Risk",
+  "@forgettingRisk": {
+    "description": "Label for forgetting risk stat"
+  },
+  "reviewUrgency": "Review Urgency",
+  "@reviewUrgency": {
+    "description": "Label for review urgency stat"
+  },
+  "lastAttempted": "Last Attempted",
+  "@lastAttempted": {
+    "description": "Label for last attempted date"
+  },
+  "lastUpdated": "Last Updated",
+  "@lastUpdated": {
+    "description": "Label for last updated date"
+  },
+  "accuracyTrend": "Accuracy Trend",
+  "@accuracyTrend": {
+    "description": "Heading for accuracy trend chart"
+  },
+  "loadingSyllabusProgress": "Loading syllabus progress...",
+  "@loadingSyllabusProgress": {
+    "description": "Loading text shown while syllabus progress is being fetched"
+  },
+  "pageIndicatorAria": "Page {count} of {total}",
+  "@pageIndicatorAria": {
+    "description": "Semantics label for page indicator dots",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
   },
   "overallMastery": "Overall Mastery",
   "@overallMastery": {
@@ -5797,11 +5837,9 @@
   "@goToDashboard": {
     "description": "Button label to navigate to the dashboard"
   },
-  "tapToCollapse": "Tap to collapse",
   "@tapToCollapse": {
     "description": "Semantic hint for collapsing a card section"
   },
-  "tapToExpand": "Tap to expand",
   "@tapToExpand": {
     "description": "Semantic hint for expanding a card section"
   },
@@ -6574,23 +6612,18 @@
       "count": { "type": "int" }
     }
   },
-  "manualSessionTracker": "Manual Session Tracker",
   "@manualSessionTracker": {
     "description": "Title for manual session tracker"
   },
-  "manualSessionTrackerDescription": "Track study time manually",
   "@manualSessionTrackerDescription": {
     "description": "Description for manual session tracking"
   },
-  "sessionHistoryDescription": "Review past study sessions",
   "@sessionHistoryDescription": {
     "description": "Description for session history"
   },
-  "sessionTracking": "Session Tracking",
   "@sessionTracking": {
     "description": "Title for session tracking section"
   },
-  "exportProgressCsv": "Export Progress CSV",
   "@exportProgressCsv": {
     "description": "Export progress as CSV"
   },
@@ -7098,7 +7131,6 @@
     "@exportReports": {
       "description": "Semantics label and tooltip for export reports button"
     },
-    "backupAndRestore": "Backup & Restore",
     "@backupAndRestore": {
       "description": "Semantics label and tooltip for backup and restore button"
     },
@@ -7205,7 +7237,6 @@
         "count": { "type": "int" }
       }
     },
-    "voiceInput": "Voice input",
     "@voiceInput": {
       "description": "Tooltip for voice input button when idle"
     },
@@ -7221,11 +7252,9 @@
     "@loadingWithEllipsis": {
       "description": "Accessible label for shimmer loading state"
     },
-    "exportReports": "Export Reports",
     "@exportReports": {
       "description": "Semantic tooltip for export reports action"
     },
-    "backupAndRestore": "Backup & Restore",
     "@backupAndRestore": {
       "description": "Semantic tooltip for backup and restore action"
     },
@@ -7242,6 +7271,14 @@
       "description": "Label shown during focus mode indicating lesson practice"
     },
     "lessonPracticeWithTopic": "Lesson Practice: {topic}",
+    "@lessonPracticeWithTopic": {
+      "description": "Label shown during focus mode with topic name",
+      "placeholders": {
+        "topic": {
+          "type": "String"
+        }
+      }
+    },
     "pageIndicator": "{current} / {total}",
     "@pageIndicator": {
       "description": "Page number indicator showing current page out of total",
@@ -7254,14 +7291,6 @@
         }
       }
     },
-    "@lessonPracticeWithTopic": {
-      "description": "Label shown during focus mode with topic name",
-      "placeholders": {
-        "topic": {
-          "type": "String"
-        }
-      }
-    },
     "mentorMessages": "Mentor Messages",
     "@mentorMessages": {
       "description": "Notification channel name for mentor messages"
@@ -7270,27 +7299,21 @@
     "@readyToContinueLearning": {
       "description": "Notification text to nudge the student to resume learning"
     },
-    "readAloud": "Read aloud",
     "@readAloud": {
       "description": "Tooltip for read aloud button on tutor messages"
     },
-    "uploadFile": "Upload file",
     "@uploadFile": {
       "description": "Label for upload file button in question card"
     },
-    "recordAudio": "Record audio",
     "@recordAudio": {
       "description": "Label for record audio button in question card"
     },
-    "fileAttached": "File attached",
     "@fileAttached": {
       "description": "Label shown when a file is attached to a question"
     },
-    "recordingComplete": "Recording complete",
     "@recordingComplete": {
       "description": "Label shown when audio recording is complete"
     },
-    "startRecording": "Start recording",
     "@startRecording": {
       "description": "Label for starting audio recording"
     },
@@ -7338,7 +7361,6 @@
     "@toolEraser": {
       "description": "Tool name for eraser drawing tool"
     },
-    "failedToLoadPlan": "Failed to load study plan",
     "@failedToLoadPlan": {
       "description": "User-facing error message when plan fails to load"
     },
@@ -7350,7 +7372,6 @@
     "@micPermissionDenied": {
       "description": "Snackbar message when microphone permission is denied"
     },
-    "scheduleLesson": "Schedule a Lesson",
     "@scheduleLesson": {
       "description": "Action button to schedule a lesson"
     },
@@ -7451,12 +7472,73 @@
     "@uploadInProgressBody": {
       "description": "Dialog body when user tries to navigate away during upload"
     },
-    "stay": "Stay",
     "@stay": {
       "description": "Button label to stay on current screen"
     },
     "selected": "selected",
     "@selected": {
       "description": "Label indicating items are selected"
+    },
+    "syllabusUploadToggle": "Upload as syllabus",
+    "@syllabusUploadToggle": {
+      "description": "Checkbox label to upload content as a syllabus"
+    },
+    "syllabusUploadToggleHint": "Marks this upload as a syllabus for structured topic generation",
+    "@syllabusUploadToggleHint": {
+      "description": "Hint text for syllabus upload checkbox"
+    },
+    "backupProvider": "Backup Provider",
+    "@backupProvider": {
+      "description": "Section title for backup AI provider configuration"
+    },
+    "backupProviderDescription": "Optional secondary AI provider for failover",
+    "@backupProviderDescription": {
+      "description": "Description text for backup provider"
+    },
+    "backupApiKey": "Backup API Key",
+    "@backupApiKey": {
+      "description": "Label for backup API key field"
+    },
+    "backupApiKeyDescription": "API key for the backup provider",
+    "@backupApiKeyDescription": {
+      "description": "Description text for backup API key"
+    },
+    "backupBaseUrl": "Backup Base URL",
+    "@backupBaseUrl": {
+      "description": "Label for backup API base URL field"
+    },
+    "backupModel": "Backup Model",
+    "@backupModel": {
+      "description": "Label for backup AI model field"
+    },
+    "backupModelHint": "e.g., gpt-4o-mini",
+    "@backupModelHint": {
+      "description": "Hint text for backup model input"
+    },
+    "backupModelDescription": "Model ID for the backup provider",
+    "@backupModelDescription": {
+      "description": "Description text for backup model"
+    },
+    "providerTimedOut": "{providerName} timed out. Please try again.",
+    "@providerTimedOut": {
+      "description": "Error message when provider times out",
+      "placeholders": {
+        "providerName": {
+          "type": "String"
+        }
+      }
+    },
+    "providerConnectionFailed": "Connection to {providerName} failed. Please check your network and API key.",
+    "@providerConnectionFailed": {
+      "description": "Error message when provider connection fails",
+      "placeholders": {
+        "providerName": {
+          "type": "String"
+        }
+      }
+    },
+    "responseInterrupted": "Response interrupted. Please try again.",
+    "@responseInterrupted": {
+      "description": "Error message when response is interrupted"
     }
   }

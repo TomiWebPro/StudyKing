@@ -149,33 +149,55 @@ class TutorService {
       voiceService: _voiceService,
     );
 
-    await manager.initialize();
+    try {
+      await manager.initialize();
 
-    final lessonPlan = await manager.generateLessonPlan(
-      durationMinutes: actualDuration,
-    );
+      final lessonPlan = await manager.generateLessonPlan(
+        durationMinutes: actualDuration,
+      );
 
-    await _database.tutorSessionRepository.saveSession(
-      session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
-    );
+      await _database.tutorSessionRepository.saveSession(
+        session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
+      );
 
-    await _lessonRepository.init();
-    final lesson = Lesson(
-      id: const Uuid().v4(),
-      subjectId: subjectId,
-      title: topicTitle,
-      topicId: topicId,
-      blocks: _lessonPlanToBlocks(lessonPlan, subjectId, topicId),
-      difficulty: 3,
-      generatedBy: GeneratedBy.ai,
-      createdAt: _clock.now(),
-    );
-    await _lessonRepository.create(lesson);
-    _currentLessonId = lesson.id;
-    _currentLessonBlocks = lesson.blocks;
+      await _lessonRepository.init();
+      final lesson = Lesson(
+        id: const Uuid().v4(),
+        subjectId: subjectId,
+        title: topicTitle,
+        topicId: topicId,
+        blocks: _lessonPlanToBlocks(lessonPlan, subjectId, topicId),
+        difficulty: 3,
+        generatedBy: GeneratedBy.ai,
+        createdAt: _clock.now(),
+      );
+      await _lessonRepository.create(lesson);
+      _currentLessonId = lesson.id;
+      _currentLessonBlocks = lesson.blocks;
 
-    _currentManager = manager;
-    return manager;
+      _currentManager = manager;
+      return manager;
+    } catch (e) {
+      _logger.w('Lesson initialization failed, rolling back session', e);
+      await _database.tutorSessionRepository.saveSession(
+        session.copyWith(status: SessionStatus.cancelled),
+      );
+      if (scheduledSessionId != null) {
+        try {
+          final existingResult = await _database.sessionRepository.get(scheduledSessionId);
+          if (existingResult.isSuccess && existingResult.data != null) {
+            final restored = existingResult.data!.copyWith(
+              status: SessionStatus.planned,
+              completed: false,
+            );
+            await _database.sessionRepository.save(restored.id, restored);
+          }
+        } catch (restoreErr) {
+          _logger.w('Failed to restore scheduled session after rollback', restoreErr);
+        }
+      }
+      rethrow;
+    }
   }
 
   Future<void> endLesson() async {

@@ -89,7 +89,7 @@ void main() {
         totalCost: 0.05,
       ));
 
-      final summary = model.formatUsageSummary();
+      final summary = model.formatUsageSummary('en');
       expect(summary, contains('Usage'));
       expect(summary, contains('1500 tokens'));
       expect(summary, contains('avg'));

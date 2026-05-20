@@ -6,7 +6,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';

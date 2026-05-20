@@ -1,7 +1,12 @@
+import 'dart:async';
+
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 
 class ConversationMemory {
+  static final Logger _logger = const Logger('ConversationMemory');
   final List<ConversationMessage> messages;
   final int maxTurns;
   final String? sessionId;
@@ -12,17 +17,22 @@ class ConversationMemory {
       : messages = [],
         _repository = repository;
 
-  void _trimRepository() async {
+  Future<void> _trimRepository() async {
     final repo = _repository;
     final sid = sessionId;
     if (repo == null || sid == null) return;
-    final storedResult = await repo.getSessionMessages(sid);
-    final stored = storedResult.data ?? [];
-    if (stored.length > maxTurns * 2) {
-      final toRemove = stored.sublist(0, stored.length - maxTurns * 2);
-      for (final msg in toRemove) {
-        await repo.deleteMessage(msg.id);
+    final result = await Result.capture(() async {
+      final storedResult = await repo.getSessionMessages(sid);
+      final stored = storedResult.data ?? [];
+      if (stored.length > maxTurns * 2) {
+        final toRemove = stored.sublist(0, stored.length - maxTurns * 2);
+        for (final msg in toRemove) {
+          await repo.deleteMessage(msg.id);
+        }
       }
+    }, context: '_trimRepository');
+    if (result.isFailure) {
+      _logger.w('Failed to trim repository: ${result.error}');
     }
   }
 
@@ -58,7 +68,7 @@ class ConversationMemory {
       }
     }
     _persistMessage(msg);
-    _trimRepository();
+    unawaited(_trimRepository());
   }
 
   void _persistMessage(ConversationMessage msg) {

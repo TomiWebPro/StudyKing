@@ -16,17 +16,33 @@ final llmUsageMeterProvider = Provider<LlmUsageMeter>((ref) {
   return meter;
 });
 
+final backupLlmProviderProvider = StateProvider<LlmProvider>((ref) => LlmProvider.openRouter);
+
+final backupApiKeyProvider = StateProvider<String>((ref) => '');
+
+final backupBaseUrlProvider = StateProvider<String>((ref) => '');
+
+final backupModelProvider = StateProvider<String>((ref) => '');
+
 final llmServiceProvider = Provider<LlmService>((ref) {
   final apiKey = ref.watch(apiKeyProvider);
   final apiBaseUrl = ref.watch(apiBaseUrlProvider);
   final llmProvider = ref.watch(llmProviderProvider);
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
+  final backupProvider = ref.watch(backupLlmProviderProvider);
+  final backupApiKey = ref.watch(backupApiKeyProvider);
+  final backupBaseUrl = ref.watch(backupBaseUrlProvider);
+  final backupModel = ref.watch(backupModelProvider);
   return LlmService(
     config: LlmConfiguration(
       provider: llmProvider,
       apiKey: apiKey,
       baseUrl: apiBaseUrl,
+      backupProvider: backupProvider,
+      backupApiKey: backupApiKey,
+      backupBaseUrl: backupBaseUrl,
+      backupModel: backupModel,
     ),
     taskManager: taskManager,
     usageMeter: usageMeter,

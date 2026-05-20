@@ -11,7 +11,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/widgets/widgets.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/subject_model.dart';
-import '../../../core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import '../../../features/subjects/data/repositories/subject_repository.dart';
 import '../../../core/data/repositories/topic_repository.dart';
 import '../data/models/personal_learning_plan_model.dart';
@@ -453,6 +453,56 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.studyPlanner),
+        actions: [
+          if (state.plan != null)
+            PopupMenuButton<String>(
+              icon: const Icon(Icons.more_vert),
+              tooltip: l10n.moreOptions,
+              onSelected: (value) async {
+                switch (value) {
+                  case 'redistribute':
+                    final missedMinutes = state.plan!.targetMinutesPerDay.toInt();
+                    await ref.read(plannerProvider.notifier).redistributeWorkload(missedMinutes, l10n);
+                    break;
+                  case 'extend':
+                    await _showCatchUpSheet(l10n, state);
+                    break;
+                  case 'regenerate':
+                    await ref.read(plannerProvider.notifier).regenerateFromAdherence(l10n);
+                    break;
+                }
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'extend',
+                  child: ListTile(
+                    leading: const Icon(Icons.date_range, size: 20),
+                    title: Text(l10n.catchUp),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'redistribute',
+                  child: ListTile(
+                    leading: const Icon(Icons.replay, size: 20),
+                    title: Text(l10n.redistribute),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                PopupMenuItem(
+                  value: 'regenerate',
+                  child: ListTile(
+                    leading: const Icon(Icons.refresh, size: 20),
+                    title: Text(l10n.regeneratePlan),
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           tabs: [

@@ -1,126 +1,97 @@
-# Dry-Run Issue: Syllabus-Driven Curriculum Learning
+# Dry-Run Issue Fixes: Syllabus-Driven Curriculum
 
-**Source scenario:** `dry-run-test/scenario_syllabus_driven_curriculum.md`
-**Audit date:** 2026-05-19
-**Status:** 4/9 steps completed (~56%) — below 80% threshold for deletion
+**Source:** `dry-run-test/scenario_syllabus_driven_curriculum.md`
 
----
-
-## NOT_COMPLETED — Must Be Fixed
-
-### Issue 1: Syllabus PDF Upload Cannot Auto-Create Topics
-
-**Step:** 1 — Upload syllabus PDF → topic creation
-
-**Root cause:** `content_pipeline.dart:310` — `_classifyTopic()` short-circuits when `possibleTopics` is empty. The upload screen (`upload_screen.dart:225-234`) populates `possibleTopics` only from existing topics in the subject. When uploading a syllabus to a fresh subject, no topics exist → `possibleTopics` is empty → classification skipped → no topics created.
-
-**What needs to change:**
-
-Option A (pipeline-level fix): In `content_pipeline.dart`, add a fallback pass in `_classifyTopic()` (or a new method) when `possibleTopics` is empty:
-- Ask the LLM: "Extract topic names from this syllabus PDF"
-- For each extracted name, create a `Topic` object via `_topicRepository.create()`
-- Return the created topic IDs
-
-Option B (UI-level fix): In `upload_screen.dart`, before calling `processFullPipeline`, if the uploaded document is a syllabus and no topics exist, first run a separate LLM pass to extract topic names, create `Topic` objects, then proceed with classification against the newly created topics.
-
-**Files involved:**
-- `lib/features/ingestion/services/content_pipeline.dart:304-364` — `_classifyTopic()` with empty-guard at line 310
-- `lib/features/ingestion/presentation/upload_screen.dart:225-234` — `possibleTopics` population from existing topics only
-- `lib/features/ingestion/presentation/source_detail_screen.dart:232` — re-process path (already has correct topic loading)
-
-### Issue 2: Syllabus Completion Tracking
-
-**Step:** 5 — No syllabus completion percentage
-
-**Root cause:** Multiple gaps:
-
-1. **No syllabus completion percentage UI component.** Dashboard shows mastery-based progress only. Subject stats tab shows attempts/accuracy/time only. No card or metric anywhere computes "X% of syllabus mastered."
-
-2. **`subject_plans` metadata never written.** `PersonalLearningPlanService._buildPlan()` (`personal_learning_plan_service.dart:236-240`) writes `syllabus_goals` to metadata but never writes `subject_plans`. The getter `PersonalLearningPlan.subjectPlans` (`personal_learning_plan_model.dart:75-82`) reads `metadata['subject_plans']` which is always absent → `_buildSubjectProgressTabs` at `planner_screen.dart:866` always shows 0 topics.
-
-3. **`estimatedCoverage` is crude heuristic.** `_calculateCoverage()` (`personal_learning_plan_service.dart:941-947`) falls back to `uniqueTopics / 10` when `totalSyllabusTopics` is 0. Even when `totalSyllabusTopics > 0`, this only tracks topics attempted vs. total topics in syllabus — not topics mastered vs. total.
-
-**What needs to change:**
-
-1. Write `subject_plans` to plan metadata during `_buildPlan()` — map each subjectId to its list of `DailyPlan` entries.
-2. Add a proper syllabus progress component (e.g., `SyllabusProgressCard`) that computes: `topicsMastered / totalSyllabusTopics`.
-3. Expose this component in Dashboard, Planner's subject progress section, and Subject Detail screen.
-4. Fix `estimatedCoverage` to use a real total (from subject's topic count) rather than hardcoded fallback.
-
-**Files involved:**
-- `lib/features/planner/services/personal_learning_plan_service.dart:236-240` — missing `subject_plans` write
-- `lib/features/planner/data/models/personal_learning_plan_model.dart:75-82` — `subjectPlans` getter (reads never-written key)
-- `lib/features/planner/presentation/planner_screen.dart:856-895` — `_buildSubjectProgressTabs` shows 0 topics
-- `lib/features/planner/services/personal_learning_plan_service.dart:941-947` — `_calculateCoverage` crude heuristic
+**Overall progress:** 6/9 steps completed (~67%). 2 PARTIAL, 1 NOT_COMPLETED.
 
 ---
 
-## PARTIAL — Needs Additional Work
+## Issue 1: Syllabus PDF Upload Does Not Auto-Create Topics
 
-### Issue 3: Study Plan from Syllabus — Topic Count Display Broken
+**Status:** NOT_COMPLETED
 
-**Step:** 3 — Study plan from syllabus goals
+**Root cause:** `SourceType.syllabus` is never assigned through the upload flow.
 
-**Root cause:** same as Issue 2 item 2 — `subject_plans` metadata never written.
+In `upload_screen.dart:329-359`, `_inferSourceType()` maps file extensions:
+- `.pdf` -> `SourceType.pdf`
+- `.docx` / `.epub` / `.md` -> `SourceType.document`
+- etc.
 
-**What needs to change:** Write `subject_plans` metadata in `_buildPlan()`. Also consider writing per-subject topic lists to enable the progress tabs to work.
+There is no code path that produces `SourceType.syllabus`. The content pipeline's `_extractTopicsFromSyllabus()` at `content_pipeline.dart:379-445` correctly parses syllabus content via LLM and auto-creates topics via `TopicRepository.create()`. However, the trigger at line 173 requires `type == SourceType.syllabus`, which never fires.
 
-**Files involved:**
-- `lib/features/planner/services/personal_learning_plan_service.dart:236-240`
-- `lib/features/planner/presentation/planner_screen.dart:866`
+Meanwhile, the `_classifyTopic()` path at line 159 requires `possibleTopics.isNotEmpty`, which is populated from existing topics only (chicken-and-egg problem for new syllabi).
 
-### Issue 4: Prerequisite Enforcement — Gaps in 6/7 Practice Entry Points
+**What to fix:**
 
-**Step:** 4 — Prerequisite enforcement
+1. Add a "This is a syllabus" toggle/checkbox in the upload screen that overrides `sourceType` to `SourceType.syllabus`.
+2. OR add a dedicated "Upload Syllabus" entry point that hardcodes `sourceType: SourceType.syllabus`.
+3. Ensure `_extractTopicsFromSyllabus()` is called when `type == SourceType.syllabus` (currently yes at line 173) and `subjectId` is provided.
 
-**Root cause:** While `TutorScreen` and `PracticeScreen._startTopicPractice` DO check prerequisites, the following entry points do NOT:
-- `_startPractice()` (subject-level practice, line 236)
-- `_startSpacedRepetitionSession()` (line 388)
-- `_startWeakAreasPractice()` (line 644)
-- `_startAtRiskPractice()` (line 430)
-- `_showSourcePracticeSheet()` (line 489)
-- `_startExamMode()` (line 419)
-- `PracticeSessionScreen._loadQuestions()` itself (practice_session_screen.dart:112-151)
-- `ExamSessionScreen` (zero prerequisite references)
-
-Additionally, `PracticeScreen._startTopicPractice()` at `practice_screen.dart:258` has a bug: the dialog result is discarded (`await showPrerequisiteDialog(...)` with no return value capture), so the method always returns and blocks ALL topic practice regardless of user choice. The "Practice Prerequisites" and "Continue Anyway" buttons in the dialog are ineffective.
-
-**What needs to change:**
-
-1. Fix `_startTopicPractice()` — capture the dialog result and only block practice if the user chooses not to continue.
-2. Add prerequisite checking to the other practice entry points (spaced repetition, weak areas, at-risk, exam mode, source practice).
-3. Consider adding prerequisite filtering in `PracticeSessionScreen._loadQuestions()` to exclude topics whose prerequisites aren't met.
-4. Either wire up `TopicReadinessService` into the practice/tutor flows OR remove it as dead code.
-
-**Files involved:**
-- `lib/features/practice/presentation/screens/practice_screen.dart:242-259` — dialog result discarded
-- `lib/features/practice/presentation/screens/practice_screen.dart:236-240` — subject-level practice
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:112-151` — session-level questioning
-- `lib/features/practice/presentation/screens/exam_session_screen.dart` — exam mode
-- `lib/core/services/topic_readiness_service.dart` — dead code (no production callers)
-
-### Issue 5: Planner Syllabus UI — No Syllabus Document Selection
-
-**Step:** 7 — Planner's syllabus UI
-
-**Root cause:** The multi-syllabus form has a subject picker dropdown, topic count preview, and validation — but no way to select a specific syllabus document from the content library to base the plan on. The plan is generated purely from topic lists, not from a syllabus document's structured outline.
-
-**What needs to change:** Consider adding a syllabus document picker to the multi-syllabus form so the user can select which uploaded source (PDF, etc.) represents the official syllabus for this subject. This would also help with the syllabus completion tracking issue.
-
-**Files involved:**
-- `lib/features/planner/presentation/planner_screen.dart:726-842` — multi-syllabus input form
-- `lib/features/planner/services/personal_learning_plan_service.dart:176-261` — plan generation
+**Files to modify:**
+- `lib/features/ingestion/presentation/upload_screen.dart` — add syllabus toggle or new entry point
+- Optionally: `lib/features/ingestion/services/content_pipeline.dart` — verify existing code handles the syllabus path (lines 173-186, 379-445)
 
 ---
 
-## Summary of Work Items
+## Issue 2: Plan Generation Fails for New Users With No Practice History
 
-| Priority | Area | Effort | Key Files |
-|---|---|---|---|
-| **HIGH** | Syllabus PDF → topic auto-creation | Medium | `content_pipeline.dart`, `upload_screen.dart` |
-| **HIGH** | Syllabus completion percentage tracking | Medium | `personal_learning_plan_model.dart`, `personal_learning_plan_service.dart`, new UI component |
-| **HIGH** | Fix `subject_plans` metadata write | Small | `personal_learning_plan_service.dart:236-240` |
-| **MEDIUM** | Fix practice prerequisite dialog bug | Small | `practice_screen.dart:258` |
-| **MEDIUM** | Add prereq checking to remaining practice entry points | Medium | `practice_screen.dart`, `practice_session_screen.dart` |
-| **LOW** | Syllabus document selection in planner | Small | `planner_screen.dart:726-842` |
-| **LOW** | Wire up or remove TopicReadinessService | Small | `topic_readiness_service.dart` |
+**Status:** PARTIAL
+
+**Root cause:** Empty `topicMastery` check blocks syllabus-based plan generation.
+
+In `personal_learning_plan_service.dart:133-144`:
+```dart
+if (topicMastery.isEmpty && courseName.isNotEmpty) {
+  return _buildEmptyMasteryPlan(...);  // bypass only works when courseName is set
+}
+if (topicMastery.isEmpty) {
+  return Result.failure('You need to add a subject and its topics...');
+}
+```
+
+When `generatePlanFromSyllabus()` is called, `courseName` defaults to `''` (line 100, `_buildPlan`). The empty-mastery bypass at line 133 is skipped because `courseName.isNotEmpty` is false. The second check at line 140 returns failure.
+
+This means a student who just created a subject, uploaded a syllabus, and has topics but has NOT yet practiced any questions cannot generate a syllabus-based plan.
+
+**What to fix:**
+- Also allow the empty-mastery bypass when `syllabusGoals` is non-null (i.e., call `_buildEmptyMasteryPlan` for syllabus-based plans too).
+- OR restructure the logic to: if topics exist for goals but no mastery states exist, generate a plan based on syllabus topic order rather than failing.
+
+**Files to modify:**
+- `lib/features/planner/services/personal_learning_plan_service.dart` lines 133-144
+- Need to also handle `_buildEmptyMasteryPlan` with syllabus goals (or create equivalent)
+
+---
+
+## Issue 3: Syllabus Completion Not Shown Outside Planner
+
+**Status:** PARTIAL
+
+**Root cause:** Syllabus completion tracking (`SyllabusProgressCard`, `estimatedCoverage` in `PlanSummaryCard`) exists only in the planner screen. Dashboard and Subject Stats tabs lack syllabus completion percentage.
+
+**Current state (what works):**
+- `SyllabusProgressCard` (`syllabus_progress_card.dart`) shows mastered/total topics with percentage and progress bar in planner's `_buildSubjectProgressTabs` (line 903 of `planner_screen.dart`)
+- `PlanSummaryCard` (`plan_summary_card.dart:66`) shows `estimatedCoverage` as percentage
+- `_calculateCoverage()` at `personal_learning_plan_service.dart:972-977` uses proper `uniqueTopics / totalSyllabusTopics` division
+
+**What to fix:**
+1. Add syllabus completion percentage to the **Dashboard** (e.g., in the mastery overview section, add a card showing syllabus progress per subject)
+2. Add syllabus completion percentage to the **Subject Stats tab** (`subject_stats_tab.dart`) — show mastered topics / total topics with progress bar
+3. Consider adding a syllabus progress section to the **Subject Detail** header area
+
+**Files to modify:**
+- `lib/features/dashboard/presentation/` (add syllabus progress widget)
+- `lib/features/subjects/presentation/widgets/subject_stats_tab.dart` (add syllabus progress section)
+- Optionally: `lib/features/subjects/presentation/subject_detail_screen.dart` (add progress indicator to header)
+
+---
+
+## Verification Checklist
+
+After fixes are applied:
+
+1. [ ] Upload a PDF named "IB Chemistry Syllabus.pdf" with `subjectId` set → verify topics are auto-created
+2. [ ] Create two topics with a prerequisite relationship via `SubjectTopicsTab` → verify `TopicDependency` persists
+3. [ ] Create a syllabus-based plan for a brand-new subject (no practice history) → verify plan generation succeeds
+4. [ ] Attempt to practice a topic with unmet prerequisites → verify dialog blocks or warns
+5. [ ] Complete some practice → verify Dashboard and Subject Stats show syllabus completion percentage

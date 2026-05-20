@@ -150,7 +150,7 @@ class PlanAdherenceOrchestrator {
       if (metrics.isEmpty) {
         return Result.success({
           'totalDays': 0,
-          'averageAdherence': null,
+          'averageAdherence': 0.0,
           'lowAdherenceDays': 0,
           'weeklyTrend': <double>[],
         });

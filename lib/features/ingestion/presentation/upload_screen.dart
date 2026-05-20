@@ -9,7 +9,7 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -50,6 +50,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _useFilePicker = false;
   bool _generateQuestions = true;
   bool _generateLessons = false;
+  bool _isSyllabus = false;
   String? _selectedFilePath;
   String? _selectedFileName;
   ProcessingStatus? _processingStage;
@@ -222,11 +223,12 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     try {
       final l10n = AppLocalizations.of(context)!;
       final pipeline = _getPipeline();
-      final sourceType = _useFilePicker
+      final inferredType = _useFilePicker
           ? _inferSourceType(_selectedFileName ?? '')
           : _useUrlInput
               ? _inferSourceType(content)
               : SourceType.externalResource;
+      final sourceType = _isSyllabus ? SourceType.syllabus : inferredType;
 
       if (fullPipeline || _generateQuestions || _generateLessons) {
         final resolvedModelId = widget.fixedModelId != null
@@ -659,6 +661,16 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                 value: _generateQuestions,
                 onChanged: (val) {
                   setState(() => _generateQuestions = val ?? true);
+                },
+                controlAffinity: ListTileControlAffinity.platform,
+                contentPadding: EdgeInsets.zero,
+              ),
+              CheckboxListTile(
+                title: Text(l10n.syllabusUploadToggle),
+                subtitle: Text(l10n.syllabusUploadToggleHint),
+                value: _isSyllabus,
+                onChanged: (val) {
+                  setState(() => _isSyllabus = val ?? false);
                 },
                 controlAffinity: ListTileControlAffinity.platform,
                 contentPadding: EdgeInsets.zero,

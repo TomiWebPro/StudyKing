@@ -16,6 +16,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 
 class EngagementSchedulerConfig {
   final int checkHour;
@@ -103,8 +104,42 @@ class EngagementScheduler {
     await _notificationService.init();
     await _nudgeRepository.init();
     await _adherenceRepository.init();
+    await _backfillMissedChecks();
+    await _autoFinalizeStaleSessions();
     _scheduleDailyCheck();
     _startLessonCheckTimer();
+  }
+
+  Future<void> _backfillMissedChecks() async {
+    try {
+      final schedulerBoxKey = 'scheduler_last_run';
+      Box? schedulerBox;
+      if (Hive.isBoxOpen(HiveBoxNames.settings)) {
+        schedulerBox = Hive.box(HiveBoxNames.settings);
+      } else {
+        schedulerBox = await Hive.openBox(HiveBoxNames.settings);
+      }
+      final lastRunStr = schedulerBox.get(schedulerBoxKey) as String?;
+      final lastRun = lastRunStr != null ? DateTime.tryParse(lastRunStr) : null;
+      final now = DateTime.now();
+
+      if (lastRun != null) {
+        final missedDays = now.difference(lastRun).inDays;
+        if (missedDays >= 2) {
+          await _nudgeRepository.create(EngagementNudgeModel(
+            id: 'missed_backfill_${now.millisecondsSinceEpoch}_${_config.studentId}',
+            studentId: _config.studentId,
+            nudgeType: NudgeType.planAdjustment.name,
+            message: _l10n.welcomeBackDays(missedDays),
+            severity: missedDays >= 7 ? NudgeSeverity.high.name : NudgeSeverity.medium.name,
+          ));
+        }
+      }
+
+      await schedulerBox.put(schedulerBoxKey, now.toIso8601String());
+    } catch (e) {
+      _logger.w('Failed to backfill missed scheduler checks: $e');
+    }
   }
 
   void _startLessonCheckTimer() {
@@ -310,6 +345,33 @@ class EngagementScheduler {
       }
     } catch (e) {
       _logger.w('Failed to check plan adherence: $e');
+    }
+  }
+
+  Future<void> _autoFinalizeStaleSessions() async {
+    final sessionRepo = _sessionRepository;
+    if (sessionRepo == null) return;
+    try {
+      final allResult = await sessionRepo.getAll();
+      if (allResult.isFailure) return;
+      final sessions = allResult.data ?? [];
+      final now = DateTime.now();
+      final cutoff = now.subtract(const Duration(hours: 24));
+      for (final session in sessions) {
+        if (session.endTime == null && !session.completed && session.startTime.isBefore(cutoff)) {
+          final finalized = session.copyWith(
+            status: SessionStatus.cancelled,
+            endTime: session.startTime.add(
+              Duration(minutes: session.plannedDurationMinutes ?? 30),
+            ),
+            completed: true,
+          );
+          await _sessionRepository!.save(finalized.id, finalized);
+          _logger.w('Auto-finalized stale session: ${session.id}');
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to auto-finalize stale sessions: $e');
     }
   }
 

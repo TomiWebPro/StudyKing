@@ -10,6 +10,8 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider;
+import 'package:studyking/core/providers/llm_providers.dart'
+    show backupLlmProviderProvider, backupApiKeyProvider, backupBaseUrlProvider, backupModelProvider;
 import 'package:studyking/core/constants/app_api_config.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 
@@ -25,14 +27,24 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _baseUrlController = TextEditingController();
 
+  final TextEditingController _backupApiKeyController = TextEditingController();
+  final TextEditingController _backupBaseUrlController = TextEditingController();
+  final TextEditingController _backupModelController = TextEditingController();
+
   LlmProvider _selectedProvider = LlmProvider.openRouter;
+  LlmProvider _selectedBackupProvider = LlmProvider.openRouter;
   bool _isSaving = false;
   bool _isTesting = false;
   bool _obscureApiKey = true;
+  bool _obscureBackupApiKey = true;
 
   String _initialApiKey = '';
   String _initialBaseUrl = '';
   LlmProvider _initialProvider = LlmProvider.openRouter;
+  String _initialBackupApiKey = '';
+  String _initialBackupBaseUrl = '';
+  String _initialBackupModel = '';
+  LlmProvider _initialBackupProvider = LlmProvider.openRouter;
   bool _hasUnsavedChanges = false;
 
   static final _knownDefaultUrls = [
@@ -47,14 +59,23 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     _loadCurrentValues();
     _apiKeyController.addListener(_onFieldChanged);
     _baseUrlController.addListener(_onFieldChanged);
+    _backupApiKeyController.addListener(_onFieldChanged);
+    _backupBaseUrlController.addListener(_onFieldChanged);
+    _backupModelController.addListener(_onFieldChanged);
   }
 
   @override
   void dispose() {
     _apiKeyController.removeListener(_onFieldChanged);
     _baseUrlController.removeListener(_onFieldChanged);
+    _backupApiKeyController.removeListener(_onFieldChanged);
+    _backupBaseUrlController.removeListener(_onFieldChanged);
+    _backupModelController.removeListener(_onFieldChanged);
     _apiKeyController.dispose();
     _baseUrlController.dispose();
+    _backupApiKeyController.dispose();
+    _backupBaseUrlController.dispose();
+    _backupModelController.dispose();
     super.dispose();
   }
 
@@ -66,7 +87,11 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     setState(() {
       _hasUnsavedChanges = _apiKeyController.text != _initialApiKey ||
           _baseUrlController.text != _initialBaseUrl ||
-          _selectedProvider != _initialProvider;
+          _selectedProvider != _initialProvider ||
+          _backupApiKeyController.text != _initialBackupApiKey ||
+          _backupBaseUrlController.text != _initialBackupBaseUrl ||
+          _backupModelController.text != _initialBackupModel ||
+          _selectedBackupProvider != _initialBackupProvider;
     });
   }
 
@@ -74,6 +99,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     final apiKey = ref.read(apiKeyProvider);
     final baseUrl = ref.read(apiBaseUrlProvider);
     final provider = ref.read(llmProviderProvider);
+    final backupProvider = ref.read(backupLlmProviderProvider);
+    final backupApiKey = ref.read(backupApiKeyProvider);
+    final backupBaseUrl = ref.read(backupBaseUrlProvider);
+    final backupModel = ref.read(backupModelProvider);
     setState(() {
       _apiKeyController.text = apiKey;
       _baseUrlController.text = baseUrl;
@@ -81,6 +110,14 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       _initialApiKey = apiKey;
       _initialBaseUrl = baseUrl;
       _initialProvider = provider;
+      _selectedBackupProvider = backupProvider;
+      _backupApiKeyController.text = backupApiKey;
+      _backupBaseUrlController.text = backupBaseUrl;
+      _backupModelController.text = backupModel;
+      _initialBackupProvider = backupProvider;
+      _initialBackupApiKey = backupApiKey;
+      _initialBackupBaseUrl = backupBaseUrl;
+      _initialBackupModel = backupModel;
       _hasUnsavedChanges = false;
     });
   }
@@ -103,16 +140,27 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     try {
       final apiKey = _apiKeyController.text.trim();
       final baseUrl = _baseUrlController.text.trim();
+      final backupApiKey = _backupApiKeyController.text.trim();
+      final backupBaseUrl = _backupBaseUrlController.text.trim();
+      final backupModel = _backupModelController.text.trim();
 
       ref.read(apiKeyProvider.notifier).state = apiKey;
       ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
       ref.read(llmProviderProvider.notifier).state = _selectedProvider;
       ref.read(selectedModelProvider.notifier).state = '';
+      ref.read(backupLlmProviderProvider.notifier).state = _selectedBackupProvider;
+      ref.read(backupApiKeyProvider.notifier).state = backupApiKey;
+      ref.read(backupBaseUrlProvider.notifier).state = backupBaseUrl;
+      ref.read(backupModelProvider.notifier).state = backupModel;
       await ref.read(settingsProvider.notifier).updateSettings(
             SettingsUpdate(
               apiKey: apiKey,
               apiBaseUrl: baseUrl,
               selectedModel: '',
+              backupLlmProviderName: _selectedBackupProvider.name,
+              backupApiKey: backupApiKey,
+              backupBaseUrl: backupBaseUrl,
+              backupModel: backupModel,
             ),
             llmProvider: _selectedProvider,
           );
@@ -130,6 +178,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         _initialApiKey = apiKey;
         _initialBaseUrl = baseUrl;
         _initialProvider = _selectedProvider;
+        _initialBackupApiKey = backupApiKey;
+        _initialBackupBaseUrl = backupBaseUrl;
+        _initialBackupModel = backupModel;
+        _initialBackupProvider = _selectedBackupProvider;
         _hasUnsavedChanges = false;
       });
       Navigator.pop(context);
@@ -285,6 +337,9 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               hint: l10n.apiKeyHint,
               description: l10n.apiKeyDescription,
               obscureText: _obscureApiKey,
+              onToggleVisibility: () => setState(() {
+                _obscureApiKey = !_obscureApiKey;
+              }),
             ),
             const SizedBox(height: 24),
             _buildProviderSection(),
@@ -294,6 +349,47 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               controller: _baseUrlController,
               hint: l10n.apiBaseUrlHint,
               description: l10n.apiBaseUrlDescription,
+            ),
+            const Divider(height: 48),
+            Semantics(
+              header: true,
+              child: Text(
+                l10n.backupProvider,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            Text(
+              l10n.backupProviderDescription,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 24),
+            _buildBackupProviderSection(),
+            const SizedBox(height: 24),
+            _buildApiSection(
+              title: l10n.backupApiKey,
+              controller: _backupApiKeyController,
+              hint: l10n.apiKeyHint,
+              description: l10n.backupApiKeyDescription,
+              obscureText: _obscureBackupApiKey,
+              onToggleVisibility: () => setState(() {
+                _obscureBackupApiKey = !_obscureBackupApiKey;
+              }),
+            ),
+            const SizedBox(height: 24),
+            _buildApiSection(
+              title: l10n.backupBaseUrl,
+              controller: _backupBaseUrlController,
+              hint: l10n.apiBaseUrlHint,
+              description: l10n.apiBaseUrlDescription,
+            ),
+            const SizedBox(height: 24),
+            _buildApiSection(
+              title: l10n.backupModel,
+              controller: _backupModelController,
+              hint: l10n.backupModelHint,
+              description: l10n.backupModelDescription,
             ),
             const SizedBox(height: 32),
             SizedBox(
@@ -330,6 +426,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     required String hint,
     required String description,
     bool obscureText = false,
+    VoidCallback? onToggleVisibility,
   }) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
@@ -354,12 +451,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             suffixIcon: obscureText
                 ? IconButton(
                     icon: Icon(
-                      _obscureApiKey ? Icons.visibility : Icons.visibility_off,
+                      obscureText ? Icons.visibility : Icons.visibility_off,
                     ),
                     tooltip: l10n.toggleVisibility,
-                    onPressed: () => setState(() {
-                      _obscureApiKey = !_obscureApiKey;
-                    }),
+                    onPressed: onToggleVisibility,
                   )
                 : null,
           ),
@@ -444,6 +539,77 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         const SizedBox(height: 4),
         Text(
           l10n.apiBaseUrlDescription,
+          style: Theme.of(context).textTheme.bodySmall,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBackupProviderSection() {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          child: Text(
+            l10n.aiModel,
+            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<LlmProvider>(
+          initialValue: _selectedBackupProvider,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+          ),
+          items: LlmProvider.values.map((provider) {
+            String label;
+            switch (provider) {
+              case LlmProvider.openRouter:
+                label = 'OpenRouter';
+                break;
+              case LlmProvider.ollama:
+                label = 'Ollama';
+                break;
+              case LlmProvider.openAI:
+                label = 'OpenAI';
+                break;
+            }
+            return DropdownMenuItem(
+              value: provider,
+              child: Text(label),
+            );
+          }).toList(),
+          onChanged: (value) {
+            if (value == null) return;
+            ref.read(backupLlmProviderProvider.notifier).state = value;
+            setState(() {
+              _selectedBackupProvider = value;
+              final currentUrl = _backupBaseUrlController.text;
+              if (currentUrl.isEmpty || _knownDefaultUrls.contains(currentUrl)) {
+                switch (value) {
+                  case LlmProvider.openRouter:
+                    _backupBaseUrlController.text = ApiConfig.openRouterBaseUrlString;
+                    break;
+                  case LlmProvider.ollama:
+                    _backupBaseUrlController.text = ApiConfig.ollamaDefaultUrl;
+                    break;
+                  case LlmProvider.openAI:
+                    _backupBaseUrlController.text = ApiConfig.openAIDefaultUrl;
+                    break;
+                }
+              }
+              ref.read(backupBaseUrlProvider.notifier).state = _backupBaseUrlController.text;
+            });
+            _updateUnsavedChanges();
+          },
+        ),
+        const SizedBox(height: 4),
+        Text(
+          l10n.backupProviderDescription,
           style: Theme.of(context).textTheme.bodySmall,
         ),
       ],

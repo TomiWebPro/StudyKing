@@ -44,13 +44,17 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       lastConnectionTestMs: fields[24] as int,
       lastLlmError: fields[25] as String,
       boldText: fields[26] as bool? ?? false,
+      backupLlmProviderName: fields[27] as String? ?? '',
+      backupApiKey: fields[28] as String? ?? '',
+      backupBaseUrl: fields[29] as String? ?? '',
+      backupModel: fields[30] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, SettingsBox obj) {
     writer
-      ..writeByte(27)
+      ..writeByte(31)
       ..writeByte(0)
       ..write(obj.apiKey)
       ..writeByte(1)
@@ -104,7 +108,15 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       ..writeByte(25)
       ..write(obj.lastLlmError)
       ..writeByte(26)
-      ..write(obj.boldText);
+      ..write(obj.boldText)
+      ..writeByte(27)
+      ..write(obj.backupLlmProviderName)
+      ..writeByte(28)
+      ..write(obj.backupApiKey)
+      ..writeByte(29)
+      ..write(obj.backupBaseUrl)
+      ..writeByte(30)
+      ..write(obj.backupModel);
   }
 
   @override

@@ -71,13 +71,13 @@ class LessonPlan {
 
   static LessonPlan defaultPlan(
     int durationMinutes, {
-    String goal = 'Understand the topic',
-    String introTitle = 'Introduction',
-    String mainTitle = 'Main Content',
-    String practiceTitle = 'Practice',
-    String checkpointStarted = 'Lesson started',
-    String checkpointCovered = 'Topic covered',
-    String checkpointCompleted = 'Practice completed',
+    required String goal,
+    required String introTitle,
+    required String mainTitle,
+    required String practiceTitle,
+    required String checkpointStarted,
+    required String checkpointCovered,
+    required String checkpointCompleted,
   }) {
     return LessonPlan(
       goals: [goal],

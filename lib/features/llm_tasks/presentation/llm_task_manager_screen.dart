@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
-import '../../../core/providers/llm_providers.dart';
-import '../../../core/services/llm_task_manager.dart';
-import '../../../features/llm_tasks/services/llm_task_service.dart';
-import '../../../core/constants/timeouts.dart';
-import '../../../core/theme/app_theme.dart';
-import '../../../core/utils/number_format_utils.dart';
-import '../../../core/utils/responsive.dart';
-import '../../../l10n/generated/app_localizations.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/features/llm_tasks/services/llm_task_service.dart';
+import 'package:studyking/core/constants/timeouts.dart';
+import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../providers/llm_task_providers.dart';
 
 class LlmTaskManagerScreen extends ConsumerStatefulWidget {

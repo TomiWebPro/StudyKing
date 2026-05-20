@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/core/constants/mentor_keywords.dart';
+import 'package:studyking/features/mentor/services/mentor_keywords.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/string_extensions.dart';

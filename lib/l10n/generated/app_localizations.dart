@@ -1286,6 +1286,12 @@ abstract class AppLocalizations {
   /// **'Backup & Restore'**
   String get backupAndRestore;
 
+  /// Semantic tooltip for backup and restore action
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Restore'**
+  String get backupAndRestoreTooltip;
+
   /// Tile title for exporting backup
   ///
   /// In en, this message translates to:
@@ -1937,7 +1943,7 @@ abstract class AppLocalizations {
   /// Action button to schedule a lesson
   ///
   /// In en, this message translates to:
-  /// **'Schedule a Lesson'**
+  /// **'Schedule Lesson'**
   String get scheduleLesson;
 
   /// Content for schedule lesson dialog
@@ -3005,7 +3011,7 @@ abstract class AppLocalizations {
   /// Tooltip for voice input button when idle
   ///
   /// In en, this message translates to:
-  /// **'Voice input'**
+  /// **'Voice Input'**
   String get voiceInput;
 
   /// Tooltip for capture image button
@@ -3776,6 +3782,54 @@ abstract class AppLocalizations {
   /// **'Readiness'**
   String get readiness;
 
+  /// Label for confidence stat
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence'**
+  String get confidence;
+
+  /// Label for forgetting risk stat
+  ///
+  /// In en, this message translates to:
+  /// **'Forgetting Risk'**
+  String get forgettingRisk;
+
+  /// Label for review urgency stat
+  ///
+  /// In en, this message translates to:
+  /// **'Review Urgency'**
+  String get reviewUrgency;
+
+  /// Label for last attempted date
+  ///
+  /// In en, this message translates to:
+  /// **'Last Attempted'**
+  String get lastAttempted;
+
+  /// Label for last updated date
+  ///
+  /// In en, this message translates to:
+  /// **'Last Updated'**
+  String get lastUpdated;
+
+  /// Heading for accuracy trend chart
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy Trend'**
+  String get accuracyTrend;
+
+  /// Loading text shown while syllabus progress is being fetched
+  ///
+  /// In en, this message translates to:
+  /// **'Loading syllabus progress...'**
+  String get loadingSyllabusProgress;
+
+  /// Semantics label for page indicator dots
+  ///
+  /// In en, this message translates to:
+  /// **'Page {count} of {total}'**
+  String pageIndicatorAria(int count, int total);
+
   /// Label for overall mastery progress section
   ///
   /// In en, this message translates to:
@@ -3953,7 +4007,7 @@ abstract class AppLocalizations {
   /// System prompt context added when lesson is part of a pre-scheduled session
   ///
   /// In en, this message translates to:
-  /// **'Note: This student has pre-scheduled this lesson session...'**
+  /// **'Note: This student has pre-scheduled this lesson session. The session has a fixed duration set in the student\'s study plan. Acknowledge the scheduled nature appropriately and respect the time limit.'**
   String get scheduledLessonSystemContext;
 
   /// Label showing correct count in summary
@@ -6921,8 +6975,8 @@ abstract class AppLocalizations {
   /// User-facing error message when plan fails to load
   ///
   /// In en, this message translates to:
-  /// **'Failed to load study plan'**
-  String get failedToLoadPlan;
+  /// **'Failed to load plan: {error}'**
+  String failedToLoadPlan(Object error);
 
   /// Error message when backup export fails with details
   ///
@@ -7365,13 +7419,13 @@ abstract class AppLocalizations {
   /// Description for manual session tracking
   ///
   /// In en, this message translates to:
-  /// **'Track study time manually'**
+  /// **'Track your study sessions manually'**
   String get manualSessionTrackerDescription;
 
   /// Description for session history
   ///
   /// In en, this message translates to:
-  /// **'Review past study sessions'**
+  /// **'View your session history'**
   String get sessionHistoryDescription;
 
   /// Export progress as CSV
@@ -9152,6 +9206,84 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'selected'**
   String get selected;
+
+  /// Checkbox label to upload content as a syllabus
+  ///
+  /// In en, this message translates to:
+  /// **'Upload as syllabus'**
+  String get syllabusUploadToggle;
+
+  /// Hint text for syllabus upload checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Marks this upload as a syllabus for structured topic generation'**
+  String get syllabusUploadToggleHint;
+
+  /// Section title for backup AI provider configuration
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Provider'**
+  String get backupProvider;
+
+  /// Description text for backup provider
+  ///
+  /// In en, this message translates to:
+  /// **'Optional secondary AI provider for failover'**
+  String get backupProviderDescription;
+
+  /// Label for backup API key field
+  ///
+  /// In en, this message translates to:
+  /// **'Backup API Key'**
+  String get backupApiKey;
+
+  /// Description text for backup API key
+  ///
+  /// In en, this message translates to:
+  /// **'API key for the backup provider'**
+  String get backupApiKeyDescription;
+
+  /// Label for backup API base URL field
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Base URL'**
+  String get backupBaseUrl;
+
+  /// Label for backup AI model field
+  ///
+  /// In en, this message translates to:
+  /// **'Backup Model'**
+  String get backupModel;
+
+  /// Hint text for backup model input
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., gpt-4o-mini'**
+  String get backupModelHint;
+
+  /// Description text for backup model
+  ///
+  /// In en, this message translates to:
+  /// **'Model ID for the backup provider'**
+  String get backupModelDescription;
+
+  /// Error message when provider times out
+  ///
+  /// In en, this message translates to:
+  /// **'{providerName} timed out. Please try again.'**
+  String providerTimedOut(String providerName);
+
+  /// Error message when provider connection fails
+  ///
+  /// In en, this message translates to:
+  /// **'Connection to {providerName} failed. Please check your network and API key.'**
+  String providerConnectionFailed(String providerName);
+
+  /// Error message when response is interrupted
+  ///
+  /// In en, this message translates to:
+  /// **'Response interrupted. Please try again.'**
+  String get responseInterrupted;
 }
 
 class _AppLocalizationsDelegate

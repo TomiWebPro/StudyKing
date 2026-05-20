@@ -20,6 +20,7 @@ import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/utils/logger.dart';
+import '../../../core/utils/study_utils.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'syllabus_resolver.dart';
@@ -124,7 +125,7 @@ class PlannerService {
       planService.config = PlanGenerationConfig(
         planDurationDays: daysValue,
         targetMinutesPerDay: (hoursValue * 60).toDouble(),
-        targetQuestionsPerDay: 15,
+        targetQuestionsPerDay: defaultQuestionsPerDay,
       );
 
       final result = await planService.generatePlan(
@@ -150,7 +151,7 @@ class PlannerService {
       planService.config = PlanGenerationConfig(
         planDurationDays: daysValue,
         targetMinutesPerDay: (hoursValue * 60).toDouble(),
-        targetQuestionsPerDay: 15,
+        targetQuestionsPerDay: defaultQuestionsPerDay,
       );
 
       final result = await planService.generatePlanFromSyllabus(
@@ -310,7 +311,7 @@ class PlannerService {
     required String topicTitle,
     required String subjectId,
     required DateTime scheduledTime,
-    int durationMinutes = 30,
+    int durationMinutes = defaultSessionDurationMinutes,
   }) async {
     try {
       await sessionRepo.init();
@@ -373,7 +374,7 @@ class PlannerService {
   Future<Result<bool>> rescheduleLesson({
     required String sessionId,
     required DateTime newStartTime,
-    int durationMinutes = 30,
+    int durationMinutes = defaultSessionDurationMinutes,
   }) async {
     try {
       await sessionRepo.init();

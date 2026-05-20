@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/services/cross_feature_integrator.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
@@ -26,7 +25,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import '../../../helpers/fakes.dart';
 
 void main() {
@@ -682,14 +681,6 @@ class FakeMistakeReviewService extends MistakeReviewService {
       : super(
           attemptRepo: AttemptRepository(),
           questionRepo: QuestionRepository(),
-        );
-}
-
-class FakeCrossFeatureIntegrator extends CrossFeatureIntegrator {
-  FakeCrossFeatureIntegrator()
-      : super(
-          sessionRepo: SessionRepository(),
-          studentIdService: FakeStudentIdService(),
         );
 }
 

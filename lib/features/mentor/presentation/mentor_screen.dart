@@ -4,8 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorServiceProvider;
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -1001,17 +1000,48 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
+  void _dismissMessage(int index) {
+    if (index < 0 || index >= _messages.length) return;
+    setState(() {
+      _messages.removeAt(index);
+    });
+  }
+
   Widget _buildMessageList(bool reduceMotion) {
+    final l10n = AppLocalizations.of(context)!;
+    final errorText = l10n.errorWithResponse;
     return ListView.builder(
       controller: _scrollController,
       padding: ResponsiveUtils.listPadding(context),
       itemCount: _messages.length,
       itemBuilder: (context, index) {
         final chatMsg = _messages[index];
-        return _AnimatedMessageItem(
-          key: ValueKey(chatMsg.message.id),
-          reduceMotion: reduceMotion,
-          child: ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion),
+        final isFailed = chatMsg.isComplete && chatMsg.message.role == MessageRole.mentor &&
+            chatMsg.message.content == errorText;
+        return Stack(
+          children: [
+            _AnimatedMessageItem(
+              key: ValueKey(chatMsg.message.id),
+              reduceMotion: reduceMotion,
+              child: ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion),
+            ),
+            if (isFailed)
+              Positioned(
+                top: 0,
+                right: 0,
+                child: Semantics(
+                  label: l10n.dismiss,
+                  child: IconButton(
+                    icon: Icon(Icons.close, size: 18, color: Theme.of(context).colorScheme.error),
+                    tooltip: l10n.dismiss,
+                    onPressed: () => _dismissMessage(index),
+                    visualDensity: VisualDensity.compact,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                  ),
+                ),
+              ),
+          ],
         );
       },
     );

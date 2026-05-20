@@ -9,7 +9,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, notificationServiceProvider, planOrchestratorProvider, SettingsController;
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
-import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';

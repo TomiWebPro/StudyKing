@@ -172,7 +172,7 @@ void sharedSettingsRepositoryTests({
 
     test('returns persisted accessibility and notification values', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         highContrastEnabled: true,
         largeTouchTargets: true,
         reduceMotion: true,
@@ -180,7 +180,7 @@ void sharedSettingsRepositoryTests({
         lessonNotificationsEnabled: false,
         overworkAlertsEnabled: false,
         planAdjustmentNotificationsEnabled: false,
-      );
+      ));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;
@@ -197,10 +197,10 @@ void sharedSettingsRepositoryTests({
   group('updateSettings', () {
     test('updates only specified fields, preserves others', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         themeMode: ThemeMode.dark,
         fontSize: 20.0,
-      );
+      ));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;
@@ -212,55 +212,55 @@ void sharedSettingsRepositoryTests({
 
     test('updates theme mode correctly', () async {
       final repo = createInitialized();
-      await repo.updateSettings(themeMode: ThemeMode.light);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.light));
       expect((await repo.getSettings()).data!.themeMode, equals(ThemeMode.light.index));
 
-      await repo.updateSettings(themeMode: ThemeMode.dark);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.dark));
       expect((await repo.getSettings()).data!.themeMode, equals(ThemeMode.dark.index));
 
-      await repo.updateSettings(themeMode: ThemeMode.system);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.system));
       expect((await repo.getSettings()).data!.themeMode, equals(ThemeMode.system.index));
     });
 
     test('updates font size with bounds', () async {
       final repo = createInitialized();
-      await repo.updateSettings(fontSize: 10.0);
+      await repo.updateSettings(SettingsUpdate(fontSize: 10.0));
       expect((await repo.getSettings()).data!.fontSize, equals(10.0));
 
-      await repo.updateSettings(fontSize: 30.0);
+      await repo.updateSettings(SettingsUpdate(fontSize: 30.0));
       expect((await repo.getSettings()).data!.fontSize, equals(30.0));
     });
 
     test('updates request timeout within valid range', () async {
       final repo = createInitialized();
-      await repo.updateSettings(requestTimeoutSeconds: 30);
+      await repo.updateSettings(SettingsUpdate(requestTimeoutSeconds: 30));
       expect((await repo.getSettings()).data!.requestTimeoutSeconds, equals(30));
 
-      await repo.updateSettings(requestTimeoutSeconds: 300);
+      await repo.updateSettings(SettingsUpdate(requestTimeoutSeconds: 300));
       expect((await repo.getSettings()).data!.requestTimeoutSeconds, equals(300));
     });
 
     test('updates session duration', () async {
       final repo = createInitialized();
-      await repo.updateSettings(sessionDurationMinutes: 15);
+      await repo.updateSettings(SettingsUpdate(sessionDurationMinutes: 15));
       expect((await repo.getSettings()).data!.sessionDurationMinutes, equals(15));
 
-      await repo.updateSettings(sessionDurationMinutes: 90);
+      await repo.updateSettings(SettingsUpdate(sessionDurationMinutes: 90));
       expect((await repo.getSettings()).data!.sessionDurationMinutes, equals(90));
     });
 
     test('updates study reminders enabled flag', () async {
       final repo = createInitialized();
-      await repo.updateSettings(studyRemindersEnabled: false);
+      await repo.updateSettings(SettingsUpdate(studyRemindersEnabled: false));
       expect((await repo.getSettings()).data!.studyRemindersEnabled, isFalse);
 
-      await repo.updateSettings(studyRemindersEnabled: true);
+      await repo.updateSettings(SettingsUpdate(studyRemindersEnabled: true));
       expect((await repo.getSettings()).data!.studyRemindersEnabled, isTrue);
     });
 
     test('updates all settings at once', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         apiKey: 'sk-all-at-once',
         apiBaseUrl: 'https://all.at.once.com',
         selectedModel: 'test-model',
@@ -269,7 +269,7 @@ void sharedSettingsRepositoryTests({
         studyRemindersEnabled: false,
         requestTimeoutSeconds: 60,
         sessionDurationMinutes: 45,
-      );
+      ));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;
@@ -290,7 +290,7 @@ void sharedSettingsRepositoryTests({
         studyTimeMs: 3600000,
         questions: 100,
       );
-      await repo.updateSettings(fontSize: 20.0);
+      await repo.updateSettings(SettingsUpdate(fontSize: 20.0));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;
@@ -301,63 +301,63 @@ void sharedSettingsRepositoryTests({
 
     test('updates highContrastEnabled', () async {
       final repo = createInitialized();
-      await repo.updateSettings(highContrastEnabled: true);
+      await repo.updateSettings(SettingsUpdate(highContrastEnabled: true));
       expect((await repo.getSettings()).data!.highContrastEnabled, isTrue);
-      await repo.updateSettings(highContrastEnabled: false);
+      await repo.updateSettings(SettingsUpdate(highContrastEnabled: false));
       expect((await repo.getSettings()).data!.highContrastEnabled, isFalse);
     });
 
     test('updates largeTouchTargets', () async {
       final repo = createInitialized();
-      await repo.updateSettings(largeTouchTargets: true);
+      await repo.updateSettings(SettingsUpdate(largeTouchTargets: true));
       expect((await repo.getSettings()).data!.largeTouchTargets, isTrue);
-      await repo.updateSettings(largeTouchTargets: false);
+      await repo.updateSettings(SettingsUpdate(largeTouchTargets: false));
       expect((await repo.getSettings()).data!.largeTouchTargets, isFalse);
     });
 
     test('updates reduceMotion', () async {
       final repo = createInitialized();
-      await repo.updateSettings(reduceMotion: true);
+      await repo.updateSettings(SettingsUpdate(reduceMotion: true));
       expect((await repo.getSettings()).data!.reduceMotion, isTrue);
-      await repo.updateSettings(reduceMotion: false);
+      await repo.updateSettings(SettingsUpdate(reduceMotion: false));
       expect((await repo.getSettings()).data!.reduceMotion, isFalse);
     });
 
     test('updates revisionRemindersEnabled', () async {
       final repo = createInitialized();
-      await repo.updateSettings(revisionRemindersEnabled: false);
+      await repo.updateSettings(SettingsUpdate(revisionRemindersEnabled: false));
       expect((await repo.getSettings()).data!.revisionRemindersEnabled, isFalse);
-      await repo.updateSettings(revisionRemindersEnabled: true);
+      await repo.updateSettings(SettingsUpdate(revisionRemindersEnabled: true));
       expect((await repo.getSettings()).data!.revisionRemindersEnabled, isTrue);
     });
 
     test('updates lessonNotificationsEnabled', () async {
       final repo = createInitialized();
-      await repo.updateSettings(lessonNotificationsEnabled: false);
+      await repo.updateSettings(SettingsUpdate(lessonNotificationsEnabled: false));
       expect((await repo.getSettings()).data!.lessonNotificationsEnabled, isFalse);
-      await repo.updateSettings(lessonNotificationsEnabled: true);
+      await repo.updateSettings(SettingsUpdate(lessonNotificationsEnabled: true));
       expect((await repo.getSettings()).data!.lessonNotificationsEnabled, isTrue);
     });
 
     test('updates overworkAlertsEnabled', () async {
       final repo = createInitialized();
-      await repo.updateSettings(overworkAlertsEnabled: false);
+      await repo.updateSettings(SettingsUpdate(overworkAlertsEnabled: false));
       expect((await repo.getSettings()).data!.overworkAlertsEnabled, isFalse);
-      await repo.updateSettings(overworkAlertsEnabled: true);
+      await repo.updateSettings(SettingsUpdate(overworkAlertsEnabled: true));
       expect((await repo.getSettings()).data!.overworkAlertsEnabled, isTrue);
     });
 
     test('updates planAdjustmentNotificationsEnabled', () async {
       final repo = createInitialized();
-      await repo.updateSettings(planAdjustmentNotificationsEnabled: false);
+      await repo.updateSettings(SettingsUpdate(planAdjustmentNotificationsEnabled: false));
       expect((await repo.getSettings()).data!.planAdjustmentNotificationsEnabled, isFalse);
-      await repo.updateSettings(planAdjustmentNotificationsEnabled: true);
+      await repo.updateSettings(SettingsUpdate(planAdjustmentNotificationsEnabled: true));
       expect((await repo.getSettings()).data!.planAdjustmentNotificationsEnabled, isTrue);
     });
 
     test('updates all accessibility and notification fields at once', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         highContrastEnabled: true,
         largeTouchTargets: true,
         reduceMotion: true,
@@ -365,7 +365,7 @@ void sharedSettingsRepositoryTests({
         lessonNotificationsEnabled: false,
         overworkAlertsEnabled: false,
         planAdjustmentNotificationsEnabled: false,
-      );
+      ));
       final result = await repo.getSettings();
       expect(result.isSuccess, isTrue);
       final settings = result.data!;
@@ -506,10 +506,10 @@ void sharedSettingsRepositoryTests({
   group('clearSettings', () {
     test('clears all settings', () async {
       final repo = createInitialized();
-      await repo.updateSettings(
+      await repo.updateSettings(SettingsUpdate(
         apiKey: 'sk-to-be-cleared',
         themeMode: ThemeMode.dark,
-      );
+      ));
       await repo.clearSettings();
 
       final result = await repo.getSettings();
@@ -591,13 +591,13 @@ void sharedSettingsRepositoryTests({
   group('themeModeEnum getter', () {
     test('returns correct ThemeMode from index', () async {
       final repo = createInitialized();
-      await repo.updateSettings(themeMode: ThemeMode.light);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.light));
       expect((await repo.getSettings()).data!.themeModeEnum, equals(ThemeMode.light));
 
-      await repo.updateSettings(themeMode: ThemeMode.dark);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.dark));
       expect((await repo.getSettings()).data!.themeModeEnum, equals(ThemeMode.dark));
 
-      await repo.updateSettings(themeMode: ThemeMode.system);
+      await repo.updateSettings(SettingsUpdate(themeMode: ThemeMode.system));
       expect((await repo.getSettings()).data!.themeModeEnum, equals(ThemeMode.system));
     });
 

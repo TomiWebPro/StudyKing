@@ -20,6 +20,11 @@ class MasteryProgressCard extends StatelessWidget {
     final avgReadiness = data.avgReadiness;
     final masteryPercent = totalTopics > 0 ? masteredTopics / totalTopics : 0.0;
 
+    final lastUpdated = data.lastUpdated;
+    final daysSinceUpdate = lastUpdated != null
+        ? DateTime.now().difference(lastUpdated).inDays
+        : -1;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -36,6 +41,40 @@ class MasteryProgressCard extends StatelessWidget {
             ),
           ],
         ),
+        if (daysSinceUpdate >= 3)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: daysSinceUpdate >= 7
+                    ? Theme.of(context).colorScheme.errorContainer
+                    : Theme.of(context).colorScheme.tertiaryContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    daysSinceUpdate >= 7 ? Icons.warning_amber_rounded : Icons.info_outline,
+                    size: 14,
+                    color: daysSinceUpdate >= 7
+                        ? Theme.of(context).colorScheme.error
+                        : Theme.of(context).colorScheme.tertiary,
+                  ),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Last updated $daysSinceUpdate days ago',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: daysSinceUpdate >= 7
+                          ? Theme.of(context).colorScheme.error
+                          : Theme.of(context).colorScheme.tertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         const SizedBox(height: 16),
         Row(
           children: [

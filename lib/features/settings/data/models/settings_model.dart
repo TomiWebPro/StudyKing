@@ -190,7 +190,7 @@ class LLMSettingsModel extends ChangeNotifier {
     return (getTotalCost() / _usageHistory.length * 30);
   }
 
-  String formatUsageSummary([String localeName = 'en']) {
+  String formatUsageSummary(String localeName) {
     final totalTokens = getTotalTokens();
     final totalCost = getTotalCost();
 

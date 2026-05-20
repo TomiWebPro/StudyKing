@@ -38,10 +38,10 @@ class DashboardHeader extends StatelessWidget {
         ),
         Semantics(
           button: true,
-          label: l10n.backupAndRestore,
+          label: l10n.backupAndRestoreTooltip,
           child: IconButton(
             icon: const Icon(Icons.backup_outlined),
-            tooltip: l10n.backupAndRestore,
+            tooltip: l10n.backupAndRestoreTooltip,
             onPressed: () => Navigator.pushNamed(context, AppRoutes.settings),
           ),
         ),

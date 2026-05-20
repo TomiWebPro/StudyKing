@@ -724,7 +724,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get examDateOptional => 'Fecha de Examen (Opcional)';
 
   @override
-  String get backupAndRestore => 'Copia de Seguridad y Restaurar';
+  String get backupAndRestore => 'Copia de Seguridad';
+
+  @override
+  String get backupAndRestoreTooltip => 'Copia de seguridad y restaurar';
 
   @override
   String get exportBackup => 'Exportar Copia';
@@ -1100,7 +1103,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get scheduleLesson => 'Programar una Lección';
+  String get scheduleLesson => 'Programar Lección';
 
   @override
   String get selectCalendarDate =>
@@ -1725,7 +1728,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get dismiss => 'Descartar';
 
   @override
-  String get voiceInput => 'Entrada de voz';
+  String get voiceInput => 'Entrada de Voz';
 
   @override
   String get captureImage => 'Capturar Imagen';
@@ -2196,6 +2199,33 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get readiness => 'Preparación';
+
+  @override
+  String get confidence => 'Confianza';
+
+  @override
+  String get forgettingRisk => 'Riesgo de Olvido';
+
+  @override
+  String get reviewUrgency => 'Urgencia de Repaso';
+
+  @override
+  String get lastAttempted => 'Último Intento';
+
+  @override
+  String get lastUpdated => 'Última Actualización';
+
+  @override
+  String get accuracyTrend => 'Tendencia de Precisión';
+
+  @override
+  String get loadingSyllabusProgress =>
+      'Cargando progreso del plan de estudios...';
+
+  @override
+  String pageIndicatorAria(int count, int total) {
+    return 'Página $count de $total';
+  }
 
   @override
   String get overallMastery => 'Dominio General';
@@ -4091,7 +4121,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Su progreso en esta sesión se guardará, pero saldrá antes de completar todas las preguntas.';
 
   @override
-  String get stay => 'Permanecer';
+  String get stay => 'Quedarse';
 
   @override
   String get exit => 'Salir';
@@ -4189,7 +4219,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownError => 'Error desconocido';
 
   @override
-  String get failedToLoadPlan => 'Error al cargar el plan de estudio';
+  String failedToLoadPlan(Object error) {
+    return 'Error al cargar el plan: $error';
+  }
 
   @override
   String backupExportFailedWithError(String error) {
@@ -5379,7 +5411,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get shareLastBackup => 'Compartir última copia';
 
   @override
-  String get exportReports => 'Exportar Informes';
+  String get exportReports => 'Exportar informes';
 
   @override
   String get readAloud => 'Leer en voz alta';
@@ -5638,4 +5670,51 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get selected => 'seleccionado(s)';
+
+  @override
+  String get syllabusUploadToggle => 'Subir como plan de estudios';
+
+  @override
+  String get syllabusUploadToggleHint =>
+      'Marca esta carga como un plan de estudios para la generación estructurada de temas';
+
+  @override
+  String get backupProvider => 'Proveedor de Respaldo';
+
+  @override
+  String get backupProviderDescription =>
+      'Proveedor de IA secundario opcional para conmutación por error';
+
+  @override
+  String get backupApiKey => 'Clave API de Respaldo';
+
+  @override
+  String get backupApiKeyDescription =>
+      'Clave API para el proveedor de respaldo';
+
+  @override
+  String get backupBaseUrl => 'URL Base de Respaldo';
+
+  @override
+  String get backupModel => 'Modelo de Respaldo';
+
+  @override
+  String get backupModelHint => 'p. ej., gpt-4o-mini';
+
+  @override
+  String get backupModelDescription =>
+      'ID del modelo para el proveedor de respaldo';
+
+  @override
+  String providerTimedOut(String providerName) {
+    return '$providerName superó el tiempo de espera. Intente de nuevo.';
+  }
+
+  @override
+  String providerConnectionFailed(String providerName) {
+    return 'Conexión a $providerName fallida. Verifique su red y clave API.';
+  }
+
+  @override
+  String get responseInterrupted => 'Respuesta interrumpida. Intente de nuevo.';
 }

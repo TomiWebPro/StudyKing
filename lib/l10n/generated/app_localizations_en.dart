@@ -720,6 +720,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupAndRestore => 'Backup & Restore';
 
   @override
+  String get backupAndRestoreTooltip => 'Backup & Restore';
+
+  @override
   String get exportBackup => 'Export Backup';
 
   @override
@@ -1088,7 +1091,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get scheduleLesson => 'Schedule a Lesson';
+  String get scheduleLesson => 'Schedule Lesson';
 
   @override
   String get selectCalendarDate => 'Select calendar date for lesson';
@@ -1706,7 +1709,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get dismiss => 'Dismiss';
 
   @override
-  String get voiceInput => 'Voice input';
+  String get voiceInput => 'Voice Input';
 
   @override
   String get captureImage => 'Capture Image';
@@ -2173,6 +2176,32 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get readiness => 'Readiness';
+
+  @override
+  String get confidence => 'Confidence';
+
+  @override
+  String get forgettingRisk => 'Forgetting Risk';
+
+  @override
+  String get reviewUrgency => 'Review Urgency';
+
+  @override
+  String get lastAttempted => 'Last Attempted';
+
+  @override
+  String get lastUpdated => 'Last Updated';
+
+  @override
+  String get accuracyTrend => 'Accuracy Trend';
+
+  @override
+  String get loadingSyllabusProgress => 'Loading syllabus progress...';
+
+  @override
+  String pageIndicatorAria(int count, int total) {
+    return 'Page $count of $total';
+  }
 
   @override
   String get overallMastery => 'Overall Mastery';
@@ -4147,7 +4176,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownError => 'Unknown error';
 
   @override
-  String get failedToLoadPlan => 'Failed to load study plan';
+  String failedToLoadPlan(Object error) {
+    return 'Failed to load plan: $error';
+  }
 
   @override
   String backupExportFailedWithError(String error) {
@@ -4416,10 +4447,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manualSessionTracker => 'Manual Session Tracker';
 
   @override
-  String get manualSessionTrackerDescription => 'Track study time manually';
+  String get manualSessionTrackerDescription =>
+      'Track your study sessions manually';
 
   @override
-  String get sessionHistoryDescription => 'Review past study sessions';
+  String get sessionHistoryDescription => 'View your session history';
 
   @override
   String get exportProgressCsv => 'Export Progress CSV';
@@ -5585,4 +5617,49 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get selected => 'selected';
+
+  @override
+  String get syllabusUploadToggle => 'Upload as syllabus';
+
+  @override
+  String get syllabusUploadToggleHint =>
+      'Marks this upload as a syllabus for structured topic generation';
+
+  @override
+  String get backupProvider => 'Backup Provider';
+
+  @override
+  String get backupProviderDescription =>
+      'Optional secondary AI provider for failover';
+
+  @override
+  String get backupApiKey => 'Backup API Key';
+
+  @override
+  String get backupApiKeyDescription => 'API key for the backup provider';
+
+  @override
+  String get backupBaseUrl => 'Backup Base URL';
+
+  @override
+  String get backupModel => 'Backup Model';
+
+  @override
+  String get backupModelHint => 'e.g., gpt-4o-mini';
+
+  @override
+  String get backupModelDescription => 'Model ID for the backup provider';
+
+  @override
+  String providerTimedOut(String providerName) {
+    return '$providerName timed out. Please try again.';
+  }
+
+  @override
+  String providerConnectionFailed(String providerName) {
+    return 'Connection to $providerName failed. Please check your network and API key.';
+  }
+
+  @override
+  String get responseInterrupted => 'Response interrupted. Please try again.';
 }

@@ -3,7 +3,7 @@ import 'package:studyking/core/constants/app_constants.dart' show defaultModelFo
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, llmProviderProvider, selectedModelProvider, engagementMasteryServiceProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show longTermMemoryProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
-import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';

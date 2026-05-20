@@ -1,5 +1,61 @@
 # Changelog
 
+- 2026-05-20: Code Refactor Master & Quality — implemented 15+ fixes from `code_refactor_master.md`:
+  - **B1:** Broke circular dependency `app_providers.dart` ↔ `mentor_providers.dart` by extracting shared providers (`llmProviderProvider`, `settingsProvider`, `l10nProvider`, `databaseProvider`, etc.) into `core/providers/shared_providers.dart`
+  - **B7/B8:** Replaced hardcoded `15`/`30` defaults with `defaultQuestionsPerDay`/`defaultSessionDurationMinutes` constants from `study_utils.dart` across `planner_service.dart`, `planner_providers.dart`, `mentor_schedule_handler.dart`
+  - **B12:** Fixed `answer_comparator.dart` import (removed unused, kept used references)
+  - **B13:** Fixed fire-and-forget `_trimRepository()` — wrapped in `Result.capture()` with logging, used `unawaited`
+  - **M1/M2:** Deleted dead code (`cross_feature_integrator.dart`, `topic_readiness_service.dart`) and their test files
+  - **M5:** Moved `mentor_keywords.dart` from `core/constants/` to `features/mentor/services/`
+  - **M6:** Moved `difficulty_controller.dart` from `features/practice/services/` to `core/utils/`
+  - **M7:** Added `fold<S>()` and `map<S>()` methods to `Result<T>` sealed class
+  - **M11:** Extracted `lateNightHour = 22` into `study_utils.dart`, removed duplicate definitions from `mentor_context_builder.dart` and `mentor_wellbeing_service.dart`
+  - **M17:** Removed unused `dart:async` imports from 4 files
+  - **m1:** Removed unused `HiveBoxNames.dbVersion` (reverted — actually used by `database_migration.dart`)
+  - **m2:** Made `MasteryImprovementTracker` a private class + added logger to `ConversationMemory`
+  - **m5:** Moved `voiceServiceProvider`, `studentIdServiceProvider`, `studentIdProvider`, `studentIdValueProvider` from service files to `core/providers/service_providers.dart`
+  - **m9/m10:** Deleted stale redirect `localization_service_test.dart` and duplicate `id_generator_test.dart`
+
+- 2026-05-20: Internationalisation Master — Full-Codebase i18n Audit Round 2 (remaining issues):
+  - **M1:** Replaced 6 hardcoded English labels in Topic Detail Screen with l10n keys (confidence, forgettingRisk, reviewUrgency, lastAttempted, lastUpdated, accuracyTrend)
+  - **M2:** Replaced hardcoded 'Loading syllabus progress...' text with l10n.loadingSyllabusProgress
+  - **M3:** Removed English defaults from `LessonPlan.defaultPlan()` — callers now pass l10n-resolved strings via required named parameters
+  - **M4:** Replaced `toStringAsFixed()` in `mentor_context_builder.dart` with `formatDecimal()`/`formatPercent()` from `number_format_utils.dart`
+  - **M5:** Replaced hardcoded 24h time format in orphaned-session dialog with `DateFormat.jm(l10n.localeName)`
+  - **m1:** Deduplicated 20+ ARB key pairs across both locale files; added `backupAndRestoreTooltip` key for distinct tooltip localization
+  - **m2:** Fixed orphaned `@lessonPracticeWithTopic` annotation to immediately follow its key
+  - **m3:** Replaced hardcoded Semantics label in Onboarding Dialog with l10n.pageIndicatorAria
+  - **m4:** Documented l10n null-coalesce fallback pattern in AGENTS.md
+  - **m6:** Removed default `'en'` locale from `formatUsageSummary()` — callers must now pass locale explicitly
+
+- 2026-05-20: Dry-Run Result AI Provider Failures & Error Recovery — implemented all outstanding issues from `dry_run_result_ai_provider_failures_recovery.md`:
+  - **Step 1 (PARTIAL → fixed):** Tutor Timeout Detection — all `.timeout()` already wired; `_sendInitialGreeting()` now propagates actual error message instead of empty string; provider-specific error messages (`providerTimedOut`, `providerConnectionFailed`) added to i18n
+  - **Step 7 (PARTIAL → fixed):** Recovery/Retry — `startLesson()` now wraps LLM-dependent operations in try-catch with rollback (restores scheduled session to `planned`, marks tutor session `cancelled`); added dismiss (X) button on failed mentor chat bubbles; `_handleBackNavigation()` cleans up failed sessions when user exits after init error
+  - **Step 8 (PARTIAL → fixed):** Mid-Stream Failures — `processImage()` already has try-catch; `responseInterrupted` i18n key added; Cancel button added alongside Retry in error banner
+  - **Step 9 (PARTIAL → fixed):** Rate Limiting — `wasThrottleActive` exposed via `ConversationManager` for UI feedback; per-user token-bucket and `TokenBucket` class already implemented
+  - **Step 10 (PARTIAL → fixed):** Config Persistence — backup provider state providers (`backupLlmProviderProvider`, `backupApiKeyProvider`, `backupBaseUrlProvider`, `backupModelProvider`) now synced from Hive in `main.dart` postFrameCallback, eliminating race condition
+  - **Step 12 (NOT_COMPLETED → fixed):** Provider Fallback — added backup AI provider section to `api_config_screen.dart` with provider dropdown, API key (obscured with toggle), base URL, and model fields; backup config persisted via `SettingsUpdate`/`SettingsRepository`; providers already wired in `llmServiceProvider`; `_streamWithFallback()`/`_callWithFallback()` now functional when backup is configured
+
+- 2026-05-20: Dry-Run Returning After a 2-Week Break — implemented all 13 issues from `dry_run_result_returning_after_break.md`:
+  - **P0#1 (CRITICAL):** Sequencing bug — `updateLastActivity()` now captures `_capturedDaysSinceLastActivity` before overwriting the stored timestamp; `getDaysSinceLastActivity()` returns the captured value during the session, so absence is detected on first launch back
+  - **P0#2 (CRITICAL):** Compounding redistribution — `redistributeMissedWorkload()` now checks `plan.metadata['lastRedistributionDate']` and skips redistribution if already applied today; stores `lastRedistributionDate` in plan metadata after redistribution
+  - **P1#3:** Added `AbsenceBanner` widget to dashboard — shows tiered messaging based on `daysSinceLastActivity` (≥1, ≥3, ≥7, ≥14) with "Study Planner" navigation button
+  - **P1#4:** `PlanAdherenceCard` now accepts `daysSinceLastActivity` — shows absence context ("Welcome back! You've been away for X days") when absent
+  - **P1#5:** Added `lastUpdated` field to `MasterySnapshot` model and repository; `MasteryProgressCard` shows "Last updated X days ago" warning when data is ≥3 days stale (orange for ≥3, red for ≥7)
+  - **P1#6:** Added "Plan Actions" `PopupMenuButton` to planner app bar — exposes redistribute, extend/catch-up, and regenerate options even when adherence banner is not visible
+  - **P1#7:** `redistributeMissedWorkload()` now uses `daysSinceLastActivity` to determine redistribution window (spreads over as many days as were missed); caps extra per day at 50% of original target (min 15 min)
+  - **P2#9:** `EngagementScheduler.init()` now backfills missed scheduler checks by comparing stored `lastSchedulerRun` timestamp — generates summary nudges for gap periods
+  - **P2#10:** Added `_checkPlanAutoExtension()` in `_handleFirstLaunch()` — when absence ≥7 days detected, prompts user to extend plan; on confirmation, calls `PersonalLearningPlanService.extendPlan()`
+  - **P2#11:** `MentorContextBuilder.buildContextPrompt()` now includes missed-lessons count with titles and redistribution status (redistribution applied + extra minutes per day over remaining days)
+  - **P2#12:** Added `_autoFinalizeStaleSessions()` in `EngagementScheduler.init()` — auto-finalizes sessions where `startTime < now - 24h && endTime == null && !completed` (sets status cancelled, endTime to startTime + plannedDuration)
+  - **P3#13:** Fixed inconsistent empty adherence reports — `plan_adherence_orchestrator.dart:150` now returns `averageAdherence: 0.0` instead of `null`, matching `plan_adherence_repository.dart:37-42` convention
+
+- 2026-05-20: Dry-Run Result Syllabus-Driven Curriculum — completed 3 remaining issues from `dry_run_result_syllabus_driven_curriculum.md`:
+  - **Issue 1 (NOT_COMPLETED → fixed):** Added `_isSyllabus` checkbox toggle to upload screen — overrides inferred `SourceType` to `SourceType.syllabus` when checked, enabling `_extractTopicsFromSyllabus()` to auto-create topics from uploaded syllabus PDFs
+  - **Issue 2 (PARTIAL → fixed):** Modified `_buildPlan()` empty-mastery guard — syllabus-based plans (`syllabusGoals != null`) now skip the early return and proceed through normal plan building with syllabus topics, unblocking plan generation for new users with no practice history
+  - **Issue 3 (PARTIAL → fixed):** Added syllabus completion section to `SubjectStatsTab` — shows mastered/total topics count with progress bar per subject, loading data via `MasteryStateRepository` and `TopicRepository`
+  - **Chore:** Added `syllabusUploadToggle`, `syllabusUploadToggleHint` ARB keys (EN/ES) and generated l10n
+
 - 2026-05-20: UI/UX Master Issue — comprehensive audit fixes from `ui_ux_master.md`:
   - **B1:** Fixed multi-choice `Checkbox(onChanged: null)` in `question_bank_screen.dart` — now toggles `selectedCorrectOptions` set; multi-choice markscheme stores all correct options via `acceptableAnswers`
   - **M1:** Replaced raw `Text('$err')` error display in `planner_screen.dart` with `ErrorRetryWidget` + `ref.invalidate(planProgressProvider)`

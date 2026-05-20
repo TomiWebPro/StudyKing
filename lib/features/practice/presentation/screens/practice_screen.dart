@@ -9,6 +9,7 @@ import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';

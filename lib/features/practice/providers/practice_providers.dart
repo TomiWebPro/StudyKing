@@ -11,7 +11,7 @@ import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
 

@@ -11,7 +11,6 @@ import 'package:studyking/features/planner/data/models/engagement_nudge_model.da
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorWellbeingService {
-  static const int _lateNightHour = 22;
   static const int _maxNudgesPerDay = 5;
 
   final SessionRepository _sessionRepository;
@@ -57,7 +56,7 @@ class MentorWellbeingService {
     }
 
     if (recentResult.isSuccess) {
-      final lateNight = recentResult.data!.where((s) => s.startTime.hour >= _lateNightHour).toList();
+      final lateNight = recentResult.data!.where((s) => s.startTime.hour >= lateNightHour).toList();
       if (lateNight.isNotEmpty) {
         final msg = lookupAppLocalizations(Locale(_localeName)).nudgeLateNight(lateNight.length);
         final nudge = EngagementNudgeModel(

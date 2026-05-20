@@ -35,6 +35,7 @@ import 'package:studyking/features/subjects/providers/topic_repository_provider.
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 

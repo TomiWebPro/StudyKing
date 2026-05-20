@@ -12,6 +12,20 @@ sealed class Result<T> {
   bool get isSuccess => this is SuccessResult<T>;
   bool get isFailure => this is FailureResult<T>;
 
+  S fold<S>(S Function(T data) onSuccess, S Function(String error) onFailure) {
+    if (this is SuccessResult<T>) {
+      return onSuccess(data as T);
+    }
+    return onFailure(error ?? 'Unknown error');
+  }
+
+  Result<S> map<S>(S Function(T data) transform) {
+    if (this is SuccessResult<T>) {
+      return Result.success(transform(data as T));
+    }
+    return Result.failure(error);
+  }
+
   static Future<Result<T>> capture<T>(Future<T> Function() block, {String? context}) async {
     try {
       return Result.success(await block());

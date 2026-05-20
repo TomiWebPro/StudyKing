@@ -7,6 +7,7 @@ import 'package:studyking/core/services/conversation_memory.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -26,7 +27,7 @@ class ScheduleProposal {
     this.topicId,
     this.subjectId,
     required this.proposedTime,
-    this.durationMinutes = 30,
+    this.durationMinutes = defaultSessionDurationMinutes,
   });
 }
 
@@ -75,13 +76,13 @@ class MentorScheduleHandler {
 
   int _getDefaultDurationMinutes() {
     try {
-      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return 30;
+      if (!Hive.isBoxOpen(HiveBoxNames.settings)) return defaultSessionDurationMinutes;
       final box = Hive.box(HiveBoxNames.settings);
-      final stored = box.get('defaultScheduleDuration', defaultValue: 30) as int;
-      return stored > 0 && stored <= 480 ? stored : 30;
+      final stored = box.get('defaultScheduleDuration', defaultValue: defaultSessionDurationMinutes) as int;
+      return stored > 0 && stored <= 480 ? stored : defaultSessionDurationMinutes;
     } catch (e) {
       _logger.w('Failed to read default schedule duration from Hive', e);
-      return 30;
+      return defaultSessionDurationMinutes;
     }
   }
 

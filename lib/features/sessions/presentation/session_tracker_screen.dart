@@ -11,7 +11,7 @@ import 'package:studyking/features/subjects/providers/subject_repository_provide
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';

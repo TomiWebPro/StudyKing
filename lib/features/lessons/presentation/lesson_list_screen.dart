@@ -5,7 +5,7 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
-import '../../../core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/widgets/widgets.dart';

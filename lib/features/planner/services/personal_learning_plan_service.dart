@@ -131,14 +131,14 @@ class PersonalLearningPlanService {
         .map((s) => s.topicId)
         .toSet();
 
-    if (topicMastery.isEmpty && courseName.isNotEmpty) {
+    if (topicMastery.isEmpty && courseName.isNotEmpty && syllabusGoals == null) {
       return _buildEmptyMasteryPlan(
         studentId: studentId,
         courseName: courseName,
       );
     }
 
-    if (topicMastery.isEmpty) {
+    if (topicMastery.isEmpty && syllabusGoals == null) {
       return Result.failure(
         'You need to add a subject and its topics before generating a plan.',
       );
@@ -651,6 +651,15 @@ class PersonalLearningPlanService {
       final now = DateTime.now();
       final todayStart = now.dateOnly;
 
+      final metadata = plan.metadata ?? {};
+      final lastRedistribution = metadata['lastRedistributionDate'] as String?;
+      if (lastRedistribution != null) {
+        final lastDate = DateTime.tryParse(lastRedistribution);
+        if (lastDate != null && lastDate.isAfter(todayStart.subtract(const Duration(days: 1)))) {
+          return Result.success(null);
+        }
+      }
+
       int redistributeDays;
       if (strategy == 'all') {
         redistributeDays = plan.dailyPlans.length;
@@ -661,7 +670,20 @@ class PersonalLearningPlanService {
         redistributeDays = 3;
       }
 
-      final extraPerDay = (missedMinutes / redistributeDays).ceil();
+      final remainingDays = plan.dailyPlans.where((d) =>
+        d.date.dateOnly.isAfter(todayStart) && !d.isRestDay
+      ).length;
+      final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
+      if (daysSinceLastActivity > 0) {
+        redistributeDays = daysSinceLastActivity.clamp(1, remainingDays);
+      }
+
+      final baseExtraPerDay = (missedMinutes / redistributeDays).ceil();
+      final maxExtraPerDay = plan.dailyPlans
+          .where((d) => d.date.dateOnly.isAfter(todayStart) && !d.isRestDay)
+          .map((d) => (d.targetMinutes * 0.5).ceil().clamp(15, 9999))
+          .firstOrNull ?? 60;
+      final extraPerDay = baseExtraPerDay.clamp(0, maxExtraPerDay);
 
       final updatedPlans = plan.dailyPlans.map((day) {
         final dDay = day.date.dateOnly;
@@ -675,7 +697,12 @@ class PersonalLearningPlanService {
         return day;
       }).toList();
 
-      final updated = plan.copyWith(dailyPlans: updatedPlans);
+      final updatedMetadata = Map<String, dynamic>.from(metadata)
+        ..['lastRedistributionDate'] = todayStart.toIso8601String();
+      final updated = plan.copyWith(
+        dailyPlans: updatedPlans,
+        metadata: updatedMetadata,
+      );
       await _planRepository.savePlan(updated);
       return Result.success(null);
     } catch (e) {

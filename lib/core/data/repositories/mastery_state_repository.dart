@@ -118,6 +118,7 @@ class MasteryStateRepository extends Repository<MasteryState> {
                     .map((s) => s.reviewUrgency)
                     .reduce((a, b) => a + b) /
                 topicStates.length,
+        'lastUpdated': DateTime.now().toIso8601String(),
       });
     } catch (e) {
       _logger.w('Error getting mastery snapshot', e);

@@ -61,6 +61,39 @@ class LlmConfiguration {
   }
 }
 
+class TokenBucket {
+  final int _capacity;
+  final Duration _refillInterval;
+  int _tokens;
+  DateTime _lastRefill;
+
+  TokenBucket({
+    required int capacity,
+    required Duration refillInterval,
+  })  : _capacity = capacity,
+        _refillInterval = refillInterval,
+        _tokens = capacity,
+        _lastRefill = DateTime.now();
+
+  bool tryConsume(int count) {
+    _refill();
+    if (_tokens >= count) {
+      _tokens -= count;
+      return true;
+    }
+    return false;
+  }
+
+  void _refill() {
+    final elapsed = DateTime.now().difference(_lastRefill);
+    final tokensToAdd = elapsed.inMilliseconds ~/ _refillInterval.inMilliseconds;
+    if (tokensToAdd > 0) {
+      _tokens = (_tokens + tokensToAdd).clamp(0, _capacity);
+      _lastRefill = DateTime.now();
+    }
+  }
+}
+
 class LlmService {
   static final Logger _logger = const Logger('LlmService');
   static String defaultSystemPromptForLocale(String localeName) {
@@ -75,6 +108,25 @@ class LlmService {
   /// Client-side throttling: minimum 500ms between calls (B3)
   DateTime _lastCallTime = DateTime.now().subtract(const Duration(seconds: 1));
   static const Duration _minCallInterval = Duration(milliseconds: 500);
+
+  /// Per-user token-bucket rate limiter (B3 enhancement)
+  static final Map<String, TokenBucket> _userBuckets = {};
+  String _studentId = '';
+
+  void setStudentId(String id) {
+    _studentId = id;
+    if (id.isNotEmpty && !_userBuckets.containsKey(id)) {
+      _userBuckets[id] = TokenBucket(
+        capacity: 20,
+        refillInterval: const Duration(seconds: 1),
+      );
+    }
+  }
+
+  /// Returns true if the last throttle call had to wait (i.e., it was active)
+  bool _lastThrottleWasActive = false;
+
+  bool get wasThrottleActive => _lastThrottleWasActive;
 
   LlmService({
     required this.config,
@@ -99,13 +151,24 @@ class LlmService {
     };
   }
 
-  /// Enforce minimum interval between calls (B3)
+  /// Enforce minimum interval between calls (B3) using token-bucket per-user
   Future<void> _throttle() async {
+    _lastThrottleWasActive = false;
     final elapsed = DateTime.now().difference(_lastCallTime);
     if (elapsed < _minCallInterval) {
+      _lastThrottleWasActive = true;
       await Future.delayed(_minCallInterval - elapsed);
     }
     _lastCallTime = DateTime.now();
+    if (_studentId.isNotEmpty) {
+      final bucket = _userBuckets[_studentId];
+      if (bucket != null) {
+        if (!bucket.tryConsume(1)) {
+          _lastThrottleWasActive = true;
+          await Future.delayed(const Duration(milliseconds: 200));
+        }
+      }
+    }
   }
 
   /// Attempt streaming with a backup provider if primary fails (B4)
@@ -395,7 +458,7 @@ class LlmService {
         'model': modelId,
         'messages': messages,
       }),
-    );
+    ).timeout(Timeouts.openRouterTimeoutProduction);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -440,7 +503,7 @@ class LlmService {
     });
 
     try {
-      final streamedResponse = await _httpClient.send(request);
+      final streamedResponse = await _httpClient.send(request).timeout(Timeouts.openRouterTimeoutProduction);
       if (streamedResponse.statusCode != 200) {
         final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'OpenRouter');
         _failTask(taskId, errorMsg);
@@ -512,7 +575,7 @@ class LlmService {
         'model': modelId,
         'messages': ollamaMessages,
       }),
-    );
+    ).timeout(Timeouts.openRouterTimeoutProduction);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -560,7 +623,7 @@ class LlmService {
     });
 
     try {
-      final streamedResponse = await _httpClient.send(request);
+      final streamedResponse = await _httpClient.send(request).timeout(Timeouts.openRouterTimeoutProduction);
       if (streamedResponse.statusCode != 200) {
         final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'Ollama');
         _failTask(taskId, errorMsg);
@@ -629,7 +692,7 @@ class LlmService {
         'model': modelId,
         'messages': messages,
       }),
-    );
+    ).timeout(Timeouts.openRouterTimeoutProduction);
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -673,7 +736,7 @@ class LlmService {
     });
 
     try {
-      final streamedResponse = await _httpClient.send(request);
+      final streamedResponse = await _httpClient.send(request).timeout(Timeouts.openRouterTimeoutProduction);
       if (streamedResponse.statusCode != 200) {
         final errorMsg = _errorForStatusCode(streamedResponse.statusCode, 'OpenAI');
         _failTask(taskId, errorMsg);

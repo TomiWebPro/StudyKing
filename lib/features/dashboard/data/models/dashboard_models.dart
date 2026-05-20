@@ -6,6 +6,7 @@ class MasterySnapshot {
   final int totalAttempts;
   final double avgReadiness;
   final double avgReviewUrgency;
+  final DateTime? lastUpdated;
 
   const MasterySnapshot({
     this.totalTopics = 0,
@@ -15,6 +16,7 @@ class MasterySnapshot {
     this.totalAttempts = 0,
     this.avgReadiness = 0.0,
     this.avgReviewUrgency = 0.0,
+    this.lastUpdated,
   });
 
   factory MasterySnapshot.fromMap(Map<String, dynamic> map) {
@@ -26,6 +28,9 @@ class MasterySnapshot {
       totalAttempts: (map['totalAttempts'] as num?)?.toInt() ?? 0,
       avgReadiness: (map['avgReadiness'] as num?)?.toDouble() ?? 0.0,
       avgReviewUrgency: (map['avgReviewUrgency'] as num?)?.toDouble() ?? 0.0,
+      lastUpdated: map['lastUpdated'] != null
+          ? DateTime.tryParse(map['lastUpdated'] as String)
+          : null,
     );
   }
 

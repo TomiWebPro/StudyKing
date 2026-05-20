@@ -10,6 +10,8 @@ import 'package:studyking/features/dashboard/presentation/widgets/badges_card.da
 import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/absence_banner.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
@@ -121,6 +123,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final showSkeleton = !hasAnyData && isLoading;
 
+    final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
+
     final asyncSnapshot =
         ref.watch(dashboardSourceCountProvider(studentId));
 
@@ -143,6 +147,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DashboardHeader(onExportTap: _scrollToExport),
+              if (daysSinceLastActivity >= 1) ...[
+                SizedBox(height: vs),
+                AbsenceBanner(daysSinceLastActivity: daysSinceLastActivity),
+              ],
               SizedBox(height: vs),
               NextUpCard(studentId: studentId),
               SizedBox(height: vs),
@@ -271,6 +279,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   body: PlanAdherenceCard(
                     averageAdherence: adherenceData.averageAdherence,
                     weeklyAdherence: adherenceData.weeklyAdherence,
+                    daysSinceLastActivity: daysSinceLastActivity,
                   ),
                 ),
                 SizedBox(height: vs),

@@ -7,6 +7,7 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/utils/date_utils.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -19,7 +20,6 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorContextBuilder {
-  static const int _lateNightHour = 22;
 
   final StudyProgressTracker _progressTracker;
   final MasteryGraphService _masteryService;
@@ -47,6 +47,7 @@ class MentorContextBuilder {
     final roadmaps = (await _loadRoadmaps()).data ?? [];
     final pendingActions = (await _loadPendingActions()).data ?? [];
     final upcomingLessons = (await loadUpcomingLessons()).data ?? [];
+    final missedLessons = (await _loadMissedLessons()).data ?? [];
     final adherenceDeviation = (await _loadAdherence()).data;
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = await _getDailyCapMinutes();
@@ -67,7 +68,7 @@ class MentorContextBuilder {
     if (plan != null) {
       buffer.writeln('$bullet${l10n.mentorContextPlanPhase(_getPlanDay(plan), plan.dailyPlans.length)}');
       if (adherenceDeviation != null) {
-        buffer.writeln('$bullet${l10n.mentorContextPlanAdherence(adherenceDeviation.averageAdherence.toStringAsFixed(1))}');
+        buffer.writeln('$bullet${l10n.mentorContextPlanAdherence(formatDecimal(adherenceDeviation.averageAdherence, _localeName, minFractionDigits: 1, maxFractionDigits: 1))}');
         if (adherenceDeviation.consecutiveLowDays > 0) {
           buffer.writeln('$bullet${l10n.mentorContextLowAdherence(adherenceDeviation.consecutiveLowDays)}');
         }
@@ -78,6 +79,29 @@ class MentorContextBuilder {
       buffer.writeln('$bullet${l10n.mentorContextDaysSinceActivity(daysSinceLastActivity)}');
       if (daysSinceLastActivity >= 3) {
         buffer.writeln(l10n.mentorContextWelcomeBack(daysSinceLastActivity));
+      }
+    }
+
+    if (missedLessons.isNotEmpty) {
+      buffer.writeln('$bullet Missed lessons: ${missedLessons.length}');
+      for (final lesson in missedLessons.take(3)) {
+        final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? l10n.unknown;
+        buffer.writeln('  $bullet$title');
+      }
+    }
+
+    if (plan != null && daysSinceLastActivity >= 3) {
+      final metadata = plan.metadata ?? {};
+      final lastRedistribution = metadata['lastRedistributionDate'] as String?;
+      if (lastRedistribution != null) {
+        buffer.writeln('$bullet Redistribution was applied for the absence.');
+        final remainingDays = plan.dailyPlans.where((d) =>
+          d.date.dateOnly.isAfter(DateTime.now().dateOnly) && !d.isRestDay
+        ).length;
+        final extraPerDay = (plan.targetMinutesPerDay * 0.5).ceil();
+        if (remainingDays > 0) {
+          buffer.writeln('$bullet Extra minutes per day: ${extraPerDay.toInt()} min over $remainingDays remaining days');
+        }
       }
     }
 
@@ -115,7 +139,7 @@ class MentorContextBuilder {
     if (weakTopics.isNotEmpty) {
       buffer.writeln('$bullet${l10n.mentorContextWeakTopics}');
       for (final topic in weakTopics.take(5)) {
-        buffer.writeln('  $bullet${l10n.mentorContextWeakTopicItem(topic.topicId, (topic.accuracy * 100).toStringAsFixed(0))}');
+        buffer.writeln('  $bullet${l10n.mentorContextWeakTopicItem(topic.topicId, formatPercent(topic.accuracy * 100, _localeName, minFractionDigits: 0))}');
       }
     }
 
@@ -139,7 +163,7 @@ class MentorContextBuilder {
       final todaySessions = recentResult.data!;
       if (todaySessions.isNotEmpty) {
         buffer.writeln('$bullet${l10n.mentorContextSessionsToday(todaySessions.length)}');
-        final lateNight = todaySessions.where((s) => s.startTime.hour >= _lateNightHour).toList();
+        final lateNight = todaySessions.where((s) => s.startTime.hour >= lateNightHour).toList();
         if (lateNight.isNotEmpty) {
           buffer.writeln('$bullet${l10n.mentorContextLateNightWarning(lateNight.length)}');
         }
@@ -174,6 +198,10 @@ class MentorContextBuilder {
 
   Future<Result<AdherenceDeviation?>> _loadAdherence() async {
     return _plannerService.planOrchestrator.checkAdherence(_plannerService.studentId);
+  }
+
+  Future<Result<List<Session>>> _loadMissedLessons() async {
+    return _plannerService.getMissedLessons();
   }
 
   int _getPlanDay(PersonalLearningPlan plan) {

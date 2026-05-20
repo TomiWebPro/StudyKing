@@ -1,4 +1,3 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
@@ -11,6 +10,7 @@ class StudentIdService {
   static const _lastActivityKey = 'lastActivityAt';
   Box? _box;
   String? _cachedId;
+  int? _capturedDaysSinceLastActivity;
 
   Future<void> init() async {
     _box = await Hive.openBox(_boxName);
@@ -51,6 +51,7 @@ class StudentIdService {
   }
 
   Future<void> updateLastActivity() async {
+    _capturedDaysSinceLastActivity = getDaysSinceLastActivity();
     final now = DateTime.now();
     if (_box != null && _box!.isOpen) {
       await _box!.put(_lastActivityKey, now.toIso8601String());
@@ -58,22 +59,13 @@ class StudentIdService {
   }
 
   int getDaysSinceLastActivity() {
+    if (_capturedDaysSinceLastActivity != null) {
+      return _capturedDaysSinceLastActivity!;
+    }
     final last = getLastActivityAt();
     if (last == null) return -1;
     return DateTime.now().difference(last).inDays;
   }
 }
 
-final studentIdServiceProvider = Provider<StudentIdService>((ref) {
-  return StudentIdService();
-});
 
-final studentIdProvider = FutureProvider<String>((ref) async {
-  final service = ref.read(studentIdServiceProvider);
-  await service.init();
-  return service.getStudentId();
-});
-
-final studentIdValueProvider = Provider<String>((ref) {
-  return ref.watch(studentIdProvider).valueOrNull ?? '';
-});

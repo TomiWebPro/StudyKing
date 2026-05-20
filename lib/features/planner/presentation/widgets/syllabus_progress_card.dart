@@ -29,8 +29,9 @@ class SyllabusProgressCard extends StatelessWidget {
     return FutureBuilder<_ProgressData>(
       future: _loadProgress(),
       builder: (context, snapshot) {
+        final l10n = AppLocalizations.of(context)!;
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return _buildLoading();
+          return _buildLoading(l10n);
         }
         final data = snapshot.data;
         if (data == null) {
@@ -56,7 +57,7 @@ class SyllabusProgressCard extends StatelessWidget {
     return _ProgressData(masteryStates: states, totalTopics: totalTopics);
   }
 
-  Widget _buildLoading() {
+  Widget _buildLoading(AppLocalizations l10n) {
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -65,7 +66,7 @@ class SyllabusProgressCard extends StatelessWidget {
           children: [
             const LinearProgressIndicator(),
             const SizedBox(height: 12),
-            Text('Loading syllabus progress...'),
+            Text(l10n.loadingSyllabusProgress),
           ],
         ),
       ),

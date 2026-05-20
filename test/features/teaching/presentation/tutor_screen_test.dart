@@ -19,7 +19,7 @@ import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
-import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 

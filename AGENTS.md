@@ -90,6 +90,16 @@ When writing tests for `MentorService` or `MentorScreen`, provide these fakes:
 - **PDF exports** should use the user's locale (they are user-facing documents).
 - **LLM-facing** strings (prompts, tutor notes) can stay in `en` invariant format.
 
+## l10n Null-Coalesce Fallback Pattern
+
+Widgets and utilities that run before `AppLocalizations` is guaranteed to be available should use the `l10n?.key ?? 'English fallback'` pattern. This ensures graceful degradation during startup screens or error states. Core files using this pattern:
+- `lib/core/widgets/dialog_utils.dart` (confirm/cancel labels)
+- `lib/core/utils/error_boundary.dart` (error messages, retry label)
+- `lib/core/widgets/shimmer_widget.dart` (loading semantics label)
+- `lib/core/utils/time_utils.dart` (unknown/today/yesterday labels)
+
+When extending these, keep the fallback pattern to avoid crashes during early startup.
+
 ## i18n Locale Switching Gotcha
 
 When the user changes their language in the Profile screen (`ref.read(localeProvider.notifier).state = Locale(value)`), any screen that caches `l10n = AppLocalizations.of(context)!` in a local variable (not inside `build`) will display stale strings until the screen is re-entered. To avoid stale text:

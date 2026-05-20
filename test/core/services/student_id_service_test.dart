@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 
 void main() {

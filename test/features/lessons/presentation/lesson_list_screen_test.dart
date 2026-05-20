@@ -13,7 +13,7 @@ import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLessonRepository extends LessonRepository {

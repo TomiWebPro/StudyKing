@@ -184,7 +184,7 @@ void main() {
       expect(l10n.failedToExtendPlan, 'Failed to extend study plan');
       expect(l10n.failedToGenerateSyllabusPlan, 'Failed to generate syllabus plan');
       expect(l10n.failedToLoadLesson, 'Failed to load lesson. Please check your connection and try again.');
-      expect(l10n.failedToLoadPlan, 'Failed to load study plan');
+      expect(l10n.failedToLoadPlan(''), startsWith('Failed to load plan'));
       expect(l10n.failedToRedistributeWorkload, 'Failed to redistribute workload');
       expect(l10n.failedToRegeneratePlan, 'Failed to regenerate plan');
       expect(l10n.failedToScheduleLesson, 'Failed to schedule lesson');
@@ -418,7 +418,7 @@ void main() {
       expect(l10n.confirmExitPracticeBody, 'Your progress in this session will be saved, but you will leave before completing all questions.');
       expect(l10n.focusFirstVisitHelp, 'Set a timer and study distraction-free. Completed sessions count toward your daily plan.');
       expect(l10n.focusTimerLabel, '(Focus)');
-      expect(l10n.sessionHistoryDescription, 'Review past study sessions');
+      expect(l10n.sessionHistoryDescription, 'View your session history');
       expect(l10n.sessionTracking, 'Session Tracking');
       expect(l10n.sessionType, 'Type');
       expect(l10n.sessionTypeFocus, 'Focus');
@@ -527,7 +527,7 @@ void main() {
     test('maintainPace', () => expect(l10n.maintainPace, 'Maintain a steady teaching pace.'));
     test('manual', () => expect(l10n.manual, 'Manual'));
     test('manualSessionTracker', () => expect(l10n.manualSessionTracker, 'Manual Session Tracker'));
-    test('manualSessionTrackerDescription', () => expect(l10n.manualSessionTrackerDescription, 'Track study time manually'));
+    test('manualSessionTrackerDescription', () => expect(l10n.manualSessionTrackerDescription, 'Track your study sessions manually'));
     test('mediumQuestions', () => expect(l10n.mediumQuestions, 'Medium'));
     test('messageFailedRetry', () => expect(l10n.messageFailedRetry, 'Message failed. Tap to retry.'));
     test('missedDismissed', () => expect(l10n.missedDismissed, 'Missed lessons dismissed'));
@@ -812,7 +812,7 @@ void main() {
     });
 
     test('Backup', () {
-      expect(l10n.backupAndRestore, 'Copia de Seguridad y Restaurar');
+      expect(l10n.backupAndRestore, 'Copia de Seguridad');
       expect(l10n.backupBoxAnswers, 'Respuestas');
       expect(l10n.backupBoxAttempts, 'Intentos');
       expect(l10n.backupBoxBadges, 'Insignias');
@@ -863,7 +863,7 @@ void main() {
       expect(l10n.exportPdfDetail, 'PDF: informe formateado con tablas, gráficos y desgloses de dominio adecuados para impresión.');
       expect(l10n.exportProgressCsv, 'Exportar Progreso CSV');
       expect(l10n.exportProgressCsvDetail, 'CSV de estadísticas: resumen de estadísticas y visión general del progreso (más ligero que el CSV completo).');
-      expect(l10n.exportReports, 'Exportar Informes');
+      expect(l10n.exportReports, 'Exportar informes');
       expect(l10n.importBackup, 'Importar Copia');
       expect(l10n.importConfirmTitle, 'Importar Copia de Seguridad');
       expect(l10n.importFailed, 'Error al restaurar los datos');
@@ -914,7 +914,7 @@ void main() {
       expect(l10n.selectAll, 'Seleccionar Todo');
       expect(l10n.selectMultiple, 'Seleccionar múltiples');
       expect(l10n.skippedLabel, 'Omitidas');
-      expect(l10n.stay, 'Permanecer');
+      expect(l10n.stay, 'Quedarse');
       expect(l10n.toggleVisibility, 'Alternar visibilidad');
     });
 
@@ -952,7 +952,7 @@ void main() {
       expect(l10n.failedToExtendPlan, 'Error al extender el plan de estudio');
       expect(l10n.failedToGenerateSyllabusPlan, 'Error al generar el plan basado en el programa');
       expect(l10n.failedToLoadLesson, 'Error al cargar la lección. Verifica tu conexión e intenta de nuevo.');
-      expect(l10n.failedToLoadPlan, 'Error al cargar el plan de estudio');
+      expect(l10n.failedToLoadPlan(''), startsWith('Error al cargar el plan'));
       expect(l10n.failedToRedistributeWorkload, 'Error al redistribuir el trabajo pendiente');
       expect(l10n.failedToRegeneratePlan, 'Error al regenerar el plan');
       expect(l10n.failedToScheduleLesson, 'Error al programar la lección');

@@ -8,6 +8,7 @@ import 'package:studyking/features/planner/data/models/pending_action_model.dart
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import '../../../core/services/plan_adherence_orchestrator.dart';
+import '../../../core/utils/study_utils.dart';
 import '../services/planner_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 
@@ -509,7 +510,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required String subjectId,
     required DateTime scheduledTime,
     required AppLocalizations l10n,
-    int durationMinutes = 30,
+    int durationMinutes = defaultSessionDurationMinutes,
   }) async {
     try {
       final successResult = await _service.scheduleLesson(
@@ -558,7 +559,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required String subjectId,
     required DateTime scheduledTime,
     required AppLocalizations l10n,
-    int durationMinutes = 30,
+    int durationMinutes = defaultSessionDurationMinutes,
   }) async {
     try {
       final hasConflictResult = await _service.hasSchedulingConflict(

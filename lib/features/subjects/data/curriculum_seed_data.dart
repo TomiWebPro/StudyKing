@@ -1,7 +1,6 @@
 
 import 'package:studyking/core/utils/answer_comparator.dart';
 
-
 class CurriculumSeedEntry {
   final String curriculumName;
   final List<SeedTopic> topics;

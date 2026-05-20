@@ -169,7 +169,16 @@ void main() {
     });
 
     test('defaultPlan generates valid plan with 45 min', () {
-      final plan = LessonPlan.defaultPlan(45);
+      final plan = LessonPlan.defaultPlan(
+        45,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       expect(plan.goals, isNotEmpty);
       expect(plan.sections, isNotEmpty);
       expect(plan.checkpoints, isNotEmpty);
@@ -177,23 +186,59 @@ void main() {
     });
 
     test('defaultPlan clamps to minimum when duration is 0', () {
-      final plan = LessonPlan.defaultPlan(0);
+      final plan = LessonPlan.defaultPlan(
+        0,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       expect(plan.totalDurationMinutes, 20);
       expect(plan.sections.length, 3);
     });
 
     test('defaultPlan clamps to minimum when duration is very small', () {
-      final plan = LessonPlan.defaultPlan(3);
+      final plan = LessonPlan.defaultPlan(
+        3,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       expect(plan.sections[1].durationMinutes, 5);
     });
 
     test('defaultPlan clamps to maximum when duration is very large', () {
-      final plan = LessonPlan.defaultPlan(300);
+      final plan = LessonPlan.defaultPlan(
+        300,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       expect(plan.sections[1].durationMinutes, 120);
     });
 
     test('defaultPlan handles negative duration', () {
-      final plan = LessonPlan.defaultPlan(-10);
+      final plan = LessonPlan.defaultPlan(
+        -10,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       expect(plan.sections[1].durationMinutes, 5);
     });
 
@@ -217,7 +262,16 @@ void main() {
     });
 
     test('serializes to JSON string', () {
-      final plan = LessonPlan.defaultPlan(30);
+      final plan = LessonPlan.defaultPlan(
+        30,
+        goal: 'Understand the topic',
+        introTitle: 'Introduction',
+        mainTitle: 'Main Content',
+        practiceTitle: 'Practice',
+        checkpointStarted: 'Lesson started',
+        checkpointCovered: 'Topic covered',
+        checkpointCompleted: 'Practice completed',
+      );
       final jsonStr = plan.toJsonString();
       expect(jsonStr, contains('"goals"'));
       expect(jsonStr, contains('"sections"'));

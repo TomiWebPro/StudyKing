@@ -898,6 +898,10 @@
   "@backupAndRestore": {
     "description": "Section title for backup & restore in settings"
   },
+  "backupAndRestoreTooltip": "Copia de seguridad y restaurar",
+  "@backupAndRestoreTooltip": {
+    "description": "Semantic tooltip for backup and restore action"
+  },
   "exportBackup": "Exportar Copia",
   "@exportBackup": {
     "description": "Tile title for exporting backup"
@@ -2870,6 +2874,42 @@
   "readiness": "Preparación",
   "@readiness": {
     "description": "Label for readiness metric"
+  },
+  "confidence": "Confianza",
+  "@confidence": {
+    "description": "Label for confidence stat"
+  },
+  "forgettingRisk": "Riesgo de Olvido",
+  "@forgettingRisk": {
+    "description": "Label for forgetting risk stat"
+  },
+  "reviewUrgency": "Urgencia de Repaso",
+  "@reviewUrgency": {
+    "description": "Label for review urgency stat"
+  },
+  "lastAttempted": "Último Intento",
+  "@lastAttempted": {
+    "description": "Label for last attempted date"
+  },
+  "lastUpdated": "Última Actualización",
+  "@lastUpdated": {
+    "description": "Label for last updated date"
+  },
+  "accuracyTrend": "Tendencia de Precisión",
+  "@accuracyTrend": {
+    "description": "Heading for accuracy trend chart"
+  },
+  "loadingSyllabusProgress": "Cargando progreso del plan de estudios...",
+  "@loadingSyllabusProgress": {
+    "description": "Loading text shown while syllabus progress is being fetched"
+  },
+  "pageIndicatorAria": "Página {count} de {total}",
+  "@pageIndicatorAria": {
+    "description": "Semantics label for page indicator dots",
+    "placeholders": {
+      "count": { "type": "int" },
+      "total": { "type": "int" }
+    }
   },
   "overallMastery": "Dominio General",
   "@overallMastery": {
@@ -7070,7 +7110,6 @@
     "@exportReports": {
       "description": "Semantics label and tooltip for export reports button"
     },
-    "backupAndRestore": "Copia de seguridad y restaurar",
     "@backupAndRestore": {
       "description": "Semantics label and tooltip for backup and restore button"
     },
@@ -7177,7 +7216,6 @@
         "count": { "type": "int" }
       }
     },
-    "voiceInput": "Entrada de voz",
     "@voiceInput": {
       "description": "Tooltip for voice input button when idle"
     },
@@ -7193,11 +7231,9 @@
     "@loadingWithEllipsis": {
       "description": "Accessible label for shimmer loading state"
     },
-    "exportReports": "Exportar Informes",
     "@exportReports": {
       "description": "Semantic tooltip for export reports action"
     },
-    "backupAndRestore": "Copia de Seguridad y Restaurar",
     "@backupAndRestore": {
       "description": "Semantic tooltip for backup and restore action"
     },
@@ -7230,27 +7266,21 @@
     "@readyToContinueLearning": {
       "description": "Notification text to nudge the student to resume learning"
     },
-    "readAloud": "Leer en voz alta",
     "@readAloud": {
       "description": "Tooltip for read aloud button on tutor messages"
     },
-    "uploadFile": "Subir archivo",
     "@uploadFile": {
       "description": "Label for upload file button in question card"
     },
-    "recordAudio": "Grabar audio",
     "@recordAudio": {
       "description": "Label for record audio button in question card"
     },
-    "fileAttached": "Archivo adjunto",
     "@fileAttached": {
       "description": "Label shown when a file is attached to a question"
     },
-    "recordingComplete": "Grabación completa",
     "@recordingComplete": {
       "description": "Label shown when audio recording is complete"
     },
-    "startRecording": "Iniciar grabación",
     "@startRecording": {
       "description": "Label for starting audio recording"
     },
@@ -7298,7 +7328,6 @@
     "@toolEraser": {
       "description": "Tool name for eraser drawing tool"
     },
-    "failedToLoadPlan": "Error al cargar el plan de estudio",
     "@failedToLoadPlan": {
       "description": "User-facing error message when plan fails to load"
     },
@@ -7310,7 +7339,6 @@
     "@micPermissionDenied": {
       "description": "Snackbar message when microphone permission is denied"
     },
-    "scheduleLesson": "Programar una Lección",
     "@scheduleLesson": {
       "description": "Action button to schedule a lesson"
     },
@@ -7423,12 +7451,73 @@
     "@uploadInProgressBody": {
       "description": "Dialog body when user tries to navigate away during upload"
     },
-    "stay": "Permanecer",
     "@stay": {
       "description": "Button label to stay on current screen"
     },
     "selected": "seleccionado(s)",
     "@selected": {
       "description": "Label indicating items are selected"
+    },
+    "syllabusUploadToggle": "Subir como plan de estudios",
+    "@syllabusUploadToggle": {
+      "description": "Checkbox label to upload content as a syllabus"
+    },
+    "syllabusUploadToggleHint": "Marca esta carga como un plan de estudios para la generación estructurada de temas",
+    "@syllabusUploadToggleHint": {
+      "description": "Hint text for syllabus upload checkbox"
+    },
+    "backupProvider": "Proveedor de Respaldo",
+    "@backupProvider": {
+      "description": "Section title for backup AI provider configuration"
+    },
+    "backupProviderDescription": "Proveedor de IA secundario opcional para conmutación por error",
+    "@backupProviderDescription": {
+      "description": "Description text for backup provider"
+    },
+    "backupApiKey": "Clave API de Respaldo",
+    "@backupApiKey": {
+      "description": "Label for backup API key field"
+    },
+    "backupApiKeyDescription": "Clave API para el proveedor de respaldo",
+    "@backupApiKeyDescription": {
+      "description": "Description text for backup API key"
+    },
+    "backupBaseUrl": "URL Base de Respaldo",
+    "@backupBaseUrl": {
+      "description": "Label for backup API base URL field"
+    },
+    "backupModel": "Modelo de Respaldo",
+    "@backupModel": {
+      "description": "Label for backup AI model field"
+    },
+    "backupModelHint": "p. ej., gpt-4o-mini",
+    "@backupModelHint": {
+      "description": "Hint text for backup model input"
+    },
+    "backupModelDescription": "ID del modelo para el proveedor de respaldo",
+    "@backupModelDescription": {
+      "description": "Description text for backup model"
+    },
+    "providerTimedOut": "{providerName} superó el tiempo de espera. Intente de nuevo.",
+    "@providerTimedOut": {
+      "description": "Error message when provider times out",
+      "placeholders": {
+        "providerName": {
+          "type": "String"
+        }
+      }
+    },
+    "providerConnectionFailed": "Conexión a {providerName} fallida. Verifique su red y clave API.",
+    "@providerConnectionFailed": {
+      "description": "Error message when provider connection fails",
+      "placeholders": {
+        "providerName": {
+          "type": "String"
+        }
+      }
+    },
+    "responseInterrupted": "Respuesta interrumpida. Intente de nuevo.",
+    "@responseInterrupted": {
+      "description": "Error message when response is interrupted"
     }
   }

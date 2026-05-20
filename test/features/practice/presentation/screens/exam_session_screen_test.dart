@@ -7,6 +7,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';

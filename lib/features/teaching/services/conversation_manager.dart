@@ -128,10 +128,25 @@ class ConversationManager {
       systemPrompt: entry.systemPrompt,
       feature: 'teaching_lesson_plan',
     );
+
+    Future<LessonPlan> buildDefaultPlan() async {
+      final l10n = lookupAppLocalizations(Locale(localeName));
+      final plan = LessonPlan.defaultPlan(
+        durationMinutes,
+        goal: l10n.defaultLessonGoal,
+        introTitle: l10n.sectionIntroduction,
+        mainTitle: l10n.sectionMainContent,
+        practiceTitle: l10n.sectionPractice,
+        checkpointStarted: l10n.checkpointStarted,
+        checkpointCovered: l10n.checkpointTopicCovered,
+        checkpointCompleted: l10n.checkpointPracticeCompleted,
+      );
+      lessonPlan = plan;
+      return plan;
+    }
+
     if (result.isFailure) {
-      final defaultPlan = LessonPlan.defaultPlan(durationMinutes);
-      lessonPlan = defaultPlan;
-      return defaultPlan;
+      return buildDefaultPlan();
     }
     final response = result.data!;
     totalTokensUsed += response.length ~/ 4;
@@ -141,9 +156,7 @@ class ConversationManager {
       lessonPlan = plan;
       return plan;
     }
-    final defaultPlan = LessonPlan.defaultPlan(durationMinutes);
-    lessonPlan = defaultPlan;
-    return defaultPlan;
+    return buildDefaultPlan();
   }
 
   Stream<String> sendMessage(String content) async* {
@@ -254,16 +267,24 @@ class ConversationManager {
     final message = l10n.tutorImageAnalysisUserPrompt(imageData);
 
     final buffer = StringBuffer();
-    await for (final chunk in _llmService.chatStream(
-      message: message,
-      modelId: _modelId,
-      memory: _memory,
-      systemPrompt: l10n.tutorImageAnalysisSystemPrompt,
-    )) {
-      buffer.write(chunk);
-      if (buffer.length > 0) {
-        yield chunk;
+    try {
+      await for (final chunk in _llmService.chatStream(
+        message: message,
+        modelId: _modelId,
+        memory: _memory,
+        systemPrompt: l10n.tutorImageAnalysisSystemPrompt,
+      )) {
+        buffer.write(chunk);
+        if (buffer.length > 0) {
+          yield chunk;
+        }
       }
+    } catch (e) {
+      final partialContent = buffer.toString();
+      if (partialContent.isNotEmpty) {
+        _memory.addAssistantMessage(partialContent);
+      }
+      rethrow;
     }
 
     final assistantContent = buffer.toString();
@@ -271,6 +292,10 @@ class ConversationManager {
     _memory.addAssistantMessage(assistantContent);
     _speakResponse(assistantContent);
   }
+
+  String get providerName => _llmService.config.provider.name;
+
+  bool get wasThrottleActive => _llmService.wasThrottleActive;
 
   Stream<String> _buildAdaptiveChunks(String fullContent) async* {
     if (reduceMotion) {

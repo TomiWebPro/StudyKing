@@ -1,328 +1,289 @@
-# Internationalisation Master — i18n Audit & Blitz
+# Internationalisation Master — Full-Codebase i18n Audit
 
-**Target locale:** Spanish (`es`) — fixes here serve as a pattern for all other locales (French, German, Arabic, etc.)
+**Audit date:** 2026-05-20
+**Scope:** `lib/`, `lib/l10n/` (all Dart and ARB files)
+**Target locale:** Spanish (`es`) — patterns apply to all future locales.
+**Severity key:** BLOCKER = crash/inability to proceed; MAJOR = feature broken or misleading; MINOR = code quality / UX friction.
 
 ---
 
 ## BLOCKER
 
-*None found.* The app bootstraps correctly with `supportedLocales: [Locale('en'), Locale('es')]`, no key is completely missing from the Spanish ARB, and the app does not crash on locale switch.
+*None found.* No issue currently causes an app crash or prevents the user from proceeding. The most critical items below (MAJOR) are priority targets.
 
 ---
 
 ## MAJOR
 
-### M1. Missing ICU plural syntax in two Spanish ARB keys
+### M1 — Hardcoded English labels in Topic Detail Screen (6 strings)
 
-**File:** `lib/l10n/app_es.arb` lines 6654, 6661  
-**Keys:** `prerequisitesCount`, `downstreamCount`
+**Files:** `lib/features/dashboard/presentation/screens/topic_detail_screen.dart:163-184`
 
-The English versions use ICU plural syntax:
-```json
-"prerequisitesCount": "{count, plural, =1{1 prerequisite} other{{count} prerequisites}}",
-"downstreamCount": "{count, plural, =1{1 downstream} other{{count} downstream}}"
+**Problem:** Six label strings are passed as raw English string literals instead of `l10n.*` keys:
+
+| Line | String | Context |
+|------|--------|---------|
+| 163 | `'Confidence'` | `_buildStatBox(context, 'Confidence', ...)` |
+| 167 | `'Forgetting Risk'` | `_buildStatBox(context, 'Forgetting Risk', ...)` |
+| 171 | `'Review Urgency'` | `_buildStatBox(context, 'Review Urgency', ...)` |
+| 177 | `'Last Attempted'` | `_buildInfoRow(context, 'Last Attempted', ...)` |
+| 180 | `'Last Updated'` | `_buildInfoRow(context, 'Last Updated', ...)` |
+| 184 | `Text('Accuracy Trend', ...)` | Raw `Text` widget |
+
+**Rationale:** These are user-facing stat labels on every topic detail page. A Spanish user sees English labels even when the rest of the screen is localised.
+
+**Fix:** Add ARB keys and use `l10n.confidence`, `l10n.forgettingRisk`, `l10n.reviewUrgency`, `l10n.lastAttempted`, `l10n.lastUpdated`, `l10n.accuracyTrend` in both `.arb` files.
+
+---
+
+### M2 — Hardcoded English loading text in Syllabus Progress Card
+
+**File:** `lib/features/planner/presentation/widgets/syllabus_progress_card.dart:68`
+
+**Problem:**
+```dart
+Text('Loading syllabus progress...'),
 ```
 
-The Spanish versions drop ICU entirely — they always render the plural form:
-```json
-"prerequisitesCount": "{count} requisitos previos",       // shows "1 requisitos previos"
-"downstreamCount": "{count} dependientes"                  // shows "1 dependientes"
+**Rationale:** Shown during async data load on the syllabus progress card. Ignores user locale. The `_buildEmpty` method at line 80 correctly uses `AppLocalizations.of(context)!`, but the loading state is hardcoded.
+
+**Fix:** Replace with `l10n.loadingSyllabusProgress` or similar ARB key.
+
+---
+
+### M3 — Default lesson plan strings in model (7 strings) bypass ARB
+
+**File:** `lib/features/teaching/data/models/lesson_plan_model.dart:72-80`
+
+**Problem:** `LessonPlan.defaultPlan()` uses hardcoded English defaults:
+```dart
+String goal = 'Understand the topic',
+String introTitle = 'Introduction',
+String mainTitle = 'Main Content',
+String practiceTitle = 'Practice',
+String checkpointStarted = 'Lesson started',
+String checkpointCovered = 'Topic covered',
+String checkpointCompleted = 'Practice completed',
 ```
 
-**Rationale:** When `count == 1`, the user sees ungrammatical "1 requisitos previos" or "1 dependientes" instead of "1 requisito previo" / "1 dependiente". This is a user-facing grammar error that affects a core navigation affordance (topic dependency dialog).
+**Rationale:** These defaults are rendered in the lesson progress bar when the AI fails to generate a plan. They are user-facing. ARB keys already exist (`defaultLessonGoal`, `sectionIntroduction`, `sectionMainContent`, `sectionPractice`, etc.) but the model never calls them. Every caller must pass l10n values, but the defaults silently fall back to English.
 
-**Acceptance criteria:**
-- Fix both keys to use `{count, plural, =1{...} other{{...}}}` syntax matching the English structure but with correct Spanish singular/plural forms.
-- Verify: `prerequisitesCount(1)` → `"1 requisito previo"`, `prerequisitesCount(3)` → `"3 requisitos previos"`
-- Verify: `downstreamCount(1)` → `"1 dependiente"`, `downstreamCount(3)` → `"3 dependientes"`
+**Fix:** Remove defaults from the method signature and require callers to pass l10n-resolved strings, or add an `AppLocalizations` parameter. Alternatively, inline the l10n lookups at the call sites where `defaultPlan()` is invoked.
 
 ---
 
-### M2. Mentor context prompt is invariant English — LLM bias toward English
+### M4 — `toStringAsFixed()` in mentor context builder (locale-unaware numbers in user-facing text)
 
-**File:** `lib/features/mentor/services/mentor_service.dart`, lines 212–322  
-**Method:** `_buildContextPrompt()`
+**File:** `lib/features/mentor/services/mentor_service.dart:246,294`
 
-**Problem:** The entire student context block that is injected into every mentor system prompt is hardcoded in English, regardless of the user's locale. Key lines:
-- Line 232: `buffer.writeln('Current student context:');`
-- Line 233: `buffer.writeln('${bullet}Total attempts: ${stats['totalAttempts']}');`
-- Line 234: `buffer.writeln('${bullet}Correct attempts: ${stats['correctAttempts']}');`
-- Line 235: `buffer.writeln('${bullet}Accuracy: ${stats['accuracy']}%');`
-- Line 288: `buffer.writeln('${bullet}Weak topics needing attention:');`
-- Line 304: `buffer.writeln('${bullet}Congratulations! $consecutiveDays day study streak!');`
+**Problem:**
+```dart
+// Line 246 — inserted into l10n.mentorContextPlanAdherence(...)
+adherenceDeviation.averageAdherence.toStringAsFixed(1)
 
-This structural English text **biases the LLM to respond in English** even when the user writes in Spanish, because the system prompt contains paragraphs of English that the model treats as normative.
+// Line 294 — inserted into l10n.mentorContextWeakTopicItem(...)
+(topic.accuracy * 100).toStringAsFixed(0)
+```
 
-**Rationale:** When a Spanish-speaking student uses the Mentor, the context section should be in Spanish so the LLM stays in Spanish throughout the conversation. The `_languageInstruction` in `prompts.dart` is appended after the context, but the context's sheer volume of English text often overrides it.
+These numbers are wrapped inside `lookupAppLocalizations(Locale(_localeName)).mentorContextPlanAdherence(...)` and `.mentorContextWeakTopicItem(...)`, which means the strings are localised but **the number format inside is invariant** — `85.5` instead of `85,5` for Spanish. Per AGENTS.md `toStringAsFixed()` is forbidden for user-facing numeric displays.
 
-**Acceptance criteria:**
-- Refactor `_buildContextPrompt()` to pull all structural labels from `AppLocalizations` via the injected `l10n` or `_localeName`.
-- Add at minimum the following new ARB keys (or reuse existing ones where they overlap with practice/dashboard labels):
-  - `mentorContextHeader` → `"Contexto actual del estudiante:"`
-  - `mentorContextTotalAttempts` → `"Intentos totales: {count}"`
-  - `mentorContextCorrectAttempts` → `"Intentos correctos: {count}"`
-  - `mentorContextAccuracy` → `"Precisión: {percent}%"`
-  - `mentorContextWeakTopics` → `"Temas débiles que necesitan atención:"`
-  - `mentorContextStreak` → `"¡Felicidades! Racha de {count} días de estudio!"`
-  - ...and analogous keys for all label strings in the 212–322 block.
-- Numbers and percentages in the context should remain in invariant format (these are LLM-facing data points, per `AGENTS.md`).
-- Verify: with `localeName = 'es'`, the context block fed to the LLM has Spanish structural labels.
+**Rationale:** The mentor context string appears directly in mentor chat messages that users read. A Spanish user sees period decimal separators in an otherwise localized paragraph.
+
+**Fix:** Replace with `formatDecimal(adherenceDeviation.averageAdherence, _localeName, minFractionDigits: 1, maxFractionDigits: 1)` and `formatPercent(topic.accuracy * 100, _localeName, minFractionDigits: 0)`.
 
 ---
 
-### M3. Hardcoded user-facing strings in presentation layer
+### M5 — Hardcoded 24h time format in orphaned-session dialog
 
-**File:** `lib/features/practice/presentation/screens/exam_session_screen.dart`
+**File:** `lib/main.dart:492-494`
 
-| Line | String | Fix |
-|------|--------|-----|
-| 815 | `'Avg time/question'` | Replace with new ARB key `avgTimePerQuestion` → `"Tiempo prom./pregunta"` |
-| 826 | `'Results will affect spaced repetition scheduling for ${result.questionResults.length} questions.'` | Replace with new ARB key `examResultsSrsImpact({count})` → `"Los resultados afectarán la programación de repaso espaciado de {count} preguntas."` |
-| 845 | `'Questions at a glance'` | Replace with new ARB key `questionsAtAGlance` → `"Preguntas de un vistazo"` |
+**Problem:**
+```dart
+final hour = session.startTime.hour.toString().padLeft(2, '0');
+final minute = session.startTime.minute.toString().padLeft(2, '0');
+final timeStr = '$hour:$minute';
+```
 
-**File:** `lib/features/practice/presentation/screens/practice_screen.dart`
+The `timeStr` is passed to `l10n.orphanedSessionMessage(session.topicTitle, timeStr)`. This always produces 24h format (e.g. `"14:30"`) regardless of locale preference. Spanish users may expect 12h format (`"2:30 p. m."`).
 
-| Line | String | Fix |
-|------|--------|-----|
-| 508 | `'No exam history available'` | Replace with new ARB key `noExamHistory` → `"No hay historial de exámenes disponible"` |
-| 517 | `'Exam History'` | Replace with new ARB key `examHistory` → `"Historial de Exámenes"` |
+**Rationale:** The orphaned-session dialog interrupts the user at app startup with a time that may feel foreign.
 
-**File:** `lib/features/planner/services/personal_learning_plan_service.dart`
-
-| Line | String | Fix |
-|------|--------|-----|
-| 848–852 | Fallback recommendation strings (used when `_l10n` is null) | These should either be removed (if `_l10n` is never null) or translated via ARB keys. Since the service already has a `_l10n` field, consider making it non-nullable. If fallback must remain, use invariant English (fine for defensive fallback—low priority). |
-| 915, 917–918 | Focus labels like `'General review'`, `'Focus on weak areas'` | These already have `_l10n` path via `planFocusLabel()` but the fallbacks remain English. Remove the `if (l10n != null)` condition entirely and make `_l10n` required. |
-
-**Rationale:** These strings are directly user-visible. In Spanish locale they appear as English text, degrading UX.
-
-**Acceptance criteria:**
-- All five strings in `exam_session_screen.dart` are replaced with `l10n.*` calls backed by new ARB keys.
-- Both strings in `practice_screen.dart` are replaced with `l10n.*` calls.
-- The `personal_learning_plan_service.dart` fallback path is either removed (by making `_l10n` required) or the fallback strings are added to ARB.
-
----
-
-### M4. Locale-unaware percentage formatting in user-facing displays
-
-These use `toStringAsFixed`, `round()` + string interpolation, or manual `%` concatenation where `formatPercent()` from `lib/core/utils/number_format_utils.dart` should be used instead. All affect user-facing displays in Spanish (where the percent sign should be `"85 %"` not `"85%"`).
-
-| # | File | Line | Pattern | Fix |
-|---|------|------|---------|-----|
-| 1 | `lib/features/practice/presentation/screens/practice_screen.dart` | 873 | `'${(s.correctAnswers / s.questionsAnswered * 100).round()}%'` | `formatPercent(value, l10n.localeName, min:0, max:0)` |
-| 2 | `lib/features/teaching/presentation/widgets/lesson_progress_bar.dart` | 78 | `'${(progress * 100).round()}%'` (Semantics) | `formatPercent(progress * 100, l10n.localeName, min:0, max:0)` |
-| 3 | `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart` | 97 | `'${(_masteryThreshold * 100).round()}'` passed to `l10n.masteryThreshold(...)` | Pass `formatPercent(...)` result instead of raw number |
-| 4 | `lib/features/subjects/presentation/dialogs/topic_dependency_dialog.dart` | 104 | `'${(_masteryThreshold * 100).round()}%'` (Slider label) | `formatPercent(..., localeName)` |
-| 5 | `lib/core/services/progress_export_service.dart` | 180 | `'${overallStats['accuracy']}%'` (PDF export — user-facing per conventions) | `formatPercent(value, l10n.localeName, min:0, max:0)` |
-
-**Rationale:** Per `AGENTS.md`: "Never use `toStringAsFixed()` for user-facing numeric displays. It always produces a period decimal separator." The same applies to manual `round()` + `%` concatenation. Spanish (and French, German) use a non-breaking space before `%` or different decimal separators.
-
-**Acceptance criteria:**
-- All five sites use `formatPercent()` with the locale-aware localeName.
-- Verify: en display shows `"85%"`, es display shows `"85 %"`.
-- Verify: no regression in CSV exports (which should remain in invariant `en` format).
-
----
-
-### M5. NavigationBar overflow with longer translated strings
-
-**File:** `lib/main.dart`, lines 641–654  
-**6 destinations on NavigationBar:** Dashboard, Subjects, Practice, Mentor, Focus Mode, Settings
-
-**Problem:** Material 3 `NavigationBar` with 6 icon+text destinations on a narrow phone (~360px) already risks overflow in English. With Spanish translations like `"Panel"`, `"Materias"`, `"Práctica"`, `"Mentor"`, `"Estudio"`, `"Ajustes"`, labels get truncated or overlap. The `NavigationBar` widget does NOT auto-scroll or wrap labels.
-
-**File:** `lib/features/subjects/presentation/subject_detail_screen.dart`, lines 186–198  
-**6 tabs in TabBar:** Lessons, Practice, Topics, Sources, History, Stats — with icon + text labels. Same overflow risk.
-
-**Rationale:** These are the app's primary navigation surfaces. Truncated labels make the app confusing to navigate.
-
-**Acceptance criteria:**
-- Make the `NavigationBar` labels scrollable or use `NavigationBar.labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected` (or similar) to handle overflow gracefully.
-- Set `isScrollable: true` on the subject detail `TabBar` so tabs can scroll horizontally instead of overflowing.
-- Verify: on a 360px-wide viewport in Spanish locale, all navigation labels are either fully visible or properly handled without overlap.
+**Fix:** Replace with `DateFormat.jm(l10n.localeName).format(session.startTime.toLocal())`.
 
 ---
 
 ## MINOR
 
-### m1. RTL-unaware directional icons (15 sites)
+### m1 — Duplicate ARB keys (12+ pairs across both .arb files)
 
-When Arabic/Hebrew/Persian support is added, these icons will point the wrong way. Fix now while only LTR locales are supported to avoid a future RTL blitz.
+**Files:** `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`
 
-| # | File | Line | Icon | Context |
-|---|------|------|------|---------|
-| 1 | `lib/features/dashboard/presentation/dashboard_screen.dart` | 536 | `Icons.chevron_right` | Empty source card affordance |
-| 2 | `lib/features/dashboard/presentation/widgets/next_up_card.dart` | 134 | `Icons.chevron_right` | ListTile trailing icon |
-| 3 | `lib/features/teaching/presentation/tutor_screen.dart` | 961 | `Icons.chevron_left` | Previous slide button |
-| 4 | `lib/features/teaching/presentation/tutor_screen.dart` | 972 | `Icons.chevron_right` | Next slide button |
-| 5 | `lib/features/lessons/presentation/widgets/lesson_block_card.dart` | 165 | `Icons.chevron_left` | Lesson page navigation |
-| 6 | `lib/features/lessons/presentation/widgets/lesson_block_card.dart` | 189 | `Icons.chevron_right` | Lesson page navigation |
-| 7 | `lib/features/lessons/presentation/lesson_detail_screen.dart` | 128 | `Icons.arrow_back` | Back navigation |
-| 8 | `lib/features/practice/presentation/widgets/practice_session_nav_buttons.dart` | 31 | `Icons.arrow_back` | Previous button (stacked) |
-| 9 | same file | 44 | `Icons.arrow_forward` | Next button (stacked) |
-| 10 | same file | 64 | `Icons.arrow_back` | Previous button (row) |
-| 11 | same file | 79 | `Icons.arrow_forward` | Next button (row) |
-| 12 | `lib/features/settings/presentation/settings_screen.dart` | 264, 420, 463, 1931, 1974 | `Icons.arrow_forward_ios` | ListTile trailing (5 locations) |
-| 13 | `lib/features/subjects/presentation/subject_list_screen.dart` | 189 | `Icons.arrow_forward_ios` | Subject card trailing |
-| 14 | `lib/features/practice/presentation/widgets/practice_mode_option.dart` | 60 | `Icons.arrow_forward_ios` | Mode option trailing |
+**Problem:** The ARB tail section (lines ~7000–7356) re-declares keys that already appear earlier, producing duplicate definitions. Flutter gen-l10n silently uses the **last** definition — callers get unpredictable values.
 
-**Acceptance criteria:**
-- Wrap each directional icon with a ternary or helper function using `Directionality.of(context)` to flip the icon for RTL.
-- Pattern: `Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right)`
-- Verify: with `Directionality.rtl` wrapping, all navigation affordances point in the correct direction.
+| Key | EN occurrences | EN values | ES occurrences | ES values |
+|---|---|---|---|---|
+| `backupAndRestore` | 3 | `"Backup & Restore"` × 3 (identical) | 3 | `"Copia de Seguridad"` / `"Copia de seguridad y restaurar"` / `"Copia de Seguridad y Restaurar"` |
+| `scheduleLesson` | 2 | `"Schedule Lesson"` / `"Schedule a Lesson"` | 2 | `"Programar Lección"` / `"Programar una Lección"` |
+| `failedToLoadPlan` | 2 | `"Failed to load plan: {error}"` / `"Failed to load study plan"` (***structural mismatch*** — one has `{error}`, the other doesn't) | 2 | `"Error al cargar el plan: {error}"` / `"Error al cargar el plan de estudio"` |
+| `voiceInput` | 2 | `"Voice Input"` / `"Voice input"` | 2 | `"Entrada de Voz"` / `"Entrada de voz"` |
+| `exportReports` | 2 | `"Export Reports"` × 2 | 2 | `"Exportar informes"` / `"Exportar Informes"` |
+| `readAloud` | 2 | `"Read aloud"` × 2 | 2 | `"Leer en voz alta"` × 2 |
+| `uploadFile` | 2 | `"Upload file"` × 2 | 2 | `"Subir archivo"` × 2 |
+| `fileAttached` | 2 | `"File attached"` × 2 | 2 | `"Archivo adjunto"` × 2 |
+| `recordAudio` | 2 | `"Record audio"` × 2 | 2 | `"Grabar audio"` × 2 |
+| `recordingComplete` | 2 | `"Recording complete"` × 2 | 2 | `"Grabación completa"` × 2 |
+| `startRecording` | 2 | `"Start recording"` × 2 | 2 | `"Iniciar grabación"` × 2 |
+| `manualSessionTracker` | 2 | (identical) | 1 | (single — fine) |
+| `manualSessionTrackerDescription` | 2 | (different values) | 1 | (single) |
+| `sessionHistoryDescription` | 2 | (different values) | 1 | (single) |
+| `sessionTracking` | 2 | (identical) | 1 | (single) |
+| `exportProgressCsv` | 2 | (identical) | 1 | (single) |
+| `tapToCollapse` | 2 | (different values) | 1 | (single) |
+| `tapToExpand` | 2 | (different values) | 1 | (single) |
 
----
+**`failedToLoadPlan` structural mismatch detail:**
+- First def: `"Failed to load plan: {error}"` with `@failedToLoadPlan.placeholders.error`
+- Second def: `"Failed to load study plan"` (no placeholder, no `@placeholders`)
+- **Generated Dart uses the getter** (`String get failedToLoadPlan`), so the `{error}` detail is silently lost. No compile error (nothing calls it with a parameter), but error reporting is degraded.
 
-### m2. Mentor tool descriptions and result messages are English-only
+**`backupAndRestore` variability (Spanish):** Three different translations exist: `"Copia de Seguridad"` (settings section), `"Copia de seguridad y restaurar"` (tooltip), `"Copia de Seguridad y Restaurar"` (tooltip with title case). The generated Dart uses only the **last** one (`"Copia de Seguridad y Restaurar"`), so other contexts get the wrong case.
 
-**Files:** `lib/features/mentor/services/tools/*.dart` (6 files)
+**Rationale:** Duplicates make the ARB files harder to maintain, create ambiguity about which value is canonical, and degrade error reporting (failedToLoadPlan loses its error detail).
 
-These tool definitions and their result messages are sent to the LLM as part of the function-calling schema. They are always in English regardless of user locale.
-
-| File | Lines | String |
-|------|-------|--------|
-| `get_student_stats_tool.dart` | 20 | `"Get overall student performance statistics and study data."` |
-| `schedule_lesson_tool.dart` | 14 | `"Schedule a lesson/session for a specific topic at a given time."` |
-| `schedule_lesson_tool.dart` | 48–50 | Result messages like `"Lesson scheduled: ..."` / `"Failed to schedule lesson"` |
-| `generate_lesson_blocks_tool.dart` | 14 | `"Generate structured lesson blocks..."` |
-| `generate_lesson_blocks_tool.dart` | 43 | `"Failed to generate lesson blocks"` |
-| `create_plan_tool.dart` | 14 | `"Create a learning plan or roadmap..."` |
-| `create_plan_tool.dart` | 44–46 | Result messages like `"Plan created for ..."` / `"Failed to create plan"` |
-| `get_weak_topics_tool.dart` | 19 | `"Get weak or at-risk topics that need student attention."` |
-| `search_questions_tool.dart` | 14 | `"Search for questions by subject, topic, or keyword."` |
-
-**Rationale:** While many LLMs understand English tool names, the result messages fed back to the mentor agent are also English, and the tool descriptions bias the LLM toward English.
-
-**Acceptance criteria:**
-- Pull tool descriptions from `AppLocalizations` using the locale-aware map, or accept that tool definitions are a low-priority i18n item and document the decision.
-- At minimum, localize the result messages in `schedule_lesson_tool.dart`, `generate_lesson_blocks_tool.dart`, and `create_plan_tool.dart` by pulling from ARB keys.
+**Fix:** De-duplicate all keys. Keep the canonical definition with the most complete placeholder set. Remove or merge the second occurrence. For `backupAndRestore` with differing values, add distinct key names (e.g. `backupAndRestoreSection`, `backupAndRestoreTooltip`).
 
 ---
 
-### m3. `languageInstruction` omits instruction for unsupported locales
+### m2 — Orphaned ARB annotation (spec violation)
 
-**File:** `lib/features/teaching/services/prompts/prompts.dart`, lines 25–28
+**File:** `lib/l10n/app_en.arb:7232-7239`
 
-```dart
-String _languageInstruction(AppLocalizations l10n) {
-  if (localeName == 'en') return '';
-  return '\n${l10n.languageInstruction(localeName)}';
-}
+**Problem:** The `@lessonPracticeWithTopic` annotation block is positioned **after** the unrelated `pageIndicator` block, separated from its key:
+```
+7219: "lessonPracticeWithTopic": "Lesson Practice: {topic}",
+7220: "pageIndicator": "{current} / {total}",
+7221: "@pageIndicator": { ... },    // belongs to pageIndicator
+7232: "@lessonPracticeWithTopic": { ... },  // ORPHANED — should follow line 7219
 ```
 
-**Problem:** When the locale is `'en'`, the instruction is empty. When a future locale (e.g. `'fr'`) is added but its `app_fr.arb` does NOT include `languageInstruction`, the `l10n.languageInstruction(localeName)` will throw a runtime error because the method is generated from the ARB key. Also, a user with English UI who wants tutoring in Spanish gets no language instruction.
+Per the ARB spec, `@key` annotations must **immediately** follow their corresponding key.
 
-**Acceptance criteria:**
-- Gracefully handle missing `languageInstruction` for unsupported locales (fallback to English instruction or silently skip).
-- Consider making the language instruction always present (even for `'en'`) but stating "Respond in English" to make the behavior explicit and consistent.
+**Rationale:** While Flutter gen-l10n tolerates this, other tools (l10n linting, crowdin) may reject the file or silently drop the annotation.
+
+**Fix:** Reorder so `@lessonPracticeWithTopic` follows `"lessonPracticeWithTopic"` directly.
 
 ---
 
-### m4. Mixed directional EdgeInsets
+### m3 — Hardcoded Semantics label in Onboarding Dialog
 
-**File:** `lib/features/planner/presentation/planner_screen.dart`, line 541
+**File:** `lib/features/onboarding/presentation/onboarding_dialog.dart:66`
 
+**Problem:**
 ```dart
-padding: const EdgeInsets.only(top: 4).add(const EdgeInsetsDirectional.only(start: 4)),
+Semantics(
+  label: 'Page ${i + 1} of ${pages.length}',
+  ...
+)
 ```
 
-This mixes `EdgeInsets.only` (non-directional) with `EdgeInsetsDirectional.only` (directional). While it works, it's fragile. Should be consolidated.
+**Rationale:** Screen-reader users hear English page indicators regardless of locale.
 
-**Acceptance criteria:**
-- Replace with `EdgeInsetsDirectional.only(start: 4, top: 4)`.
+**Fix:** Add ARB key (e.g. `"pageIndicatorAria": "Page {count} of {total}"`) and use `l10n.pageIndicatorAria(i + 1, pages.length)`.
 
 ---
 
-### m5. `maxLines: 1` truncation risk for translated content
+### m4 — Fallback English strings in core widgets (l10n null-coalesce)
 
 **Files:**
-- `lib/features/ingestion/presentation/content_library_screen.dart:528` — source title
-- `lib/features/subjects/presentation/subject_detail_screen.dart:557` — source list item title
-- `lib/features/planner/presentation/widgets/roadmap_card.dart:175` — sub-task text
-- `lib/features/planner/presentation/widgets/calendar_view_widget.dart:141` — calendar event label
+- `lib/core/widgets/dialog_utils.dart:18,22` — `cancelLabel ?? 'Cancel'`, `confirmLabel ?? 'Confirm'`
+- `lib/core/utils/error_boundary.dart:53,59,71` — `'Something went wrong'`, `'An unexpected error occurred'`, `'Retry'`
+- `lib/core/widgets/shimmer_widget.dart:65` — `'Loading'`
+- `lib/core/utils/time_utils.dart:64,70,74` — `'Unknown'`, `'Today'`, `'Yesterday'`
 
-**Rationale:** German compound words (e.g. "Benachrichtigungseinstellungen") or Spanish longer phrases may exceed the single-line limit. Switching to `maxLines: 2` or removing `maxLines` constraint (with `SoftWrap`) avoids truncation.
+**Problem:** These use `l10n?.key ?? 'English fallback'` pattern. When `AppLocalizations.of(context)` returns null (e.g. before locale is loaded), English is shown.
 
-**Acceptance criteria:**
-- Review each site and either remove `maxLines` or increase to `maxLines: 2`.
-- For known cases where space is tight (e.g. calendar events), ensure `overflow: TextOverflow.clip` or `ellipsis` is acceptable.
+**Rationale:** Low severity because `AppLocalizations.of(context)` is almost always available by the time these widgets render. However, startup screens or error states could race.
+
+**Fix:** Ensure `AppLocalizations` is loaded before these widgets are built, or provide locale-aware fallbacks. At minimum, add a note in AGENTS.md about this pattern.
 
 ---
 
-### m6. `tokensAndCost` and `tokensLabel` not translated in Spanish ARB
+### m5 — Notification strings intentionally English (documented, but worth noting)
 
-**File:** `lib/l10n/app_es.arb`, line 2160
+**File:** `lib/features/sessions/services/study_timer_service.dart:189-192`
 
-```json
-"tokensAndCost": "Tokens: {count} ({cost})",
-"tokensLabel": "{count} tokens",
+```dart
+// Notifications appear in the OS notification shade where locale is OS-
+// controlled, not the app. Intentionally invariant English.
+'Focus Session Complete',
+'Great focus! You completed ${_elapsedMs ~/ msPerMinute} minutes.'
 ```
 
-**Problem:** The word "Tokens" is an English loanword that translates to "Fichas" or "Tokens" (accepted in many Spanish contexts, but inconsistent with the rest of the localisation). At minimum, the phrasing `"Tokens:"` should be `"Tokens:"` (acceptable) or `"Fichas:"` (preferred).
+**Rationale:** OS notifications use device-level locale, not in-app locale. This is a deliberate trade-off. If full i18n is desired, platform-specific notification localization would be needed.
 
-**Rationale:** Minor — "Tokens" is widely understood in Spanish tech contexts. Flagged for consistency review.
-
-**Acceptance criteria:**
-- Either accept current value (document decision) or change to `"Fichas: {count} ({cost})"` / `"{count} fichas"`.
+**Acceptance:** Documented as intentional — no fix required unless platform-level locale matching is implemented.
 
 ---
 
-### m7. Stale locale after switching language (documented gotcha)
+### m6 — `settings_model.dart` locale default
 
-**File:** `lib/features/settings/presentation/profile_screen.dart`, line 81  
-**Referenced in:** `AGENTS.md` — "i18n Locale Switching Gotcha"
+**File:** `lib/features/settings/data/models/settings_model.dart:193` (estimated)
 
-When the user changes language in Profile, `ref.read(localeProvider.notifier).state = Locale(profile.language)` updates the locale, but screens that cached `AppLocalizations.of(context)!` in a local variable (outside `build`) will display stale strings until re-entered.
+**Problem:** `formatUsageSummary([String localeName = 'en'])` defaults to `'en'`. If any code path calls this without passing the user's locale, numbers render in invariant English format.
 
-**Rationale:** This is a known pattern but not audited. A sweep is needed to find all screens that cache `l10n` as a local variable instead of reading it inside `build`.
+**Rationale:** No current caller omits the locale (verified by grep), but the default creates a latent bug for future callers.
 
-**Acceptance criteria:**
-- Search for all occurrences of `AppLocalizations.of(context)` or `l10n` being stored in a field or local variable outside the `build` method in presentation layer files.
-- Refactor any such occurrences to read `l10n` inside `build` (or use `ref.watch(localeProvider)`).
-- Verify: after switching locale from `en` to `es` on the Profile screen, navigating to _any_ other screen shows the new locale immediately without requiring a screen re-entry.
+**Fix:** Remove the default value or assert that a locale is always passed.
 
 ---
 
-### m8. Score/ratio display with plain integer concatenation (PDF- and user-facing)
+### m7 — LLM prompt `defaultTemplates` defaults to `en`
 
-| # | File | Line | Pattern | Fix |
-|---|------|------|---------|-----|
-| 1 | `lib/features/sessions/services/session_export_service.dart` | 124 | `'${s.correctAnswers}/${s.questionsAnswered}'` (PDF) | Use `formatDecimal` for each component |
-| 2 | `lib/features/subjects/presentation/widgets/subject_history_tab.dart` | 120 | `'${session.correctAnswers}/${session.questionsAnswered}'` | Use `formatDecimal` for each component |
-| 3 | `lib/features/focus_mode/presentation/widgets/inline_practice_widget.dart` | 234 | `'${e.value.correct}/${e.value.total}'` | Use `formatDecimal` for each component |
-| 4 | `lib/features/practice/presentation/screens/exam_session_screen.dart` | 917 | `'${minutes}m ${seconds}s'` / `'${seconds}s'` | Use new ARB keys `durationMinutesSeconds(minutes, seconds)` / `durationSeconds(seconds)` |
+**File:** `lib/features/teaching/services/prompts/prompts.dart:23`
 
-**Acceptance criteria:**
-- Items 1–3 use `formatDecimal()` from `number_format_utils.dart` with the user's `localeName`.
-- Item 4 uses an ARB-backed localized duration format.
-- For CSV exports (item 1 is PDF per context), keep invariant format per conventions; item 2 and 3 are definitely user-facing.
+```dart
+static const ConversationPromptSet defaultTemplates = ConversationPromptSet(localeName: 'en');
+```
+
+**Rationale:** The `localeName` is overridden at construction time. The `defaultTemplates` constant is only a fallback when no locale is explicitly chosen. Verified that all production call sites pass the user's locale.
+
+**Acceptance:** Low risk — document that callers must always pass the resolved locale.
 
 ---
 
-## Summary of ARB keys to add
+## Summary Table
 
-| New key | Purpose | Priority |
-|---------|---------|----------|
-| `avgTimePerQuestion` | "Avg time/question" label | M3 |
-| `examResultsSrsImpact` | "Results will affect spaced repetition for {count} questions" | M3 |
-| `questionsAtAGlance` | "Questions at a glance" | M3 |
-| `noExamHistory` | "No exam history available" | M3 |
-| `examHistory` | "Exam History" | M3 |
-| `durationMinutesSeconds` | "{minutes}m {seconds}s" for exam results | m8 |
-| `mentorContextHeader` | "Current student context:" localized | M2 |
-| `mentorContextTotalAttempts` | "Total attempts: {count}" | M2 |
-| `mentorContextCorrectAttempts` | "Correct attempts: {count}" | M2 |
-| `mentorContextAccuracy` | "Accuracy: {percent}%" | M2 |
-| `mentorContextWeakTopics` | "Weak topics needing attention:" | M2 |
-| `mentorContextStreak` | "Congratulations! {count} day study streak!" | M2 |
-| ... | (~15 more context labels for full mentor context i18n) | M2 |
-| Tool descriptions | 6+ ARB keys for tool descriptions and result messages | m2 |
+| ID | Severity | File(s) | Issue |
+|---|---|---|---|
+| M1 | MAJOR | `topic_detail_screen.dart:163-184` | 6 hardcoded English labels |
+| M2 | MAJOR | `syllabus_progress_card.dart:68` | Hardcoded English loading text |
+| M3 | MAJOR | `lesson_plan_model.dart:72-80` | 7 default plan strings bypass ARB |
+| M4 | MAJOR | `mentor_service.dart:246,294` | `toStringAsFixed` in user-facing mentor context (locale-unaware numbers) |
+| M5 | MAJOR | `main.dart:492-494` | Hardcoded 24h time format in orphaned-session dialog |
+| m1 | MINOR | `app_en.arb`, `app_es.arb` | 12+ duplicate ARB keys with value/structural mismatches |
+| m2 | MINOR | `app_en.arb:7232` | Orphaned `@lessonPracticeWithTopic` annotation |
+| m3 | MINOR | `onboarding_dialog.dart:66` | Hardcoded Semantics page label |
+| m4 | MINOR | 5 core widget files | Fallback English strings in l10n null-coalesce |
+| m5 | MINOR | `study_timer_service.dart:189` | English notification strings (intentional) |
+| m6 | MINOR | `settings_model.dart` | `localeName` default `'en'` |
+| m7 | MINOR | `prompts.dart:23` | `defaultTemplates` locale default (safe — overridden at call sites) |
 
-## ARB keys to fix (existing)
+---
 
-| Key | File | Fix | Priority |
-|-----|------|-----|----------|
-| `prerequisitesCount` | `app_es.arb:6654` | Add ICU plural syntax | M1 |
-| `downstreamCount` | `app_es.arb:6661` | Add ICU plural syntax | M1 |
-| `tokensAndCost` | `app_es.arb:2160` | Review/sync translation | m6 |
-| `tokensLabel` | `app_es.arb` | Review/sync translation | m6 |
+## Acceptance Criteria
+
+For each MAJOR item (M1–M5), "fixed" means:
+
+- **M1:** ARB keys added for all 6 labels and used in `topic_detail_screen.dart`. Verify Spanish rendering: `"Confianza"`, `"Riesgo de Olvido"`, `"Urgencia de Repaso"`, `"Último Intento"`, `"Última Actualización"`, `"Tendencia de Precisión"`.
+- **M2:** `'Loading syllabus progress...'` replaced with `l10n.loadingSyllabusProgress`. Spanish value: `"Cargando progreso del plan de estudios..."`.
+- **M3:** `LessonPlan.defaultPlan()` no longer uses hardcoded English defaults. Either method takes `AppLocalizations l10n` parameter, or callers pass l10n-resolved strings.
+- **M4:** All `toStringAsFixed()` calls in `mentor_service.dart` replaced with `formatDecimal()` / `formatPercent()` from `number_format_utils.dart`. Spanish output: `"85,5"` instead of `"85.5"`.
+- **M5:** `main.dart:492-494` uses `DateFormat.jm(l10n.localeName)` instead of manual 24h formatting. Spanish output: `"2:30 p. m."` instead of `"14:30"`.
+
+For MINOR items (m1–m7):
+
+- **m1:** All duplicate ARB keys removed; `failedToLoadPlan` uses the `{error}` placeholder variant; `backupAndRestore` with different values gets distinct key names.
+- **m2:** `@lessonPracticeWithTopic` annotation moved immediately after its key.
+- **m3:** Semantics label uses l10n key.
+- **m4:** Fallback pattern documented or mitigated.
+- **m6:** Default value removed from `formatUsageSummary`.

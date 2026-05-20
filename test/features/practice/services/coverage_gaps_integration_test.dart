@@ -13,7 +13,7 @@ import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
-import 'package:studyking/features/practice/services/difficulty_controller.dart';
+import 'package:studyking/core/utils/difficulty_controller.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';

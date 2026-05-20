@@ -9,8 +9,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider;
 import 'package:studyking/core/routes/app_router.dart';
-import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/core/services/prerequisite_check_service.dart';
@@ -188,7 +187,14 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         _scrollToBottom();
       }
     } catch (e) {
-      _logger.w('Initial greeting failed', e);
+      _logger.w('Initial greeting failed: $e');
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        setState(() {
+          _initError = true;
+          _initErrorMessage = l10n.tutorInitFailed(e.toString());
+        });
+      }
     }
 
     if (mounted) setState(() => _isSending = false);
@@ -221,10 +227,18 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       }
     } catch (e) {
       final l10n = AppLocalizations.of(context)!;
+      final errorStr = e.toString();
       _logger.w('Stream failed', e);
-      _manager!.addAssistantMessage(
-        '${l10n.errorWithResponse}\n\n${l10n.tryAgain}',
-      );
+      final providerName = _manager!.providerName;
+      String userMessage;
+      if (errorStr.contains('timed out')) {
+        userMessage = l10n.providerTimedOut(providerName);
+      } else if (errorStr.contains('Connection refused') || errorStr.contains('SocketException')) {
+        userMessage = l10n.providerConnectionFailed(providerName);
+      } else {
+        userMessage = l10n.responseInterrupted;
+      }
+      _manager!.addAssistantMessage(userMessage);
       _retryMessage = text;
       setState(() {});
       _scrollToBottom();
@@ -233,6 +247,12 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     if (mounted) setState(() => _isSending = false);
     _scrollToBottom();
     _inputFocusNode.requestFocus();
+  }
+
+  void _cancelRetryMessage() {
+    setState(() {
+      _retryMessage = null;
+    });
   }
 
   Future<void> _pickImage() async {
@@ -281,9 +301,18 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final bytes = await pickedFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
-    await for (final _ in _manager!.processImage(base64Image)) {
-      setState(() {});
-      _scrollToBottom();
+    try {
+      await for (final _ in _manager!.processImage(base64Image)) {
+        setState(() {});
+        _scrollToBottom();
+      }
+    } catch (e) {
+      _logger.w('Image processing failed', e);
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        _manager!.addAssistantMessage(l10n.errorWithResponse);
+        setState(() {});
+      }
     }
 
     if (mounted) setState(() => _isSending = false);
@@ -339,9 +368,18 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
     final base64Drawing = base64Encode(drawingData);
 
-    await for (final _ in _manager!.processImage(base64Drawing)) {
-      setState(() {});
-      _scrollToBottom();
+    try {
+      await for (final _ in _manager!.processImage(base64Drawing)) {
+        setState(() {});
+        _scrollToBottom();
+      }
+    } catch (e) {
+      _logger.w('Drawing processing failed', e);
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        _manager!.addAssistantMessage(l10n.errorWithResponse);
+        setState(() {});
+      }
     }
 
     if (mounted) setState(() => _isSending = false);
@@ -406,6 +444,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
   Future<void> _handleBackNavigation() async {
     if (_manager == null) {
+      if (_initError) {
+        await _tutorService.cancelActiveSession();
+      }
+      if (!mounted) return;
       Navigator.of(context).pop();
       return;
     }
@@ -976,6 +1018,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
             onPressed: _retryLastMessage,
             icon: const Icon(Icons.refresh, size: 18),
             label: Text(l10n.retry),
+          ),
+          TextButton.icon(
+            onPressed: _cancelRetryMessage,
+            icon: const Icon(Icons.close, size: 18),
+            label: Text(l10n.cancel),
           ),
         ],
       ),

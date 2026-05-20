@@ -19,7 +19,7 @@ import 'package:studyking/features/subjects/providers/subjects_repository_provid
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/core/services/student_id_service.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
 

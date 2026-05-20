@@ -69,7 +69,7 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: List.generate(pages.length, (i) {
                   return Semantics(
-                    label: 'Page ${i + 1} of ${pages.length}',
+                    label: l10n.pageIndicatorAria(i + 1, pages.length),
                     selected: _currentPage == i,
                     child: reduceMotion
                         ? Container(

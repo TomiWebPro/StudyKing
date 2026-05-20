@@ -93,6 +93,18 @@ class SettingsBox {
   @HiveField(26)
   late bool boldText;
 
+  @HiveField(27)
+  late String backupLlmProviderName;
+
+  @HiveField(28)
+  late String backupApiKey;
+
+  @HiveField(29)
+  late String backupBaseUrl;
+
+  @HiveField(30)
+  late String backupModel;
+
   SettingsBox({
     this.apiKey = '',
     this.apiBaseUrl = ApiConfig.openRouterBaseUrlString,
@@ -121,6 +133,10 @@ class SettingsBox {
     this.llmProviderName = 'openRouter',
     this.lastConnectionTestMs = 0,
     this.lastLlmError = '',
+    this.backupLlmProviderName = '',
+    this.backupApiKey = '',
+    this.backupBaseUrl = '',
+    this.backupModel = '',
   });
 
   ThemeMode get themeModeEnum => ThemeMode.values.firstWhere(
@@ -161,6 +177,10 @@ class SettingsBox {
       'llmProviderName': llmProviderName,
       'lastConnectionTestMs': lastConnectionTestMs,
       'lastLlmError': lastLlmError,
+      'backupLlmProviderName': backupLlmProviderName,
+      'backupApiKey': backupApiKey,
+      'backupBaseUrl': backupBaseUrl,
+      'backupModel': backupModel,
     };
   }
 
@@ -225,6 +245,18 @@ class SettingsBox {
       lastLlmError: json['lastLlmError'] is String
           ? json['lastLlmError'] as String
           : '',
+      backupLlmProviderName: json['backupLlmProviderName'] is String
+          ? json['backupLlmProviderName'] as String
+          : '',
+      backupApiKey: json['backupApiKey'] is String
+          ? json['backupApiKey'] as String
+          : '',
+      backupBaseUrl: json['backupBaseUrl'] is String
+          ? json['backupBaseUrl'] as String
+          : '',
+      backupModel: json['backupModel'] is String
+          ? json['backupModel'] as String
+          : '',
     );
   }
 
@@ -256,6 +288,10 @@ class SettingsBox {
     String? llmProviderName,
     int? lastConnectionTestMs,
     String? lastLlmError,
+    String? backupLlmProviderName,
+    String? backupApiKey,
+    String? backupBaseUrl,
+    String? backupModel,
   }) {
     return SettingsBox(
       apiKey: apiKey ?? this.apiKey,
@@ -285,6 +321,10 @@ class SettingsBox {
       llmProviderName: llmProviderName ?? this.llmProviderName,
       lastConnectionTestMs: lastConnectionTestMs ?? this.lastConnectionTestMs,
       lastLlmError: lastLlmError ?? this.lastLlmError,
+      backupLlmProviderName: backupLlmProviderName ?? this.backupLlmProviderName,
+      backupApiKey: backupApiKey ?? this.backupApiKey,
+      backupBaseUrl: backupBaseUrl ?? this.backupBaseUrl,
+      backupModel: backupModel ?? this.backupModel,
     );
   }
 
