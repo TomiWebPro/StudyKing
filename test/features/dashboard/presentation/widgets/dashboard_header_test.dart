@@ -21,12 +21,11 @@ void main() {
       expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
 
-    testWidgets('renders study dashboard title text with semantics', (tester) async {
+    testWidgets('renders study dashboard title text', (tester) async {
       await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
       await tester.pumpAndSettle();
 
       expect(find.text('Study Dashboard'), findsOneWidget);
-      expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
 
     testWidgets('renders export icon button', (tester) async {
@@ -50,17 +49,24 @@ void main() {
       expect(find.byIcon(Icons.help_outline), findsOneWidget);
     });
 
-    testWidgets('export icon button has semantics label', (tester) async {
+    testWidgets('onExportTap callback is called when export button tapped', (tester) async {
+      bool tapped = false;
+      await tester.pumpWidget(_buildTestApp(
+        DashboardHeader(onExportTap: () => tapped = true),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.file_download_outlined));
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('renders all icon buttons as tappable', (tester) async {
       await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
       await tester.pumpAndSettle();
 
-      final exportButton = find.byIcon(Icons.file_download_outlined);
-      expect(exportButton, findsOneWidget);
-
-      expect(
-        tester.getSemantics(find.byIcon(Icons.file_download_outlined)),
-        matchesSemantics(label: 'Export Reports'),
-      );
+      expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.backup_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
     });
   });
 }

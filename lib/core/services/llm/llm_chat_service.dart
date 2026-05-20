@@ -11,7 +11,7 @@ export '../conversation_memory.dart' show ConversationMemory;
 import '../llm_task_manager.dart';
 import '../llm_usage_meter.dart' show LlmUsageMeter;
 
-enum LlmProvider { openRouter, ollama, openAI }
+enum LlmProvider { openRouter, ollama, openAI, custom }
 
 class LlmConfiguration {
   final LlmProvider provider;
@@ -319,6 +319,11 @@ class LlmService {
     if (config.apiKey.isEmpty) {
       return Result.failure('API key is empty');
     }
+    if (modelId.isEmpty) {
+      return Result.failure(
+        'No model selected. Please go to Settings and select an AI model.',
+      );
+    }
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
@@ -344,6 +349,8 @@ class LlmService {
             return await _callOllama(message, modelId, memory: memory, history: history, feature: feature);
           case LlmProvider.openAI:
             return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+          case LlmProvider.custom:
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
         }
       },
     );
@@ -360,6 +367,10 @@ class LlmService {
   }) async* {
     if (config.apiKey.isEmpty) {
       yield 'API key not configured. Please set up an API key in Settings to use AI features.';
+      return;
+    }
+    if (modelId.isEmpty) {
+      yield 'No model selected. Please go to Settings and select an AI model.';
       return;
     }
 
@@ -386,6 +397,8 @@ class LlmService {
           case LlmProvider.ollama:
             return _streamOllama(message, modelId, memory: memory, history: history, feature: feature);
           case LlmProvider.openAI:
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+          case LlmProvider.custom:
             return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
         }
       },

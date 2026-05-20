@@ -126,8 +126,7 @@ class ReviewAnswersScreen extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(
-          width: 100,
+        IntrinsicWidth(
           child: Text(
             label,
             style: theme.textTheme.bodySmall?.copyWith(
@@ -136,6 +135,7 @@ class ReviewAnswersScreen extends StatelessWidget {
             ),
           ),
         ),
+        const SizedBox(width: 12),
         Expanded(
           child: Text(
             value,

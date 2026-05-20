@@ -16,6 +16,7 @@ class LessonBookingSheet extends StatefulWidget {
   final PlannerService? plannerService;
   final DateTime? initialDate;
   final int? initialDuration;
+  final String? excludeSessionId;
 
   const LessonBookingSheet({
     super.key,
@@ -26,6 +27,7 @@ class LessonBookingSheet extends StatefulWidget {
     this.plannerService,
     this.initialDate,
     this.initialDuration,
+    this.excludeSessionId,
   });
 
   @override
@@ -61,9 +63,10 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
     try {
       final repo = StudentAvailabilityRepository();
       await repo.init();
-      final availability = await repo.getByStudent(
+      final availabilityResult = await repo.getByStudent(
         widget.plannerService?.studentId ?? '',
       );
+      final availability = availabilityResult.data;
       if (availability != null && mounted) {
         setState(() {
           _selectedTime = TimeOfDay(
@@ -91,7 +94,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
 
     return Padding(
       padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
+        bottom: MediaQuery.viewInsetsOf(context).bottom,
       ).add(ResponsiveUtils.screenPadding(context)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
@@ -260,6 +263,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       final conflictResult = await service.hasSchedulingConflict(
         startTime: time,
         durationMinutes: _durationMinutes,
+        excludeSessionId: widget.excludeSessionId,
       );
       if (mounted) {
         setState(() => _hasConflict = conflictResult.data ?? false);
@@ -299,6 +303,38 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
         setState(() => _isScheduling = false);
         return;
       }
+
+      if (widget.initialDate != null && widget.excludeSessionId != null) {
+        final l10n = AppLocalizations.of(context)!;
+        final fmt = DateFormat.yMd(l10n.localeName).add_jm();
+        final oldTime = fmt.format(widget.initialDate!);
+        final newTime = fmt.format(scheduledTime);
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.rescheduleLesson),
+            content: Text(
+              'Move ${widget.topicTitle} lesson from $oldTime to $newTime?\n\n'
+              'This will update your schedule.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.cancel),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Confirm'),
+              ),
+            ],
+          ),
+        );
+        if (confirmed != true) {
+          setState(() => _isScheduling = false);
+          return;
+        }
+      }
+
       await widget.onSchedule(scheduledTime, _durationMinutes);
       if (mounted) {
         Navigator.pop(context);

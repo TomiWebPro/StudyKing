@@ -6,12 +6,14 @@ import '../../../../../l10n/generated/app_localizations.dart';
 
 class PlanSummaryCard extends StatelessWidget {
   final PlanSummary summary;
+  final List<SyllabusGoal>? syllabusGoals;
 
-  const PlanSummaryCard({super.key, required this.summary});
+  const PlanSummaryCard({super.key, required this.summary, this.syllabusGoals});
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final hasMultipleSubjects = syllabusGoals != null && syllabusGoals!.length > 1;
 
     Widget buildSummaryChip(String value, String label) {
       return MergeSemantics(
@@ -45,8 +47,22 @@ class PlanSummaryCard extends StatelessWidget {
                 Icon(Icons.summarize,
                     color: Theme.of(context).colorScheme.primary),
                 const SizedBox(width: 8),
-                Text(l10n.planSummary,
-                    style: Theme.of(context).textTheme.titleMedium),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(l10n.planSummary,
+                          style: Theme.of(context).textTheme.titleMedium),
+                      if (hasMultipleSubjects)
+                        Text(
+                          '${syllabusGoals!.length} subjects',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ],
             ),
             const Divider(),

@@ -2591,15 +2591,6 @@
   "@noAtRiskTopics": {
     "description": "Empty state message when no at-risk topics"
   },
-  "accuracyLabel": "Accuracy: {percent}",
-  "@accuracyLabel": {
-    "description": "Accuracy percentage label",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
   "readyToAdvance": "Ready to Advance",
   "@readyToAdvance": {
     "description": "Section title for ready-to-advance topics"
@@ -2619,24 +2610,6 @@
   "weakLabel": "Weak",
   "@weakLabel": {
     "description": "Label for weak topic count"
-  },
-  "avgAccuracyLabel": "Avg Accuracy: {percent}",
-  "@avgAccuracyLabel": {
-    "description": "Average accuracy percentage",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "avgReadinessLabel": "Avg Readiness: {percent}",
-  "@avgReadinessLabel": {
-    "description": "Average readiness percentage",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
   },
   "courseSessionLabel": "{course} - Session {number}",
   "@courseSessionLabel": {
@@ -4685,6 +4658,10 @@
   "@failedToAdjustPlan": {
     "description": "Error message when pace adjustment fails"
   },
+  "failedToAddSubjectToPlan": "Failed to add subject to study plan",
+  "@failedToAddSubjectToPlan": {
+    "description": "Error message when adding a subject to the plan fails"
+  },
   "progressOverview": "Progress Overview",
   "@progressOverview": {
     "description": "Title for the progress overview section"
@@ -5820,6 +5797,22 @@
   "@signOutPreservesStudyData": {
     "description": "Reassurance that study data is not deleted on sign out"
   },
+  "signOutClearAllData": "Clear all study data",
+  "@signOutClearAllData": {
+    "description": "Checkbox label to clear all study data on sign out"
+  },
+  "signOutRemovesAllData": "Removes all subjects, questions, attempts, and progress",
+  "@signOutRemovesAllData": {
+    "description": "Subtitle explaining what clearing data removes"
+  },
+  "signOutBackupBeforeSignOut": "Back up before signing out",
+  "@signOutBackupBeforeSignOut": {
+    "description": "Checkbox label to back up before clearing data"
+  },
+  "signOutCreatesBackupFile": "Creates a backup file before clearing data",
+  "@signOutCreatesBackupFile": {
+    "description": "Subtitle explaining what backing up does"
+  },
   "importRestartHint": "A restart may be needed for all changes to appear.",
   "@importRestartHint": {
     "description": "Hint shown after successful data import"
@@ -6150,6 +6143,34 @@
       "studentAnswer": { "type": "String" }
     }
   },
+  "evalScoreDesc": "<0.0 to 1.0>",
+  "@evalScoreDesc": {
+    "description": "JSON template description for score field in evaluation prompt"
+  },
+  "evalExplanationDesc": "<detailed feedback explaining what was correct/incorrect>",
+  "@evalExplanationDesc": {
+    "description": "JSON template description for explanation field in evaluation prompt"
+  },
+  "evalPartialCreditDesc": "<optional 0.0-1.0 for partially correct parts>",
+  "@evalPartialCreditDesc": {
+    "description": "JSON template description for partial credit field in evaluation prompt"
+  },
+  "evalConceptBreakdownDesc": "<optional map of concept name to mastery score 0.0-1.0>",
+  "@evalConceptBreakdownDesc": {
+    "description": "JSON template description for concept breakdown field in evaluation prompt"
+  },
+  "evalCorrectAnswerDesc": "<the correct answer to the exercise question>",
+  "@evalCorrectAnswerDesc": {
+    "description": "JSON template description for correct answer field in evaluation prompt"
+  },
+  "evalTypeDesc": "<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>",
+  "@evalTypeDesc": {
+    "description": "JSON template description for type field in evaluation prompt"
+  },
+  "evalOptionsDesc": "<for singleChoice/multiChoice, list of answer options; otherwise empty>",
+  "@evalOptionsDesc": {
+    "description": "JSON template description for options field in evaluation prompt"
+  },
   "minutesSemantics": "{count} {count, plural, =1{minute} other{minutes}}",
   "@minutesSemantics": {
     "description": "Semantics label for minutes in focus timer",
@@ -6230,6 +6251,15 @@
   "errorLoadingSource": "An error occurred while loading the source. Please try again.",
   "@errorLoadingSource": {
     "description": "Error message when loading source fails"
+  },
+  "errorLoadingSourceWithDetail": "An error occurred while loading the source: {error}",
+  "@errorLoadingSourceWithDetail": {
+    "description": "Error message when loading source fails, with error detail",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "reprocessSource": "Reprocess Source",
   "@reprocessSource": {
@@ -7183,6 +7213,10 @@
     "@recordingComplete": {
       "description": "Button label when recording is complete"
     },
+    "recordingInProgress": "Recording in progress",
+    "@recordingInProgress": {
+      "description": "Label shown while audio recording is active"
+    },
     "startRecording": "Start recording",
     "@startRecording": {
       "description": "Button label for idle recording state"
@@ -7651,5 +7685,22 @@
     "pleaseWait": "Please wait…",
     "@pleaseWait": {
       "description": "Transient indicator shown when a message was rate-limited"
+    },
+    "difficultyRandomDistribution": "Questions will be randomly distributed by difficulty",
+    "@difficultyRandomDistribution": {
+      "description": "Hint shown when no difficulty counts are specified for exam"
+    },
+    "questionsRemainingCount": "Remaining: {count}",
+    "@questionsRemainingCount": {
+      "description": "Count of questions still needing difficulty assignment",
+      "placeholders": {
+        "count": {
+          "type": "String"
+        }
+      }
+    },
+    "profileDeleted": "Profile deleted successfully",
+    "@profileDeleted": {
+      "description": "Snackbar message after profile deletion"
     }
   }

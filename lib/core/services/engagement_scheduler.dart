@@ -168,7 +168,8 @@ class EngagementScheduler {
     final frequencyDays = _getMentorCheckinFrequency();
     if (frequencyDays == 0) return;
     try {
-      final nudges = await mentorService.checkWellbeingAndGenerateNudges();
+      final result = await mentorService.checkWellbeingAndGenerateNudges();
+      final nudges = result.data ?? [];
       if (nudges.isNotEmpty) {
         await _notificationService.showMentorMessage(
           id: _notificationIdCounter++,

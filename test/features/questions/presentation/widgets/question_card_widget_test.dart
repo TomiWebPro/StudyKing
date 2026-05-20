@@ -634,26 +634,12 @@ void main() {
         expect(find.byIcon(Icons.mic), findsOneWidget);
       });
 
-      testWidgets('audioRecording tap updates answer', (tester) async {
-        String? changedAnswer;
-        final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
-        await tester.pumpWidget(buildWidget(
-          question: question,
-          onAnswerChanged: (value) => changedAnswer = value,
-        ));
-
-        await tester.tap(find.textContaining('Start recording'));
-        await tester.pump();
-
-        expect(changedAnswer, 'audio_recorded');
-      });
-
       testWidgets('audioRecording button disabled when submitted', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.audioRecording);
         await tester.pumpWidget(buildWidget(
           question: question,
           isSubmitted: true,
-          currentAnswer: 'audio_recorded',
+          currentAnswer: 'audio_recording_path.m4a',
         ));
 
         final button = tester.widget<OutlinedButton>(
@@ -676,25 +662,11 @@ void main() {
         final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
         await tester.pumpWidget(buildWidget(
           question: question,
-          currentAnswer: 'file_uploaded',
+          currentAnswer: 'report.pdf||/tmp/report.pdf',
         ));
 
         expect(find.textContaining('File attached'), findsOneWidget);
         expect(find.byIcon(Icons.check_circle), findsOneWidget);
-      });
-
-      testWidgets('fileUpload tap updates answer', (tester) async {
-        String? changedAnswer;
-        final question = _defaultQuestion().copyWith(type: QuestionType.fileUpload);
-        await tester.pumpWidget(buildWidget(
-          question: question,
-          onAnswerChanged: (value) => changedAnswer = value,
-        ));
-
-        await tester.tap(find.textContaining('Upload file'));
-        await tester.pump();
-
-        expect(changedAnswer, 'file_uploaded');
       });
 
       testWidgets('fileUpload button disabled when submitted', (tester) async {
@@ -702,7 +674,7 @@ void main() {
         await tester.pumpWidget(buildWidget(
           question: question,
           isSubmitted: true,
-          currentAnswer: 'file_uploaded',
+          currentAnswer: 'report.pdf||/tmp/report.pdf',
         ));
 
         final button = tester.widget<OutlinedButton>(

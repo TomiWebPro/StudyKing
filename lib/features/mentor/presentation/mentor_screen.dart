@@ -414,7 +414,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _scrollToBottom();
       }
 
-      final nudges = await _mentorService.checkWellbeingAndGenerateNudges();
+      final nudgeResult = await _mentorService.checkWellbeingAndGenerateNudges();
+      final nudges = nudgeResult.data ?? [];
       if (nudges.isNotEmpty && mounted) {
         setState(() {
           for (final nudge in nudges) {
@@ -1101,13 +1102,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       }
 
       if (!mounted) return;
-      if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop();
-      }
 
-      await Future.delayed(const Duration(milliseconds: 50));
-
-      if (!mounted) return;
       try {
         showDialog(
           context: context,

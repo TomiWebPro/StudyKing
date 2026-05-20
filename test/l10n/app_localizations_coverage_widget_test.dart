@@ -64,9 +64,7 @@ void main() {
                     Text(l10n.totalTopicsLabel),
                     Text(l10n.masteredLabel),
                     Text(l10n.weakLabel),
-                    Text(l10n.accuracyLabel('80%')),
-                    Text(l10n.avgAccuracyLabel('75%')),
-                    Text(l10n.avgReadinessLabel('85%')),
+                    Text(l10n.signOutClearAllData),
                   ],
                 ),
               );
@@ -79,9 +77,7 @@ void main() {
       expect(find.text('Total Topics'), findsOneWidget);
       expect(find.text('Mastered'), findsOneWidget);
       expect(find.text('Weak'), findsOneWidget);
-      expect(find.text('Accuracy: 80%'), findsOneWidget);
-      expect(find.text('Avg Accuracy: 75%'), findsOneWidget);
-      expect(find.text('Avg Readiness: 85%'), findsOneWidget);
+      expect(find.text('Clear all study data'), findsOneWidget);
     });
 
     testWidgets('block types and study plan labels in widget tree', (tester) async {

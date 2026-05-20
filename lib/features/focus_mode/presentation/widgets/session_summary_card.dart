@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -82,7 +83,7 @@ class SessionSummaryCard extends StatelessWidget {
                       constraints: BoxConstraints(minWidth: narrow ? (constraints.maxWidth - 12) / 2 : 140),
                       child: MetricCard(
                         icon: Icons.check_circle,
-                        value: '$completed/$total',
+                        value: '${formatDecimal(completed.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}/${formatDecimal(total.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}',
                         label: l10n.sessionsLabel,
                         accent: cs.primary,
                       ),

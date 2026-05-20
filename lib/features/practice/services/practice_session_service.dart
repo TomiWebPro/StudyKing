@@ -49,6 +49,7 @@ class PracticeSessionService {
 
   /// Deprecated: [MasteryRecorder.recordAttempt] is the single source of truth
   /// for SM-2 scheduling. This binary (0.8/0.2) path discards confidence data.
+  @Deprecated('Use MasteryRecorder.recordAttempt instead')
   Future<Result<void>> updateNextReview(String questionId, bool isCorrect) async {
     try {
       final masteryLevel = isCorrect ? 0.8 : 0.2;

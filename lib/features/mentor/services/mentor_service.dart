@@ -363,12 +363,14 @@ class MentorService {
     return PlanProposal(days: days, goal: goal);
   }
 
-  Future<List<String>> checkWellbeingAndGenerateNudges() async {
-    final messages = await _wellbeingService.checkWellbeingAndGenerateNudges();
-    for (final msg in messages) {
-      _memory.addAssistantMessage(msg);
+  Future<Result<List<String>>> checkWellbeingAndGenerateNudges() async {
+    final result = await _wellbeingService.checkWellbeingAndGenerateNudges();
+    if (result.isSuccess && result.data != null) {
+      for (final msg in result.data!) {
+        _memory.addAssistantMessage(msg);
+      }
     }
-    return messages;
+    return result;
   }
 
   Future<String> confirmSchedule(ScheduleProposal proposal) async {

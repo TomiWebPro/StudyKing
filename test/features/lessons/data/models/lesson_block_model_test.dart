@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
@@ -57,6 +58,30 @@ void main() {
         );
         expect(block.content, content);
       });
+
+      test('creates with non-default answerKey', () {
+        final block = LessonBlock(
+          id: 'b1',
+          subjectId: 's1',
+          lessonId: 'l1',
+          type: LessonBlockType.quiz,
+          content: 'Question?',
+          order: 1,
+          answerKey: 'The answer is 42',
+        );
+        expect(block.answerKey, 'The answer is 42');
+      });
+
+      test('creates with empty answerKey default', () {
+        final block = LessonBlock(
+          id: 'b1',
+          subjectId: 's1',
+          lessonId: 'l1',
+          type: LessonBlockType.text,
+          content: 'Content',
+        );
+        expect(block.answerKey, '');
+      });
     });
 
     group('toJson', () {
@@ -95,6 +120,25 @@ void main() {
         );
         final json = block.toJson();
         expect(json['content'], '');
+      });
+
+      test('serializes answerKey', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+          answerKey: 'Answer key',
+        );
+        final json = block.toJson();
+        expect(json['answerKey'], 'Answer key');
+      });
+
+      test('serializes empty answerKey default', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: 'C',
+        );
+        final json = block.toJson();
+        expect(json['answerKey'], '');
       });
     });
 
@@ -156,6 +200,16 @@ void main() {
         final block = LessonBlock.fromJson(json);
         expect(block.content, content);
       });
+
+      test('deserializes with answerKey', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 4, 'content': 'Question?',
+          'order': 2, 'answerKey': 'Correct answer',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, 'Correct answer');
+      });
     });
 
     group('serialization roundtrip', () {
@@ -187,6 +241,16 @@ void main() {
           final restored = LessonBlock.fromJson(original.toJson());
           expect(restored.type, type);
         }
+      });
+
+      test('roundtrip preserves answerKey', () {
+        final original = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+          order: 2, answerKey: 'secret answer',
+        );
+        final restored = LessonBlock.fromJson(original.toJson());
+        expect(restored.answerKey, 'secret answer');
       });
     });
 
@@ -260,11 +324,11 @@ void main() {
         final block = LessonBlock(
           id: 'b1', subjectId: 's1', lessonId: 'l1',
           type: LessonBlockType.summary, content: 'original',
-          order: 7,
+          order: 7, answerKey: 'orig key',
         );
         final copy = block.copyWith(
           id: null, subjectId: null, lessonId: null,
-          type: null, content: null, order: null,
+          type: null, content: null, order: null, answerKey: null,
         );
         expect(copy.id, 'b1');
         expect(copy.subjectId, 's1');
@@ -272,6 +336,17 @@ void main() {
         expect(copy.type, LessonBlockType.summary);
         expect(copy.content, 'original');
         expect(copy.order, 7);
+        expect(copy.answerKey, 'orig key');
+      });
+
+      test('updates answerKey', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+        );
+        final copy = block.copyWith(answerKey: 'new key');
+        expect(copy.answerKey, 'new key');
+        expect(copy.id, block.id);
       });
     });
 
@@ -299,6 +374,31 @@ void main() {
         };
         final block = LessonBlock.fromJson(json);
         expect(block.order, 0);
+      });
+
+      test('handles null answerKey falling back to empty string', () {
+        final json = {
+          'id': 'block-1',
+          'subjectId': 's1',
+          'lessonId': 'l1',
+          'type': 0,
+          'content': 'Content',
+          'answerKey': null,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, '');
+      });
+
+      test('handles missing answerKey key', () {
+        final json = {
+          'id': 'block-1',
+          'subjectId': 's1',
+          'lessonId': 'l1',
+          'type': 0,
+          'content': 'Content',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, '');
       });
     });
 
@@ -367,6 +467,174 @@ void main() {
       test('includes class name', () {
         final obj = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C', order: 1);
         expect(obj.toString(), contains('LessonBlock'));
+      });
+    });
+
+    group('copyWith edge cases', () {
+      test('changes answerKey from empty string to non-empty', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+        );
+        final copy = block.copyWith(answerKey: 'new key');
+        expect(copy.answerKey, 'new key');
+        expect(block.answerKey, '');
+      });
+
+      test('changes answerKey from non-empty to empty string', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+          answerKey: 'old key',
+        );
+        final copy = block.copyWith(answerKey: '');
+        expect(copy.answerKey, '');
+      });
+
+      test('preserves answerKey when passing null', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.quiz, content: 'Q',
+          answerKey: 'existing key',
+        );
+        final copy = block.copyWith(answerKey: null);
+        expect(copy.answerKey, 'existing key');
+      });
+
+      test('chains multiple copyWith calls', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: 'Start',
+          order: 0,
+        );
+        final step1 = block.copyWith(content: 'Step 1', order: 1);
+        final step2 = step1.copyWith(content: 'Step 2', type: LessonBlockType.quiz);
+        expect(step2.content, 'Step 2');
+        expect(step2.order, 1);
+        expect(step2.type, LessonBlockType.quiz);
+        expect(step2.id, 'b1');
+        expect(step2.subjectId, 's1');
+        expect(step2.lessonId, 'l1');
+      });
+    });
+
+    group('LessonBlock numeric edge cases', () {
+      test('creates with negative order', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: 'C',
+          order: -5,
+        );
+        expect(block.order, -5);
+        final json = block.toJson();
+        expect(json['order'], -5);
+        final restored = LessonBlock.fromJson(json);
+        expect(restored.order, -5);
+      });
+
+      test('creates with very large order', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: 'C',
+          order: 2147483647,
+        );
+        expect(block.order, 2147483647);
+        final restored = LessonBlock.fromJson(block.toJson());
+        expect(restored.order, 2147483647);
+      });
+    });
+
+    group('LessonBlock very long content', () {
+      test('handles very long content string', () {
+        final longContent = 'A' * 10000;
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: longContent,
+        );
+        expect(block.content.length, 10000);
+        final json = block.toJson();
+        expect(json['content'], longContent);
+        final restored = LessonBlock.fromJson(json);
+        expect(restored.content, longContent);
+      });
+
+      test('handles content with only whitespace', () {
+        final block = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.text, content: '   ',
+        );
+        expect(block.content, '   ');
+        final restored = LessonBlock.fromJson(block.toJson());
+        expect(restored.content, '   ');
+      });
+    });
+
+    group('LessonBlock fromJson with varied answerKey', () {
+      test('deserializes answerKey as empty string when key is empty string', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 4, 'content': 'Q', 'answerKey': '',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, '');
+      });
+
+      test('deserializes answerKey as empty string when key is absent and type is quiz', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 4, 'content': 'Q',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, '');
+      });
+
+      test('deserializes answerKey with special characters', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 4, 'content': 'Q',
+          'answerKey': 'Answer: 42\nExplanation: Life\tuniverse',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.answerKey, 'Answer: 42\nExplanation: Life\tuniverse');
+      });
+    });
+
+    group('LessonBlock identity and mutability', () {
+      test('two blocks with same data are not identical', () {
+        final a = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        final b = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        expect(identical(a, b), isFalse);
+      });
+
+      test('copyWith returns different instance', () {
+        final a = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        final b = a.copyWith();
+        expect(identical(a, b), isFalse);
+      });
+    });
+
+    group('LessonBlock JSON with unexpected types', () {
+      test('fromJson handles content as non-string by crashing gracefully', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 123,
+        };
+        expect(() => LessonBlock.fromJson(json), throwsA(isA<TypeError>()));
+      });
+
+      test('fromJson throws when type index is out of range', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 999, 'content': 'C',
+        };
+        expect(() => LessonBlock.fromJson(json), throwsA(isA<RangeError>()));
+      });
+    });
+
+    group('LessonBlock Hive extension', () {
+      test('is a HiveObject', () {
+        final block = LessonBlock(id: 'b1', subjectId: 's1', lessonId: 'l1', type: LessonBlockType.text, content: 'C');
+        expect(block, isA<HiveObject>());
       });
     });
   });

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
@@ -13,6 +15,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -23,6 +26,7 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
@@ -31,6 +35,9 @@ import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart'
     show subjectRepositoryProvider;
+import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   final List<MasteryState>? _allMastery;
@@ -187,6 +194,8 @@ ProviderContainer _createContainer({
   SessionRepository? sessionRepo,
   SpacedRepetitionService? srService,
   SubjectRepository? subjectRepo,
+  QuestionRepository? questionRepo,
+  PlannerService? plannerServiceParam,
 }) {
   return ProviderContainer(
     overrides: [
@@ -211,6 +220,10 @@ ProviderContainer _createContainer({
         spacedRepetitionServiceProvider.overrideWithValue(srService),
       if (subjectRepo != null)
         subjectRepositoryProvider.overrideWithValue(subjectRepo),
+      if (questionRepo != null)
+        questionRepositoryProvider.overrideWithValue(questionRepo),
+      if (plannerServiceParam != null)
+        plannerServiceProvider.overrideWithValue(plannerServiceParam),
     ],
   );
 }
@@ -255,6 +268,44 @@ class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
       nextReview: DateTime.now(),
       updatedData: currentData ?? const QuestionSRData(),
     );
+  }
+}
+
+class _FakeQuestionRepository extends QuestionRepository {
+  final List<Question> _questions;
+
+  _FakeQuestionRepository({List<Question> questions = const []}) : _questions = questions;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Question>>> getAll() async => Result.success(_questions);
+}
+
+class _FakePlannerService extends PlannerService {
+  final PersonalLearningPlan? _plan;
+  final List<Session> _scheduledLessons;
+  final bool _loadExistingPlanThrows;
+
+  _FakePlannerService({
+    PersonalLearningPlan? plan,
+    List<Session> scheduledLessons = const [],
+    bool loadExistingPlanThrows = false,
+  })  : _plan = plan,
+        _scheduledLessons = scheduledLessons,
+        _loadExistingPlanThrows = loadExistingPlanThrows,
+        super();
+
+  @override
+  Future<Result<PersonalLearningPlan?>> loadExistingPlan() async {
+    if (_loadExistingPlanThrows) throw Exception('loadExistingPlan error');
+    return Result.success(_plan);
+  }
+
+  @override
+  Future<Result<List<Session>>> getScheduledLessons() async {
+    return Result.success(_scheduledLessons);
   }
 }
 
@@ -900,6 +951,140 @@ void main() {
       expect(result!.totalDue, 0);
       expect(result.subjectBreakdown.length, 1);
       expect(result.subjectBreakdown[0].dueCount, 0);
+    });
+  });
+
+  group('dashboardWorkloadProvider', () {
+    test('returns null when question repo has no questions', () async {
+      final now = DateTime.now();
+      final masteryService = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now),
+        ],
+      );
+      final topicRepo = _FakeTopicRepo(topics: [
+        Topic(id: 't1', subjectId: 'subj1', title: 'Topic 1', description: '', syllabusText: ''),
+      ]);
+      final questionRepo = _FakeQuestionRepository(questions: []);
+      final container = _createContainer(
+        masteryService: masteryService,
+        topicRepo: topicRepo,
+        questionRepo: questionRepo,
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardWorkloadProvider('s1').future);
+      expect(result, isA<SubjectWorkload>());
+      expect(result!.totalQuestions, 0);
+    });
+
+    test('returns workload with question counts', () async {
+      final now = DateTime.now();
+      final masteryService = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(studentId: 's1', topicId: 't1', lastAttempt: now, lastUpdated: now),
+        ],
+      );
+      final topicRepo = _FakeTopicRepo(topics: [
+        Topic(id: 't1', subjectId: 'subj1', title: 'Topic 1', description: '', syllabusText: ''),
+      ]);
+      final questionRepo = _FakeQuestionRepository(questions: [
+        Question(
+          id: 'q1', text: 'Q1', type: QuestionType.singleChoice,
+          subjectId: 'subj1', topicId: 't1',
+          createdAt: now, updatedAt: now,
+        ),
+        Question(
+          id: 'q2', text: 'Q2', type: QuestionType.singleChoice,
+          subjectId: 'subj1', topicId: 't1',
+          createdAt: now, updatedAt: now,
+        ),
+      ]);
+      final container = _createContainer(
+        masteryService: masteryService,
+        topicRepo: topicRepo,
+        questionRepo: questionRepo,
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardWorkloadProvider('s1').future);
+      expect(result, isA<SubjectWorkload>());
+      expect(result!.totalQuestions, 2);
+      expect(result.topicWorkloads.length, 1);
+    });
+
+    test('returns null on error', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardWorkloadProvider('s1').future);
+      expect(result, isNull);
+    });
+  });
+
+  group('dashboardSourceCountProvider', () {
+    test('returns 0 when Hive is not initialized (error path)', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardSourceCountProvider('s1').future);
+      expect(result, 0);
+    });
+  });
+
+  group('dashboardSyllabusProgressProvider', () {
+    test('returns empty list when plan is null', () async {
+      final plannerService = _FakePlannerService(plan: null);
+      final container = _createContainer(plannerServiceParam: plannerService);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardSyllabusProgressProvider('s1').future);
+      expect(result, isEmpty);
+    });
+
+    test('returns syllabus goals from plan', () async {
+      final plan = PersonalLearningPlan(
+        studentId: 's1',
+        generatedAt: DateTime.now(),
+        dailyPlans: [],
+        summary: PlanSummary(totalQuestions: 0, totalMinutes: 0, newTopics: 0, reviewTopics: 0, estimatedCoverage: 0, focusAreas: []),
+        recommendations: [],
+        metadata: {
+          'syllabus_goals': [
+            {'subjectId': 'subj1', 'subjectTitle': 'Math'},
+            {'subjectId': 'subj2', 'subjectTitle': 'Science'},
+          ],
+        },
+      );
+      final plannerService = _FakePlannerService(plan: plan);
+      final container = _createContainer(plannerServiceParam: plannerService);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardSyllabusProgressProvider('s1').future);
+      expect(result.length, 2);
+      expect(result[0].subjectId, 'subj1');
+      expect(result[0].subjectTitle, 'Math');
+      expect(result[1].subjectId, 'subj2');
+    });
+
+    test('returns empty list when planner service throws', () async {
+      final plannerService = _FakePlannerService(loadExistingPlanThrows: true);
+      final container = _createContainer(plannerServiceParam: plannerService);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardSyllabusProgressProvider('s1').future);
+      expect(result, isEmpty);
+    });
+  });
+
+  group('dashboardChecklistProgressProvider', () {
+    test('returns default ChecklistProgress when Hive is not initialized', () async {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardChecklistProgressProvider('s1').future);
+      expect(result, isA<ChecklistProgress>());
+      expect(result.isEmpty, isTrue);
     });
   });
 }

@@ -68,7 +68,9 @@ class _FakePlanRepository extends PlanRepository {
   PersonalLearningPlan? storedPlan;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {

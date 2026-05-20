@@ -88,5 +88,53 @@ void main() {
       expect(find.byIcon(Icons.trending_up), findsOneWidget);
       expect(find.byIcon(Icons.book), findsOneWidget);
     });
+
+    testWidgets('displays total attempts metric icon', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SummaryRow(overallStats: OverallStats(
+          accuracy: 75,
+          totalStudyTimeHours: 10,
+          weeklyActivity: 5,
+          topicsStudied: 3,
+          totalAttempts: 1500,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.byIcon(Icons.timer), findsOneWidget);
+      expect(find.byIcon(Icons.trending_up), findsOneWidget);
+      expect(find.byIcon(Icons.book), findsOneWidget);
+    });
+
+    testWidgets('handles large stats values', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SummaryRow(overallStats: OverallStats(
+          accuracy: 100,
+          totalStudyTimeHours: 999,
+          weeklyActivity: 9999,
+          topicsStudied: 500,
+          totalAttempts: 99999,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.quiz), findsOneWidget);
+    });
+
+    testWidgets('displays metric card for total questions', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        SummaryRow(overallStats: OverallStats(
+          accuracy: 50,
+          totalStudyTimeHours: 5,
+          weeklyActivity: 3,
+          topicsStudied: 2,
+          totalAttempts: 42,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.quiz), findsOneWidget);
+    });
   });
 }

@@ -559,8 +559,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               final clearResult = await ref.read(settingsRepositoryProvider).clearProfile();
               if (clearResult.isFailure) return;
               if (!context.mounted) return;
-              Navigator.pop(context);
-              Navigator.maybePop(context);
+              Navigator.of(context).pop();
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.profileDeleted)),
+              );
+              if (!context.mounted) return;
+              if (Navigator.of(context).canPop()) {
+                Navigator.of(context).pop();
+              } else {
+                Navigator.of(context).pushNamedAndRemoveUntil(
+                  '/dashboard',
+                  (route) => false,
+                );
+              }
             },
             style: FilledButton.styleFrom(foregroundColor: Theme.of(context).colorScheme.error),
             child: Text(l10n.delete),

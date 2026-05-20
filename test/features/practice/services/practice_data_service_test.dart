@@ -353,6 +353,7 @@ void main() {
     final result = await service.loadWeakAreaQuestions(masteryService);
     expect(result, isEmpty);
   });
+});
 }
 
 class _FakeFailingQuestionRepository extends QuestionRepository {
@@ -360,7 +361,7 @@ class _FakeFailingQuestionRepository extends QuestionRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<List<Question>>> getAll() async => throw Exception('Failed to load');
+  Future<Result<List<Question>>> getAll() async => Result.failure('Failed to load');
 }
 
 class _FakeMasteryGraphService extends MasteryGraphService {

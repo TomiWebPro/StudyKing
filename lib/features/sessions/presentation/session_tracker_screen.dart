@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -13,6 +12,7 @@ import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/utils/id_generator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/study_utils.dart';
@@ -195,7 +195,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     final correctAnswers = stats?.correctAnswers ?? 0;
     final studentId = widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId();
 
-    final id = '${endTime.millisecondsSinceEpoch}_${Random().nextInt(99999)}';
+    final id = IdGenerator.generate('session');
 
     try {
       final session = Session(

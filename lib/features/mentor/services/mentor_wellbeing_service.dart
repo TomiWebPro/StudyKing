@@ -29,9 +29,8 @@ class MentorWellbeingService {
         _localeName = localeName,
         _studentId = studentId;
 
-  Future<List<String>> checkWellbeingAndGenerateNudges() async {
-    final result = await Result.capture(() => _checkWellbeingInner(), context: 'checkWellbeingAndGenerateNudges');
-    return result.data ?? [];
+  Future<Result<List<String>>> checkWellbeingAndGenerateNudges() async {
+    return Result.capture(() => _checkWellbeingInner(), context: 'checkWellbeingAndGenerateNudges');
   }
 
   Future<List<String>> _checkWellbeingInner() async {

@@ -208,6 +208,7 @@ class QuestionMasteryState extends HiveObject {
 
   /// Deprecated: SM-2 nextReview from [MasteryRecorder] is the single source of truth.
   /// This fallback is only used when caller does not provide [sm2NextReview].
+  @Deprecated('Use MasteryRecorder SM-2 nextReview instead')
   static DateTime? _calculateNextReview({
     required double masteryLevel,
     required DateTime now,

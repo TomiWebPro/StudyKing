@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/practice/presentation/widgets/source_practice_sheet.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -44,7 +45,7 @@ void main() {
       expect(find.text('Questions: 30'), findsOneWidget);
     });
 
-    testWidgets('shows zero-question message for sources without questions', (tester) async {
+    testWidgets('shows zero-question count for sources without questions', (tester) async {
       final zeroSources = [
         const SourceItemData(id: 's1', title: 'Textbook Ch.1', questionCount: 0),
       ];
@@ -52,7 +53,8 @@ void main() {
         SourcePracticeSheet(sources: zeroSources, onSourceSelected: (_, __) {}),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('0 questions — generate questions from this source'), findsOneWidget);
+      expect(find.text('Textbook Ch.1'), findsOneWidget);
+      expect(find.byType(ListTile), findsOneWidget);
     });
 
     testWidgets('shows source icon for each source item', (tester) async {
@@ -63,12 +65,12 @@ void main() {
       expect(find.byIcon(Icons.source), findsWidgets);
     });
 
-    testWidgets('shows chevron icon for each source item', (tester) async {
+    testWidgets('shows popup menu button for each source item', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         SourcePracticeSheet(sources: sources, onSourceSelected: (_, __) {}),
       ));
       await tester.pumpAndSettle();
-      expect(find.byIcon(Icons.chevron_right), findsWidgets);
+      expect(find.byIcon(Icons.more_vert), findsWidgets);
     });
 
     testWidgets('calls onSourceSelected when source is tapped', (tester) async {
@@ -127,6 +129,67 @@ void main() {
       expect(find.text('Questions: 15'), findsOneWidget);
 
       await tester.tap(find.text('Textbook Ch.1'));
+      await tester.pumpAndSettle();
+
+      expect(capturedId, equals('s1'));
+      expect(capturedTitle, equals('Textbook Ch.1'));
+    });
+
+    testWidgets('shows completed status label', (tester) async {
+      final sources = [
+        const SourceItemData(id: 's1', title: 'Textbook', questionCount: 10, status: ProcessingStatus.completed),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        SourcePracticeSheet(sources: sources, onSourceSelected: (_, __) {}),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Completed'), findsOneWidget);
+    });
+
+    testWidgets('shows failed status with error icon', (tester) async {
+      final sources = [
+        const SourceItemData(id: 's1', title: 'Textbook', questionCount: 0, status: ProcessingStatus.failed),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        SourcePracticeSheet(sources: sources, onSourceSelected: (_, __) {}),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.text('Failed'), findsOneWidget);
+    });
+
+    testWidgets('shows processing status label', (tester) async {
+      final sources = [
+        const SourceItemData(id: 's1', title: 'Textbook', questionCount: 0, status: ProcessingStatus.classifying),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        SourcePracticeSheet(sources: sources, onSourceSelected: (_, __) {}),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Processing'), findsOneWidget);
+    });
+
+    testWidgets('popup menu select action calls onSourceSelected', (tester) async {
+      String? capturedId;
+      String? capturedTitle;
+      await tester.pumpWidget(_buildTestApp(
+        SourcePracticeSheet(
+          sources: sources,
+          onSourceSelected: (id, title) {
+            capturedId = id;
+            capturedTitle = title;
+          },
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.more_vert).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Practice'));
       await tester.pumpAndSettle();
 
       expect(capturedId, equals('s1'));

@@ -15,13 +15,13 @@ class AppRadius {
   static BorderRadius get circularLg => BorderRadius.circular(lg);
   static BorderRadius get circularXl => BorderRadius.circular(xl);
 
-  static RoundedRectangleBorder roundedSm = RoundedRectangleBorder(
+  static RoundedRectangleBorder get roundedSm => RoundedRectangleBorder(
     borderRadius: circularSm,
   );
-  static RoundedRectangleBorder roundedMd = RoundedRectangleBorder(
+  static RoundedRectangleBorder get roundedMd => RoundedRectangleBorder(
     borderRadius: circularMd,
   );
-  static RoundedRectangleBorder roundedLg = RoundedRectangleBorder(
+  static RoundedRectangleBorder get roundedLg => RoundedRectangleBorder(
     borderRadius: circularLg,
   );
 }

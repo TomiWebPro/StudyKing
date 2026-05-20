@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../services/onboarding_service.dart';
 
@@ -15,10 +16,12 @@ class OnboardingDialog extends ConsumerStatefulWidget {
 }
 
 class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
+  static final Logger _logger = const Logger('OnboardingDialog');
   bool _dontShowAgain = false;
   final _pageController = PageController();
   int _currentPage = 0;
   bool _apiKeyExpanded = false;
+  bool _isSaving = false;
 
   @override
   void dispose() {
@@ -30,6 +33,8 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
       widget.service ?? OnboardingService();
 
   Future<void> _completeOnboarding() async {
+    if (_isSaving) return;
+    setState(() => _isSaving = true);
     final service = _service;
     try {
       if (_dontShowAgain) {
@@ -38,7 +43,16 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
         await service.markCompleted();
       }
     } catch (e) {
-      // Log the error but don't silently convert to completed
+      _logger.w('Failed to complete onboarding', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)?.somethingWentWrong ?? 'Something went wrong')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
     }
   }
 
@@ -104,12 +118,20 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   TextButton(
-                    onPressed: () async {
-                      await _completeOnboarding();
-                      if (!context.mounted) return;
-                      Navigator.pushNamed(context, AppRoutes.dashboard);
-                    },
-                    child: Text(l10n.skip),
+                    onPressed: _isSaving
+                        ? null
+                        : () async {
+                            await _completeOnboarding();
+                            if (!context.mounted) return;
+                            Navigator.pushNamed(context, AppRoutes.dashboard);
+                          },
+                    child: _isSaving
+                        ? SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(l10n.skip),
                   ),
                   Row(
                     children: [
@@ -123,13 +145,21 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                         )
                       else
                         FilledButton.icon(
-                          onPressed: () async {
-                            await _completeOnboarding();
-                            if (!context.mounted) return;
-                            Navigator.pushNamed(context, AppRoutes.dashboard);
-                          },
-                          icon: const Icon(Icons.rocket_launch),
-                          label: Text(l10n.getStarted),
+                          onPressed: _isSaving
+                              ? null
+                              : () async {
+                                  await _completeOnboarding();
+                                  if (!context.mounted) return;
+                                  Navigator.pushNamed(context, AppRoutes.dashboard);
+                                },
+                          icon: _isSaving
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
+                                )
+                              : const Icon(Icons.rocket_launch),
+                          label: Text(_isSaving ? l10n.pleaseWait : l10n.getStarted),
                         ),
                     ],
                   ),

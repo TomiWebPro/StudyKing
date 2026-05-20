@@ -4,8 +4,11 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class PlanRepository extends Repository<PersonalLearningPlan> {
-  Future<void> init() async {
-    await openBox(HiveBoxNames.learningPlans);
+  Future<Result<void>> init() async {
+    return Result.capture(
+      () async => openBox(HiveBoxNames.learningPlans),
+      context: 'PlanRepository.init',
+    );
   }
 
   Future<Result<void>> create(PersonalLearningPlan plan) async {

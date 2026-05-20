@@ -569,7 +569,7 @@ void main() {
 
     test('fileUpload question type returns correct when answer provided', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
-      final result = QuestionAnswerValidator.validateStatic('file_uploaded', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
+      final result = QuestionAnswerValidator.validateStatic('notes.pdf||/tmp/notes.pdf', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
       expect(result.isCorrect, isTrue);
     });
 
@@ -581,7 +581,7 @@ void main() {
 
     test('audioRecording question type returns correct when answer provided', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
-      final result = QuestionAnswerValidator.validateStatic('audio_recorded', QuestionType.audioRecording, markscheme, messages: ValidationMessages.english);
+      final result = QuestionAnswerValidator.validateStatic('/tmp/recording_123.m4a', QuestionType.audioRecording, markscheme, messages: ValidationMessages.english);
       expect(result.isCorrect, isTrue);
     });
 

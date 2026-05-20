@@ -24,6 +24,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -44,6 +45,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -61,6 +63,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -78,6 +81,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -95,6 +99,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -112,6 +117,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -126,10 +132,12 @@ void main() {
           isLoadingDueCounts: false,
           dueCounts: {},
           hasSubjects: true,
+          totalQuestionCount: 10,
           onQuickPractice: () => called = true,
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -151,6 +159,7 @@ void main() {
           onSpacedRepetition: () => called = true,
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -172,6 +181,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () => called = true,
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -193,6 +203,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () => called = true,
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -213,6 +224,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -232,6 +244,7 @@ void main() {
           onSpacedRepetition: () => called = true,
           onTopicFocus: () {},
           onWeakAreas: () {},
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -253,6 +266,7 @@ void main() {
           onSpacedRepetition: () {},
           onTopicFocus: () {},
           onWeakAreas: () => called = true,
+          onMyQuestions: () {},
         ),
       ));
       await tester.pumpAndSettle();
@@ -261,6 +275,105 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(called, isFalse);
+    });
+
+    testWidgets('shows new user banner when isNewUser is true', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          isNewUser: true,
+          totalQuestionCount: 10,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+          onMyQuestions: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+    });
+
+    testWidgets('shows upload materials subtitle when totalQuestionCount is 0', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          totalQuestionCount: 0,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+          onMyQuestions: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upload materials to create questions'), findsOneWidget);
+    });
+
+    testWidgets('shows questions count subtitle when totalQuestionCount < 10', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          totalQuestionCount: 5,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+          onMyQuestions: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Questions: 5'), findsOneWidget);
+    });
+
+    testWidgets('shows random questions subtitle when totalQuestionCount >= 10', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          totalQuestionCount: 15,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+          onMyQuestions: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('10 random questions'), findsOneWidget);
+    });
+
+    testWidgets('shows disabled dialog for quick practice when no questions', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeGrid(
+          isLoadingDueCounts: false,
+          dueCounts: {},
+          hasSubjects: true,
+          totalQuestionCount: 0,
+          onQuickPractice: () {},
+          onSpacedRepetition: () {},
+          onTopicFocus: () {},
+          onWeakAreas: () {},
+          onMyQuestions: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Quick Practice'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upload Materials'), findsOneWidget);
     });
   });
 }

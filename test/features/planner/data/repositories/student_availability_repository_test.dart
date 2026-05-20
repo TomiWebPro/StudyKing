@@ -101,9 +101,10 @@ void main() {
       test('stores an availability model by studentId', () async {
         final model = createAvailability(studentId: 'student-1');
         await repository.saveAvailability(model);
-        final stored = await repository.getByStudent('student-1');
-        expect(stored, isNotNull);
-        expect(stored!.studentId, 'student-1');
+        final result = await repository.getByStudent('student-1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.studentId, 'student-1');
       });
 
       test('overwrites existing availability for same student', () async {
@@ -117,24 +118,26 @@ void main() {
         );
         await repository.saveAvailability(model1);
         await repository.saveAvailability(model2);
-        final stored = await repository.getByStudent('student-1');
-        expect(stored!.preferredStudyDays, [4, 5, 6]);
+        final result = await repository.getByStudent('student-1');
+        expect(result.data!.preferredStudyDays, [4, 5, 6]);
       });
     });
 
     group('getByStudent', () {
-      test('returns null for non-existent student', () async {
+      test('returns null data for non-existent student', () async {
         final result = await repository.getByStudent('non-existent');
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('returns stored availability for existing student', () async {
         final model = createAvailability(studentId: 'student-1');
         mockBox.addAvailability(model);
-        final stored = await repository.getByStudent('student-1');
-        expect(stored, isNotNull);
-        expect(stored!.preferredStartHour, 9);
-        expect(stored.preferredEndHour, 17);
+        final result = await repository.getByStudent('student-1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.preferredStartHour, 9);
+        expect(result.data!.preferredEndHour, 17);
       });
 
       test('stores and retrieves all fields', () async {
@@ -149,23 +152,24 @@ void main() {
           blackoutDates: [blackout],
         );
         await repository.saveAvailability(model);
-        final stored = await repository.getByStudent('student-1');
-        expect(stored!.preferredStudyDays, [1, 3, 5]);
-        expect(stored.preferredStartHour, 8);
-        expect(stored.preferredEndHour, 22);
-        expect(stored.maxSessionsPerDay, 2);
-        expect(stored.defaultSessionDurationMinutes, 45);
-        expect(stored.blackoutDates, [blackout]);
+        final result = await repository.getByStudent('student-1');
+        expect(result.data!.preferredStudyDays, [1, 3, 5]);
+        expect(result.data!.preferredStartHour, 8);
+        expect(result.data!.preferredEndHour, 22);
+        expect(result.data!.maxSessionsPerDay, 2);
+        expect(result.data!.defaultSessionDurationMinutes, 45);
+        expect(result.data!.blackoutDates, [blackout]);
       });
     });
 
     group('edge cases', () {
-      test('returns null after delete', () async {
+      test('returns null data after delete', () async {
         final model = createAvailability(studentId: 'student-1');
         await repository.saveAvailability(model);
         mockBox.clearStorage();
-        final stored = await repository.getByStudent('student-1');
-        expect(stored, isNull);
+        final result = await repository.getByStudent('student-1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('handles multiple students independently', () async {
@@ -173,25 +177,26 @@ void main() {
         await repository.saveAvailability(createAvailability(studentId: 's2', preferredStartHour: 10));
         final s1 = await repository.getByStudent('s1');
         final s2 = await repository.getByStudent('s2');
-        expect(s1!.preferredStartHour, 8);
-        expect(s2!.preferredStartHour, 10);
+        expect(s1.data!.preferredStartHour, 8);
+        expect(s2.data!.preferredStartHour, 10);
       });
     });
   });
 
   group('error handling', () {
-    test('saveAvailability handles box throw gracefully', () async {
+    test('saveAvailability returns failure when box throws', () async {
       final repo = StudentAvailabilityRepository();
       repo.attachBox(_ThrowingAvailabilityBox());
       final model = createAvailability();
-      await repo.saveAvailability(model);
+      final result = await repo.saveAvailability(model);
+      expect(result.isFailure, isTrue);
     });
 
-    test('getByStudent returns null when box throws', () async {
+    test('getByStudent returns failure when box throws', () async {
       final repo = StudentAvailabilityRepository();
       repo.attachBox(_ThrowingAvailabilityBox());
       final result = await repo.getByStudent('test');
-      expect(result, isNull);
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -219,17 +224,18 @@ void main() {
     test('init opens box and supports CRUD', () async {
       final model = createAvailability(studentId: 'hive-1');
       await repository.saveAvailability(model);
-      final stored = await repository.getByStudent('hive-1');
-      expect(stored, isNotNull);
-      expect(stored!.studentId, 'hive-1');
-      expect(stored.preferredStartHour, 9);
+      final result = await repository.getByStudent('hive-1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotNull);
+      expect(result.data!.studentId, 'hive-1');
+      expect(result.data!.preferredStartHour, 9);
     });
 
     test('overwrites existing availability', () async {
       await repository.saveAvailability(createAvailability(studentId: 's1', preferredStartHour: 8));
       await repository.saveAvailability(createAvailability(studentId: 's1', preferredStartHour: 10));
-      final stored = await repository.getByStudent('s1');
-      expect(stored!.preferredStartHour, 10);
+      final result = await repository.getByStudent('s1');
+      expect(result.data!.preferredStartHour, 10);
     });
   });
 }

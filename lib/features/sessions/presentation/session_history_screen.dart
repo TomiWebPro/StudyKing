@@ -180,7 +180,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       _logger.w('Export failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.exportFailed(e.toString()))),
+          SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
         );
       }
     }
@@ -285,9 +285,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
         }
         return true;
       } catch (e) {
+        _logger.w('Failed to delete session', e);
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.failedToDeleteSession(e.toString()))),
+            SnackBar(content: Text(l10n.failedToDeleteSession(l10n.somethingWentWrong))),
           );
         }
         return false;
@@ -408,7 +409,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                         l10n.average,
                         _filteredSessions.isNotEmpty
                             ? formatDurationFromContext(context, Duration(minutes: totalMinutes ~/ _filteredSessions.length))
-                            : '0m',
+                            : formatDurationFromContext(context, Duration.zero),
                         Icons.schedule,
                       ),
                     ],

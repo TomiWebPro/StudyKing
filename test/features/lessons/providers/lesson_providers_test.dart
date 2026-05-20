@@ -6,7 +6,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
-import 'package:studyking/features/lessons/services/lesson_service.dart';
+import 'package:studyking/features/lessons/services/session_query_service.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';

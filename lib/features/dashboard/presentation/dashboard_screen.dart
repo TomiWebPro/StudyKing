@@ -490,7 +490,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
   }
 
   VoidCallback _onRetry(ProviderBase<Object?> provider) => () {
-        ref.invalidate(dashboardInitProvider);
         ref.invalidate(provider);
       };
 

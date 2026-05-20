@@ -254,10 +254,10 @@ void main() {
         };
 
         final service = ModelListingService(apiKey: 'test_key', httpClient: client);
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 2);
-        expect(models[0].id, 'model-a');
-        expect(models[1].id, 'model-b');
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 2);
+        expect(result.data![0].id, 'model-a');
+        expect(result.data![1].id, 'model-b');
       });
 
       test('returns empty list on API error', () async {
@@ -265,8 +265,8 @@ void main() {
         client.handler = (_) async => http.Response('Not Found', 404);
 
         final service = ModelListingService(apiKey: 'key', httpClient: client);
-        final models = await service.fetchAvailableModels();
-        expect(models, isEmpty);
+        final result = await service.fetchAvailableModels();
+        expect(result.data, isEmpty);
       });
 
       test('returns empty list on network error', () async {
@@ -274,9 +274,9 @@ void main() {
         client.handler = (_) async => throw Exception('Connection failed');
 
         final service = ModelListingService(apiKey: 'key', httpClient: client);
-        final models = await service.fetchAvailableModels();
-        expect(models, isEmpty);
-      });
+        final result = await service.fetchAvailableModels();
+        expect(result.data, isEmpty);
+    });
     });
 
     group('getModelById', () {
@@ -339,12 +339,12 @@ void main() {
           httpClient: client,
           provider: LlmProvider.ollama,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 2);
-        expect(models[0].id, 'llama3.2');
-        expect(models[0].provider, 'Ollama');
-        expect(models[1].id, 'mistral:7b');
-        expect(models[1].provider, 'Ollama');
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 2);
+        expect(result.data![0].id, 'llama3.2');
+        expect(result.data![0].provider, 'Ollama');
+        expect(result.data![1].id, 'mistral:7b');
+        expect(result.data![1].provider, 'Ollama');
       });
 
       test('returns empty list on Ollama API error', () async {
@@ -356,8 +356,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.ollama,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models, isEmpty);
+        final result = await service.fetchAvailableModels();
+        expect(result.data, isEmpty);
       });
     });
 
@@ -383,12 +383,12 @@ void main() {
           httpClient: client,
           provider: LlmProvider.openAI,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 2);
-        expect(models[0].id, 'gpt-4o');
-        expect(models[0].provider, 'OpenAI');
-        expect(models[1].id, 'gpt-4o-mini');
-        expect(models[1].provider, 'OpenAI');
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 2);
+        expect(result.data![0].id, 'gpt-4o');
+        expect(result.data![0].provider, 'OpenAI');
+        expect(result.data![1].id, 'gpt-4o-mini');
+        expect(result.data![1].provider, 'OpenAI');
       });
 
       test('returns empty list on OpenAI API error', () async {
@@ -400,8 +400,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.openAI,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models, isEmpty);
+        final result = await service.fetchAvailableModels();
+        expect(result.data, isEmpty);
       });
     });
 
@@ -421,8 +421,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.ollama,
         );
-        final models = await service.fetchAvailableModels(provider: LlmProvider.ollama);
-        expect(models.length, 1);
+        final result = await service.fetchAvailableModels(provider: LlmProvider.ollama);
+        expect(result.data!.length, 1);
       });
     });
 
@@ -444,8 +444,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.ollama,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 1);
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 1);
       });
 
       test('uses Ollama default baseUrl with Ollama provider', () async {
@@ -464,8 +464,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.ollama,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 1);
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 1);
       });
 
       test('uses OpenAI default baseUrl with OpenAI provider', () async {
@@ -483,8 +483,8 @@ void main() {
           httpClient: client,
           provider: LlmProvider.openAI,
         );
-        final models = await service.fetchAvailableModels();
-        expect(models.length, 1);
+        final result = await service.fetchAvailableModels();
+        expect(result.data!.length, 1);
       });
     });
   });

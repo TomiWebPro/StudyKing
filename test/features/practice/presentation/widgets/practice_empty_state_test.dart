@@ -25,18 +25,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Add Subject'), findsOneWidget);
-      expect(find.byIcon(Icons.add), findsOneWidget);
-      expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.byType(FilledButton), findsOneWidget);
     });
 
-    testWidgets('shows snackbar when add subject button tapped', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const PracticeEmptyState()));
+    testWidgets('calls onAddSubject when provided', (tester) async {
+      bool called = false;
+      await tester.pumpWidget(_buildTestApp(PracticeEmptyState(onAddSubject: () => called = true)));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('Add Subject'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Add subjects from the Subjects tab'), findsOneWidget);
+      expect(called, isTrue);
     });
 
     testWidgets('renders descriptive text', (tester) async {

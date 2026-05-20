@@ -5,8 +5,14 @@ import '../utils/logger.dart';
 import '../widgets/snackbar_utils.dart';
 
 class AppErrorHandler {
+  static Logger _logger = const Logger('AppErrorHandler');
+
   @visibleForTesting
-  static Logger logger = const Logger('AppErrorHandler');
+  static Logger get logger => _logger;
+  @visibleForTesting
+  static set logger(Logger value) {
+    _logger = value;
+  }
 
   @visibleForTesting
   static void logError(Object error, String context) {

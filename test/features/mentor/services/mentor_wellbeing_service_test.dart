@@ -98,7 +98,7 @@ void main() {
       test('returns empty list with normal activity', () async {
         final service = _createService();
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       test('creates overwork nudge when daily cap exceeded', () async {
@@ -116,7 +116,7 @@ void main() {
         );
 
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isNotEmpty);
+        expect(result.data, isNotEmpty);
         expect(nudgeRepo.createdNudges, isNotEmpty);
         expect(nudgeRepo.createdNudges.first.nudgeType, equals(NudgeType.overwork.name));
 
@@ -141,7 +141,7 @@ void main() {
         );
 
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isNotEmpty);
+        expect(result.data, isNotEmpty);
         expect(nudgeRepo.createdNudges, isNotEmpty);
         expect(nudgeRepo.createdNudges.first.message, contains('late-night'));
       });
@@ -158,8 +158,8 @@ void main() {
 
         final service = _createService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isNotEmpty);
-        expect(result.first, contains('revision'));
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('revision'));
       });
 
       test('does not create revision nudge with fewer than 3 at-risk questions', () async {
@@ -174,7 +174,7 @@ void main() {
 
         final service = _createService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result.where((m) => m.contains('revision')), isEmpty);
+        expect(result.data!.where((m) => m.contains('revision')), isEmpty);
       });
 
       test('handles repository errors gracefully', () async {
@@ -183,7 +183,7 @@ void main() {
 
         final service = _createService(sessionRepository: sessionRepo);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isA<List<String>>());
+        expect(result.data, isA<List<String>>());
       });
 
       test('returns empty when getTodayDurationMs fails', () async {
@@ -192,7 +192,7 @@ void main() {
 
         final service = _createService(sessionRepository: sessionRepo);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       group('inactivity nudges', () {
@@ -221,9 +221,9 @@ void main() {
             nudgeRepo: nudgeRepo,
           );
 
-          final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
-          expect(result.first, contains('48 hours'));
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('48 hours'));
         });
 
         test('creates 7-day inactivity nudge', () async {
@@ -237,9 +237,9 @@ void main() {
             nudgeRepo: nudgeRepo,
           );
 
-          final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
-          expect(result.first, contains('days'));
+        final result = await service.checkWellbeingAndGenerateNudges();
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('days'));
         });
 
         test('creates 14-day inactivity nudge', () async {
@@ -254,8 +254,8 @@ void main() {
           );
 
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
-          expect(result.first, contains('days'));
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('days'));
         });
 
         test('creates 30-day inactivity nudge', () async {
@@ -270,8 +270,8 @@ void main() {
           );
 
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
-          expect(result.first, contains('days'));
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('days'));
         });
       });
 
@@ -294,9 +294,9 @@ void main() {
 
           // Overwork nudge is created before the cap check, so result has it
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
+          expect(result.data, isNotEmpty);
           // Only the overwork message should be present (others blocked by cap)
-          expect(result.length, equals(1));
+          expect(result.data!.length, equals(1));
 
           await box.clear();
           await box.close();
@@ -319,7 +319,7 @@ void main() {
           );
 
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
+          expect(result.data, isNotEmpty);
 
           await box.clear();
           await box.close();
@@ -336,7 +336,7 @@ void main() {
           final service = _createService(nudgeRepo: nudgeRepo);
 
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isA<List<String>>());
+          expect(result.data, isA<List<String>>());
 
           await box.clear();
           await box.close();
@@ -355,8 +355,8 @@ void main() {
 
           final service = _createService(sessionRepository: sessionRepo);
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result, isNotEmpty);
-          expect(result.any((m) => m.contains('study streak')), isTrue);
+          expect(result.data, isNotEmpty);
+          expect(result.data!.any((m) => m.contains('study streak')), isTrue);
         });
       });
     });

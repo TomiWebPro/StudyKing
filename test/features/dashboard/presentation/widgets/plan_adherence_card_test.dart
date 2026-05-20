@@ -158,6 +158,60 @@ void main() {
       expect(find.text('35%'), findsOneWidget);
     });
 
-    // PlanAdherenceCard is a pure rendering widget with no navigation callbacks.
+    testWidgets('shows days since last activity banner when >= 1 day', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PlanAdherenceCard(
+          averageAdherence: 0.8,
+          weeklyAdherence: 0.7,
+          daysSinceLastActivity: 3,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+      expect(find.textContaining('Welcome back!'), findsWidgets);
+    });
+
+    testWidgets('hides days since last activity banner when 0 days', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PlanAdherenceCard(
+          averageAdherence: 0.8,
+          weeklyAdherence: 0.7,
+          daysSinceLastActivity: 0,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsNothing);
+      expect(find.text('Overall'), findsOneWidget);
+      expect(find.text('This Week'), findsOneWidget);
+    });
+
+    testWidgets('shows overall and this week labels', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PlanAdherenceCard(
+          averageAdherence: 0.8,
+          weeklyAdherence: 0.7,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Overall'), findsOneWidget);
+      expect(find.text('This Week'), findsOneWidget);
+    });
+
+    testWidgets('shows negative days since last activity gracefully', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PlanAdherenceCard(
+          averageAdherence: 0.8,
+          weeklyAdherence: 0.7,
+          daysSinceLastActivity: -1,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsNothing);
+      expect(find.text('Overall'), findsOneWidget);
+    });
   });
 }

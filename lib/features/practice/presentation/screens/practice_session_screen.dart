@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/errors/handlers.dart';
@@ -11,7 +12,11 @@ import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -19,11 +24,16 @@ import 'package:studyking/core/providers/app_providers.dart' show settingsProvid
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/practice/presentation/widgets/confidence_selector.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/core/utils/difficulty_controller.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
+import 'package:studyking/core/utils/id_generator.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_results_screen.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_stats_bar.dart';
@@ -32,6 +42,7 @@ import 'package:studyking/features/practice/presentation/widgets/practice_sessio
 import 'package:studyking/features/practice/presentation/widgets/mistake_review_widget.dart';
 import 'package:studyking/features/practice/services/question_type_localizer.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class PracticeSessionScreen extends ConsumerStatefulWidget {
   final PracticeSessionArgs args;
@@ -46,6 +57,7 @@ class PracticeSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
+  static final Logger _logger = const Logger('PracticeSessionScreen');
   late QuestionRepository _questionRepo;
   late SpacedRepetitionService _srService;
   late PracticeSessionService _sessionService;
@@ -54,6 +66,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late final MasteryRecorder _masteryRecorder;
   late final MistakeReviewService _mistakeReviewService;
   late final DifficultyController _difficultyAdapter;
+  late final TopicRepository _topicRepo;
+  late final SourceRepository _sourceRepo;
+  List<Topic> _topics = [];
+  List<Source> _sources = [];
   List<Question> _questions = [];
   int _currentIndex = 0;
   int _previousIndex = 0;
@@ -82,6 +98,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _masteryRecorder = ref.read(masteryRecorderProvider);
     _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
     _difficultyAdapter = DifficultyController();
+    _topicRepo = ref.read(topicRepositoryProvider);
+    _sourceRepo = ref.read(sourceRepositoryProvider);
     final sessionRepo = ref.read(sessionRepositoryProvider);
     _sessionService = PracticeSessionService(
       sessionRepo: sessionRepo,
@@ -90,6 +108,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       subjectId: widget.args.subjectId,
     );
     _loadQuestions();
+    _loadTopicsAndSources();
     _sessionService.startTimer();
     _sessionService.elapsedNotifier.addListener(_onElapsedChanged);
   }
@@ -204,6 +223,23 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _retryLoadQuestions() => _loadQuestions();
+
+  Future<void> _loadTopicsAndSources() async {
+    try {
+      await _topicRepo.init();
+      await _sourceRepo.init();
+      final topicsResult = await _topicRepo.getBySubject(widget.args.subjectId);
+      final sourcesResult = await _sourceRepo.getAll();
+      if (mounted) {
+        setState(() {
+          _topics = topicsResult.data ?? [];
+          _sources = sourcesResult.data ?? [];
+        });
+      }
+    } catch (e) {
+      _logger.w('Failed to load topics and sources for create dialog', e);
+    }
+  }
 
   void _initializeSession() {
     if (_questions.isEmpty) {
@@ -625,6 +661,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         }
       },
       child: Scaffold(
+      floatingActionButton: FloatingActionButton.small(
+        onPressed: _showCreateQuestionDialog,
+        tooltip: l10n.createQuestion,
+        child: const Icon(Icons.add),
+      ),
       appBar: AppBar(
         title: Text(widget.args.isSpacedRepetition
             ? l10n.practiceModeType(l10n.spacedRepetitionMode, question.type.localizedLabel(l10n))
@@ -777,111 +818,315 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Widget _buildConfidenceSelector() {
-    final l10n = AppLocalizations.of(context)!;
-    final currentLabel = _getConfidenceLabel(l10n, _currentConfidence);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.howConfident,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
-        Semantics(
-          label: '${l10n.howConfident}: $_currentConfidence ${l10n.confidenceRatingOf} 5, $currentLabel',
-          child: Wrap(
-            spacing: ResponsiveUtils.horizontalSpacing(context),
-            runSpacing: ResponsiveUtils.verticalSpacing(context) / 2,
-            alignment: WrapAlignment.center,
-            children: List.generate(5, (index) {
-              final rating = index + 1;
-              final isSelected = _currentConfidence == rating;
-              return Semantics(
-                button: true,
-                selected: isSelected,
-                  child: InkWell(
-                  onTap: () => setState(() => _currentConfidence = rating),
-                  borderRadius: BorderRadius.circular(24),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
-                    height: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? _getConfidenceColor(rating).withValues(alpha: 0.2)
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected
-                            ? _getConfidenceColor(rating)
-                            : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$rating',
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected
-                              ? _getConfidenceColor(rating)
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
-        Center(
-          child: Text(
-            currentLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
+    return ConfidenceSelector(
+      value: _currentConfidence,
+      onChanged: (rating) => setState(() => _currentConfidence = rating),
     );
   }
 
-  Color _getConfidenceColor(int rating) {
-    final cs = Theme.of(context).colorScheme;
-    switch (rating) {
-      case 1:
-        return cs.error;
-      case 2:
-        return cs.tertiary;
-      case 3:
-        return cs.tertiary;
-      case 4:
-        return cs.primary;
-      case 5:
-        return cs.primary;
-      default:
-        return cs.onSurfaceVariant;
+  Future<void> _showCreateQuestionDialog() async {
+    final l10n = AppLocalizations.of(context)!;
+    final textController = TextEditingController();
+    final explanationController = TextEditingController();
+    final optionControllers = <TextEditingController>[];
+    String selectedType = QuestionType.singleChoice.name;
+    String selectedTopicId = '';
+    String selectedDifficulty = 'easy';
+    int? selectedCorrectOption;
+    final selectedCorrectOptions = <int>{};
+    final selectedSourceIds = <String>{};
+
+    optionControllers.add(TextEditingController());
+    optionControllers.add(TextEditingController());
+
+    List<Topic> topicsForSubject() {
+      if (widget.args.subjectId.isEmpty) return _topics;
+      return _topics.where((t) => t.subjectId == widget.args.subjectId).toList();
+    }
+
+    List<Source> sourcesForSubject() {
+      if (widget.args.subjectId.isEmpty) return _sources;
+      return _sources.where((s) => s.subjectId == widget.args.subjectId).toList();
+    }
+
+    try {
+      final result = await showDialog<Map<String, dynamic>>(
+        context: context,
+        builder: (ctx) => StatefulBuilder(
+          builder: (ctx, setInnerState) => AlertDialog(
+            title: Text(l10n.createQuestion),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: textController,
+                    decoration: InputDecoration(labelText: l10n.questionText, border: const OutlineInputBorder()),
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedType,
+                    decoration: InputDecoration(labelText: l10n.type, border: const OutlineInputBorder()),
+                    items: QuestionType.values.map((t) => DropdownMenuItem(
+                      value: t.name,
+                      child: Text(questionTypeLabel(t, l10n)),
+                    )).toList(),
+                    onChanged: (v) {
+                      selectedType = v ?? QuestionType.singleChoice.name;
+                      setInnerState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedTopicId.isEmpty ? null : selectedTopicId,
+                    decoration: InputDecoration(
+                      labelText: l10n.topics,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: [
+                      DropdownMenuItem(value: '', child: Text(l10n.none)),
+                      ...topicsForSubject().map((t) => DropdownMenuItem(
+                        value: t.id,
+                        child: Text(t.title),
+                      )),
+                    ],
+                    onChanged: (v) {
+                      selectedTopicId = v ?? '';
+                      setInnerState(() {});
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: selectedDifficulty,
+                    decoration: InputDecoration(
+                      labelText: l10n.difficulty,
+                      border: const OutlineInputBorder(),
+                    ),
+                    items: ['easy', 'medium', 'hard'].map((d) => DropdownMenuItem(
+                      value: d,
+                      child: Text(d[0].toUpperCase() + d.substring(1)),
+                    )).toList(),
+                    onChanged: (v) => selectedDifficulty = v ?? 'easy',
+                  ),
+                  if (sourcesForSubject().isNotEmpty) ...[
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      decoration: InputDecoration(
+                        labelText: l10n.sources,
+                        border: const OutlineInputBorder(),
+                      ),
+                      items: [
+                        DropdownMenuItem(value: '', child: Text(l10n.none)),
+                        ...sourcesForSubject().map((s) => DropdownMenuItem(
+                          value: s.id,
+                          child: Text(s.title),
+                        )),
+                      ],
+                      onChanged: (v) {
+                        if (v != null && v.isNotEmpty) {
+                          setInnerState(() {
+                            if (selectedSourceIds.contains(v)) {
+                              selectedSourceIds.remove(v);
+                            } else {
+                              selectedSourceIds.add(v);
+                            }
+                          });
+                        }
+                      },
+                    ),
+                    if (selectedSourceIds.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Wrap(
+                          spacing: 4,
+                          runSpacing: 2,
+                          children: selectedSourceIds.map((sid) {
+                            final name = _sourceName(sid) ?? sid;
+                            return Chip(
+                              label: Text(name, style: const TextStyle(fontSize: 12)),
+                              deleteIcon: const Icon(Icons.close, size: 16),
+                              onDeleted: () => setInnerState(() => selectedSourceIds.remove(sid)),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              visualDensity: VisualDensity.compact,
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
+                  if (selectedType == QuestionType.singleChoice.name ||
+                      selectedType == QuestionType.multiChoice.name) ...[
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    Text(l10n.answerOptions, style: Theme.of(ctx).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    if (selectedType == QuestionType.singleChoice.name)
+                      RadioGroup<int?>(
+                        groupValue: selectedCorrectOption,
+                        onChanged: (v) => setInnerState(() => selectedCorrectOption = v),
+                        child: Column(
+                          children: List.generate(optionControllers.length, (i) {
+                            final controller = optionControllers[i];
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 8),
+                              child: Row(
+                                children: [
+                                  Radio<int?>(value: i),
+                                  Expanded(child: TextField(controller: controller, decoration: InputDecoration(hintText: '${l10n.addOption} ${i + 1}', border: const OutlineInputBorder(), isDense: true))),
+                                  if (optionControllers.length > 2)
+                                    IconButton(
+                                      icon: Icon(Icons.remove_circle_outline, color: Theme.of(ctx).colorScheme.error, size: 20),
+                                      tooltip: l10n.delete,
+                                      onPressed: () {
+                                        setInnerState(() {
+                                          controller.dispose();
+                                          optionControllers.removeAt(i);
+                                          if (selectedCorrectOption == i) {
+                                            selectedCorrectOption = null;
+                                          } else if (selectedCorrectOption != null && selectedCorrectOption! > i) {
+                                            selectedCorrectOption = selectedCorrectOption! - 1;
+                                          }
+                                        });
+                                      },
+                                    ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ),
+                      )
+                    else
+                      ...List.generate(optionControllers.length, (i) {
+                        final controller = optionControllers[i];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 8),
+                          child: Row(
+                            children: [
+                              Checkbox(
+                                value: selectedCorrectOptions.contains(i),
+                                onChanged: (v) => setInnerState(() {
+                                  if (v == true) { selectedCorrectOptions.add(i); } else { selectedCorrectOptions.remove(i); }
+                                }),
+                              ),
+                              Expanded(child: TextField(controller: controller, decoration: InputDecoration(hintText: '${l10n.addOption} ${i + 1}', border: const OutlineInputBorder(), isDense: true))),
+                              if (optionControllers.length > 2)
+                                IconButton(
+                                  icon: Icon(Icons.remove_circle_outline, color: Theme.of(ctx).colorScheme.error, size: 20),
+                                  tooltip: l10n.delete,
+                                  onPressed: () {
+                                    setInnerState(() {
+                                      controller.dispose();
+                                      optionControllers.removeAt(i);
+                                      if (selectedCorrectOption == i) {
+                                        selectedCorrectOption = null;
+                                      } else if (selectedCorrectOption != null && selectedCorrectOption! > i) {
+                                        selectedCorrectOption = selectedCorrectOption! - 1;
+                                      }
+                                    });
+                                  },
+                                ),
+                            ],
+                          ),
+                        );
+                      }),
+                    TextButton.icon(onPressed: () => setInnerState(() => optionControllers.add(TextEditingController())), icon: const Icon(Icons.add, size: 18), label: Text(l10n.addOption)),
+                    const Divider(),
+                  ],
+                  const SizedBox(height: 12),
+                  TextField(controller: explanationController, decoration: InputDecoration(labelText: l10n.explanation, border: const OutlineInputBorder()), maxLines: 2),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
+              FilledButton(
+                onPressed: () {
+                  if (textController.text.trim().isEmpty) return;
+                  if ((selectedType == QuestionType.singleChoice.name ||
+                      selectedType == QuestionType.multiChoice.name) &&
+                      optionControllers.any((c) => c.text.trim().isEmpty)) {
+                    return;
+                  }
+                  Navigator.pop(ctx, {
+                    'text': textController.text.trim(),
+                    'type': selectedType,
+                    'topicId': selectedTopicId,
+                    'difficulty': selectedDifficulty,
+                    'options': optionControllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList(),
+                    'correctOption': selectedCorrectOption,
+                    'correctOptions': selectedCorrectOptions.toList(),
+                    'explanation': explanationController.text.trim(),
+                    'sourceIds': selectedSourceIds.toList(),
+                  });
+                },
+                child: Text(l10n.save),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      if (result == null || !mounted) return;
+
+      int difficultyValue;
+      switch (selectedDifficulty) {
+        case 'easy':
+          difficultyValue = 1;
+        case 'medium':
+          difficultyValue = 2;
+        case 'hard':
+          difficultyValue = 3;
+        default:
+          difficultyValue = 1;
+      }
+
+      final options = (result['options'] as List<dynamic>?)?.cast<String>() ?? <String>[];
+      final correctOption = result['correctOption'] as int?;
+      final correctOptions = (result['correctOptions'] as List<dynamic>?)?.cast<int>();
+      final sourceIds = (result['sourceIds'] as List<dynamic>?)?.cast<String>() ?? selectedSourceIds.toList();
+
+      Markscheme? markscheme;
+      if (correctOption != null && correctOption < options.length) {
+        markscheme = Markscheme(correctAnswer: options[correctOption]);
+      } else if (correctOptions != null && correctOptions.isNotEmpty) {
+        final correctTexts = correctOptions.where((i) => i < options.length).map((i) => options[i]).toList();
+        if (correctTexts.isNotEmpty) {
+          markscheme = Markscheme(correctAnswer: correctTexts.first, acceptableAnswers: correctTexts.skip(1).toList());
+        }
+      }
+
+      final question = Question(
+        id: IdGenerator.generate('question'),
+        text: result['text'] as String,
+        subjectId: widget.args.subjectId,
+        topicId: result['topicId'] as String? ?? '',
+        type: QuestionType.values.firstWhere((t) => t.name == result['type'], orElse: () => QuestionType.singleChoice),
+        difficulty: difficultyValue,
+        options: options,
+        sourceIds: sourceIds,
+        markscheme: markscheme,
+        explanation: (result['explanation'] as String?)?.isNotEmpty == true ? result['explanation'] as String : null,
+        createdAt: DateTime.now(),
+        updatedAt: DateTime.now(),
+      );
+
+      final saveResult = await _questionRepo.create(question);
+      if (saveResult.isSuccess && mounted) {
+        setState(() {
+          _questions.insert(_currentIndex + 1, question);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.questionCreated)),
+        );
+      }
+    } finally {
+      textController.dispose();
+      explanationController.dispose();
+      for (final c in optionControllers) { c.dispose(); }
     }
   }
 
-  String _getConfidenceLabel(AppLocalizations l10n, int rating) {
-    switch (rating) {
-      case 1:
-        return l10n.notConfidentAtAll;
-      case 2:
-        return l10n.slightlyConfident;
-      case 3:
-        return l10n.moderatelyConfident;
-      case 4:
-        return l10n.quiteConfident;
-      case 5:
-        return l10n.veryConfident;
-      default:
-        return '';
-    }
+  String? _sourceName(String sourceId) {
+    return _sources.where((s) => s.id == sourceId).firstOrNull?.title;
   }
 }

@@ -121,7 +121,8 @@ void main() {
           subjectId: 'sub1',
         );
 
-        expect(mistakes, hasLength(1));
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, hasLength(1));
         expect(mistakes.data!.first.attempt!.questionId, 'q1');
       });
 
@@ -141,7 +142,8 @@ void main() {
           subjectId: 'sub1',
         );
 
-        expect(mistakes, isEmpty);
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, isEmpty);
       });
 
       test('applies date filter', () async {
@@ -163,7 +165,8 @@ void main() {
           after: DateTime(2026, 1, 1),
         );
 
-        expect(mistakes, isEmpty);
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, isEmpty);
       });
 
       test('deduplicates repeated mistakes for same question', () async {
@@ -193,7 +196,8 @@ void main() {
           subjectId: 'sub1',
         );
 
-        expect(mistakes, hasLength(1));
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, hasLength(1));
       });
     });
 
@@ -216,7 +220,8 @@ void main() {
           subjectId: 'sub1',
         );
 
-        expect(pending, hasLength(1));
+        expect(pending.isSuccess, isTrue);
+        expect(pending.data, hasLength(1));
       });
 
       test('excludes questions corrected after mistake', () async {
@@ -246,7 +251,8 @@ void main() {
           subjectId: 'sub1',
         );
 
-        expect(pending, isEmpty);
+        expect(pending.isSuccess, isTrue);
+        expect(pending.data, isEmpty);
       });
     });
 
@@ -263,7 +269,8 @@ void main() {
         ));
 
         final corrected = await service.isQuestionCorrected('q1');
-        expect(corrected, isTrue);
+        expect(corrected.isSuccess, isTrue);
+        expect(corrected.data, isTrue);
       });
 
       test('returns false when question never answered correctly', () async {
@@ -278,7 +285,8 @@ void main() {
         ));
 
         final corrected = await service.isQuestionCorrected('q1');
-        expect(corrected, isFalse);
+        expect(corrected.isSuccess, isTrue);
+        expect(corrected.data, isFalse);
       });
     });
 
@@ -313,7 +321,8 @@ void main() {
         studentId: 'nonexistent',
         subjectId: 'sub1',
       );
-      expect(mistakes, isEmpty);
+      expect(mistakes.isSuccess, isTrue);
+      expect(mistakes.data, isEmpty);
     });
 
     group('error-state: repository failures', () {
@@ -327,7 +336,8 @@ void main() {
           studentId: 's1',
           subjectId: 'sub1',
         );
-        expect(mistakes, isEmpty);
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, isEmpty);
       });
 
       test('getMistakesFromSession handles questionRepo failure', () async {
@@ -349,7 +359,8 @@ void main() {
           studentId: 's1',
           subjectId: 'sub1',
         );
-        expect(mistakes, isEmpty);
+        expect(mistakes.isSuccess, isTrue);
+        expect(mistakes.data, isEmpty);
       });
 
       test('getPendingMistakes handles attemptRepo failure', () async {
@@ -362,7 +373,8 @@ void main() {
           studentId: 's1',
           subjectId: 'sub1',
         );
-        expect(pending, isEmpty);
+        expect(pending.isSuccess, isTrue);
+        expect(pending.data, isEmpty);
       });
     });
   });
@@ -398,7 +410,8 @@ void main() {
       subjectId: 'sub1',
     );
 
-    expect(mistakes, isEmpty);
+    expect(mistakes.isSuccess, isTrue);
+    expect(mistakes.data, isEmpty);
   });
 
   test('getMistakesFromSession handles exception gracefully', () async {
@@ -409,7 +422,8 @@ void main() {
       subjectId: 'sub1',
     );
 
-    expect(mistakes, isEmpty);
+    // Exception caught, returns failure result
+    expect(mistakes.isFailure, isTrue);
   });
 
   test('getPendingMistakes handles exception gracefully', () async {
@@ -420,14 +434,16 @@ void main() {
       subjectId: 'sub1',
     );
 
-    expect(pending, isEmpty);
+    // Exception caught, returns failure result
+    expect(pending.isFailure, isTrue);
   });
 
   test('isQuestionCorrected handles exception gracefully', () async {
     attemptRepo.shouldThrow = true;
 
     final corrected = await service.isQuestionCorrected('q1');
-    expect(corrected, isFalse);
+    // Exception caught, returns failure result
+    expect(corrected.isFailure, isTrue);
   });
 
   test('extractRedoQuestions returns empty for empty input', () {
@@ -483,10 +499,12 @@ void main() {
       subjectId: 'sub1',
     );
 
-    expect(mistakes, hasLength(1));
+    expect(mistakes.isSuccess, isTrue);
+    expect(mistakes.data, hasLength(1));
     expect(mistakes.data!.first.correctAnswer, 'Correct Answer');
     expect(mistakes.data!.first.explanation, 'Exp');
   });
+});
 }
 
 class _FailingAttemptRepository extends AttemptRepository {

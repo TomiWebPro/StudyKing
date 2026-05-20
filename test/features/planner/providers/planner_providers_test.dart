@@ -35,7 +35,9 @@ class _FakePlanRepository extends PlanRepository {
   void setPlan(PersonalLearningPlan p) => _plan = p;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
@@ -124,7 +126,9 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   void addRoadmap(RoadmapModel r) => _roadmaps[r.id] = r;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<List<RoadmapModel>>> getRoadmapsByStudent(String studentId) async {

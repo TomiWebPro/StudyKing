@@ -223,7 +223,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: _presetColors.map((color) => Padding(
-                  padding: const EdgeInsets.only(right: 4),
+                  padding: const EdgeInsetsDirectional.only(end: 4),
                   child: _buildColorButton(color),
                 )).toList(),
               ),

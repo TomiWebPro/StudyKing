@@ -135,5 +135,13 @@ void main() {
       final service = container.read(dashboardInstrumentationServiceProvider);
       expect(service, isA<InstrumentationService>());
     });
+
+    test('dashboardExportServiceProvider creates ProgressExportService', () {
+      final container = ProviderContainer();
+      addTearDown(container.dispose);
+
+      final exportService = container.read(dashboardExportServiceProvider);
+      expect(exportService, isNotNull);
+    });
   });
 }

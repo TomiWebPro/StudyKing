@@ -10,7 +10,9 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   final Map<String, RoadmapModel> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> saveRoadmap(RoadmapModel roadmap) async {

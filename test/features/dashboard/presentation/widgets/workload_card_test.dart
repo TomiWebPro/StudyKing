@@ -144,6 +144,124 @@ void main() {
       expect(find.text('7 topics need attention'), findsOneWidget);
     });
 
-    // WorkloadCard is a pure rendering widget with no navigation callbacks.
+    testWidgets('shows individual topic rows with mastery labels', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WorkloadCard(
+          workload: SubjectWorkload(
+            subjectId: 's1',
+            subjectTitle: 'Subject 1',
+            totalQuestions: 30,
+            masteredQuestions: 10,
+            atRiskQuestions: 10,
+            unattemptedQuestions: 10,
+            overallMasteryLevel: 0.3,
+            estimatedLessonsRemaining: 3.0,
+            topicWorkloads: [
+              _topicWorkload(topicId: 't1', masteryLevel: 0.2, estimatedLessonsRemaining: 1.25),
+              _topicWorkload(topicId: 't2', masteryLevel: 0.8, estimatedLessonsRemaining: 0),
+            ],
+          ),
+          resolveTopicName: (id) => id == 't1' ? 'Algebra' : 'Geometry',
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algebra'), findsOneWidget);
+      expect(find.text('Geometry'), findsOneWidget);
+      expect(find.text('Novice'), findsOneWidget);
+      expect(find.text('Expert'), findsOneWidget);
+    });
+
+    testWidgets('shows remaining lessons count', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WorkloadCard(
+          workload: SubjectWorkload(
+            subjectId: 's1',
+            subjectTitle: 'Subject 1',
+            totalQuestions: 50,
+            masteredQuestions: 0,
+            atRiskQuestions: 50,
+            unattemptedQuestions: 0,
+            overallMasteryLevel: 0.3,
+            estimatedLessonsRemaining: 5.0,
+            topicWorkloads: [
+              _topicWorkload(topicId: 't1', masteryLevel: 0.2, estimatedLessonsRemaining: 2.5),
+            ],
+          ),
+          resolveTopicName: (id) => id,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('lessons remaining'), findsWidgets);
+    });
+
+    testWidgets('shows mastery label for different levels', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WorkloadCard(
+          workload: SubjectWorkload(
+            subjectId: 's1',
+            subjectTitle: 'Subject 1',
+            totalQuestions: 40,
+            masteredQuestions: 20,
+            atRiskQuestions: 10,
+            unattemptedQuestions: 10,
+            overallMasteryLevel: 0.5,
+            estimatedLessonsRemaining: 2.0,
+            topicWorkloads: [
+              _topicWorkload(topicId: 't1', masteryLevel: 0.1, estimatedLessonsRemaining: 1.0),
+              _topicWorkload(topicId: 't2', masteryLevel: 0.4, estimatedLessonsRemaining: 1.0),
+              _topicWorkload(topicId: 't3', masteryLevel: 0.6, estimatedLessonsRemaining: 0.5),
+              _topicWorkload(topicId: 't4', masteryLevel: 0.8, estimatedLessonsRemaining: 0),
+              _topicWorkload(topicId: 't5', masteryLevel: 0.95, estimatedLessonsRemaining: 0),
+            ],
+          ),
+          resolveTopicName: (id) => id,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Novice'), findsOneWidget);
+      expect(find.text('Browsing'), findsOneWidget);
+      expect(find.text('Developing'), findsOneWidget);
+      expect(find.text('Proficient'), findsOneWidget);
+      expect(find.text('Expert'), findsOneWidget);
+    });
+
+    testWidgets('renders upload button when empty state', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WorkloadCard(
+          workload: null,
+          resolveTopicName: (id) => id,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.upload_file), findsOneWidget);
+    });
+
+    testWidgets('shows topic error icon for topics needing attention', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WorkloadCard(
+          workload: SubjectWorkload(
+            subjectId: 's1',
+            subjectTitle: 'Subject 1',
+            totalQuestions: 10,
+            masteredQuestions: 0,
+            atRiskQuestions: 10,
+            unattemptedQuestions: 0,
+            overallMasteryLevel: 0.2,
+            estimatedLessonsRemaining: 2.0,
+            topicWorkloads: [
+              _topicWorkload(topicId: 't1', masteryLevel: 0.2, estimatedLessonsRemaining: 1.0),
+            ],
+          ),
+          resolveTopicName: (id) => 'Algebra',
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+    });
   });
 }

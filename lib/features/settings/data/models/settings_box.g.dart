@@ -31,6 +31,7 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       highContrastEnabled: fields[11] as bool,
       largeTouchTargets: fields[12] as bool,
       reduceMotion: fields[13] as bool,
+      boldText: fields[26] as bool,
       revisionRemindersEnabled: fields[14] as bool,
       lessonNotificationsEnabled: fields[15] as bool,
       overworkAlertsEnabled: fields[16] as bool,
@@ -43,11 +44,10 @@ class SettingsBoxAdapter extends TypeAdapter<SettingsBox> {
       llmProviderName: fields[23] as String,
       lastConnectionTestMs: fields[24] as int,
       lastLlmError: fields[25] as String,
-      boldText: fields[26] as bool? ?? false,
-      backupLlmProviderName: fields[27] as String? ?? '',
-      backupApiKey: fields[28] as String? ?? '',
-      backupBaseUrl: fields[29] as String? ?? '',
-      backupModel: fields[30] as String? ?? '',
+      backupLlmProviderName: fields[27] as String,
+      backupApiKey: fields[28] as String,
+      backupBaseUrl: fields[29] as String,
+      backupModel: fields[30] as String,
     );
   }
 

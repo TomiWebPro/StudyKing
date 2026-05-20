@@ -37,6 +37,7 @@ const int _typeIdStudentAvailability = 35;
 const int _typeIdMilestoneModel = 25;
 const int _typeIdSource = 26;
 const int sessionTypeId = 36;
+const int _typeIdPlanAdvisorSuggestion = 37;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -74,6 +75,7 @@ const List<int> _allTypeIds = [
   _typeIdAccessibilityPreferences,
   _typeIdStudentAvailability,
   sessionTypeId,
+  _typeIdPlanAdvisorSuggestion,
 ];
 
 bool _checkUniqueIds() {

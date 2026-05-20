@@ -122,7 +122,9 @@ class SyllabusProgressCard extends StatelessWidget {
               children: [
                 Expanded(
                   child: Text(
-                    '${l10n.mastered} $masteredCount / $totalTopics',
+                    masteredCount == 0
+                        ? 'No progress yet'
+                        : '${l10n.mastered} $masteredCount / $totalTopics',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                 ),
@@ -147,6 +149,38 @@ class SyllabusProgressCard extends StatelessWidget {
                 ),
               ),
             ),
+            if (masteredCount == 0 && totalTopics > 0) ...[
+              const SizedBox(height: 12),
+              Text(
+                'You haven\'t practiced ${goal.subjectTitle} yet. '
+                'Start by uploading materials or scheduling a lesson.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 4,
+                children: [
+                  ActionChip(
+                    avatar: const Icon(Icons.upload_file, size: 16),
+                    label: Text(l10n.uploadMaterials),
+                    onPressed: () {},
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.quiz, size: 16),
+                    label: const Text('Practice Questions'),
+                    onPressed: () {},
+                  ),
+                  ActionChip(
+                    avatar: const Icon(Icons.school, size: 16),
+                    label: const Text('Start Lesson'),
+                    onPressed: () {},
+                  ),
+                ],
+              ),
+            ],
           ],
         ),
       ),

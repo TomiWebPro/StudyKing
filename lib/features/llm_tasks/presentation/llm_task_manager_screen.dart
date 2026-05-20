@@ -184,7 +184,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                 SizedBox(
                   width: (MediaQuery.sizeOf(context).width -
                       ResponsiveUtils.cardPadding(context).horizontal - 32) / 2,
-                  child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4)),
+                  child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 2, maxFractionDigits: 2)),
                 ),
                 SizedBox(
                   width: (MediaQuery.sizeOf(context).width -
@@ -203,7 +203,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               children: [
                 Expanded(child: _buildUsageStat(context, l10n.totalTokens, _formatTokens(totalTokens, l10n.localeName))),
                 const SizedBox(width: 16),
-                Expanded(child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4))),
+                Expanded(child: _buildUsageStat(context, l10n.totalCost, formatCurrency(totalCost, l10n.localeName, minFractionDigits: 2, maxFractionDigits: 2))),
                 const SizedBox(width: 16),
                 Expanded(child: _buildUsageStat(context, l10n.done, '$completedTasks')),
                 const SizedBox(width: 16),
@@ -352,7 +352,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                       Icon(Icons.attach_money, size: 14, color: cs.tertiary),
                       const SizedBox(width: 4),
                       Text(
-                        formatCurrency(task.estimatedCost, l10n.localeName, minFractionDigits: 4, maxFractionDigits: 4),
+                        formatCurrency(task.estimatedCost, l10n.localeName, minFractionDigits: 2, maxFractionDigits: 4),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(color: cs.tertiary),
                       ),
                     ],

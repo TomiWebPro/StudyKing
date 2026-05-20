@@ -8,6 +8,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -68,7 +69,8 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
           .length;
 
       return _SyllabusProgressData(totalTopics: allTopics.length, masteredCount: masteredCount);
-    } catch (_) {
+    } catch (e) {
+      Logger('SubjectStatsTab').w('Failed to load syllabus progress', e);
       return const _SyllabusProgressData(totalTopics: 0, masteredCount: 0);
     }
   }

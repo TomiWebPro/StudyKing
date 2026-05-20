@@ -157,5 +157,40 @@ void main() {
       // Semantics widget wraps the card
       expect(find.byType(Semantics), findsWidgets);
     });
+
+    testWidgets('calls onTapDisabled when card is disabled and tapped', (tester) async {
+      bool disabledCalled = false;
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+          onTap: null,
+          onTapDisabled: () => disabledCalled = true,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Quick Practice'));
+      await tester.pumpAndSettle();
+
+      expect(disabledCalled, isTrue);
+    });
+
+    testWidgets('shows badge with correct accessibility label', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeModeCard(
+          icon: Icons.flash_on,
+          title: 'Quick Practice',
+          subtitle: '10 random questions',
+          color: Colors.blue,
+          badge: 3,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('3'), findsOneWidget);
+    });
   });
 }

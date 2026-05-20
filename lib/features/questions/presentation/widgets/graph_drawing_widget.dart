@@ -173,7 +173,7 @@ class _GraphDrawingWidgetState extends State<GraphDrawingWidget> {
             _buildToolButton(l10n.toolEraser, DrawingTool.eraser, Icons.auto_fix_high),
             const SizedBox(width: 12),
             ..._presetColors.map((color) => Padding(
-              padding: const EdgeInsets.only(right: 4),
+              padding: const EdgeInsetsDirectional.only(end: 4),
               child: _buildColorButton(color),
             )),
             const SizedBox(width: 8),

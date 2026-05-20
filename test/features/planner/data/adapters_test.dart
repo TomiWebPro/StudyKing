@@ -11,11 +11,13 @@ import 'package:studyking/features/planner/data/adapters/engagement_nudge_adapte
 import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/plan_advisor_suggestion_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/student_availability_adapter.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/plan_advisor_suggestion_model.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 
 void main() {
@@ -31,6 +33,7 @@ void main() {
       expect(Hive.isAdapterRegistered(32), isTrue);
       expect(Hive.isAdapterRegistered(33), isTrue);
       expect(Hive.isAdapterRegistered(35), isTrue);
+      expect(Hive.isAdapterRegistered(37), isTrue);
     });
 
     test('is idempotent when called multiple times', () {
@@ -45,6 +48,7 @@ void main() {
       expect(Hive.isAdapterRegistered(32), isTrue);
       expect(Hive.isAdapterRegistered(33), isTrue);
       expect(Hive.isAdapterRegistered(35), isTrue);
+      expect(Hive.isAdapterRegistered(37), isTrue);
     });
   });
 
@@ -60,7 +64,8 @@ void main() {
         ..registerAdapter(PlanAdherenceMetricAdapter())
         ..registerAdapter(PlanAdherenceModelAdapter())
         ..registerAdapter(EngagementNudgeModelAdapter())
-        ..registerAdapter(StudentAvailabilityModelAdapter());
+        ..registerAdapter(StudentAvailabilityModelAdapter())
+        ..registerAdapter(PlanAdvisorSuggestionAdapter());
     }
 
     test('PersonalLearningPlanAdapter round-trip', () {
@@ -360,6 +365,61 @@ void main() {
       expect(restored.maxSessionsPerDay, 3);
       expect(restored.defaultSessionDurationMinutes, 30);
       expect(restored.blackoutDates, isEmpty);
+    });
+
+    test('PlanAdvisorSuggestionAdapter round-trip with all fields', () {
+      final registry = fullRegistry();
+      final adapter = PlanAdvisorSuggestionAdapter();
+      final now = DateTime(2025, 6, 15);
+      final source = PlanAdvisorSuggestionModel(
+        id: 'suggestion-rt',
+        studentId: 'student-1',
+        generatedAt: now,
+        suggestionType: 'plan_adjustment',
+        workloadEstimate: '~1.5h/day',
+        pathwaySuggestion: 'Review chapter 3 first',
+        motivationalReasoning: 'You are 80% through the syllabus',
+        metadata: {'confidence': 0.9},
+        applied: false,
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.id, 'suggestion-rt');
+      expect(restored.studentId, 'student-1');
+      expect(restored.generatedAt.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
+      expect(restored.suggestionType, 'plan_adjustment');
+      expect(restored.workloadEstimate, '~1.5h/day');
+      expect(restored.pathwaySuggestion, 'Review chapter 3 first');
+      expect(restored.motivationalReasoning, 'You are 80% through the syllabus');
+      expect(restored.metadata['confidence'], 0.9);
+      expect(restored.applied, isFalse);
+    });
+
+    test('PlanAdvisorSuggestionAdapter round-trip with defaults', () {
+      final registry = fullRegistry();
+      final adapter = PlanAdvisorSuggestionAdapter();
+      final now = DateTime(2025, 6, 15);
+      final source = PlanAdvisorSuggestionModel(
+        id: 'suggestion-rt2',
+        studentId: 'student-2',
+        generatedAt: now,
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.suggestionType, 'plan_generation');
+      expect(restored.workloadEstimate, isNull);
+      expect(restored.pathwaySuggestion, isNull);
+      expect(restored.motivationalReasoning, isNull);
+      expect(restored.metadata, {});
+      expect(restored.applied, isFalse);
     });
 
     test('reading from empty binary throws', () {

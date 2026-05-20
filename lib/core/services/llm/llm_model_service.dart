@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../../../core/constants/app_constants.dart';
+import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
 import 'llm_chat_service.dart';
 
@@ -118,23 +119,27 @@ class ModelListingService {
         return ApiConfig.openAIDefaultUrl;
       case LlmProvider.openRouter:
         return _openRouterBaseUrl.toString().replaceAll('/v1', '');
+      case LlmProvider.custom:
+        return _openRouterBaseUrl.toString().replaceAll('/v1', '');
     }
   }
 
-  Future<List<AiModel>> fetchAvailableModels({LlmProvider? provider}) async {
+  Future<Result<List<AiModel>>> fetchAvailableModels({LlmProvider? provider}) async {
     final activeProvider = provider ?? _provider ?? LlmProvider.openRouter;
     try {
       switch (activeProvider) {
         case LlmProvider.ollama:
-          return await _fetchOllamaModels();
+          return Result.success(await _fetchOllamaModels());
         case LlmProvider.openAI:
-          return await _fetchOpenAIModels();
+          return Result.success(await _fetchOpenAIModels());
         case LlmProvider.openRouter:
-          return await _fetchOpenRouterModels();
+          return Result.success(await _fetchOpenRouterModels());
+        case LlmProvider.custom:
+          return Result.success(await _fetchOpenAIModels());
       }
     } catch (e) {
       _logger.w('Error fetching models', e);
-      return [];
+      return Result.failure(e.toString());
     }
   }
 

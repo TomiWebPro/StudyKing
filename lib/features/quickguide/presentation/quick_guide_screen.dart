@@ -315,7 +315,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
             if (_showSuggestions && !_hasInteracted)
               Padding(
                 padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom + 8,
+                  bottom: MediaQuery.paddingOf(context).bottom + 8,
                 ),
                 child: SuggestedPromptsWidget(
                   prompts: _suggestedPrompts,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/utils/id_generator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -75,7 +76,7 @@ class _SubjectSelectionScreenState
       final subject = Subject(
         id: widget.isEditing
             ? widget.editingSubject!.id
-            : 'subject_${DateTime.now().millisecondsSinceEpoch}',
+            : IdGenerator.generate('subject'),
         name: _nameController.text.trim(),
         code: _codeController.text.trim().isEmpty
             ? null

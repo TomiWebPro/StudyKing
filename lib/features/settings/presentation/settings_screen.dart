@@ -437,7 +437,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
   }
   String _getAiModelLabel(String model) {
     final l10n = AppLocalizations.of(context)!;
-    if (model.isEmpty) return l10n.selectModelFromApi;
+    if (model.isEmpty) return '⚠ ${l10n.selectModelFromApi}';
     final parts = model.split('/');
     if (parts.length < 2) return model;
     final name = parts.last.replaceAll('-', ' ').replaceAll('_', ' ').trim();
@@ -1665,8 +1665,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               const SizedBox(height: 12),
               const Divider(),
               CheckboxListTile(
-                title: const Text('Clear all study data'),
-                subtitle: const Text('Removes all subjects, questions, attempts, and progress'),
+                title: Text(l10n.signOutClearAllData),
+                subtitle: Text(l10n.signOutRemovesAllData),
                 value: clearData,
                 onChanged: (v) => setInnerState(() {
                   clearData = v!;
@@ -1675,8 +1675,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               ),
               if (clearData)
                 CheckboxListTile(
-                  title: const Text('Back up before signing out'),
-                  subtitle: const Text('Creates a backup file before clearing data'),
+                  title: Text(l10n.signOutBackupBeforeSignOut),
+                  subtitle: Text(l10n.signOutCreatesBackupFile),
                   value: backupFirst,
                   onChanged: (v) => setInnerState(() => backupFirst = v!),
                 ),
@@ -1739,8 +1739,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 
 enum _SignOutResult { cancelled, signOutOnly, signOutAndClear, signOutBackupAndClear }
 
+final Logger _aboutDialogLogger = const Logger('SettingsScreen');
+
 void _showAboutDialog(BuildContext context) async {
-  final log = const Logger('SettingsScreen');
   final l10n = AppLocalizations.of(context)!;
   String version = l10n.aboutVersion;
   try {
@@ -1749,7 +1750,7 @@ void _showAboutDialog(BuildContext context) async {
       version = '${info.version}+${info.buildNumber}';
     }
   } catch (e) {
-    log.w('Failed to get package info: $e');
+    _aboutDialogLogger.w('Failed to get package info: $e');
   }
   if (!context.mounted) return;
   showDialog(
@@ -1803,11 +1804,15 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
         baseUrl: widget.apiBaseUrl,
         provider: widget.llmProvider,
       );
-      final models = await modelService.fetchAvailableModels().timeout(
+      final result = await modelService.fetchAvailableModels().timeout(
         const Duration(seconds: 10),
       );
       if (!mounted) return;
-      final items = models.take(100).map((m) => _ModelItem(name: m.name, provider: m.provider, id: m.id)).toList();
+      if (result.isFailure) {
+        setState(() => _error = result.error ?? '');
+        return;
+      }
+      final items = result.data!.take(100).map((m) => _ModelItem(name: m.name, provider: m.provider, id: m.id)).toList();
       setState(() {
         _models = items;
         _isLoading = false;

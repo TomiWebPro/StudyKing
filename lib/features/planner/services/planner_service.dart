@@ -25,6 +25,7 @@ import '../../../core/utils/time_utils.dart';
 import '../../../l10n/generated/app_localizations.dart';
 import 'syllabus_resolver.dart';
 import 'action_executor.dart';
+import 'planner_advisor_strategy.dart';
 class PlannerService {
   static final Logger _logger = const Logger('PlannerService');
   final PlanRepository planRepo;
@@ -39,6 +40,7 @@ class PlannerService {
   final SyllabusResolver syllabusResolver;
   final   PlanAdherenceRepository adherenceRepo;
   final LessonAgentService? lessonAgentService;
+  final PlannerAdvisorStrategy? advisor;
   final String? fixedStudentId;
   final String _localeName;
   ActionExecutor? _actionExecutor;
@@ -62,6 +64,7 @@ class PlannerService {
     PlanAdherenceRepository? adherenceRepo,
     ActionExecutor? actionExecutor,
     this.lessonAgentService,
+    this.advisor,
     this.fixedStudentId,
     String localeName = 'en',
   })  : _localeName = localeName,
@@ -72,6 +75,7 @@ class PlannerService {
         planService = planService ??
             PersonalLearningPlanService(
               masteryService: masteryService ?? MasteryGraphService(),
+              advisor: advisor,
             ),
         sessionRepo = sessionRepo ?? SessionRepository(),
         pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
@@ -164,6 +168,50 @@ class PlannerService {
       return Result.success(result.isSuccess ? result.data : null);
     } catch (e) {
       _logger.w('generatePlanFromSyllabus failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<PersonalLearningPlan?>> addSubjectToPlan({
+    required SyllabusGoal newGoal,
+    required PersonalLearningPlan existingPlan,
+  }) async {
+    try {
+      await planRepo.init();
+      await roadmapRepo.init();
+
+      final existingGoals = existingPlan.syllabusGoals;
+      final combinedGoals = [...existingGoals, newGoal];
+      final overallDays = combinedGoals.fold<int>(0, (sum, g) => sum + g.targetDays) ~/ combinedGoals.length;
+      final overallHours = combinedGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
+
+      planService.config = PlanGenerationConfig(
+        planDurationDays: overallDays.clamp(1, 365),
+        targetMinutesPerDay: (overallHours * 60).toDouble(),
+        targetQuestionsPerDay: defaultQuestionsPerDay,
+      );
+
+      final result = await planService.generatePlanFromSyllabus(
+        studentId: studentId,
+        syllabusGoals: combinedGoals,
+      );
+
+      if (result.isSuccess && result.data != null) {
+        final newPlan = result.data!;
+        final oldDateRanges = existingPlan.dailyPlans
+            .where((d) => !d.isRestDay)
+            .map((d) => d.date.toIso8601String())
+            .toList();
+        final updatedMetadata = Map<String, dynamic>.from(newPlan.metadata ?? {});
+        updatedMetadata['previous_plan_dates'] = oldDateRanges;
+        final preservedNewPlan = newPlan.copyWith(metadata: updatedMetadata);
+        await planRepo.savePlan(preservedNewPlan);
+        return Result.success(preservedNewPlan);
+      }
+
+      return Result.success(result.data);
+    } catch (e) {
+      _logger.w('addSubjectToPlan failed', e);
       return Result.failure(e.toString());
     }
   }
@@ -547,7 +595,7 @@ class PlannerService {
     }
   }
 
-  Future<Result<void>> adjustPace(double newTargetMinutesPerDay) async {
+  Future<Result<void>> adjustPace(double newTargetMinutesPerDay, {bool recalculateDuration = false}) async {
     try {
       await planRepo.init();
       final result = await planRepo.loadPlan(studentId);
@@ -558,6 +606,42 @@ class PlannerService {
       if (oldTarget <= 0) return Result.success(null);
 
       final ratio = newTargetMinutesPerDay / oldTarget;
+
+      if (recalculateDuration && plan.summary.totalMinutes > 0) {
+        final newTotalDays = (plan.summary.totalMinutes / newTargetMinutesPerDay).ceil();
+        final oldNonRestDays = plan.dailyPlans.where((d) => !d.isRestDay).length;
+        if (newTotalDays < oldNonRestDays && newTotalDays > 0) {
+          final compressedPlans = plan.dailyPlans.where((d) => !d.isRestDay).toList();
+          final step = compressedPlans.length / newTotalDays;
+          final newPlans = <DailyPlan>[];
+          final now = plan.dailyPlans.first.date;
+          for (var i = 0; i < newTotalDays; i++) {
+            final startIdx = (i * step).round();
+            final endIdx = ((i + 1) * step).round().clamp(0, compressedPlans.length);
+            final topics = compressedPlans.sublist(startIdx, endIdx)
+                .expand((d) => d.priorityTopics)
+                .toList();
+            newPlans.add(DailyPlan(
+              date: now.add(Duration(days: i)),
+              dayNumber: i + 1,
+              priorityTopics: topics,
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: newTargetMinutesPerDay.toInt() ~/ 4,
+              targetMinutes: newTargetMinutesPerDay.round(),
+              focus: 'Adjusted pace',
+            ));
+          }
+          final updatedPlan = plan.copyWith(
+            targetMinutesPerDay: newTargetMinutesPerDay,
+            targetQuestionsPerDay: (plan.targetQuestionsPerDay * ratio).round().clamp(5, 50),
+            dailyPlans: newPlans,
+            planDurationDays: newTotalDays,
+          );
+          await planRepo.savePlan(updatedPlan);
+          return Result.success(null);
+        }
+      }
 
       final updatedPlans = plan.dailyPlans.map((day) {
         if (day.isRestDay) return day;

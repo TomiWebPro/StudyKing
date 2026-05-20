@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -9,6 +10,11 @@ import 'package:studyking/core/utils/study_utils.dart';
 class SessionMigrationService {
   static final Logger _logger = const Logger('SessionMigrationService');
   static bool _migrated = false;
+
+  @visibleForTesting
+  static void resetMigrationState() {
+    _migrated = false;
+  }
 
   static Future<Result<void>> migrateIfNeeded() async {
     if (_migrated) return Result.success(null);

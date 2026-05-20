@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -40,7 +41,7 @@ void main() {
 
       expect(find.text('Add Subject'), findsOneWidget);
       expect(find.text('Upload Study Material'), findsOneWidget);
-      expect(find.text('Take Your First Practice Quiz'), findsOneWidget);
+      expect(find.text('Start Practicing'), findsOneWidget);
       expect(find.text('Schedule an AI Tutor Session'), findsOneWidget);
     });
 
@@ -105,6 +106,80 @@ void main() {
 
       expect(find.byIcon(Icons.library_add), findsOneWidget);
       expect(find.text('Add Subject'), findsOneWidget);
+    });
+
+    testWidgets('shows progress badge when some items completed', (tester) async {
+      final progress = ChecklistProgress(
+        hasSubjects: true,
+        hasSources: true,
+      );
+      await tester.pumpWidget(_buildTestApp(EmptyDashboardChecklist(progress: progress)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('2 / 4'), findsOneWidget);
+    });
+
+    testWidgets('shows celebration when all items completed', (tester) async {
+      final progress = ChecklistProgress(
+        hasSubjects: true,
+        hasSources: true,
+        hasPracticeSessions: true,
+        hasScheduledLessons: true,
+      );
+      await tester.pumpWidget(_buildTestApp(EmptyDashboardChecklist(progress: progress)));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.celebration), findsOneWidget);
+      expect(find.text('Great job setting up!'), findsOneWidget);
+    });
+
+    testWidgets('celebration shows suggested actions', (tester) async {
+      final progress = ChecklistProgress(
+        hasSubjects: true,
+        hasSources: true,
+        hasPracticeSessions: true,
+        hasScheduledLessons: true,
+      );
+      await tester.pumpWidget(_buildTestApp(EmptyDashboardChecklist(progress: progress)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Suggested next actions'), findsOneWidget);
+    });
+
+    testWidgets('celebration can be dismissed with Get Started', (tester) async {
+      final progress = ChecklistProgress(
+        hasSubjects: true,
+        hasSources: true,
+        hasPracticeSessions: true,
+        hasScheduledLessons: true,
+      );
+      await tester.pumpWidget(_buildTestApp(EmptyDashboardChecklist(progress: progress)));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.celebration), findsOneWidget);
+      expect(find.text('Get Started'), findsOneWidget);
+
+      await tester.tap(find.text('Get Started'));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.celebration), findsNothing);
+    });
+
+    testWidgets('first incomplete item is highlighted', (tester) async {
+      final progress = ChecklistProgress(
+        hasSubjects: true,
+      );
+      await tester.pumpWidget(_buildTestApp(EmptyDashboardChecklist(progress: progress)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Next Step'), findsOneWidget);
+    });
+
+    testWidgets('does not show completed count when all empty', (tester) async {
+      await tester.pumpWidget(_buildTestApp(const EmptyDashboardChecklist()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0 / 4'), findsNothing);
     });
   });
 }

@@ -31,6 +31,9 @@ class EmbeddingService {
       case LlmProvider.openAI:
         final url = baseUrl.isNotEmpty ? baseUrl : ApiConfig.openAIDefaultUrl;
         return '$url/embeddings';
+      case LlmProvider.custom:
+        final url = baseUrl.isNotEmpty ? baseUrl : ApiConfig.openAIDefaultUrl;
+        return '$url/embeddings';
     }
   }
 
@@ -45,6 +48,11 @@ class EmbeddingService {
       case LlmProvider.ollama:
         return {'Content-Type': 'application/json'};
       case LlmProvider.openAI:
+        return {
+          'Content-Type': 'application/json',
+          'Authorization': '${ApiConfig.bearerAuth}$apiKey',
+        };
+      case LlmProvider.custom:
         return {
           'Content-Type': 'application/json',
           'Authorization': '${ApiConfig.bearerAuth}$apiKey',

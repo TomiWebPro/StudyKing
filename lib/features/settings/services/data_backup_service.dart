@@ -34,7 +34,8 @@ class DataBackupService {
     if (value is Map<String, dynamic>) return value;
     try {
       return (value as dynamic).toJson() as Map<String, dynamic>;
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to convert value to map', e);
       return null;
     }
   }

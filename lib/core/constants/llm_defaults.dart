@@ -9,6 +9,8 @@ String defaultModelForProvider(LlmProvider provider) {
       return 'llama3';
     case LlmProvider.openAI:
       return 'gpt-4o-mini';
+    case LlmProvider.custom:
+      return 'gpt-4o-mini';
   }
 }
 
@@ -27,12 +29,12 @@ String evaluationPromptTemplate({
   );
   return '$intro\n'
       '{\n'
-      '  "score": <0.0 to 1.0>,\n'
-      '  "$explanationKey": "<detailed feedback explaining what was correct/incorrect>",\n'
-      '  "$partialCreditKey": <optional 0.0-1.0 for partially correct parts>,\n'
-      '  "$conceptBreakdownKey": {<optional map of concept name to mastery score 0.0-1.0>},\n'
-      '  "correctAnswer": "<the correct answer to the exercise question>",\n'
-      '  "type": "<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>",\n'
-      '  "options": [<for singleChoice/multiChoice, list of answer options; otherwise empty>]\n'
+      '  "score": ${l10n.evalScoreDesc},\n'
+      '  "$explanationKey": "${l10n.evalExplanationDesc}",\n'
+      '  "$partialCreditKey": ${l10n.evalPartialCreditDesc},\n'
+      '  "$conceptBreakdownKey": {${l10n.evalConceptBreakdownDesc}},\n'
+      '  "correctAnswer": "${l10n.evalCorrectAnswerDesc}",\n'
+      '  "type": "${l10n.evalTypeDesc}",\n'
+      '  "options": [${l10n.evalOptionsDesc}]\n'
       '}';
 }

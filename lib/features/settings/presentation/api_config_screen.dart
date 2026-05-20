@@ -45,6 +45,8 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   String _initialBackupBaseUrl = '';
   String _initialBackupModel = '';
   LlmProvider _initialBackupProvider = LlmProvider.openRouter;
+  String _selectedModel = '';
+  String _initialSelectedModel = '';
   bool _hasUnsavedChanges = false;
 
   static final _knownDefaultUrls = [
@@ -88,6 +90,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       _hasUnsavedChanges = _apiKeyController.text != _initialApiKey ||
           _baseUrlController.text != _initialBaseUrl ||
           _selectedProvider != _initialProvider ||
+          _selectedModel != _initialSelectedModel ||
           _backupApiKeyController.text != _initialBackupApiKey ||
           _backupBaseUrlController.text != _initialBackupBaseUrl ||
           _backupModelController.text != _initialBackupModel ||
@@ -103,13 +106,16 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     final backupApiKey = ref.read(backupApiKeyProvider);
     final backupBaseUrl = ref.read(backupBaseUrlProvider);
     final backupModel = ref.read(backupModelProvider);
+    final model = ref.read(selectedModelProvider);
     setState(() {
       _apiKeyController.text = apiKey;
       _baseUrlController.text = baseUrl;
       _selectedProvider = provider;
+      _selectedModel = model;
       _initialApiKey = apiKey;
       _initialBaseUrl = baseUrl;
       _initialProvider = provider;
+      _initialSelectedModel = model;
       _selectedBackupProvider = backupProvider;
       _backupApiKeyController.text = backupApiKey;
       _backupBaseUrlController.text = backupBaseUrl;
@@ -136,6 +142,17 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       return;
     }
 
+    final model = ref.read(selectedModelProvider);
+    if (model.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Please select a model before saving.'),
+          backgroundColor: errorColor,
+        ),
+      );
+      return;
+    }
+
     setState(() => _isSaving = true);
     try {
       final apiKey = _apiKeyController.text.trim();
@@ -147,7 +164,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       ref.read(apiKeyProvider.notifier).state = apiKey;
       ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
       ref.read(llmProviderProvider.notifier).state = _selectedProvider;
-      ref.read(selectedModelProvider.notifier).state = '';
+      ref.read(selectedModelProvider.notifier).state = model;
       ref.read(backupLlmProviderProvider.notifier).state = _selectedBackupProvider;
       ref.read(backupApiKeyProvider.notifier).state = backupApiKey;
       ref.read(backupBaseUrlProvider.notifier).state = backupBaseUrl;
@@ -156,7 +173,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             SettingsUpdate(
               apiKey: apiKey,
               apiBaseUrl: baseUrl,
-              selectedModel: '',
+              selectedModel: model,
               backupLlmProviderName: _selectedBackupProvider.name,
               backupApiKey: backupApiKey,
               backupBaseUrl: backupBaseUrl,
@@ -182,6 +199,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         _initialApiKey = apiKey;
         _initialBaseUrl = baseUrl;
         _initialProvider = _selectedProvider;
+        _initialSelectedModel = model;
         _initialBackupApiKey = backupApiKey;
         _initialBackupBaseUrl = backupBaseUrl;
         _initialBackupModel = backupModel;
@@ -292,7 +310,12 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
             child: Text(l10n.cancel),
           ),
           FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
+            onPressed: () {
+              ref.read(llmProviderProvider.notifier).state = _initialProvider;
+              ref.read(selectedModelProvider.notifier).state = _initialSelectedModel;
+              ref.read(apiBaseUrlProvider.notifier).state = _initialBaseUrl;
+              Navigator.pop(ctx, true);
+            },
             child: Text(l10n.discard),
           ),
         ],
@@ -527,6 +550,9 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               case LlmProvider.openAI:
                 label = 'OpenAI';
                 break;
+              case LlmProvider.custom:
+                label = 'Custom';
+                break;
             }
             return DropdownMenuItem(
               value: provider,
@@ -557,11 +583,28 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           onChanged: (value) {
             if (value == null) return;
 
-            ref.read(llmProviderProvider.notifier).state = value;
-            ref.read(selectedModelProvider.notifier).state = '';
+            if (value != _selectedProvider && _selectedModel.isNotEmpty) {
+              showDialog(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Provider Changed'),
+                  content: const Text(
+                    'Changing the provider will clear the selected model. '
+                    'You\'ll need to select a new model.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      child: const Text('OK'),
+                    ),
+                  ],
+                ),
+              );
+            }
 
             setState(() {
               _selectedProvider = value;
+              _selectedModel = '';
 
               final currentUrl = _baseUrlController.text;
               if (currentUrl.isEmpty || _knownDefaultUrls.contains(currentUrl)) {
@@ -575,10 +618,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                   case LlmProvider.openAI:
                     _baseUrlController.text = ApiConfig.openAIDefaultUrl;
                     break;
+                  case LlmProvider.custom:
+                    break;
                 }
               }
-
-              ref.read(apiBaseUrlProvider.notifier).state = _baseUrlController.text;
             });
             _updateUnsavedChanges();
           },
@@ -654,6 +697,9 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               case LlmProvider.openAI:
                 label = 'OpenAI';
                 break;
+              case LlmProvider.custom:
+                label = 'Custom';
+                break;
             }
             return DropdownMenuItem(
               value: provider,
@@ -662,7 +708,6 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           }).toList(),
           onChanged: (value) {
             if (value == null) return;
-            ref.read(backupLlmProviderProvider.notifier).state = value;
             setState(() {
               _selectedBackupProvider = value;
               final currentUrl = _backupBaseUrlController.text;
@@ -677,9 +722,10 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
                   case LlmProvider.openAI:
                     _backupBaseUrlController.text = ApiConfig.openAIDefaultUrl;
                     break;
+                  case LlmProvider.custom:
+                    break;
                 }
               }
-              ref.read(backupBaseUrlProvider.notifier).state = _backupBaseUrlController.text;
             });
             _updateUnsavedChanges();
           },

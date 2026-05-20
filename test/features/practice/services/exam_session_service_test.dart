@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -40,6 +42,20 @@ Question _q({
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('exam_service_test_').path;
+    Hive.init(hivePath);
+  });
+
+  tearDownAll(() async {
+    await Hive.deleteFromDisk();
+    if (hivePath.isNotEmpty) {
+      Directory(hivePath).deleteSync(recursive: true);
+    }
+  });
+
   group('ExamResult', () {
     group('accuracy', () {
       test('returns 1.0 when all correct', () {
@@ -453,6 +469,7 @@ void main() {
       localService.dispose();
     });
   });
+});
 }
 
 class _FailingSessionRepository extends SessionRepository {
@@ -485,7 +502,6 @@ class _FakeSessionRepo extends SessionRepository {
   final List<Session> sessions = [];
   bool shouldThrow = false;
 
-  @override
   @override
   Future<Result<void>> save(String key, Session session) async {
     if (shouldThrow) return Result.failure('Save error');

@@ -16,6 +16,7 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/practice/presentation/widgets/confidence_selector.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/practice/presentation/widgets/mistake_review_widget.dart';
@@ -596,7 +597,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           Padding(
             padding: const EdgeInsets.only(top: 4),
             child: Text(
-              'Questions will be randomly distributed by difficulty',
+              l10n.difficultyRandomDistribution,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.primary,
                 fontStyle: FontStyle.italic,
@@ -608,7 +609,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'Remaining: ${formatCompactNumber(_questionCount - (_easyCount + _mediumCount + _hardCount), l10n.localeName)}',
+                l10n.questionsRemainingCount(formatCompactNumber(_questionCount - (_easyCount + _mediumCount + _hardCount), l10n.localeName)),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.tertiary,
               ),
@@ -630,7 +631,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       child: Row(
         children: [
           ConstrainedBox(
-            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.3),
+            constraints: BoxConstraints(maxWidth: MediaQuery.sizeOf(context).width * 0.3),
             child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ),
           Expanded(
@@ -681,110 +682,10 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   }
 
   Widget _buildConfidenceSelector() {
-    final l10n = AppLocalizations.of(context)!;
-    final currentLabel = _getConfidenceLabel(l10n, _currentConfidence);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          l10n.howConfident,
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
-        Semantics(
-          label: '${l10n.howConfident}: $_currentConfidence ${l10n.confidenceRatingOf} 5, $currentLabel',
-          child: Wrap(
-            spacing: ResponsiveUtils.horizontalSpacing(context),
-            runSpacing: ResponsiveUtils.verticalSpacing(context) / 2,
-            alignment: WrapAlignment.center,
-            children: List.generate(5, (index) {
-              final rating = index + 1;
-              final isSelected = _currentConfidence == rating;
-              return Semantics(
-                button: true,
-                selected: isSelected,
-                child: InkWell(
-                  onTap: () => setState(() => _currentConfidence = rating),
-                  borderRadius: BorderRadius.circular(24),
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
-                    height: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
-                    decoration: BoxDecoration(
-                      color: isSelected
-                          ? _getConfidenceColor(rating).withValues(alpha: 0.2)
-                          : Theme.of(context).colorScheme.surfaceContainerHighest,
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: isSelected ? _getConfidenceColor(rating) : Colors.transparent,
-                        width: 2,
-                      ),
-                    ),
-                    child: Center(
-                      child: Text(
-                        '$rating',
-                        style: TextStyle(
-                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                          color: isSelected
-                              ? _getConfidenceColor(rating)
-                              : Theme.of(context).colorScheme.onSurface,
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-              );
-            }),
-          ),
-        ),
-        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
-        Center(
-          child: Text(
-            currentLabel,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
-        ),
-      ],
+    return ConfidenceSelector(
+      value: _currentConfidence,
+      onChanged: (rating) => setState(() => _currentConfidence = rating),
     );
-  }
-
-  Color _getConfidenceColor(int rating) {
-    final cs = Theme.of(context).colorScheme;
-    switch (rating) {
-      case 1:
-        return cs.error;
-      case 2:
-        return cs.tertiary;
-      case 3:
-        return cs.tertiary;
-      case 4:
-        return cs.primary;
-      case 5:
-        return cs.primary;
-      default:
-        return cs.onSurfaceVariant;
-    }
-  }
-
-  String _getConfidenceLabel(AppLocalizations l10n, int rating) {
-    switch (rating) {
-      case 1:
-        return l10n.notConfidentAtAll;
-      case 2:
-        return l10n.slightlyConfident;
-      case 3:
-        return l10n.moderatelyConfident;
-      case 4:
-        return l10n.quiteConfident;
-      case 5:
-        return l10n.veryConfident;
-      default:
-        return '';
-    }
   }
 
   Widget _buildResultsScreen(AppLocalizations l10n) {

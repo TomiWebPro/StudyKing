@@ -51,7 +51,7 @@ class TopicDetailScreen extends ConsumerWidget {
       ),
       body: allMasteryAsync.when(
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('${l10n.errorLoadingSource}\n$e')),
+        error: (e, _) => Center(child: Text(l10n.errorLoadingSourceWithDetail('$e'))),
         data: (allMastery) {
           final state = allMastery.where((s) => s.topicId == topicId).firstOrNull;
           if (state == null) {
@@ -133,10 +133,10 @@ class _TopicDetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildStatBox(context, l10n.totalQuestions, '${state.totalAttempts}',
+              Expanded(child: _buildStatBox(context, l10n.totalQuestions, formatDecimal(state.totalAttempts.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                   _levelColor(state.masteryLevel, context))),
               const SizedBox(width: 8),
-              Expanded(child: _buildStatBox(context, l10n.correctAnswers, '${state.correctAttempts}',
+              Expanded(child: _buildStatBox(context, l10n.correctAnswers, formatDecimal(state.correctAttempts.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                   cs.primary)),
               const SizedBox(width: 8),
               Expanded(child: _buildStatBox(context, l10n.masteryLevel,
@@ -147,10 +147,10 @@ class _TopicDetailBody extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _buildStatBox(context, l10n.currentStreak, '${state.currentStreak}',
+              Expanded(child: _buildStatBox(context, l10n.currentStreak, formatDecimal(state.currentStreak.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                   cs.tertiary)),
               const SizedBox(width: 8),
-              Expanded(child: _buildStatBox(context, l10n.bestStreak, '${state.bestStreak}',
+              Expanded(child: _buildStatBox(context, l10n.bestStreak, formatDecimal(state.bestStreak.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                   cs.primary)),
               const SizedBox(width: 8),
               Expanded(child: _buildStatBox(context, l10n.readiness,

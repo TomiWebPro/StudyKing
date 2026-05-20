@@ -164,7 +164,7 @@ void main() {
         expect(find.textContaining('graphDrawing'), findsOneWidget);
       });
 
-      testWidgets('renders fallback for fileUpload question type', (tester) async {
+      testWidgets('renders file upload button for fileUpload question type', (tester) async {
         await tester.pumpWidget(sessionApp(
           result: Result.success([
             question(
@@ -179,11 +179,10 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Upload a file'), findsOneWidget);
-        expect(find.textContaining('Unsupported'), findsOneWidget);
-        expect(find.textContaining('fileUpload'), findsOneWidget);
+        expect(find.textContaining('Upload file'), findsOneWidget);
       });
 
-      testWidgets('renders fallback for audioRecording question type', (tester) async {
+      testWidgets('renders audio recording button for audioRecording question type', (tester) async {
         await tester.pumpWidget(sessionApp(
           result: Result.success([
             question(
@@ -198,8 +197,7 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Record audio'), findsOneWidget);
-        expect(find.textContaining('Unsupported'), findsOneWidget);
-        expect(find.textContaining('audioRecording'), findsOneWidget);
+        expect(find.textContaining('Start recording'), findsOneWidget);
       });
 
       testWidgets('renders default fallback for stepByStep question type', (tester) async {

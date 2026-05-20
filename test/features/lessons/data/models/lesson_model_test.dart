@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -51,12 +52,22 @@ void main() {
           generatedBy: GeneratedBy.ai,
           createdAt: now,
           markscheme: 'answer key',
+          sessionId: 'session-123',
         );
         expect(lesson.blocks.length, 1);
         expect(lesson.blocks.first.id, 'block-1');
         expect(lesson.difficulty, 3);
         expect(lesson.generatedBy, GeneratedBy.ai);
         expect(lesson.markscheme, 'answer key');
+        expect(lesson.sessionId, 'session-123');
+      });
+
+      test('creates with null sessionId by default', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        expect(lesson.sessionId, isNull);
       });
 
       test('creates with explicit empty markscheme', () {
@@ -139,6 +150,24 @@ void main() {
         expect((json['blocks'] as List)[1]['type'], LessonBlockType.quiz.index);
         expect((json['blocks'] as List)[2]['type'], LessonBlockType.slide.index);
       });
+
+      test('serializes sessionId when non-null', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now, sessionId: 'sess-1',
+        );
+        final json = lesson.toJson();
+        expect(json['sessionId'], 'sess-1');
+      });
+
+      test('serializes null sessionId', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final json = lesson.toJson();
+        expect(json['sessionId'], isNull);
+      });
     });
 
     group('fromJson', () {
@@ -162,6 +191,7 @@ void main() {
           'generatedBy': 1,
           'createdAt': now.toIso8601String(),
           'markscheme': null,
+          'sessionId': 'session-abc',
         };
         final lesson = Lesson.fromJson(json);
         expect(lesson.id, 'lesson-1');
@@ -173,6 +203,7 @@ void main() {
         expect(lesson.generatedBy, GeneratedBy.manual);
         expect(lesson.createdAt, now);
         expect(lesson.markscheme, isNull);
+        expect(lesson.sessionId, 'session-abc');
       });
 
       test('deserializes with missing optionals', () {
@@ -311,6 +342,24 @@ void main() {
         final restored = Lesson.fromJson(original.toJson());
         expect(restored.markscheme, '');
       });
+
+      test('roundtrip preserves sessionId', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now, sessionId: 'sess-round',
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.sessionId, 'sess-round');
+      });
+
+      test('roundtrip preserves null sessionId', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.sessionId, isNull);
+      });
     });
 
     group('copyWith', () {
@@ -409,6 +458,24 @@ void main() {
         );
         final copy = lesson.copyWith(markscheme: null);
         expect(copy.markscheme, 'key');
+      });
+
+      test('updates sessionId', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final copy = lesson.copyWith(sessionId: 'new-session');
+        expect(copy.sessionId, 'new-session');
+      });
+
+      test('passing null sessionId preserves original sessionId', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now, sessionId: 'orig',
+        );
+        final copy = lesson.copyWith(sessionId: null);
+        expect(copy.sessionId, 'orig');
       });
     });
 
@@ -512,6 +579,31 @@ void main() {
         final lesson = Lesson.fromJson(json);
         expect(lesson.markscheme, isNull);
       });
+
+      test('handles null sessionId', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'sessionId': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.sessionId, isNull);
+      });
+
+      test('handles missing sessionId key', () {
+        final json = {
+          'id': 'lesson-1',
+          'subjectId': 's1',
+          'title': 'Title',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.sessionId, isNull);
+      });
     });
 
     group('equality', () {
@@ -577,6 +669,185 @@ void main() {
       test('includes class name', () {
         final obj = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
         expect(obj.toString(), contains('Lesson'));
+      });
+    });
+
+    group('copyWith edge cases', () {
+      test('changes markscheme from null to string', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
+        final copy = lesson.copyWith(markscheme: 'new key');
+        expect(copy.markscheme, 'new key');
+        expect(lesson.markscheme, isNull);
+      });
+
+      test('changes markscheme from string to null', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now, markscheme: 'old key');
+        final copy = lesson.copyWith(markscheme: null);
+        expect(copy.markscheme, 'old key');
+      });
+
+      test('changes sessionId from null to string', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
+        final copy = lesson.copyWith(sessionId: 'sess-1');
+        expect(copy.sessionId, 'sess-1');
+        expect(lesson.sessionId, isNull);
+      });
+
+      test('changes sessionId from string to null preserves original', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now, sessionId: 'orig');
+        final copy = lesson.copyWith(sessionId: null);
+        expect(copy.sessionId, 'orig');
+      });
+
+      test('chains three copyWith calls', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'Start', topicId: 't1', createdAt: now);
+        final s1 = lesson.copyWith(title: 'Step 1');
+        final s2 = s1.copyWith(title: 'Step 2', difficulty: 3);
+        final s3 = s2.copyWith(markscheme: 'final key');
+        expect(s3.title, 'Step 2');
+        expect(s3.difficulty, 3);
+        expect(s3.markscheme, 'final key');
+        expect(s3.id, 'l1');
+      });
+
+      test('copyWith with empty blocks replaces blocks', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', blocks: [sampleBlock], createdAt: now);
+        final copy = lesson.copyWith(blocks: []);
+        expect(copy.blocks, isEmpty);
+        expect(lesson.blocks.length, 1);
+      });
+    });
+
+    group('createdAt date edge cases', () {
+      test('uses very old date', () {
+        final oldDate = DateTime(1, 1, 1);
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: oldDate);
+        expect(lesson.createdAt, oldDate);
+        final restored = Lesson.fromJson(lesson.toJson());
+        expect(restored.createdAt, oldDate);
+      });
+
+      test('uses very far future date', () {
+        final futureDate = DateTime(9999, 12, 31);
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: futureDate);
+        expect(lesson.createdAt, futureDate);
+        final restored = Lesson.fromJson(lesson.toJson());
+        expect(restored.createdAt, futureDate);
+      });
+
+      test('uses UTC date', () {
+        final utcDate = DateTime.utc(2026, 5, 12, 10, 30, 0);
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: utcDate);
+        final json = lesson.toJson();
+        expect(json['createdAt'], utcDate.toIso8601String());
+        final restored = Lesson.fromJson(json);
+        expect(restored.createdAt, utcDate);
+      });
+    });
+
+    group('Lesson with every LessonBlockType', () {
+      test('serializes and deserializes all block types in one lesson', () {
+        final blocks = LessonBlockType.values.map((type) {
+          return LessonBlock(
+            id: 'b-${type.index}',
+            subjectId: 's1',
+            lessonId: 'l1',
+            type: type,
+            content: 'Content for $type',
+            order: type.index,
+          );
+        }).toList();
+
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T', topicId: 't1',
+          blocks: blocks, createdAt: now,
+        );
+
+        final json = lesson.toJson();
+        expect((json['blocks'] as List).length, LessonBlockType.values.length);
+
+        final restored = Lesson.fromJson(json);
+        expect(restored.blocks.length, LessonBlockType.values.length);
+        for (final type in LessonBlockType.values) {
+          expect(restored.blocks.any((b) => b.type == type), isTrue);
+        }
+      });
+
+      test('roundtrip preserves all block types', () {
+        final blocks = LessonBlockType.values.map((type) {
+          return LessonBlock(
+            id: 'b-$type',
+            subjectId: 's1',
+            lessonId: 'l1',
+            type: type,
+            content: 'C',
+            order: type.index,
+          );
+        }).toList();
+
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T', topicId: 't1',
+          blocks: blocks, createdAt: now,
+        );
+        final restored = Lesson.fromJson(lesson.toJson());
+        expect(restored.blocks.length, LessonBlockType.values.length);
+        for (final b in restored.blocks) {
+          expect(b, isA<LessonBlock>());
+        }
+      });
+    });
+
+    group('Lesson JSON extreme values', () {
+      test('handles very long title', () {
+        final longTitle = 'x' * 5000;
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: longTitle, topicId: 't1', createdAt: now);
+        final json = lesson.toJson();
+        expect(json['title'], longTitle);
+        final restored = Lesson.fromJson(json);
+        expect(restored.title, longTitle);
+      });
+
+      test('handles difficulty 0', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', difficulty: 0, createdAt: now);
+        expect(lesson.difficulty, 0);
+        final restored = Lesson.fromJson(lesson.toJson());
+        expect(restored.difficulty, 0);
+      });
+
+      test('handles very high difficulty', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', difficulty: 999, createdAt: now);
+        expect(lesson.difficulty, 999);
+        final restored = Lesson.fromJson(lesson.toJson());
+        expect(restored.difficulty, 999);
+      });
+    });
+
+    group('Lesson fromJson unexpected input', () {
+      test('fromJson throws when createdAt is invalid', () {
+        final json = {
+          'id': 'l1',
+          'subjectId': 's1',
+          'title': 'T',
+          'topicId': 't1',
+          'createdAt': 'not-a-date',
+        };
+        expect(() => Lesson.fromJson(json), throwsA(isA<FormatException>()));
+      });
+
+      test('fromJson throws when generatedBy index is out of range', () {
+        final json = {
+          'id': 'l1', 'subjectId': 's1', 'title': 'T',
+          'topicId': 't1', 'generatedBy': 999,
+          'createdAt': now.toIso8601String(),
+        };
+        expect(() => Lesson.fromJson(json), throwsA(isA<RangeError>()));
+      });
+    });
+
+    group('Lesson Hive extension', () {
+      test('is a HiveObject', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
+        expect(lesson, isA<HiveObject>());
       });
     });
   });

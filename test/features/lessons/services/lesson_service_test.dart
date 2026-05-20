@@ -11,7 +11,7 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
-import 'package:studyking/features/lessons/services/lesson_service.dart';
+import 'package:studyking/features/lessons/services/session_query_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 
 class _FakeTopicRepository extends TopicRepository {

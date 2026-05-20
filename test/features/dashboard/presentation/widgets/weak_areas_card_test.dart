@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import '../../../../helpers/navigator_observer_helper.dart';
 
 Widget _buildTestApp(Widget child) {
   return MaterialApp(
@@ -13,22 +11,6 @@ Widget _buildTestApp(Widget child) {
     locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
-  );
-}
-
-Widget _buildTestAppWithRoutes(Widget child, {List<NavigatorObserver>? navigatorObservers}) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
-    navigatorObservers: navigatorObservers ?? [],
-    home: Scaffold(body: child),
-    routes: {
-      '/practice-session': (_) => const Scaffold(
-        body: Text('Practice Session'),
-      ),
-    },
   );
 }
 
@@ -164,42 +146,21 @@ void main() {
       expect(find.byIcon(Icons.play_arrow), findsWidgets);
     });
 
-    testWidgets('tapping practice icon navigates to practice session', (tester) async {
-      final observer = TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestAppWithRoutes(
+    testWidgets('taps onTopicTap when topic name is tapped', (tester) async {
+      String? tappedTopicId;
+      await tester.pumpWidget(_buildTestApp(
         WeakAreasCard(
           allMastery: [
             _state(topicId: 't1', accuracy: 0.35),
           ],
           resolveTopicName: _resolveName,
+          onTopicTap: (topicId) => tappedTopicId = topicId,
         ),
-        navigatorObservers: [observer],
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.play_arrow).first);
-      await tester.pumpAndSettle();
-
-      expect(observer.pushedRoutes.last.settings.name, AppRoutes.practiceSession);
-    });
-
-    testWidgets('tapping practice all button navigates to practice session', (tester) async {
-      final observer = TestNavigatorObserver();
-      await tester.pumpWidget(_buildTestAppWithRoutes(
-        WeakAreasCard(
-          allMastery: [
-            _state(topicId: 't1', accuracy: 0.35),
-          ],
-          resolveTopicName: _resolveName,
-        ),
-        navigatorObservers: [observer],
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byType(OutlinedButton));
-      await tester.pumpAndSettle();
-
-      expect(observer.pushedRoutes.last.settings.name, AppRoutes.practiceSession);
+      await tester.tap(find.text('Algebra'));
+      expect(tappedTopicId, 't1');
     });
 
     testWidgets('renders divider when weak areas present', (tester) async {
@@ -214,6 +175,32 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(Divider), findsOneWidget);
+    });
+
+    testWidgets('shows message when no weak areas with empty list', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeakAreasCard(
+          allMastery: [],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No weak areas found. Keep up the great work!'), findsOneWidget);
+    });
+
+    testWidgets('boundary: accuracy exactly 0.6 is not a weak area', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        WeakAreasCard(
+          allMastery: [
+            _state(topicId: 't1', accuracy: 0.6),
+          ],
+          resolveTopicName: _resolveName,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No weak areas found. Keep up the great work!'), findsOneWidget);
     });
   });
 }

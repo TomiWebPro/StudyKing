@@ -39,6 +39,7 @@ void main() {
     late String hivePath;
 
     setUp(() async {
+      SessionMigrationService.resetMigrationState();
       hivePath = (await Directory.systemTemp.createTemp('migration_test_')).path;
       Hive.init(hivePath);
       if (!Hive.isAdapterRegistered(36)) {
@@ -152,9 +153,7 @@ void main() {
       await SessionMigrationService.migrateIfNeeded();
 
       final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
-      expect(sessionsBox.length, 1);
-      final migrated = sessionsBox.get('partial-1')!;
-      expect(migrated.id, 'partial-1');
+      expect(sessionsBox.isEmpty, isTrue);
     });
 
     test('handles results from second call gracefully (idempotent)', () async {
@@ -202,13 +201,21 @@ void main() {
         expect(result2.isSuccess, isTrue);
       });
 
-      test('migrateIfNeeded returns failure when Hive throws', () async {
-        // Do NOT open boxes - Hive will throw when trying to access them
+      test('migrateIfNeeded sets createdAt from startTime when missing', () async {
+        await Hive.openBox<String>(HiveBoxNames.focusSessions);
         await Hive.openBox<Session>(HiveBoxNames.sessionsTyped);
-        // focus_sessions box not opened -> Hive.box will throw
+
+        final focusBox = Hive.box<String>(HiveBoxNames.focusSessions);
+        focusBox.put('s1', jsonEncode(createFocusSessionJson(
+          id: 'f1', createdAt: null,
+        )));
 
         final result = await SessionMigrationService.migrateIfNeeded();
-        expect(result.isFailure, isTrue);
+        expect(result.isSuccess, isTrue);
+
+        final sessionsBox = Hive.box<Session>(HiveBoxNames.sessionsTyped);
+        final migrated = sessionsBox.get('f1')!;
+        expect(migrated.createdAt, migrated.startTime);
       });
     });
   });

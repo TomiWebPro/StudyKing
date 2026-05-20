@@ -9,11 +9,13 @@ class PracticeModeGrid extends StatelessWidget {
   final Map<String, int> dueCounts;
   final bool hasSubjects;
   final int totalQuestionCount;
+  final int customQuestionCount;
   final bool isNewUser;
   final VoidCallback onQuickPractice;
   final VoidCallback onSpacedRepetition;
   final VoidCallback onTopicFocus;
   final VoidCallback onWeakAreas;
+  final VoidCallback onMyQuestions;
 
   const PracticeModeGrid({
     super.key,
@@ -21,11 +23,13 @@ class PracticeModeGrid extends StatelessWidget {
     required this.dueCounts,
     required this.hasSubjects,
     this.totalQuestionCount = 0,
+    this.customQuestionCount = 0,
     this.isNewUser = false,
     required this.onQuickPractice,
     required this.onSpacedRepetition,
     required this.onTopicFocus,
     required this.onWeakAreas,
+    required this.onMyQuestions,
   });
 
   void _showDisabledCardDialog(BuildContext context, String title, String message, String actionLabel, VoidCallback action) {
@@ -151,6 +155,22 @@ class PracticeModeGrid extends StatelessWidget {
                       l10n.addFirstSubject,
                       l10n.subjects,
                       () => Navigator.pushNamed(context, AppRoutes.subjectSelection),
+                    )
+                  : null,
+            ),
+            PracticeModeCard(
+              icon: Icons.person,
+              title: l10n.manual,
+              subtitle: l10n.questionsCount(customQuestionCount),
+              color: Theme.of(context).colorScheme.tertiary,
+              onTap: customQuestionCount > 0 ? onMyQuestions : null,
+              onTapDisabled: customQuestionCount == 0
+                  ? () => _showDisabledCardDialog(
+                      context,
+                      l10n.manual,
+                      l10n.noQuestionsAvailable,
+                      l10n.createQuestion,
+                      () => Navigator.pushNamed(context, AppRoutes.questionBank),
                     )
                   : null,
             ),

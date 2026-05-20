@@ -10,133 +10,17 @@ import 'package:studyking/core/providers/shared_providers.dart' show localeProvi
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/utils/study_utils.dart';
+import '../../../core/utils/time_utils.dart';
 import '../services/planner_service.dart';
-import 'package:studyking/core/utils/time_utils.dart';
+export 'plan_providers.dart' show PlanProgressData, DailyProgress, planProgressProvider;
+export 'syllabus_providers.dart' show SyllabusProgressData, RoadmapListData, syllabusProgressProvider, roadmapListProvider;
+export 'adherence_providers.dart' show AdherenceSummaryData, TodayAdherenceData, adherenceSummaryProvider, todayAdherenceProvider;
 
 final plannerServiceProvider = Provider<PlannerService>((ref) {
   final locale = ref.watch(localeProvider);
   return PlannerService(
     lessonAgentService: ref.watch(lessonAgentServiceProvider),
     localeName: locale.languageCode,
-  );
-});
-
-class PlanProgressData {
-  final int plannedMinutesToday;
-  final int actualMinutesToday;
-  final int plannedQuestionsToday;
-  final int actualQuestionsToday;
-  final double todayProgress;
-  final int totalPlanDays;
-  final int completedDays;
-  final double cumulativeProgress;
-  final List<DailyProgress> weeklyProgress;
-
-  const PlanProgressData({
-    this.plannedMinutesToday = 0,
-    this.actualMinutesToday = 0,
-    this.plannedQuestionsToday = 0,
-    this.actualQuestionsToday = 0,
-    this.todayProgress = 0.0,
-    this.totalPlanDays = 0,
-    this.completedDays = 0,
-    this.cumulativeProgress = 0.0,
-    this.weeklyProgress = const [],
-  });
-}
-
-class DailyProgress {
-  final DateTime date;
-  final int plannedMinutes;
-  final int actualMinutes;
-
-  const DailyProgress({
-    required this.date,
-    this.plannedMinutes = 0,
-    this.actualMinutes = 0,
-  });
-}
-
-final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
-  final service = ref.watch(plannerServiceProvider);
-  final planResult = await service.loadExistingPlan();
-  final plan = planResult.data;
-  if (plan == null) return const PlanProgressData();
-
-  final now = DateTime.now();
-  final todayStart = now.dateOnly;
-
-  int plannedMinutesToday = 0;
-  int plannedQuestionsToday = 0;
-  for (final day in plan.dailyPlans) {
-    final dDay = day.date.dateOnly;
-    if (dDay == todayStart) {
-      plannedMinutesToday = day.targetMinutes;
-      plannedQuestionsToday = day.targetQuestions;
-      break;
-    }
-  }
-
-  final metricsResult = await service.getAdherenceMetrics();
-  final metrics = metricsResult.data ?? <String, int>{};
-  final actualMinutesToday = metrics['actualMinutesToday'] as int;
-  final actualQuestionsToday = metrics['actualQuestionsToday'] as int;
-
-  final todayProgress = plannedMinutesToday > 0
-      ? (actualMinutesToday / plannedMinutesToday).clamp(0.0, 1.5)
-      : 0.0;
-
-  final adherenceRecordsResult = await service.getAdherenceRecords();
-  final adherenceRecords = adherenceRecordsResult.data ?? [];
-
-  final weeklyProgress = <DailyProgress>[];
-  for (var i = 6; i >= 0; i--) {
-    final day = todayStart.subtract(Duration(days: i));
-    var pMin = 0;
-    var aMin = 0;
-    for (final dp in plan.dailyPlans) {
-      final dDay = dp.date.dateOnly;
-      if (dDay == day) {
-        pMin = dp.targetMinutes;
-        break;
-      }
-    }
-    for (final r in adherenceRecords) {
-      final rDay = r.date.dateOnly;
-      if (rDay == day) {
-        aMin += r.actualMinutes;
-      }
-    }
-    weeklyProgress.add(DailyProgress(
-      date: day,
-      plannedMinutes: pMin,
-      actualMinutes: aMin,
-    ));
-  }
-
-  final completedDays = plan.dailyPlans.where((d) {
-    if (d.isRestDay) return true;
-    for (final r in adherenceRecords) {
-      final rDay = r.date.dateOnly;
-      final dDay = d.date.dateOnly;
-      if (rDay == dDay && r.adherenceScore >= 0.5) return true;
-    }
-    return false;
-  }).length;
-
-  final totalPlanDays = plan.dailyPlans.length;
-  final cumulativeProgress = totalPlanDays > 0 ? completedDays / totalPlanDays : 0.0;
-
-  return PlanProgressData(
-    plannedMinutesToday: plannedMinutesToday,
-    actualMinutesToday: actualMinutesToday,
-    plannedQuestionsToday: plannedQuestionsToday,
-    actualQuestionsToday: actualQuestionsToday,
-    todayProgress: todayProgress,
-    totalPlanDays: totalPlanDays,
-    completedDays: completedDays,
-    cumulativeProgress: cumulativeProgress,
-    weeklyProgress: weeklyProgress,
   );
 });
 
@@ -366,6 +250,12 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     state = state.copyWith(isGenerating: true, error: null, successMessage: null);
 
     try {
+      final oldPlan = state.plan;
+      final oldDateRanges = oldPlan?.dailyPlans
+          .where((d) => !d.isRestDay)
+          .map((d) => d.date.toIso8601String())
+          .toList() ?? [];
+
       final planResult = await _service.generatePlanFromSyllabus(
         syllabusGoals: syllabusGoals,
         daysValue: daysValue,
@@ -373,8 +263,13 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       );
       final plan = planResult.data;
       if (plan != null) {
+        final updatedMetadata = Map<String, dynamic>.from(plan.metadata ?? {});
+        if (oldDateRanges.isNotEmpty) {
+          updatedMetadata['previous_plan_dates'] = oldDateRanges;
+        }
+        final preservedPlan = plan.copyWith(metadata: updatedMetadata);
         state = state.copyWith(
-          plan: plan,
+          plan: preservedPlan,
           isGenerating: false,
           successMessage: l10n.syllabusPlanGenerated,
         );
@@ -682,6 +577,44 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       state = state.copyWith(successMessage: l10n.planAdjusted);
     } catch (e) {
       state = state.copyWith(error: l10n.failedToAdjustPlan);
+    }
+  }
+
+  Future<void> addSubjectToPlan(SyllabusGoal newGoal, AppLocalizations l10n) async {
+    try {
+      final existingPlan = state.plan;
+      if (existingPlan == null) {
+        state = state.copyWith(error: l10n.failedToAddSubjectToPlan);
+        return;
+      }
+
+      final existingGoals = existingPlan.syllabusGoals;
+      if (existingGoals.any((g) => g.subjectId == newGoal.subjectId)) {
+        state = state.copyWith(error: 'Subject already in plan');
+        return;
+      }
+
+      state = state.copyWith(isGenerating: true, error: null, successMessage: null);
+      final result = await _service.addSubjectToPlan(
+        newGoal: newGoal,
+        existingPlan: existingPlan,
+      );
+      if (result.isSuccess && result.data != null) {
+        state = state.copyWith(
+          plan: result.data,
+          isGenerating: false,
+          successMessage: 'Subject added to plan',
+        );
+      } else {
+        state = state.copyWith(
+          isGenerating: false,
+          error: l10n.failedToAddSubjectToPlan,
+        );
+      }
+      await loadExistingPlan();
+    } catch (e) {
+      _logger.w('Failed to add subject to plan', e);
+      state = state.copyWith(isGenerating: false, error: l10n.somethingWentWrong);
     }
   }
 }

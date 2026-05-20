@@ -1286,7 +1286,7 @@ abstract class AppLocalizations {
   /// **'Exam Date (Optional)'**
   String get examDateOptional;
 
-  /// Semantic tooltip for backup and restore action
+  /// Section title for backup & restore in settings
   ///
   /// In en, this message translates to:
   /// **'Backup & Restore'**
@@ -1946,7 +1946,7 @@ abstract class AppLocalizations {
   /// **'{percent}% Complete: {completed}/{total} questions generated'**
   String percentComplete(int percent, int completed, int total);
 
-  /// Action button to schedule a lesson
+  /// Title for schedule lesson dialog
   ///
   /// In en, this message translates to:
   /// **'Schedule Lesson'**
@@ -3026,7 +3026,7 @@ abstract class AppLocalizations {
   /// **'Dismiss'**
   String get dismiss;
 
-  /// Tooltip for voice input button when idle
+  /// Tooltip for voice input button
   ///
   /// In en, this message translates to:
   /// **'Voice Input'**
@@ -3428,12 +3428,6 @@ abstract class AppLocalizations {
   /// **'No at-risk topics. Keep up the good work!'**
   String get noAtRiskTopics;
 
-  /// Accuracy percentage label
-  ///
-  /// In en, this message translates to:
-  /// **'Accuracy: {percent}'**
-  String accuracyLabel(String percent);
-
   /// Section title for ready-to-advance topics
   ///
   /// In en, this message translates to:
@@ -3463,18 +3457,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Weak'**
   String get weakLabel;
-
-  /// Average accuracy percentage
-  ///
-  /// In en, this message translates to:
-  /// **'Avg Accuracy: {percent}'**
-  String avgAccuracyLabel(String percent);
-
-  /// Average readiness percentage
-  ///
-  /// In en, this message translates to:
-  /// **'Avg Readiness: {percent}'**
-  String avgReadinessLabel(String percent);
 
   /// Label for a course session in planner
   ///
@@ -5954,6 +5936,12 @@ abstract class AppLocalizations {
   /// **'Failed to adjust study pace'**
   String get failedToAdjustPlan;
 
+  /// Error message when adding a subject to the plan fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to add subject to study plan'**
+  String get failedToAddSubjectToPlan;
+
   /// Title for the progress overview section
   ///
   /// In en, this message translates to:
@@ -6840,7 +6828,7 @@ abstract class AppLocalizations {
   /// **'Your progress in this session will be saved, but you will leave before completing all questions.'**
   String get confirmExitPracticeBody;
 
-  /// Button label to stay on current screen
+  /// Button to stay in current session
   ///
   /// In en, this message translates to:
   /// **'Stay'**
@@ -7014,11 +7002,11 @@ abstract class AppLocalizations {
   /// **'Unknown error'**
   String get unknownError;
 
-  /// User-facing error message when plan fails to load
+  /// Error message when plan fails to load
   ///
   /// In en, this message translates to:
   /// **'Failed to load plan: {error}'**
-  String failedToLoadPlan(Object error);
+  String failedToLoadPlan(String error);
 
   /// Error message when backup export fails with details
   ///
@@ -7265,6 +7253,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your study data will be preserved.'**
   String get signOutPreservesStudyData;
+
+  /// Checkbox label to clear all study data on sign out
+  ///
+  /// In en, this message translates to:
+  /// **'Clear all study data'**
+  String get signOutClearAllData;
+
+  /// Subtitle explaining what clearing data removes
+  ///
+  /// In en, this message translates to:
+  /// **'Removes all subjects, questions, attempts, and progress'**
+  String get signOutRemovesAllData;
+
+  /// Checkbox label to back up before clearing data
+  ///
+  /// In en, this message translates to:
+  /// **'Back up before signing out'**
+  String get signOutBackupBeforeSignOut;
+
+  /// Subtitle explaining what backing up does
+  ///
+  /// In en, this message translates to:
+  /// **'Creates a backup file before clearing data'**
+  String get signOutCreatesBackupFile;
 
   /// Hint shown after successful data import
   ///
@@ -7697,6 +7709,48 @@ abstract class AppLocalizations {
     String studentAnswer,
   );
 
+  /// JSON template description for score field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<0.0 to 1.0>'**
+  String get evalScoreDesc;
+
+  /// JSON template description for explanation field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<detailed feedback explaining what was correct/incorrect>'**
+  String get evalExplanationDesc;
+
+  /// JSON template description for partial credit field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<optional 0.0-1.0 for partially correct parts>'**
+  String get evalPartialCreditDesc;
+
+  /// JSON template description for concept breakdown field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<optional map of concept name to mastery score 0.0-1.0>'**
+  String get evalConceptBreakdownDesc;
+
+  /// JSON template description for correct answer field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<the correct answer to the exercise question>'**
+  String get evalCorrectAnswerDesc;
+
+  /// JSON template description for type field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>'**
+  String get evalTypeDesc;
+
+  /// JSON template description for options field in evaluation prompt
+  ///
+  /// In en, this message translates to:
+  /// **'<for singleChoice/multiChoice, list of answer options; otherwise empty>'**
+  String get evalOptionsDesc;
+
   /// Semantics label for minutes in focus timer
   ///
   /// In en, this message translates to:
@@ -7804,6 +7858,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'An error occurred while loading the source. Please try again.'**
   String get errorLoadingSource;
+
+  /// Error message when loading source fails, with error detail
+  ///
+  /// In en, this message translates to:
+  /// **'An error occurred while loading the source: {error}'**
+  String errorLoadingSourceWithDetail(String error);
 
   /// Dialog title for source reprocessing
   ///
@@ -8861,43 +8921,49 @@ abstract class AppLocalizations {
   /// **'Share last backup'**
   String get shareLastBackup;
 
-  /// Semantic tooltip for export reports action
+  /// Semantics label and tooltip for export reports button
   ///
   /// In en, this message translates to:
   /// **'Export Reports'**
   String get exportReports;
 
-  /// Tooltip for read aloud button on tutor messages
+  /// Tooltip for read aloud button on chat bubble
   ///
   /// In en, this message translates to:
   /// **'Read aloud'**
   String get readAloud;
 
-  /// Label for upload file button in question card
+  /// Semantics label and button label for file upload
   ///
   /// In en, this message translates to:
   /// **'Upload file'**
   String get uploadFile;
 
-  /// Label shown when a file is attached to a question
+  /// Button label when a file is attached
   ///
   /// In en, this message translates to:
   /// **'File attached'**
   String get fileAttached;
 
-  /// Label for record audio button in question card
+  /// Semantics label for audio recording button
   ///
   /// In en, this message translates to:
   /// **'Record audio'**
   String get recordAudio;
 
-  /// Label shown when audio recording is complete
+  /// Button label when recording is complete
   ///
   /// In en, this message translates to:
   /// **'Recording complete'**
   String get recordingComplete;
 
-  /// Label for starting audio recording
+  /// Label shown while audio recording is active
+  ///
+  /// In en, this message translates to:
+  /// **'Recording in progress'**
+  String get recordingInProgress;
+
+  /// Button label for idle recording state
   ///
   /// In en, this message translates to:
   /// **'Start recording'**
@@ -9488,6 +9554,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Please wait…'**
   String get pleaseWait;
+
+  /// Hint shown when no difficulty counts are specified for exam
+  ///
+  /// In en, this message translates to:
+  /// **'Questions will be randomly distributed by difficulty'**
+  String get difficultyRandomDistribution;
+
+  /// Count of questions still needing difficulty assignment
+  ///
+  /// In en, this message translates to:
+  /// **'Remaining: {count}'**
+  String questionsRemainingCount(String count);
+
+  /// Snackbar message after profile deletion
+  ///
+  /// In en, this message translates to:
+  /// **'Profile deleted successfully'**
+  String get profileDeleted;
 }
 
 class _AppLocalizationsDelegate

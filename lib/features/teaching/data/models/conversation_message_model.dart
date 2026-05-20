@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 enum MessageRole { system, tutor, student, mentor }
 
@@ -65,11 +66,14 @@ class ConversationMessage extends HiveObject {
     bool? isEvaluation,
   }) : isEvaluation = isEvaluation ?? _computeIsEvaluation(content);
 
+  static final Logger _logger = const Logger('ConversationMessage');
+
   static bool _computeIsEvaluation(String content) {
     try {
       final data = jsonDecode(content) as Map<String, dynamic>;
       return data['type'] == 'evaluation';
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse evaluation content', e);
       return false;
     }
   }

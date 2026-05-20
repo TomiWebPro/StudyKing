@@ -64,7 +64,7 @@ class MasteryProgressCard extends StatelessWidget {
                   ),
                   const SizedBox(width: 4),
                   Text(
-                    'Last updated $daysSinceUpdate days ago',
+                    l10n.mentorDaysAgo(daysSinceUpdate),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: daysSinceUpdate >= 7
                           ? Theme.of(context).colorScheme.error

@@ -78,39 +78,29 @@ class CollapsibleCard extends ConsumerWidget {
               top: 12,
               bottom: 12,
             ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    expanded: !isCollapsed,
-                    hint: isCollapsed
-                        ? AppLocalizations.of(context)!.tapToExpand
-                        : AppLocalizations.of(context)!.tapToCollapse,
-                    child: InkWell(
-                      onTap: () =>
-                          ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
-                      child: title,
-                    ),
+              child: Semantics(
+                button: true,
+                expanded: !isCollapsed,
+                label: isCollapsed
+                    ? AppLocalizations.of(context)!.tapToExpand
+                    : AppLocalizations.of(context)!.tapToCollapse,
+                child: InkWell(
+                  onTap: () =>
+                      ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: title,
+                      ),
+                      Icon(
+                        isCollapsed ? Icons.expand_more : Icons.expand_less,
+                        size: 20,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ],
                   ),
                 ),
-                Semantics(
-                  explicitChildNodes: true,
-                  child: IconButton(
-                    icon: Icon(
-                      isCollapsed ? Icons.expand_more : Icons.expand_less,
-                      size: 20,
-                    ),
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    tooltip: isCollapsed
-                        ? AppLocalizations.of(context)!.tapToExpand
-                        : AppLocalizations.of(context)!.tapToCollapse,
-                    onPressed: () =>
-                        ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
-                  ),
-                ),
-              ],
-            ),
+              ),
           ),
           if (reduceMotion)
             isCollapsed

@@ -52,24 +52,26 @@ class AbsenceBanner extends StatelessWidget {
           Icon(icon, color: fgColor, size: 20),
           const SizedBox(width: 12),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.absenceDetectedTitle,
-                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                    color: fgColor,
-                    fontWeight: FontWeight.bold,
+            child: MergeSemantics(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.absenceDetectedTitle,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      color: fgColor,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  message,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: fgColor,
+                  const SizedBox(height: 4),
+                  Text(
+                    message,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: fgColor,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
           const SizedBox(width: 8),

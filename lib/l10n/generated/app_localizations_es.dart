@@ -1981,11 +1981,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noAtRiskTopics => 'No hay temas en riesgo. ¡Siga así!';
 
   @override
-  String accuracyLabel(String percent) {
-    return 'Precisión: $percent';
-  }
-
-  @override
   String get readyToAdvance => 'Listo para Avanzar';
 
   @override
@@ -2000,16 +1995,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get weakLabel => 'Por mejorar';
-
-  @override
-  String avgAccuracyLabel(String percent) {
-    return 'Precisión Prom.: $percent';
-  }
-
-  @override
-  String avgReadinessLabel(String percent) {
-    return 'Preparación Prom.: $percent';
-  }
 
   @override
   String courseSessionLabel(String course, int number) {
@@ -3540,6 +3525,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get failedToAdjustPlan => 'Error al ajustar el ritmo de estudio';
 
   @override
+  String get failedToAddSubjectToPlan =>
+      'Error al agregar la materia al plan de estudio';
+
+  @override
   String get progressOverview => 'Resumen de Progreso';
 
   @override
@@ -4243,7 +4232,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get unknownError => 'Error desconocido';
 
   @override
-  String failedToLoadPlan(Object error) {
+  String failedToLoadPlan(String error) {
     return 'Error al cargar el plan: $error';
   }
 
@@ -4391,6 +4380,21 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get signOutPreservesStudyData =>
       'Tus datos de estudio se conservarán.';
+
+  @override
+  String get signOutClearAllData => 'Borrar todos los datos de estudio';
+
+  @override
+  String get signOutRemovesAllData =>
+      'Elimina todas las materias, preguntas, intentos y el progreso';
+
+  @override
+  String get signOutBackupBeforeSignOut =>
+      'Hacer copia de seguridad antes de cerrar sesión';
+
+  @override
+  String get signOutCreatesBackupFile =>
+      'Crea un archivo de copia de seguridad antes de borrar los datos';
 
   @override
   String get importRestartHint =>
@@ -4671,6 +4675,33 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get evalScoreDesc => '<0.0 a 1.0>';
+
+  @override
+  String get evalExplanationDesc =>
+      '<comentario detallado explicando qué fue correcto/incorrecto>';
+
+  @override
+  String get evalPartialCreditDesc =>
+      '<opcional 0.0-1.0 para partes parcialmente correctas>';
+
+  @override
+  String get evalConceptBreakdownDesc =>
+      '<mapa opcional de nombre de concepto a puntuación de dominio 0.0-1.0>';
+
+  @override
+  String get evalCorrectAnswerDesc =>
+      '<la respuesta correcta a la pregunta del ejercicio>';
+
+  @override
+  String get evalTypeDesc =>
+      '<tipo de pregunta: typedAnswer|singleChoice|multiChoice|essay|mathExpression>';
+
+  @override
+  String get evalOptionsDesc =>
+      '<para singleChoice/multiChoice, lista de opciones de respuesta; si no, vacío>';
+
+  @override
   String minutesSemantics(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4743,6 +4774,11 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorLoadingSource =>
       'Ocurrió un error al cargar la fuente. Intente de nuevo.';
+
+  @override
+  String errorLoadingSourceWithDetail(String error) {
+    return 'Error al cargar la fuente: $error';
+  }
 
   @override
   String get reprocessSource => 'Reprocesar Fuente';
@@ -4882,7 +4918,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String mentorContextLateNightWarning(int count) {
-    return 'ADVERTENCIA: $count sesión(es) iniciada(s) después de las 10 PM (estudio nocturno detectado)';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sesiones iniciadas después de las 10 PM',
+      one: '1 sesión iniciada después de las 10 PM',
+    );
+    return 'ADVERTENCIA: $_temp0 (estudio nocturno detectado)';
   }
 
   @override
@@ -5453,6 +5495,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get recordingComplete => 'Grabación completa';
 
   @override
+  String get recordingInProgress => 'Grabación en curso';
+
+  @override
   String get startRecording => 'Iniciar grabación';
 
   @override
@@ -5837,4 +5882,16 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pleaseWait => 'Espera un momento…';
+
+  @override
+  String get difficultyRandomDistribution =>
+      'Las preguntas se distribuirán aleatoriamente por dificultad';
+
+  @override
+  String questionsRemainingCount(String count) {
+    return 'Restantes: $count';
+  }
+
+  @override
+  String get profileDeleted => 'Perfil eliminado exitosamente';
 }

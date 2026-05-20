@@ -131,5 +131,35 @@ void main() {
 
       expect(find.byType(ElevatedButton), findsNWidgets(2));
     });
+
+    testWidgets('previous button is disabled when onPrevious is null', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionNavButtons(
+          onPrevious: null,
+          onNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final previousButton = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Previous'),
+      );
+      expect(previousButton.onPressed, isNull);
+    });
+
+    testWidgets('next button is always enabled', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        PracticeSessionNavButtons(
+          onPrevious: null,
+          onNext: () {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final nextButton = tester.widget<ElevatedButton>(
+        find.widgetWithText(ElevatedButton, 'Next'),
+      );
+      expect(nextButton.onPressed, isNotNull);
+    });
   });
 }

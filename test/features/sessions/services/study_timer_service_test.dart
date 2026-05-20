@@ -368,7 +368,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(hours: 1)),
+          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
           actualDurationMs: 600000,
           completed: true,
           type: SessionType.focus,
@@ -384,7 +384,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
           actualDurationMs: 600000,
           completed: true,
           type: SessionType.focus,
@@ -409,7 +409,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
           actualDurationMs: 1800000,
           completed: true,
           type: SessionType.focus,
@@ -424,7 +424,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(hours: 2)),
+          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
           actualDurationMs: 3600000,
           completed: true,
           type: SessionType.focus,
@@ -691,5 +691,118 @@ void main() {
         await service.dispose();
       });
     });
+
+    group('error paths - repository throws', () {
+      late _ThrowingFakeRepository throwingRepo;
+      late StudyTimerService throwingService;
+
+      setUp(() {
+        throwingRepo = _ThrowingFakeRepository();
+        throwingService = StudyTimerService(repository: throwingRepo);
+      });
+
+      tearDown(() async {
+        await throwingService.dispose();
+      });
+
+      test('startSession returns failure when repository save throws', () async {
+        throwingRepo.throwOnSave = true;
+        final result = await throwingService.startSession(
+          plannedDurationMinutes: 25,
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('StudyTimerService.startSession'));
+      });
+
+      test('completeSession propagates exception when repository save throws', () async {
+        final session = (await throwingService.startSession(
+          plannedDurationMinutes: 25,
+        )).data!;
+        expect(session, isNotNull);
+        throwingRepo.throwOnSave = true;
+        await expectLater(
+          () => throwingService.completeSession(),
+          throwsA(isA<Exception>()),
+        );
+      });
+
+      test('getTodayDurationMs returns failure when repository throws', () async {
+        throwingRepo.throwOnGetTodayDurationMs = true;
+        final result = await throwingService.getTodayDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodaySessionCount returns failure when repository throws', () async {
+        throwingRepo.throwOnGetTodaySessionCount = true;
+        final result = await throwingService.getTodaySessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayCompletedSessionCount returns failure when repository throws', () async {
+        throwingRepo.throwOnGetTodayCompletedSessionCount = true;
+        final result = await throwingService.getTodayCompletedSessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayStats returns failure when repository throws', () async {
+        throwingRepo.throwOnGetTodayStats = true;
+        final result = await throwingService.getTodayStats();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getRecentSessions returns failure when repository throws', () async {
+        throwingRepo.throwOnGetAll = true;
+        final result = await throwingService.getRecentSessions();
+        expect(result.isFailure, isTrue);
+      });
+    });
   });
+}
+
+class _ThrowingFakeRepository extends SessionRepository {
+  bool throwOnSave = false;
+  bool throwOnGetAll = false;
+  bool throwOnGetTodayDurationMs = false;
+  bool throwOnGetTodaySessionCount = false;
+  bool throwOnGetTodayCompletedSessionCount = false;
+  bool throwOnGetTodayStats = false;
+
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    if (throwOnSave) throw Exception('save failed');
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    if (throwOnGetAll) throw Exception('getAll failed');
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async {
+    if (throwOnGetTodayDurationMs) throw Exception('getTodayDurationMs failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getTodaySessionCount() async {
+    if (throwOnGetTodaySessionCount) throw Exception('getTodaySessionCount failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getTodayCompletedSessionCount() async {
+    if (throwOnGetTodayCompletedSessionCount) throw Exception('getTodayCompletedSessionCount failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getTodayStats() async {
+    if (throwOnGetTodayStats) throw Exception('getTodayStats failed');
+    return Result.success({});
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async => Result.success(null);
 }

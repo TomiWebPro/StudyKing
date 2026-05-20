@@ -348,3 +348,367 @@ If the AI generates a question that contradicts the textbook, the student has no
 | 13 | I can flag/report incorrect AI-generated content | No "report," "flag," or "not verified" mechanism exists | **FAIL (BLOCKER)** |
 | 14 | Questions show AI-generated vs. verified status | No trust/verification field on Question model | **FAIL (BLOCKER)** |
 | 15 | Content validation pipeline uses LLM for re-check | Never called after generation; structural checks only | **FAIL (BLOCKER)** |
+
+---
+
+## Dry-Run Validation Results (May 2026)
+
+**Validator:** Codebase trace against actual source files
+**Date:** May 2026
+
+### Summary
+
+| Status | Count |
+|---|---|
+| COMPLETED | 3 |
+| PARTIAL | 1 |
+| NOT_COMPLETED | 11 |
+| **Total** | **15** |
+| **Completion %** | **~23%** |
+
+Since completion is well below 80%, this scenario file is **retained** and a detailed issue file has been created at `issues/open/dry_run_result_math_scientific_canvas_validation.md`.
+
+---
+
+### Step-by-Step Validation
+
+#### Step 1: Math Formula Rendering — NOT_COMPLETED
+
+**Files examined:**
+- `lib/features/questions/presentation/widgets/math_expression_widget.dart` (394 lines)
+- `pubspec.yaml`
+
+**Current state:** The `MathExpressionWidget` is still a hand-rolled parser with ~30 commands. No `flutter_math`, `katex_flutter`, or any LaTeX typesetting package in `pubspec.yaml`. The parser handles `^` (superscript), `_` (subscript), `\sqrt`, Greek letters, `\frac` (renders as plain `/`), and simple operators. **Critical gaps remain:**
+1. `\int` — not handled; renders as literal text
+2. `\frac` — renders as `3/4` using a plain slash, not a stacked fraction
+3. `\sum`, `\prod`, `\lim`, `\frac{d}{dx}` — not supported
+4. `\begin{matrix}` — not supported
+5. Multi-line equations, aligned equals signs — not supported
+6. No LaTeX error handling or fallback rendering
+
+**Code reference:** `math_expression_widget.dart:75-330` (parse loop), no integral/sum/product handling anywhere.
+
+---
+
+#### Step 2: Math Answer Input — NOT_COMPLETED
+
+**Files examined:**
+- `lib/features/practice/presentation/widgets/practice_session_question_card.dart`
+- `lib/features/questions/presentation/widgets/question_card_widget.dart`
+
+**Current state:** In the **practice session** (`practice_session_question_card.dart:183-184`), the `mathExpression` case renders only `MathExpressionWidget(expression: question.text, isSolution: false)` — this displays the question text but provides **no input field at all**. The user cannot type an answer for math expression questions in practice sessions.
+
+In the **question bank** (`question_card_widget.dart:198-200`), `mathExpression` falls through to `_buildTextAnswerContent` which is a plain `TextField` — identical to `typedAnswer`.
+
+There is no:
+- Math symbol keyboard
+- Superscript/subscript helper buttons
+- LaTeX helper toolbar
+- Formula preview while typing
+- Input validation for valid math syntax
+
+**Code reference:**
+- `practice_session_question_card.dart:183-184` — only displays expression, no input
+- `question_card_widget.dart:198-200` — plain TextField
+- `question_card_widget.dart:285-303` — `_buildTextAnswerContent` (plain `TextField`, `TextInputType.multiline`, no math helpers)
+
+---
+
+#### Step 3: Math Validation — NOT_COMPLETED
+
+**Files examined:**
+- `lib/core/services/answer_validation_service.dart`
+
+**Current state:** `validateMathExpression` (lines 382-393) uses `_normalizeMathExpression` (lines 395-397) which strips whitespace, lowercases, and replaces `x` with `*`. Then does **exact string comparison**. No tolerance for:
+- Equivalent expressions: `3+5` vs `5+3`
+- Different formatting: `∫₀⁴ (3t²+2t) dt` vs `80`
+- Unit suffixes: `80 m` vs `80`
+- No symbolic math evaluation (no `math_expressions`, `sympy`, or any CAS)
+
+**Code reference:** `answer_validation_service.dart:382-397`
+
+---
+
+#### Step 4: Graph Drawing with Axes/Tools — PARTIAL
+
+**Files examined:**
+- `lib/features/questions/presentation/widgets/graph_drawing_widget.dart`
+- `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart`
+- `lib/features/questions/presentation/painters/grid_painter.dart`
+- `lib/features/questions/data/models/drawing_models.dart`
+- `lib/features/questions/presentation/painters/drawing_painter.dart`
+
+**Current state — SIGNIFICANT PROGRESS from scenario:**
+
+**What now works:**
+- `GraphDrawingWidget` (`graph_drawing_widget.dart`) is a **separate widget** from `CanvasDrawingWidget` — not the same widget as the scenario claimed
+- `GridPainter` (`grid_painter.dart:14-22`) now has `showAxes`, `axisColor`, `originX`, `originY`, `pixelsPerUnit` parameters
+- Axes are rendered with `showAxes: true` for graph drawings (`graph_drawing_widget.dart:263-266`)
+- Coordinate axes with **arrows** and **tick labels** are drawn (`grid_painter.dart:36-82`)
+- X/Y axis labels are rendered (`grid_painter.dart:81-82`)
+- Toolbar with: **freehand**, **line** (straight line), **plot point**, and **eraser** tools (`graph_drawing_widget.dart:167-173`)
+- **Color picker** (6 preset colors) and **stroke width** selector (`graph_drawing_widget.dart:175-184`)
+- **Undo/redo/clear** controls (`graph_drawing_widget.dart:114-119`)
+- **Snap-to-grid** is NOT implemented
+- **Text tool** is NOT available
+- No scale or measurement indicators
+- `CanvasDrawingWidget` has additional tools (rectangle, circle) behind `showTools: true` flag, but these are only enabled in the tutor screen (`tutor_screen.dart:374-376`), NOT in practice/question-bank usage
+- In practice sessions (`practice_session_question_card.dart:187-188`), `CanvasDrawingWidget` is used with default parameters (tools hidden)
+- In question bank (`question_card_widget.dart:327-334`), `CanvasDrawingWidget` also uses default parameters (tools hidden)
+
+**Remaining gaps:**
+1. No snap-to-grid for precise graph drawing
+2. No text tool for labeling axes or data points
+3. No measurement/scale indicator
+4. CanvasDrawingWidget shape tools (rectangle, circle) are hidden in practice/question-bank contexts
+5. No content-based validation of graph drawings (see Step 5)
+
+**Code references:**
+- `graph_drawing_widget.dart:67` — toolbar always shown with line, plotPoint, eraser
+- `grid_painter.dart:36-82` — axis rendering with labels and ticks
+- `canvas_drawing_widget.dart:28-30` — `showTools`, `showColorPicker`, `showStrokeWidth` default to `false`
+- `practice_session_question_card.dart:187-188` — `CanvasDrawingWidget` used with defaults (tools hidden)
+- `tutor_screen.dart:371-377` — `CanvasDrawingWidget` used with `showTools: true, showColorPicker: true, showStrokeWidth: true`
+
+---
+
+#### Step 5: Graph Drawing Validation — NOT_COMPLETED
+
+**Files examined:**
+- `lib/core/services/answer_validation_service.dart`
+
+**Current state:** `validateGraphDrawing` (lines 445-465) only validates:
+1. Answer is not empty
+2. Can be base64-decoded
+3. Decoded JSON is a non-empty List
+
+**No content-based evaluation whatsoever.** A random scribble, a blank canvas with one dot, or the correct velocity-time graph all receive `isCorrect: true`.
+
+**Code reference:** `answer_validation_service.dart:445-465`
+
+---
+
+#### Step 6: Graph Renderer Feature — NOT_COMPLETED
+
+**Files examined:**
+- `lib/l10n/app_en.arb` (lines 1194-1364+)
+- `lib/l10n/app_es.arb` (lines 1194-1364+)
+- `lib/l10n/generated/app_localizations.dart` (lines 1683-1899+)
+- Full `lib/features/` tree
+
+**Current state:** 17+ localization strings for a "Graph Renderer" feature exist in both English and Spanish ARB files and generated Dart files. These include:
+- `graphRenderer` — "Graph Renderer"
+- `refreshGraph` — "Refresh graph"
+- `validateGraphType` — "Validate graph type"
+- `graphTypeDetection` — "Graph Type Detection"
+- `graphVisualization(String graphType)` — "Showing $graphType visualization"
+- `graphTypeDetectionError` — "Graph type detection failed"
+- `useLlmToValidateGraph` — "Use LLM to validate graph:"
+- `validateWithLlm` — "Validate with LLM"
+- `graphTypeMatchesData` — "Graph type matches data structure"
+- Labels for `lineGraph`, `barChart`, `scatterPlot`, `pieChart`
+
+**Zero usage in `lib/features/`.** These strings are completely unreferenced by any widget, screen, service, or provider. This is dead code / placeholder localization.
+
+**Code references:**
+- `app_en.arb` lines 1194-1364+ — all graph renderer strings
+- Generated getters in `app_localizations.dart:1683-1899+`
+- **No imports or references** in any `lib/features/` file
+
+---
+
+#### Step 7: Question Validation in Pipeline — NOT_COMPLETED
+
+**Files examined:**
+- `lib/features/ingestion/services/content_pipeline.dart`
+
+**Current state:** `_validateGeneratedQuestions` (lines 396-405) is still a **complete stub**:
+
+```dart
+List<String> _validateGeneratedQuestions(Source source, List<String> questionIds) {
+  final warnings = <String>[];
+  if (questionIds.isEmpty) {
+    warnings.add('No questions were generated for source ${source.id}');
+  }
+  return warnings;
+}
+```
+
+The validation stage:
+- Does NOT check factual correctness against source content
+- Does NOT verify answer consistency
+- Does NOT cross-reference questions with each other
+- Does NOT use LLM for validation
+- Does NOT score or rank question quality
+- Does NOT check for duplicate or contradictory questions
+- Only warns if ZERO questions were generated
+
+**Code reference:** `content_pipeline.dart:396-405`
+
+---
+
+#### Step 8: Question Variant System — NOT_COMPLETED
+
+**Files examined:**
+- `lib/core/data/models/question_model.dart`
+
+**Current state:** The `variantIds` field exists in the `Question` model (`question_model.dart:27-28`):
+```dart
+@HiveField(6, defaultValue: [])
+final List<String> variantIds;
+```
+
+It is declared in the constructor, serialized in `toJson()`, deserialized in `fromJson()`, and preserved in `copyWith()`.
+
+**Zero population logic exists.** There is no service, provider, or UI code that ever writes to `variantIds`. Every question is created with `variantIds: const []`.
+
+**Code reference:** `question_model.dart:27-28, 77, 100, 147, 194`
+
+---
+
+#### Step 9: Question Type Dead Zones — COMPLETED
+
+**Files examined:**
+- `lib/features/ingestion/services/content_pipeline.dart`
+- `lib/features/practice/presentation/widgets/practice_session_question_card.dart`
+
+**Current state — FIXED from original scenario:**
+
+The `_defaultAllowedTypes` constant in `content_pipeline.dart` (lines 577-588) now includes **ALL 10 question types**:
+
+```dart
+static const List<String> _defaultAllowedTypes = [
+  'singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression',
+  'essay', 'canvas', 'graphDrawing', 'stepByStep', 'fileUpload', 'audioRecording',
+];
+```
+
+This means the pipeline can now auto-generate questions of any type. The original scenario's concern about 5 types being excluded is no longer valid.
+
+**However**, `fileUpload` and `audioRecording` types still have limited functionality in validation (see Steps 11-12), and their practice session rendering is now functional (not `SizedBox.shrink()`).
+
+**Code reference:** `content_pipeline.dart:577-588`
+
+---
+
+#### Step 10: Canvas Drawing Validation — NOT_COMPLETED
+
+**Files examined:**
+- `lib/core/services/answer_validation_service.dart`
+
+**Current state:** `validateCanvasDrawing` (lines 415-426) validates only that:
+1. Canvas data list is non-empty
+2. Each entry in the list is non-empty
+
+**No content evaluation.** A random scribble passes. The correct molecular structure passes. A wrong drawing passes. This validation is structural (presence of data) only.
+
+**Code reference:** `answer_validation_service.dart:415-426`
+
+---
+
+#### Step 11: File Upload — COMPLETED
+
+**Files examined:**
+- `lib/features/questions/presentation/widgets/file_upload_widget.dart`
+- `pubspec.yaml`
+
+**Current state — FIXED from original scenario:**
+
+The `FileUploadWidget` now uses `FilePicker.platform.pickFiles()` from the `file_picker` package to select actual files. The widget:
+- Calls `FilePicker.platform.pickFiles()` when tapped
+- Captures `file.name` and `file.path`
+- Sets the answer to `"$fileName||$filePath"` format
+- Displays the filename after selection
+- No longer uses placeholder string `'file_uploaded'`
+
+**Validation** (`answer_validation_service.dart:467-473`): Checks that answer is non-empty, then returns `isCorrect: true`. This is still simplistic but at least the file is actually picked.
+
+**Code references:**
+- `file_upload_widget.dart:41-48` — actual file picker usage
+- `pubspec.yaml:48` — `file_picker: ^7.0.2`
+- `answer_validation_service.dart:467-473` — file upload validation
+
+---
+
+#### Step 12: Audio Recording — COMPLETED
+
+**Files examined:**
+- `lib/features/questions/presentation/widgets/audio_recording_widget.dart`
+- `pubspec.yaml`
+
+**Current state — FIXED from original scenario:**
+
+The `AudioRecordingWidget` now uses `AudioRecorder` from the `record` package for actual audio recording:
+- Checks microphone permission via `_audioRecorder.hasPermission()`
+- Records to a temp file: `recording_{timestamp}.m4a`
+- Monitors amplitude via `onAmplitudeChanged` stream
+- Shows recording state (in-progress/complete)
+- Stores the file path as the answer
+- Stops recording on tap
+
+**Validation** (`answer_validation_service.dart:475-481`): Checks that answer is non-empty, then returns `isCorrect: true`. Recording is functional though validation is simplistic.
+
+**Code references:**
+- `audio_recording_widget.dart:24-78` — actual audio recording
+- `pubspec.yaml:68` — `record: ^5.0.5`
+- `answer_validation_service.dart:475-481` — audio validation
+
+---
+
+#### Step 13: Cannot Flag/Report Incorrect AI Content — NOT_COMPLETED
+
+**Files examined:**
+- `lib/features/questions/data/models/question_model.dart`
+- `lib/core/data/models/markscheme_model.dart`
+- `lib/features/ingestion/services/content_pipeline.dart`
+- Full `lib/features/` tree
+
+**Current state:** The application provides **zero mechanisms** for students to:
+- Flag a question as incorrect
+- Report an AI-generated answer as wrong
+- Provide feedback on question quality
+- Mark content for human review
+- Compare against source material
+
+No "Report incorrect" button, no "This explanation seems wrong" feedback, no content flagging UI exists anywhere in the codebase.
+
+**Code references:** No relevant code exists.
+
+---
+
+#### Step 14: No Trust/Verification Field on Question Model — NOT_COMPLETED
+
+**Files examined:**
+- `lib/core/data/models/question_model.dart`
+- `lib/core/data/models/markscheme_model.dart`
+
+**Current state:** The `Question` model has **no trust-related fields**:
+- No `isValidated` field
+- No `needsReview` field  
+- No `verifiedBy` field
+- No `reviewedAt` timestamp
+- No `trustScore` field
+- No `confidenceScore` field
+- No `generatedBy` indicator beyond the implicit fact of being AI-generated
+
+The `Markscheme` model similarly has: no `confidenceScore`, no `validationSource`, no `isVerified`.
+
+**Code reference:** `question_model.dart:9-91` (all fields), `markscheme_model.dart:7-33` (all fields)
+
+---
+
+#### Step 15: Content Validation Pipeline No LLM Re-Check — NOT_COMPLETED
+
+**Files examined:**
+- `lib/features/ingestion/services/content_pipeline.dart`
+
+**Current state:** The validation stage (`_validateGeneratedQuestions`) is a stub (see Step 7). There is:
+- No LLM call to verify question correctness against source text
+- No LLM call to verify answer consistency
+- No LLM call to check for contradictions
+- No scoring or ranking of question quality
+- No re-validation pass after generation
+
+The `_isValidGeneratedQuestion` method (lines 657-701) performs only **structural/schema validation** (question text non-empty, MCQ has >=2 options, correct answer exists in options, explanation non-empty).
+
+**Code reference:** `content_pipeline.dart:396-405` (stub validation), `657-701` (structural-only validation)

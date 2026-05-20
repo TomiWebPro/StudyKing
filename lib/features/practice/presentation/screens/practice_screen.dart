@@ -68,6 +68,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   bool _isLoadingDueCounts = false;
   bool _dueCountsLoadFailed = false;
   int _totalQuestionCount = 0;
+  int _customQuestionCount = 0;
   int _questionsToday = 0;
   bool _questionCountLoadFailed = false;
   bool _isLoadingActivity = true;
@@ -168,6 +169,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       if (!mounted) return;
       setState(() {
         _totalQuestionCount = allQuestions.length;
+        _customQuestionCount = allQuestions.where((q) => q.model == null).length;
       });
     } catch (e) {
       _logger.w('Failed to load question count', e);
@@ -780,6 +782,41 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             _startSpacedRepetitionSession(subject));
   }
 
+  Future<void> _startMyQuestionsPractice() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
+      final customQuestions = allQuestions.where((q) => q.model == null).toList();
+      if (customQuestions.isEmpty) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noQuestionsAvailable)),
+        );
+        return;
+      }
+      final subjectId = customQuestions.first.subjectId;
+      final topicIds = await _getSubjectTopicIds(subjectId);
+      final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+      if (!canProceed) return;
+      if (!mounted) return;
+      final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: subjectId,
+          questionCount: customQuestions.length,
+          orderedQuestionIds: customQuestions.map((q) => q.id).toList(),
+        ),
+      ) as PracticeSessionResult?;
+      _onSessionResult(result);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.noQuestionsAvailable)),
+        );
+      }
+    }
+  }
+
   Future<void> _startWeakAreasPractice() async {
     final l10n = AppLocalizations.of(context)!;
     try {
@@ -1106,12 +1143,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             isLoadingDueCounts: _isLoadingDueCounts,
             dueCounts: _dueCounts,
             totalQuestionCount: _totalQuestionCount,
+            customQuestionCount: _customQuestionCount,
             hasSubjects: _subjects.isNotEmpty,
             isNewUser: _practiceStreak < 3 && _weeklyActivity < 10,
             onQuickPractice: _showPracticeModeDialog,
             onSpacedRepetition: _showSpacedRepetitionSubjectSelector,
             onTopicFocus: _showTopicSelector,
             onWeakAreas: _startWeakAreasPractice,
+            onMyQuestions: _startMyQuestionsPractice,
           ),
           SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
           _buildExtraModes(),

@@ -37,6 +37,7 @@ class HiveBoxNames {
   static const String examResults = 'exam_results';
   static const String studentId = 'student_id';
   static const String dashboardLayoutPrefs = 'dashboard_layout_prefs';
+  static const String planAdvisorSuggestions = 'plan_advisor_suggestions';
   static const String dbVersion = 'db_version';
 
   /// All boxes included in a full backup (all boxes except those excluded).
@@ -59,6 +60,7 @@ class HiveBoxNames {
         pendingActions,
         planAdherence,
         planAdherenceMetrics,
+        planAdvisorSuggestions,
         progress,
         profile,
         questions,
@@ -98,6 +100,7 @@ class HiveBoxNames {
         pendingActions,
         planAdherence,
         planAdherenceMetrics,
+        planAdvisorSuggestions,
         progress,
         questions,
         questionMasteryStates,

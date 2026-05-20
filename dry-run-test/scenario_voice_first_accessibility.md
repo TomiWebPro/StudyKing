@@ -290,3 +290,133 @@ The `AccessibilityPreferences` model at `accessibility_preferences.dart:8` defin
 | 18 | Voice state preserved after tab switch | Tab is `Offstage`-preserved, TTS may continue in background | PASS (partial) |
 | 19 | Bold Text toggle exists in Settings | `boldText` Hive field exists but no UI toggle — dead code | FAIL (MAJOR) |
 | 20 | Bold system setting applies throughout the app | `MediaQuery.boldText` read and applied via framework DefaultTextStyle | PASS |
+
+---
+
+## Validation Results (Dry-Run Audit — May 2026)
+
+Audit performed by tracing each scenario claim against the actual source code. Many issues noted in the original scenario have been fixed. Below is the per-step verdict with code references.
+
+### Step 1: Screen Reader — Bottom Navigation Labels
+**Verdict: COMPLETED** ✓
+- `NavigationBar` with `NavigationDestination` has built-in semantics via `label` field (`main.dart:310-336`).
+- `VoiceBar` is wrapped in `Semantics(container: true, label: ...)` (`voice_bar.dart:146-149`).
+- `IconButton` wrapped in `Semantics(button: true, label: ...)` (`voice_bar.dart:190-201`).
+- Waveform `CustomPaint` has `Semantics(excludeSemantics: true)` (`voice_bar.dart:171-188`).
+- Transcription uses `Semantics(liveRegion: true, label: ...)` (`voice_bar.dart:154-167`).
+
+### Step 2: Mentor Mic Button
+**Verdict: COMPLETED** ✓
+- Button **disabled** (not hidden) when `!isAvailable` — `onPressed: null` (`mentor_screen.dart:617-641`).
+- Subscription leak **fixed**: `_voiceSubscription?.cancel()` before new `.listen()` (`mentor_screen.dart:631`).
+- Subscription cancelled on dispose (`mentor_screen.dart:646`).
+
+### Step 3: VoiceBar Component
+**Verdict: PARTIAL** ⚠️
+- Permission requested **on first tap**, not on mount — `_toggleListening()` at `voice_bar.dart:77`. ✓
+- **Review overlay exists**: 2-second overlay with cancel button before auto-submit (`voice_bar.dart:60-75, 202-211`). ✓
+- **But**: When `reduceMotion=true`, the review overlay is **skipped** — text auto-submits immediately (`voice_bar.dart:70-74`).
+
+### Step 4: TTS Auto-Reading
+**Verdict: COMPLETED** ✓
+- TTS toggle via AppBar volume button (`tutor_screen.dart:736-746`).
+- `_speakResponse()` calls `vs.speak()` after AI response (`conversation_manager.dart:250-255`).
+- Mutual state checking: `speak()` blocks if listening (`voice_service.dart:189-192`); `startListening()` stops TTS first (`voice_service.dart:110-113`).
+- Per-message speak via `ChatBubble.onSpeak` (`tutor_screen.dart:1098-1099`).
+
+### Step 5: Practice Voice Input
+**Verdict: COMPLETED** ✓
+- Partial results NOT auto-submitted — updates `_voiceTranscriptionPreview` only (`practice_session_screen.dart:594-599`).
+- `_onAnswerSelected` called only on stop or timeout (`practice_session_screen.dart:582-584, 607-609`).
+- Subscription leak fixed (`practice_session_screen.dart:593-594, 605`). ✓
+- Mic button disabled (not hidden) when unavailable (`practice_session_screen.dart:733-748`).
+- Timer-based auto-stop (`practice_session_screen.dart:601-614`).
+
+### Step 6: Large Text Mode
+**Verdict: PARTIAL** ⚠️
+- Text scaling works: `main.dart:441-449` combines system + user scale, clamped 1.0–2.0.
+- Dashboard uses `SingleChildScrollView` + `CollapsibleCard`, not `SliverGrid` — scenario's grid concern outdated.
+- `practice_mode_grid.dart:100` adjusts `childAspectRatio` for `MediaQuery.textScalerOf`.
+- **Remaining:** No systematic overflow (`TextOverflow.ellipsis`) check across all card widgets at max font size.
+
+### Step 7: Color Blind Mode
+**Verdict: PARTIAL** ⚠️
+- Text labels in `_masteryLabel()` differentiate levels verbally (`topic_breakdown_card.dart:188-205`). ✓
+- `WeakAreasCard` uses `Icons.warning_amber`, not red dot (`weak_areas_card.dart:52`). ✓
+- `workload_card.dart:96` uses `Icons.error_outline` — icon + color. ✓
+- **Remaining:** `LinearProgressIndicator` color-only fill (`topic_breakdown_card.dart:155-165`). `_getProgressColor()` color-only (`topic_breakdown_card.dart:207-212`). No color-blind safe palette in `app_theme.dart`.
+
+### Step 8: Keyboard Navigation
+**Verdict: COMPLETED** ✓
+- `FocusTraversalGroup` + `NumericFocusOrder` used in 14+ screens (mentor, tutor, practice, settings, dashboard).
+- `VoiceBar` `IconButton` is `Semantics(button: true, ...)` and keyboard-focusable.
+- Waveform `CustomPaint` has `excludeSemantics: true` — cannot intercept focus.
+
+### Step 9: Reduce Motion
+**Verdict: COMPLETED** ✓
+- `VoiceBar.reduceMotion` from `settingsProvider` (`tutor_screen.dart:852`).
+- Waveform animation skipped: `if (!widget.reduceMotion) { ... }` (`voice_bar.dart:102`).
+- Waveform `SizedBox` not rendered: `if (isListening && !widget.reduceMotion)` (`voice_bar.dart:170`).
+- `_buildAdaptiveChunks()` at `conversation_manager.dart:301` streams full text when reduceMotion=true.
+- `_AnimatedMessageItem` skips fade animation (`mentor_screen.dart:1378-1401`).
+
+### Step 10: Bold Text Support
+**Verdict: COMPLETED** ✓
+- **UI toggle EXISTS** at `settings_screen.dart:167-173` — SwitchListTile for `settings.boldText`.
+- `main.dart:421`: `systemBoldText = MediaQuery.boldTextOf(context) || settings.boldText`.
+- `main.dart:447`: `boldText: systemBoldText` via `MediaQuery.copyWith`.
+- `SettingsBox.boldText` at field 26, fully serialized (`settings_box.dart:94, 123, 167, 216-218`).
+
+### Step 11: Large Touch Targets
+**Verdict: PARTIAL** ⚠️
+- SwitchListTile at `settings_screen.dart:182-189`.
+- Button themes respect `largeTouchTargets` (`app_theme.dart:62-90`).
+- Drawing widgets pass it (`practice_session_question_card.dart:191, 197`).
+- **Remaining:** `VoiceBar` `IconButton` not largeTouchTarget-aware (`voice_bar.dart:111-118`). Majority of interactive elements (chips, tabs, sliders, list tiles) don't check it.
+
+### Step 12: Microphone Permission
+**Verdict: COMPLETED** ✓
+- Permission requested on first tap (`voice_bar.dart:77`) — no postFrameCallback in initState.
+- Denial dialog at `voice_bar.dart:108-130`.
+- Retry via snack bar at `voice_bar.dart:85-97`.
+- Mentor button disabled with `micPermissionDenied` tooltip (`mentor_screen.dart:624, 640`).
+- Practice button has `voiceInputNotAvailable` semantic label (`practice_session_screen.dart:735-748`).
+
+### Step 13: Session Resume After Interruption
+**Verdict: PARTIAL** ⚠️
+- `AutomaticKeepAliveClientMixin` preserves state across tab switches (`tutor_screen.dart:53, 76`). ✓
+- `_voiceOutputEnabled` state retained on return.
+- **Remaining:** Mid-speech TTS not restorable — `_speakResponse()` only fires after AI response completes (`conversation_manager.dart:243-255`). No TTS progress tracking.
+
+### Step 14: AccessibilityPreferences Dead Code
+**Verdict: COMPLETED** ✓
+- `AccessibilityPreferences.boldText` at `accessibility_preferences.dart:8` — fully implemented with Hive, `toJson`, `fromJson`, `copyWith`.
+- **Confirmed dead:** No UI or logic path reads from this model. Settings UI uses `SettingsBox.boldText` (field 26).
+
+---
+
+### Summary of Updated Status
+
+| # | Expectation | Status | Code Reference |
+|---|---|---|---|
+| 1 | Screen reader can explore all elements | **COMPLETED** | `voice_bar.dart:146-213` |
+| 2 | Mentor mic button shows disabled (not hidden) when unavailable | **COMPLETED** | `mentor_screen.dart:617-641` |
+| 3 | Mentor voice input doesn't leak stream subscriptions | **COMPLETED** | `mentor_screen.dart:631, 646` |
+| 4 | VoiceBar requests mic permission on user action | **COMPLETED** | `voice_bar.dart:77` |
+| 5 | VoiceBar allows reviewing transcription before sending | **PARTIAL** — review skipped when reduceMotion=true | `voice_bar.dart:70-74` |
+| 6 | Practice voice input handles partial results correctly | **COMPLETED** | `practice_session_screen.dart:594-608` |
+| 7 | Practice voice input stops after submission | **COMPLETED** | `practice_session_screen.dart:576-614` |
+| 8 | TTS and STT don't compete | **COMPLETED** | `voice_service.dart:110-113, 189-192` |
+| 9 | TTS auto-reads AI responses | **COMPLETED** | `conversation_manager.dart:250-255` |
+| 10 | Per-message speak button in tutor chat | **COMPLETED** | `tutor_screen.dart:1098-1099` |
+| 11 | Large text scales consistently | **PARTIAL** — scaling works, card overflow not systematically checked | `main.dart:441-449` |
+| 12 | Color-blind accessible mastery levels | **PARTIAL** — text labels + icons help, but progress bars color-only, no CB palette | `topic_breakdown_card.dart:155-165, 207-212` |
+| 13 | Keyboard focus includes all interactive elements | **COMPLETED** | 14+ screens with `FocusTraversalGroup` |
+| 14 | Reduce Motion disables VoiceBar waveform | **COMPLETED** | `voice_bar.dart:60, 102, 170` |
+| 15 | Large Touch Targets applies to all interactive elements | **PARTIAL** — button themes respect it, VoiceBar and most widgets do not | `app_theme.dart:62-90`, `voice_bar.dart:111-118` |
+| 16 | Permission denied shows clear error | **COMPLETED** | `voice_bar.dart:108-130` |
+| 17 | Permission re-request after initial denial | **COMPLETED** | `voice_bar.dart:85-97, 120-125` |
+| 18 | Voice state preserved after tab switch | **PARTIAL** — KeepAlive preserves state, mid-speech TTS not restorable | `tutor_screen.dart:53, 76` |
+| 19 | Bold Text toggle exists in Settings | **COMPLETED** | `settings_screen.dart:167-173` |
+| 20 | Bold system setting applies throughout app | **COMPLETED** | `main.dart:421, 447` |
+| 21 | `AccessibilityPreferences.boldText` dead code | **COMPLETED** (confirmed dead) | `accessibility_preferences.dart:1-64` vs `settings_box.dart:94` |

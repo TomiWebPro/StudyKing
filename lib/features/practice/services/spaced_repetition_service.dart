@@ -119,8 +119,8 @@ class SpacedRepetitionService {
     }
   }
 
-  /// Deprecated: binary masteryLevel (0.8/0.2) loses confidence nuance.
-  /// Use [SpacedRepetitionEngine.mapConfidenceToGrade] via [MasteryRecorder] instead.
+  /// Binary masteryLevel (0.8/0.2) loses confidence nuance.
+  @Deprecated('Use SpacedRepetitionEngine.mapConfidenceToGrade via MasteryRecorder instead')
   int _masteryLevelToGrade(double masteryLevel) {
     if (masteryLevel >= 0.9) return 5;
     if (masteryLevel >= 0.7) return 4;

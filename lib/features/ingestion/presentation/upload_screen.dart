@@ -70,6 +70,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   @override
   void dispose() {
     _processingStopwatch.stop();
+    _titleController.dispose();
+    _contentController.dispose();
+    _urlController.dispose();
     super.dispose();
   }
 
@@ -293,10 +296,10 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             ? 'file://$_selectedFilePath'
             : content;
 
-        final stageOrder = [
-          'extracting', 'classifying', 'summarizing',
-          'generatingQuestions', 'validating', 'completed',
-        ];
+        final stageOrder = ProcessingStatus.values
+            .where((s) => s != ProcessingStatus.pending && s != ProcessingStatus.failed)
+            .map((s) => s.name)
+            .toList();
         final result = await pipeline.processFullPipeline(
           title: title,
           content: actualContent,

@@ -206,19 +206,6 @@ void main() {
       expect(l10n.minutesCountMetric(60), '60 min');
     });
 
-    test('accuracyLabel', () {
-      expect(l10n.accuracyLabel('85%'), 'Accuracy: 85%');
-      expect(l10n.accuracyLabel('100%'), 'Accuracy: 100%');
-    });
-
-    test('avgAccuracyLabel', () {
-      expect(l10n.avgAccuracyLabel('75%'), 'Avg Accuracy: 75%');
-    });
-
-    test('avgReadinessLabel', () {
-      expect(l10n.avgReadinessLabel('80%'), 'Avg Readiness: 80%');
-    });
-
     test('courseSessionLabel', () {
       expect(l10n.courseSessionLabel('Math', 1), 'Math - Session 1');
       expect(l10n.courseSessionLabel('Physics', 5), 'Physics - Session 5');
@@ -456,18 +443,6 @@ void main() {
     test('minutesCountMetric', () {
       expect(l10n.minutesCountMetric(0), '0 min');
       expect(l10n.minutesCountMetric(30), '30 min');
-    });
-
-    test('accuracyLabel', () {
-      expect(l10n.accuracyLabel('85%'), 'Precisión: 85%');
-    });
-
-    test('avgAccuracyLabel', () {
-      expect(l10n.avgAccuracyLabel('75%'), 'Precisión Prom.: 75%');
-    });
-
-    test('avgReadinessLabel', () {
-      expect(l10n.avgReadinessLabel('80%'), 'Preparación Prom.: 80%');
     });
 
     test('courseSessionLabel', () {

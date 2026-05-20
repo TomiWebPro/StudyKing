@@ -1027,7 +1027,7 @@ void main() {
       manager.completeTask(id1, tokensUsed: 500, estimatedCost: 0.025);
       final id2 = manager.createTask(feature: 'teach', modelId: 'gpt-4');
       manager.startTask(id2);
-      final id3 = manager.createTask(feature: 'practice', modelId: 'gpt-4');
+      manager.createTask(feature: 'practice', modelId: 'gpt-4');
 
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();

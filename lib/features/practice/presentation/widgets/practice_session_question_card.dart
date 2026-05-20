@@ -7,6 +7,8 @@ import 'package:studyking/features/questions/presentation/widgets/single_answer_
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/graph_drawing_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/math_expression_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/file_upload_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/audio_recording_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
@@ -79,7 +81,7 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
 
     return ConstrainedBox(
       constraints: BoxConstraints(
-        maxHeight: MediaQuery.of(context).size.height * 0.4,
+        maxHeight: MediaQuery.sizeOf(context).height * 0.4,
       ),
       child: ListView(
         shrinkWrap: true,
@@ -203,30 +205,16 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         return _buildEssayWidget(context);
 
       case QuestionType.fileUpload:
+        return FileUploadWidget(
+          currentAnswer: currentAnswer,
+          isSubmitted: isSubmitted,
+          onAnswerChanged: onAnswerSelected,
+        );
       case QuestionType.audioRecording:
-        return Semantics(
-          liveRegion: true,
-          child: Container(
-            padding: ResponsiveUtils.cardPadding(context),
-            decoration: BoxDecoration(
-              color: Theme.of(context).colorScheme.surfaceContainerHighest,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: Row(
-              children: [
-                Icon(Icons.info_outline, color: Theme.of(context).colorScheme.onSurfaceVariant),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Text(
-                    AppLocalizations.of(context)!.questionTypeNotSupported,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+        return AudioRecordingWidget(
+          currentAnswer: currentAnswer,
+          isSubmitted: isSubmitted,
+          onAnswerChanged: onAnswerSelected,
         );
     }
   }

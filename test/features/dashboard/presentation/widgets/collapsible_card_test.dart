@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/core/providers/shared_providers.dart' show SettingsController;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget child) {
@@ -10,6 +13,9 @@ Widget _buildTestApp(Widget child) {
     overrides: [
       dashboardLayoutPreferencesProvider.overrideWith(
         (ref) => DashboardLayoutNotifier(),
+      ),
+      settingsProvider.overrideWith(
+        (ref) => SettingsController(SettingsRepository()),
       ),
     ],
     child: MaterialApp(
@@ -210,6 +216,40 @@ void main() {
 
       expect(find.text('Collapsible Body'), findsNothing);
       expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    });
+
+    testWidgets('toggle via icon button works', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        CollapsibleCard(
+          cardId: 'icon-toggle',
+          title: const Text('Icon Toggle Title'),
+          body: const Text('Icon Toggle Body'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Icon Toggle Body'), findsOneWidget);
+      expect(find.byIcon(Icons.expand_less), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.expand_less));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Icon Toggle Body'), findsNothing);
+      expect(find.byIcon(Icons.expand_more), findsOneWidget);
+    });
+
+    testWidgets('uses AnimatedSize with default reduceMotion false', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        CollapsibleCard(
+          cardId: 'anim-test',
+          title: const Text('Anim Title'),
+          body: const Text('Anim Body'),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Anim Body'), findsOneWidget);
+      expect(find.byType(AnimatedSize), findsOneWidget);
     });
   });
 }

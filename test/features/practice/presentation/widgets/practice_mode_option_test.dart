@@ -58,7 +58,7 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('shows forward arrow icon', (tester) async {
+    testWidgets('shows forward chevron icon', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         PracticeModeOption(
           icon: Icons.school,
@@ -68,7 +68,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.byIcon(Icons.arrow_forward_ios), findsOneWidget);
+      expect(find.byIcon(Icons.chevron_right), findsOneWidget);
     });
 
     testWidgets('does not render subtitle container when subtitle is null', (tester) async {

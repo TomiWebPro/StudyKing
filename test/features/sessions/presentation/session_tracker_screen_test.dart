@@ -1,23 +1,39 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdServiceProvider;
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/sessions/presentation/session_tracker_screen.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false})
+  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false, this.throwOnGetAll = false})
       : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnSave;
+  final bool throwOnGetAll;
 
   @override
-  Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
+  Future<Result<List<Session>>> getAll() async {
+    if (throwOnGetAll) throw Exception('getAll failed');
+    return Result.success(List<Session>.from(sessions));
+  }
 
   @override
   @override
@@ -31,8 +47,72 @@ class _FakeSessionRepository extends SessionRepository {
   }
 }
 
+class _FakeSubjectRepository extends SubjectRepository {
+  _FakeSubjectRepository({List<Subject>? subjects}) : _subjects = subjects ?? [];
+
+  final List<Subject> _subjects;
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(List<Subject>.from(_subjects));
+
+  @override
+  @override
+  Future<Result<void>> save(String key, Subject subject) async {
+    _subjects.add(subject);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Subject?>> get(String id) async =>
+      Result.success(_subjects.where((s) => s.id == id).firstOrNull);
+
+  @override
+  Future<Result<void>> delete(String id) async {
+    _subjects.removeWhere((s) => s.id == id);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> clearAll() async {
+    _subjects.clear();
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+}
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  String getStudentId() => 'test-student';
+
+  @override
+  Future<void> init() async {}
+}
+
+class _FakeSettingsRepository extends SettingsRepository {
+  @override
+  Future<Result<SettingsBox>> getSettings() async => Result.success(SettingsBox());
+
+  @override
+  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
+
+  @override
+  Future<Result<SettingsBox>> updateStats({int? sessionCount, int? studyTimeMs, int? questions}) async =>
+      Result.success(SettingsBox());
+
+  @override
+  Future<Result<void>> saveApiKey({required String service, required String key}) async =>
+      Result.success(null);
+}
+
 Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
+    overrides: [
+      settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepository())),
+      subjectRepositoryProvider.overrideWithValue(_FakeSubjectRepository()),
+      studentIdServiceProvider.overrideWithValue(_FakeStudentIdService()),
+    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -46,6 +126,20 @@ Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? 
 }
 
 void main() {
+  late String _hivePath;
+
+  setUpAll(() async {
+    _hivePath = (await Directory.systemTemp.createTemp('tracker_test_')).path;
+    Hive.init(_hivePath);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    if (_hivePath.isNotEmpty) {
+      await Directory(_hivePath).delete(recursive: true);
+    }
+  });
+
   group('SessionTrackerScreen', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -189,6 +283,11 @@ void main() {
     testWidgets('view all navigates to history screen', (tester) async {
       final repo = _FakeSessionRepository();
       await tester.pumpWidget(ProviderScope(
+        overrides: [
+          settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepository())),
+          subjectRepositoryProvider.overrideWithValue(_FakeSubjectRepository()),
+          studentIdServiceProvider.overrideWithValue(_FakeStudentIdService()),
+        ],
         child: MaterialApp(
           localizationsDelegates: AppLocalizations.localizationsDelegates,
           supportedLocales: AppLocalizations.supportedLocales,
@@ -437,7 +536,7 @@ void main() {
       view.devicePixelRatio = 1.0;
     });
 
-    testWidgets('non-numeric input defaults to 0 for stats', (tester) async {
+    testWidgets('shows validation error for non-numeric input', (tester) async {
       final repo = _FakeSessionRepository();
       await tester.pumpWidget(_buildTestApp(repo));
       await tester.pumpAndSettle();
@@ -449,13 +548,33 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.widgetWithText(TextField, 'Questions Answered'), 'abc');
-      await tester.enterText(find.widgetWithText(TextField, 'Correct Answers'), 'xyz');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(repo.sessions.length, 0);
+      expect(find.text('Session Complete'), findsOneWidget);
+    });
+
+    testWidgets('valid input saves session correctly', (tester) async {
+      final repo = _FakeSessionRepository();
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+      await tester.pump();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.widgetWithText(TextField, 'Questions Answered'), '5');
+      await tester.enterText(find.widgetWithText(TextField, 'Correct Answers'), '3');
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
       await tester.pumpAndSettle();
 
       expect(repo.sessions.length, 1);
-      expect(repo.sessions.single.questionsAnswered, 0);
-      expect(repo.sessions.single.correctAnswers, 0);
+      expect(repo.sessions.single.questionsAnswered, 5);
+      expect(repo.sessions.single.correctAnswers, 3);
       await tester.pump();
       expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
     });

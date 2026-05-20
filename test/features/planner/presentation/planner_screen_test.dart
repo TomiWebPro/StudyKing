@@ -31,8 +31,9 @@ class _FakePlanRepository extends PlanRepository {
   bool failOnInit = false;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (failOnInit) throw Exception('Init failed');
+    return Result.success(null);
   }
 
   @override
@@ -123,9 +124,10 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   Completer<void>? loadCompleter;
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     if (failOnInit) throw Exception('Init failed');
     if (loadCompleter != null) await loadCompleter!.future;
+    return Result.success(null);
   }
 
   @override

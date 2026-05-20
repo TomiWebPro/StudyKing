@@ -5,7 +5,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 Session _createExportSession({
@@ -466,8 +465,98 @@ void main() {
         expect(result.isFailure, isTrue);
         expect(result.error, isNotEmpty);
       });
-
     });
 
+    group('sessionsToCSV with all SessionType values', () {
+      test('includes type.name for each SessionType', () {
+        final start = startTime;
+        for (final type in SessionType.values) {
+          final sessions = [
+            Session(
+              id: 'type-${type.name}',
+              studentId: 'stu1',
+              type: type,
+              startTime: start,
+            ),
+          ];
+          final csv = SessionExportService.sessionsToCSV(sessions);
+          expect(csv, contains(type.name));
+        }
+      });
+
+      test('includes different accuracy values', () {
+        final sessions = [
+          Session(
+            id: 'perfect', studentId: 'stu1', type: SessionType.practice,
+            startTime: startTime, questionsAnswered: 10, correctAnswers: 10,
+          ),
+          Session(
+            id: 'half', studentId: 'stu1', type: SessionType.practice,
+            startTime: startTime, questionsAnswered: 10, correctAnswers: 5,
+          ),
+          Session(
+            id: 'zero', studentId: 'stu1', type: SessionType.practice,
+            startTime: startTime, questionsAnswered: 10, correctAnswers: 0,
+          ),
+        ];
+        final csv = SessionExportService.sessionsToCSV(sessions);
+        expect(csv, contains('100.0'));
+        expect(csv, contains('50.0'));
+        expect(csv, contains('0.0'));
+      });
+    });
+
+    group('sessionsToPDF with different configurations', () {
+      final l10n = AppLocalizationsEn();
+
+      test('produces PDF for each SessionType without crash', () async {
+        for (final type in SessionType.values) {
+          final session = _createExportSession(type: type);
+          final bytes = await SessionExportService.sessionsToPDF([session], l10n);
+          expect(bytes, isNotEmpty);
+        }
+      });
+
+      test('produces PDF for multiple sessions', () async {
+        final sessions = List.generate(
+          5,
+          (i) => _createExportSession(id: 's$i'),
+        );
+        final bytes = await SessionExportService.sessionsToPDF(sessions, l10n);
+        expect(bytes, isNotEmpty);
+      });
+
+      test('produces PDF for sessions with no questions', () async {
+        final session = _createExportSession(questionsAnswered: 0, correctAnswers: 0);
+        final bytes = await SessionExportService.sessionsToPDF([session], l10n);
+        expect(bytes, isNotEmpty);
+      });
+
+      test('produces PDF for sessions with high correctAnswers', () async {
+        final session = _createExportSession(questionsAnswered: 50, correctAnswers: 48);
+        final bytes = await SessionExportService.sessionsToPDF([session], l10n);
+        expect(bytes, isNotEmpty);
+      });
+    });
+
+    group('sessionsToJSON edge cases', () {
+      test('handles sessions with null subjectId', () {
+        final sessions = [
+          createSession(start: startTime, subjectId: null),
+        ];
+        final json = SessionExportService.sessionsToJSON(sessions);
+        expect(json.first['subjectId'], isNull);
+      });
+
+      test('handles sessions with all optional fields null', () {
+        final session = Session(
+          id: 'minimal', studentId: 'stu1',
+          type: SessionType.focus, startTime: startTime,
+        );
+        final json = SessionExportService.sessionsToJSON([session]);
+        expect(json.first['id'], 'minimal');
+        expect(json.first['subjectId'], isNull);
+      });
+    });
   });
 }

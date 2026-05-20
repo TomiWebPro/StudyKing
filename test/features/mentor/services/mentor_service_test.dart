@@ -1036,7 +1036,7 @@ void main() {
         final failingRepo = _FakeSessionRepo();
         final service = createMentorService(sessionRepository: failingRepo);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isA<List<String>>());
+        expect(result.data, isA<List<String>>());
       });
 
       test('handles mastery service failure gracefully', () async {
@@ -1044,7 +1044,7 @@ void main() {
         mastery.setAtRiskResult(Result.failure('Service unavailable'));
         final service = createMentorService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       test('handles planner service failure in getWeakTopics gracefully', () async {
@@ -1052,7 +1052,7 @@ void main() {
         mastery.setWeakTopicsResult(Result.failure('Weak topics unavailable'));
         final service = createMentorService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isA<List<String>>());
+        expect(result.data, isA<List<String>>());
       });
 
       test('generates revision nudge when 3+ at-risk questions', () async {
@@ -1066,8 +1066,8 @@ void main() {
         // Ensure the at-risk list has >= 3 items to trigger revision nudge
         final service = createMentorService(masteryService: mastery);
         final result = await service.checkWellbeingAndGenerateNudges();
-        expect(result, isNotEmpty);
-        expect(result.first, contains('revision'));
+        expect(result.data, isNotEmpty);
+        expect(result.data!.first, contains('revision'));
       });
     });
 

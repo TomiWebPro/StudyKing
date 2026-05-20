@@ -20,6 +20,7 @@ import 'package:studyking/features/planner/data/models/plan_adherence_model.dart
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/planner/services/planner_advisor_strategy.dart';
 
 
 class PlanGenerationConfig {
@@ -52,6 +53,7 @@ class PersonalLearningPlanService {
   final QuestionRepository _questionRepository;
   final RoadmapRepository _roadmapRepository;
   final SyllabusResolver? _syllabusResolver;
+  final PlannerAdvisorStrategy? _advisor;
   PlanGenerationConfig config;
   final AppLocalizations? _l10n;
 
@@ -64,6 +66,7 @@ class PersonalLearningPlanService {
     RoadmapRepository? roadmapRepository,
     QuestionRepository? questionRepository,
     SyllabusResolver? syllabusResolver,
+    PlannerAdvisorStrategy? advisor,
     PlanGenerationConfig? config,
     AppLocalizations? l10n,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
@@ -74,6 +77,7 @@ class PersonalLearningPlanService {
         _roadmapRepository = roadmapRepository ?? RoadmapRepository(),
         _questionRepository = questionRepository ?? QuestionRepository(),
         _syllabusResolver = syllabusResolver,
+        _advisor = advisor,
         config = config ?? PlanGenerationConfig(),
         _l10n = l10n;
 
@@ -220,6 +224,35 @@ class PersonalLearningPlanService {
       }
     }
 
+    final advisor = _advisor;
+    Map<String, dynamic> advisorMetadata;
+    if (advisor != null) {
+      final weakResult = await _masteryService.getWeakTopics(studentId);
+      final weakTopicIds = weakResult.isSuccess
+          ? weakResult.data!.map((s) => s.topicId).toList()
+          : <String>[];
+      final atRiskResult = await getAtRiskTopicIds(studentId);
+      final atRiskIds = atRiskResult.data ?? [];
+      final adherence = await getCurrentAdherence(studentId);
+      final lowDays = await getConsecutiveLowAdherenceDays(studentId);
+
+      final analysisResult = await advisor.analyzeForPlanGeneration(
+        studentId: studentId,
+        courseName: courseName,
+        planDurationDays: config.planDurationDays,
+        targetMinutesPerDay: config.targetMinutesPerDay,
+        weakTopicIds: weakTopicIds,
+        atRiskTopicIds: atRiskIds,
+        currentAdherence: adherence,
+        consecutiveLowAdherenceDays: lowDays,
+      );
+      advisorMetadata = analysisResult.isSuccess
+          ? analysisResult.data!.toJson()
+          : <String, dynamic>{};
+    } else {
+      advisorMetadata = <String, dynamic>{};
+    }
+
     final dailyPlans = await _generateDailyPlans(
       studentId: studentId,
       recommendations: recommendations,
@@ -247,7 +280,7 @@ class PersonalLearningPlanService {
       }
     }
 
-    final metadata = syllabusGoals != null
+    final baseMetadata = syllabusGoals != null
         ? <String, dynamic>{
             'syllabus_goals': syllabusGoals.map((g) => g.toJson()).toList(),
             if (subjectPlansMap.isNotEmpty)
@@ -255,7 +288,11 @@ class PersonalLearningPlanService {
                 (k, v) => MapEntry(k, v.map((e) => e.toJson()).toList()),
               ),
           }
-        : null;
+        : <String, dynamic>{};
+    if (advisorMetadata.isNotEmpty) {
+      baseMetadata['advisor_analysis'] = advisorMetadata;
+    }
+    final metadata = baseMetadata.isNotEmpty ? baseMetadata : null;
 
     final plan = PersonalLearningPlan(
       studentId: studentId,

@@ -92,5 +92,33 @@ void main() {
         equals(AppRoutes.planner),
       );
     });
+
+    testWidgets('shows info icon for 1 day absence (boundary)', (tester) async {
+      await tester.pumpWidget(_buildTestApp(daysSinceLastActivity: 1));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+    });
+
+    testWidgets('shows info icon for 2 days absence', (tester) async {
+      await tester.pumpWidget(_buildTestApp(daysSinceLastActivity: 2));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+    });
+
+    testWidgets('shows info icon for 6 days absence (boundary)', (tester) async {
+      await tester.pumpWidget(_buildTestApp(daysSinceLastActivity: 6));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+    });
+
+    testWidgets('shows warning icon for exactly 7 days absence', (tester) async {
+      await tester.pumpWidget(_buildTestApp(daysSinceLastActivity: 7));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+    });
   });
 }

@@ -170,6 +170,131 @@ void main() {
       expect(find.text('In Progress'), findsOneWidget);
     });
 
-    // MasteryProgressCard is a pure rendering widget with no navigation callbacks.
+    testWidgets('shows stale data banner when daysSinceUpdate >= 3', (tester) async {
+      final oldDate = DateTime.now().subtract(const Duration(days: 3));
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+          weakTopics: 1,
+          averageAccuracy: 0.6,
+          avgReadiness: 0.5,
+          lastUpdated: oldDate,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('days ago'), findsWidgets);
+      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+    });
+
+    testWidgets('shows warning banner when daysSinceUpdate >= 7', (tester) async {
+      final oldDate = DateTime.now().subtract(const Duration(days: 7));
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+          weakTopics: 1,
+          averageAccuracy: 0.6,
+          avgReadiness: 0.5,
+          lastUpdated: oldDate,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('days ago'), findsWidgets);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+    });
+
+    testWidgets('no stale data banner when just updated', (tester) async {
+      final recentDate = DateTime.now().subtract(const Duration(days: 1));
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+          weakTopics: 1,
+          averageAccuracy: 0.6,
+          avgReadiness: 0.5,
+          lastUpdated: recentDate,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.info_outline), findsNothing);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+    });
+
+    testWidgets('shows weak topics stat label', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 4,
+          weakTopics: 3,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Weak Topics'), findsOneWidget);
+    });
+
+    testWidgets('handles zero totalTopics gracefully', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 0,
+          masteredTopics: 0,
+          weakTopics: 0,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      final progress = tester.widget<LinearProgressIndicator>(
+        find.byType(LinearProgressIndicator),
+      );
+      expect(progress.value, 0.0);
+    });
+
+    testWidgets('shows accuracy stat column', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 4,
+          weakTopics: 2,
+          averageAccuracy: 0.85,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Accuracy'), findsOneWidget);
+      expect(find.text('85%'), findsOneWidget);
+    });
+
+    testWidgets('shows readiness stat column', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 10,
+          masteredTopics: 4,
+          weakTopics: 2,
+          avgReadiness: 0.7,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Readiness'), findsOneWidget);
+      expect(find.text('70%'), findsOneWidget);
+    });
+
+    testWidgets('handles null lastUpdated', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        const MasteryProgressCard(snapshot: MasterySnapshot(
+          totalTopics: 5,
+          masteredTopics: 2,
+          weakTopics: 1,
+        )),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+    });
   });
 }

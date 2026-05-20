@@ -98,6 +98,77 @@ void main() {
       expect(find.text('Math'), findsNothing);
     });
 
-    // DueReviewsCard is a pure rendering widget with no navigation callbacks.
+    testWidgets('shows due count number in rich text', (tester) async {
+      final data = DueReviewsData(
+        totalDue: 15,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Math', dueCount: 15),
+        ],
+      );
+
+      await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('15'), findsOneWidget);
+    });
+
+    testWidgets('shows large due count', (tester) async {
+      final data = DueReviewsData(
+        totalDue: 999,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Math', dueCount: 500),
+          SubjectDueCount(subjectId: 's2', subjectName: 'Physics', dueCount: 499),
+        ],
+      );
+
+      await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('999'), findsOneWidget);
+      expect(find.text('500'), findsWidgets);
+      expect(find.text('499'), findsWidgets);
+    });
+
+    testWidgets('shows subject due count numbers', (tester) async {
+      final data = DueReviewsData(
+        totalDue: 25,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Mathematics', dueCount: 25),
+        ],
+      );
+
+      await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('25 questions due'), findsOneWidget);
+    });
+
+    testWidgets('shows empty breakdown when no subjectBreakdown list', (tester) async {
+      final data = DueReviewsData(
+        totalDue: 5,
+        subjectBreakdown: [],
+      );
+
+      await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text(' due for review'), findsOneWidget);
+    });
+
+    testWidgets('shows zero due count with subjects', (tester) async {
+      final data = DueReviewsData(
+        totalDue: 0,
+        subjectBreakdown: [
+          SubjectDueCount(subjectId: 's1', subjectName: 'Math', dueCount: 0),
+        ],
+      );
+
+      await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('0'), findsOneWidget);
+      expect(find.text('Math'), findsNothing);
+    });
   });
 }

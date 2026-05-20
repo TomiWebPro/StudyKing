@@ -1,6 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'dart:convert';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
 import '../../../../core/utils/responsive.dart';
@@ -9,6 +9,8 @@ import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
 import 'canvas_drawing_widget.dart';
 import 'graph_drawing_widget.dart';
+import 'file_upload_widget.dart';
+import 'audio_recording_widget.dart';
 
 class QuestionCardWidget extends StatefulWidget {
   final Question question;
@@ -75,13 +77,6 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
               .where((e) => e.isNotEmpty));
       }
     }
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    _essayController.dispose();
-    super.dispose();
   }
 
   void _updateAnswer(String? value) {
@@ -350,35 +345,26 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildFileUploadContent(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final hasFile = _localAnswer != null && _localAnswer!.isNotEmpty;
-    return Semantics(
-      button: true,
-      label: l10n.uploadFile,
-      child: OutlinedButton.icon(
-        onPressed: widget.isSubmitted
-            ? null
-            : () => _updateAnswer('file_uploaded'),
-        icon: Icon(hasFile ? Icons.check_circle : Icons.upload_file),
-        label: Text(hasFile ? l10n.fileAttached : l10n.uploadFile),
-      ),
+    return FileUploadWidget(
+      currentAnswer: _localAnswer,
+      isSubmitted: widget.isSubmitted,
+      onAnswerChanged: _updateAnswer,
     );
   }
 
   Widget _buildAudioRecordingContent(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final hasRecording = _localAnswer != null && _localAnswer!.isNotEmpty;
-    return Semantics(
-      button: true,
-      label: l10n.recordAudio,
-      child: OutlinedButton.icon(
-        onPressed: widget.isSubmitted
-            ? null
-            : () => _updateAnswer('audio_recorded'),
-        icon: Icon(hasRecording ? Icons.mic : Icons.mic_none),
-        label: Text(hasRecording ? l10n.recordingComplete : l10n.startRecording),
-      ),
+    return AudioRecordingWidget(
+      currentAnswer: _localAnswer,
+      isSubmitted: widget.isSubmitted,
+      onAnswerChanged: _updateAnswer,
     );
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _essayController.dispose();
+    super.dispose();
   }
 
   String? _getCorrectAnswer() {

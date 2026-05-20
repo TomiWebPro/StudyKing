@@ -153,6 +153,8 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                                           color: ColorUtils.contrastingTextColor(color),
                                           fontWeight: FontWeight.bold,
                                         ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 2,
                                       ),
                                       if (widget.subject.code != null)
                                         Text(
@@ -437,7 +439,7 @@ class _SubjectSourcesTab extends ConsumerStatefulWidget {
 }
 
 class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
-  static final Logger _logger = const Logger('SubjectDetailScreen');
+  static final Logger _logger = const Logger('SubjectDetailScreen.SubjectSourcesTab');
   final _sourceRepo = SourceRepository();
   List<_SourceItem> _items = [];
   bool _isLoading = true;

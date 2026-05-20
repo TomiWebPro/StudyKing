@@ -2591,15 +2591,6 @@
   "@noAtRiskTopics": {
     "description": "Empty state message when no at-risk topics"
   },
-  "accuracyLabel": "Precisión: {percent}",
-  "@accuracyLabel": {
-    "description": "Accuracy percentage label",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
   "readyToAdvance": "Listo para Avanzar",
   "@readyToAdvance": {
     "description": "Section title for ready-to-advance topics"
@@ -2619,24 +2610,6 @@
   "weakLabel": "Por mejorar",
   "@weakLabel": {
     "description": "Label for weak topic count"
-  },
-  "avgAccuracyLabel": "Precisión Prom.: {percent}",
-  "@avgAccuracyLabel": {
-    "description": "Average accuracy percentage",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
-  },
-  "avgReadinessLabel": "Preparación Prom.: {percent}",
-  "@avgReadinessLabel": {
-    "description": "Average readiness percentage",
-    "placeholders": {
-      "percent": {
-        "type": "String"
-      }
-    }
   },
   "courseSessionLabel": "{course} - Sesión {number}",
   "@courseSessionLabel": {
@@ -4685,6 +4658,10 @@
   "@failedToAdjustPlan": {
     "description": "Error message when pace adjustment fails"
   },
+  "failedToAddSubjectToPlan": "Error al agregar la materia al plan de estudio",
+  "@failedToAddSubjectToPlan": {
+    "description": "Error message when adding a subject to the plan fails"
+  },
   "progressOverview": "Resumen de Progreso",
   "@progressOverview": {
     "description": "Title for the progress overview section"
@@ -5812,6 +5789,22 @@
   "@signOutPreservesStudyData": {
     "description": "Reassurance that study data is not deleted on sign out"
   },
+  "signOutClearAllData": "Borrar todos los datos de estudio",
+  "@signOutClearAllData": {
+    "description": "Checkbox label to clear all study data on sign out"
+  },
+  "signOutRemovesAllData": "Elimina todas las materias, preguntas, intentos y el progreso",
+  "@signOutRemovesAllData": {
+    "description": "Subtitle explaining what clearing data removes"
+  },
+  "signOutBackupBeforeSignOut": "Hacer copia de seguridad antes de cerrar sesión",
+  "@signOutBackupBeforeSignOut": {
+    "description": "Checkbox label to back up before clearing data"
+  },
+  "signOutCreatesBackupFile": "Crea un archivo de copia de seguridad antes de borrar los datos",
+  "@signOutCreatesBackupFile": {
+    "description": "Subtitle explaining what backing up does"
+  },
   "importRestartHint": "Es posible que se necesite un reinicio para que todos los cambios aparezcan.",
   "@importRestartHint": {
     "description": "Hint shown after successful data import"
@@ -6124,6 +6117,34 @@
       "studentAnswer": { "type": "String" }
     }
   },
+  "evalScoreDesc": "<0.0 a 1.0>",
+  "@evalScoreDesc": {
+    "description": "JSON template description for score field in evaluation prompt"
+  },
+  "evalExplanationDesc": "<comentario detallado explicando qué fue correcto/incorrecto>",
+  "@evalExplanationDesc": {
+    "description": "JSON template description for explanation field in evaluation prompt"
+  },
+  "evalPartialCreditDesc": "<opcional 0.0-1.0 para partes parcialmente correctas>",
+  "@evalPartialCreditDesc": {
+    "description": "JSON template description for partial credit field in evaluation prompt"
+  },
+  "evalConceptBreakdownDesc": "<mapa opcional de nombre de concepto a puntuación de dominio 0.0-1.0>",
+  "@evalConceptBreakdownDesc": {
+    "description": "JSON template description for concept breakdown field in evaluation prompt"
+  },
+  "evalCorrectAnswerDesc": "<la respuesta correcta a la pregunta del ejercicio>",
+  "@evalCorrectAnswerDesc": {
+    "description": "JSON template description for correct answer field in evaluation prompt"
+  },
+  "evalTypeDesc": "<tipo de pregunta: typedAnswer|singleChoice|multiChoice|essay|mathExpression>",
+  "@evalTypeDesc": {
+    "description": "JSON template description for type field in evaluation prompt"
+  },
+  "evalOptionsDesc": "<para singleChoice/multiChoice, lista de opciones de respuesta; si no, vacío>",
+  "@evalOptionsDesc": {
+    "description": "JSON template description for options field in evaluation prompt"
+  },
   "minutesSemantics": "{count,plural,=1{1 minuto} other{{count} minutos}}",
   "@minutesSemantics": {
     "description": "Semantics label for minutes in focus timer",
@@ -6204,6 +6225,15 @@
   "errorLoadingSource": "Ocurrió un error al cargar la fuente. Intente de nuevo.",
   "@errorLoadingSource": {
     "description": "Error message when loading source fails"
+  },
+  "errorLoadingSourceWithDetail": "Error al cargar la fuente: {error}",
+  "@errorLoadingSourceWithDetail": {
+    "description": "Error message when loading source fails, with error detail",
+    "placeholders": {
+      "error": {
+        "type": "String"
+      }
+    }
   },
   "reprocessSource": "Reprocesar Fuente",
   "@reprocessSource": {
@@ -7162,6 +7192,10 @@
     "@recordingComplete": {
       "description": "Button label when recording is complete"
     },
+    "recordingInProgress": "Grabación en curso",
+    "@recordingInProgress": {
+      "description": "Label shown while audio recording is active"
+    },
     "startRecording": "Iniciar grabación",
     "@startRecording": {
       "description": "Button label for idle recording state"
@@ -7630,5 +7664,22 @@
     "pleaseWait": "Espera un momento…",
     "@pleaseWait": {
       "description": "Transient indicator shown when a message was rate-limited"
+    },
+    "difficultyRandomDistribution": "Las preguntas se distribuirán aleatoriamente por dificultad",
+    "@difficultyRandomDistribution": {
+      "description": "Hint shown when no difficulty counts are specified for exam"
+    },
+    "questionsRemainingCount": "Restantes: {count}",
+    "@questionsRemainingCount": {
+      "description": "Count of questions still needing difficulty assignment",
+      "placeholders": {
+        "count": {
+          "type": "String"
+        }
+      }
+    },
+    "profileDeleted": "Perfil eliminado exitosamente",
+    "@profileDeleted": {
+      "description": "Snackbar message after profile deletion"
     }
   }

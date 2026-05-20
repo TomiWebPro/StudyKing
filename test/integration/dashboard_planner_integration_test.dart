@@ -281,7 +281,9 @@ class PlanRepositoryFake extends PlanRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {

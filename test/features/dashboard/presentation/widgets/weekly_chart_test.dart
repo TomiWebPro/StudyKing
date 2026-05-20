@@ -102,5 +102,29 @@ void main() {
       expect(find.text('W1'), findsOneWidget);
       expect(find.byType(AnimatedBarChart), findsOneWidget);
     });
+
+    testWidgets('shows no activity label for gap weeks', (tester) async {
+      final trend = [
+        WeeklyTrendEntry(attempts: 5, isGap: false),
+        WeeklyTrendEntry(attempts: 0, isGap: true),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(WeeklyChart(weeklyTrend: trend)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No Activity'), findsWidgets);
+    });
+
+    testWidgets('shows chart without gap legend when no gaps', (tester) async {
+      final trend = List.generate(3, (i) => WeeklyTrendEntry(
+        attempts: 5 + i,
+        isGap: false,
+      ));
+
+      await tester.pumpWidget(_buildTestApp(WeeklyChart(weeklyTrend: trend)));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Weekly Activity'), findsOneWidget);
+    });
   });
 }

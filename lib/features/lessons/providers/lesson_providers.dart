@@ -3,7 +3,7 @@ import '../../../core/providers/app_providers.dart' show databaseProvider, setti
 import '../../../core/providers/llm_providers.dart' show llmServiceProvider, llmTaskManagerProvider;
 import '../../../features/teaching/data/repositories/tutor_session_repository.dart';
 import '../../lessons/data/repositories/lesson_repository.dart';
-import '../services/lesson_service.dart';
+import '../services/session_query_service.dart';
 import '../services/lesson_agent_service.dart';
 
 final lessonRepositoryProvider = Provider<LessonRepository>((ref) {

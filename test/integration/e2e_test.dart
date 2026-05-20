@@ -28,7 +28,9 @@ class _IntegrationFakePlanRepository extends PlanRepository {
   final Map<String, PersonalLearningPlan> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {

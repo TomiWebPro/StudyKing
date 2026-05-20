@@ -165,7 +165,7 @@ class _ConversationInputState extends State<ConversationInput> {
               padding: EdgeInsetsDirectional.only(
                 start: ResponsiveUtils.screenPadding(context).left,
                 end: ResponsiveUtils.screenPadding(context).right,
-                bottom: MediaQuery.of(context).padding.bottom + 4,
+                bottom: MediaQuery.paddingOf(context).bottom + 4,
               ),
               child: Row(
                 children: [

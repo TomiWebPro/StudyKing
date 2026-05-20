@@ -191,7 +191,7 @@ void main() {
 
       test('handles explanation with special characters', () async {
         llmService.responseJson =
-            '{"score": 0.5, "explanation": "Line1\\nLine2\\tTabbed\\\"Quoted\\"\\u00e9"}';
+            '{"score": 0.5, "explanation": "Line1\\nLine2\\tTabbed\\"Quoted\\"\\u00e9"}';
 
         final result = await evaluator.evaluate(
           question: 'Question?',

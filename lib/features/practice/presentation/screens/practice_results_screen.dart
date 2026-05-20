@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-
 class QuestionReviewData {
   final Question question;
   final String? userAnswer;
@@ -16,6 +16,8 @@ class QuestionReviewData {
     this.correctAnswer,
     required this.isCorrect,
   });
+
+  bool get isManual => question.model == null;
 }
 
 class PracticeResultsScreen extends StatelessWidget {
@@ -42,7 +44,16 @@ class PracticeResultsScreen extends StatelessWidget {
         : (correctAnswers / totalQuestions) * 100;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.sessionResults)),
+      appBar: AppBar(
+        title: Text(l10n.sessionResults),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share),
+            tooltip: l10n.share,
+            onPressed: () => _shareResults(context),
+          ),
+        ],
+      ),
       body: FocusTraversalGroup(
         child: SingleChildScrollView(
           padding: ResponsiveUtils.screenPadding(context),
@@ -78,6 +89,11 @@ class PracticeResultsScreen extends StatelessWidget {
                   e.key,
                   formatPercent(e.value * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 )),
+              ],
+              if (reviewQuestions != null && reviewQuestions!.isNotEmpty) ...[
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+                _buildManualAiBreakdown(context),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
               ],
               if (reviewQuestions != null && reviewQuestions!.isNotEmpty) ...[
                 SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
@@ -195,6 +211,52 @@ class PracticeResultsScreen extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  Widget _buildManualAiBreakdown(BuildContext context) {
+    if (reviewQuestions == null || reviewQuestions!.isEmpty) return const SizedBox.shrink();
+    final l10n = AppLocalizations.of(context)!;
+    final manualQs = reviewQuestions!.where((r) => r.isManual).toList();
+    final aiQs = reviewQuestions!.where((r) => !r.isManual).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.topicBreakdown,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        if (manualQs.isNotEmpty) ...[
+          _buildStatRow(context, l10n.manual, '${manualQs.where((r) => r.isCorrect).length}/${manualQs.length} (${formatPercent(manualQs.where((r) => r.isCorrect).length / manualQs.length * 100, l10n.localeName, minFractionDigits: 0)})'),
+        ],
+        if (aiQs.isNotEmpty) ...[
+          SizedBox(height: 4),
+          _buildStatRow(context, l10n.aiGenerated, '${aiQs.where((r) => r.isCorrect).length}/${aiQs.length} (${formatPercent(aiQs.where((r) => r.isCorrect).length / aiQs.length * 100, l10n.localeName, minFractionDigits: 0)})'),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _shareResults(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
+    final accuracy = totalQuestions == 0 ? 0.0 : (correctAnswers / totalQuestions) * 100;
+    final buffer = StringBuffer();
+    buffer.writeln(l10n.sessionResults);
+    buffer.writeln('${l10n.totalQuestions}: $totalQuestions');
+    buffer.writeln('${l10n.correctAnswers}: ${l10n.correctOf(correctAnswers, totalQuestions)}');
+    buffer.writeln('${l10n.accuracy}: ${formatPercent(accuracy, l10n.localeName, minFractionDigits: 0)}');
+    if (reviewQuestions != null && reviewQuestions!.isNotEmpty) {
+      final manualQs = reviewQuestions!.where((r) => r.isManual).toList();
+      final aiQs = reviewQuestions!.where((r) => !r.isManual).toList();
+      if (manualQs.isNotEmpty) {
+        buffer.writeln('${l10n.manual}: ${manualQs.where((r) => r.isCorrect).length}/${manualQs.length}');
+      }
+      if (aiQs.isNotEmpty) {
+        buffer.writeln('${l10n.aiGenerated}: ${aiQs.where((r) => r.isCorrect).length}/${aiQs.length}');
+      }
+    }
+    await Share.share(buffer.toString(), subject: l10n.sessionResults);
   }
 
   Widget _buildStatRow(BuildContext context, String label, String value) {

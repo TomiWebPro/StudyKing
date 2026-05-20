@@ -1961,11 +1961,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noAtRiskTopics => 'No at-risk topics. Keep up the good work!';
 
   @override
-  String accuracyLabel(String percent) {
-    return 'Accuracy: $percent';
-  }
-
-  @override
   String get readyToAdvance => 'Ready to Advance';
 
   @override
@@ -1980,16 +1975,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get weakLabel => 'Weak';
-
-  @override
-  String avgAccuracyLabel(String percent) {
-    return 'Avg Accuracy: $percent';
-  }
-
-  @override
-  String avgReadinessLabel(String percent) {
-    return 'Avg Readiness: $percent';
-  }
 
   @override
   String courseSessionLabel(String course, int number) {
@@ -3500,6 +3485,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get failedToAdjustPlan => 'Failed to adjust study pace';
 
   @override
+  String get failedToAddSubjectToPlan => 'Failed to add subject to study plan';
+
+  @override
   String get progressOverview => 'Progress Overview';
 
   @override
@@ -4199,7 +4187,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get unknownError => 'Unknown error';
 
   @override
-  String failedToLoadPlan(Object error) {
+  String failedToLoadPlan(String error) {
     return 'Failed to load plan: $error';
   }
 
@@ -4346,6 +4334,20 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signOutPreservesStudyData => 'Your study data will be preserved.';
+
+  @override
+  String get signOutClearAllData => 'Clear all study data';
+
+  @override
+  String get signOutRemovesAllData =>
+      'Removes all subjects, questions, attempts, and progress';
+
+  @override
+  String get signOutBackupBeforeSignOut => 'Back up before signing out';
+
+  @override
+  String get signOutCreatesBackupFile =>
+      'Creates a backup file before clearing data';
 
   @override
   String get importRestartHint =>
@@ -4621,6 +4623,33 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get evalScoreDesc => '<0.0 to 1.0>';
+
+  @override
+  String get evalExplanationDesc =>
+      '<detailed feedback explaining what was correct/incorrect>';
+
+  @override
+  String get evalPartialCreditDesc =>
+      '<optional 0.0-1.0 for partially correct parts>';
+
+  @override
+  String get evalConceptBreakdownDesc =>
+      '<optional map of concept name to mastery score 0.0-1.0>';
+
+  @override
+  String get evalCorrectAnswerDesc =>
+      '<the correct answer to the exercise question>';
+
+  @override
+  String get evalTypeDesc =>
+      '<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>';
+
+  @override
+  String get evalOptionsDesc =>
+      '<for singleChoice/multiChoice, list of answer options; otherwise empty>';
+
+  @override
   String minutesSemantics(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -4693,6 +4722,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorLoadingSource =>
       'An error occurred while loading the source. Please try again.';
+
+  @override
+  String errorLoadingSourceWithDetail(String error) {
+    return 'An error occurred while loading the source: $error';
+  }
 
   @override
   String get reprocessSource => 'Reprocess Source';
@@ -5401,6 +5435,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get recordingComplete => 'Recording complete';
 
   @override
+  String get recordingInProgress => 'Recording in progress';
+
+  @override
   String get startRecording => 'Start recording';
 
   @override
@@ -5781,4 +5818,16 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pleaseWait => 'Please wait…';
+
+  @override
+  String get difficultyRandomDistribution =>
+      'Questions will be randomly distributed by difficulty';
+
+  @override
+  String questionsRemainingCount(String count) {
+    return 'Remaining: $count';
+  }
+
+  @override
+  String get profileDeleted => 'Profile deleted successfully';
 }

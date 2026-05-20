@@ -752,8 +752,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                           labelType: NavigationRailLabelType.all,
                           destinations: _buildDestinations(l10n, isWideScreen: true).map((d) {
                             return NavigationRailDestination(
-                              icon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.icon))),
-                              selectedIcon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon))),
+                              icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
+                              selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
                               label: Text(d.label),
                             );
                           }).toList(),
@@ -778,8 +778,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
                 destinations: _buildDestinations(l10n).map((d) {
                   return NavigationDestination(
-                    icon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.icon))),
-                    selectedIcon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon))),
+                    icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
+                    selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
                     label: d.label,
                   );
                 }).toList(),
