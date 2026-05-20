@@ -44,13 +44,14 @@ class ActionExecutor {
 
     final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
 
-    return _plannerService.scheduleLesson(
+    final result = await _plannerService.scheduleLesson(
       topicId: topicId,
       topicTitle: topicTitle,
       subjectId: subjectId,
       scheduledTime: scheduledTime,
       durationMinutes: durationMinutes,
     );
+    return result.data ?? false;
   }
 
   Future<bool> _executeReschedule(PendingActionModel action) async {
@@ -73,22 +74,24 @@ class ActionExecutor {
 
     final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
 
-    return _plannerService.scheduleLesson(
+    final result = await _plannerService.scheduleLesson(
       topicId: topicId,
       topicTitle: topicTitle,
       subjectId: subjectId,
       scheduledTime: scheduledTime,
       durationMinutes: durationMinutes,
     );
+    return result.data ?? false;
   }
 
   Future<bool> _executePlanAdjustment(PendingActionModel action) async {
     final adjustmentFactor = (action.payload['adjustmentFactor'] as num?)?.toDouble();
     if (adjustmentFactor == null) return false;
 
-    return _plannerService.suggestPlanRegeneration(
+    final result = await _plannerService.planOrchestrator.suggestRegeneration(
       studentId: action.studentId,
       adjustmentFactor: adjustmentFactor,
     );
+    return result.isSuccess;
   }
 }

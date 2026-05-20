@@ -7,6 +7,50 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 
+class _ThrowingBadgeBox implements Box<BadgeModel> {
+  @override
+  Iterable<BadgeModel> get values => throw Exception('Box values error');
+
+  @override
+  BadgeModel? get(dynamic key, {BadgeModel? defaultValue}) =>
+      throw Exception('Box get error');
+
+  @override
+  Future<void> put(dynamic key, BadgeModel value) async =>
+      throw Exception('Box put error');
+
+  @override
+  Future<void> delete(dynamic key) async =>
+      throw Exception('Box delete error');
+
+  @override
+  Future<int> clear() async => throw Exception('Box clear error');
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'badges';
+
+  @override
+  int get length => 0;
+
+  @override
+  bool get isNotEmpty => false;
+
+  @override
+  bool get isEmpty => true;
+
+  @override
+  bool containsKey(dynamic key) => throw Exception('Box containsKey error');
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
 class _FakeBadgeBox implements Box<BadgeModel> {
   final Map<dynamic, BadgeModel> _storage = {};
 
@@ -354,6 +398,38 @@ void main() {
       await repository.create(createTestBadge(id: 'g1'));
       await repository.create(createTestBadge(id: 'g2'));
       expect((await repository.getAll()).data, hasLength(2));
+    });
+  });
+
+  group('BadgeRepository (throwing fake box)', () {
+    late BadgeRepository repository;
+    late _ThrowingBadgeBox throwingBox;
+
+    setUp(() {
+      repository = BadgeRepository();
+      throwingBox = _ThrowingBadgeBox();
+      repository.attachBox(throwingBox);
+    });
+
+    test('create with throwing box returns error gracefully', () async {
+      final badge = createTestBadge();
+      await repository.create(badge);
+      expect((await repository.get(badge.id)).isFailure, isTrue);
+    });
+
+    test('get with throwing box returns failure', () async {
+      final result = await repository.get('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getAll with throwing box returns failure', () async {
+      final result = await repository.getAll();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('delete with throwing box returns failure', () async {
+      final result = await repository.delete('any');
+      expect(result.isFailure, isTrue);
     });
   });
 }

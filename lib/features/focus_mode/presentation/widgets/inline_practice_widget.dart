@@ -12,6 +12,7 @@ import 'package:studyking/features/practice/presentation/widgets/practice_sessio
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -46,7 +47,7 @@ class SubjectAccuracy {
 }
 
 class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
-  final _logger = const Logger('InlinePracticeWidget');
+  static final Logger _logger = const Logger('InlinePracticeWidget');
   List<Question> _questions = [];
   int _currentIndex = 0;
   String? _currentAnswer;
@@ -222,7 +223,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
               const SizedBox(height: 16),
               Text(l10n.correctFeedback, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 12),
-              Text('${formatDecimal(_correctCount.toDouble(), l10n.localeName, minFractionDigits: 0)} / ${formatDecimal(_questions.length.toDouble(), l10n.localeName, minFractionDigits: 0)} ${l10n.correct.toLowerCase()}',
+              Text('${formatDecimal(_correctCount.toDouble(), l10n.localeName, minFractionDigits: 0)} / ${formatDecimal(_questions.length.toDouble(), l10n.localeName, minFractionDigits: 0)} ${l10n.correct.normalized}',
                 style: theme.textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                   color: _correctCount == _questions.length ? theme.colorScheme.primary : null,
@@ -231,7 +232,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
                 const SizedBox(height: 12),
                 ...perSubjectAccuracies.entries.map((e) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${e.value.correct}/${e.value.total} (${formatPercent(e.value.accuracyPercent, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)})',
+                  child: Text('${formatDecimal(e.value.correct.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}/${formatDecimal(e.value.total.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)} (${formatPercent(e.value.accuracyPercent, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)})',
                     style: theme.textTheme.bodyMedium),
                 )),
               ],
@@ -258,7 +259,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text('$_correctCount ${l10n.correct.toLowerCase()}',
+            Text('$_correctCount ${l10n.correct.normalized}',
               style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.primary)),
             Text(progress, style: theme.textTheme.bodySmall),
           ],

@@ -5,7 +5,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
@@ -150,19 +150,19 @@ void main() {
         subjectId: subjectId,
       );
 
-      expect(pendingMistakes, hasLength(2));
-      final mistakeIds = pendingMistakes.map((m) => m.question.id).toSet();
+      expect(pendingMistakes.data!, hasLength(2));
+      final mistakeIds = pendingMistakes.data!.map((m) => m.question.id).toSet();
       expect(mistakeIds, contains('q-cell'));
       expect(mistakeIds, contains('q-gen'));
       expect(mistakeIds, isNot(contains('q-eco')));
       expect(mistakeIds, isNot(contains('q-meta')));
 
-      for (final mistake in pendingMistakes) {
+      for (final mistake in pendingMistakes.data!) {
         expect(mistake.correctAnswer, isNotEmpty);
         expect(mistake.explanation, isNotNull);
       }
 
-      final redoQuestions = mistakeRepo.extractRedoQuestions(pendingMistakes);
+      final redoQuestions = mistakeRepo.extractRedoQuestions(pendingMistakes.data!);
       expect(redoQuestions, hasLength(2));
 
       final scorer = ReadinessScorer();
@@ -178,8 +178,8 @@ void main() {
         subjectId: subjectId,
       );
 
-      expect(updatedPending, hasLength(1));
-      expect(updatedPending.first.question.id, 'q-gen');
+      expect(updatedPending.data!, hasLength(1));
+      expect(updatedPending.data!.first.question.id, 'q-gen');
     });
 
     test('mistake review with date-filtered session', () async {
@@ -219,9 +219,9 @@ void main() {
         after: now.subtract(const Duration(days: 7)),
       );
 
-      expect(sessionMistakes, hasLength(1));
-      expect(sessionMistakes.first.question.id, 'q-recent');
-      expect(sessionMistakes.first.correctAnswer, 'A');
+      expect(sessionMistakes.data!, hasLength(1));
+      expect(sessionMistakes.data!.first.question.id, 'q-recent');
+      expect(sessionMistakes.data!.first.correctAnswer, 'A');
     });
 
     test('spaced repetition integrates questions and attempts', () async {
@@ -246,10 +246,10 @@ void main() {
         subjectId: subjectId,
       );
 
-      expect(mistakes, hasLength(1));
-      expect(mistakes.first.question.id, 'q-sr2');
+      expect(mistakes.data!, hasLength(1));
+      expect(mistakes.data!.first.question.id, 'q-sr2');
 
-      final redoQuestions = container.read(mistakeReviewServiceProvider).extractRedoQuestions(mistakes);
+      final redoQuestions = container.read(mistakeReviewServiceProvider).extractRedoQuestions(mistakes.data!);
       expect(redoQuestions, hasLength(1));
       expect(redoQuestions.first.id, 'q-sr2');
     });

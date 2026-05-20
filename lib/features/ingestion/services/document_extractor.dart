@@ -5,6 +5,7 @@ import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
 
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
@@ -14,6 +15,7 @@ import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/services/extraction_result.dart';
 
 class DocumentExtractor {
+  static final Logger _logger = const Logger('DocumentExtractor');
   static final _headingPatterns = [
     RegExp(r'^#{1,6}\s+(.+)$', multiLine: true),
     RegExp(r'^(.+)\n={3,}$', multiLine: true),
@@ -105,7 +107,7 @@ class DocumentExtractor {
         if (file.existsSync()) {
           final bytes = file.readAsBytesSync();
           if (bytes.length >= 4 && bytes[0] == 0x50 && bytes[1] == 0x4B && bytes[2] == 0x03 && bytes[3] == 0x04) {
-            final extension = filePath.split('.').last.toLowerCase();
+            final extension = filePath.split('.').last.normalized;
             try {
               final text = _extractFromZip(bytes, extension);
               if (text.isNotEmpty) {
@@ -118,7 +120,7 @@ class DocumentExtractor {
                 );
               }
             } catch (e) {
-              const Logger('DocumentExtractor').w('Failed to parse $extension archive: $e');
+              _logger.w('Failed to parse $extension archive: $e');
               return ExtractionResult(
                 text: '',
                 extractionMethod: '${extension}_parse_failed',
@@ -139,7 +141,7 @@ class DocumentExtractor {
         }
       }
     } catch (e) {
-      const Logger('DocumentExtractor').e('Failed to read file as UTF-8: $e');
+      _logger.w('Failed to read file as UTF-8: $e');
     }
 
     final chunks = _chunkContent(rawContent);
@@ -481,7 +483,7 @@ class DocumentExtractor {
 
       return buffer.toString().trim();
     } catch (e) {
-      const Logger('DocumentExtractor').w('EPUB extraction failed: $e');
+      _logger.w('EPUB extraction failed: $e');
       return '';
     }
   }
@@ -540,7 +542,7 @@ class DocumentExtractor {
 
       return buffer.toString().trim();
     } catch (e) {
-      const Logger('DocumentExtractor').w('XLSX extraction failed: $e');
+      _logger.w('XLSX extraction failed: $e');
       return '';
     }
   }
@@ -582,7 +584,7 @@ class DocumentExtractor {
   }
 
   String _detectMimeType(String filePath) {
-    final ext = filePath.split('.').last.toLowerCase();
+    final ext = filePath.split('.').last.normalized;
     switch (ext) {
       case 'png':
         return 'image/png';

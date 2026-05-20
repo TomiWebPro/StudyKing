@@ -205,6 +205,180 @@ void main() {
       await tester.tap(find.text('AI Tutor'));
       expect(tutorTapped, isTrue);
     });
+
+    testWidgets('incorrect quiz answer still shows AI tutor button when onStartTutor provided', (tester) async {
+      bool tutorTapped = false;
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'q4', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?',
+            answerKey: '4',
+          ),
+          onStartTutor: () => tutorTapped = true,
+        ),
+      ));
+
+      await tester.enterText(find.byType(TextField), 'wrong');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect answer'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy), findsOneWidget);
+
+      await tester.tap(find.text('AI Tutor'));
+      expect(tutorTapped, isTrue);
+    });
+
+    testWidgets('quiz fallback when answerKey is empty and no answer in content', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'q5', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?',
+            answerKey: '',
+          ),
+        ),
+      ));
+
+      await tester.enterText(find.byType(TextField), '4');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect answer'), findsOneWidget);
+    });
+
+    testWidgets('quiz fallback with answer in content but empty answerKey scores correct', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'q6', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2? answer: 4',
+            answerKey: '',
+          ),
+        ),
+      ));
+
+      await tester.enterText(find.byType(TextField), '4');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Correct'), findsOneWidget);
+    });
+  });
+
+  group('LessonBlockCard - Quiz Multi-Choice', () {
+    testWidgets('renders choice chips for multi-choice quiz', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.quiz,
+          content: 'What is 2+2?\n? \n- 3\n- 4\n- 5\n- 6',
+        )),
+      ));
+
+      expect(find.byType(ChoiceChip), findsNWidgets(4));
+      expect(find.text('3'), findsOneWidget);
+      expect(find.text('4'), findsOneWidget);
+      expect(find.text('5'), findsOneWidget);
+      expect(find.text('6'), findsOneWidget);
+      expect(find.byType(TextField), findsNothing);
+    });
+
+    testWidgets('selecting correct multi-choice option and submitting shows correct', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'mc1', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?\n? \n- 3\n- 4\n- 5\n- 6',
+            answerKey: '4',
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('4'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Correct'), findsOneWidget);
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+    });
+
+    testWidgets('selecting incorrect multi-choice option and submitting shows incorrect', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'mc2', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?\n? \n- 3\n- 4\n- 5\n- 6',
+            answerKey: '4',
+          ),
+        ),
+      ));
+
+      await tester.tap(find.text('5'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Incorrect answer'), findsOneWidget);
+      expect(find.byIcon(Icons.cancel), findsOneWidget);
+    });
+
+    testWidgets('deselects previous choice when new choice selected', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.quiz,
+          content: 'Pick one?\n? \n- A\n- B',
+        )),
+      ));
+
+      await tester.tap(find.text('A'));
+      await tester.pump();
+
+      ChoiceChip chipA = tester.widget<ChoiceChip>(find.byType(ChoiceChip).first);
+      expect(chipA.selected, isTrue);
+
+      await tester.tap(find.text('B'));
+      await tester.pump();
+
+      chipA = tester.widget<ChoiceChip>(find.byType(ChoiceChip).first);
+      expect(chipA.selected, isFalse);
+      final chipB = tester.widget<ChoiceChip>(find.byType(ChoiceChip).last);
+      expect(chipB.selected, isTrue);
+    });
+
+    testWidgets('AI tutor button shows after correct multi-choice answer', (tester) async {
+      bool tutorTapped = false;
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'mc3', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?\n? \n- 3\n- 4\n- 5\n- 6',
+            answerKey: '4',
+          ),
+          onStartTutor: () => tutorTapped = true,
+        ),
+      ));
+
+      await tester.tap(find.text('4'));
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI Tutor'), findsOneWidget);
+      await tester.tap(find.text('AI Tutor'));
+      expect(tutorTapped, isTrue);
+    });
   });
 
   group('LessonBlockCard - Exercise', () {
@@ -246,6 +420,22 @@ void main() {
       await tester.pump();
       await tester.tap(find.text('AI Tutor'));
       expect(tutorTapped, isTrue);
+    });
+
+    testWidgets('submit without AI tutor still shows submitted answer', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(type: LessonBlockType.exercise)),
+      ));
+
+      await tester.enterText(find.byType(TextField), 'Answer without tutor');
+      await tester.pump();
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Answer without tutor'), findsOneWidget);
+      expect(find.text('Your Answer'), findsOneWidget);
+      expect(find.byIcon(Icons.smart_toy), findsNothing);
+      expect(find.widgetWithText(FilledButton, 'Submit Answer'), findsNothing);
     });
   });
 
@@ -354,6 +544,36 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.close), findsNothing);
+    });
+
+    testWidgets('navigating back to previous slide shows first slide', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: block(type: LessonBlockType.slide, content: 'First slide'),
+          allBlocks: [
+            LessonBlock(id: 's1', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.slide, content: 'First slide', order: 0),
+            LessonBlock(id: 's2', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.slide, content: 'Second slide', order: 1),
+          ],
+          blockIndex: 0,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('Second slide'), findsAtLeastNWidgets(1));
+
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+      expect(find.text('First slide'), findsAtLeastNWidgets(1));
+      expect(find.text('1 / 2'), findsWidgets);
     });
   });
 }

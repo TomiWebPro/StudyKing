@@ -3,13 +3,13 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class MasteryRecorder {
-  final Logger _logger = const Logger('MasteryRecorder');
+  static final Logger _logger = const Logger('MasteryRecorder');
   final MasteryGraphService _masteryGraphService;
   final SpacedRepetitionEngine _srEngine;
   final AttemptRepository _attemptRepo;
@@ -108,7 +108,7 @@ class MasteryRecorder {
 
       return Result.success(null);
     } catch (e) {
-      _logger.e('MasteryRecorder.recordAttempt failed', e);
+      _logger.w('MasteryRecorder.recordAttempt failed', e);
       return Result.failure(e.toString());
     }
   }
@@ -128,7 +128,7 @@ class MasteryRecorder {
             : null,
       );
     } catch (e) {
-      _logger.e('Failed to deserialize SR data', e);
+      _logger.w('Failed to deserialize SR data', e);
       return const QuestionSRData();
     }
   }

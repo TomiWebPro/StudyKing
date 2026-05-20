@@ -154,7 +154,7 @@ class ChatBubble extends StatelessWidget {
       final data = jsonDecode(content) as Map<String, dynamic>;
       return data['type'] == 'evaluation';
     } catch (e) {
-      _logger.e('Failed to parse evaluation message', e);
+      _logger.w('Failed to parse evaluation message', e);
       return false;
     }
   }
@@ -222,7 +222,7 @@ class ChatBubble extends StatelessWidget {
         ],
       );
     } catch (e) {
-      _logger.e('Failed to build evaluation content', e);
+      _logger.w('Failed to build evaluation content', e);
       final l10n = AppLocalizations.of(context)!;
       return Text(l10n.unableToDisplayEvaluation);
     }

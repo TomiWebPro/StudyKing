@@ -8,13 +8,13 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/dashboard/services/dashboard_service.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   final List<MasteryState> _allMastery;
@@ -88,15 +88,15 @@ class _FakeProgressTracker extends StudyProgressTracker {
         super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async => _stats;
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async => Result.success(_stats);
 
   @override
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async => _trend;
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async => Result.success(_trend);
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    if (_failBadges) throw Exception('badges error');
-    return _badges;
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    if (_failBadges) return Result.failure('badges error');
+    return Result.success(_badges);
   }
 }
 
@@ -279,13 +279,13 @@ void main() {
           }),
         );
         final stats = await service.getOverallStats('s1');
-        expect(stats, isNotNull);
-        expect(stats!.totalAttempts, 50);
-        expect(stats.correctAttempts, 35);
-        expect(stats.accuracy, 70);
-        expect(stats.totalStudyTimeHours, 15.5);
-        expect(stats.weeklyActivity, 7);
-        expect(stats.topicsStudied, 6);
+        expect(stats.data, isNotNull);
+        expect(stats.data!.totalAttempts, 50);
+        expect(stats.data!.correctAttempts, 35);
+        expect(stats.data!.accuracy, 70);
+        expect(stats.data!.totalStudyTimeHours, 15.5);
+        expect(stats.data!.weeklyActivity, 7);
+        expect(stats.data!.topicsStudied, 6);
       });
 
       test('returns OverallStats with default values when stats are empty', () async {
@@ -294,8 +294,8 @@ void main() {
           progressTracker: _FakeProgressTracker(),
         );
         final stats = await service.getOverallStats('s1');
-        expect(stats, isNotNull);
-        expect(stats!.isEmpty, isTrue);
+        expect(stats.data, isNotNull);
+        expect(stats.data!.isEmpty, isTrue);
       });
     });
 
@@ -306,7 +306,7 @@ void main() {
           progressTracker: _FakeProgressTracker(),
         );
         final trend = await service.getWeeklyTrend('s1');
-        expect(trend, isEmpty);
+        expect(trend.data, isEmpty);
       });
 
       test('returns list of WeeklyTrendEntry', () async {
@@ -318,10 +318,10 @@ void main() {
           ]),
         );
         final trend = await service.getWeeklyTrend('s1');
-        expect(trend.length, 2);
-        expect(trend[0].week, 1);
-        expect(trend[0].attempts, 10);
-        expect(trend[1].accuracy, 85);
+        expect(trend.data!.length, 2);
+        expect(trend.data![0].week, 1);
+        expect(trend.data![0].attempts, 10);
+        expect(trend.data![1].accuracy, 85);
       });
     });
 
@@ -332,7 +332,7 @@ void main() {
           sessionRepo: _FakeSessionRepo(),
         );
         final stats = await service.getFocusStats();
-        expect(stats, isNull);
+        expect(stats.data, isNull);
       });
 
       test('returns null when no focus sessions', () async {
@@ -345,7 +345,7 @@ void main() {
           ]),
         );
         final stats = await service.getFocusStats();
-        expect(stats, isNull);
+        expect(stats.data, isNull);
       });
 
       test('returns FocusTodayStats when focus sessions exist', () async {
@@ -362,12 +362,12 @@ void main() {
           ]),
         );
         final stats = await service.getFocusStats();
-        expect(stats, isNotNull);
-        expect(stats!.totalSeconds, 5400);
-        expect(stats.completedSessions, 1);
-        expect(stats.totalSessions, 2);
-        expect(stats.plannedMinutes, 90);
-        expect(stats.hours, closeTo(1.5, 0.01));
+        expect(stats.data, isNotNull);
+        expect(stats.data!.totalSeconds, 5400);
+        expect(stats.data!.completedSessions, 1);
+        expect(stats.data!.totalSessions, 2);
+        expect(stats.data!.plannedMinutes, 90);
+        expect(stats.data!.hours, closeTo(1.5, 0.01));
       });
 
       test('returns null when session repo throws', () async {
@@ -376,7 +376,7 @@ void main() {
           sessionRepo: _FakeSessionRepo(throwOnGetByDate: true),
         );
         final stats = await service.getFocusStats();
-        expect(stats, isNull);
+        expect(stats.data, isNull);
       });
     });
 
@@ -394,8 +394,8 @@ void main() {
           ),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.averageAdherence, 0.85);
-        expect(data.weeklyAdherence, closeTo(0.8, 0.001));
+        expect(data.data!.averageAdherence, 0.85);
+        expect(data.data!.weeklyAdherence, closeTo(0.8, 0.001));
       });
 
       test('weeklyAdherence is 0 when no weekly records', () async {
@@ -404,8 +404,8 @@ void main() {
           adherenceRepo: _FakePlanAdherenceRepo(avgAdherence: 0.5, weekly: []),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.averageAdherence, 0.5);
-        expect(data.weeklyAdherence, 0.0);
+        expect(data.data!.averageAdherence, 0.5);
+        expect(data.data!.weeklyAdherence, 0.0);
       });
 
       test('isEmpty is true when both adherences are 0', () async {
@@ -414,7 +414,7 @@ void main() {
           adherenceRepo: _FakePlanAdherenceRepo(),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.isEmpty, isTrue);
+        expect(data.data!.isEmpty, isTrue);
       });
     });
 
@@ -432,9 +432,9 @@ void main() {
           ]),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map['t1'], 'Topic One');
-        expect(map['t2'], 'Topic Two');
-        expect(map['t_missing'], 't_missing');
+        expect(map.data!['t1'], 'Topic One');
+        expect(map.data!['t2'], 'Topic Two');
+        expect(map.data!['t_missing'], 't_missing');
       });
 
       test('handles empty topics and mastery data', () async {
@@ -443,7 +443,7 @@ void main() {
           topicRepo: _FakeTopicRepo(),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map, isEmpty);
+        expect(map.data, isEmpty);
       });
 
       test('handles failed getAllTopicMastery gracefully', () async {
@@ -454,7 +454,7 @@ void main() {
           ]),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map['t1'], 'Topic One');
+        expect(map.data!['t1'], 'Topic One');
       });
 
       test('handles topic repo failure gracefully', () async {
@@ -463,7 +463,7 @@ void main() {
           topicRepo: _FakeTopicRepo(failGetAll: true),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map, isEmpty);
+        expect(map.data, isEmpty);
       });
     });
 
@@ -477,11 +477,11 @@ void main() {
           ]),
         );
         final badges = await service.getBadges('s1');
-        expect(badges.length, 2);
-        expect(badges[0].name, 'Badge 1');
-        expect(badges[0].category, 'achievement');
-        expect(badges[1].name, 'Badge 2');
-        expect(badges[1].category, 'general');
+        expect(badges.data!.length, 2);
+        expect(badges.data![0].name, 'Badge 1');
+        expect(badges.data![0].category, 'achievement');
+        expect(badges.data![1].name, 'Badge 2');
+        expect(badges.data![1].category, 'general');
       });
 
       test('returns empty list when tracker throws', () async {
@@ -490,7 +490,7 @@ void main() {
           progressTracker: _FakeProgressTracker(failBadges: true),
         );
         final badges = await service.getBadges('s1');
-        expect(badges, isEmpty);
+        expect(badges.data, isEmpty);
       });
 
       test('handles empty badges list', () async {
@@ -499,7 +499,7 @@ void main() {
           progressTracker: _FakeProgressTracker(),
         );
         final badges = await service.getBadges('s1');
-        expect(badges, isEmpty);
+        expect(badges.data, isEmpty);
       });
 
       test('handles badge with null fields gracefully', () async {
@@ -510,10 +510,10 @@ void main() {
           ]),
         );
         final badges = await service.getBadges('s1');
-        expect(badges.length, 1);
-        expect(badges[0].name, '');
-        expect(badges[0].description, '');
-        expect(badges[0].category, 'general');
+        expect(badges.data!.length, 1);
+        expect(badges.data![0].name, '');
+        expect(badges.data![0].description, '');
+        expect(badges.data![0].category, 'general');
       });
 
       test('handles badge with missing category key', () async {
@@ -524,9 +524,9 @@ void main() {
           ]),
         );
         final badges = await service.getBadges('s1');
-        expect(badges.length, 1);
-        expect(badges[0].name, 'Test');
-        expect(badges[0].category, 'general');
+        expect(badges.data!.length, 1);
+        expect(badges.data![0].name, 'Test');
+        expect(badges.data![0].category, 'general');
       });
 
       test('handles badge with full data including category', () async {
@@ -537,7 +537,7 @@ void main() {
           ]),
         );
         final badges = await service.getBadges('s1');
-        expect(badges[0].category, 'milestone');
+        expect(badges.data![0].category, 'milestone');
       });
     });
 
@@ -566,9 +566,9 @@ void main() {
           ),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.averageAdherence, 1.0);
-        expect(data.weeklyAdherence, closeTo(0.975, 0.001));
-        expect(data.isEmpty, isFalse);
+        expect(data.data!.averageAdherence, 1.0);
+        expect(data.data!.weeklyAdherence, closeTo(0.975, 0.001));
+        expect(data.data!.isEmpty, isFalse);
       });
 
       test('handles zero adherence values', () async {
@@ -583,9 +583,9 @@ void main() {
           ),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.averageAdherence, 0.0);
-        expect(data.weeklyAdherence, 0.0);
-        expect(data.isEmpty, isTrue);
+        expect(data.data!.averageAdherence, 0.0);
+        expect(data.data!.weeklyAdherence, 0.0);
+        expect(data.data!.isEmpty, isTrue);
       });
 
       test('handles single weekly record', () async {
@@ -600,7 +600,7 @@ void main() {
           ),
         );
         final data = await service.getAdherenceData('s1');
-        expect(data.weeklyAdherence, 0.5);
+        expect(data.data!.weeklyAdherence, 0.5);
       });
     });
 
@@ -623,7 +623,7 @@ void main() {
           topicRepo: _FakeTopicRepo(returnNullData: true),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map['t1'], 't1');
+        expect(map.data!['t1'], 't1');
       });
     });
   });

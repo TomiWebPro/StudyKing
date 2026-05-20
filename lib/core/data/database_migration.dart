@@ -4,7 +4,7 @@ import 'hive_box_names.dart';
 
 class DatabaseMigration {
   static final Logger _logger = const Logger('DatabaseMigration');
-  static const String versionBoxName = 'db_version';
+  static const String versionBoxName = HiveBoxNames.dbVersion;
   static const int currentVersionNum = 1;
 
   static Future<void> runMigrations() async {
@@ -33,7 +33,7 @@ class DatabaseMigration {
         try {
           await Hive.openBox(boxName);
         } catch (e) {
-          Logger('DatabaseMigration').w('Failed to open box "$boxName"', e);
+          _logger.w('Failed to open box "$boxName"', e);
           missingBoxes.add(boxName);
         }
       }

@@ -5,11 +5,12 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 
 class StudyTimerService {
-  final Logger _logger = const Logger('StudyTimerService');
+  static final Logger _logger = const Logger('StudyTimerService');
   final SessionRepository _repository;
   final NotificationService? _notificationService;
   Timer? _timer;
@@ -29,7 +30,7 @@ class StudyTimerService {
   SessionRepository get repository => _repository;
   Session? get currentSession => _currentSession;
   int get elapsedMs => _elapsedMs;
-  int get elapsedSeconds => _elapsedMs ~/ 1000;
+  int get elapsedSeconds => _elapsedMs ~/ msPerSecond;
   bool get isPaused => _isPaused;
   bool get hasActiveSession => _currentSession != null;
 
@@ -53,76 +54,105 @@ class StudyTimerService {
     if (!hasActiveSession || _isPaused) return;
     _elapsedMs += expectedMs;
     final plannedSeconds = (_currentSession!.plannedDurationMinutes ?? 25) * 60;
-    if (_elapsedMs ~/ 1000 >= plannedSeconds) {
+    if (_elapsedMs ~/ msPerSecond >= plannedSeconds) {
       _timer?.cancel();
       completeSession();
     }
   }
 
-  Future<int> getDailyCapMinutes() async {
+  Future<Result<int>> getDailyCapMinutes() async {
     try {
       final box = Hive.box(HiveBoxNames.settings);
-      return box.get('dailyCapMinutes', defaultValue: 0);
+      return Result.success(box.get('dailyCapMinutes', defaultValue: 0));
     } catch (e) {
       _logger.w('Failed to get daily cap minutes', e);
-      return 0;
+      return Result.failure(e.toString());
     }
   }
 
-  Future<bool> isDailyCapReached(int additionalMinutes) async {
-    final capMinutes = await getDailyCapMinutes();
-    if (capMinutes <= 0) return false;
-    final todayStatsResult = await _repository.getTodayStats();
-    final todayMinutes = (todayStatsResult.data?['totalMs'] as int? ?? 0) ~/ 60000;
-    return (todayMinutes + additionalMinutes) > capMinutes;
+  Future<Result<bool>> isDailyCapReached(int additionalMinutes) async {
+    try {
+      final capResult = await getDailyCapMinutes();
+      if (capResult.isFailure) return Result.failure(capResult.error);
+      final capMinutes = capResult.data!;
+      if (capMinutes <= 0) return Result.success(false);
+      final todayStatsResult = await _repository.getTodayStats();
+      if (todayStatsResult.isFailure) return Result.failure(todayStatsResult.error);
+      final todayMinutes = (todayStatsResult.data!['totalMs'] as int? ?? 0) ~/ msPerMinute;
+      return Result.success((todayMinutes + additionalMinutes) > capMinutes);
+    } catch (e) {
+      _logger.w('Failed to check daily cap', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<bool> isDailyCapExceededMidSession() async {
-    final capMinutes = await getDailyCapMinutes();
-    if (capMinutes <= 0) return false;
-    final todayStatsResult = await _repository.getTodayStats();
-    final totalMs = (todayStatsResult.data?['totalMs'] as int? ?? 0);
-    final withoutCurrent = _elapsedMs > 0 ? totalMs - _elapsedMs : totalMs;
-    return (withoutCurrent ~/ 60000) >= capMinutes;
+  Future<Result<bool>> isDailyCapExceededMidSession() async {
+    try {
+      final capResult = await getDailyCapMinutes();
+      if (capResult.isFailure) return Result.failure(capResult.error);
+      final capMinutes = capResult.data!;
+      if (capMinutes <= 0) return Result.success(false);
+      final todayStatsResult = await _repository.getTodayStats();
+      if (todayStatsResult.isFailure) return Result.failure(todayStatsResult.error);
+      final totalMs = (todayStatsResult.data!['totalMs'] as int? ?? 0);
+      final withoutCurrent = _elapsedMs > 0 ? totalMs - _elapsedMs : totalMs;
+      return Result.success((withoutCurrent ~/ msPerMinute) >= capMinutes);
+    } catch (e) {
+      _logger.w('Failed to check mid-session cap', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<int> getRemainingDailyCapMinutes() async {
-    final capMinutes = await getDailyCapMinutes();
-    if (capMinutes <= 0) return -1;
-    final todayStatsResult = await _repository.getTodayStats();
-    final todayMinutes = (todayStatsResult.data?['totalMs'] as int? ?? 0) ~/ 60000;
-    return capMinutes - todayMinutes;
+  Future<Result<int>> getRemainingDailyCapMinutes() async {
+    try {
+      final capResult = await getDailyCapMinutes();
+      if (capResult.isFailure) return Result.failure(capResult.error);
+      final capMinutes = capResult.data!;
+      if (capMinutes <= 0) return Result.success(-1);
+      final todayStatsResult = await _repository.getTodayStats();
+      if (todayStatsResult.isFailure) return Result.failure(todayStatsResult.error);
+      final todayMinutes = (todayStatsResult.data!['totalMs'] as int? ?? 0) ~/ msPerMinute;
+      return Result.success(capMinutes - todayMinutes);
+    } catch (e) {
+      _logger.w('Failed to get remaining daily cap minutes', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<Session> startSession({
+  Future<Result<Session>> startSession({
     required int plannedDurationMinutes,
     SessionType type = SessionType.focus,
     String? studentId,
     String? subjectId,
     String? topicId,
   }) async {
-    if (_currentSession != null) {
-      await cancelSession();
+    try {
+      if (_currentSession != null) {
+        await cancelSession();
+      }
+
+      final now = DateTime.now();
+      _currentSession = Session(
+        id: '${type.name}_${now.millisecondsSinceEpoch}_${plannedDurationMinutes}m',
+        studentId: studentId ?? '',
+        subjectId: subjectId,
+        topicId: topicId,
+        type: type,
+        startTime: now,
+        plannedDurationMinutes: plannedDurationMinutes,
+      );
+
+      _elapsedMs = 0;
+      _isPaused = false;
+      _startTimer();
+
+      await _repository.save(_currentSession!.id, _currentSession!);
+      _logger.i('Session started: ${_currentSession!.id} type: ${type.name}');
+      return Result.success(_currentSession!);
+    } catch (e) {
+      _logger.w('Failed to start session: $e');
+      return Result.failure('StudyTimerService.startSession: $e');
     }
-
-    final now = DateTime.now();
-    _currentSession = Session(
-      id: '${type.name}_${now.millisecondsSinceEpoch}_${plannedDurationMinutes}m',
-      studentId: studentId ?? '',
-      subjectId: subjectId,
-      topicId: topicId,
-      type: type,
-      startTime: now,
-      plannedDurationMinutes: plannedDurationMinutes,
-    );
-
-    _elapsedMs = 0;
-    _isPaused = false;
-    _startTimer();
-
-    await _repository.save(_currentSession!.id, _currentSession!);
-    _logger.i('Session started: ${_currentSession!.id} type: ${type.name}');
-    return _currentSession!;
   }
 
   void _startTimer() {
@@ -130,7 +160,7 @@ class StudyTimerService {
     _lastTickTime = DateTime.now();
     _timer = Timer.periodic(Timeouts.second, (_) {
       final now = DateTime.now();
-      final diff = _lastTickTime != null ? now.difference(_lastTickTime!).inMilliseconds : 1000;
+      final diff = _lastTickTime != null ? now.difference(_lastTickTime!).inMilliseconds : msPerSecond;
       _lastTickTime = now;
 
       if (!_isPaused) {
@@ -141,7 +171,7 @@ class StudyTimerService {
         }
 
         if (_currentSession!.plannedDurationMinutes != null &&
-            _elapsedMs ~/ 1000 >= _currentSession!.plannedDurationMinutes! * 60) {
+            _elapsedMs ~/ msPerSecond >= _currentSession!.plannedDurationMinutes! * 60) {
           _timer?.cancel();
           completeSession();
         }
@@ -181,7 +211,7 @@ class StudyTimerService {
         await _notificationService?.showNotification(
           id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
           title: 'Focus Session Complete',
-          body: 'Great focus! You completed ${_elapsedMs ~/ 60000} minutes.',
+          body: 'Great focus! You completed ${_elapsedMs ~/ msPerMinute} minutes.',
         );
         // Note: Notification titles/bodies are intentionally invariant (English)
         // because they are not rendered inside the app UI; they appear in the
@@ -228,34 +258,65 @@ class StudyTimerService {
     return Result.success(cancelled);
   }
 
-  Future<int> getTodayDurationMs() async {
-    final result = await _repository.getTodayDurationMs();
-    return result.data ?? 0;
+  Future<Result<int>> getTodayDurationMs() async {
+    try {
+      final result = await _repository.getTodayDurationMs();
+      return Result.success(result.data ?? 0);
+    } catch (e) {
+      _logger.w('getTodayDurationMs failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<int> getTodaySessionCount() async {
-    final result = await _repository.getTodaySessionCount();
-    return result.data ?? 0;
+  Future<Result<int>> getTodaySessionCount() async {
+    try {
+      final result = await _repository.getTodaySessionCount();
+      return Result.success(result.data ?? 0);
+    } catch (e) {
+      _logger.w('getTodaySessionCount failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<int> getTodayCompletedSessionCount() async {
-    final result = await _repository.getTodayCompletedSessionCount();
-    return result.data ?? 0;
+  Future<Result<int>> getTodayCompletedSessionCount() async {
+    try {
+      final result = await _repository.getTodayCompletedSessionCount();
+      return Result.success(result.data ?? 0);
+    } catch (e) {
+      _logger.w('getTodayCompletedSessionCount failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<Map<String, dynamic>> getTodayStats() async {
-    final result = await _repository.getTodayStats();
-    return result.data ?? {};
+  Future<Result<Map<String, dynamic>>> getTodayStats() async {
+    try {
+      final result = await _repository.getTodayStats();
+      return Result.success(result.data ?? {});
+    } catch (e) {
+      _logger.w('getTodayStats failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<List<Session>> getRecentSessions({int limit = 10}) async {
-    final allResult = await _repository.getAll();
-    final all = allResult.data ?? [];
-    return all.take(limit).toList();
+  Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async {
+    try {
+      final allResult = await _repository.getAll();
+      final all = allResult.data ?? [];
+      return Result.success(all.take(limit).toList());
+    } catch (e) {
+      _logger.w('getRecentSessions failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<void> dispose() async {
-    _timer?.cancel();
-    _timer = null;
+  Future<Result<void>> dispose() async {
+    try {
+      _timer?.cancel();
+      _timer = null;
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('dispose failed', e);
+      return Result.failure(e.toString());
+    }
   }
 }

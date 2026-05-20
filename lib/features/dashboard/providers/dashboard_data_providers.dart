@@ -3,17 +3,22 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/utils/study_utils.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart' show SyllabusGoal;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+
+final _dashboardLogger = const Logger('DashboardDataProviders');
 
 final dashboardInitProvider = FutureProvider<void>((ref) async {
   await Future.wait([
@@ -46,10 +51,11 @@ final dashboardOverallStatsProvider =
   await ref.watch(dashboardInitProvider.future);
   try {
     final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
-    final stats = await tracker.getOverallStats(studentId);
+    final statsResult = await tracker.getOverallStats(studentId);
+    final stats = statsResult.data ?? <String, dynamic>{};
     return OverallStats.fromMap(stats);
   } catch (e) {
-    const Logger('dashboardOverallStatsProvider').e('Failed to get overall stats', e);
+    _dashboardLogger.w('Failed to get overall stats', e);
     return null;
   }
 });
@@ -60,10 +66,11 @@ final dashboardWeeklyTrendProvider =
   await ref.watch(dashboardInitProvider.future);
   try {
     final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
-    final trend = await tracker.getWeeklyTrend(8, studentId: studentId);
+    final trendResult = await tracker.getWeeklyTrend(8, studentId: studentId);
+    final trend = trendResult.data ?? [];
     return trend.map((m) => WeeklyTrendEntry.fromMap(m)).toList();
   } catch (e) {
-    const Logger('dashboardWeeklyTrendProvider').e('Failed to get weekly trend', e);
+    _dashboardLogger.w('Failed to get weekly trend', e);
     return [];
   }
 });
@@ -77,7 +84,7 @@ final dashboardFocusStatsProvider =
     final todaySessions = todayResult.data ?? [];
     final focusToday = todaySessions.where((s) => s.type == SessionType.focus).toList();
     if (focusToday.isEmpty) return null;
-    final totalSeconds = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs) ~/ 1000;
+    final totalSeconds = focusToday.fold<int>(0, (sum, s) => sum + s.actualDurationMs) ~/ msPerSecond;
     return FocusTodayStats.fromMap({
       'totalSeconds': totalSeconds,
       'completedSessions': focusToday.where((s) => s.completed).length,
@@ -85,7 +92,7 @@ final dashboardFocusStatsProvider =
       'plannedMinutes': focusToday.fold<int>(0, (sum, s) => sum + (s.plannedDurationMinutes ?? 0)),
     });
   } catch (e) {
-    const Logger('dashboardFocusStatsProvider').e('Failed to get focus stats', e);
+    _dashboardLogger.w('Failed to get focus stats', e);
     return null;
   }
 });
@@ -106,7 +113,7 @@ final dashboardAdherenceDataProvider =
       weeklyAdherence: weeklyAdherence,
     );
   } catch (e) {
-    const Logger('dashboardAdherenceDataProvider').e('Failed to get adherence data', e);
+    _dashboardLogger.w('Failed to get adherence data', e);
     return AdherenceData(averageAdherence: 0.0, weeklyAdherence: 0.0);
   }
 });
@@ -128,7 +135,7 @@ final dashboardTopicNamesProvider =
     }
     return topicMap;
   } catch (e) {
-    const Logger('dashboardTopicNamesProvider').e('Failed to get topic names', e);
+    _dashboardLogger.w('Failed to get topic names', e);
     return {};
   }
 });
@@ -138,7 +145,8 @@ final dashboardBadgesProvider =
   await ref.watch(dashboardInitProvider.future);
   final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
   try {
-    final badges = await tracker.getBadges(studentId);
+    final badgesResult = await tracker.getBadges(studentId);
+    final badges = badgesResult.data ?? [];
     return badges.map((b) {
       return BadgeDisplay(
         name: (b['name'] as String?) ?? '',
@@ -147,7 +155,7 @@ final dashboardBadgesProvider =
       );
     }).toList();
   } catch (e) {
-    const Logger('dashboardBadgesProvider').e('Failed to get badges', e);
+    _dashboardLogger.w('Failed to get badges', e);
     return [];
   }
 });
@@ -184,7 +192,7 @@ final dashboardWorkloadProvider =
       topicMasteryLevels: topicMasteryLevels,
     );
   } catch (e) {
-    const Logger('dashboardWorkloadProvider').e('Failed to estimate workload', e);
+    _dashboardLogger.w('Failed to estimate workload', e);
     return null;
   }
 });
@@ -213,7 +221,7 @@ final dashboardDueReviewsProvider =
 
     return DueReviewsData(totalDue: totalDue, subjectBreakdown: breakdown);
   } catch (e) {
-    const Logger('dashboardDueReviewsProvider').e('Failed to load due reviews', e);
+    _dashboardLogger.w('Failed to load due reviews', e);
     return null;
   }
 });
@@ -225,8 +233,22 @@ final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, st
     final sources = await repo.getByStudent(studentId);
     return sources.length;
   } catch (e) {
-    const Logger('dashboardSourceCountProvider').e('Failed to get source count', e);
+    _dashboardLogger.w('Failed to get source count', e);
     return 0;
+  }
+});
+
+final dashboardSyllabusProgressProvider =
+    FutureProvider.family<List<SyllabusGoal>, String>((ref, studentId) async {
+  try {
+    final plannerService = ref.watch(plannerServiceProvider);
+    final planResult = await plannerService.loadExistingPlan();
+    final plan = planResult.data;
+    if (plan == null) return [];
+    return plan.syllabusGoals;
+  } catch (e) {
+    _dashboardLogger.w('Failed to load syllabus progress', e);
+    return [];
   }
 });
 
@@ -249,7 +271,8 @@ final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgre
     final hasPracticeSessions = sessions.any((s) => s.type == SessionType.practice);
 
     final plannerService = ref.watch(plannerServiceProvider);
-    final lessons = await plannerService.getScheduledLessons();
+    final lessonsResult = await plannerService.getScheduledLessons();
+    final lessons = lessonsResult.data ?? [];
     final hasScheduledLessons = lessons.isNotEmpty;
 
     return ChecklistProgress(
@@ -259,7 +282,7 @@ final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgre
       hasScheduledLessons: hasScheduledLessons,
     );
   } catch (e) {
-    const Logger('dashboardChecklistProgressProvider').e('Failed to get checklist progress', e);
+    _dashboardLogger.w('Failed to get checklist progress', e);
     return const ChecklistProgress();
   }
 });

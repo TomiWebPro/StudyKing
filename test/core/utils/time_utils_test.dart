@@ -99,7 +99,7 @@ void main() {
 
   group('formatDate', () {
     setUpAll(() async {
-      await initializeDateFormatting('en');
+      await initializeDateFormatting();
     });
 
     test('returns unknown for null date', () {

@@ -5,7 +5,7 @@ import 'package:studyking/features/practice/services/spaced_repetition_service.d
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 
 class _FakeSpacedRepetitionService extends SpacedRepetitionService {
@@ -200,42 +200,6 @@ class FakeQuestionBox implements Box<Question> {
 }
 
 void main() {
-  group('SpacedRepetitionQueries', () {
-    group('getQuestionsDueAfter', () {
-      test('returns questions due after specific date', () {
-        final box = FakeQuestionBox();
-        box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
-        box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
-        final due = SpacedRepetitionQueries.getQuestionsDueAfter(box, DateTime(2023, 1, 1));
-        expect(due.length, 1);
-        expect(due.first.id, 'q1');
-      });
-    });
-
-    group('isQuestionDueForReview', () {
-      test('returns true for past due question', () {
-        final q = createSRQuestion(nextReview: DateTime(2020, 1, 1));
-        expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isTrue);
-      });
-
-      test('returns false for future review question', () {
-        final q = createSRQuestion(nextReview: DateTime(2099, 1, 1));
-        expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isFalse);
-      });
-    });
-
-    group('mapQuestionsToStatus', () {
-      test('returns status map for questions', () {
-        final box = FakeQuestionBox();
-        box.put('q1', createSRQuestion(id: 'q1', nextReview: DateTime(2020, 1, 1)));
-        box.put('q2', createSRQuestion(id: 'q2', nextReview: DateTime(2099, 1, 1)));
-        final status = SpacedRepetitionQueries.mapQuestionsToStatus(box);
-        expect(status['q1'], 'due');
-        expect(status['q2'], 'not-due');
-      });
-    });
-  });
-
   group('SpacedRepetitionService', () {
     late _FakeSpacedRepetitionService service;
 

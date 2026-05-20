@@ -11,7 +11,7 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/ingestion/presentation/source_detail_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 

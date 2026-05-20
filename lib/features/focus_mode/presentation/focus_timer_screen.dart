@@ -6,10 +6,10 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planOrchestratorProvider;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, planOrchestratorProvider, badgeServiceProvider;
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/inline_practice_widget.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
@@ -40,6 +40,7 @@ class FocusTimerScreen extends ConsumerStatefulWidget {
 }
 
 class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
+  static final Logger _logger = const Logger('FocusTimerScreen');
   late final StudyTimerService _service;
 
   bool _initialized = false;
@@ -60,12 +61,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   List<Subject> _subjects = [];
   Map<String, int> _dueCounts = {};
 
+  bool _showOnboarding = false;
+
   bool _inlinePracticeActive = false;
   Subject? _inlinePracticeSubject;
 
   bool _subjectsError = false;
   bool _dueCountsError = false;
   bool _statsError = false;
+
+  int _lastMidSessionCapCheckMs = 0;
 
   @override
   bool get wantKeepAlive => true;
@@ -94,10 +99,13 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     if (!_service.hasActiveSession || _lastTickMs <= 0) return;
     final expectedMs = DateTime.now().millisecondsSinceEpoch - _lastTickMs;
     if (expectedMs > 2000) {
-      _service.reconcileElapsedMs(expectedMs);
-      if (_service.elapsedMs >= (_service.currentSession?.plannedDurationMinutes ?? 25) * 60000) {
+      final maxPlannedMs = (_service.currentSession?.plannedDurationMinutes ?? 25) * msPerMinute;
+      final clampedMs = expectedMs > maxPlannedMs ? maxPlannedMs : expectedMs;
+      _service.reconcileElapsedMs(clampedMs);
+      if (_service.elapsedMs >= maxPlannedMs) {
         _service.completeSession();
       }
+      _checkMidSessionCap();
     }
   }
 
@@ -111,10 +119,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       _breakDuration = settings.breakDurationSeconds;
 
       if (settings.firstFocusVisit) {
+        _showOnboarding = true;
         try {
           ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(firstFocusVisit: false));
         } catch (e) {
-          const Logger('FocusTimerScreen').e('Failed to update first focus visit: $e');
+          _logger.w('Failed to update first focus visit: $e');
         }
       }
 
@@ -123,7 +132,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       }
       _loadInitialData();
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to initialize', e);
+      _logger.w('Failed to initialize', e);
       if (mounted) {
         setState(() => _initialized = true);
       }
@@ -148,7 +157,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         });
       }
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to load subjects', e);
+      _logger.w('Failed to load subjects', e);
       if (mounted) {
         setState(() => _subjectsError = true);
       }
@@ -172,7 +181,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         });
       }
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to load due counts', e);
+      _logger.w('Failed to load due counts', e);
       if (mounted) {
         setState(() => _dueCountsError = true);
       }
@@ -195,7 +204,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Future<void> _checkBadges(Session session) async {
     try {
       final studentId = ref.read(studentIdValueProvider);
-      final badgeService = BadgeService();
+      final badgeService = ref.read(badgeServiceProvider);
       await badgeService.checkAndUnlockBadges(studentId);
     } catch (e) {
       // silent - badge check is non-critical
@@ -205,7 +214,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Future<void> _recordAdherence(Session session) async {
     try {
       final planAdapter = ref.read(planOrchestratorProvider);
-      final elapsedSeconds = session.actualDurationMs ~/ 1000;
+      final elapsedSeconds = session.actualDurationMs ~/ msPerSecond;
       final actualMinutes = (elapsedSeconds / 60).ceil().clamp(1, 480);
       await planAdapter.recordActivity(
         studentId: ref.read(studentIdValueProvider),
@@ -216,10 +225,52 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     }
   }
 
+  void _dismissOnboarding() {
+    setState(() => _showOnboarding = false);
+  }
+
+  Future<void> _checkMidSessionCap() async {
+    if (!_service.hasActiveSession) return;
+    try {
+      final exceededResult = await _service.isDailyCapExceededMidSession();
+      final exceeded = exceededResult.data ?? false;
+      if (exceeded && mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        await showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.dailyLimitReached),
+            content: Text(l10n.dailyLimitReachedBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text(l10n.continueAnyway),
+              ),
+              FilledButton(
+                onPressed: () async {
+                  Navigator.pop(ctx);
+                  await _service.completeSession();
+                  if (mounted) setState(() {});
+                },
+                child: Text(l10n.endSession),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      _logger.w('Failed to complete session', e);
+    }
+  }
+
   void _onTick(int elapsedMs) {
     if (mounted) {
       _lastTickMs = DateTime.now().millisecondsSinceEpoch;
       setState(() {});
+      if (elapsedMs - _lastMidSessionCapCheckMs >= msPerMinute) {
+        _lastMidSessionCapCheckMs = elapsedMs;
+        _checkMidSessionCap();
+      }
     }
   }
 
@@ -243,9 +294,12 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   Future<void> _loadStats() async {
     try {
-      final stats = await _service.getTodayStats();
-      final weekly = await _service.getTodayDurationMs();
-      final recent = await _service.getRecentSessions();
+      final statsResult = await _service.getTodayStats();
+      final weeklyResult = await _service.getTodayDurationMs();
+      final recentResult = await _service.getRecentSessions();
+      final stats = statsResult.data ?? <String, dynamic>{};
+      final weekly = weeklyResult.data ?? 0;
+      final recent = recentResult.data ?? [];
       if (mounted) {
         setState(() {
           _todayStats = stats;
@@ -255,7 +309,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         });
       }
     } catch (e) {
-      const Logger('FocusTimerScreen').e('Failed to load stats', e);
+      _logger.w('Failed to load stats', e);
       if (mounted) {
         setState(() => _statsError = true);
       }
@@ -264,9 +318,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   Future<void> _startFocus() async {
     try {
-      final capMinutes = await _service.getDailyCapMinutes();
+      final capResult = await _service.getDailyCapMinutes();
+      final capMinutes = capResult.data ?? 0;
       if (capMinutes > 0) {
-        final remaining = await _service.getRemainingDailyCapMinutes();
+        final remainingResult = await _service.getRemainingDailyCapMinutes();
+        final remaining = remainingResult.data ?? -1;
         if (remaining > 0 && _selectedMinutes > remaining) {
           if (mounted) {
             final l10n = AppLocalizations.of(context)!;
@@ -292,7 +348,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         }
       }
 
-      await _service.startSession(
+      final result = await _service.startSession(
         plannedDurationMinutes: _selectedMinutes,
         type: SessionType.focus,
         subjectId: _selectedSubjectId.isNotEmpty
@@ -300,6 +356,15 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             : widget.preselectedSubjectId,
         topicId: widget.preselectedTopicId,
       );
+      if (result.isFailure) {
+        if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.errorStartingSession(''))),
+          );
+        }
+        return;
+      }
       if (mounted) {
         setState(() {});
       }
@@ -476,6 +541,10 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         physics: const AlwaysScrollableScrollPhysics(),
         child: Column(
           children: [
+            if (_showOnboarding) ...[
+              _buildOnboardingCard(l10n),
+              const SizedBox(height: 12),
+            ],
             _buildModeToggle(cs, l10n),
             if (widget.preselectedTopicId != null || widget.preselectedSubjectId != null)
               Padding(
@@ -529,6 +598,52 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         ),
       ),
     ),
+    );
+  }
+
+  Widget _buildOnboardingCard(AppLocalizations l10n) {
+    return Card(
+      margin: EdgeInsets.zero,
+      color: Theme.of(context).colorScheme.primaryContainer.withValues(alpha: 0.3),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.info_outline, size: 20, color: Theme.of(context).colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.focusMode,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: l10n.close,
+                  onPressed: _dismissOnboarding,
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              l10n.focusFirstVisitHelp,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 12),
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: FilledButton.tonalIcon(
+                onPressed: _dismissOnboarding,
+                icon: const Icon(Icons.check, size: 18),
+                label: Text(l10n.gotIt),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -870,7 +985,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
             ),
             const SizedBox(height: 8),
             Text(
-              l10n.sessionCompleted(_completedSession!.actualDurationMs ~/ 60000),
+              l10n.sessionCompleted(_completedSession!.actualDurationMs ~/ msPerMinute),
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),

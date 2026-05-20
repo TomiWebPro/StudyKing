@@ -120,6 +120,23 @@ Subject _createSubject({
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('subjects_repo_provider_test_').path;
+    Hive.init(hivePath);
+    if (!Hive.isAdapterRegistered(11)) {
+      Hive.registerAdapter(TestSubjectAdapter());
+    }
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    try {
+      await Directory(hivePath).delete(recursive: true);
+    } catch (_) {}
+  });
+
   group('subjectsRepositoryProvider', () {
     test('resolves SubjectRepository', () async {
       final c = _makeContainer(TestSubjectsRepositoryNotifier(FakeSubjectRepository()));
@@ -259,20 +276,6 @@ void main() {
   });
 
   group('subjectsRepositoryProvider (real Hive init)', () {
-    late String hivePath;
-
-    setUp(() async {
-      final dir = await Directory.systemTemp.createTemp('subjects_provider_test_');
-      hivePath = dir.path;
-      Hive.init(hivePath);
-      if (!Hive.isAdapterRegistered(11)) {
-        Hive.registerAdapter(TestSubjectAdapter());
-      }
-    });
-
-    tearDown(() async {
-      await Hive.close();
-    });
 
     test('real build() creates SubjectRepository with init', () async {
       final container = ProviderContainer();

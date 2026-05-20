@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
 import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, llmProviderProvider, selectedModelProvider, engagementMasteryServiceProvider;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show longTermMemoryProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -35,6 +36,7 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     exerciseEvaluator: ref.watch(exerciseEvaluatorProvider),
     conversationRepository: database.conversationRepository,
     voiceService: ref.watch(voiceServiceProvider),
+    longTermMemory: ref.watch(longTermMemoryProvider),
     clock: ref.watch(clockProvider),
   );
 });

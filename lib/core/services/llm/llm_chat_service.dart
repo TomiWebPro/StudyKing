@@ -62,6 +62,7 @@ class LlmConfiguration {
 }
 
 class LlmService {
+  static final Logger _logger = const Logger('LlmService');
   static String defaultSystemPromptForLocale(String localeName) {
     return lookupAppLocalizations(Locale(localeName)).aiDefaultSystemPrompt;
   }
@@ -387,7 +388,7 @@ class LlmService {
       Uri.parse('$url/chat/completions'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${config.apiKey}',
+        'Authorization': '${ApiConfig.bearerAuth}${config.apiKey}',
         'HTTP-Referer': BuildConfig.appName,
       },
       body: jsonEncode({
@@ -429,7 +430,7 @@ class LlmService {
     final request = http.Request('POST', Uri.parse('$url/chat/completions'));
     request.headers.addAll({
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${config.apiKey}',
+      'Authorization': '${ApiConfig.bearerAuth}${config.apiKey}',
       'HTTP-Referer': BuildConfig.appName,
     });
     request.body = jsonEncode({
@@ -467,7 +468,7 @@ class LlmService {
               }
             }
           } catch (e) {
-            const Logger('LlmService').e('Failed to parse SSE response: $e');
+            _logger.w('Failed to parse SSE response: $e');
           }
         }
       }
@@ -583,7 +584,7 @@ class LlmService {
           }
           if (done) break;
         } catch (e) {
-          const Logger('LlmService').e('Failed to parse Ollama response: $e');
+          _logger.w('Failed to parse Ollama response: $e');
         }
       }
       _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
@@ -622,7 +623,7 @@ class LlmService {
       Uri.parse('$baseUrl/chat/completions'),
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer ${config.apiKey}',
+        'Authorization': '${ApiConfig.bearerAuth}${config.apiKey}',
       },
       body: jsonEncode({
         'model': modelId,
@@ -663,7 +664,7 @@ class LlmService {
     final request = http.Request('POST', Uri.parse('$baseUrl/chat/completions'));
     request.headers.addAll({
       'Content-Type': 'application/json',
-      'Authorization': 'Bearer ${config.apiKey}',
+      'Authorization': '${ApiConfig.bearerAuth}${config.apiKey}',
     });
     request.body = jsonEncode({
       'model': modelId,
@@ -700,7 +701,7 @@ class LlmService {
               }
             }
           } catch (e) {
-            const Logger('LlmService').e('Failed to parse SSE response: $e');
+            _logger.w('Failed to parse SSE response: $e');
           }
         }
       }

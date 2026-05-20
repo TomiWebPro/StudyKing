@@ -1,4 +1,4 @@
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 
 class ProgressReport {
   final int totalAttempts;

@@ -162,7 +162,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         IconButton(
-                          icon: const Icon(Icons.chevron_left),
+                          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
                           onPressed: () {
                             final current = pageController.page?.round() ?? 0;
                             if (current > 0) {
@@ -186,7 +186,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                         ),
                         const SizedBox(width: 16),
                         IconButton(
-                          icon: const Icon(Icons.chevron_right),
+                          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                           onPressed: () {
                             final current = pageController.page?.round() ?? 0;
                             if (current < blocks.length - 1) {
@@ -311,10 +311,10 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
     bool correct;
     if (answerKey.isNotEmpty) {
       final keys = answerKey.split('||').map((k) => k.normalized);
-      correct = keys.any((k) => answer.toLowerCase() == k);
+      correct = keys.any((k) => answer.normalized == k);
     } else {
-      final content = widget.block.content.toLowerCase();
-      final ansLower = answer.toLowerCase();
+      final content = widget.block.content.normalized;
+      final ansLower = answer.normalized;
       final idx = content.indexOf('answer:');
       correct = idx >= 0 && content.substring(idx).contains(ansLower);
     }

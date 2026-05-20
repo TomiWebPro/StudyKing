@@ -75,7 +75,7 @@ class LessonProgressBar extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Semantics(
-            label: '${(progress * 100).round()}%',
+            label: formatPercent(progress * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(

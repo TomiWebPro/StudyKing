@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -12,13 +12,8 @@ import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
-
-final subjectRepositoryProvider = Provider<SubjectRepository>((ref) {
-  return SubjectRepository();
-});
 
 final attemptRepositoryProvider = Provider<AttemptRepository>((ref) {
   return AttemptRepository();

@@ -29,7 +29,7 @@ class CanvasDrawingWidget extends StatefulWidget {
 }
 
 class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
-  final Logger _logger = const Logger('CanvasDrawingWidget');
+  static final Logger _logger = const Logger('CanvasDrawingWidget');
   final GlobalKey _paintKey = GlobalKey();
   final List<Stroke> _strokes = <Stroke>[];
   bool _isDrawing = false;
@@ -126,11 +126,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
               child: ElevatedButton(
                 onPressed: (isEmpty || _isSaving) ? null : _handleSave,
                 child: _isSaving
-                    ? const SizedBox(
-                        height: 16,
-                        width: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? ResponsiveUtils.loaderInTouchTarget(size: 16)
                     : Text(l10n.saveDrawing),
               ),
             ),

@@ -34,4 +34,8 @@ class HiveBoxNames {
   static const String studentAvailability = 'student_availability';
   static const String llmTasks = 'llm_tasks';
   static const String llmUsageRecords = 'llm_usage_records';
+  static const String examResults = 'exam_results';
+  static const String studentId = 'student_id';
+  static const String dashboardLayoutPrefs = 'dashboard_layout_prefs';
+  static const String dbVersion = 'db_version';
 }

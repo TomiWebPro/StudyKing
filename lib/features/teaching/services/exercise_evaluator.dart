@@ -84,7 +84,7 @@ class ExerciseEvaluator {
       final json = jsonDecode(response) as Map<String, dynamic>;
       return EvaluationResult.fromJson(json);
     } catch (e) {
-      _logger.e('Failed to parse evaluation response', e);
+      _logger.w('Failed to parse evaluation response', e);
       return EvaluationResult(
         score: 0.5,
         explanation: response,

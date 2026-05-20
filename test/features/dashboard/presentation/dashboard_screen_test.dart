@@ -14,24 +14,26 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart'
+    show subjectRepositoryProvider;
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -106,9 +108,9 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
   final List<Map<String, dynamic>> badges;
   final bool failExportProgress;
   final bool failExportSession;
-  final Completer<Map<String, dynamic>>? statsCompleter;
-  final Completer<String>? exportProgressCompleter;
-  final Completer<String>? exportSessionCompleter;
+  final Completer<Result<Map<String, dynamic>>>? statsCompleter;
+  final Completer<Result<String>>? exportProgressCompleter;
+  final Completer<Result<String>>? exportSessionCompleter;
 
   FakeStudyProgressTracker({
     this.overallStats,
@@ -125,9 +127,9 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
   );
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     if (statsCompleter != null) return statsCompleter!.future;
-    return overallStats ?? {
+    return Result.success(overallStats ?? {
       'totalAttempts': 0,
       'correctAttempts': 0,
       'accuracy': 0,
@@ -136,31 +138,31 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
       'weeklyActivity': 0,
       'dailyActivity': 0,
       'topicsStudied': 0,
-    };
+    });
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async {
-    return weeklyTrend;
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+    return Result.success(weeklyTrend);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    return badges;
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    return Result.success(badges);
   }
 
   @override
-  Future<String> exportProgressCSV(String studentId) async {
+  Future<Result<String>> exportProgressCSV(String studentId) async {
     if (exportProgressCompleter != null) return exportProgressCompleter!.future;
-    if (failExportProgress) throw Exception('Export failed');
-    return 'progress,csv,data';
+    if (failExportProgress) return Result.failure('Export failed');
+    return Result.success('progress,csv,data');
   }
 
   @override
-  Future<String> exportSessionHistoryCSV(String studentId) async {
+  Future<Result<String>> exportSessionHistoryCSV(String studentId) async {
     if (exportSessionCompleter != null) return exportSessionCompleter!.future;
-    if (failExportSession) throw Exception('Session export failed');
-    return 'session,csv,data';
+    if (failExportSession) return Result.failure('Session export failed');
+    return Result.success('session,csv,data');
   }
 }
 
@@ -1387,7 +1389,7 @@ void main() {
 
     group('mounted guard', () {
       testWidgets('does not crash when unmounted during async load', (tester) async {
-        final statsCompleter = Completer<Map<String, dynamic>>();
+        final statsCompleter = Completer<Result<Map<String, dynamic>>>();
         final masteryService = FakeMasteryGraphService();
         final tracker = FakeStudyProgressTracker(statsCompleter: statsCompleter);
         final instrumentation = FakeInstrumentationService();
@@ -1405,19 +1407,19 @@ void main() {
 
         await tester.pumpWidget(const SizedBox());
 
-        statsCompleter.complete({
+        statsCompleter.complete(Result.success({
           'accuracy': 50,
           'totalStudyTimeHours': '2',
           'weeklyActivity': 5,
           'topicsStudied': 3,
-        });
+        }));
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsNothing);
       });
 
       testWidgets('dispose during progress CSV export does not crash', (tester) async {
-        final exportCompleter = Completer<String>();
+        final exportCompleter = Completer<Result<String>>();
 
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
@@ -1436,14 +1438,14 @@ void main() {
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
 
-        exportCompleter.complete('data');
+        exportCompleter.complete(Result.success('data'));
         await tester.pump();
 
         expect(find.byType(DashboardScreen), findsNothing);
       });
 
       testWidgets('dispose during session CSV export does not crash', (tester) async {
-        final exportCompleter = Completer<String>();
+        final exportCompleter = Completer<Result<String>>();
 
         await tester.pumpWidget(_buildTestApp(
           DashboardScreen(studentId: 'student-1'),
@@ -1462,7 +1464,7 @@ void main() {
         await tester.pumpWidget(const SizedBox());
         await tester.pump();
 
-        exportCompleter.complete('data');
+        exportCompleter.complete(Result.success('data'));
         await tester.pump();
 
         expect(find.byType(DashboardScreen), findsNothing);

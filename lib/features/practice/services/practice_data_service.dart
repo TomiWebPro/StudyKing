@@ -40,21 +40,28 @@ class PracticeDataService {
     return dueCounts;
   }
 
-  Future<List<String>> loadTopics(QuestionRepository questionRepo) async {
+  Future<Map<String, String>> loadTopicsWithNames(QuestionRepository questionRepo) async {
+    final questionsResult = await questionRepo.getAll();
+    final questions = questionsResult.data ?? [];
+    if (questions.isEmpty) return {};
+    final topicMap = <String, String>{};
+    for (final q in questions) {
+      if (q.topicId.isNotEmpty && (q.topic?.isNotEmpty == true)) {
+        topicMap.putIfAbsent(q.topicId, () => q.topic!);
+      }
+    }
+    return topicMap;
+  }
+
+  Future<List<String>> loadTopicIds(QuestionRepository questionRepo) async {
     final questionsResult = await questionRepo.getAll();
     final questions = questionsResult.data ?? [];
     if (questions.isEmpty) return [];
     return questions
-        .where((q) => q.topic != null && q.topic!.isNotEmpty)
-        .map((q) => q.topic!)
+        .where((q) => q.topicId.isNotEmpty)
+        .map((q) => q.topicId)
         .toSet()
         .toList();
-  }
-
-  Future<List<Question>> loadTopicQuestions(String topic) async {
-    final questionsResult = await _questionRepo.getAll();
-    final questions = questionsResult.data ?? [];
-    return questions.where((q) => q.topic == topic).toList();
   }
 
   Future<List<Question>> loadWeakAreaQuestions(

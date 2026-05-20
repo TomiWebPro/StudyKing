@@ -13,6 +13,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
@@ -34,6 +35,7 @@ class ContentLibraryScreen extends ConsumerStatefulWidget {
 }
 
 class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
+  static final Logger _logger = const Logger('ContentLibraryScreen');
   late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
   late final QuestionRepository _questionRepo = widget.questionRepo ?? QuestionRepository();
   List<Source> _sources = [];
@@ -73,7 +75,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         });
       }
     } catch (e) {
-      const Logger('ContentLibraryScreen').e('Failed to load sources', e);
+      _logger.w('Failed to load sources', e);
       if (mounted) {
         setState(() {
           _error = AppLocalizations.of(context)!.somethingWentWrong;
@@ -321,7 +323,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
   Widget _buildFilterBar(AppLocalizations l10n) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+      padding: const EdgeInsetsDirectional.only(start: 16, top: 8, end: 16, bottom: 0),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const AlwaysScrollableScrollPhysics(),
@@ -502,9 +504,9 @@ class _SourceListTile extends StatelessWidget {
             content: Text(l10n.deleteSourceBody),
             actions: [
               TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-              ElevatedButton(
+              FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                style: ElevatedButton.styleFrom(backgroundColor: theme.colorScheme.error),
+                style: AppTheme.destructiveButtonStyle(ctx),
                 child: Text(l10n.delete),
               ),
             ],
@@ -523,7 +525,7 @@ class _SourceListTile extends StatelessWidget {
               backgroundColor: theme.colorScheme.primaryContainer,
               child: Icon(typeIcon, color: theme.colorScheme.primary, size: 20),
             ),
-            title: Text(source.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            title: Text(source.title, maxLines: 2, overflow: TextOverflow.ellipsis),
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

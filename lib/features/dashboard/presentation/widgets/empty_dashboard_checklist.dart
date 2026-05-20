@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/widgets/empty_state_widget.dart';
 
 class EmptyDashboardChecklist extends StatelessWidget {
   final ChecklistProgress progress;
@@ -12,6 +13,14 @@ class EmptyDashboardChecklist extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+
+    if (progress.isComplete) {
+      return EmptyStateWidget(
+        icon: Icons.checklist,
+        title: l10n.allCaughtUp,
+        subtitle: l10n.gettingStartedDesc,
+      );
+    }
 
     final items = <_ChecklistData>[
       _ChecklistData(
@@ -148,7 +157,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
                                     children: [
                                       if (showStepNumber)
                                         Padding(
-                                          padding: const EdgeInsets.only(right: 6),
+                                          padding: const EdgeInsetsDirectional.only(end: 6),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
@@ -180,7 +189,7 @@ class EmptyDashboardChecklist extends StatelessWidget {
                                     children: [
                                       if (isFirstIncomplete)
                                         Padding(
-                                          padding: const EdgeInsets.only(right: 6),
+                                          padding: const EdgeInsetsDirectional.only(end: 6),
                                           child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(

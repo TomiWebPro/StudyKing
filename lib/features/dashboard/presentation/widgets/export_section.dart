@@ -13,6 +13,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ExportSection extends ConsumerWidget {
+  static final Logger _logger = const Logger('ExportSection');
   final String studentId;
 
   const ExportSection({
@@ -195,7 +196,7 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      const Logger('ExportSection').e('CSV export failed', e);
+      _logger.w('CSV export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
@@ -220,7 +221,7 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      const Logger('ExportSection').e('PDF export failed', e);
+      _logger.w('PDF export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
@@ -245,7 +246,7 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      const Logger('ExportSection').e('JSON export failed', e);
+      _logger.w('JSON export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
@@ -263,15 +264,16 @@ class ExportSection extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      final csv = await tracker.exportProgressCSV(studentId);
+      final csvResult = await tracker.exportProgressCSV(studentId);
       if (!context.mounted) return;
+      final csv = csvResult.data ?? '';
       await Share.shareXFiles(
         [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
         text: l10n.shareProgressReport,
       );
     } catch (e) {
       if (!context.mounted) return;
-      const Logger('ExportSection').e('Progress CSV export failed', e);
+      _logger.w('Progress CSV export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );
@@ -292,7 +294,7 @@ class ExportSection extends ConsumerWidget {
       final result = await instrumentation.getInstrumentationDashboard(studentId);
       if (result.isFailure) {
         if (!context.mounted) return;
-        const Logger('ExportSection').e('Instrumentation fetch failed', result.error);
+        _logger.w('Instrumentation fetch failed', result.error);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
         );
@@ -307,7 +309,7 @@ class ExportSection extends ConsumerWidget {
       );
     } catch (e) {
       if (!context.mounted) return;
-      const Logger('ExportSection').e('Instrumentation export failed', e);
+      _logger.w('Instrumentation export failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
       );

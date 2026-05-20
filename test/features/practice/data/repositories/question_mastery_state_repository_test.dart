@@ -4,8 +4,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 
 class _FakeQuestionMasteryStateBox implements Box<QuestionMasteryState> {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -10,15 +11,16 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 
 class QuestionBankScreen extends ConsumerStatefulWidget {
   final String? initialQuestionId;
@@ -33,6 +35,7 @@ class QuestionBankScreen extends ConsumerStatefulWidget {
 }
 
 class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
+  static final Logger _logger = const Logger('QuestionBankScreen');
   late final QuestionRepository _questionRepo;
   late final SubjectRepository _subjectRepo;
   late final TopicRepository _topicRepo;
@@ -114,7 +117,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         }
       }
     } catch (e) {
-      const Logger('QuestionBankScreen').e('Failed to load questions', e);
+      _logger.w('Failed to load questions', e);
       if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
     }
   }
@@ -125,8 +128,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       if (_typeFilter.isNotEmpty && q.type.index.toString() != _typeFilter) return false;
       if (_sourceFilter.isNotEmpty && !q.sourceIds.contains(_sourceFilter)) return false;
       if (_searchQuery.isNotEmpty) {
-        final query = _searchQuery.toLowerCase();
-        if (!q.text.toLowerCase().contains(query)) return false;
+        final query = _searchQuery.normalized;
+        if (!q.text.normalized.contains(query)) return false;
       }
       return true;
     }).toList();
@@ -153,9 +156,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         content: Text(l10n.deleteQuestionConfirm),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(ctx),
             child: Text(l10n.delete),
           ),
         ],
@@ -679,7 +682,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
 
   Widget _buildSearchAndFilter(AppLocalizations l10n) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+      padding: const EdgeInsetsDirectional.only(start: 16, top: 8, end: 16, bottom: 4),
       child: Column(
         children: [
           TextField(

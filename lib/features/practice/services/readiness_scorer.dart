@@ -1,6 +1,6 @@
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -20,7 +20,7 @@ class ScoredQuestion {
 }
 
 class ReadinessScorer {
-  final Logger _logger = const Logger('ReadinessScorer');
+  static final Logger _logger = const Logger('ReadinessScorer');
   Map<String, MasteryState> _topicMasteryMap = {};
   Map<String, QuestionMasteryState> _questionMasteryMap = {};
   bool _dataLoaded = false;
@@ -50,10 +50,12 @@ class ReadinessScorer {
     }
   }
 
+  bool _loading = false;
+
   Future<void> _ensureDataLoaded() async {
-    if (_dataLoaded) return;
+    if (_dataLoaded || _loading) return;
     if (_masteryService == null || _studentIdService == null) return;
-    _dataLoaded = true;
+    _loading = true;
 
     try {
       await _masteryService.init();
@@ -73,8 +75,11 @@ class ReadinessScorer {
           _questionMasteryMap[state.questionId] = state;
         }
       }
+      _dataLoaded = true;
     } catch (e) {
       _logger.w('Error loading mastery data', e);
+    } finally {
+      _loading = false;
     }
   }
 

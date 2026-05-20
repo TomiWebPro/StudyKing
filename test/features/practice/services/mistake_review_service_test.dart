@@ -3,7 +3,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
@@ -121,7 +121,7 @@ void main() {
         );
 
         expect(mistakes, hasLength(1));
-        expect(mistakes.first.attempt!.questionId, 'q1');
+        expect(mistakes.data!.first.attempt!.questionId, 'q1');
       });
 
       test('returns empty when no incorrect attempts', () async {
@@ -301,7 +301,7 @@ void main() {
           subjectId: 'sub1',
         );
 
-        final redoQuestions = service.extractRedoQuestions(mistakes);
+        final redoQuestions = service.extractRedoQuestions(mistakes.data!);
         expect(redoQuestions, hasLength(1));
         expect(redoQuestions.first.id, 'q1');
       });

@@ -215,3 +215,38 @@ My Ollama server goes down mid-session. The tutor lesson is interrupted.
 | 10 | Provider config persists correctly across app restarts, no race conditions |
 | 11 | Different providers can be configured per feature (optional) |
 | 12 | Automatic failover to backup provider on connection failure |
+
+---
+
+## Validation Results (Dry-Run: 2026-05-20)
+
+**Overall completion: ~71% (8.5/12)** — below 80% threshold, scenario retained.
+
+| Step | Status | Code References | What's Missing |
+|---|---|---|---|
+| **1. Tutor timeout detection** | **PARTIAL** | `tutor_screen.dart:161-169` init error card; `tutor_screen.dart:218-227` generic `errorWithResponse`; `llm_chat_service.dart:387,443,508,563` no `.timeout()` on HTTP calls; `timeouts.dart` defines `openRouterRequestTimeout` but it's never wired | ① No LLM request timeout (45-90s constant defined but never applied to any `http.post()`/`http.send()` call) ② Provider-specific context lost at UI — `_sendText()` shows generic `l10n.errorWithResponse` instead of e.g. "OpenRouter timed out" ③ `_sendInitialGreeting()` silently swallows errors (line 186-188, just logs) ④ `_pickImage()` has no try-catch (line 280, crashes widget tree on stream failure) |
+| **2. Mentor failure** | **COMPLETED** | `mentor_screen.dart:278-294` API key check; `mentor_screen.dart:324-338` error in bubble + retry banner; `mentor_service.dart:188-213` rethrows via direct path; `agent_loop.dart:124` returns generic error string | Edge case: empty LLM stream (zero chunks, no exception) produces a blank bubble. Agent path swallows error into generic string rather than the specific error. |
+| **3. Settings diagnosis** | **COMPLETED** | `settings_screen.dart` → AI Configuration tiles; `api_config_screen.dart` full config screen; `settings_screen.dart` "Connection Health" tile shows last test status | No "last error log" display on the settings screen (but `lastLlmError` is stored in `SettingsBox` field 25, just not surfaced in UI). |
+| **4. Provider switching** | **COMPLETED** | `api_config_screen.dart:392-443` `DropdownButtonFormField<LlmProvider>`; per-provider default URL auto-fill; model reset on switch | Single shared API key and base URL — not per-provider. Only one provider config at a time (no multi-config storage). |
+| **5. Test Connection** | **COMPLETED** | `api_config_screen.dart:152-223` sends real HTTP POST to `/chat/completions` with `"Reply with exactly: OK"`, shows timing `"Connection successful (X ms)"`, handles failure with status code | No `LlmService.testConnection()` method (logic lives in widget layer). Does not send a real LLM inference (just checks HTTP reachability + response). |
+| **6. HTTP status codes** | **COMPLETED** | `llm_chat_service.dart:91-100` `_errorForStatusCode()` maps 401/403/404/429/5xx to user-readable strings; streaming yields inline error chunks; non-streaming returns `Result.failure()` | — |
+| **7. Recovery/retry** | **PARTIAL** | `tutor_screen.dart:202-207` `_retryLastMessage()`, `tutor_screen.dart:807-860` init error card with Retry + Settings buttons; `mentor_screen.dart:344-350` `_retryLastMessage()`; `tutor_service.dart:104-176` session status changed to `inProgress` BEFORE LLM call at line 125, no rollback on failure | ① Scheduled session status corrupted to `inProgress` on failed tutor init (no rollback — `cancelActiveSession()` only called on explicit "Discard and Exit", not on error) ② No way to dismiss/clear failed mentor chat bubbles ③ Retry works but leaves corrupted session behind if user navigates away |
+| **8. Mid-stream failures** | **PARTIAL** | `conversation_manager.dart:197-215` preserves partial buffer before rethrow; `tutor_screen.dart:218-227` catches and shows retry; `conversation_manager.dart:240-269` `processImage()` has NO try-catch | ① `processImage()` has no error handling — crashes widget tree on stream failure ② No explicit "Response interrupted" message (shows generic `errorWithResponse` instead) ③ No Cancel option for mid-stream failures (only Retry) |
+| **9. Rate limiting** | **PARTIAL** | `llm_chat_service.dart:75-109` 500ms `_throttle()`; `conversation_input.dart` 100ms UI debounce; `llm_chat_service.dart:94` 429 → "Too many requests. Wait and try again." | ① No proactive user feedback when client-side throttle kicks in (silently delays) ② No per-user quota tracking ③ No RateLimiter/token-bucket pattern — just a simple minimum interval |
+| **10. Config persistence** | **PARTIAL** | `settings_box.dart` Hive fields for `llmProviderName`(23), `apiKey`(0), etc.; `main.dart:314-328` `addPostFrameCallback` restores providers; `app_providers.dart:135-141` providers initialized with empty/ default values | **Race condition**: providers start with `apiKey=''`, `llmProvider=openRouter`, `selectedModel=''`; values synced in `addPostFrameCallback` AFTER first frame; any AI screen mounting before the callback sees stale/empty config (transient window). API key stored in plain text Hive (no secure storage). |
+| **11. Mixed providers** | **COMPLETED** | `llm_providers.dart` single `llmServiceProvider` shared by all features; `teaching_providers.dart`, `mentor_providers.dart`, `lesson_providers.dart` all read same `llmProviderProvider` | One provider serves all features. No per-feature provider override exists (this is an acceptable tradeoff as noted in the expectations). |
+| **12. Provider fallback** | **NOT_COMPLETED** | `llm_chat_service.dart:23-38` `backupProvider/backupApiKey/backupBaseUrl/backupModel` fields; `_streamWithFallback()` (line 112) and `_callWithFallback()` (line 190) implement logic; `llm_providers.dart:26-30` `LlmConfiguration` created with **NO backup fields** | **Backup provider is dead code**: ① No production code populates backup fields ② No UI to configure backup provider ③ No persistence for backup config in `SettingsBox` ④ No Riverpod provider exposing backup config ⑤ `copyWithBackup()` never called anywhere |
+
+### Summary
+
+| Metric | Value |
+|---|---|
+| Steps COMPLETED | 6/12 (50%) |
+| Steps PARTIAL | 5/12 (42%) |
+| Steps NOT_COMPLETED | 1/12 (8%) |
+| **Overall score** | **70.8%** |
+| Decision | **Keep scenario** — significant gaps in timeout wiring, mid-stream error handling, session corruption on tutor failure, and dead-code backup failover |
+
+### Re-validation (2026-05-20)
+
+I re-traced all 12 steps against the actual source code and confirmed the validation results above are accurate. No new issues or regressions found. Issue file written to `issues/open/dry_run_result_ai_provider_failures_recovery.md` with detailed fix requirements.

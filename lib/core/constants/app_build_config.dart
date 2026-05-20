@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:studyking/core/errors/exceptions.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 enum AppEnvironment { development, staging, production }
 
@@ -18,7 +19,7 @@ class BuildConfig {
 
   static AppEnvironment get environment {
     const env = String.fromEnvironment('APP_ENV', defaultValue: 'development');
-    switch (env.toLowerCase()) {
+    switch (env.normalized) {
       case 'production':
       case 'prod':
         return AppEnvironment.production;

@@ -5,6 +5,7 @@ import '../../l10n/generated/app_localizations.dart';
 import 'logger.dart';
 
 class ColorUtils {
+  static final Logger _logger = const Logger('ColorUtils');
   static const Color defaultColor = Color(0xFF2196F3);
 
   static double _relativeLuminance(Color color) {
@@ -39,7 +40,7 @@ class ColorUtils {
       final hex = hexColor.replaceAll('#', '');
       return Color(int.parse(hex, radix: 16) + 0xFF000000);
     } catch (e) {
-      const Logger('ColorUtils').e('stringToColor: invalid hex color "$hexColor": $e');
+      _logger.w('stringToColor: invalid hex color "$hexColor": $e');
       return defaultColor;
     }
   }

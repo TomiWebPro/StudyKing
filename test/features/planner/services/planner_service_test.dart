@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -11,11 +11,11 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -238,10 +238,26 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   }
 
   @override
-  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
+  Future<Result<void>> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
+    return Result.success(null);
+  }
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('planner_service_test_').path;
+    Hive.init(hivePath);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    try {
+      await Directory(hivePath).delete(recursive: true);
+    } catch (_) {}
+  });
+
   late PlannerService service;
   late _FakeMasteryGraphRepository masteryRepo;
   late _FakeTopicRepository topicRepo;
@@ -295,8 +311,8 @@ void main() {
 
   group('loadExistingPlan', () {
     test('returns null when no plan exists', () async {
-      final plan = await service.loadExistingPlan();
-      expect(plan, isNull);
+      final planResult = await service.loadExistingPlan();
+      expect(planResult.data, isNull);
     });
 
     test('returns saved plan', () async {
@@ -316,17 +332,17 @@ void main() {
       );
       await planRepo.savePlan(testPlan);
 
-      final plan = await service.loadExistingPlan();
-      expect(plan, isNotNull);
-      expect(plan!.studentId, 'test-student');
-      expect(plan.summary.totalQuestions, 10);
+      final planResult = await service.loadExistingPlan();
+      expect(planResult.data, isNotNull);
+      expect(planResult.data!.studentId, 'test-student');
+      expect(planResult.data!.summary.totalQuestions, 10);
     });
   });
 
   group('loadRoadmaps', () {
     test('returns empty list when no roadmaps exist', () async {
       final roadmaps = await service.loadRoadmaps();
-      expect(roadmaps, isEmpty);
+      expect(roadmaps.data, isEmpty);
     });
 
     test('returns saved roadmaps', () async {
@@ -338,7 +354,7 @@ void main() {
       );
       await roadmapRepo.saveRoadmap(roadmap);
 
-      final roadmaps = await service.loadRoadmaps();
+      final roadmaps = (await service.loadRoadmaps()).data!;
       expect(roadmaps, hasLength(1));
       expect(roadmaps.first.goal, 'Learn Physics');
     });
@@ -347,7 +363,7 @@ void main() {
   group('loadPendingActions', () {
     test('returns empty list when no pending actions', () async {
       final actions = await service.loadPendingActions();
-      expect(actions, isEmpty);
+      expect(actions.data, isEmpty);
     });
 
     test('returns only pending actions', () async {
@@ -364,7 +380,7 @@ void main() {
         status: 'completed',
       ));
 
-      final actions = await service.loadPendingActions();
+      final actions = (await service.loadPendingActions()).data!;
       expect(actions, hasLength(1));
       expect(actions.first.id, 'action-1');
     });
@@ -378,10 +394,10 @@ void main() {
         hoursValue: 2,
       );
 
-      expect(plan, isNotNull);
-      expect(plan!.studentId, 'test-student');
-      expect(plan.planDurationDays, 7);
-      expect(plan.targetMinutesPerDay, 120.0);
+      expect(plan.data, isNotNull);
+      expect(plan.data!.studentId, 'test-student');
+      expect(plan.data!.planDurationDays, 7);
+      expect(plan.data!.targetMinutesPerDay, 120.0);
     });
 
     test('generated plan has daily plans', () async {
@@ -391,17 +407,13 @@ void main() {
         hoursValue: 1,
       );
 
-      expect(plan, isNotNull);
-      expect(plan!.dailyPlans, hasLength(3));
-      expect(plan.dailyPlans.first.dayNumber, 1);
+      expect(plan.data, isNotNull);
+      expect(plan.data!.dailyPlans, hasLength(3));
+      expect(plan.data!.dailyPlans.first.dayNumber, 1);
     });
   });
 
   group('generatePlanFromSyllabus', () {
-    setUp(() {
-      Hive.init(Directory.systemTemp.createTempSync('planner_genplan_').path);
-    });
-
     test('generates plan from syllabus goals', () async {
       topicRepo.addTopic(Topic(
         id: 'topic-1',
@@ -427,9 +439,9 @@ void main() {
         hoursValue: 2,
       );
 
-      expect(plan, isNotNull);
-      expect(plan!.syllabusGoals, hasLength(1));
-      expect(plan.syllabusGoals.first.subjectId, 'sub_physics');
+      expect(plan.data, isNotNull);
+      expect(plan.data!.syllabusGoals, hasLength(1));
+      expect(plan.data!.syllabusGoals.first.subjectId, 'sub_physics');
     });
 
     test('generated plan has metadata with syllabus goals', () async {
@@ -459,9 +471,9 @@ void main() {
         hoursValue: 1,
       );
 
-      expect(plan, isNotNull);
-      expect(plan!.metadata, isNotNull);
-      expect(plan.metadata!.containsKey('syllabus_goals'), true);
+      expect(plan.data, isNotNull);
+      expect(plan.data!.metadata, isNotNull);
+      expect(plan.data!.metadata!.containsKey('syllabus_goals'), true);
     });
   });
 
@@ -473,10 +485,10 @@ void main() {
         l10n: l10n,
       );
 
-      expect(roadmap, isNotNull);
-      expect(roadmap!.goal, 'Learn IB Physics');
-      expect(roadmap.milestones, isNotEmpty);
-      expect(roadmap.studentId, 'test-student');
+      expect(roadmap.data, isNotNull);
+      expect(roadmap.data!.goal, 'Learn IB Physics');
+      expect(roadmap.data!.milestones, isNotEmpty);
+      expect(roadmap.data!.studentId, 'test-student');
     });
 
     test('creates roadmap with subject ID', () async {
@@ -495,8 +507,8 @@ void main() {
         subjectId: 'sub_physics',
       );
 
-      expect(roadmap, isNotNull);
-      expect(roadmap!.subjectId, 'sub_physics');
+      expect(roadmap.data, isNotNull);
+      expect(roadmap.data!.subjectId, 'sub_physics');
     });
 
     test('subject-linked roadmap has topic coverage in milestones', () async {
@@ -515,8 +527,8 @@ void main() {
         subjectId: 'sub_physics',
       );
 
-      expect(roadmap, isNotNull);
-      expect(roadmap!.milestones.first.topicsCovered, isNotEmpty);
+      expect(roadmap.data, isNotNull);
+      expect(roadmap.data!.milestones.first.topicsCovered, isNotEmpty);
     });
   });
 
@@ -527,20 +539,20 @@ void main() {
         days: 14,
         l10n: l10n,
       );
-      expect(roadmap, isNotNull);
+      expect(roadmap.data, isNotNull);
 
-      final firstMilestoneId = roadmap!.milestones.first.id;
+      final firstMilestoneId = roadmap.data!.milestones.first.id;
 
       final updated = await service.toggleMilestoneCompletion(
-        roadmapId: roadmap.id,
+        roadmapId: roadmap.data!.id,
         milestoneId: firstMilestoneId,
         isCompleted: true,
       );
 
-      expect(updated, isNotNull);
-      final updatedMs = updated!.milestones.firstWhere((m) => m.id == firstMilestoneId);
+      expect(updated.data, isNotNull);
+      final updatedMs = updated.data!.milestones.firstWhere((m) => m.id == firstMilestoneId);
       expect(updatedMs.isCompleted, true);
-      expect(updated.completionPercentage, greaterThan(0));
+      expect(updated.data!.completionPercentage, greaterThan(0));
     });
 
     test('uncompleting milestone reduces percentage', () async {
@@ -549,23 +561,23 @@ void main() {
         days: 7,
         l10n: l10n,
       );
-      expect(roadmap, isNotNull);
+      expect(roadmap.data, isNotNull);
 
-      final firstId = roadmap!.milestones.first.id;
+      final firstId = roadmap.data!.milestones.first.id;
 
       await service.toggleMilestoneCompletion(
-        roadmapId: roadmap.id,
+        roadmapId: roadmap.data!.id,
         milestoneId: firstId,
         isCompleted: true,
       );
 
       final reverted = await service.toggleMilestoneCompletion(
-        roadmapId: roadmap.id,
+        roadmapId: roadmap.data!.id,
         milestoneId: firstId,
         isCompleted: false,
       );
 
-      expect(reverted!.milestones.firstWhere((m) => m.id == firstId).isCompleted, false);
+      expect(reverted.data!.milestones.firstWhere((m) => m.id == firstId).isCompleted, false);
     });
   });
 
@@ -579,7 +591,7 @@ void main() {
         durationMinutes: 30,
       );
 
-      expect(success, true);
+      expect(success.data, isTrue);
     });
 
     test('scheduled lesson appears in getScheduledLessons', () async {
@@ -591,7 +603,7 @@ void main() {
         durationMinutes: 30,
       );
 
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       expect(lessons, hasLength(1));
       expect(lessons.first.topicId, 'topic-1');
       expect(lessons.first.status, SessionStatus.planned);
@@ -608,12 +620,12 @@ void main() {
         durationMinutes: 30,
       );
 
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       final cancelled = await service.cancelLesson(lessons.first.id);
 
-      expect(cancelled, true);
+      expect(cancelled.data, isTrue);
 
-      final remainingLessons = await service.getScheduledLessons();
+      final remainingLessons = (await service.getScheduledLessons()).data!;
       expect(remainingLessons.where((l) => l.status == SessionStatus.planned), isEmpty);
     });
   });
@@ -635,10 +647,10 @@ void main() {
       ));
 
       final success = await service.acceptPendingAction('action-1');
-      expect(success, true);
+      expect(success.data, isTrue);
 
       final pending = await service.loadPendingActions();
-      expect(pending, isEmpty);
+      expect(pending.data, isEmpty);
     });
 
     test('dismissPendingAction marks action as rejected', () async {
@@ -650,26 +662,26 @@ void main() {
       ));
 
       final success = await service.dismissPendingAction('action-2');
-      expect(success, true);
+      expect(success.data, isTrue);
 
       final pending = await service.loadPendingActions();
-      expect(pending, isEmpty);
+      expect(pending.data, isEmpty);
     });
   });
 
   group('adherence', () {
     test('getAdherenceReport returns report data', () async {
-      final report = await service.getAdherenceReport();
-      expect(report, isNotEmpty);
+      final report = await service.planOrchestrator.getAdherenceReport(service.studentId);
+      expect(report.data, isNotEmpty);
     });
 
     test('checkAdherence returns deviation', () async {
-      final deviation = await service.checkAdherence();
-      expect(deviation, isNotNull);
+      final deviation = await service.planOrchestrator.checkAdherence(service.studentId);
+      expect(deviation.data, isNotNull);
     });
 
     test('getAdherenceMetrics returns metrics', () async {
-      final metrics = await service.getAdherenceMetrics();
+      final metrics = (await service.getAdherenceMetrics()).data!;
       expect(metrics, contains('actualMinutesToday'));
       expect(metrics, contains('actualQuestionsToday'));
     });
@@ -679,7 +691,7 @@ void main() {
         startTime: DateTime.now(),
         durationMinutes: 30,
       );
-      expect(conflict, false);
+      expect(conflict.data, isFalse);
     });
 
     test('hasSchedulingConflict returns true when sessions overlap', () async {
@@ -695,7 +707,7 @@ void main() {
         startTime: now.add(const Duration(minutes: 30)),
         durationMinutes: 30,
       );
-      expect(conflict, true);
+      expect(conflict.data, isTrue);
     });
 
     test('hasSchedulingConflict returns false when excludeSessionId matches overlapping session', () async {
@@ -707,13 +719,13 @@ void main() {
         scheduledTime: now,
         durationMinutes: 60,
       );
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       final conflict = await service.hasSchedulingConflict(
         startTime: now.add(const Duration(minutes: 30)),
         durationMinutes: 30,
         excludeSessionId: lessons.first.id,
       );
-      expect(conflict, false);
+      expect(conflict.data, isFalse);
     });
 
     test('hasSchedulingConflict returns false with completed sessions', () async {
@@ -749,7 +761,7 @@ void main() {
         startTime: now.add(const Duration(minutes: 30)),
         durationMinutes: 30,
       );
-      expect(conflict, false);
+      expect(conflict.data, isFalse);
     });
 
     test('hasSchedulingConflict propagates exception from getAll', () async {
@@ -765,14 +777,14 @@ void main() {
 
     test('getAdherenceReport returns empty map on failure', () async {
       planOrchestrator.returnFailureForAdherence = true;
-      final report = await service.getAdherenceReport();
-      expect(report, isEmpty);
+      final report = await service.planOrchestrator.getAdherenceReport(service.studentId);
+      expect(report.isFailure, isTrue);
     });
 
     test('checkAdherence returns null on failure', () async {
       planOrchestrator.returnFailureForCheck = true;
-      final deviation = await service.checkAdherence();
-      expect(deviation, isNull);
+      final deviation = await service.planOrchestrator.checkAdherence(service.studentId);
+      expect(deviation.isFailure, isTrue);
     });
   });
 
@@ -784,7 +796,7 @@ void main() {
         daysValue: 1,
         hoursValue: 1,
       );
-      expect(plan, isNotNull);
+      expect(plan.data, isNotNull);
     });
   });
 
@@ -795,9 +807,9 @@ void main() {
         days: 14,
         l10n: l10n,
       );
-      expect(roadmap, isNotNull);
-      expect(roadmap!.goal, 'Learn Physics');
-      expect(roadmap.milestones, isNotEmpty);
+      expect(roadmap.data, isNotNull);
+      expect(roadmap.data!.goal, 'Learn Physics');
+      expect(roadmap.data!.milestones, isNotEmpty);
     });
 
     test('creates roadmap with subject ID', () async {
@@ -814,9 +826,9 @@ void main() {
         l10n: l10n,
         subjectId: 'sub_physics',
       );
-      expect(roadmap, isNotNull);
-      expect(roadmap!.subjectId, 'sub_physics');
-      expect(roadmap.milestones.first.topicsCovered, isNotEmpty);
+      expect(roadmap.data, isNotNull);
+      expect(roadmap.data!.subjectId, 'sub_physics');
+      expect(roadmap.data!.milestones.first.topicsCovered, isNotEmpty);
     });
   });
 
@@ -827,7 +839,7 @@ void main() {
         milestoneId: 'ms-1',
         isCompleted: true,
       );
-      expect(result, isNull);
+      expect(result.data, isNull);
     });
   });
 
@@ -840,7 +852,7 @@ void main() {
         scheduledTime: DateTime.now().add(const Duration(days: 1)),
       );
 
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       expect(lessons, hasLength(1));
 
       final newTime = DateTime.now().add(const Duration(days: 3));
@@ -850,9 +862,9 @@ void main() {
         durationMinutes: 45,
       );
 
-      expect(success, true);
+      expect(success.data, isTrue);
 
-      final updatedLessons = await service.getScheduledLessons();
+      final updatedLessons = (await service.getScheduledLessons()).data!;
       expect(updatedLessons.first.startTime, newTime);
     });
 
@@ -862,7 +874,7 @@ void main() {
         newStartTime: DateTime.now(),
         durationMinutes: 30,
       );
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
 
     test('returns false when get session throws', () async {
@@ -872,21 +884,21 @@ void main() {
         subjectId: 'sub_physics',
         scheduledTime: DateTime.now().add(const Duration(days: 1)),
       );
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       sessionRepo.throwOnGet = true;
       final result = await service.rescheduleLesson(
         sessionId: lessons.first.id,
         newStartTime: DateTime.now(),
         durationMinutes: 30,
       );
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
   group('cancelLesson edge cases', () {
     test('returns false when session does not exist', () async {
       final result = await service.cancelLesson('nonexistent-session');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
 
     test('returns false when tutorRepo throws', () async {
@@ -898,7 +910,7 @@ void main() {
       );
       sessionRepo.throwOnGet = true;
       final result = await service.cancelLesson('nonexistent');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
 
     test('returns false when save throws', () async {
@@ -908,10 +920,10 @@ void main() {
         subjectId: 'sub_physics',
         scheduledTime: DateTime.now().add(const Duration(days: 1)),
       );
-      final lessons = await service.getScheduledLessons();
+      final lessons = (await service.getScheduledLessons()).data!;
       sessionRepo.throwOnSave = true;
       final result = await service.cancelLesson(lessons.first.id);
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
@@ -919,7 +931,7 @@ void main() {
     test('returns empty list when tutorRepo throws', () async {
       sessionRepo.throwOnGetAll = true;
       final lessons = await service.getScheduledLessons();
-      expect(lessons, isEmpty);
+      expect(lessons.data, isEmpty);
     });
 
     test('filters out completed sessions', () async {
@@ -965,7 +977,7 @@ void main() {
         fixedStudentId: 'test-student',
       );
 
-      final lessons = await service2.getScheduledLessons();
+      final lessons = (await service2.getScheduledLessons()).data!;
       expect(lessons, hasLength(1));
       expect(lessons.first.id, 'planned-1');
     });
@@ -1014,7 +1026,7 @@ void main() {
         fixedStudentId: 'test-student',
       );
 
-      final lessons = await service2.getScheduledLessons();
+      final lessons = (await service2.getScheduledLessons()).data!;
       expect(lessons, hasLength(1));
       expect(lessons.first.id, 'planned-2');
     });
@@ -1023,7 +1035,7 @@ void main() {
   group('acceptPendingAction edge cases', () {
     test('returns false when action is null', () async {
       final result = await service.acceptPendingAction('nonexistent');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
 
     test('returns false when actionExecutor execute returns false', () async {
@@ -1040,7 +1052,7 @@ void main() {
       ));
       sessionRepo.throwOnSave = true;
       final result = await service.acceptPendingAction('action-fail');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
@@ -1048,14 +1060,14 @@ void main() {
     test('returns false when repo throws', () async {
       pendingActionRepo.throwOnMarkRejected = true;
       final result = await service.dismissPendingAction('action-1');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
   group('regeneratePlanFromAdherence', () {
     test('returns null when adapter has no regeneration plan', () async {
-      final plan = await service.regeneratePlanFromAdherence();
-      expect(plan, isNull);
+      final plan = await service.planOrchestrator.suggestRegeneration(studentId: service.studentId);
+      expect(plan.data, isNull);
     });
 
     test('returns plan when adapter provides regeneration', () async {
@@ -1071,15 +1083,15 @@ void main() {
         recommendations: [],
       );
       planOrchestrator.setRegeneratedPlan(testPlan);
-      final plan = await service.regeneratePlanFromAdherence();
-      expect(plan, isNotNull);
-      expect(plan!.studentId, 'test-student');
+      final plan = await service.planOrchestrator.suggestRegeneration(studentId: service.studentId);
+      expect(plan.data, isNotNull);
+      expect(plan.data!.studentId, 'test-student');
     });
   });
 
   group('getAdherenceMetrics', () {
     test('aggregates metrics from multiple records', () async {
-      final metrics = await service.getAdherenceMetrics();
+      final metrics = (await service.getAdherenceMetrics()).data!;
       expect(metrics['actualMinutesToday'], 0);
       expect(metrics['actualQuestionsToday'], 0);
     });
@@ -1118,7 +1130,7 @@ void main() {
         fixedStudentId: 'test-student',
       );
 
-      final metrics = await service2.getAdherenceMetrics();
+      final metrics = (await service2.getAdherenceMetrics()).data!;
       expect(metrics['actualMinutesToday'], 65);
       expect(metrics['actualQuestionsToday'], 15);
     });
@@ -1126,14 +1138,14 @@ void main() {
 
   group('redistributeWorkload', () {
     test('completes without error', () async {
-      await service.redistributeWorkload(30);
+      await service.planService.redistributeMissedWorkloadForStudent(service.studentId, 30);
       // No exception means success
     });
   });
 
   group('linkDailyPlanToRoadmap', () {
     test('completes without error', () async {
-      await service.linkDailyPlanToRoadmap(['topic-1', 'topic-2']);
+      await service.planService.linkDailyPlanToRoadmap(service.studentId, ['topic-1', 'topic-2']);
       // No exception means success
     });
   });
@@ -1156,7 +1168,7 @@ void main() {
         subjectId: 'sub_physics',
         scheduledTime: DateTime.now(),
       );
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
@@ -1176,7 +1188,7 @@ void main() {
       ));
       sessionRepo.throwOnSave = true;
       final result = await service.acceptPendingAction('action-catch');
-      expect(result, isFalse);
+      expect(result.data, isFalse);
     });
   });
 
@@ -1187,7 +1199,7 @@ void main() {
         startTime: DateTime.now(),
         durationMinutes: 30,
       );
-      expect(conflict, false);
+      expect(conflict.data, isFalse);
     });
   });
 
@@ -1207,9 +1219,136 @@ void main() {
         fixedStudentId: 'test-student',
       );
 
-      final metrics = await freshService.getAdherenceMetrics();
+      final metrics = (await freshService.getAdherenceMetrics()).data!;
       expect(metrics['actualMinutesToday'], 0);
       expect(metrics['actualQuestionsToday'], 0);
+    });
+  });
+
+  group('getMissedLessons', () {
+    test('returns empty list when no sessions exist', () async {
+      final missed = await service.getMissedLessons();
+      expect(missed.data, isEmpty);
+    });
+
+    test('returns past uncompleted sessions as missed', () async {
+      final now = DateTime.now();
+      await service.scheduleLesson(
+        topicId: 'topic-missed',
+        topicTitle: 'Past Topic',
+        subjectId: 'sub_physics',
+        scheduledTime: now.subtract(const Duration(hours: 3)),
+        durationMinutes: 30,
+      );
+      final missed = (await service.getMissedLessons()).data!;
+      expect(missed, isNotEmpty);
+      expect(missed.first.topicId, 'topic-missed');
+    });
+
+    test('excludes future sessions', () async {
+      await service.scheduleLesson(
+        topicId: 'topic-future',
+        topicTitle: 'Future Topic',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+        durationMinutes: 30,
+      );
+      final missed = (await service.getMissedLessons()).data!;
+      final futureMissed = missed.where((m) => m.topicId == 'topic-future');
+      expect(futureMissed, isEmpty);
+    });
+
+    test('returns empty when getAll throws', () async {
+      sessionRepo.throwOnGetAll = true;
+      final missed = await service.getMissedLessons();
+      expect(missed, isEmpty);
+    });
+
+    test('returns empty when getAll returns failure', () async {
+      sessionRepo.returnFailureOnGetAll = true;
+      final missed = await service.getMissedLessons();
+      expect(missed.data, isEmpty);
+    });
+  });
+
+  group('dismissAllMissed', () {
+    test('marks all missed lessons as completed', () async {
+      final now = DateTime.now();
+      await service.scheduleLesson(
+        topicId: 'dismiss-topic',
+        topicTitle: 'Dismiss Me',
+        subjectId: 'sub_physics',
+        scheduledTime: now.subtract(const Duration(hours: 3)),
+        durationMinutes: 30,
+      );
+      await service.dismissAllMissed();
+      final missed = (await service.getMissedLessons()).data!;
+      expect(missed.where((m) => m.topicId == 'dismiss-topic'), isEmpty);
+    });
+
+    test('completes when no missed lessons', () async {
+      await service.dismissAllMissed();
+    });
+  });
+
+  group('updateRoadmap', () {
+    test('updates an existing roadmap', () async {
+      final roadmap = await service.createRoadmap(
+        goal: 'Original goal',
+        days: 14,
+        l10n: l10n,
+      );
+      expect(roadmap.data, isNotNull);
+
+      final updated = await service.updateRoadmap(
+        roadmapId: roadmap.data!.id,
+        goal: 'Updated goal',
+        days: 21,
+        l10n: l10n,
+      );
+      expect(updated.data, isNotNull);
+      expect(updated.data!.goal, 'Updated goal');
+    });
+
+    test('returns null when roadmap does not exist', () async {
+      final result = await service.updateRoadmap(
+        roadmapId: 'nonexistent',
+        goal: 'New goal',
+        days: 7,
+        l10n: l10n,
+      );
+      expect(result.data, isNull);
+    });
+  });
+
+  group('extendPlan', () {
+    test('extends plan without error', () async {
+      await service.generatePlan(course: 'Test', daysValue: 3, hoursValue: 1);
+      final result = await service.planService.extendPlan(service.studentId, 2);
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('completes when no plan exists', () async {
+      final result = await service.planService.extendPlan(service.studentId, 5);
+      expect(result.isSuccess, isTrue);
+    });
+  });
+
+  group('adjustPace', () {
+    test('adjusts pace without error when plan exists', () async {
+      await service.generatePlan(course: 'Test', daysValue: 3, hoursValue: 1);
+      await service.adjustPace(45.0);
+    });
+
+    test('completes when no plan exists', () async {
+      await service.adjustPace(30.0);
+    });
+  });
+
+  group('getAdherenceRecords', () {
+    test('returns empty list when no records exist', () async {
+      final records = await service.getAdherenceRecords();
+      expect(records.data, isEmpty);
     });
   });
 }

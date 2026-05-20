@@ -7,11 +7,20 @@ import 'hive_type_ids.dart';
 import 'models/session_model.dart';
 import 'package:studyking/features/ingestion/data/adapters/adapters.dart';
 import 'package:studyking/features/sessions/data/adapters/adapters.dart';
-import 'package:studyking/features/questions/data/questions_data.dart';
-import 'package:studyking/features/practice/data/practice_data.dart';
-import 'package:studyking/features/planner/data/planner_data.dart';
-import 'package:studyking/features/subjects/data/subjects_data.dart';
-import 'package:studyking/features/teaching/data/teaching_data.dart';
+import 'package:studyking/features/questions/data/adapters.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/features/practice/data/adapters.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/subjects/data/adapters.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/features/teaching/data/adapters.dart';
+import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/sessions/services/session_migration_service.dart';
 
 class HiveInitializer {
@@ -40,11 +49,16 @@ class HiveInitializer {
     await Hive.openBox(HiveBoxNames.tasks);
 
     await Hive.openBox<ConversationMessage>(HiveBoxNames.conversations);
+    await Hive.openBox(HiveBoxNames.examResults);
     await Hive.openBox<TutorSession>(HiveBoxNames.tutorSessions);
     await Hive.openBox<PlanAdherenceModel>(HiveBoxNames.planAdherence);
     await Hive.openBox(HiveBoxNames.planAdherenceMetrics);
     await Hive.openBox(HiveBoxNames.masteryImprovementMetrics);
-    await SessionMigrationService.migrateIfNeeded();
+    await SessionMigrationService.migrateIfNeeded().then((r) {
+      if (r.isFailure) {
+        _logger.w('Session migration failed: ${r.error}');
+      }
+    });
 
     _logger.i('Hive initialized successfully with migrations');
   }

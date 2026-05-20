@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -14,7 +15,7 @@ import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/utils/id_generator.dart';
@@ -33,7 +34,7 @@ class ContentPipeline {
   final DocumentExtractor _documentExtractor;
   final WebScraper _webScraper;
   final String _localeName;
-  final Logger _logger = const Logger('ContentPipeline');
+  static final Logger _logger = const Logger('ContentPipeline');
 
   ContentPipeline({
     required LlmService llmService,
@@ -86,7 +87,7 @@ class ContentPipeline {
       _logger.d('Source saved: ${source.id}');
       return Result.success(source);
     } catch (e) {
-      _logger.e('Failed to save source', e);
+      _logger.w('Failed to save source', e);
       return Result.failure(e.toString());
     }
   }
@@ -129,7 +130,7 @@ class ContentPipeline {
       await _sourceRepository.create(source);
       _logger.d('Source created: ${source.id}');
     } catch (e) {
-      _logger.e('Failed to create initial source', e);
+      _logger.w('Failed to create initial source', e);
       return Result.failure(e.toString());
     }
 
@@ -170,6 +171,19 @@ class ContentPipeline {
           await _sourceRepository.save(updated.id, updated);
         }
         _logger.d('Stage 2 complete: topic classified');
+      } else if (subjectId.isNotEmpty && type == SourceType.syllabus) {
+        onProgress?.call(ProcessingStatus.classifying, 'Extracting topics from syllabus...');
+        updated = _updateStatus(updated, ProcessingStatus.classifying);
+        final extractedTopicIds = await _extractTopicsFromSyllabus(
+          textToClassify,
+          subjectId,
+          modelId,
+        );
+        if (extractedTopicIds.isNotEmpty) {
+          updated = updated.copyWith(topicId: extractedTopicIds.first);
+          await _sourceRepository.save(updated.id, updated);
+          _logger.d('Stage 2 alternative: ${extractedTopicIds.length} topics extracted from syllabus');
+        }
       }
 
       onProgress?.call(ProcessingStatus.classifying, 'Generating summary...');
@@ -236,7 +250,7 @@ class ContentPipeline {
 
       return Result.success(updated);
     } catch (e) {
-      _logger.e('Pipeline failed', e);
+      _logger.w('Pipeline failed', e);
       try {
         final failed = source.copyWith(
           processingStatus: ProcessingStatus.failed.name,
@@ -244,7 +258,7 @@ class ContentPipeline {
         await _sourceRepository.save(failed.id, failed);
         return Result.failure(e.toString());
       } catch (e2) {
-        _logger.e('Failed to save failed source', e2);
+        _logger.w('Failed to save failed source', e2);
         return Result.failure(e.toString());
       }
     }
@@ -323,8 +337,8 @@ class ContentPipeline {
 
       final cleaned = response.trim();
       final validTopic = possibleTopics.where(
-        (t) => cleaned.toLowerCase().contains(t.toLowerCase()) ||
-            t.toLowerCase().contains(cleaned.toLowerCase()),
+        (t) => cleaned.normalized.contains(t.normalized) ||
+            t.normalized.contains(cleaned.normalized),
       );
       if (validTopic.isEmpty) return '';
 
@@ -333,7 +347,7 @@ class ContentPipeline {
         final topics = topicsResult.data ?? [];
         final topicTitle = validTopic.first;
         final topicMatch = topics.where(
-          (t) => t.title.toLowerCase().contains(topicTitle.toLowerCase()),
+          (t) => t.title.normalized.contains(topicTitle.normalized),
         ).firstOrNull;
         if (topicMatch != null) return topicMatch.id;
 
@@ -353,13 +367,82 @@ class ContentPipeline {
           return newTopic.id;
         }
       } catch (e) {
-        _logger.e('Failed to look up topic by title', e);
+        _logger.w('Failed to look up topic by title', e);
       }
 
       return '';
     } catch (e) {
-      _logger.e('Classification failed', e);
+      _logger.w('Classification failed', e);
       return '';
+    }
+  }
+
+  Future<List<String>> _extractTopicsFromSyllabus(
+    String content,
+    String subjectId,
+    String modelId,
+  ) async {
+    try {
+      final prompt = 'Extract a list of topic names from the following syllabus content. '
+          'Return ONLY a JSON array of strings, one per topic. No explanation, no extra text.'
+          '\n\nContent:\n$content';
+
+      final result = await _llmService.chat(
+        message: prompt,
+        modelId: modelId,
+        systemPrompt: 'You are a syllabus parser. Extract topic names as a JSON array of strings.',
+        feature: 'syllabus_topic_extraction',
+      );
+      if (result.isFailure) return [];
+
+      final response = result.data!.trim();
+      final cleaned = response
+          .replaceAll(RegExp(r'^```(?:json)?\s*', multiLine: true), '')
+          .replaceAll(RegExp(r'\s*```$', multiLine: true), '')
+          .trim();
+
+      List<String> topicNames;
+      try {
+        final decoded = jsonDecode(cleaned);
+        if (decoded is List) {
+          topicNames = decoded.whereType<String>().map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        } else {
+          return [];
+        }
+      } catch (e) {
+        _logger.w('Failed to decode LLM topic list JSON, falling back to split parsing', e);
+        topicNames = cleaned
+            .split(RegExp(r'[\n,]+'))
+            .map((s) => s.trim())
+            .where((s) => s.isNotEmpty && !s.startsWith('[') && !s.startsWith(']'))
+            .toList();
+      }
+
+      if (topicNames.isEmpty) return [];
+
+      final createdIds = <String>[];
+      await _topicRepository.init();
+      final subjRepo = SubjectRepository();
+      await subjRepo.init();
+
+      for (final name in topicNames) {
+        final topic = Topic(
+          id: IdGenerator.generate('topic'),
+          subjectId: subjectId,
+          title: name,
+          description: 'Auto-created from syllabus upload',
+          syllabusText: '',
+        );
+        await _topicRepository.create(topic);
+        await subjRepo.addTopicToSubject(subjectId, topic.id);
+        createdIds.add(topic.id);
+        _logger.i('Auto-created syllabus topic "$name" under subject $subjectId');
+      }
+
+      return createdIds;
+    } catch (e) {
+      _logger.w('Failed to extract topics from syllabus', e);
+      return [];
     }
   }
 
@@ -382,7 +465,7 @@ class ContentPipeline {
 
       return response.trim();
     } catch (e) {
-      _logger.e('Summary generation failed', e);
+      _logger.w('Summary generation failed', e);
       return '';
     }
   }
@@ -400,6 +483,11 @@ class ContentPipeline {
     'typedAnswer',
     'mathExpression',
     'essay',
+    'canvas',
+    'graphDrawing',
+    'stepByStep',
+    'fileUpload',
+    'audioRecording',
   ];
 
   Future<List<String>> _generateQuestions(
@@ -464,7 +552,7 @@ class ContentPipeline {
         }
       }
     } catch (e) {
-      _logger.e('Question generation failed', e);
+      _logger.w('Question generation failed', e);
     }
     return questionIds;
   }
@@ -529,7 +617,7 @@ class ContentPipeline {
         return List<Map<String, dynamic>>.from(decoded['questions']);
       }
     } catch (e) {
-      _logger.e('Failed to parse question response', e);
+      _logger.w('Failed to parse question response', e);
     }
     return [];
   }

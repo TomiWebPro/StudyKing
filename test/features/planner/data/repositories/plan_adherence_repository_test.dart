@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/errors/result.dart';
 

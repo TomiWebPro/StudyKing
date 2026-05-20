@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/routes/app_router.dart';
@@ -26,7 +27,7 @@ class LessonListScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonListScreenState extends ConsumerState<LessonListScreen> {
-  final _logger = const Logger('LessonListScreen');
+  static final _logger = const Logger('LessonListScreen');
   List<Lesson> _lessons = [];
   final Map<String, LessonStatusDisplay> _statusCache = {};
   bool _isLoading = true;
@@ -85,7 +86,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
     }
   }
 
-  static const int _defaultDurationMinutes = 45;
+  static const int _defaultDurationMinutes = Timeouts.defaultLessonDurationMinutes;
 
   void _openTutorMode() {
     if (!mounted) return;
@@ -95,7 +96,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
       arguments: TutorArgs(
         topicId: widget.args.topicId,
         topicTitle: widget.args.topicTitle,
-        subjectId: widget.args.subjectId,
+        subjectId: widget.args.subjectId ?? '',
         durationMinutes: _defaultDurationMinutes,
       ),
     );
@@ -179,7 +180,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
                     lessonId: l.id,
                     topicId: widget.args.topicId,
                     topicTitle: widget.args.topicTitle,
-                    subjectId: widget.args.subjectId,
+        subjectId: widget.args.subjectId ?? '',
                   ),
                 ),
               ),

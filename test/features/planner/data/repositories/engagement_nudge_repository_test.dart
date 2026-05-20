@@ -3,7 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
 class _FakeEngagementNudgeRepository extends EngagementNudgeRepository {

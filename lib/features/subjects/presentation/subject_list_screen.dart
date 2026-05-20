@@ -7,11 +7,12 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 
 class SubjectListScreen extends ConsumerWidget {
+  static final Logger _logger = const Logger('SubjectListScreen');
   const SubjectListScreen({super.key});
 
   @override
@@ -43,7 +44,7 @@ class SubjectListScreen extends ConsumerWidget {
           data: (repository) => _buildSubjectList(context, ref, repository),
           loading: () => const Center(child: LoadingIndicator()),
           error: (error, stack) {
-            const Logger('SubjectListScreen').e('Error loading subjects', error, stack);
+            _logger.w('Error loading subjects', error, stack);
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
@@ -71,7 +72,7 @@ class SubjectListScreen extends ConsumerWidget {
         }
 
         if (snapshot.hasError) {
-          const Logger('SubjectListScreen').e('Error in subject list builder', snapshot.error);
+          _logger.w('Error in subject list builder', snapshot.error);
           return ErrorRetryWidget(
             message: l10n.somethingWentWrong,
             retryLabel: l10n.retry,
@@ -185,7 +186,7 @@ class SubjectListScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios, size: 16),
+                Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios, size: 16),
               ],
             ),
           ),

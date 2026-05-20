@@ -9,18 +9,18 @@ import 'package:studyking/features/planner/data/models/engagement_nudge_model.da
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -273,7 +273,9 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   }
 
   @override
-  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
+  Future<Result<void>> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
+    return Result.success(null);
+  }
 
   @override
   Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
@@ -550,39 +552,39 @@ class FakePlannerService {
   bool hasSchedulingConflictCalled = false;
   bool scheduleLessonCalled = false;
 
-  Future<PersonalLearningPlan?> loadExistingPlan(String studentId) async {
+  Future<Result<PersonalLearningPlan?>> loadExistingPlan(String studentId) async {
     loadExistingPlanCalled = true;
-    return null;
+    return Result.success(null);
   }
 
-  Future<List<RoadmapModel>> loadRoadmaps(String studentId) async {
+  Future<Result<List<RoadmapModel>>> loadRoadmaps(String studentId) async {
     loadRoadmapsCalled = true;
-    return [];
+    return Result.success([]);
   }
 
-  Future<List<PendingActionModel>> loadPendingActions(String studentId) async {
+  Future<Result<List<PendingActionModel>>> loadPendingActions(String studentId) async {
     loadPendingActionsCalled = true;
-    return [];
+    return Result.success([]);
   }
 
-  Future<List<Session>> getScheduledLessons(String studentId) async {
+  Future<Result<List<Session>>> getScheduledLessons(String studentId) async {
     getScheduledLessonsCalled = true;
-    return [];
+    return Result.success([]);
   }
 
-  Future<AdherenceDeviation?> checkAdherence(String studentId) async {
+  Future<Result<AdherenceDeviation?>> checkAdherence(String studentId) async {
     checkAdherenceCalled = true;
-    return null;
+    return Result.success(null);
   }
 
-  Future<bool> hasSchedulingConflict(String studentId, DateTime start, DateTime end) async {
+  Future<Result<bool>> hasSchedulingConflict(String studentId, DateTime start, DateTime end) async {
     hasSchedulingConflictCalled = true;
-    return false;
+    return Result.success(false);
   }
 
-  Future<bool> scheduleLesson(String studentId, Map<String, dynamic> lesson) async {
+  Future<Result<bool>> scheduleLesson(String studentId, Map<String, dynamic> lesson) async {
     scheduleLessonCalled = true;
-    return false;
+    return Result.success(false);
   }
 }
 
@@ -606,18 +608,18 @@ class FakeProgressTracker {
   bool getRecommendationsCalled = false;
   bool getBadgesCalled = false;
 
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     getOverallStatsCalled = true;
-    return {'accuracy': 0.0, 'totalAttempts': 0};
+    return Result.success({'accuracy': 0.0, 'totalAttempts': 0});
   }
 
-  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
     getRecommendationsCalled = true;
-    return [];
+    return Result.success([]);
   }
 
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
     getBadgesCalled = true;
-    return [];
+    return Result.success([]);
   }
 }

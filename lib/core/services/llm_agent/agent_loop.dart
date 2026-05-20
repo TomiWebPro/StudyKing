@@ -85,6 +85,7 @@ class AgentLoop {
               ? jsonDecode(parsed.toolArguments) as Map<String, dynamic>
               : {};
         } catch (e) {
+          _logger.w('Failed to parse tool arguments JSON: $e');
           toolArgs = {};
         }
 
@@ -99,6 +100,7 @@ class AgentLoop {
         try {
           toolResult = await tool.execute(toolArgs);
         } catch (e) {
+          _logger.w('Tool execution failed: $e');
           toolResult = {'error': e.toString()};
         }
 

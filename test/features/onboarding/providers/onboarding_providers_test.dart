@@ -18,34 +18,44 @@ class _ThrowingOnboardingStorage extends OnboardingStorage {
 
 void main() {
   group('onboardingNeededProvider', () {
-    setUp(() {
-      OnboardingService.setStorage(InMemoryOnboardingStorage());
-    });
+    late OnboardingService service;
 
-    tearDown(() {
-      OnboardingService.setStorage(HiveOnboardingStorage());
+    setUp(() {
+      service = OnboardingService(storage: InMemoryOnboardingStorage());
     });
 
     test('returns true when onboarding is needed', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(service),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(onboardingNeededProvider.future);
       expect(result, isTrue);
     });
 
     test('returns false when onboarding is completed', () async {
-      await OnboardingService.markCompleted();
-      final container = ProviderContainer();
+      await service.markCompleted();
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(service),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(onboardingNeededProvider.future);
       expect(result, isFalse);
     });
 
     test('returns true when storage throws (safe default)', () async {
-      OnboardingService.setStorage(_ThrowingOnboardingStorage());
-      addTearDown(() => OnboardingService.setStorage(HiveOnboardingStorage()));
-
-      final container = ProviderContainer();
+      final throwingService = OnboardingService(
+        storage: _ThrowingOnboardingStorage(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(throwingService),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(onboardingNeededProvider.future);
       expect(result, isTrue);
@@ -53,34 +63,44 @@ void main() {
   });
 
   group('isFirstLaunchProvider', () {
-    setUp(() {
-      OnboardingService.setStorage(InMemoryOnboardingStorage());
-    });
+    late OnboardingService service;
 
-    tearDown(() {
-      OnboardingService.setStorage(HiveOnboardingStorage());
+    setUp(() {
+      service = OnboardingService(storage: InMemoryOnboardingStorage());
     });
 
     test('returns true when not completed', () async {
-      final container = ProviderContainer();
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(service),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(isFirstLaunchProvider.future);
       expect(result, isTrue);
     });
 
     test('returns false after markCompleted', () async {
-      await OnboardingService.markCompleted();
-      final container = ProviderContainer();
+      await service.markCompleted();
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(service),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(isFirstLaunchProvider.future);
       expect(result, isFalse);
     });
 
     test('returns true when storage throws (safe default)', () async {
-      OnboardingService.setStorage(_ThrowingOnboardingStorage());
-      addTearDown(() => OnboardingService.setStorage(HiveOnboardingStorage()));
-
-      final container = ProviderContainer();
+      final throwingService = OnboardingService(
+        storage: _ThrowingOnboardingStorage(),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          onboardingServiceProvider.overrideWithValue(throwingService),
+        ],
+      );
       addTearDown(() => container.dispose());
       final result = await container.read(isFirstLaunchProvider.future);
       expect(result, isTrue);

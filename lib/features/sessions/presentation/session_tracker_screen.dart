@@ -7,18 +7,19 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/features/practice/providers/practice_providers.dart' show subjectRepositoryProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 import 'package:studyking/features/sessions/presentation/widgets/session_analytics.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -34,7 +35,7 @@ class SessionTrackerScreen extends ConsumerStatefulWidget {
 }
 
 class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> with WidgetsBindingObserver, AutomaticKeepAliveClientMixin {
-  final Logger _logger = const Logger('SessionTrackerScreen');
+  static final Logger _logger = const Logger('SessionTrackerScreen');
   late SessionRepository _sessionRepository;
   List<Session> _allSessions = [];
   List<Session> _sortedSessions = [];
@@ -73,7 +74,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         });
       }
     } catch (e) {
-      _logger.e('Failed to load subjects in session tracker', e);
+      _logger.w('Failed to load subjects in session tracker', e);
     }
   }
 
@@ -113,7 +114,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         _calculateStats();
       }
     } catch (e) {
-      _logger.e('Error loading sessions', e);
+      _logger.w('Error loading sessions', e);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -228,12 +229,12 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
             plannedQuestions: todayPlan.targetQuestions,
             actualQuestions: questionsAnswered,
             plannedMinutes: todayPlan.targetMinutes,
-            actualMinutes: duration ~/ 60000,
+            actualMinutes: duration ~/ msPerMinute,
           );
         }
       }
     } catch (e) {
-      _logger.e('Failed to track plan adherence after session', e);
+      _logger.w('Failed to track plan adherence after session', e);
     }
 
     // Track mastery improvement for topics practiced
@@ -249,7 +250,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         }
       }
     } catch (e) {
-      _logger.e('Failed to track mastery improvement after session', e);
+      _logger.w('Failed to track mastery improvement after session', e);
     }
 
     if (!mounted) return;
@@ -272,8 +273,6 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.studySessionTracker),
-          centerTitle: false,
-          elevation: 0,
         ),
         body: const LoadingIndicator(),
       );
@@ -283,8 +282,6 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.studySessionTracker),
-          centerTitle: false,
-          elevation: 0,
         ),
         body: Center(
           child: Column(
@@ -320,8 +317,6 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.studySessionTracker),
-        centerTitle: false,
-        elevation: 0,
       ),
       body: SafeArea(
         child: Padding(

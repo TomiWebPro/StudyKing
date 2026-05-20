@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 Widget _buildTestApp(Widget child) {
   return MaterialApp(
@@ -14,12 +16,13 @@ Widget _buildTestApp(Widget child) {
   );
 }
 
-Widget _buildTestAppWithRoutes(Widget child) {
+Widget _buildTestAppWithRoutes(Widget child, {List<NavigatorObserver>? navigatorObservers}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     locale: const Locale('en'),
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
+    navigatorObservers: navigatorObservers ?? [],
     home: Scaffold(body: child),
     routes: {
       '/practice-session': (_) => const Scaffold(
@@ -162,6 +165,7 @@ void main() {
     });
 
     testWidgets('tapping practice icon navigates to practice session', (tester) async {
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(_buildTestAppWithRoutes(
         WeakAreasCard(
           allMastery: [
@@ -169,16 +173,18 @@ void main() {
           ],
           resolveTopicName: _resolveName,
         ),
+        navigatorObservers: [observer],
       ));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byIcon(Icons.play_arrow).first);
       await tester.pumpAndSettle();
 
-      expect(find.text('Practice Session'), findsOneWidget);
+      expect(observer.pushedRoutes.last.settings.name, AppRoutes.practiceSession);
     });
 
     testWidgets('tapping practice all button navigates to practice session', (tester) async {
+      final observer = TestNavigatorObserver();
       await tester.pumpWidget(_buildTestAppWithRoutes(
         WeakAreasCard(
           allMastery: [
@@ -186,13 +192,14 @@ void main() {
           ],
           resolveTopicName: _resolveName,
         ),
+        navigatorObservers: [observer],
       ));
       await tester.pumpAndSettle();
 
       await tester.tap(find.byType(OutlinedButton));
       await tester.pumpAndSettle();
 
-      expect(find.text('Practice Session'), findsOneWidget);
+      expect(observer.pushedRoutes.last.settings.name, AppRoutes.practiceSession);
     });
 
     testWidgets('renders divider when weak areas present', (tester) async {

@@ -1,11 +1,15 @@
+import 'package:flutter/material.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class GenerateLessonBlocksTool extends AgentTool {
   final LessonAgentService _lessonAgentService;
+  final String _localeName;
 
-  GenerateLessonBlocksTool({required LessonAgentService lessonAgentService})
-      : _lessonAgentService = lessonAgentService;
+  GenerateLessonBlocksTool({required LessonAgentService lessonAgentService, String localeName = 'en'})
+      : _lessonAgentService = lessonAgentService,
+        _localeName = localeName;
 
   @override
   String get name => 'generate_lesson_blocks';
@@ -39,8 +43,10 @@ class GenerateLessonBlocksTool extends AgentTool {
       localeName: (args['localeName'] as String?) ?? 'en',
     );
 
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+
     if (lesson == null) {
-      return {'success': false, 'message': 'Failed to generate lesson blocks'};
+      return {'success': false, 'message': l10n.toolGenerateBlocksFail};
     }
 
     return {

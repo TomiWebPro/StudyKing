@@ -1,11 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 
 class StudentIdService {
   StudentIdService();
 
-  static const _boxName = 'student_id';
+  static const _boxName = HiveBoxNames.studentId;
   static const _idKey = 'id';
   static const _lastActivityKey = 'lastActivityAt';
   Box? _box;

@@ -5,7 +5,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/sessions/data/adapters/session_adapter.dart';
 import 'package:studyking/core/utils/clock.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 
 Session createSession({
   String id = 'session-1',
@@ -1148,7 +1148,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 0),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns false when no overlap exists', () async {
@@ -1163,7 +1163,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 14, 0),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns true when sessions overlap', () async {
@@ -1178,7 +1178,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 60,
         );
-        expect(conflict, isTrue);
+        expect(conflict.data, isTrue);
       });
 
       test('returns true when proposed is fully contained', () async {
@@ -1193,7 +1193,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 11, 0),
           durationMinutes: 30,
         );
-        expect(conflict, isTrue);
+        expect(conflict.data, isTrue);
       });
 
       test('skips excluded session', () async {
@@ -1209,7 +1209,7 @@ void main() {
           durationMinutes: 60,
           excludeSessionId: 'to-exclude',
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('skips session with no endTime and no plannedDurationMinutes',
@@ -1226,7 +1226,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('detects conflict using endTime when available', () async {
@@ -1242,7 +1242,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 60,
         );
-        expect(conflict, isTrue);
+        expect(conflict.data, isTrue);
       });
 
       test('detects conflict using plannedDurationMinutes when no endTime',
@@ -1259,7 +1259,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 30,
         );
-        expect(conflict, isTrue);
+        expect(conflict.data, isTrue);
       });
 
       test('returns false when box is closed', () async {
@@ -1274,7 +1274,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 30),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns false when excludeSessionId does not match any session', () async {
@@ -1289,7 +1289,7 @@ void main() {
           durationMinutes: 60,
           excludeSessionId: 'phantom',
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns false when proposed session starts exactly at existing endTime', () async {
@@ -1303,7 +1303,7 @@ void main() {
           startTime: DateTime(2025, 1, 15, 11, 0),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns false when proposed session ends exactly at existing startTime', () async {
@@ -1317,14 +1317,14 @@ void main() {
           startTime: DateTime(2025, 1, 15, 10, 0),
           durationMinutes: 60,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
     });
 
     group('getScheduledLessons', () {
       test('returns empty when no sessions exist', () async {
         final lessons = await repository.getScheduledLessons();
-        expect(lessons, isEmpty);
+        expect(lessons.data, isEmpty);
       });
 
       test('returns only planned sessions', () async {
@@ -1353,9 +1353,9 @@ void main() {
         );
         await repository.save(cancelled.id, cancelled);
         final lessons = await repository.getScheduledLessons();
-        expect(lessons.length, 1);
-        expect(lessons.first.id, 'planned-1');
-        expect(lessons.first.status, SessionStatus.planned);
+        expect(lessons.data!.length, 1);
+        expect(lessons.data!.first.id, 'planned-1');
+        expect(lessons.data!.first.status, SessionStatus.planned);
       });
 
       test('returns multiple planned sessions', () async {
@@ -1368,7 +1368,7 @@ void main() {
           await repository.save(sess.id, sess);
         }
         final lessons = await repository.getScheduledLessons();
-        expect(lessons.length, 3);
+        expect(lessons.data!.length, 3);
       });
 
       test('returns empty when box is closed', () async {
@@ -1380,7 +1380,7 @@ void main() {
         await repository.save(sess.id, sess);
         await Hive.close();
         final lessons = await repository.getScheduledLessons();
-        expect(lessons, isEmpty);
+        expect(lessons.data, isEmpty);
       });
     });
 

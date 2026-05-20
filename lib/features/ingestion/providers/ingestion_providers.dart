@@ -7,7 +7,7 @@ import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 
 final documentExtractorProvider = Provider<DocumentExtractor>((ref) {
   final llmService = ref.watch(llmServiceProvider);

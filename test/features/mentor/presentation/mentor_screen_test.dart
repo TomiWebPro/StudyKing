@@ -16,9 +16,9 @@ import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider, mentorProgressTrackerProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider, plannerProvider, PlannerNotifier;
 import 'package:studyking/features/planner/services/planner_service.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart' show AdherenceDeviation;
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -26,13 +26,13 @@ import 'package:studyking/features/planner/data/models/pending_action_model.dart
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/services/voice_service.dart';
@@ -64,21 +64,20 @@ class _FakeSettingsRepository extends SettingsRepository {
 
 class FakePlannerService extends PlannerService {
   @override
-  Future<PersonalLearningPlan?> loadExistingPlan() async => null;
+  Future<Result<PersonalLearningPlan?>> loadExistingPlan() async => Result.success(null);
   @override
-  Future<List<RoadmapModel>> loadRoadmaps() async => [];
+  Future<Result<List<RoadmapModel>>> loadRoadmaps() async => Result.success([]);
   @override
-  Future<List<PendingActionModel>> loadPendingActions() async => [];
+  Future<Result<List<PendingActionModel>>> loadPendingActions() async => Result.success([]);
   @override
-  Future<List<Session>> getScheduledLessons() async => [];
-  @override
+  Future<Result<List<Session>>> getScheduledLessons() async => Result.success([]);
   Future<AdherenceDeviation?> checkAdherence() async => null;
   @override
-  Future<bool> hasSchedulingConflict({required DateTime startTime, required int durationMinutes, String? excludeSessionId}) async => false;
+  Future<Result<bool>> hasSchedulingConflict({required DateTime startTime, required int durationMinutes, String? excludeSessionId}) async => Result.success(false);
   @override
-  Future<bool> scheduleLesson({required String topicId, required String topicTitle, required String subjectId, required DateTime scheduledTime, int durationMinutes = 30}) async => true;
+  Future<Result<bool>> scheduleLesson({required String topicId, required String topicTitle, required String subjectId, required DateTime scheduledTime, int durationMinutes = 30}) async => Result.success(true);
   @override
-  Future<RoadmapModel?> createRoadmap({required String goal, required int days, required AppLocalizations l10n, String? subjectId}) async => null;
+  Future<Result<RoadmapModel?>> createRoadmap({required String goal, required int days, required AppLocalizations l10n, String? subjectId}) async => Result.success(null);
 }
 
 class _FakeNudgeRepo extends EngagementNudgeRepository {
@@ -240,7 +239,7 @@ class _NudgeReturningRepo extends EngagementNudgeRepository {
 
 class _ThrowingProgressTracker extends FakeProgressTracker {
   @override
-  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
     throw Exception('Simulated recommendations failure');
   }
 }
@@ -289,18 +288,18 @@ class FakeProgressTracker extends StudyProgressTracker {
   FakeProgressTracker() : super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     if (_throwOnReport) throw Exception('Simulated error');
-    return Map<String, dynamic>.from(_overallStats);
+    return Result.success(Map<String, dynamic>.from(_overallStats));
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async =>
-      List<Map<String, dynamic>>.from(_recommendations);
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async =>
+      Result.success(List<Map<String, dynamic>>.from(_recommendations));
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async =>
-      List<Map<String, dynamic>>.from(_badges);
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async =>
+      Result.success(List<Map<String, dynamic>>.from(_badges));
 }
 
 Widget _buildTestApp({

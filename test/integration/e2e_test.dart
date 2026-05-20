@@ -6,7 +6,7 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';

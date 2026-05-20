@@ -7,7 +7,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -89,29 +89,29 @@ class FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  Future<bool> isDailyCapReached(int additionalMinutes) async => false;
+  Future<Result<bool>> isDailyCapReached(int additionalMinutes) async => Result.success(false);
 
   @override
-  Future<int> getDailyCapMinutes() async => 0;
+  Future<Result<int>> getDailyCapMinutes() async => Result.success(0);
 
   @override
-  Future<Map<String, dynamic>> getTodayStats() async => {
+  Future<Result<Map<String, dynamic>>> getTodayStats() async => Result.success({
     'totalMs': 0,
     'totalSeconds': 0,
     'completedSessions': 0,
     'totalSessions': 0,
     'plannedMinutes': 0,
     'hours': '0.0',
-  };
+  });
 
   @override
-  Future<int> getTodayDurationMs() async => 0;
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
 
   @override
-  Future<List<Session>> getRecentSessions({int limit = 10}) async => [];
+  Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async => Result.success([]);
 
   @override
-  Future<Session> startSession({
+  Future<Result<Session>> startSession({
     required int plannedDurationMinutes,
     SessionType type = SessionType.focus,
     String? studentId,
@@ -130,7 +130,7 @@ class FakeStudyTimerService extends StudyTimerService {
       startTime: DateTime.now(),
       plannedDurationMinutes: plannedDurationMinutes,
     );
-    return _fakeCurrentSession!;
+    return Result.success(_fakeCurrentSession!);
   }
 
   @override
@@ -182,46 +182,46 @@ class FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  Future<void> dispose() async {}
+  Future<Result<void>> dispose() async => Result.success(null);
 }
 
 class _FakeCapReachedService extends FakeStudyTimerService {
   @override
-  Future<bool> isDailyCapReached(int additionalMinutes) async => true;
+  Future<Result<bool>> isDailyCapReached(int additionalMinutes) async => Result.success(true);
 }
 
 class _FakeStartErrorService extends FakeStudyTimerService {
   @override
-  Future<Session> startSession({
+  Future<Result<Session>> startSession({
     required int plannedDurationMinutes,
     SessionType type = SessionType.focus,
     String? studentId,
     String? subjectId,
     String? topicId,
   }) async {
-    throw Exception('Start failed');
+    return Result.failure('Start failed');
   }
 }
 
 class _FakeStatsService extends FakeStudyTimerService {
   @override
-  Future<Map<String, dynamic>> getTodayStats() async {
-    return {
+  Future<Result<Map<String, dynamic>>> getTodayStats() async {
+    return Result.success({
       'totalMs': 3600000,
       'totalSeconds': 3600,
       'completedSessions': 2,
       'totalSessions': 3,
       'plannedMinutes': 75,
       'hours': '1.0',
-    };
+    });
   }
 
   @override
-  Future<int> getTodayDurationMs() async => 7200000;
+  Future<Result<int>> getTodayDurationMs() async => Result.success(7200000);
 
   @override
-  Future<List<Session>> getRecentSessions({int limit = 10}) async {
-    return [
+  Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async {
+    return Result.success([
       Session(
         id: 's1',
         studentId: '',
@@ -261,7 +261,7 @@ class _FakeStatsService extends FakeStudyTimerService {
         questionsAnswered: 0,
         correctAnswers: 0,
       ),
-    ];
+    ]);
   }
 }
 

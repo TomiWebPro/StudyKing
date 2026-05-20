@@ -9,13 +9,13 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 
 class _FakeAttemptRepo extends AttemptRepository {
@@ -33,25 +33,25 @@ class _FakeTracker extends StudyProgressTracker {
   );
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
-    return {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
+    return Result.success({
       'accuracy': 80,
       'totalStudyTimeHours': 3.5,
       'weeklyActivity': 25,
       'topicsStudied': 10,
       'correctAttempts': 40,
       'totalAttempts': 50,
-    };
+    });
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async {
-    return [];
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
+    return Result.success([]);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    return [];
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    return Result.success([]);
   }
 }
 

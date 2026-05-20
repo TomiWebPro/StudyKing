@@ -3,6 +3,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/not_found_screen.dart';
 import 'package:studyking/features/dashboard/presentation/dashboard_screen.dart';
+import 'package:studyking/features/dashboard/presentation/screens/topic_detail_screen.dart';
 
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
 import 'package:studyking/features/ingestion/presentation/content_library_screen.dart';
@@ -10,6 +11,7 @@ import 'package:studyking/features/ingestion/presentation/source_detail_screen.d
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/features/lessons/presentation/lesson_list_screen.dart';
+import 'package:studyking/features/lessons/presentation/topic_list_screen.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/practice/presentation/screens/exam_session_screen.dart';
@@ -52,6 +54,8 @@ class AppRoutes {
   static const String contentLibrary = '/content-library';
   static const String sourceDetail = '/source-detail';
   static const String questionBank = '/question-bank';
+  static const String topicList = '/topic-list';
+  static const String topicDetail = '/topic-detail';
 }
 
 class PracticeSessionArgs {
@@ -97,12 +101,12 @@ class LessonDetailArgs {
 class LessonListArgs {
   final String topicId;
   final String topicTitle;
-  final String subjectId;
+  final String? subjectId;
 
   const LessonListArgs({
     required this.topicId,
     required this.topicTitle,
-    this.subjectId = '',
+    this.subjectId,
   });
 }
 
@@ -295,6 +299,20 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings, [StudentIdService? 
         QuestionBankScreen(initialQuestionId: initialQuestionId),
         routeSettings,
       );
+    case AppRoutes.topicList:
+      return _materialPageRoute(const TopicListScreen(), routeSettings);
+    case AppRoutes.topicDetail:
+      final args = routeSettings.arguments;
+      if (args is TopicDetailArgs) {
+        return _materialPageRoute(
+          TopicDetailScreen(
+            topicId: args.topicId,
+            studentId: args.studentId,
+          ),
+          routeSettings,
+        );
+      }
+      return _errorRoute(routeSettings);
     default:
       return _materialPageRoute(const NotFoundScreen(), routeSettings);
   }

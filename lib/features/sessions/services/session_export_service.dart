@@ -11,10 +11,13 @@ import 'package:path_provider/path_provider.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/data/models/session_model.dart';
+import '../../../core/errors/result.dart';
 import '../../../core/utils/number_format_utils.dart';
 import 'package:intl/intl.dart';
 
 import '../../../l10n/generated/app_localizations.dart';
+import '../../../core/utils/study_utils.dart';
+import '../../../core/utils/logger.dart';
 
 String _localizedSessionType(SessionType type, AppLocalizations l10n) {
   return switch (type) {
@@ -41,7 +44,7 @@ class SessionExportService {
     for (final s in sessions) {
       final startStr = s.startTime.toIso8601String();
       final endStr = s.endTime?.toIso8601String() ?? '';
-      final durationMin = (s.actualDurationMs / 60000).toStringAsFixed(1);
+      final durationMin = (s.actualDurationMs / msPerMinute).toStringAsFixed(1);
       final accuracy = s.questionsAnswered > 0
           ? ((s.correctAnswers / s.questionsAnswered) * 100).toStringAsFixed(1)
           : '0.0';
@@ -120,7 +123,7 @@ class SessionExportService {
                   s.subjectId ?? '',
                   date,
                   dur,
-                  '${s.correctAnswers}/${s.questionsAnswered}',
+                  '${formatDecimal(s.correctAnswers.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}/${formatDecimal(s.questionsAnswered.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}',
                   accuracy,
                   _localizedSessionType(s.type, l10n),
                 ];
@@ -167,7 +170,7 @@ class SessionExportService {
 
   static String _formatTotalDuration(List<Session> sessions, AppLocalizations l10n) {
     final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-    final minutes = totalMs ~/ 60000;
+    final minutes = totalMs ~/ msPerMinute;
     final hours = minutes ~/ 60;
     final remainingMin = minutes % 60;
     if (hours > 0) {
@@ -177,8 +180,8 @@ class SessionExportService {
   }
 
   static String _formatDuration(int ms, AppLocalizations l10n) {
-    final minutes = ms ~/ 60000;
-    final seconds = (ms % 60000) ~/ 1000;
+    final minutes = ms ~/ msPerMinute;
+    final seconds = (ms % msPerMinute) ~/ msPerSecond;
     if (minutes > 0) {
       return '${l10n.durationMinutes(minutes)} ${l10n.durationSeconds(seconds)}';
     }
@@ -186,52 +189,67 @@ class SessionExportService {
   }
 
   @visibleForTesting
-  static Future<File> writeCSVFile(
+  static Future<Result<File>> writeCSVFile(
     List<Session> sessions,
     String filename, {
     Directory? directory,
   }) async {
-    final csv = sessionsToCSV(sessions);
     if (kIsWeb) {
-      throw UnsupportedError('File operations are not supported on web');
+      return Result.failure('File operations are not supported on web');
     }
-    final dir = directory ?? await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.csv');
-    await file.writeAsString(csv);
-    return file;
+    try {
+      final csv = sessionsToCSV(sessions);
+      final dir = directory ?? await getTemporaryDirectory();
+      final file = File('${dir.path}/$filename.csv');
+      await file.writeAsString(csv);
+      return Result.success(file);
+    } catch (e) {
+      Logger('SessionExportService').w('Failed to write CSV file', e);
+      return Result.failure(e.toString());
+    }
   }
 
   @visibleForTesting
-  static Future<File> writeJSONFile(
+  static Future<Result<File>> writeJSONFile(
     List<Session> sessions,
     String filename, {
     Directory? directory,
   }) async {
-    final json = jsonEncode(sessionsToJSON(sessions));
     if (kIsWeb) {
-      throw UnsupportedError('File operations are not supported on web');
+      return Result.failure('File operations are not supported on web');
     }
-    final dir = directory ?? await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.json');
-    await file.writeAsString(json);
-    return file;
+    try {
+      final json = jsonEncode(sessionsToJSON(sessions));
+      final dir = directory ?? await getTemporaryDirectory();
+      final file = File('${dir.path}/$filename.json');
+      await file.writeAsString(json);
+      return Result.success(file);
+    } catch (e) {
+      Logger('SessionExportService').w('Failed to write JSON file', e);
+      return Result.failure(e.toString());
+    }
   }
 
   @visibleForTesting
-  static Future<File> writePDFFile(
+  static Future<Result<File>> writePDFFile(
     List<Session> sessions,
     String filename,
     AppLocalizations l10n, {
     Directory? directory,
   }) async {
-    final pdfBytes = await sessionsToPDF(sessions, l10n);
     if (kIsWeb) {
-      throw UnsupportedError('File operations are not supported on web');
+      return Result.failure('File operations are not supported on web');
     }
-    final dir = directory ?? await getTemporaryDirectory();
-    final file = File('${dir.path}/$filename.pdf');
-    await file.writeAsBytes(pdfBytes);
-    return file;
+    try {
+      final pdfBytes = await sessionsToPDF(sessions, l10n);
+      final dir = directory ?? await getTemporaryDirectory();
+      final file = File('${dir.path}/$filename.pdf');
+      await file.writeAsBytes(pdfBytes);
+      return Result.success(file);
+    } catch (e) {
+      Logger('SessionExportService').w('Failed to write PDF file', e);
+      return Result.failure(e.toString());
+    }
   }
 
   static Future<void> shareCSV(
@@ -246,8 +264,10 @@ class SessionExportService {
         text: l10n.shareSessionsText,
       );
     } else {
-      final file = await writeCSVFile(sessions, filename);
-      await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+      final result = await writeCSVFile(sessions, filename);
+      if (result.isSuccess) {
+        await Share.shareXFiles([XFile(result.data!.path)], text: l10n.shareSessionsText);
+      }
     }
   }
 
@@ -263,8 +283,10 @@ class SessionExportService {
         text: l10n.shareSessionsText,
       );
     } else {
-      final file = await writeJSONFile(sessions, filename);
-      await Share.shareXFiles([XFile(file.path)], text: l10n.shareSessionsText);
+      final result = await writeJSONFile(sessions, filename);
+      if (result.isSuccess) {
+        await Share.shareXFiles([XFile(result.data!.path)], text: l10n.shareSessionsText);
+      }
     }
   }
 
@@ -281,8 +303,10 @@ class SessionExportService {
         text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
       );
     } else {
-      final file = await writePDFFile(sessions, filename, l10n);
-      await Share.shareXFiles([XFile(file.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
+      final result = await writePDFFile(sessions, filename, l10n);
+      if (result.isSuccess) {
+        await Share.shareXFiles([XFile(result.data!.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
+      }
     }
   }
 }

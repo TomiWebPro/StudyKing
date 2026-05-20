@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/color_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 const _commonSyllabi = [
@@ -199,7 +200,8 @@ class SubjectFormFields extends StatelessWidget {
             optionsBuilder: (TextEditingValue value) {
               if (value.text.isEmpty) return [];
               final matches = _commonSyllabi.where((s) =>
-                  s.toLowerCase().contains(value.text.toLowerCase()));
+                  s.normalized.contains(value.text.normalized));
+
               return matches.take(10);
             },
             onSelected: (selection) => nameController.text = selection,
@@ -245,7 +247,7 @@ class SubjectFormFields extends StatelessWidget {
             optionsBuilder: (TextEditingValue value) {
               if (value.text.isEmpty) return _commonSyllabi;
               return _commonSyllabi.where((s) =>
-                  s.toLowerCase().contains(value.text.toLowerCase()));
+                  s.normalized.contains(value.text.normalized));
             },
             onSelected: (selection) => syllabusController.text = selection,
             fieldViewBuilder: (context, controller, focusNode, onSubmit) {

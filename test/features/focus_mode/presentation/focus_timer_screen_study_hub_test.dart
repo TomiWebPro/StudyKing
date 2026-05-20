@@ -14,14 +14,14 @@ import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.da
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -121,8 +121,9 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   bool recordActivityCalled = false;
 
   @override
-  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
+  Future<Result<void>> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
     recordActivityCalled = true;
+    return Result.success(null);
   }
 }
 
@@ -177,24 +178,24 @@ class _FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  Future<int> getDailyCapMinutes() async => _dailyCapMin;
+  Future<Result<int>> getDailyCapMinutes() async => Result.success(_dailyCapMin);
 
   @override
-  Future<int> getRemainingDailyCapMinutes() async => _remainingCap;
+  Future<Result<int>> getRemainingDailyCapMinutes() async => Result.success(_remainingCap);
 
   @override
-  Future<Map<String, dynamic>> getTodayStats() async => {
+  Future<Result<Map<String, dynamic>>> getTodayStats() async => Result.success({
     'totalMs': 0, 'totalSeconds': 0, 'completedSessions': 0, 'totalSessions': 0,
-  };
+  });
 
   @override
-  Future<int> getTodayDurationMs() async => 0;
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
 
   @override
-  Future<List<Session>> getRecentSessions({int limit = 10}) async => [];
+  Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async => Result.success([]);
 
   @override
-  Future<Session> startSession({
+  Future<Result<Session>> startSession({
     required int plannedDurationMinutes,
     SessionType type = SessionType.focus,
     String? studentId,
@@ -213,7 +214,7 @@ class _FakeStudyTimerService extends StudyTimerService {
       startTime: DateTime.now(),
       plannedDurationMinutes: plannedDurationMinutes,
     );
-    return _fakeCurrentSession!;
+    return Result.success(_fakeCurrentSession!);
   }
 
   @override
@@ -249,7 +250,7 @@ class _FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  Future<void> dispose() async {}
+  Future<Result<void>> dispose() async => Result.success(null);
 }
 
 // ── Fake SettingsRepository ────────────────────────────────────────────

@@ -67,7 +67,7 @@ void main() {
       ));
 
       for (var i = 0; i < 7; i++) {
-        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        final day = DateFormat('E', 'en').format(asOf.subtract(Duration(days: i)));
         expect(find.text(day), findsOneWidget);
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
@@ -442,7 +442,7 @@ void main() {
       ));
 
       for (var i = 0; i < 7; i++) {
-        final day = DateFormat('E').format(customAsOf.subtract(Duration(days: i)));
+        final day = DateFormat('E', 'en').format(customAsOf.subtract(Duration(days: i)));
         expect(find.text(day), findsOneWidget);
       }
     });
@@ -478,7 +478,7 @@ void main() {
       ));
 
       for (var i = 0; i < 3; i++) {
-        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        final day = DateFormat('E', 'en').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
     });
@@ -521,7 +521,7 @@ void main() {
       await tester.pump();
 
       for (var i = 0; i < 7; i++) {
-        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        final day = DateFormat('E', 'en').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
     });
@@ -623,7 +623,7 @@ void main() {
         ),
       ));
 
-      final day = DateFormat('E').format(asOf);
+      final day = DateFormat('E', 'en').format(asOf);
       expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       expect(find.text('1'), findsAtLeastNWidgets(1));
     });
@@ -645,7 +645,7 @@ void main() {
       ));
 
       for (var i = 0; i < 30; i++) {
-        final day = DateFormat('E').format(asOf.subtract(Duration(days: i)));
+        final day = DateFormat('E', 'en').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
     });

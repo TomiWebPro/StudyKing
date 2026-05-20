@@ -5,7 +5,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class TopicDependencyRepository {
-  final Logger _logger = const Logger('TopicDependencyRepository');
+  static final Logger _logger = const Logger('TopicDependencyRepository');
   late Box<TopicDependency> _box;
 
   Future<void> init() async {
@@ -26,7 +26,7 @@ class TopicDependencyRepository {
       await _box.put(topicId, newDep);
       return Result.success(newDep);
     } catch (e) {
-      _logger.e('Error getting topic dependency', e);
+      _logger.w('Error getting topic dependency', e);
       return Result.failure(e.toString());
     }
   }
@@ -37,7 +37,7 @@ class TopicDependencyRepository {
       await _box.put(dependency.topicId, dependency);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error updating topic dependency', e);
+      _logger.w('Error updating topic dependency', e);
       return Result.failure(e.toString());
     }
   }
@@ -46,7 +46,7 @@ class TopicDependencyRepository {
     try {
       return Result.success(_box.values.toList());
     } catch (e) {
-      _logger.e('Error getting all dependencies', e);
+      _logger.w('Error getting all dependencies', e);
       return Result.failure(e.toString());
     }
   }

@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/database_service.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -12,15 +12,15 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart' show AdherenceDeviation;
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -28,6 +28,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/features/mentor/services/mentor_schedule_handler.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -181,29 +182,28 @@ class FakePlannerService extends PlannerService {
   void setScheduleResult(bool v) => _scheduleResult = v;
 
   @override
-  Future<PersonalLearningPlan?> loadExistingPlan() async => _plan;
+  Future<Result<PersonalLearningPlan?>> loadExistingPlan() async => Result.success(_plan);
 
   @override
-  Future<List<RoadmapModel>> loadRoadmaps() async => _roadmaps;
+  Future<Result<List<RoadmapModel>>> loadRoadmaps() async => Result.success(_roadmaps);
 
   @override
-  Future<List<PendingActionModel>> loadPendingActions() async => _pendingActions;
+  Future<Result<List<PendingActionModel>>> loadPendingActions() async => Result.success(_pendingActions);
 
   @override
-  Future<List<Session>> getScheduledLessons() async => _scheduledLessons;
+  Future<Result<List<Session>>> getScheduledLessons() async => Result.success(_scheduledLessons);
 
-  @override
   Future<AdherenceDeviation?> checkAdherence() async => _deviation;
 
   @override
-  Future<bool> hasSchedulingConflict({
+  Future<Result<bool>> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,
     String? excludeSessionId,
-  }) async => _hasConflict;
+  }) async => Result.success(_hasConflict);
 
   @override
-  Future<bool> scheduleLesson({
+  Future<Result<bool>> scheduleLesson({
     required String topicId,
     required String topicTitle,
     required String subjectId,
@@ -213,7 +213,7 @@ class FakePlannerService extends PlannerService {
     scheduleCallCount++;
     lastScheduledTopicTitle = topicTitle;
     lastScheduledTopicId = topicId;
-    return _scheduleResult;
+    return Result.success(_scheduleResult);
   }
 }
 
@@ -245,18 +245,18 @@ class FakeProgressTracker extends StudyProgressTracker {
   void setBadges(List<Map<String, dynamic>> badges) => _badges = badges;
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     if (_stats.containsKey('throw')) throw Exception('Simulated error');
-    return _stats;
+    return Result.success(_stats);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getRecommendations(
-      String studentId) async => _recommendations;
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(
+      String studentId) async => Result.success(_recommendations);
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async =>
-      _badges;
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async =>
+      Result.success(_badges);
 }
 
 MentorService createMentorService({
@@ -345,7 +345,7 @@ class _FakeSessionRepo extends SessionRepository {
 
 void main() {
   setUpAll(() async {
-    await initializeDateFormatting('en');
+    await initializeDateFormatting();
   });
 
   group('MentorService', () {

@@ -4,7 +4,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -196,21 +196,21 @@ void main() {
 
       // q1 and q2 should be pending mistakes (last attempt incorrect,
       // no prior correct attempt). q3 should NOT be pending (had correct).
-      expect(pendingMistakes.length, 2);
+      expect(pendingMistakes.data!.length, 2);
       final mistakeQuestionIds =
-          pendingMistakes.map((m) => m.question.id).toSet();
+          pendingMistakes.data!.map((m) => m.question.id).toSet();
       expect(mistakeQuestionIds, contains('q1'));
       expect(mistakeQuestionIds, contains('q2'));
       expect(mistakeQuestionIds, isNot(contains('q3')));
 
       // Verify mistake details
-      for (final mistake in pendingMistakes) {
+      for (final mistake in pendingMistakes.data!) {
         expect(mistake.correctAnswer, isNotEmpty);
         expect(mistake.explanation, isNotNull);
       }
 
       // Extract re-teach questions
-      final redoQuestions = mistakeService.extractRedoQuestions(pendingMistakes);
+      final redoQuestions = mistakeService.extractRedoQuestions(pendingMistakes.data!);
       expect(redoQuestions.length, 2);
       expect(redoQuestions.map((q) => q.id).toSet(),
           equals({'q1', 'q2'}));
@@ -290,13 +290,13 @@ void main() {
       );
 
       // Only the recent wrong attempt should be included
-      expect(sessionMistakes.length, 1);
-      expect(sessionMistakes.first.question.id, 'q_p2');
-      expect(sessionMistakes.first.correctAnswer, 'C');
+      expect(sessionMistakes.data!.length, 1);
+      expect(sessionMistakes.data!.first.question.id, 'q_p2');
+      expect(sessionMistakes.data!.first.correctAnswer, 'C');
 
       // extractRedoQuestions for re-teaching
       final redoQuestions =
-          mistakeService.extractRedoQuestions(sessionMistakes);
+          mistakeService.extractRedoQuestions(sessionMistakes.data!);
       expect(redoQuestions.length, 1);
       expect(redoQuestions.first.id, 'q_p2');
       expect(redoQuestions.first.text, 'Question 2');

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -117,7 +117,7 @@ class SubjectHistoryTab extends StatelessWidget {
                     ),
                     if (session.questionsAnswered > 0)
                       Text(
-                        '${session.correctAnswers}/${session.questionsAnswered}',
+                        '${formatDecimal(session.correctAnswers.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}/${formatDecimal(session.questionsAnswered.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                   ],

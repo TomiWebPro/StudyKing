@@ -257,9 +257,9 @@ void main() {
             sessions, 'test_export',
             directory: dir,
           );
-          expect(file.existsSync(), isTrue);
-          expect(file.path, contains('test_export.csv'));
-          final content = await file.readAsString();
+          expect(file.data!.existsSync(), isTrue);
+          expect(file.data!.path, contains('test_export.csv'));
+          final content = await file.data!.readAsString();
           expect(content, contains('session-1'));
         } finally {
           await dir.delete(recursive: true);
@@ -270,8 +270,8 @@ void main() {
         final dir = await Directory.systemTemp.createTemp('csv_empty_test_');
         try {
           final file = await SessionExportService.writeCSVFile([], 'empty_export', directory: dir);
-          expect(file.existsSync(), isTrue);
-          final content = await file.readAsString();
+          expect(file.data!.existsSync(), isTrue);
+          final content = await file.data!.readAsString();
           expect(content, contains('Session ID'));
         } finally {
           await dir.delete(recursive: true);
@@ -287,7 +287,7 @@ void main() {
             [session], 'test',
             directory: dir,
           );
-          final written = await file.readAsString();
+          final written = await file.data!.readAsString();
           expect(written, equals(csv));
         } finally {
           await dir.delete(recursive: true);
@@ -306,9 +306,9 @@ void main() {
             sessions, 'test_export',
             directory: dir,
           );
-          expect(file.existsSync(), isTrue);
-          expect(file.path, contains('test_export.json'));
-          final content = jsonDecode(await file.readAsString()) as List;
+          expect(file.data!.existsSync(), isTrue);
+          expect(file.data!.path, contains('test_export.json'));
+          final content = jsonDecode(await file.data!.readAsString()) as List;
           expect(content.length, 1);
           expect(content.first['id'], 'session-1');
         } finally {
@@ -320,8 +320,8 @@ void main() {
         final dir = await Directory.systemTemp.createTemp('json_empty_test_');
         try {
           final file = await SessionExportService.writeJSONFile([], 'empty_export', directory: dir);
-          expect(file.existsSync(), isTrue);
-          final content = jsonDecode(await file.readAsString()) as List;
+          expect(file.data!.existsSync(), isTrue);
+          final content = jsonDecode(await file.data!.readAsString()) as List;
           expect(content, isEmpty);
         } finally {
           await dir.delete(recursive: true);
@@ -339,7 +339,7 @@ void main() {
             [session], 'test',
             directory: dir,
           );
-          final written = await file.readAsString();
+          final written = await file.data!.readAsString();
           expect(written, equals(expectedJson));
         } finally {
           await dir.delete(recursive: true);
@@ -358,8 +358,8 @@ void main() {
             [session], 'test-export', l10n,
             directory: dir,
           );
-          expect(file.path, endsWith('.pdf'));
-          expect(file.existsSync(), isTrue);
+          expect(file.data!.path, endsWith('.pdf'));
+          expect(file.data!.existsSync(), isTrue);
         } finally {
           await dir.delete(recursive: true);
         }
@@ -373,7 +373,7 @@ void main() {
             [session], 'test', l10n,
             directory: dir,
           );
-          final bytes = await file.readAsBytes();
+          final bytes = await file.data!.readAsBytes();
           expect(bytes, isNotEmpty);
         } finally {
           await dir.delete(recursive: true);

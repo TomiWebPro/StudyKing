@@ -1,13 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -101,13 +101,13 @@ void main() {
       expect(dueCounts['missing'], 0);
     });
 
-    test('loadTopics extracts unique non-empty topics', () async {
+    test('loadTopicsWithNames extracts unique topic id->name mapping', () async {
       final questionRepo = _FakeQuestionRepository([
-        _question(id: 'q1', topic: 'Algebra'),
-        _question(id: 'q2', topic: 'Geometry'),
-        _question(id: 'q3', topic: 'Algebra'),
-        _question(id: 'q4', topic: ''),
-        _question(id: 'q5', topic: null),
+        _question(id: 'q1', topic: 'Algebra', topicId: 't1'),
+        _question(id: 'q2', topic: 'Geometry', topicId: 't2'),
+        _question(id: 'q3', topic: 'Algebra', topicId: 't1'),
+        _question(id: 'q4', topic: '', topicId: 't4'),
+        _question(id: 'q5', topic: null, topicId: 't5'),
       ]);
 
       final service = PracticeDataService(
@@ -116,12 +116,13 @@ void main() {
         subjectRepo: _FakeSubjectRepository([]),
         studentIdService: FakeStudentIdService(),
       );
-      final topics = await service.loadTopics(questionRepo);
+      final topics = await service.loadTopicsWithNames(questionRepo);
       expect(topics, hasLength(2));
-      expect(topics, containsAll(['Algebra', 'Geometry']));
+      expect(topics['t1'], 'Algebra');
+      expect(topics['t2'], 'Geometry');
     });
 
-    test('loadTopics returns empty list when getAll fails', () async {
+    test('loadTopicsWithNames returns empty map when getAll fails', () async {
       final questionRepo = _FakeFailingQuestionRepository();
 
       final service = PracticeDataService(
@@ -130,15 +131,15 @@ void main() {
         subjectRepo: _FakeSubjectRepository([]),
         studentIdService: FakeStudentIdService(),
       );
-      final topics = await service.loadTopics(questionRepo);
+      final topics = await service.loadTopicsWithNames(questionRepo);
       expect(topics, isEmpty);
     });
 
-    test('loadTopicQuestions filters questions by topic', () async {
+    test('loadTopicIds returns topic IDs', () async {
       final questionRepo = _FakeQuestionRepository([
-        _question(id: 'q1', topic: 'Algebra'),
-        _question(id: 'q2', topic: 'Algebra'),
-        _question(id: 'q3', topic: 'Geometry'),
+        _question(id: 'q1', topicId: 't1'),
+        _question(id: 'q2', topicId: 't1'),
+        _question(id: 'q3', topicId: 't2'),
       ]);
 
       final service = PracticeDataService(
@@ -147,11 +148,12 @@ void main() {
         subjectRepo: _FakeSubjectRepository([]),
         studentIdService: FakeStudentIdService(),
       );
-      final algebraQs = await service.loadTopicQuestions('Algebra');
-      expect(algebraQs, hasLength(2));
+      final ids = await service.loadTopicIds(questionRepo);
+      expect(ids, hasLength(2));
+      expect(ids, containsAll(['t1', 't2']));
     });
 
-    test('loadTopicQuestions returns empty list when getAll fails', () async {
+    test('loadTopicIds returns empty list when getAll fails', () async {
       final failingRepo = _FakeFailingQuestionRepository();
 
       final service = PracticeDataService(
@@ -160,7 +162,7 @@ void main() {
         subjectRepo: _FakeSubjectRepository([]),
         studentIdService: FakeStudentIdService(),
       );
-      final result = await service.loadTopicQuestions('Algebra');
+      final result = await service.loadTopicIds(failingRepo);
       expect(result, isEmpty);
     });
 

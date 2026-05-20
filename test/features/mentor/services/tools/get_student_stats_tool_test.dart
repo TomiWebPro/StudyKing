@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';
 import '../../../../helpers/fakes.dart';
@@ -18,9 +19,9 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
   void setStats(Map<String, dynamic> stats) => _stats = stats;
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     capturedStudentId = studentId;
-    return _stats;
+    return Result.success(_stats);
   }
 }
 

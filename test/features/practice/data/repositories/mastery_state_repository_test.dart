@@ -3,8 +3,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_state_adapter.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 
 class _FakeMasteryStateRepository extends MasteryStateRepository {

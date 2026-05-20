@@ -1,6 +1,6 @@
 import '../errors/result.dart';
 import '../utils/logger.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import '../utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -37,6 +37,7 @@ class AbsenceDeviation extends AdherenceDeviation {
 }
 
 class PlanAdherenceOrchestrator {
+  static final Logger _logger = const Logger('PlanAdherenceOrchestrator');
   final PlanAdherenceRepository _adherenceRepository;
 
   PlanAdherenceRepository get adherenceRepository => _adherenceRepository;
@@ -231,23 +232,29 @@ class PlanAdherenceOrchestrator {
       }
       return null;
     } catch (e) {
-      Logger('PlanAdherenceOrchestrator').e('getDailyAdherenceFeedback failed', e);
+      _logger.w('getDailyAdherenceFeedback failed', e);
       return null;
     }
   }
 
-  Future<void> recordActivity({
+  Future<Result<void>> recordActivity({
     required String studentId,
     required int actualMinutes,
     int actualQuestions = 0,
     String? planId,
   }) async {
-    await _planService.recordDailyAdherence(
-      studentId: studentId,
-      actualQuestions: actualQuestions,
-      actualMinutes: actualMinutes,
-      planId: planId,
-    );
+    try {
+      await _planService.recordDailyAdherence(
+        studentId: studentId,
+        actualQuestions: actualQuestions,
+        actualMinutes: actualMinutes,
+        planId: planId,
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('recordActivity failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
   Future<double> _calculateAdjustmentFactor(String studentId) async {
@@ -257,7 +264,7 @@ class PlanAdherenceOrchestrator {
       if (avgAdherence <= 0.0) return 0.7;
       return (avgAdherence + 0.3).clamp(0.5, 1.0);
     } catch (e) {
-      Logger('PlanAdherenceOrchestrator').e('_calculateAdjustmentFactor failed', e);
+      _logger.w('_calculateAdjustmentFactor failed', e);
       return 0.7;
     }
   }

@@ -78,7 +78,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
     super.dispose();
   }
 
-  static const int _defaultDurationMinutes = 45;
+  static const int _defaultDurationMinutes = Timeouts.defaultLessonDurationMinutes;
 
   void _openTutorMode() {
     if (!mounted) return;
@@ -125,7 +125,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                   children: [
                     OutlinedButton.icon(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.arrow_back),
+                      icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward : Icons.arrow_back),
                       label: Text(l10n.goBack),
                     ),
                     const SizedBox(width: 12),
@@ -246,7 +246,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
                 Semantics(
                   button: true,
                   label: l10n.aiTutor,
-                  child: ElevatedButton.icon(
+                  child: FilledButton.icon(
                     onPressed: _openTutorMode,
                     icon: const Icon(Icons.smart_toy, size: 18),
                     label: Text(l10n.aiTutor),

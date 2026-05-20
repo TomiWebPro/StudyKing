@@ -4,8 +4,8 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_sheet_template.dart';
 
 class TopicSelectionSheet extends StatelessWidget {
-  final List<String> topics;
-  final void Function(String) onTopicSelected;
+  final Map<String, String> topics;
+  final void Function(String topicId) onTopicSelected;
 
   const TopicSelectionSheet({
     super.key,
@@ -18,14 +18,14 @@ class TopicSelectionSheet extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return PracticeSheetTemplate(
       title: l10n.selectTopic,
-      children: topics.map((topic) => Semantics(
-        label: '${l10n.selectTopic} $topic',
+      children: topics.entries.map((entry) => Semantics(
+        label: '${l10n.selectTopic} ${entry.value}',
         child: ListTile(
           leading: const Icon(Icons.topic),
-          title: Text(topic),
+          title: Text(entry.value),
           onTap: () {
             Navigator.pop(context);
-            onTopicSelected(topic);
+            onTopicSelected(entry.key);
           },
         ),
       )).toList(),
@@ -33,8 +33,8 @@ class TopicSelectionSheet extends StatelessWidget {
   }
 
   static Future<void> show(BuildContext context, {
-    required List<String> topics,
-    required void Function(String) onTopicSelected,
+    required Map<String, String> topics,
+    required void Function(String topicId) onTopicSelected,
   }) {
     return showModalBottomSheet(
       context: context,

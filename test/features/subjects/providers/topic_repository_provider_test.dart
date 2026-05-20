@@ -6,7 +6,7 @@ import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class _FakeTopicRepository extends TopicRepository {
@@ -103,6 +103,23 @@ Topic _createTopic({
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('topic_repo_provider_test_').path;
+    Hive.init(hivePath);
+    if (!Hive.isAdapterRegistered(0)) {
+      Hive.registerAdapter(_TestTopicAdapter());
+    }
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    try {
+      await Directory(hivePath).delete(recursive: true);
+    } catch (_) {}
+  });
+
   group('topicRepositoryProvider', () {
     test('creates a TopicRepository', () {
       final container = ProviderContainer();
@@ -369,21 +386,6 @@ void main() {
   });
 
   group('topicRepositoryProvider (real Hive init)', () {
-    late String hivePath;
-
-    setUp(() async {
-      final dir = await Directory.systemTemp.createTemp('topic_provider_test_');
-      hivePath = dir.path;
-      Hive.init(hivePath);
-
-      if (!Hive.isAdapterRegistered(0)) {
-        Hive.registerAdapter(_TestTopicAdapter());
-      }
-    });
-
-    tearDown(() async {
-      await Hive.close();
-    });
 
     test('real provider creates TopicRepository', () {
       final container = ProviderContainer();

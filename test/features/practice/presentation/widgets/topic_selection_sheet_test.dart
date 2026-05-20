@@ -16,7 +16,7 @@ void main() {
     testWidgets('renders topic list', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         TopicSelectionSheet(
-          topics: ['Algebra', 'Geometry'],
+          topics: {'topic-algebra': 'Algebra', 'topic-geometry': 'Geometry'},
           onTopicSelected: (_) {},
         ),
       ));
@@ -26,11 +26,11 @@ void main() {
       expect(find.text('Geometry'), findsOneWidget);
     });
 
-    testWidgets('calls onTopicSelected when topic tapped', (tester) async {
+    testWidgets('calls onTopicSelected with topic id when topic tapped', (tester) async {
       String? selected;
       await tester.pumpWidget(_buildTestApp(
         TopicSelectionSheet(
-          topics: ['Algebra'],
+          topics: {'topic-algebra': 'Algebra'},
           onTopicSelected: (t) => selected = t,
         ),
       ));
@@ -39,13 +39,13 @@ void main() {
       await tester.tap(find.text('Algebra'));
       await tester.pumpAndSettle();
 
-      expect(selected, 'Algebra');
+      expect(selected, 'topic-algebra');
     });
 
     testWidgets('shows topic icon for each item', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         TopicSelectionSheet(
-          topics: ['Algebra', 'Geometry'],
+          topics: {'topic-algebra': 'Algebra', 'topic-geometry': 'Geometry'},
           onTopicSelected: (_) {},
         ),
       ));
@@ -57,7 +57,7 @@ void main() {
     testWidgets('renders select topic title', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         TopicSelectionSheet(
-          topics: ['Algebra'],
+          topics: {'topic-algebra': 'Algebra'},
           onTopicSelected: (_) {},
         ),
       ));
@@ -69,7 +69,7 @@ void main() {
     testWidgets('renders empty topics list gracefully', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         TopicSelectionSheet(
-          topics: [],
+          topics: <String, String>{},
           onTopicSelected: (_) {},
         ),
       ));
@@ -87,7 +87,7 @@ void main() {
             onPressed: () {
               TopicSelectionSheet.show(
                 context,
-                topics: ['Algebra', 'Geometry'],
+                topics: {'topic-algebra': 'Algebra', 'topic-geometry': 'Geometry'},
                 onTopicSelected: (t) => selected = t,
               );
             },
@@ -107,7 +107,7 @@ void main() {
       await tester.tap(find.text('Geometry'));
       await tester.pumpAndSettle();
 
-      expect(selected, 'Geometry');
+      expect(selected, 'topic-geometry');
     });
   });
 }

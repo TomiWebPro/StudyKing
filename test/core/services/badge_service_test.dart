@@ -70,7 +70,7 @@ void main() {
       mockRepo = _FakeBadgeRepository();
       service = BadgeService(
         repository: mockRepo,
-        getStats: (studentId) async => const {
+        getStats: (studentId) async => Result.success({
           'totalAttempts': 0,
           'correctAttempts': 0,
           'accuracy': 0,
@@ -78,7 +78,7 @@ void main() {
           'weeklyActivity': 0,
           'dailyActivity': 0,
           'topicsStudied': 0,
-        },
+        }),
         notificationService: null,
       );
     });
@@ -86,7 +86,7 @@ void main() {
     group('getBadges', () {
       test('returns empty list when no badges', () async {
         final badges = await service.getBadges('student1');
-        expect(badges, isEmpty);
+        expect(badges.data!, isEmpty);
       });
 
       test('returns badges from repository', () async {
@@ -95,41 +95,41 @@ void main() {
           name: 'First Step', description: 'First question',
         ));
         final badges = await service.getBadges('student1');
-        expect(badges, hasLength(1));
-        expect(badges.first.name, equals('First Step'));
+        expect(badges.data!, hasLength(1));
+        expect(badges.data!.first.name, equals('First Step'));
       });
     });
 
     group('checkAndUnlockBadges', () {
       test('runs without errors with minimal stats', () async {
         final unlocked = await service.checkAndUnlockBadges('student1');
-        expect(unlocked, isEmpty);
+        expect(unlocked.data!, isEmpty);
       });
     });
 
     group('hasBadge', () {
       test('returns true when badge exists', () async {
         mockRepo._hasBadgeResult = true;
-        expect(await service.hasBadge('student1', 'century'), isTrue);
+        expect((await service.hasBadge('student1', 'century')).data!, isTrue);
       });
 
       test('returns false when badge does not exist', () async {
         mockRepo._hasBadgeResult = false;
-        expect(await service.hasBadge('student1', 'nonexistent'), isFalse);
+        expect((await service.hasBadge('student1', 'nonexistent')).data!, isFalse);
       });
     });
 
     group('getBadgeCount', () {
       test('returns badge count from repository', () async {
         mockRepo._badgeCount = 3;
-        expect(await service.getBadgeCount('student1'), equals(3));
+        expect((await service.getBadgeCount('student1')).data!, equals(3));
       });
     });
 
     group('getBadgesByCategory', () {
       test('returns empty map when no badges', () async {
         final categorized = await service.getBadgesByCategory('student1');
-        expect(categorized, isEmpty);
+        expect(categorized.data!, isEmpty);
       });
 
       test('groups badges by category', () async {
@@ -150,16 +150,16 @@ void main() {
 
         final categorized = await service.getBadgesByCategory('s1');
 
-        expect(categorized.length, equals(2));
-        expect(categorized['milestone']!.length, equals(2));
-        expect(categorized['accuracy']!.length, equals(1));
+        expect(categorized.data!.length, equals(2));
+        expect(categorized.data!['milestone']!.length, equals(2));
+        expect(categorized.data!['accuracy']!.length, equals(1));
       });
     });
 
     group('getLockedBadges', () {
       test('returns all definitions when no badges are earned', () async {
         final locked = await service.getLockedBadges('student1');
-        expect(locked, hasLength(BadgeDefinitions.all.length));
+        expect(locked.data!, hasLength(BadgeDefinitions.all.length));
       });
 
       test('excludes earned badges from locked list', () async {
@@ -169,17 +169,17 @@ void main() {
           ),
         };
         final locked = await service.getLockedBadges('student1');
-        expect(locked.length, lessThan(BadgeDefinitions.all.length));
+        expect(locked.data!.length, lessThan(BadgeDefinitions.all.length));
       });
     });
 
     group('getBadgeStats', () {
       test('returns stats with zero unlocked badges', () async {
         final stats = await service.getBadgeStats('student1');
-        expect(stats['total'], greaterThan(0));
-        expect(stats['unlocked'], equals(0));
-        expect(stats['locked'], greaterThan(0));
-        expect(stats['completionPercentage'], equals(0.0));
+        expect(stats.data!['total'], greaterThan(0));
+        expect(stats.data!['unlocked'], equals(0));
+        expect(stats.data!['locked'], greaterThan(0));
+        expect(stats.data!['completionPercentage'], equals(0.0));
       });
 
       test('returns stats with some unlocked badges', () async {
@@ -188,8 +188,8 @@ void main() {
         ));
 
         final stats = await service.getBadgeStats('s1');
-        expect(stats['unlocked'], equals(1));
-        expect(stats['locked'], equals(stats['total'] - 1));
+        expect(stats.data!['unlocked'], equals(1));
+        expect(stats.data!['locked'], equals(stats.data!['total'] - 1));
       });
     });
   });

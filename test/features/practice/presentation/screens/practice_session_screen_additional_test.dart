@@ -1,8 +1,6 @@
-import 'dart:io' show Directory;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart' as hive_package;
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -33,22 +31,7 @@ class _FailingOrderedRepo extends FakeQuestionRepository {
   }
 }
 
-String? _hivePath;
-
 void main() {
-  setUp(() async {
-    final dir = await Directory.systemTemp.createTemp('hive_test');
-    _hivePath = dir.path;
-    hive_package.Hive.init(_hivePath!);
-  });
-
-  tearDown(() async {
-    if (_hivePath != null) {
-      await hive_package.Hive.deleteBoxFromDisk('plan_adherences');
-      await hive_package.Hive.deleteBoxFromDisk('plans');
-      await hive_package.Hive.deleteBoxFromDisk('plan_milestones');
-    }
-  });
   group('PracticeSessionScreen - additional coverage', () {
     group('ordered questions loading', () {
       testWidgets('loads ordered questions by IDs', (tester) async {

@@ -6,9 +6,11 @@ final onboardingServiceProvider = Provider<OnboardingService>((ref) {
 });
 
 final onboardingNeededProvider = FutureProvider<bool>((ref) async {
-  return OnboardingService.isOnboardingNeeded();
+  final result = await ref.read(onboardingServiceProvider).isOnboardingNeeded();
+  return result.data ?? true;
 });
 
 final isFirstLaunchProvider = FutureProvider<bool>((ref) async {
-  return OnboardingService.isFirstLaunch();
+  final result = await ref.read(onboardingServiceProvider).isFirstLaunch();
+  return result.data ?? true;
 });

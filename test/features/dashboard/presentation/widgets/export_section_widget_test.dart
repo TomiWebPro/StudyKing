@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
@@ -21,9 +21,9 @@ class _FakeTracker extends StudyProgressTracker {
   _FakeTracker() : super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
-  Future<String> exportProgressCSV(String studentId) async => 'progress,csv,data';
+  Future<Result<String>> exportProgressCSV(String studentId) async => Result.success('progress,csv,data');
   @override
-  Future<String> exportSessionHistoryCSV(String studentId) async => 'session,history,csv';
+  Future<Result<String>> exportSessionHistoryCSV(String studentId) async => Result.success('session,history,csv');
 }
 
 class _FakeInstrumentation extends InstrumentationService {

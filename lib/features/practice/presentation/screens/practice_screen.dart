@@ -1,19 +1,30 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/handlers.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/providers/study_progress_provider.dart';
+import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -42,11 +53,13 @@ class PracticeScreen extends ConsumerStatefulWidget {
 
 class _PracticeScreenState extends ConsumerState<PracticeScreen>
     with AutomaticKeepAliveClientMixin {
-  final Logger _logger = const Logger('PracticeScreen');
+  static final Logger _logger = const Logger('PracticeScreen');
   late final PracticeDataService _dataService;
   late final SpacedRepetitionService _srService;
   late final QuestionRepository _questionRepo;
   late final StudentIdService _studentIdService;
+  late final SessionRepository _sessionRepo;
+  late final StudyProgressTracker _progressTracker;
   List<Subject> _subjects = [];
   bool _isLoading = true;
   String? _loadError;
@@ -56,6 +69,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   int _totalQuestionCount = 0;
   int _questionsToday = 0;
   bool _questionCountLoadFailed = false;
+  bool _isLoadingActivity = true;
+  int _weeklyAccuracy = 0;
+  int _weeklyActivity = 0;
+  int _practiceStreak = 0;
+  int _weakTopicCount = 0;
+  int _mediumTopicCount = 0;
+  int _strongTopicCount = 0;
+  List<Session> _recentSessions = [];
 
   @override
   bool get wantKeepAlive => true;
@@ -66,6 +87,8 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     _srService = ref.read(spacedRepetitionServiceProvider);
     _questionRepo = ref.read(questionRepositoryProvider);
     _studentIdService = ref.read(studentIdServiceProvider);
+    _sessionRepo = ref.read(sessionRepositoryProvider);
+    _progressTracker = ref.read(studyProgressTrackerProvider);
     _dataService = PracticeDataService(
       srService: _srService,
       questionRepo: _questionRepo,
@@ -86,6 +109,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       });
       _loadDueCounts();
       _loadQuestionCount();
+      _loadActivity();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -110,7 +134,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         _isLoadingDueCounts = false;
       });
     } catch (e) {
-      _logger.e('Failed to load due counts', e);
+      _logger.w('Failed to load due counts', e);
       if (mounted) {
         setState(() {
           _isLoadingDueCounts = false;
@@ -136,7 +160,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             .where((a) => a.timestamp.isAfter(today))
             .length;
       } catch (e) {
-        _logger.e('Failed to load attempts count', e);
+        _logger.w('Failed to load attempts count', e);
         _questionsToday = 0;
       }
 
@@ -145,49 +169,151 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         _totalQuestionCount = allQuestions.length;
       });
     } catch (e) {
-      _logger.e('Failed to load question count', e);
+      _logger.w('Failed to load question count', e);
       if (mounted) setState(() => _questionCountLoadFailed = true);
     }
   }
 
+  Future<void> _loadActivity() async {
+    try {
+      final studentId = _studentIdService.getStudentId();
+      final statsResult = await _progressTracker.getOverallStats(studentId);
+      final stats = statsResult.data ?? <String, dynamic>{};
+      final weeklyAcc = stats['accuracy'] as int? ?? 0;
+      final weeklyAct = stats['weeklyActivity'] as int? ?? 0;
+
+      final allMasteryResult =
+          await ref.read(masteryGraphServiceProvider).getAllTopicMastery(studentId);
+      final allMastery = allMasteryResult.data ?? [];
+      int weak = 0, medium = 0, strong = 0;
+      for (final ms in allMastery) {
+        switch (ms.masteryLevel) {
+          case MasteryLevel.novice:
+          case MasteryLevel.browsing:
+          case MasteryLevel.developing:
+            weak++;
+          case MasteryLevel.proficient:
+            medium++;
+          case MasteryLevel.expert:
+            strong++;
+        }
+      }
+
+      final sessionsResult = await _sessionRepo.getByStudent(studentId);
+      final sessions = sessionsResult.data ?? [];
+      final now = DateTime.now();
+      final today = now.dateOnly;
+      int streak = 0;
+      for (var i = 0; i < 365; i++) {
+        final day = today.subtract(Duration(days: i));
+        final hasActivity = sessions.any((s) =>
+            s.startTime.isSameDay(day) && s.completed) ||
+            (allMastery.any((ms) => ms.lastAttempt.isSameDay(day)));
+        if (hasActivity) {
+          streak++;
+        } else {
+          break;
+        }
+      }
+
+      final recentSessions = sessions
+          .where((s) => s.completed && s.endTime != null)
+          .toList()
+        ..sort((a, b) => b.endTime!.compareTo(a.endTime!));
+      final recent = recentSessions.take(3).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _isLoadingActivity = false;
+        _weeklyAccuracy = weeklyAcc;
+        _weeklyActivity = weeklyAct;
+        _practiceStreak = streak;
+        _weakTopicCount = weak;
+        _mediumTopicCount = medium;
+        _strongTopicCount = strong;
+        _recentSessions = recent;
+      });
+    } catch (e) {
+      _logger.w('Failed to load activity stats', e);
+      if (mounted) setState(() => _isLoadingActivity = false);
+    }
+  }
+
   Future<void> _startPractice(Subject subject) async {
+    final topicIds = await _getSubjectTopicIds(subject.id);
+    final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+    if (!canProceed) return;
+    if (!mounted) return;
     final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
         arguments: PracticeSessionArgs(subjectId: subject.id)) as PracticeSessionResult?;
     _onSessionResult(result);
   }
 
-  Future<void> _startTopicPractice(String topic) async {
+  Future<List<String>> _getSubjectTopicIds(String subjectId) async {
+    try {
+      final repo = TopicRepository();
+      await repo.init();
+      final result = await repo.getBySubject(subjectId);
+      return (result.data ?? []).map((t) => t.id).toList();
+    } catch (e) {
+      _logger.w('Failed to get subject topic IDs', e);
+      return [];
+    }
+  }
+
+  Future<bool> _checkPrerequisitesForTopicIds(
+    List<String> topicIds,
+  ) async {
+    if (topicIds.isEmpty) return true;
+    final prereqCheck = PrerequisiteCheckService();
+    final allUnmetTopics = <String, Topic>{};
+    for (final topicId in topicIds) {
+      final result = await prereqCheck.checkPrerequisites(
+        topicId: topicId,
+        studentId: _studentIdService.getStudentId(),
+      );
+      if (result.isSuccess &&
+          !result.data!.isReady &&
+          result.data!.unmetPrerequisiteTopics.isNotEmpty) {
+        for (final t in result.data!.unmetPrerequisiteTopics) {
+          allUnmetTopics[t.id] = t;
+        }
+      }
+    }
+    if (allUnmetTopics.isEmpty) return true;
+    if (!mounted) return false;
+    final dialogResult = await PrerequisiteCheckService.showPrerequisiteDialog(
+      context,
+      unmetTopics: allUnmetTopics.values.toList(),
+    );
+    return dialogResult != true;
+  }
+
+  Future<void> _startTopicPractice(String topicId) async {
     try {
       final prereqCheck = PrerequisiteCheckService();
       final prereqResult = await prereqCheck.checkPrerequisites(
-        topicId: topic,
+        topicId: topicId,
         studentId: _studentIdService.getStudentId(),
       );
       if (prereqResult.isSuccess &&
           !prereqResult.data!.isReady &&
           prereqResult.data!.unmetPrerequisiteTopics.isNotEmpty) {
         if (mounted) {
-          await PrerequisiteCheckService.showPrerequisiteDialog(
+          final dialogResult = await PrerequisiteCheckService.showPrerequisiteDialog(
             context,
             unmetTopics: prereqResult.data!.unmetPrerequisiteTopics,
           );
+          if (dialogResult == true) return;
+        } else {
+          return;
         }
-        return;
       }
 
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
-      final trimmedTopic = topic.trim();
-      var topicQuestions =
-          allQuestions.where((q) => q.topicId == trimmedTopic).toList();
-      if (topicQuestions.isEmpty) {
-        topicQuestions = allQuestions
-            .where((q) =>
-                q.topic != null &&
-                q.topic!.normalized ==
-                    trimmedTopic.toLowerCase())
-            .toList();
-      }
+      final topicQuestions =
+          allQuestions.where((q) => q.topicId == topicId).toList();
       if (topicQuestions.isEmpty) {
         if (!mounted) return;
         final l10n = AppLocalizations.of(context)!;
@@ -195,17 +321,21 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             content: Text(l10n.noQuestionsAvailable)));
         return;
       }
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(topicQuestions);
+      final orderedIds = scored.map((s) => s.question.id).toList();
       if (!mounted) return;
       final tResult = await Navigator.pushNamed(context,
               AppRoutes.practiceSession,
               arguments: PracticeSessionArgs(
                 subjectId: topicQuestions.first.subjectId,
-                topicId: topicQuestions.first.topicId,
-                questionCount: topicQuestions.length,
+                topicId: topicId,
+                orderedQuestionIds: orderedIds,
+                questionCount: orderedIds.length,
               )) as PracticeSessionResult?;
       _onSessionResult(tResult);
     } catch (e) {
-      _logger.e('Error starting practice session', e);
+      _logger.w('Error starting practice session', e);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content:
@@ -213,28 +343,32 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     }
   }
 
-  static const int _minAttemptsForWeakAreas = 10;
-
   Future<void> _launchWeakAreasForSubject(
       MasteryGraphService masteryService, Subject subject) async {
     final l10n = AppLocalizations.of(context)!;
     try {
       final studentId = _studentIdService.getStudentId();
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
+      final subjectQuestions =
+          allQuestions.where((q) => q.subjectId == subject.id).toList();
+      final minAttempts = (subjectQuestions.length * 0.3).ceil().clamp(3, 50);
+
       final attemptRepo = ref.read(attemptRepositoryProvider);
       final attemptResult = await attemptRepo.getByStudent(studentId);
       final allAttempts = attemptResult.data ?? [];
       final subjectAttempts =
           allAttempts.where((a) => a.subjectId == subject.id).toList();
-      if (subjectAttempts.length < _minAttemptsForWeakAreas) {
+      if (subjectAttempts.length < minAttempts) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content: Text(
-                '${subject.name}: ${l10n.practiceAtLeastTen}')));
+                '${subject.name}: Need at least $minAttempts attempted questions (30% of this subject) to identify weak areas')));
         return;
       }
 
       final insufficientData =
-          allAttempts.length < _minAttemptsForWeakAreas * 3;
+          allAttempts.length < minAttempts * 3;
       final weakTopicsResult =
           await masteryService.getWeakTopics(studentId);
       if (weakTopicsResult.isFailure ||
@@ -244,7 +378,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         if (insufficientData) {
           ScaffoldMessenger.of(context).showSnackBar(SnackBar(
               content: Text(
-                  '${l10n.practiceAtLeastTen}. ${l10n.noQuestionsAvailable}')));
+                  'Need at least $minAttempts attempted questions (30% of this subject). ${l10n.noQuestionsAvailable}')));
         } else {
           ScaffoldMessenger.of(context)
               .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
@@ -253,8 +387,6 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       }
       final weakTopicIds =
           weakTopicsResult.data!.map((s) => s.topicId).toSet();
-      final allQuestionsResult = await _questionRepo.getAll().catchError((_) => Result.success(<Question>[]));
-      final allQuestions = allQuestionsResult.data ?? [];
       if (allQuestions.isEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context)
@@ -304,6 +436,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
 
   void _startSpacedRepetitionSession(Subject subject) async {
     try {
+      final topicIds = await _getSubjectTopicIds(subject.id);
+      final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+      if (!canProceed) return;
       final result = await _srService.getPracticeQuestions(subject.id);
       if (result.isFailure || result.data == null || result.data!.isEmpty) {
         if (!mounted) return;
@@ -350,6 +485,14 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       final masteryService = ref.read(masteryGraphServiceProvider);
       await masteryService.init();
       final studentId = _studentIdService.getStudentId();
+      if (_subjects.isNotEmpty) {
+        final allTopicIds = <String>[];
+        for (final subject in _subjects) {
+          allTopicIds.addAll(await _getSubjectTopicIds(subject.id));
+        }
+        final canProceed = await _checkPrerequisitesForTopicIds(allTopicIds);
+        if (!canProceed) return;
+      }
       final atRiskResult = await masteryService.getAtRiskQuestions(studentId);
       if (atRiskResult.isFailure ||
           atRiskResult.data == null ||
@@ -377,13 +520,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       final scored = await scorer.scoreQuestions(atRiskQuestions);
       final orderedIds = scored.map((s) => s.question.id).toList();
       if (!mounted) return;
-      await Navigator.pushNamed(context, AppRoutes.practiceSession,
+      final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
           arguments: PracticeSessionArgs(
             subjectId: atRiskQuestions.first.subjectId,
             orderedQuestionIds: orderedIds,
             questionCount: orderedIds.length,
-          ));
-      _loadDueCounts();
+          )) as PracticeSessionResult?;
+      _onSessionResult(result);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -392,8 +535,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     }
   }
 
-  void _navigateToExam(Subject subject) {
-    Navigator.pushNamed(
+  Future<void> _navigateToExam(Subject subject) async {
+    final topicIds = await _getSubjectTopicIds(subject.id);
+    final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+    if (!canProceed) return;
+    if (!mounted) return;
+    await Navigator.pushNamed(
       context,
       AppRoutes.examSession,
       arguments: ExamSessionArgs(
@@ -401,11 +548,80 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         subjectName: subject.name,
       ),
     );
+    _loadDueCounts();
+  }
+
+  Future<void> _showExamHistory() async {
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final box = await Hive.openBox(HiveBoxNames.examResults);
+      final allResults = box.values.cast<Map<String, dynamic>>().toList()
+        ..sort((a, b) {
+          final aTime = (a['result'] as Map<String, dynamic>?)?['startTime'] as String? ?? '';
+          final bTime = (b['result'] as Map<String, dynamic>?)?['startTime'] as String? ?? '';
+          return bTime.compareTo(aTime);
+        });
+      if (!mounted || allResults.isEmpty) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noExamHistory)),
+          );
+        }
+        return;
+      }
+      if (!mounted) return;
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.examHistory),
+          content: SizedBox(
+            width: double.maxFinite,
+            child: ListView(
+              shrinkWrap: true,
+              children: allResults.take(20).map((entry) {
+                final result = entry['result'] as Map<String, dynamic>?;
+                if (result == null) return const SizedBox.shrink();
+                final accuracy = (result['accuracy'] as num?)?.toDouble() ?? 0.0;
+                final totalCorrect = (result['totalCorrect'] as num?)?.toInt() ?? 0;
+                final totalIncorrect = (result['totalIncorrect'] as num?)?.toInt() ?? 0;
+                final totalSkipped = (result['totalSkipped'] as num?)?.toInt() ?? 0;
+                final totalQuestions = totalCorrect + totalIncorrect + totalSkipped;
+                final startTime = result['startTime'] as String? ?? '';
+                final date = startTime.length >= 10 ? startTime.substring(0, 10) : startTime;
+                return ListTile(
+                  dense: true,
+                  title: Text(
+                    '${formatPercent(accuracy * 100, l10n.localeName, minFractionDigits: 0)} — $totalQuestions ${l10n.questionsLabel}',
+                  ),
+                  subtitle: Text(date),
+                );
+              }).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: Text(l10n.close),
+            ),
+          ],
+        ),
+      );
+    } catch (e) {
+      _logger.w('Failed to load exam history', e);
+    }
   }
 
   void _showSourcePracticeSheet() async {
     final l10n = AppLocalizations.of(context)!;
     try {
+      if (_subjects.isNotEmpty) {
+        final allTopicIds = <String>[];
+        for (final subject in _subjects) {
+          allTopicIds.addAll(await _getSubjectTopicIds(subject.id));
+        }
+        final canProceed = await _checkPrerequisitesForTopicIds(allTopicIds);
+        if (!canProceed) return;
+      }
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
       final sourceMap = <String, Set<String>>{};
@@ -438,14 +654,19 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       if (!mounted) return;
       SourcePracticeSheet.show(context,
           sources: sourceItems,
-          onSourceSelected: (sourceId, sourceTitle) {
+          onSourceSelected: (sourceId, sourceTitle) async {
             final sourceQuestions = allQuestions
                 .where((q) => q.sourceIds.contains(sourceId))
                 .toList();
             if (sourceQuestions.isNotEmpty) {
+              final sourceSubjectId = sourceQuestions.first.subjectId;
+              final topicIds = await _getSubjectTopicIds(sourceSubjectId);
+              final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+              if (!canProceed) return;
+              if (!mounted) return;
               Navigator.pushNamed(context, AppRoutes.practiceSession,
                   arguments: PracticeSessionArgs(
-                    subjectId: sourceQuestions.first.subjectId,
+                    subjectId: sourceSubjectId,
                     questionCount: sourceQuestions.length,
                   )).then((r) => _onSessionResult(r as PracticeSessionResult?));
             } else if (mounted) {
@@ -507,7 +728,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   Future<void> _showTopicSelector() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final topics = await _dataService.loadTopics(_questionRepo);
+      final topics = await _dataService.loadTopicsWithNames(_questionRepo);
       if (topics.isEmpty) {
         if (!mounted) return;
         showDialog(
@@ -535,7 +756,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       if (!mounted) return;
       TopicSelectionSheet.show(context,
           topics: topics,
-          onTopicSelected: (topic) => _startTopicPractice(topic));
+          onTopicSelected: (topicId) => _startTopicPractice(topicId));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -565,14 +786,21 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       await masteryService.init();
       if (_subjects.isEmpty) return;
       if (_subjects.length == 1) {
+        final topicIds = await _getSubjectTopicIds(_subjects.first.id);
+        final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+        if (!canProceed) return;
         await _launchWeakAreasForSubject(masteryService, _subjects.first);
         return;
       }
       if (!mounted) return;
       WeakAreasSheet.show(context,
           subjects: _subjects,
-          onSubjectSelected: (subject) =>
-              _launchWeakAreasForSubject(masteryService, subject));
+          onSubjectSelected: (subject) async {
+            final topicIds = await _getSubjectTopicIds(subject.id);
+            final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+            if (!canProceed) return;
+            await _launchWeakAreasForSubject(masteryService, subject);
+          });
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context)
@@ -640,6 +868,159 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
                 icon: Icons.book, label: l10n.subjects, value: '${_subjects.length}')),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildActivitySection() {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    if (_isLoadingActivity) {
+      return Card(
+        child: Padding(
+          padding: ResponsiveUtils.cardPadding(context),
+          child: const LinearProgressIndicator(),
+        ),
+      );
+    }
+    return Card(
+      child: Padding(
+        padding: ResponsiveUtils.cardPadding(context),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                _buildActivityItem(
+                  icon: Icons.trending_up,
+                  label: l10n.accuracy,
+                  value: formatPercent(_weeklyAccuracy.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
+                ),
+                _buildActivityItem(
+                  icon: Icons.local_fire_department,
+                  label: l10n.thisWeek,
+                  value: '$_weeklyActivity',
+                ),
+                _buildActivityItem(
+                  icon: Icons.star,
+                  label: l10n.weeklyActivity,
+                  value: '${_practiceStreak}d',
+                ),
+              ],
+            ),
+            if (_weakTopicCount > 0 || _mediumTopicCount > 0 || _strongTopicCount > 0)
+              Padding(
+                padding: EdgeInsets.only(
+                  top: ResponsiveUtils.verticalSpacing(context) / 2,
+                ),
+                child: Wrap(
+                  spacing: 6,
+                  runSpacing: 4,
+                  children: [
+                    if (_weakTopicCount > 0)
+                      _buildMasteryChip(context,
+                          '$_weakTopicCount ${l10n.masteryLevelDeveloping}',
+                          theme.colorScheme.error),
+                    if (_mediumTopicCount > 0)
+                      _buildMasteryChip(context,
+                          '$_mediumTopicCount ${l10n.masteryLevelProficient}',
+                          theme.colorScheme.tertiary),
+                    if (_strongTopicCount > 0)
+                      _buildMasteryChip(context,
+                          '$_strongTopicCount ${l10n.masteryLevelExpert}',
+                          theme.colorScheme.primary),
+                  ],
+                ),
+              ),
+            if (_recentSessions.isNotEmpty)
+              Padding(
+                padding: EdgeInsets.only(
+                  top: ResponsiveUtils.verticalSpacing(context) / 2,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.recentSessions,
+                      style: theme.textTheme.labelMedium?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    ...(_recentSessions.take(3).map((s) {
+                      final score = s.questionsAnswered > 0
+                          ? '${(s.correctAnswers / s.questionsAnswered * 100).round()}%'
+                          : '-';
+                      final date = formatDate(s.startTime, l10n: l10n);
+                      return Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Row(
+                          children: [
+                            Icon(Icons.check_circle_outline,
+                                size: 14,
+                                color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 6),
+                            Expanded(
+                              child: Text(
+                                '$date — $score',
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    })),
+                  ],
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActivityItem({
+    required IconData icon,
+    required String label,
+    required String value,
+  }) {
+    final theme = Theme.of(context);
+    return Expanded(
+      child: Column(
+        children: [
+          Icon(icon, size: 20, color: theme.colorScheme.primary),
+          const SizedBox(height: 2),
+          Text(
+            value,
+            style: theme.textTheme.titleSmall
+                ?.copyWith(fontWeight: FontWeight.bold),
+          ),
+          Text(
+            label,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMasteryChip(BuildContext context, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.15),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Text(
+        label,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: color,
+              fontWeight: FontWeight.w600,
+            ),
       ),
     );
   }
@@ -716,6 +1097,9 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
               ),
             ),
           _buildSummaryRow(),
+          const SizedBox(height: 8),
+          _buildActivitySection(),
+          const SizedBox(height: 8),
           if (_totalQuestionCount == 0) _buildNoQuestionsBanner() else
           PracticeModeGrid(
             isLoadingDueCounts: _isLoadingDueCounts,
@@ -767,6 +1151,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         title: l10n.questionBankLink,
         description: l10n.browseAndManageQuestions,
         onTap: () => Navigator.pushNamed(context, AppRoutes.questionBank),
+      ),
+      _ExtraModeCard(
+        icon: Icons.history,
+        iconColor: Theme.of(context).colorScheme.primary,
+        title: l10n.examHistory,
+        description: l10n.viewPastExamResults,
+        onTap: _showExamHistory,
       ),
     ];
     return Padding(

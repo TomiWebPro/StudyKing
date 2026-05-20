@@ -65,7 +65,7 @@
       }
     }
   },
-  "sessionDurationMinutes": "Sesión de {minutes} min",
+  "sessionDurationMinutes": "{minutes} min de sesión",
   "@sessionDurationMinutes": {
     "description": "Session duration in minutes",
     "placeholders": {
@@ -2157,7 +2157,7 @@
       }
     }
   },
-  "tokensAndCost": "Tokens: {count} ({cost})",
+  "tokensAndCost": "Fichas: {count} ({cost})",
   "@tokensAndCost": {
     "description": "Label showing token count and cost",
     "placeholders": {
@@ -2701,6 +2701,10 @@
   "@mentorSystemPrompt": {
     "description": "System prompt for Mentor AI in the current locale"
   },
+  "mentorSystemPromptScheduling": "IMPORTANTE: Cuando el estudiante pregunte sobre programar lecciones, crear planes o reprogramar, tu respuesta debe reconocer la solicitud e indicar que presentarás una propuesta de confirmación. No digas ni impliques que la programación o el cambio de plan se ha comprometido o completado. Usa lenguaje condicional como \"Puedo ayudarte con eso\", \"Déjame verificar la disponibilidad\" o \"Prepararé una propuesta para que la confirmes\". Después de tu respuesta, el sistema presentará un diálogo de confirmación al estudiante antes de aplicar cualquier cambio.",
+  "@mentorSystemPromptScheduling": {
+    "description": "Additional scheduling instructions appended to Mentor system prompt"
+  },
   "aboutApplicationName": "StudyKing",
   "@aboutApplicationName": {
     "description": "Application name for About dialog"
@@ -2732,6 +2736,19 @@
   "lessonFallbackTitle": "Lección",
   "@lessonFallbackTitle": {
     "description": "Fallback title for a lesson when name is missing"
+  },
+  "lessonFallbackContent": "Estudia los conceptos clave de {topicTitle}. Concéntrate en entender los principios fundamentales.",
+  "@lessonFallbackContent": {
+    "description": "Fallback content template for a lesson when LLM generation fails",
+    "placeholders": {
+      "topicTitle": {
+        "type": "String"
+      }
+    }
+  },
+  "lessonPlanFallbackTitle": "Plan de lección para esta sesión",
+  "@lessonPlanFallbackTitle": {
+    "description": "Fallback title for a lesson plan when JSON parsing fails"
   },
   "errorWithMessage": "Error: {error}",
   "@errorWithMessage": {
@@ -4733,7 +4750,7 @@
       }
     }
   },
-  "tokensLabel": "{count} tokens",
+  "tokensLabel": "{count} fichas",
   "@tokensLabel": {
     "description": "Token count label with formatted number",
     "placeholders": {
@@ -4930,6 +4947,18 @@
   "@cancelLessonConfirmation": {
     "description": "Confirmation dialog when cancelling a lesson"
   },
+  "orphanedSessionFound": "Lección Incompleta Encontrada",
+  "@orphanedSessionFound": {
+    "description": "Dialog title when an incomplete tutor lesson is found on startup"
+  },
+  "orphanedSessionMessage": "Se encontró una lección incompleta sobre \"{topicTitle}\" de {time}. ¿Qué desea hacer?",
+  "@orphanedSessionMessage": {
+    "description": "Message shown when an incomplete tutor session is found on startup",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
   "sessionProgressLabel": "Progreso de la sesión: {current} de {total}",
   "@sessionProgressLabel": {
     "description": "Semantic label for session progress bar",
@@ -5119,7 +5148,41 @@
   },
   "mentorScheduleFail": "No pude programar la lección. Por favor, inténtelo de nuevo o revise su planificador.",
   "@mentorScheduleFail": {
+    "description": "Message when scheduling a lesson fails"
+  },
+  "toolScheduleLessonResult": "Lección programada: {topicTitle}",
+  "@toolScheduleLessonResult": {
+    "description": "Result message when a lesson is scheduled via tool",
+    "placeholders": {
+      "topicTitle": { "type": "String" }
+    }
+  },
+  "toolScheduleLessonFail": "Error al programar la lección",
+  "@toolScheduleLessonFail": {
+    "description": "Result message when scheduling fails via tool"
+  },
+  "toolGenerateBlocksFail": "Error al generar bloques de lección",
+  "@toolGenerateBlocksFail": {
+    "description": "Result message when lesson block generation fails via tool"
+  },
+  "toolCreatePlanResult": "Plan creado para {course} durante {days} días",
+  "@toolCreatePlanResult": {
+    "description": "Result message when a plan is created via tool",
+    "placeholders": {
+      "course": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+  "toolCreatePlanFail": "Error al crear el plan",
+  "@toolCreatePlanFail": {
+    "description": "Result message when plan creation fails via tool"
+  },
+  "@mentorScheduleFail": {
     "description": "Failure message when lesson cannot be scheduled"
+  },
+  "mentorRescheduleNotFound": "No se pudo encontrar la lección para reprogramar. Es posible que ya haya sido eliminada o completada.",
+  "@mentorRescheduleNotFound": {
+    "description": "Message when the session to reschedule is not found"
   },
   "mentorRescheduleNoFreeSlot": "No se pudo encontrar un espacio libre para reprogramar \"{topic}\". Por favor, verifique su disponibilidad en el planificador.",
   "@mentorRescheduleNoFreeSlot": {
@@ -6223,6 +6286,241 @@
       }
     }
   },
+  "avgTimePerQuestion": "Tiempo prom./pregunta",
+  "@avgTimePerQuestion": {
+    "description": "Label for average time per question in exam results"
+  },
+  "examResultsSrsImpact": "Los resultados afectarán la programación de repaso espaciado de {count} preguntas.",
+  "@examResultsSrsImpact": {
+    "description": "Message about spaced repetition impact in exam results",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "questionsAtAGlance": "Preguntas de un vistazo",
+  "@questionsAtAGlance": {
+    "description": "Section header for question overview in exam results"
+  },
+  "noExamHistory": "No hay historial de exámenes disponible",
+  "@noExamHistory": {
+    "description": "Message shown when no exam history exists"
+  },
+  "examHistory": "Historial de Exámenes",
+  "@examHistory": {
+    "description": "Title for exam history dialog"
+  },
+  "durationMinutesSeconds": "{minutes}m {seconds}s",
+  "@durationMinutesSeconds": {
+    "description": "Duration format with minutes and seconds",
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "seconds": { "type": "int" }
+    }
+  },
+  "viewPastExamResults": "Ver resultados de exámenes anteriores",
+  "@viewPastExamResults": {
+    "description": "Description for exam history card"
+  },
+  "mentorContextHeader": "Contexto actual del estudiante:",
+  "@mentorContextHeader": {
+    "description": "Header for student context section in mentor prompt"
+  },
+  "mentorContextTotalAttempts": "Intentos totales: {count}",
+  "@mentorContextTotalAttempts": {
+    "description": "Label for total attempts count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextCorrectAttempts": "Intentos correctos: {count}",
+  "@mentorContextCorrectAttempts": {
+    "description": "Label for correct attempts count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextAccuracy": "Precisión: {percent}%",
+  "@mentorContextAccuracy": {
+    "description": "Label for accuracy percentage in mentor context",
+    "placeholders": {
+      "percent": { "type": "String" }
+    }
+  },
+  "mentorContextTopicsStudied": "Temas estudiados: {count}",
+  "@mentorContextTopicsStudied": {
+    "description": "Label for topics studied count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextWeeklyActivity": "Actividad semanal: {count} intentos",
+  "@mentorContextWeeklyActivity": {
+    "description": "Label for weekly activity count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextTotalStudyTime": "Tiempo total de estudio: {hours} horas",
+  "@mentorContextTotalStudyTime": {
+    "description": "Label for total study time in mentor context",
+    "placeholders": {
+      "hours": { "type": "String" }
+    }
+  },
+  "mentorContextPlanPhase": "Plan existente: fase actual (día {currentDay} de {totalDays})",
+  "@mentorContextPlanPhase": {
+    "description": "Label for plan phase in mentor context",
+    "placeholders": {
+      "currentDay": { "type": "int" },
+      "totalDays": { "type": "int" }
+    }
+  },
+  "mentorContextPlanAdherence": "Adherencia al plan: {percent}%",
+  "@mentorContextPlanAdherence": {
+    "description": "Label for plan adherence in mentor context",
+    "placeholders": {
+      "percent": { "type": "String" }
+    }
+  },
+  "mentorContextLowAdherence": "Baja adherencia durante {count} días consecutivos",
+  "@mentorContextLowAdherence": {
+    "description": "Label for low adherence warning in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextDaysSinceActivity": "Días desde la última actividad: {count}",
+  "@mentorContextDaysSinceActivity": {
+    "description": "Label for days since last activity in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextWelcomeBack": "IMPORTANTE: El estudiante regresa después de una ausencia de {count} días. Proporcione una cálida bienvenida y sugiera pasos específicos para ponerse al día.",
+  "@mentorContextWelcomeBack": {
+    "description": "Welcome back message after absence in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextActiveRoadmaps": "Roadmaps activos: {count}",
+  "@mentorContextActiveRoadmaps": {
+    "description": "Label for active roadmaps count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextRoadmapProgress": "{goal}: {completed}/{total} hitos completados",
+  "@mentorContextRoadmapProgress": {
+    "description": "Label for roadmap progress in mentor context",
+    "placeholders": {
+      "goal": { "type": "String" },
+      "completed": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "mentorContextNextMilestone": "Próximo hito: \"{title}\" vence {dueDate}",
+  "@mentorContextNextMilestone": {
+    "description": "Label for next milestone in mentor context",
+    "placeholders": {
+      "title": { "type": "String" },
+      "dueDate": { "type": "String" }
+    }
+  },
+  "mentorContextPendingActions": "Acciones pendientes que esperan decisión: {count}",
+  "@mentorContextPendingActions": {
+    "description": "Label for pending actions count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextPendingActionItem": "{type}: {topic}",
+  "@mentorContextPendingActionItem": {
+    "description": "Format for a pending action item in mentor context",
+    "placeholders": {
+      "type": { "type": "String" },
+      "topic": { "type": "String" }
+    }
+  },
+  "mentorContextUpcomingLessons": "Próximas lecciones (próximas {count}):",
+  "@mentorContextUpcomingLessons": {
+    "description": "Header for upcoming lessons in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextLessonItem": "\"{title}\" a las {time} ({duration}min)",
+  "@mentorContextLessonItem": {
+    "description": "Format for a lesson item in mentor context",
+    "placeholders": {
+      "title": { "type": "String" },
+      "time": { "type": "String" },
+      "duration": { "type": "int" }
+    }
+  },
+  "mentorContextWeakTopics": "Temas débiles que necesitan atención:",
+  "@mentorContextWeakTopics": {
+    "description": "Header for weak topics section in mentor context"
+  },
+  "mentorContextWeakTopicItem": "{topic} (precisión: {accuracy}%)",
+  "@mentorContextWeakTopicItem": {
+    "description": "Format for a weak topic item in mentor context",
+    "placeholders": {
+      "topic": { "type": "String" },
+      "accuracy": { "type": "String" }
+    }
+  },
+  "mentorContextStudyTimeToday": "Tiempo de estudio de hoy: {minutes} minutos",
+  "@mentorContextStudyTimeToday": {
+    "description": "Label for today's study time in mentor context",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "mentorContextCapExceeded": "ADVERTENCIA: Límite diario de estudio ({cap} min) excedido por {today} minutos",
+  "@mentorContextCapExceeded": {
+    "description": "Warning when daily study cap is exceeded in mentor context",
+    "placeholders": {
+      "cap": { "type": "int" },
+      "today": { "type": "int" }
+    }
+  },
+  "mentorContextCapRemaining": "Límite diario: {cap} minutos ({remaining} min restantes)",
+  "@mentorContextCapRemaining": {
+    "description": "Label for daily cap remaining in mentor context",
+    "placeholders": {
+      "cap": { "type": "int" },
+      "remaining": { "type": "int" }
+    }
+  },
+  "mentorContextStreak": "¡Felicidades! Racha de {count} días de estudio!",
+  "@mentorContextStreak": {
+    "description": "Congratulations message for long study streak in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextStreakGood": "{count} días consecutivos de estudio - ¡buena consistencia!",
+  "@mentorContextStreakGood": {
+    "description": "Positive message for good study consistency in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextSessionsToday": "Sesiones hoy: {count}",
+  "@mentorContextSessionsToday": {
+    "description": "Label for sessions today count in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "mentorContextLateNightWarning": "ADVERTENCIA: {count} sesión(es) iniciada(s) después de las 10 PM (estudio nocturno detectado)",
+  "@mentorContextLateNightWarning": {
+    "description": "Warning about late-night study sessions in mentor context",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "manualSessionTracker": "Rastreador de Sesiones Manual",
   "@manualSessionTracker": {
     "description": "Title for manual session tracker"
@@ -6622,14 +6920,14 @@
   "@dependenciesNav": {
     "description": "Popup menu item for topic dependencies"
   },
-  "prerequisitesCount": "{count} requisitos previos",
+  "prerequisitesCount": "{count, plural, =1{1 requisito previo} other{{count} requisitos previos}}",
   "@prerequisitesCount": {
     "description": "Label showing prerequisite count",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "downstreamCount": "{count} dependientes",
+  "downstreamCount": "{count, plural, =1{1 dependiente} other{{count} dependientes}}",
   "@downstreamCount": {
     "description": "Label showing downstream topic count",
     "placeholders": {
@@ -7010,5 +7308,21 @@
     "microphonePermissionRequired": "Permiso de Micrófono Requerido",
     "@microphonePermissionRequired": {
       "description": "Dialog title when microphone permission is needed"
+    },
+    "pageIndicator": "{current} / {total}",
+    "@pageIndicator": {
+      "description": "Indicador de número de página que muestra la página actual del total",
+      "placeholders": {
+        "current": {
+          "type": "int"
+        },
+        "total": {
+          "type": "int"
+        }
+      }
+    },
+    "showOnboardingTour": "Mostrar tour de introducción",
+    "@showOnboardingTour": {
+      "description": "Opción de configuración para volver a mostrar el tour de introducción"
     }
   }

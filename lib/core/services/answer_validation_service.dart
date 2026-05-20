@@ -5,6 +5,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import '../data/models/question_model.dart';
 
@@ -77,12 +78,12 @@ class AnswerValidationService {
   }) {
     final answer = userAnswer.normalized;
     final correct = evaluation.correctAnswer.normalized;
-    final isExactMatch = answer == correct;
+    final isExactMatch = AnswerComparator.areEquivalent(userAnswer, evaluation.correctAnswer);
 
     bool isMatch = isExactMatch;
     if (!isMatch) {
       for (final acceptable in evaluation.acceptableAnswers) {
-        if (acceptable.normalized == answer) {
+        if (AnswerComparator.areEquivalent(userAnswer, acceptable)) {
           isMatch = true;
           break;
         }
@@ -94,8 +95,8 @@ class AnswerValidationService {
     }
 
     if (!isMatch && evaluation.evaluationType == EvaluationType.stepBased && evaluation.steps != null && evaluation.steps!.isNotEmpty) {
-      final answerLower = userAnswer.toLowerCase();
-      isMatch = evaluation.steps!.every((step) => answerLower.contains(step.requiredAnswer.toLowerCase()));
+      final answerLower = userAnswer.normalized;
+      isMatch = evaluation.steps!.every((step) => answerLower.contains(step.requiredAnswer.normalized));
     }
 
     double score;
@@ -127,10 +128,10 @@ class AnswerValidationService {
 
   double _calculateStepScore(List<EvaluationStep> steps, String userAnswer) {
     if (steps.isEmpty) return 1.0;
-    final userAnswerLower = userAnswer.toLowerCase();
+    final userAnswerLower = userAnswer.normalized;
     var matchedSteps = 0;
     for (final step in steps) {
-      if (userAnswerLower.contains(step.requiredAnswer.toLowerCase())) {
+      if (userAnswerLower.contains(step.requiredAnswer.normalized)) {
         matchedSteps++;
       }
     }
@@ -144,9 +145,9 @@ class AnswerValidationService {
     String? partialStepsFormat,
     String? noStepsFormat,
   }) {
-    final userAnswerLower = userAnswer.toLowerCase();
-    final matchedCount = steps.where((s) => userAnswerLower.contains(s.requiredAnswer.toLowerCase())).length;
-    final missingSteps = steps.where((s) => !userAnswerLower.contains(s.requiredAnswer.toLowerCase())).map((s) => s.requiredAnswer).join(', ');
+    final userAnswerLower = userAnswer.normalized;
+    final matchedCount = steps.where((s) => userAnswerLower.contains(s.requiredAnswer.normalized)).length;
+    final missingSteps = steps.where((s) => !userAnswerLower.contains(s.requiredAnswer.normalized)).map((s) => s.requiredAnswer).join(', ');
     if (matchedCount == steps.length) {
       return allStepsFormat ?? _messages.allStepsFormat(steps.length);
     } else if (matchedCount > 0) {
@@ -392,7 +393,7 @@ class QuestionAnswerValidator {
   }
 
   static String _normalizeMathExpression(String expr) {
-    return expr.replaceAll(' ', '').toLowerCase().replaceAll(r'x', '*');
+    return expr.replaceAll(' ', '').normalized.replaceAll(r'x', '*');
   }
 
   static ValidationResult validateEssayAnswer(String userAnswer, Markscheme? markscheme, {required ValidationMessages messages}) {
@@ -433,7 +434,7 @@ class QuestionAnswerValidator {
       );
     }
     final hasRequiredSteps = markscheme.steps.every((step) {
-      return answer.toLowerCase().contains(step.requiredAnswer.toLowerCase());
+      return answer.normalized.contains(step.requiredAnswer.normalized);
     });
     return ValidationResult(
       isCorrect: hasRequiredSteps,

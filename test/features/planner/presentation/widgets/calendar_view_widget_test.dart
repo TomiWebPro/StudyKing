@@ -120,7 +120,7 @@ PersonalLearningPlan createEmptyPlan() {
 void main() {
   setUp(() async {
     Intl.defaultLocale = 'en';
-    await initializeDateFormatting('en');
+    await initializeDateFormatting();
   });
 
   group('CalendarViewWidget', () {

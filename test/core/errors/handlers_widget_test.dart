@@ -1799,4 +1799,54 @@ void main() {
       expect(find.byIcon(Icons.error), findsOneWidget);
     });
   });
+
+  group('AppErrorHandler.showSuccess', () {
+    testWidgets('displays success message in snackbar', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showSuccess(context, 'Operation completed successfully');
+      await tester.pump();
+      expect(find.text('Operation completed successfully'), findsOneWidget);
+    });
+
+    testWidgets('shows floating snackbar', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showSuccess(context, 'Success');
+      await tester.pump();
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.behavior, equals(SnackBarBehavior.floating));
+    });
+
+    testWidgets('shows snackbar with Text content', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showSuccess(context, 'Saved');
+      await tester.pump();
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.content, isA<Text>());
+    });
+  });
+
+  group('AppErrorHandler.showError', () {
+    testWidgets('displays error message in snackbar', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showError(context, 'Something went wrong');
+      await tester.pump();
+      expect(find.text('Something went wrong'), findsOneWidget);
+    });
+
+    testWidgets('shows floating snackbar', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showError(context, 'Error');
+      await tester.pump();
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.behavior, equals(SnackBarBehavior.floating));
+    });
+
+    testWidgets('shows snackbar with Text content', (tester) async {
+      final context = await captureContext(tester);
+      AppErrorHandler.showError(context, 'Failed');
+      await tester.pump();
+      final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
+      expect(snackBar.content, isA<Text>());
+    });
+  });
 }

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../../core/errors/handlers.dart';
-import '../../../core/data/models/topic_model.dart';
-import '../../../core/routes/app_router.dart';
-import '../../../l10n/generated/app_localizations.dart';
-import '../../../core/utils/responsive.dart';
-import '../../../core/widgets/widgets.dart';
-import '../../subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/routes/app_router.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/core/widgets/widgets.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class TopicListScreen extends ConsumerStatefulWidget {
   const TopicListScreen({super.key});
@@ -83,8 +83,8 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
               onTap: () => Navigator.pushNamed(
                 context,
                 AppRoutes.lessonList,
-                arguments: LessonListArgs(
-                    topicId: t.id, topicTitle: t.title),
+              arguments: LessonListArgs(
+                  topicId: t.id, topicTitle: t.title, subjectId: t.subjectId),
               ),
             ),
           ),

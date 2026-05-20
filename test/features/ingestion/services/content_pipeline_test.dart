@@ -8,7 +8,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 
 class _FakeLlmService extends LlmService {
   _FakeLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));

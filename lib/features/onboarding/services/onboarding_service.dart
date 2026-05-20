@@ -1,3 +1,4 @@
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'onboarding_storage.dart';
 
@@ -7,39 +8,61 @@ class OnboardingService {
   static const String onboardingKey = 'onboarding_completed';
   static const String dontShowAgainKey = 'onboarding_dont_show_again';
 
-  static OnboardingStorage _storage = HiveOnboardingStorage();
+  final OnboardingStorage _storage;
 
-  /// Replace the storage backend (used for test injection).
-  static void setStorage(OnboardingStorage storage) {
-    _storage = storage;
-  }
+  OnboardingService({OnboardingStorage? storage})
+      : _storage = storage ?? HiveOnboardingStorage();
 
-  static Future<bool> isOnboardingNeeded() async {
+  Future<Result<bool>> isOnboardingNeeded() async {
     try {
       final completed = await _storage.getBool(onboardingKey);
       final dontShow = await _storage.getBool(dontShowAgainKey);
-      return !completed && !dontShow;
+      return Result.success(!completed && !dontShow);
     } catch (e) {
       _logger.w('Failed to check onboarding needed: $e');
-      return true;
+      return Result.failure(e.toString());
     }
   }
 
-  static Future<void> markCompleted() async {
-    await _storage.setBool(onboardingKey, true);
+  Future<Result<void>> markCompleted() async {
+    try {
+      await _storage.setBool(onboardingKey, true);
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to mark onboarding completed', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  static Future<void> markDontShowAgain() async {
-    await _storage.setBool(dontShowAgainKey, true);
+  Future<Result<void>> markDontShowAgain() async {
+    try {
+      await _storage.setBool(dontShowAgainKey, true);
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to mark onboarding dont show again', e);
+      return Result.failure(e.toString());
+    }
   }
 
-  static Future<bool> isFirstLaunch() async {
+  Future<Result<bool>> isFirstLaunch() async {
     try {
       final completed = await _storage.getBool(onboardingKey);
-      return !completed;
+      return Result.success(!completed);
     } catch (e) {
       _logger.w('Failed to check first launch: $e');
-      return true;
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<void>> resetOnboarding() async {
+    try {
+      await _storage.setBool(onboardingKey, false);
+      await _storage.setBool(dontShowAgainKey, false);
+      _logger.w('Onboarding has been reset');
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to reset onboarding: $e');
+      return Result.failure(e.toString());
     }
   }
 }

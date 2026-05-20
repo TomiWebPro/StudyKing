@@ -16,7 +16,7 @@ class PdfExtractionResult {
 }
 
 class PdfExtractor {
-  final Logger _logger = const Logger('PdfExtractor');
+  static final Logger _logger = const Logger('PdfExtractor');
 
   Future<PdfExtractionResult> extractFromFile(String filePath) async {
     try {
@@ -31,7 +31,7 @@ class PdfExtractor {
       final bytes = await file.readAsBytes();
       return extractFromBytes(bytes);
     } catch (e) {
-      _logger.e('Failed to read PDF file', e);
+      _logger.w('Failed to read PDF file', e);
       return const PdfExtractionResult(
         text: '',
         extractionMethod: 'file_read_error',
@@ -65,7 +65,7 @@ class PdfExtractor {
         );
       }
     } catch (e) {
-      _logger.e('Failed to clean raw PDF content', e);
+      _logger.w('Failed to clean raw PDF content', e);
     }
 
     if (simpleExtraction.text.isNotEmpty) {
@@ -116,7 +116,7 @@ class PdfExtractor {
         extractionMethod: 'pdf_text_extracted',
       );
     } catch (e) {
-      _logger.e('Simple PDF extraction failed', e);
+      _logger.w('Simple PDF extraction failed', e);
       return PdfExtractionResult(
         text: '',
         pageCount: pageCount,

@@ -115,5 +115,48 @@ void main() {
 
       expect(find.byIcon(Icons.book), findsOneWidget);
     });
+
+    testWidgets('renders with custom card theme margin', (tester) async {
+      final lesson = createLesson(blockCount: 3);
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(
+          body: Theme(
+            data: ThemeData().copyWith(
+              cardTheme: const CardThemeData(
+                margin: EdgeInsets.only(bottom: 24, left: 8, right: 8, top: 4),
+              ),
+            ),
+            child: LessonListItem(
+              lesson: lesson,
+              topicTitle: 'Topic 1',
+            ),
+          ),
+        ),
+      ));
+
+      expect(find.text('Algebra Basics'), findsOneWidget);
+      expect(find.text('3 blocks'), findsOneWidget);
+    });
+
+    testWidgets('renders single block count correctly', (tester) async {
+      final lesson = createLesson(blockCount: 1);
+      await tester.pumpWidget(buildApp(
+        LessonListItem(lesson: lesson, topicTitle: 'Topic 1'),
+      ));
+
+      expect(find.text('1 block'), findsOneWidget);
+    });
+
+    testWidgets('renders zero block count correctly', (tester) async {
+      final lesson = createLesson(blockCount: 0);
+      await tester.pumpWidget(buildApp(
+        LessonListItem(lesson: lesson, topicTitle: 'Topic 1'),
+      ));
+
+      expect(find.text('0 blocks'), findsOneWidget);
+    });
   });
 }

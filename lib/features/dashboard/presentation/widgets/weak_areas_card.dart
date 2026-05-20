@@ -2,20 +2,23 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class WeakAreasCard extends ConsumerWidget {
+  static final Logger _logger = const Logger('WeakAreasCard');
   final List<MasteryState> allMastery;
   final String Function(String) resolveTopicName;
+  final void Function(String topicId)? onTopicTap;
 
   const WeakAreasCard({
     super.key,
     required this.allMastery,
     required this.resolveTopicName,
+    this.onTopicTap,
   });
 
   @override
@@ -61,9 +64,13 @@ class WeakAreasCard extends ConsumerWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      resolveTopicName(state.topicId),
-                      style: Theme.of(context).textTheme.bodyMedium,
+                    child: InkWell(
+                      onTap: onTopicTap != null ? () => onTopicTap!(state.topicId) : null,
+                      borderRadius: BorderRadius.circular(4),
+                      child: Text(
+                        resolveTopicName(state.topicId),
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
                     ),
                   ),
                   Text(
@@ -102,14 +109,39 @@ class WeakAreasCard extends ConsumerWidget {
 
   void _practiceWeakArea(BuildContext context, WidgetRef ref, String topicId) async {
     if (topicId.isEmpty) return;
-    await Navigator.pushNamed(
-      context,
-      AppRoutes.practiceSession,
-      arguments: PracticeSessionArgs(
-        subjectId: '',
-        topicId: topicId,
-      ),
-    );
+    final l10n = AppLocalizations.of(context)!;
+    try {
+      final questionRepo = ref.read(questionRepositoryProvider);
+      final allQResult = await questionRepo.getAll();
+      final allQuestions = allQResult.data ?? [];
+      final topicQuestions = allQuestions.where((q) => q.topicId == topicId).toList();
+      if (topicQuestions.isEmpty) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noQuestionsAvailable)));
+        return;
+      }
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(topicQuestions);
+      final orderedIds = scored.map((s) => s.question.id).toList();
+      final subjectId = topicQuestions.first.subjectId;
+      if (!context.mounted) return;
+      await Navigator.pushNamed(
+        context,
+        AppRoutes.practiceSession,
+        arguments: PracticeSessionArgs(
+          subjectId: subjectId,
+          topicId: topicId,
+          orderedQuestionIds: orderedIds,
+          questionCount: orderedIds.length,
+        ),
+      );
+    } catch (e) {
+      _logger.w('Failed to practice weak area', e);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.somethingWentWrong)));
+    }
   }
 
   void _practiceAllWeakAreas(BuildContext context, WidgetRef ref) async {
@@ -146,7 +178,7 @@ class WeakAreasCard extends ConsumerWidget {
         ),
       );
     } catch (e) {
-      const Logger('WeakAreasCard').e('Failed to practice weak areas', e);
+      _logger.w('Failed to practice weak areas', e);
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.somethingWentWrong)));

@@ -4,7 +4,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
@@ -167,116 +167,6 @@ Question _createQuestion({
 }
 
 void main() {
-  group('SpacedRepetitionQueries', () {
-    group('getQuestionsDueForReview', () {
-      test('returns questions due before cutoff', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 1, 1)));
-        box.put('q2', _createQuestion(
-          id: 'q2', nextReview: DateTime(2099, 1, 1)));
-
-        final due = SpacedRepetitionQueries.getQuestionsDueForReview(
-          box, asOf: DateTime(2026, 5, 12));
-        expect(due.length, 1);
-        expect(due.first.id, 'q1');
-      });
-
-      test('returns empty when none due', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2099, 1, 1)));
-
-        final due = SpacedRepetitionQueries.getQuestionsDueForReview(
-          box, asOf: DateTime(2026, 5, 12));
-        expect(due, isEmpty);
-      });
-
-      test('sorts by nextReview ascending', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 6, 1)));
-        box.put('q2', _createQuestion(
-          id: 'q2', nextReview: DateTime(2020, 1, 1)));
-
-        final due = SpacedRepetitionQueries.getQuestionsDueForReview(
-          box, asOf: DateTime(2026, 5, 12));
-        expect(due[0].id, 'q2');
-        expect(due[1].id, 'q1');
-      });
-    });
-
-    group('getQuestionsDueAfter', () {
-      test('returns questions due after date', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 1, 1)));
-        box.put('q2', _createQuestion(
-          id: 'q2', nextReview: DateTime(2023, 6, 1)));
-
-        final due = SpacedRepetitionQueries.getQuestionsDueAfter(
-          box, DateTime(2023, 1, 1));
-        expect(due.length, 1);
-        expect(due.first.id, 'q1');
-      });
-
-      test('returns empty when no questions due', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2026, 6, 1)));
-
-        final due = SpacedRepetitionQueries.getQuestionsDueAfter(
-          box, DateTime(2026, 5, 12));
-        expect(due, isEmpty);
-      });
-    });
-
-    group('isQuestionDueForReview', () {
-      test('returns true for past due question', () {
-        final q = _createQuestion(nextReview: DateTime(2020, 1, 1));
-        expect(SpacedRepetitionQueries.isQuestionDueForReview(q), isTrue);
-      });
-
-      test('returns false for future review question', () {
-        final q = _createQuestion(nextReview: DateTime(2099, 1, 1));
-        expect(
-          SpacedRepetitionQueries.isQuestionDueForReview(
-            q, asOf: DateTime(2026, 5, 12)),
-          isFalse,
-        );
-      });
-
-      test('returns false when nextReview is null', () {
-        final q = _createQuestion();
-        expect(
-          SpacedRepetitionQueries.isQuestionDueForReview(q),
-          isFalse,
-        );
-      });
-    });
-
-    group('mapQuestionsToStatus', () {
-      test('returns correct status map', () {
-        final box = _FakeQuestionBox();
-        box.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 1, 1)));
-        box.put('q2', _createQuestion(
-          id: 'q2', nextReview: DateTime(2099, 1, 1)));
-
-        final status = SpacedRepetitionQueries.mapQuestionsToStatus(
-          box, asOf: DateTime(2026, 5, 12));
-        expect(status['q1'], 'due');
-        expect(status['q2'], 'not-due');
-      });
-
-      test('returns empty map for empty box', () {
-        final box = _FakeQuestionBox();
-        final status = SpacedRepetitionQueries.mapQuestionsToStatus(box);
-        expect(status, isEmpty);
-      });
-    });
-  });
-
   group('SpacedRepetitionService', () {
     late _FakeQuestionBox questionBox;
     late _FakeAttemptRepository attemptRepo;
@@ -294,23 +184,23 @@ void main() {
     });
 
     group('getQuestionsDueForReview', () {
-      test('returns due questions sorted', () {
+      test('returns due questions sorted', () async {
         questionBox.put('q1', _createQuestion(
           id: 'q1', nextReview: DateTime(2020, 6, 1)));
         questionBox.put('q2', _createQuestion(
           id: 'q2', nextReview: DateTime(2020, 1, 1)));
 
-        final due = service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12));
+        final due = (await service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12))).data!;
         expect(due.length, 2);
         expect(due[0].id, 'q2');
         expect(due[1].id, 'q1');
       });
 
-      test('returns empty when none due', () {
+      test('returns empty when none due', () async {
         questionBox.put('q1', _createQuestion(
           id: 'q1', nextReview: DateTime(2099, 1, 1)));
 
-        final due = service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12));
+        final due = (await service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12))).data;
         expect(due, isEmpty);
       });
     });

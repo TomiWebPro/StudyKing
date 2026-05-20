@@ -3,10 +3,10 @@ import '../errors/result.dart';
 import '../utils/study_utils.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import '../utils/logger.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/models/mastery_improvement_metric_model.dart';
 import '../data/hive_box_names.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 
@@ -78,7 +78,7 @@ class MasteryImprovementTracker {
 }
 
 class InstrumentationService {
-  final Logger _logger = const Logger('InstrumentationService');
+  static final Logger _logger = const Logger('InstrumentationService');
   final MasteryGraphRepository _repository;
   final MasteryImprovementTracker _improvementTracker;
   final PlanAdherenceRepository? _adherenceRepository;

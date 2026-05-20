@@ -6,7 +6,7 @@ import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
 
 class DataBackupService {
-  final Logger _logger = const Logger('DataBackupService');
+  static final Logger _logger = const Logger('DataBackupService');
 
   Future<Result<String>> exportAllData({
     required Map<String, List<Map<String, dynamic>>> boxData,
@@ -32,7 +32,7 @@ class DataBackupService {
       _logger.i('Backup exported to ${file.path} (${json.length} bytes)');
       return Result.success(file.path);
     } catch (e) {
-      _logger.e('Failed to export backup', e);
+      _logger.w('Failed to export backup', e);
       return Result.failure(e.toString());
     }
   }
@@ -81,7 +81,7 @@ class DataBackupService {
       );
       return Result.success(result);
     } catch (e) {
-      _logger.e('Failed to restore backup', e);
+      _logger.w('Failed to restore backup', e);
       return Result.failure(e.toString());
     }
   }

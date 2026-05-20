@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
@@ -41,7 +42,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   final ScrollController _scrollController = ScrollController();
   final FocusNode _inputFocusNode = FocusNode();
   final Uuid _uuid = const Uuid();
-  final Logger _logger = const Logger('QuickGuide');
+  static final Logger _logger = const Logger('QuickGuide');
   final ConversationMemory _memory = ConversationMemory();
 
   List<ConversationMessage> _messages = [];
@@ -164,7 +165,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         _scrollToBottom();
       }
     } catch (e) {
-      _logger.e('QuickGuide error', e);
+      _logger.w('QuickGuide error', e);
       buffer.write(_fallbackResponse(text));
     }
 
@@ -185,7 +186,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
 
   String _fallbackResponse(String text) {
     final l10n = AppLocalizations.of(context)!;
-    final lower = text.toLowerCase();
+    final lower = text.normalized;
     if (lower.contains('explain')) return l10n.fallbackExplainResponse;
     if (lower.contains('quiz') || lower.contains('question')) return l10n.fallbackQuizResponse;
     if (lower.contains('math') || lower.contains('calculate')) return l10n.fallbackMathResponse;

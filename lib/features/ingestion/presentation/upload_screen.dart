@@ -2,6 +2,7 @@ import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -11,7 +12,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show contentPipelineProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -35,6 +36,7 @@ class UploadScreen extends ConsumerStatefulWidget {
 }
 
 class _UploadScreenState extends ConsumerState<UploadScreen> {
+  static final Logger _logger = const Logger('UploadScreen');
   final _titleController = TextEditingController();
   final _contentController = TextEditingController();
   final _urlController = TextEditingController();
@@ -71,7 +73,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         });
       }
     } catch (e) {
-      const Logger('UploadScreen').e('Failed to load subjects: $e');
+      _logger.w('Failed to load subjects: $e');
     }
   }
 
@@ -233,7 +235,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                 .where((t) => t.isNotEmpty)
                 .toList();
           } catch (e) {
-            const Logger('UploadScreen').w('Failed to load topics: $e');
+            _logger.w('Failed to load topics: $e');
           }
         }
 
@@ -326,11 +328,11 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   }
 
   SourceType _inferSourceType(String name) {
-    final lower = name.toLowerCase();
+    final lower = name.normalized;
     if (lower.contains('youtube.com') || lower.contains('youtu.be')) {
       return SourceType.video;
     }
-    final ext = name.split('.').last.toLowerCase();
+    final ext = name.split('.').last.normalized;
     switch (ext) {
       case 'pdf':
         return SourceType.pdf;
@@ -608,19 +610,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                 order: const NumericFocusOrder(5),
                 child: SizedBox(
                   width: double.infinity,
-                  child: ElevatedButton.icon(
+                  child: FilledButton.icon(
                     onPressed: _isUploading ? null : () => _submitContent(fullPipeline: true),
                     icon: _isUploading
-                        ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(strokeWidth: 2),
-                          )
+                        ? ResponsiveUtils.loaderInTouchTarget()
                         : const Icon(Icons.cloud_upload),
                     label: Text(_isUploading
                         ? l10n.uploading
                         : l10n.uploadAndAnalyze),
-                    style: ElevatedButton.styleFrom(
+                    style: FilledButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 16),
                     ),
                   ),
@@ -640,11 +638,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                           const SizedBox(height: 12),
                           Row(
                             children: [
-                              SizedBox(
-                                width: 16,
-                                height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              ),
+                              ResponsiveUtils.loaderInTouchTarget(size: 16),
                               const SizedBox(width: 12),
                               Expanded(
                                 child: Text(

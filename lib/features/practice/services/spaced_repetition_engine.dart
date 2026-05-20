@@ -79,14 +79,12 @@ class SM2Result {
 }
 
 class SpacedRepetitionEngine {
-  final bool useFSRS;
-
   static const double defaultEaseFactor = 2.5;
   static const double minEaseFactor = 1.3;
   static const Duration initialInterval = Duration(days: 1);
   static const Duration secondInterval = Duration(days: 6);
 
-  SpacedRepetitionEngine({this.useFSRS = false});
+  const SpacedRepetitionEngine();
 
   SM2Result scheduleReview({
     required String questionId,

@@ -13,9 +13,9 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorProgressTrackerProvider, mentorModelIdProvider;
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, masteryGraphServiceProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -135,18 +135,18 @@ class _FakeStudyProgressTracker extends StudyProgressTracker {
         );
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
-    return {};
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
+    return Result.success({});
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async {
-    return [];
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+    return Result.success([]);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    return [];
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    return Result.success([]);
   }
 }
 

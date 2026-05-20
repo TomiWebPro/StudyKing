@@ -3,14 +3,15 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class PracticeSessionService {
-  final Logger _logger = const Logger('PracticeSessionService');
+  static final Logger _logger = const Logger('PracticeSessionService');
   final SessionRepository _sessionRepo;
   final SpacedRepetitionService _srService;
   final StudentIdService _studentIdService;
@@ -46,16 +47,20 @@ class PracticeSessionService {
     _timer?.cancel();
   }
 
-  Future<void> updateNextReview(String questionId, bool isCorrect) async {
+  /// Deprecated: [MasteryRecorder.recordAttempt] is the single source of truth
+  /// for SM-2 scheduling. This binary (0.8/0.2) path discards confidence data.
+  Future<Result<void>> updateNextReview(String questionId, bool isCorrect) async {
     try {
       final masteryLevel = isCorrect ? 0.8 : 0.2;
       await _srService.updateNextReviewDate(questionId, masteryLevel);
+      return Result.success(null);
     } catch (e) {
-      _logger.e('Error updating next review date', e);
+      _logger.w('Error updating next review date', e);
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> autoSaveSession({
+  Future<Result<void>> autoSaveSession({
     required int questionsAnswered,
     required int correctAnswers,
   }) async {
@@ -76,8 +81,10 @@ class PracticeSessionService {
         type: SessionType.practice,
       );
       await _sessionRepo.save(session.id, session);
+      return Result.success(null);
     } catch (e) {
-      _logger.e('Failed to auto-save session', e);
+      _logger.w('Failed to auto-save session', e);
+      return Result.failure(e.toString());
     }
   }
 

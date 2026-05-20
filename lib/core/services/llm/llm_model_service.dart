@@ -95,7 +95,7 @@ class ModelListingService {
   final String _baseUrl;
   final http.Client _httpClient;
   final LlmProvider? _provider;
-  final Logger _logger = const Logger('ModelListingService');
+  static final Logger _logger = const Logger('ModelListingService');
 
   ModelListingService({
     required String apiKey,
@@ -133,7 +133,7 @@ class ModelListingService {
           return _fetchOpenRouterModels();
       }
     } catch (e) {
-      _logger.e('Error fetching models', e);
+      _logger.w('Error fetching models', e);
       return [];
     }
   }
@@ -142,7 +142,7 @@ class ModelListingService {
     final response = await _httpClient.get(
       Uri.parse('$_openRouterBaseUrl/models'),
       headers: {
-        'Authorization': 'Bearer $_apiKey',
+        'Authorization': '${ApiConfig.bearerAuth}$_apiKey',
         'HTTP-Referer': BuildConfig.appName,
       },
     );
@@ -176,7 +176,7 @@ class ModelListingService {
     final response = await _httpClient.get(
       Uri.parse('$_effectiveBaseUrl/models'),
       headers: {
-        'Authorization': 'Bearer $_apiKey',
+        'Authorization': '${ApiConfig.bearerAuth}$_apiKey',
       },
     );
 

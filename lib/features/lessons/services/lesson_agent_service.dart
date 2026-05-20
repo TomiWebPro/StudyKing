@@ -86,12 +86,12 @@ class LessonAgentService {
 
     if (result.isFailure || result.data == null) {
       _logger.w('LLM lesson generation failed: ${result.error}');
-      return _fallbackBlocks(subjectId, topicId, topicTitle);
+      return _fallbackBlocks(subjectId, topicId, topicTitle, localeName);
     }
 
     final blocks = _parseBlocks(result.data!, subjectId);
     if (blocks.isEmpty) {
-      return _fallbackBlocks(subjectId, topicId, topicTitle);
+      return _fallbackBlocks(subjectId, topicId, topicTitle, localeName);
     }
 
     return blocks.map((b) => b.copyWith(lessonId: topicId)).toList();
@@ -234,14 +234,15 @@ class LessonAgentService {
     }
   }
 
-  List<LessonBlock> _fallbackBlocks(String subjectId, String topicId, String topicTitle) {
+  List<LessonBlock> _fallbackBlocks(String subjectId, String topicId, String topicTitle, String localeName) {
+    final l10n = lookupAppLocalizations(Locale(localeName));
     return [
       LessonBlock(
         id: const Uuid().v4(),
         subjectId: subjectId,
         lessonId: topicId,
         type: LessonBlockType.text,
-        content: 'Lesson: $topicTitle',
+        content: '${l10n.lessonFallbackTitle}: $topicTitle',
         order: 0,
       ),
       LessonBlock(
@@ -249,7 +250,7 @@ class LessonAgentService {
         subjectId: subjectId,
         lessonId: topicId,
         type: LessonBlockType.text,
-        content: 'Study the key concepts of $topicTitle. Focus on understanding the core principles.',
+        content: l10n.lessonFallbackContent(topicTitle),
         order: 1,
       ),
     ];

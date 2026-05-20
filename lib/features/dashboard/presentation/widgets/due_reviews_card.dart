@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -40,7 +41,7 @@ class DueReviewsCard extends StatelessWidget {
                     ),
                     WidgetSpan(
                       child: Text(
-                        ' ${l10n.dueForReview.toLowerCase()}',
+                        ' ${l10n.dueForReview.normalized}',
                         style: theme.textTheme.titleSmall?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
                         ),

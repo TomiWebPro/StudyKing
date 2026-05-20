@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -24,7 +25,7 @@ class FakePlannerService extends PlannerService {
   FakePlannerService() : super();
 
   @override
-  Future<bool> scheduleLesson({
+  Future<Result<bool>> scheduleLesson({
     required String topicId,
     required String topicTitle,
     required String subjectId,
@@ -38,18 +39,17 @@ class FakePlannerService extends PlannerService {
     lastSubjectId = subjectId;
     lastScheduledTime = scheduledTime;
     lastDurationMinutes = durationMinutes;
-    return scheduleResult;
+    return Result.success(scheduleResult);
   }
 
   @override
-  Future<bool> cancelLesson(String sessionId) async {
+  Future<Result<bool>> cancelLesson(String sessionId) async {
     if (throwOnCancel) throw Exception('Cancel failed');
     cancelCalled = true;
     lastSessionId = sessionId;
-    return cancelResult;
+    return Result.success(cancelResult);
   }
 
-  @override
   Future<bool> suggestPlanRegeneration({
     required String studentId,
     required double adjustmentFactor,
@@ -337,6 +337,17 @@ void main() {
           );
           final result = await executor.execute(action);
           expect(result, isFalse);
+        });
+
+        test('executes plan adjustment with zero factor', () async {
+          final action = createAction(
+            actionType: 'planAdjustment',
+            payload: {'adjustmentFactor': 0.0},
+          );
+          final result = await executor.execute(action);
+          expect(result, isTrue);
+          expect(plannerService.regenerateCalled, isTrue);
+          expect(plannerService.lastAdjustmentFactor, 0.0);
         });
       });
     });

@@ -13,8 +13,9 @@ import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_lessons_tab.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_practice_tab.dart';
@@ -37,6 +38,7 @@ class SubjectDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with SingleTickerProviderStateMixin {
+  static final Logger _logger = const Logger('SubjectDetailScreen');
   late TabController _tabController;
   int _sourceCount = 0;
 
@@ -54,7 +56,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       final sources = await repo.getBySubject(widget.subject.id);
       if (mounted) setState(() => _sourceCount = sources.length);
     } catch (e) {
-      const Logger('SubjectDetailScreen').e('Failed to load source count: $e');
+      _logger.w('Failed to load source count: $e');
     }
   }
 
@@ -183,6 +185,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             ),
             bottom: TabBar(
               controller: _tabController,
+              isScrollable: true,
               labelColor: theme.colorScheme.primary,
               unselectedLabelColor: theme.colorScheme.onSurfaceVariant,
               indicatorColor: color,
@@ -329,7 +332,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
         arguments: subject,
       );
     } catch (e) {
-      const Logger('SubjectDetailScreen').e('Failed to edit subject: $e');
+      _logger.w('Failed to edit subject: $e');
     }
   }
 
@@ -345,9 +348,9 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
             onPressed: () => Navigator.pop(context, false),
             child: Text(l10n.cancel),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(context).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(context),
             child: Text(l10n.delete),
           ),
         ],
@@ -364,7 +367,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      const Logger('SubjectDetailScreen').e('Delete subject failed', e);
+      _logger.w('Delete subject failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.somethingWentWrong)),
       );
@@ -434,6 +437,7 @@ class _SubjectSourcesTab extends ConsumerStatefulWidget {
 }
 
 class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
+  static final Logger _logger = const Logger('SubjectDetailScreen');
   final _sourceRepo = SourceRepository();
   List<_SourceItem> _items = [];
   bool _isLoading = true;
@@ -463,7 +467,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
         });
       }
     } catch (e) {
-      const Logger('SubjectDetailScreen').e('Failed to load sources', e);
+      _logger.w('Failed to load sources', e);
       if (mounted) setState(() { _isLoading = false; _error = AppLocalizations.of(context)!.somethingWentWrong; });
     }
   }
@@ -551,7 +555,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
                   backgroundColor: theme.colorScheme.primaryContainer,
                   child: Icon(_typeIcon(item.type), color: theme.colorScheme.primary, size: 20),
                 ),
-                title: Text(item.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+                title: Text(item.title, maxLines: 2, overflow: TextOverflow.ellipsis),
                 subtitle: Row(
                   children: [
                     Container(

@@ -12,4 +12,5 @@ export 'app_storage_config.dart';
 export 'llm_defaults.dart';
 export 'notification_channel_ids.dart';
 export 'security_config.dart';
+export 'spaced_repetition_config.dart';
 export 'timeouts.dart';

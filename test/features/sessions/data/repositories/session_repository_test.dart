@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/clock.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 
 class _FakeClock implements Clock {
   final DateTime fixed;
@@ -138,7 +138,7 @@ class InMemorySessionRepository extends SessionRepository {
   }
 
   @override
-  Future<bool> hasSchedulingConflict({
+  Future<Result<bool>> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,
     String? excludeSessionId,
@@ -152,15 +152,15 @@ class InMemorySessionRepository extends SessionRepository {
               : null);
       if (sEnd == null) continue;
       if (s.startTime.isBefore(proposedEnd) && sEnd.isAfter(startTime)) {
-        return true;
+        return Result.success(true);
       }
     }
-    return false;
+    return Result.success(false);
   }
 
   @override
-  Future<List<Session>> getScheduledLessons() async {
-    return _store.values.where((s) => s.status == SessionStatus.planned).toList();
+  Future<Result<List<Session>>> getScheduledLessons() async {
+    return Result.success(_store.values.where((s) => s.status == SessionStatus.planned).toList());
   }
 
   @override
@@ -454,7 +454,7 @@ void main() {
           startTime: DateTime(2024, 1, 1, 11, 30),
           durationMinutes: 30,
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
 
       test('returns true when overlapping', () async {
@@ -466,7 +466,7 @@ void main() {
           startTime: DateTime(2024, 1, 1, 10, 30),
           durationMinutes: 30,
         );
-        expect(conflict, isTrue);
+        expect(conflict.data, isTrue);
       });
 
       test('excludes session by id', () async {
@@ -479,7 +479,7 @@ void main() {
           durationMinutes: 30,
           excludeSessionId: 's1',
         );
-        expect(conflict, isFalse);
+        expect(conflict.data, isFalse);
       });
     });
 
@@ -551,14 +551,14 @@ void main() {
         await repo.save('s2', createSession(id: 's2', status: SessionStatus.inProgress));
         await repo.save('s3', createSession(id: 's3', status: SessionStatus.completed));
         final lessons = await repo.getScheduledLessons();
-        expect(lessons.length, 1);
-        expect(lessons.first.id, 's1');
+        expect(lessons.data!.length, 1);
+        expect(lessons.data!.first.id, 's1');
       });
 
       test('returns empty when no planned sessions', () async {
         await repo.save('s1', createSession(id: 's1', status: SessionStatus.completed));
         final lessons = await repo.getScheduledLessons();
-        expect(lessons, isEmpty);
+        expect(lessons.data, isEmpty);
       });
     });
 

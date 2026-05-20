@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../errors/exceptions.dart';
 import '../utils/logger.dart';
+import '../widgets/snackbar_utils.dart';
 
 class AppErrorHandler {
   @visibleForTesting
@@ -137,8 +138,16 @@ class AppErrorHandler {
     }
   }
 
+  static void showSuccess(BuildContext context, String message) {
+    showSuccessSnackBar(context, message);
+  }
+
+  static void showError(BuildContext context, String message) {
+    showErrorSnackBar(context, message);
+  }
+
   static void _logError(Object error, String context) {
-    logger.e('[$context] Error: $error');
+    logger.e('[$context] Error: $error', StackTrace.current);
   }
 
   @visibleForTesting

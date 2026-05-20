@@ -1,9 +1,8 @@
 import 'dart:convert';
-import 'package:hive/hive.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/errors/spaced_repetition_error_codes.dart';
@@ -16,55 +15,10 @@ import 'package:studyking/core/utils/logger.dart';
 /// Set to [Duration.zero] for exact matching.
 Duration dueWindowTolerance = Timeouts.hour;
 
-/// Static utility queries for spaced repetition used only in tests.
-/// Operates on a [Box<Question>] directly for testability.
-/// Remove after migrating test helpers to use SpacedRepetitionService methods.
-class SpacedRepetitionQueries {
-  static List<Question> getQuestionsDueForReview(Box<Question> box,
-      {DateTime? asOf}) {
-    final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate;
-    final all = box.values.toList();
-    all.sort((a, b) =>
-        (a.nextReview ?? DateTime.now())
-            .compareTo(b.nextReview ?? DateTime.now()));
-    return all
-        .where((q) => (q.nextReview ?? DateTime.now()).isBefore(cutover))
-        .toList();
-  }
-
-  static List<Question> getQuestionsDueAfter(
-      Box<Question> box, DateTime asOf) {
-    final cutover = asOf.subtract(Timeouts.thirtyMinutes);
-    return box.values
-        .where((q) => (q.nextReview ?? DateTime.now()).isBefore(cutover))
-        .toList();
-  }
-
-  static bool isQuestionDueForReview(Question question, {DateTime? asOf}) {
-    final reviewDate = asOf ?? DateTime.now();
-    final dueWindow = reviewDate.subtract(Timeouts.fiveMinutes);
-    return (question.nextReview ?? DateTime.now()).isBefore(dueWindow);
-  }
-
-  static Map<String, String> mapQuestionsToStatus(Box<Question> box,
-      {DateTime? asOf}) {
-    final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate;
-    return {
-      for (final q in box.values)
-        q.id:
-            (q.nextReview ?? DateTime.now()).isBefore(cutover)
-                ? 'due'
-                : 'not-due',
-    };
-  }
-}
-
 /// Service layer for spaced repetition logic.
 /// Uses [SpacedRepetitionEngine] (proper SM-2) for all interval calculations.
 class SpacedRepetitionService {
-  final Logger _logger = const Logger('SpacedRepetitionService');
+  static final Logger _logger = const Logger('SpacedRepetitionService');
   final QuestionRepository _questionRepo;
   final AttemptRepository _attemptRepo;
   final SpacedRepetitionEngine _srEngine;
@@ -79,23 +33,35 @@ class SpacedRepetitionService {
 
   /// Get questions due for review based on next_review date.
   /// Uses the global [dueWindowTolerance] as the cutoff precision.
-  List<Question> getQuestionsDueForReview({DateTime? asOf}) {
-    final reviewDate = asOf ?? DateTime.now();
-    final cutover = reviewDate.subtract(dueWindowTolerance);
-    final all = _questionRepo.box.values.toList();
-    all.sort((a, b) =>
-        (a.nextReview ?? DateTime.now())
-            .compareTo(b.nextReview ?? DateTime.now()));
-    return all
-        .where((q) => (q.nextReview ?? DateTime.now()).isBefore(cutover))
-        .toList();
+  Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {
+    try {
+      final reviewDate = asOf ?? DateTime.now();
+      final cutover = reviewDate.subtract(dueWindowTolerance);
+      final all = _questionRepo.box.values.toList();
+      all.sort((a, b) =>
+          (a.nextReview ?? DateTime.now())
+              .compareTo(b.nextReview ?? DateTime.now()));
+      final due = all
+          .where((q) => (q.nextReview ?? DateTime.now()).isBefore(cutover))
+          .toList();
+      return Result.success(due);
+    } catch (e) {
+      _logger.w('getQuestionsDueForReview failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
   /// Check if a question is due for review
-  bool isQuestionDueForReview(Question question, {DateTime? asOf}) {
-    final reviewDate = asOf ?? DateTime.now();
-    final dueWindow = reviewDate.subtract(Timeouts.fiveMinutes);
-    return (question.nextReview ?? DateTime.now()).isBefore(dueWindow);
+  Future<Result<bool>> isQuestionDueForReview(Question question, {DateTime? asOf}) async {
+    try {
+      final reviewDate = asOf ?? DateTime.now();
+      final dueWindow = reviewDate.subtract(Timeouts.fiveMinutes);
+      final isDue = (question.nextReview ?? DateTime.now()).isBefore(dueWindow);
+      return Result.success(isDue);
+    } catch (e) {
+      _logger.w('isQuestionDueForReview failed', e);
+      return Result.failure(e.toString());
+    }
   }
 
   /// Get questions due for review with proper error handling
@@ -104,10 +70,11 @@ class SpacedRepetitionService {
       if (!_questionRepo.box.isOpen) {
         return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
-      final dueQuestions = getQuestionsDueForReview(asOf: asOf);
+      final dueQuestionsResult = await getQuestionsDueForReview(asOf: asOf);
+      final dueQuestions = dueQuestionsResult.data ?? [];
       return Result.success(dueQuestions);
     } catch (e) {
-      _logger.e('Error getting due questions', e);
+      _logger.w('Error getting due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -116,6 +83,11 @@ class SpacedRepetitionService {
   /// Maps masteryLevel (0.0–1.0) to an SM-2 grade and delegates to
   /// [SpacedRepetitionEngine.scheduleReview] for proper interval calculation.
   /// Stores serialized SM-2 state on the [Question] for progressive tracking.
+  ///
+  /// Prefer calling [MasteryRecorder.recordAttempt] instead, which preserves
+  /// the user's full confidence rating through [SpacedRepetitionEngine.mapConfidenceToGrade].
+  /// This method uses a simplified masteryLevel → grade mapping that discards
+  /// nuanced confidence data.
   Future<Result<void>> updateNextReviewDate(
       String questionId, double masteryLevel) async {
     try {
@@ -142,11 +114,13 @@ class SpacedRepetitionService {
 
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error updating next review date', e);
+      _logger.w('Error updating next review date', e);
       return Result.failure(e.toString());
     }
   }
 
+  /// Deprecated: binary masteryLevel (0.8/0.2) loses confidence nuance.
+  /// Use [SpacedRepetitionEngine.mapConfidenceToGrade] via [MasteryRecorder] instead.
   int _masteryLevelToGrade(double masteryLevel) {
     if (masteryLevel >= 0.9) return 5;
     if (masteryLevel >= 0.7) return 4;
@@ -170,7 +144,7 @@ class SpacedRepetitionService {
             : null,
       );
     } catch (e) {
-      _logger.e('Error deserializing SR data', e);
+      _logger.w('Error deserializing SR data', e);
       return const QuestionSRData();
     }
   }
@@ -200,7 +174,7 @@ class SpacedRepetitionService {
 
       return Result.success(timestamps);
     } catch (e) {
-      _logger.e('Error getting question due times', e);
+      _logger.w('Error getting question due times', e);
       return Result.failure(e.toString());
     }
   }
@@ -220,7 +194,7 @@ class SpacedRepetitionService {
 
       return Result.success(practiceQuestions.toList());
     } catch (e) {
-      _logger.e('Error getting practice questions', e);
+      _logger.w('Error getting practice questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -237,7 +211,7 @@ class SpacedRepetitionService {
 
       return Result.success(topicQuestions.toList());
     } catch (e) {
-      _logger.e('Error getting topic time due questions', e);
+      _logger.w('Error getting topic time due questions', e);
       return Result.failure(e.toString());
     }
   }
@@ -248,7 +222,7 @@ class SpacedRepetitionService {
       await _questionRepo.delete(questionId);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error removing question', e);
+      _logger.w('Error removing question', e);
       return Result.failure(e.toString());
     }
   }
@@ -269,7 +243,7 @@ class SpacedRepetitionService {
 
       return Result.success(dueCount);
     } catch (e) {
-      _logger.e('Error getting subject due count', e);
+      _logger.w('Error getting subject due count', e);
       return Result.failure(e.toString());
     }
   }

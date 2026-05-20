@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -22,16 +24,18 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final masteryService = ref.watch(masteryGraphServiceProvider);
   final studentIdService = StudentIdService();
   final lessonAgentService = ref.watch(lessonAgentServiceProvider);
+  final locale = ref.watch(localeProvider);
+  final localeName = locale.languageCode;
 
   return [
-    ScheduleLessonTool(plannerService: plannerService),
+    ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
     SearchQuestionsTool(questionRepo: questionRepo),
     GetStudentStatsTool(
       progressTracker: progressTracker,
       studentIdService: studentIdService,
     ),
-    GenerateLessonBlocksTool(lessonAgentService: lessonAgentService),
-    CreatePlanTool(plannerService: plannerService),
+    GenerateLessonBlocksTool(lessonAgentService: lessonAgentService, localeName: localeName),
+    CreatePlanTool(plannerService: plannerService, localeName: localeName),
     GetWeakTopicsTool(
       masteryService: masteryService,
       studentIdService: studentIdService,
@@ -54,4 +58,8 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
     taskManager: taskManager,
     tools: tools,
   );
+});
+
+final longTermMemoryProvider = Provider<LongTermMemory>((ref) {
+  return LongTermMemory();
 });

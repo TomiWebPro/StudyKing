@@ -6,7 +6,7 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/study_progress_provider.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show attemptRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -109,9 +109,9 @@ void main() {
 
         final tracker = container.read(studyProgressTrackerProvider);
         final stats = await tracker.getOverallStats('stu1');
-        expect(stats['totalAttempts'], 2);
-        expect(stats['correctAttempts'], 1);
-        expect(stats['accuracy'], 50);
+        expect(stats.data!['totalAttempts'], 2);
+        expect(stats.data!['correctAttempts'], 1);
+        expect(stats.data!['accuracy'], 50);
       });
 
       test('error-state: handles attemptRepo failure gracefully', () async {
@@ -125,9 +125,9 @@ void main() {
 
         final tracker = container.read(studyProgressTrackerProvider);
         final stats = await tracker.getOverallStats('stu1');
-        expect(stats['totalAttempts'], 0);
-        expect(stats['correctAttempts'], 0);
-        expect(stats['accuracy'], 0);
+        expect(stats.data!['totalAttempts'], 0);
+        expect(stats.data!['correctAttempts'], 0);
+        expect(stats.data!['accuracy'], 0);
       });
     });
   });

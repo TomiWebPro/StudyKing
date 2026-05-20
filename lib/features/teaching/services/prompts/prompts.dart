@@ -1,5 +1,6 @@
 import '../conversation_phase.dart';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 import 'package:studyking/core/constants/llm_defaults.dart' show evaluationPromptTemplate;
@@ -15,6 +16,8 @@ class PromptEntry {
 }
 
 class ConversationPromptSet {
+  static final Logger _logger = const Logger('ConversationPromptSet');
+
   final int version;
   final String localeName;
 
@@ -23,8 +26,13 @@ class ConversationPromptSet {
   static const ConversationPromptSet defaultTemplates = ConversationPromptSet(localeName: 'en');
 
   String _languageInstruction(AppLocalizations l10n) {
-    if (localeName == 'en') return '';
-    return '\n${l10n.languageInstruction(localeName)}';
+    try {
+      final instruction = l10n.languageInstruction(localeName);
+      return '\n$instruction';
+    } catch (e) {
+      _logger.w('Failed to get language instruction for locale $localeName', e);
+      return '';
+    }
   }
 
   PromptEntry lessonPlan({

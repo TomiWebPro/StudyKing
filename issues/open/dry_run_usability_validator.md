@@ -1,313 +1,273 @@
-# Dry-Run Usability Validation: Exam Mode & Spaced Repetition
+# Dry-Run Issue: Uploading Study Materials & First AI Processing — The Content Pipeline Journey
 
-**Scenario:** `dry-run-test/scenario_exam_mode_spaced_repetition.md`
-**Validator Date:** 2026-05-19
-**Validator:** Dry-Run Usability Validator
-
-**Scenario Summary:**
-A student preparing for their IB Chemistry exam wants to use timed exam simulations and spaced repetition for test readiness. The student expects to discover spaced repetition on the Practice tab, take timed exams with realistic constraints, have SM-2 scheduling automatically updated after practice, and see how the system prioritizes their weak areas. Over 17 expectations are evaluated against actual implementation.
+**Source scenario:** `dry-run-test/scenario_content_upload_pipeline.md`
+**Audit date:** 2026-05-19
+**Status:** 1 PASS, 2 BLOCKER, 9 MAJOR, 3 MINOR — below 80% threshold
 
 ---
 
-## BLOCKER findings (app crashes or user cannot proceed)
+## BLOCKER — User Cannot Proceed
 
-### B-001: Back-button exit during active exam discards unanswered questions without recording them
+### Issue 1: Save-Only Upload Path Is Dead Code — Users Without API Key Cannot Upload Anything
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:424-452` (`_onWillPop()`)
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:256-279` (`_autoSubmitExam()`)
+**File:** `lib/features/ingestion/presentation/upload_screen.dart:184, 214, 612-613`
 
-**Rationale:**
-When a user presses the back button during an active exam, `_onWillPop()` is called. The method:
-1. Shows a confirmation dialog (correct behaviour ✓)
-2. If user taps "Exit" with a current answer: calls `_submitAnswer()` for the CURRENT question only (line 446)
-3. Calls `_finishExam()` (line 448) — which processes only the already-submitted `_results` list
+**Root cause:** The "Upload & Analyze" button at line 612-613 always calls `_submitContent(fullPipeline: true)`. At line 214, the check `if (fullPipeline || _generateQuestions || _generateLessons)` is always true because `fullPipeline` is hardcoded to `true`. This means the `else` branch at line 272 calling `pipeline.processUpload()` (the save-only path) is **dead code — completely unreachable**.
 
-**Critical bug:** Unlike `_autoSubmitExam()` (lines 256-279) which correctly iterates ALL remaining questions (`_questions.skip(_currentIndex)`) and marks them as `wasSkipped: true, isCorrect: false`, the `_onWillPop()` path NEVER iterates the remaining unanswered questions. Questions at indices > `_currentIndex` are silently discarded.
+When the user has no API key configured, the model check at lines 218-224 errors out: `if ((_generateQuestions || _generateLessons) && resolvedModelId.isEmpty)`. Since the pipeline path is always entered, this error always fires when there's no model.
 
-**Impact:** If a user exits an exam of 20 questions at question 12, only 12 results are recorded. The exam displays "12 of 12 correct (100%)" — a misleadingly perfect score that ignores 8 unanswered questions. The user sees inflated accuracy and the SM-2 system doesn't schedule the unsubmitted questions for appropriate review.
+**Impact:** A user who just installed the app, has no API key yet, but wants to upload content just to save it for later processing, is completely blocked. They must cancel the upload, configure the API key, and come back. There is no way to save a source record without AI processing.
 
 **Acceptance criteria:**
-- [ ] `_onWillPop()` must iterate all unanswered questions and mark them as skipped (same logic as `_autoSubmitExam()`)
-- [ ] The exam result must accurately reflect the total configured question count with skipped questions properly counted
-- [ ] The results screen must show the total number of skipped questions when an early exit occurs
+1. Add a "Save Only" button or mode that calls `processUpload()` directly without the AI pipeline.
+2. When `fullPipeline: true` is passed but model is empty, either: fall through to `processUpload()` instead of erroring, or offer the user a choice: "Configure API key now / Save without AI processing."
+3. The `else` branch in `_submitContent()` should be reachable through a user-accessible UI path.
 
 ---
 
-### B-002: No user-facing spaced repetition configuration exists anywhere in the app
+### Issue 2: Pipeline Error Details Lost on Navigation — Source Model Has No Error Field
 
-**Affected files:**
-- `lib/features/practice/services/spaced_repetition_engine.dart:82` (`useFSRS` dead code flag)
-- `lib/features/practice/services/spaced_repetition_service.dart:82-84` (`getQuestionsDueForReview()` hardcoded tolerance)
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:584-618` (SR results shown but no config)
-- `lib/features/settings/presentation/settings_screen.dart` (no SR section)
+**Files:**
+- `lib/core/data/models/source_model.dart:60-79` — no `errorMessage` field
+- `lib/features/ingestion/services/content_pipeline.dart:238-250` — error not persisted on Source
+- `lib/features/ingestion/presentation/source_detail_screen.dart:327-349` — generic error banner
 
-**Rationale:**
-The spaced repetition system uses a fully implemented SM-2 algorithm with parameters that affect every user's review schedule (ease factor minimum of 1.3, interval multipliers, due window tolerances). However:
+**Root cause:** When the pipeline fails at any stage, `content_pipeline.dart:238-250` catches the error and saves the Source with `processingStatus: ProcessingStatus.failed.name`. But the `Source` model has no `errorMessage` field — the specific error (e.g., "Timeout", "Invalid API key", "PDF parse failure") is only returned in the `Result.failure` and displayed temporarily on the upload screen.
 
-- No settings screen or dialog allows users to view or modify any SR parameter
-- Users cannot set a daily review limit — `getPracticeQuestions()` returns ALL due questions without pagination
-- Users cannot view the SM-2 state of individual questions (repetition count, ease factor, next review date)
-- Users cannot reset SR data for specific questions
-- The `useFSRS` flag exists in the engine (line 82) but is never read — dead code
+If the user navigates away from the upload screen and returns via Content Library → Source Detail, the error banner at `source_detail_screen.dart:327-349` can only show a generic "Processing failed" message with no details about what went wrong.
 
-**Impact:** Users have zero control over their spaced repetition experience. If intervals are too aggressive or too relaxed, there is no recourse. Advanced users who understand SM-2 cannot fine-tune the system. The `useFSRS` dead code clutters the codebase.
+**Impact:** The specific failure reason is permanently lost once the user leaves the upload screen. Users see a vague "Processing failed" banner with no actionable information. Troubleshooting is impossible without checking application logs.
 
 **Acceptance criteria:**
-- [ ] A "Spaced Repetition" section exists in Settings with configurable parameters (minimum interval, maximum interval, daily review limit, ease factor sensitivity)
-- [ ] Users can view a question's SM-2 state (repetitions, ease factor, next review date) from the Question Bank or a dedicated SR management screen
-- [ ] Users can reset SR data for individual questions or topics
-- [ ] The `useFSRS` flag is either used or removed
+1. Add `@HiveField(18) String errorMessage = ''` to the `Source` model.
+2. In `content_pipeline.dart:242`, persist the error message on the source before saving as failed.
+3. In `source_detail_screen.dart:327-349`, display the stored error message.
+4. Localize common error types (timeout, rate limit, auth failure, parse error) into user-friendly language.
 
 ---
 
-### B-003: Exam results are never persisted — no exam history exists
+## MAJOR — Feature Broken or UX Misleading
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/practice_screen.dart:395-404` (`_navigateToExam()` discards return value)
-- `lib/features/practice/services/exam_session_service.dart:47-67` (`ExamResult` has no persistence)
-- No `ExamRepository` exists in the codebase
+### Issue 3: Pipeline Progress Indication Is Barely Informative
 
-**Rationale:**
-When the `ExamSessionScreen` pops via `_navigateToExam()`, the return value (which would contain `ExamResult`) is discarded — `Navigator.pushNamed` is called without `await` (line 396). There is:
+**Files:**
+- `lib/features/ingestion/presentation/upload_screen.dart:626-654` — progress card
+- `lib/features/ingestion/services/content_pipeline.dart:159-161, 175-176` — duplicate status
 
-- No repository or storage layer for exam results (`ExamResult` objects created in memory only)
-- No exam history screen or section anywhere in the app
-- The `ExamResult.scoreHistory` field (declared at exam_session_service.dart:47) is declared but never populated — dead data
-
-**Impact:** Every exam is a one-off event. A student cannot track whether their exam performance is improving over time, cannot compare results across weeks, and cannot see trend data. The exam feature provides no long-term value.
+**Problems:**
+1. **Always indeterminate:** `LinearProgressIndicator()` at line 636 has no `value` — always spinning. No percentage or step-of-total indication.
+2. **Duplicate status:** `ProcessingStatus.classifying` is used for BOTH topic classification (line 159) AND summary generation (line 175). The UI description text differs but the enum value doesn't — any code checking status enum cannot distinguish these two phases.
+3. **No elapsed time:** No `Stopwatch` or elapsed counter in the upload screen.
+4. **No stage counter:** No "Step 2 of 6" label.
 
 **Acceptance criteria:**
-- [ ] Implement an `ExamRepository` (Hive-backed) that stores `ExamResult` objects
-- [ ] `_navigateToExam()` awaits the result and persists it
-- [ ] An exam history view exists (accessible from Practice tab or Dashboard) showing past exams with scores, dates, durations, and topic breakdowns
-- [ ] The `scoreHistory` field is either populated or removed
+1. Calculate overall progress fraction (stage index / total stages) and pass it to `LinearProgressIndicator(value: ...)`.
+2. Add elapsed time counter: "Processing... 45 seconds elapsed."
+3. Use distinct progress statuses for classification vs. summary, or add a stage counter label.
+4. Ensure the progress card shows cumulative meaningful information (e.g., "Extracting text... ✓ Generating summary... ✓ Generating questions... ⟳").
 
 ---
 
-## MAJOR findings (feature is broken or misleading)
+### Issue 4: Source Detail Has No "Practice Generated Questions" Button
 
-### M-001: Spaced Repetition mode overwrites accurate MasteryRecorder SM-2 data with binary correct/incorrect calculation
+**File:** `lib/features/ingestion/presentation/source_detail_screen.dart:432-485`
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:283-298` (dual update path)
-- `lib/features/practice/services/practice_session_service.dart:52` (`updateNextReview()` calls SR service)
-- `lib/features/practice/services/spaced_repetition_service.dart:128-150` (`_masteryLevelToGrade()` maps 0.2/0.8)
+**Problem:** The Source Detail screen shows generated questions as a numbered list at lines 432-464, followed by "Reprocess" and "Delete" buttons at lines 466-485. There is no "Practice All Questions" or "Practice from This Source" button. After uploading content and seeing the AI-generated questions, the user must:
+1. Note the subject name
+2. Navigate back to Practice tab
+3. Find Source Practice mode (under "Extra Modes")
+4. Select subject → select source → start practice
 
-**Rationale:**
-In Spaced Repetition mode, each answer triggers TWO SM-2 updates:
-
-1. **Line 283** `_masteryRecorder.recordAttempt(...)` — uses the user's actual confidence rating (1-5) + correctness, maps to SM-2 grade via `SpacedRepetitionEngine.mapConfidenceToGrade()`. This is the accurate path.
-
-2. **Line 297-298** `_updateNextReview(question.id, isCorrect)` — calls `SpacedRepetitionService.updateNextReviewDate()` which converts `isCorrect` to a crude `masteryLevel` (0.8 or 0.2) via `_masteryLevelToGrade()`. This uses only BINARY correct/incorrect, ignoring the user's confidence.
-
-Since line 298 runs AFTER line 283, the second call OVERWRITES the first. The user's confidence rating is discarded. The SM-2 system operates on a simplified pass/fail basis in SR mode.
-
-**Impact:** The core purpose of SM-2's 6-grade scale (0-5) is defeated. A question answered correctly with "very sure" (confidence 5) gets the same schedule as one answered correctly with "unsure" (confidence 3). Users who carefully rate their confidence are wasting effort — only their final right/wrong matters.
+This is 4-5 navigational steps for what should be a single tap.
 
 **Acceptance criteria:**
-- [ ] Remove the redundant `_updateNextReview()` call at line 297-298, or refactor so `MasteryRecorder.recordAttempt()` is the single source of truth for SM-2 updates
-- [ ] Ensure the confidence rating from the user is preserved through to the `SpacedRepetitionEngine.scheduleReview()` call
-- [ ] The `_masteryLevelToGrade()` method should be removed or deprecated (it only serves the redundant path)
+1. Add a "Practice All Questions" `FilledButton` below the questions list on Source Detail.
+2. The button should navigate to `PracticeSessionScreen` with the source's `sourceId` as a filter, so only this source's questions are practiced.
+3. The button should be disabled when `generatedQuestionIds` is empty, with a hint explaining why.
 
 ---
 
-### M-002: Practice results screen shows no spaced repetition scheduling information
+### Issue 5: Reprocessing Orphans Old Questions with No Cleanup
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:593-660` (`_buildResultsContent()`)
-- `lib/features/practice/presentation/screens/practice_session_screen.dart:277-278` (`PracticeSessionResult` carries only count + accuracy)
+**Files:**
+- `lib/features/ingestion/presentation/source_detail_screen.dart:133-201` — `_reprocess()` method
+- `lib/features/ingestion/services/content_pipeline.dart:253-283` — `reprocessSource()`
 
-**Rationale:**
-After completing a Spaced Repetition session, the results screen shows standard metrics (total questions, correct count, accuracy, topic breakdown) but ZERO spaced repetition-specific information. The user cannot see:
-
-- How many questions were rescheduled and to what dates
-- Which questions had their intervals changed
-- Their current ease factors or repetition counts
-- Whether their next review load increased or decreased
-
-The `PracticeSessionResult` object (returned via `Navigator.pop()`) contains only `questionsAnswered` and `accuracy` — no SM-2 state diff.
-
-**Impact:** Spaced Repetition mode is functionally invisible to the user. They experience it as "some questions, maybe ordered differently" with no feedback on the scheduling adjustments being made. The feature becomes a confusing variant of regular practice rather than an understandable learning tool.
+**Problem:** When a source is reprocessed:
+1. `reprocessSource()` calls `processFullPipeline()` which generates new question IDs via `IdGenerator.generate('q')`.
+2. The source's `generatedQuestionIds` is overwritten with the new IDs.
+3. **Old questions are NOT deleted** — they remain in the `QuestionRepository` as orphaned records (no source references them).
+4. After multiple reprocesses, orphaned questions accumulate as database bloat.
+5. `reprocessSource()` at `content_pipeline.dart:253-283` always generates a NEW source ID — the Source Detail screen works around this by merging, but it's fragile.
 
 **Acceptance criteria:**
-- [ ] The results screen shows at minimum: number of questions rescheduled, next review date range (earliest-latest), count of questions at each interval tier
-- [ ] `PracticeSessionResult` carries SR summary data (questions rescheduled, total interval change)
-- [ ] An "SR Details" expandable section shows per-question next review dates
+1. Before reprocessing, warn the user: "This will regenerate questions. Old questions will be replaced."
+2. On successful reprocess, delete old questions referenced by the previous `generatedQuestionIds`.
+3. Fix `reprocessSource()` to preserve the existing source ID instead of generating a new one.
+4. Consider adding a "Keep old questions" checkbox to the reprocess confirmation dialog.
 
 ---
 
-### M-003: Exam mode hardcodes confidence to 4 (correct) or 2 (incorrect) with no user input
+### Issue 6: Pipeline Error Messages Are Raw Dart Exceptions
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:217` (`confidence: isCorrect ? 4 : 2`)
+**Files:**
+- `lib/features/ingestion/presentation/upload_screen.dart:265-269` — error display
+- `lib/features/ingestion/services/content_pipeline.dart:238-250` — exception propagation
 
-**Rationale:**
-In `_submitAnswer()` (exam_session_screen.dart:195-237), the confidence is hardcoded:
-```dart
-confidence: isCorrect ? 4 : 2,
-```
-Every correct answer gets confidence 4. Every incorrect answer gets confidence 2. There is no confidence selector in exam mode.
+**Problem:** When the pipeline fails, the error shown to the user is `e.toString()` — a raw Dart exception string. Users see messages like:
+- "Upload failed: TimeoutException after 0:00:30.000000: Future not completed"
+- "Upload failed: HttpException: Connection closed before full response"
+- "Upload failed: FormatException: Unexpected character"
 
-This means correct lucky guesses (which should get low confidence) are treated as confident knowledge, and incorrect answers where the user was very sure are treated as "unsure." The SM-2 algorithm cannot distinguish between a lucky guess and solid knowledge.
-
-**Impact:** Exam mode produces less accurate SM-2 scheduling than regular practice. The auto-submitted questions (from time-out) also get confidence 2 (since `isCorrect: false, wasSkipped: true`), so skipped questions are scheduled for immediate review — which might be appropriate but uses the wrong reasoning.
+These are developer-oriented messages with no localization or user-friendly translation.
 
 **Acceptance criteria:**
-- [ ] Add a confidence/confidence rating UI element in the exam answer flow (similar to regular practice mode)
-- [ ] After each answer, the user rates their confidence before proceeding to the next question
-- [ ] The hardcoded confidence fallback is only used for auto-submitted (skipped) questions
+1. Map common exception types to user-friendly localized messages:
+   - Timeout → "The AI service timed out. Check your internet connection or try a different model."
+   - Rate limit (429) → "You've been rate-limited. Please wait a moment and try again."
+   - Auth failure (401) → "Your API key is invalid or expired. Update it in Settings."
+   - Model not found (404) → "The selected model wasn't found. Try a different model."
+   - LLM JSON parse error → "The AI response was malformed. Try reprocessing."
+   - PDF parse failure → "Could not read this file. Make sure it's a valid PDF or document."
+2. Fall through to the raw error only for unclassified exceptions.
+3. Log the original error internally for debugging.
 
 ---
 
-### M-004: Dual "next review" tracking systems can diverge, producing inconsistent due counts
+### Issue 7: No Model-Capability Check for Image/Audio Content Types
 
-**Affected files:**
-- `lib/features/practice/services/mastery_recorder.dart:94-107` (updates `QuestionMasteryState.nextReview` via heuristic)
-- `lib/features/practice/services/spaced_repetition_service.dart:82-91` (`getQuestionsDueForReview()` uses `Question.nextReview`)
-- `lib/core/data/models/question_mastery_state.dart:209-225` (`_calculateNextReview()` heuristic formula)
+**Files:**
+- `lib/features/ingestion/presentation/upload_screen.dart:208-224` — only checks model ID emptiness
+- `lib/features/ingestion/services/document_extractor.dart:41-64` — routes all types to LLM
 
-**Rationale:**
-Two systems track "next review":
+**Problem:** The upload screen checks only `resolvedModelId.isEmpty` before processing. It does not check whether the user's selected model supports:
+- **Vision** (for image/camera uploads — OCR needs vision capabilities)
+- **Audio transcription** (for audio/video uploads)
 
-1. **`Question.nextReview`** — managed by SM-2 via `MasteryRecorder.recordAttempt()`. Stores SM-2 params in `srDataJson`. Queried by `getSubjectDueCount()` for the badge.
-
-2. **`QuestionMasteryState.nextReview`** — updated in the SAME `recordAttempt()` call (line 94-107) but uses a different formula: `nextReview = now + Duration(days: (1.0 / accuracy).round())`. This is a simple heuristic unrelated to SM-2.
-
-The `QuestionMasteryStateRepository.getDueQuestions()` queries System 2, but the actual practice mode uses System 1. Code paths that use the wrong system will see inconsistent due counts.
-
-**Impact:** A student might see "5 questions due" on the Spaced Repetition badge (from System 1) but the Focus Mode Study Hub or a non-standard query might report different counts (from System 2). Due counts are inconsistent.
+If a user uploads a photo with a text-only model (e.g., Llama 3 8B), the `OcrExtractor` sends a vision prompt that the model doesn't understand, producing garbage output or errors. The user has no warning beforehand.
 
 **Acceptance criteria:**
-- [ ] Eliminate one of the two systems. Either `Question.nextReview` (SM-2) should be the single source of truth, or `QuestionMasteryState.nextReview` should be replaced with a direct read from `Question.nextReview`
-- [ ] `QuestionMasteryState._calculateNextReview()` should be removed or aligned with SM-2 intervals
+1. Add a model capability registry or at minimum a warning dialog before processing image/audio content: "Your selected model may not support image analysis. Proceed anyway?"
+2. If the pipeline produces empty extracted text from an image/audio source, show a helpful error: "No text could be extracted. Your model may not support this content type. Try a different model or upload a text-based file."
+3. Consider adding a user-facing model capability viewer in AI Configuration.
 
 ---
 
-### M-005: ReadinessScorer provider creates instance with empty data — scoring is a no-op
+### Issue 8: No Duplicate Content Detection
 
-**Affected files:**
-- `lib/features/practice/providers/practice_providers.dart:94-96` (`readinessScorerProvider`)
-- `lib/features/practice/services/readiness_scorer.dart` (entire file)
+**File:** `lib/features/ingestion/services/content_pipeline.dart:58-92, 94-251`
 
-**Rationale:**
-The `readinessScorerProvider` creates `ReadinessScorer()` with no arguments, which means the internal `_topicMasteryMap` and `_questionMasteryMap` are empty. Inside `scoreQuestions()`, every lookup returns null, and every question falls through to the default score: `0.47 + 0.19 + difficulty * 0.05`. Since all scores are near-identical, the subsequent sort is effectively random.
-
-This affects the Weak Areas mode (practice_screen.dart:274-276) and At Risk mode (practice_screen.dart:377-378), which pass questions through this scorer expecting priority ordering.
-
-**Impact:** The Weak Areas and At Risk modes claim to prioritize high-urgency questions but deliver random ordering. The sophisticated `ReadinessScorer` is wasted infrastructure that never receives real data.
+**Problem:** Uploading the same PDF file twice creates two separate source records with different IDs, two sets of generated questions, and no indication to the user that this content already exists. There is no content hashing, title comparison, or any form of deduplication.
 
 **Acceptance criteria:**
-- [ ] `readinessScorerProvider` must populate the scorer with actual mastery data (topic mastery map + question mastery map from `MasteryGraphService`)
-- [ ] Add test coverage verifying that `scoreQuestions()` returns non-trivial ordering with real data
+1. Compute SHA-256 hash (or similar) of uploaded file content before processing.
+2. Check repository for existing sources with the same hash.
+3. If match found, show dialog: "This content appears to already exist as '[title]'. Upload anyway?"
+4. Same check for text pasting and URL content (hash the extracted text).
 
 ---
 
-### M-006: Exam results show no SR scheduling impact, no per-question timing, no historical comparison
+### Issue 9: Pipeline Has No Cancel Button and No Back-Navigation Guard
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:651-727` (`_buildResultsScreen()`)
+**Files:**
+- `lib/features/ingestion/presentation/upload_screen.dart:608-654` — no cancel UI
+- `lib/features/ingestion/services/content_pipeline.dart:94-251` — no cancellation mechanism
 
-**Rationale:**
-The exam results screen shows score, accuracy, topic breakdown, and duration. Missing:
-- No impact summary: "These results will affect your spaced repetition schedule for 15 questions"
-- No per-question timing analysis: "You spent the most time on question 7 (3:20)"
-- No historical comparison: no previous exam scores shown (because none are persisted — see B-003)
-
-The results screen is adequate for a one-off quiz but insufficient as a diagnostic tool for exam preparation.
+**Problem:** During pipeline processing:
+- There is no cancel/abort button on the upload screen.
+- There is no `PopScope` preventing back navigation during processing.
+- If the user navigates back, the pipeline continues in the background (it's not bound to widget lifecycle).
+- The `mounted` checks at the upload screen prevent crashes but the pipeline bleeds — consuming API credits and time invisibly.
+- There's no elapsed time counter, so users can't tell if they've been waiting 30 seconds or 5 minutes.
 
 **Acceptance criteria:**
-- [ ] Add a "Questions at a glance" section showing per-question time spent
-- [ ] If exam history exists (B-003), add a comparison card showing previous exam scores
-- [ ] Add a note about SR scheduling impact
+1. Add elapsed time display during processing: "Processing... 1m 23s elapsed."
+2. Add a cancel button that cancels in-flight LLM calls.
+3. Add `PopScope` to show confirmation dialog before allowing back-navigation during processing: "Upload in progress. Cancel and go back?"
+4. For very long operations (>2 minutes), consider showing a notification or estimate.
 
 ---
 
-### M-007: `_navigateToExam()` discards the screen's return value
+### Issue 10: Generated Questions May Have Empty TopicId Making Them Unfindable
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/practice_screen.dart:395-404`
+**File:** `lib/features/ingestion/services/content_pipeline.dart:410-475`
 
-**Rationale:**
-The method calls `Navigator.pushNamed(context, AppRoutes.examSession, arguments: ...)` but does NOT capture the return value. Even though `ExamSessionScreen` could `pop()` with meaningful data (e.g., `ExamResult`), the caller ignores it. The Void suffix in `_navigateToExam()` confirms it's fire-and-forget.
-
-**Impact:** Even if exam results were persisted (B-003), the practice screen can never act on the result for post-exam actions (e.g., recommending revision topics, updating due counts).
-This is likely the original source of the results-discarding bug B-003.
+**Problem:** At line 454, `_generateQuestions()` creates `Question` objects with `topicId: topicId` where `topicId` comes from the pipeline's parameter. If the source's `topicId` is empty (classification was skipped or failed — no `possibleTopics`, or no match found), all generated questions have `topicId: ''`. These questions are invisible in Topic Focus practice mode and do not contribute to any named topic's mastery score.
 
 **Acceptance criteria:**
-- [ ] Change `_navigateToExam()` to `async` and capture the return value
-- [ ] Process the return value to update state (refresh due counts, show post-exam recommendations)
+1. After the pipeline completes, if `source.topicId` is empty but questions were generated, show a warning on the Source Detail: "These questions aren't linked to any topic. Use the topic classifier or edit the source's topic to enable topic-specific practice."
+2. Consider providing a fallback: if questions have no topic, create a generic topic for the source.
+3. In the Source Detail screen's topic section, highlight when topic is missing and questions exist.
 
 ---
 
-### M-008: "At Risk" practice mode may be inaccessible from the UI grid
+### Issue 11: All Processing Stages Use the Same "classifying" Status
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/practice_screen.dart:347-393` (`_startAtRiskPractice()`)
-- `lib/features/practice/presentation/widgets/practice_mode_grid.dart` (mode grid rendering)
+**File:** `lib/features/ingestion/services/content_pipeline.dart:159-161, 175-176`
 
-**Rationale:**
-The `_startAtRiskPractice()` method exists and is functional, but the mode grid in `PracticeModeGrid` renders only 6 modes (Quick Practice, Spaced Repetition, Topic Focus, Weak Areas, Exam Mode, Source Practice). The "At Risk" card may not be present in the grid at all, making the method unreachable through any UI path.
-
-**Impact:** A completed feature with dead code path. Users cannot access At Risk practice despite the implementation being complete.
+**Problem:** Two distinct pipeline stages — topic classification (line 159-161) and summary generation (line 175-176) — both use `ProcessingStatus.classifying`. This means:
+1. The progress card shows the same status enum twice, making it impossible for UI code to distinguish between "classifying content topic" and "generating summary" by enum alone.
+2. If a user glances at the progress indicator, they see "classifying" for what feels like twice as long as expected.
+3. Any future code that tracks stage-level progress would need to parse the description text instead of checking the enum.
 
 **Acceptance criteria:**
-- [ ] Verify whether "At Risk" is rendered in the mode grid. If not, either add it to the grid or remove the dead code.
+1. Add a new `ProcessingStatus.summarizing` to the `ProcessingStatus` enum, or
+2. Track stage index separately (not just status enum) to provide accurate stage information to the UI.
 
 ---
 
-## MINOR findings (UX friction)
+## MINOR — UX Friction
 
-### m-001: Exam difficulty sliders default to 0 and are independent of question count — confusing UX
+### Issue 12: Content Library Filters Are Single-Select Only
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:454-640` (`_buildConfigScreen()`)
+**File:** `lib/features/ingestion/presentation/content_library_screen.dart:139-141`
 
-**Rationale:**
-The exam config screen has sliders for Easy (0-10), Medium (0-10), and Hard (0-10) that default to 0. A value of 0 means "no questions of this difficulty," not "any." The sliders add up independently of the separate question count selector (5/10/15/20/30). A user might set Easy=5 expecting 5 easy questions without understanding they need to manually adjust Medium and Hard to reach the question count.
-
-**Impact:** Confusing first-use experience. Users may end up with fewer questions than expected or a different difficulty mix than intended.
+**Problem:** The status and type filters are single-select (`_statusFilter` and `_typeFilter` are `String`, not `List<String>`). Users cannot view multiple statuses simultaneously (e.g., show both "Completed" AND "Failed" sources). Filter comparison uses fragile enum index comparison at line 140-141: `s.type.index.toString()`.
 
 **Acceptance criteria:**
-- [ ] Auto-distribute difficulty proportionally when sliders are left at 0
-- [ ] Show a visual indicator that difficulty values should sum to the question count (e.g., a bar or a "remaining" counter)
-- [ ] Or replace sliders with a percentage-based distribution that automatically sums to 100%
+1. Change filter variables to `List<String>` to support multi-select.
+2. Replace enum index comparison with stable string comparison (type name or identifier).
 
----
+### Issue 13: Source Practice Mode Is Hidden Under "Extra Modes"
 
-### m-002: `useFSRS` dead code flag in SpacedRepetitionEngine
+**Files:**
+- `lib/features/practice/presentation/screens/practice_screen.dart` — mode grid
+- `lib/features/ingestion/presentation/source_detail_screen.dart` — no practice button
 
-**Affected files:**
-- `lib/features/practice/services/spaced_repetition_engine.dart:82` (flag declaration)
-- `lib/features/practice/services/spaced_repetition_engine.dart:89` (constructor parameter)
-
-**Rationale:**
-The `useFSRS` boolean flag is declared as a field and accepted as a constructor parameter, but is never read anywhere in the engine or any caller. Searching the codebase confirms zero reads of `this.useFSRS` or `widget.useFSRS`.
+**Problem:** Source Practice mode is in the "Extra Modes" section at the bottom of the Practice tab's mode grid, below the main 6 cards. Users who just uploaded content and want to practice its questions must scroll down, discover Source Practice, select the subject, then find their source. There is no "Recently Uploaded" shortcut or badge indicating new questions are available.
 
 **Acceptance criteria:**
-- [ ] Remove the `useFSRS` flag if FSRS support is not planned, or implement the conditional branch if it is
+1. After upload completes, consider showing a "Practice New Questions" option in the success snackbar (alongside "Content Library").
+2. Add a badge/banner to the Practice tab when sources were recently processed.
+3. Consider promoting Source Practice cards with recently-processed sources above other modes.
 
----
+### Issue 14: No Post-Upload Guidance for Next Steps
 
-### m-003: No per-question timing breakdown in exam results
+**File:** `lib/features/ingestion/presentation/upload_screen.dart:306-315`
 
-**Affected files:**
-- `lib/features/practice/presentation/screens/exam_session_screen.dart:651-727`
-
-**Rationale:**
-The `ExamQuestionResult` model stores `timeSpentMs` per question, but the results screen does not display it. A student cannot identify which questions they spent too long on — a critical insight for exam strategy improvement.
+**Problem:** After successful upload, the snackbar says "Content uploaded successfully" with a "Content Library" action. There is no guidance on what to do next: "You can now practice the generated questions in the Practice tab!" or "View your extracted text in the Content Library."
 
 **Acceptance criteria:**
-- [ ] In the Review Mistakes dialog (or a new "Exam Analysis" section), show time spent per question
-- [ ] Highlight questions where time spent significantly exceeded the average
+1. Enhance the success snackbar to include a secondary action: "Start Practice" (navigating to practice with this source's questions).
+2. Consider showing a brief one-time success dialog after first upload: "Your content has been processed! Tap 'Practice' to start answering questions, or explore the Content Library to see the extracted text and summary."
 
 ---
 
-## Findings Summary
+## Summary of Work Items
 
-| Severity | Count | Issue IDs |
-|---|---|---|
-| **BLOCKER** | 3 | B-001, B-002, B-003 |
-| **MAJOR** | 8 | M-001, M-002, M-003, M-004, M-005, M-006, M-007, M-008 |
-| **MINOR** | 3 | m-001, m-002, m-003 |
-| **Total** | 14 | |
+| Priority | Issue | Effort | Key Files |
+|---|---|---|---|
+| **BLOCKER** | Save-only path dead code (API key requirement unnecessary) | Small | `upload_screen.dart:184, 214, 612-613` |
+| **BLOCKER** | Pipeline error details lost — Source needs errorMessage field | Medium | `source_model.dart`, `content_pipeline.dart`, `source_detail_screen.dart` |
+| **MAJOR** | Progress indicator always indeterminate, no stage counter | Small | `upload_screen.dart:626-654`, `content_pipeline.dart` |
+| **MAJOR** | No "Practice Generated Questions" button on Source Detail | Small | `source_detail_screen.dart:432-485` |
+| **MAJOR** | Reprocessing orphans old questions | Medium | `source_detail_screen.dart`, `content_pipeline.dart:253-283` |
+| **MAJOR** | Raw Dart exceptions shown as error messages | Medium | `upload_screen.dart`, `content_pipeline.dart` |
+| **MAJOR** | No model-capability check for image/audio content types | Small | `upload_screen.dart`, `document_extractor.dart` |
+| **MAJOR** | No duplicate content detection | Medium | `content_pipeline.dart` |
+| **MAJOR** | Pipeline has no cancel button or back-navigation guard | Medium | `upload_screen.dart` |
+| **MAJOR** | Generated questions may have empty topicId (unfindable) | Small | `content_pipeline.dart:410-475` |
+| **MAJOR** | Two stages share same "classifying" progress status | Trivial | `content_pipeline.dart:159-176` |
+| **MINOR** | Content Library filters single-select, fragile index comparison | Small | `content_library_screen.dart:139-141` |
+| **MINOR** | Source Practice mode hidden under "Extra Modes" | Small | `practice_screen.dart`, `source_detail_screen.dart` |
+| **MINOR** | No post-upload next-steps guidance | Small | `upload_screen.dart:306-315` |

@@ -1,8 +1,6 @@
-import 'dart:io' show Directory;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:hive/hive.dart' as hive_package;
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -13,11 +11,12 @@ import 'package:studyking/features/practice/presentation/screens/practice_screen
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -181,11 +180,6 @@ const _kAtRiskQuestions = 'At-Risk Questions';
 const _kPractice = 'Practice';
 
 void main() {
-  setUp(() async {
-    final dir = await Directory.systemTemp.createTemp('hive_test');
-    hive_package.Hive.init(dir.path);
-  });
-
   group('PracticeScreen - additional coverage', () {
     group('spaced repetition', () {
       testWidgets('SR shows all caught up when no due', (tester) async {

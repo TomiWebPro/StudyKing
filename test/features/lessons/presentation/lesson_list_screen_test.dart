@@ -7,7 +7,7 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';

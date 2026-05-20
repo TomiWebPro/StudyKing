@@ -1,12 +1,12 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 
@@ -83,6 +83,12 @@ class _FakeQuestionRepository extends QuestionRepository {
   Future<Result<List<Question>>> getAll() async {
     return Result.success(_questions);
   }
+}
+
+class _FailingMasteryRepository extends _FakeMasteryRepository {
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async =>
+      Result.failure('Failed to get dependencies');
 }
 
 void main() {
@@ -402,6 +408,76 @@ void main() {
         );
         final levels = resolver.buildLearningLevels(result.data!);
         expect(levels, isEmpty);
+      });
+    });
+
+    group('resolveSyllabus with empty dep results', () {
+      test('handles failed dependency fetching gracefully', () async {
+        topicRepo.addTopic(Topic(
+          id: 'topic-1', subjectId: 'sub_phys', title: 'T1', description: '',
+          syllabusText: '',
+        ));
+        final failingMasteryRepo = _FailingMasteryRepository();
+        final res = SyllabusResolver(
+          topicRepository: topicRepo,
+          masteryRepository: failingMasteryRepo,
+          questionRepository: questionRepo,
+        );
+        final result = await res.resolveSyllabus(subjectId: 'sub_phys');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.first.isReady, isTrue);
+      });
+    });
+
+    group('resolveSyllabus priority with dependencies', () {
+      test('calculates priority with dependency', () async {
+        topicRepo.addTopic(Topic(
+          id: 't1', subjectId: 'sub', title: 'T1', description: '',
+          syllabusText: '',
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 't1',
+          prerequisites: [],
+          downstreamTopics: ['t2'],
+          syllabusWeight: 1.0,
+        ));
+        masteryRepo.addMasteryState(
+          MasteryState.initial(studentId: 's1', topicId: 't1')
+              .copyWith(accuracy: 0.5),
+        );
+        final result = await resolver.resolveSyllabus(
+          subjectId: 'sub', studentId: 's1',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.first.priority, greaterThan(0.0));
+      });
+    });
+
+    group('topological sort with multi-level deps', () {
+      test('sorts three levels correctly', () async {
+        topicRepo.addTopic(Topic(
+          id: 'level3', subjectId: 'sub', title: 'L3', description: '',
+          syllabusText: '',
+        ));
+        topicRepo.addTopic(Topic(
+          id: 'level2', subjectId: 'sub', title: 'L2', description: '',
+          syllabusText: '',
+        ));
+        topicRepo.addTopic(Topic(
+          id: 'level1', subjectId: 'sub', title: 'L1', description: '',
+          syllabusText: '',
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'level2', prerequisites: ['level1'], downstreamTopics: ['level3'],
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'level3', prerequisites: ['level2'], downstreamTopics: [],
+        ));
+        final result = await resolver.resolveSyllabus(
+          subjectId: 'sub', studentId: 's1',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data!, hasLength(3));
       });
     });
   });

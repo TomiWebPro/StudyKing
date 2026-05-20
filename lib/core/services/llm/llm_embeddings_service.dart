@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/constants/app_api_config.dart';
 import '../../../core/constants/app_constants.dart';
 import '../../../core/errors/result.dart';
 import '../../../core/utils/logger.dart';
@@ -10,7 +11,7 @@ class EmbeddingService {
   final String baseUrl;
   final LlmProvider provider;
   final http.Client _httpClient;
-  final Logger _logger = const Logger('EmbeddingService');
+  static final Logger _logger = const Logger('EmbeddingService');
 
   EmbeddingService({
     required this.apiKey,
@@ -38,7 +39,7 @@ class EmbeddingService {
       case LlmProvider.openRouter:
         return {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
+          'Authorization': '${ApiConfig.bearerAuth}$apiKey',
           'HTTP-Referer': 'StudyKing',
         };
       case LlmProvider.ollama:
@@ -46,7 +47,7 @@ class EmbeddingService {
       case LlmProvider.openAI:
         return {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
+          'Authorization': '${ApiConfig.bearerAuth}$apiKey',
         };
     }
   }
@@ -72,7 +73,7 @@ class EmbeddingService {
       }
       return Result.failure('Embedding API Error: ${response.statusCode}');
     } catch (e) {
-      _logger.e('Embedding error', e);
+      _logger.w('Embedding error', e);
       return Result.failure(e.toString());
     }
   }

@@ -5,12 +5,12 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -142,13 +142,14 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   FakePlanAdherenceOrchestrator() : super();
 
   @override
-  Future<void> recordActivity({
+  Future<Result<void>> recordActivity({
     required String studentId,
     required int actualMinutes,
     int actualQuestions = 0,
     String? planId,
   }) async {
     recordActivityCalled = true;
+    return Result.success(null);
   }
 }
 

@@ -26,7 +26,6 @@ import 'widgets/voice_bar.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/presentation/widgets/lesson_block_card.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
-import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
@@ -41,7 +40,7 @@ class TutorScreen extends ConsumerStatefulWidget {
     required this.topicId,
     required this.topicTitle,
     required this.subjectId,
-    this.durationMinutes = 45,
+    this.durationMinutes = Timeouts.defaultLessonDurationMinutes,
     this.tutorService,
     this.scheduledSessionId,
   });
@@ -51,6 +50,7 @@ class TutorScreen extends ConsumerStatefulWidget {
 }
 
 class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAliveClientMixin {
+  static final Logger _logger = const Logger('TutorScreen');
   late final TutorService _tutorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
@@ -65,6 +65,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   String _initErrorMessage = '';
   String? _retryMessage;
   Timer? _timer;
+  Timer? _closingTimer;
   int _elapsedMinutes = 0;
   LessonPlan? _lessonPlan;
   bool _voiceOutputEnabled = false;
@@ -141,6 +142,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         setState(() => _elapsedMinutes++);
         if (_elapsedMinutes >= widget.durationMinutes && _manager != null) {
           _manager!.transitionToClosing();
+          _startClosingGraceTimer();
         }
       });
 
@@ -182,7 +184,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         _scrollToBottom();
       }
     } catch (e) {
-      const Logger('TutorScreen').e('Initial greeting failed', e);
+      _logger.w('Initial greeting failed', e);
     }
 
     if (mounted) setState(() => _isSending = false);
@@ -215,7 +217,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       }
     } catch (e) {
       final l10n = AppLocalizations.of(context)!;
-      const Logger('TutorScreen').e('Stream failed', e);
+      _logger.w('Stream failed', e);
       _manager!.addAssistantMessage(
         '${l10n.errorWithResponse}\n\n${l10n.tryAgain}',
       );
@@ -369,6 +371,8 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     );
     if (result == 'cancel' || result == null) return;
     if (result == 'discard') {
+      _cancelClosingGraceTimer();
+      await _tutorService.cancelActiveSession();
       _manager = null;
       if (mounted) Navigator.of(context).pop();
       return;
@@ -387,10 +391,27 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
   Future<String> _endLessonInternal() async {
     if (_manager == null) return '';
+    _cancelClosingGraceTimer();
     final summary = await _manager!.generateSummary();
     await _tutorService.endLesson();
     _timer?.cancel();
     return summary;
+  }
+
+  void _startClosingGraceTimer() {
+    _closingTimer?.cancel();
+    _closingTimer = Timer(const Duration(minutes: 3), () {
+      if (!mounted || _manager == null) return;
+      _logger.w('Closing grace period expired, auto-ending lesson');
+      _endLessonInternal().then((_) {
+        if (mounted) _showSummaryDialog();
+      });
+    });
+  }
+
+  void _cancelClosingGraceTimer() {
+    _closingTimer?.cancel();
+    _closingTimer = null;
   }
 
   Future<void> _startFocusModePractice() async {
@@ -399,7 +420,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     await Navigator.pushNamed(
       context,
       AppRoutes.focusMode,
-      arguments: FocusTimerScreen(
+      arguments: FocusTimerScreenArgs(
         preselectedSubjectId: widget.subjectId,
         preselectedTopicId: widget.topicId,
         defaultDurationMinutes: 15,
@@ -413,7 +434,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     await Navigator.pushNamed(
       context,
       AppRoutes.focusMode,
-      arguments: FocusTimerScreen(
+      arguments: FocusTimerScreenArgs(
         preselectedSubjectId: widget.subjectId,
         preselectedTopicId: widget.topicId,
         defaultDurationMinutes: 30,
@@ -474,10 +495,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(ctx).pop();
-              Future.delayed(const Duration(milliseconds: 200), () {
-                if (mounted) Navigator.of(context).pop();
-              });
+              Navigator.of(context)..pop()..pop();
             },
             child: Text(l10n.done),
           ),
@@ -559,6 +577,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _inputFocusNode.dispose();
     _pageController.dispose();
     _timer?.cancel();
+    _closingTimer?.cancel();
     super.dispose();
   }
 
@@ -960,7 +979,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
-            icon: const Icon(Icons.chevron_left),
+            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
             tooltip: l10n.previous,
             onPressed: _currentSlideIndex > 0
                 ? () => _pageController.previousPage(
@@ -969,9 +988,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                     )
                 : null,
           ),
-          Text('${_currentSlideIndex + 1} / $total'),
+          Text(l10n.ofLabel(_currentSlideIndex + 1, total)),
           IconButton(
-            icon: const Icon(Icons.chevron_right),
+            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
             tooltip: l10n.next,
             onPressed: _currentSlideIndex < total - 1
                 ? () => _pageController.nextPage(

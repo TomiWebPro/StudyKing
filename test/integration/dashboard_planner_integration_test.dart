@@ -5,13 +5,13 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 
 class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];

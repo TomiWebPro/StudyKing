@@ -29,7 +29,8 @@ class GetStudentStatsTool extends AgentTool {
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
     final studentId = _studentIdService.getStudentId();
-    final stats = await _progressTracker.getOverallStats(studentId);
+    final statsResult = await _progressTracker.getOverallStats(studentId);
+    final stats = statsResult.data ?? <String, dynamic>{};
     return {
       'totalAttempts': stats['totalAttempts'] ?? 0,
       'correctAttempts': stats['correctAttempts'] ?? 0,

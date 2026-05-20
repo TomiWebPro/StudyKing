@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -382,11 +383,11 @@ class _FakeConflictPlannerService extends PlannerService {
       : super(fixedStudentId: 'test');
 
   @override
-  Future<bool> hasSchedulingConflict({
+  Future<Result<bool>> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,
     String? excludeSessionId,
   }) async {
-    return conflictResult;
+    return Result.success(conflictResult);
   }
 }

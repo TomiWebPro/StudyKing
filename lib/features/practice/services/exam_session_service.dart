@@ -1,10 +1,13 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/clock.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 
 class ExamConfig {
@@ -41,6 +44,22 @@ class ExamQuestionResult {
     required this.timeSpentMs,
     this.wasSkipped = false,
   });
+
+  Map<String, dynamic> toJson() => {
+    'questionId': question.id,
+    'userAnswer': userAnswer,
+    'isCorrect': isCorrect,
+    'timeSpentMs': timeSpentMs,
+    'wasSkipped': wasSkipped,
+  };
+
+  factory ExamQuestionResult.fromJson(Map<String, dynamic> json, Question q) => ExamQuestionResult(
+    question: q,
+    userAnswer: json['userAnswer'] as String?,
+    isCorrect: json['isCorrect'] as bool,
+    timeSpentMs: json['timeSpentMs'] as int,
+    wasSkipped: json['wasSkipped'] as bool? ?? false,
+  );
 }
 
 class ExamResult {
@@ -88,9 +107,41 @@ class ExamResult {
     final total = questionResults.fold<int>(0, (sum, r) => sum + r.timeSpentMs);
     return total / questionResults.length;
   }
+
+  Map<String, dynamic> toJson() => {
+    'configDurationMinutes': config.durationMinutes,
+    'configQuestionCount': config.questionCount,
+    'configSubjectId': config.subjectId,
+    'configEasyCount': config.easyCount,
+    'configMediumCount': config.mediumCount,
+    'configHardCount': config.hardCount,
+    'totalCorrect': totalCorrect,
+    'totalIncorrect': totalIncorrect,
+    'totalSkipped': totalSkipped,
+    'accuracy': accuracy,
+    'startTime': startTime.toIso8601String(),
+    'endTime': endTime.toIso8601String(),
+    'wasAutoSubmitted': wasAutoSubmitted,
+  };
+
+  factory ExamResult.fromJson(Map<String, dynamic> json, List<ExamQuestionResult> results) => ExamResult(
+    config: ExamConfig(
+      durationMinutes: json['configDurationMinutes'] as int,
+      questionCount: json['configQuestionCount'] as int,
+      subjectId: json['configSubjectId'] as String,
+      easyCount: json['configEasyCount'] as int?,
+      mediumCount: json['configMediumCount'] as int?,
+      hardCount: json['configHardCount'] as int?,
+    ),
+    questionResults: results,
+    startTime: DateTime.parse(json['startTime'] as String),
+    endTime: DateTime.parse(json['endTime'] as String),
+    wasAutoSubmitted: json['wasAutoSubmitted'] as bool? ?? false,
+  );
 }
 
 class ExamSessionService {
+  static final Logger _logger = const Logger('ExamSessionService');
   final SessionRepository _sessionRepo;
   final StudentIdService _studentIdService;
   final Clock _clock;
@@ -213,7 +264,39 @@ class ExamSessionService {
     );
     await _sessionRepo.save(session.id, session);
 
+    await _saveExamResult(result);
+
     return result;
+  }
+
+  static Future<List<Map<String, dynamic>>> getSavedExamResults() async {
+    try {
+      final box = await Hive.openBox(HiveBoxNames.examResults);
+      return box.values.cast<Map<String, dynamic>>().toList()
+        ..sort((a, b) {
+          final aTime = a['result']?['startTime'] as String? ?? '';
+          final bTime = b['result']?['startTime'] as String? ?? '';
+          return bTime.compareTo(aTime);
+        });
+    } catch (e) {
+      return [];
+    }
+  }
+
+  Future<void> _saveExamResult(ExamResult result) async {
+    try {
+      final box = await Hive.openBox(HiveBoxNames.examResults);
+      final id = 'exam_${result.startTime.millisecondsSinceEpoch}';
+      final data = <String, dynamic>{
+        'id': id,
+        'result': result.toJson(),
+        'questionResults': result.questionResults.map((qr) => qr.toJson()).toList(),
+        'questionIds': result.questionResults.map((qr) => qr.question.id).toList(),
+      };
+      await box.put(id, data);
+    } catch (e) {
+      _logger.w('Failed to save exam result', e);
+    }
   }
 
   void cancelExam() {

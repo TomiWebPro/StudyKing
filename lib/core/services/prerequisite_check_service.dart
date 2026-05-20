@@ -3,7 +3,7 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -18,7 +18,7 @@ class PrerequisiteCheckResult {
 }
 
 class PrerequisiteCheckService {
-  final Logger _logger = const Logger('PrerequisiteCheckService');
+  static final Logger _logger = const Logger('PrerequisiteCheckService');
   final TopicRepository _topicRepository;
   final MasteryGraphRepository _masteryRepository;
 
@@ -84,7 +84,7 @@ class PrerequisiteCheckService {
         unmetPrerequisiteTopics: unmetTopics,
       ));
     } catch (e) {
-      _logger.e('Failed to check prerequisites', e);
+      _logger.w('Failed to check prerequisites', e);
       return Result.failure('Prerequisite check failed: $e');
     }
   }

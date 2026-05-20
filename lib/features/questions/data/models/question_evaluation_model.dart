@@ -1,4 +1,5 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 
 enum EvaluationType {
@@ -137,10 +138,10 @@ class QuestionEvaluation extends HiveObject {
     final normalizedAnswer = userAnswer.normalized;
     final normalizedCorrect = correctAnswer.normalized;
 
-    if (normalizedAnswer == normalizedCorrect) return true;
+    if (AnswerComparator.areEquivalent(userAnswer, correctAnswer)) return true;
 
     for (final acceptable in acceptableAnswers) {
-      if (normalizedAnswer == acceptable.normalized) return true;
+      if (AnswerComparator.areEquivalent(userAnswer, acceptable)) return true;
     }
 
     if (evaluationType == EvaluationType.fuzzyMatch && normalizedAnswer.isNotEmpty) {
@@ -153,8 +154,8 @@ class QuestionEvaluation extends HiveObject {
     }
 
     if (evaluationType == EvaluationType.stepBased && steps != null && steps!.isNotEmpty) {
-      final answerLower = userAnswer.toLowerCase();
-      return steps!.every((step) => answerLower.contains(step.requiredAnswer.toLowerCase()));
+      final answerLower = userAnswer.normalized;
+      return steps!.every((step) => answerLower.contains(step.requiredAnswer.normalized));
     }
 
     return false;

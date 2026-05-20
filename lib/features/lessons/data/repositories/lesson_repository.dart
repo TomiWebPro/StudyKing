@@ -6,7 +6,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class LessonRepository extends Repository<Lesson> {
-  final Logger _logger = const Logger('LessonRepository');
+  static final Logger _logger = const Logger('LessonRepository');
 
   Future<void> init() async {
     await openBox(HiveBoxNames.lessons);
@@ -17,7 +17,7 @@ class LessonRepository extends Repository<Lesson> {
       await save(lesson.id, lesson);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error creating lesson', e);
+      _logger.w('Error creating lesson', e);
       return Result.failure(e.toString());
     }
   }
@@ -26,7 +26,7 @@ class LessonRepository extends Repository<Lesson> {
     try {
       return Result.success(filterBy((l) => l.subjectId, subjectId));
     } catch (e) {
-      _logger.e('Error getting lessons by subject', e);
+      _logger.w('Error getting lessons by subject', e);
       return Result.failure(e.toString());
     }
   }
@@ -35,7 +35,7 @@ class LessonRepository extends Repository<Lesson> {
     try {
       return Result.success(filterBy((l) => l.topicId, topicId));
     } catch (e) {
-      _logger.e('Error getting lessons by topic', e);
+      _logger.w('Error getting lessons by topic', e);
       return Result.failure(e.toString());
     }
   }
@@ -46,7 +46,7 @@ class LessonRepository extends Repository<Lesson> {
       final bySubject = filterBy((l) => l.subjectId, subjectId);
       return Result.success(bySubject.where((l) => l.topicId == topicId).toList());
     } catch (e) {
-      _logger.e('Error getting lessons by subject and topic', e);
+      _logger.w('Error getting lessons by subject and topic', e);
       return Result.failure(e.toString());
     }
   }
@@ -62,7 +62,7 @@ class LessonRepository extends Repository<Lesson> {
       await save(lesson.id, updated);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error adding block to lesson', e);
+      _logger.w('Error adding block to lesson', e);
       return Result.failure(e.toString());
     }
   }
@@ -76,7 +76,7 @@ class LessonRepository extends Repository<Lesson> {
       }
       return Result.success(lesson.blocks);
     } catch (e) {
-      _logger.e('Error getting blocks for lesson', e);
+      _logger.w('Error getting blocks for lesson', e);
       return Result.failure(e.toString());
     }
   }
@@ -91,7 +91,7 @@ class LessonRepository extends Repository<Lesson> {
           .toList();
       return Result.success(blocks);
     } catch (e) {
-      _logger.e('Error getting blocks by subject', e);
+      _logger.w('Error getting blocks by subject', e);
       return Result.failure(e.toString());
     }
   }

@@ -1,3 +1,4 @@
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
@@ -50,11 +51,11 @@ class SearchQuestionsTool extends AgentTool {
       questions = questions.where((q) => q.topicId == topicId).toList();
     }
     if (keyword != null && keyword.isNotEmpty) {
-      final lower = keyword.toLowerCase();
+      final lower = keyword.normalized;
       questions = questions
           .where((q) =>
-              q.text.toLowerCase().contains(lower) ||
-              (q.topic ?? '').toLowerCase().contains(lower))
+              q.text.normalized.contains(lower) ||
+              (q.topic ?? '').normalized.contains(lower))
           .toList();
     }
 

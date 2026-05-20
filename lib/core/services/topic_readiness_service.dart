@@ -1,9 +1,9 @@
 import '../errors/result.dart';
 import '../utils/logger.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 
 class TopicReadinessResult {
   final String topicId;
@@ -26,7 +26,7 @@ class TopicReadinessResult {
 }
 
 class TopicReadinessService {
-  final Logger _logger = const Logger('TopicReadinessService');
+  static final Logger _logger = const Logger('TopicReadinessService');
   final MasteryGraphRepository _masteryRepository;
   final TopicRepository _topicRepository;
 
@@ -108,7 +108,7 @@ class TopicReadinessService {
       results.sort((a, b) => b.priority.compareTo(a.priority));
       return Result.success(results);
     } catch (e) {
-      _logger.e('Failed to get ready topics', e);
+      _logger.w('Failed to get ready topics', e);
       return Result.failure(e.toString());
     }
   }

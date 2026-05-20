@@ -1,10 +1,10 @@
 import '../errors/result.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'mastery_calculation_service.dart';
 
@@ -34,10 +34,9 @@ class MasteryGraphService {
     await questionEvaluationRepo.init();
   }
 
-  Future<Result<void>> recordAttempt({
+  Future<Result<void>> recordTopicAttempt({
     required String studentId,
     required String topicId,
-    required String questionId,
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
@@ -57,12 +56,16 @@ class MasteryGraphService {
       subtopicId: subtopicId,
     );
 
-    final updateResult =
-        await masteryStateRepo.updateMasteryState(updatedTopicMastery);
-    if (updateResult.isFailure) {
-      return updateResult;
-    }
+    return masteryStateRepo.updateMasteryState(updatedTopicMastery);
+  }
 
+  Future<Result<void>> recordQuestionAttempt({
+    required String studentId,
+    required String questionId,
+    required bool isCorrect,
+    required int confidence,
+    required int timeSpentMs,
+  }) async {
     final questionMasteryResult =
         await questionMasteryRepo.getQuestionMasteryState(
             studentId, questionId);
@@ -79,6 +82,38 @@ class MasteryGraphService {
     );
 
     return questionMasteryRepo.updateQuestionMasteryState(updated);
+  }
+
+  /// Thin wrapper that calls [recordTopicAttempt] and [recordQuestionAttempt]
+  /// sequentially. Note: these are NOT transactionally atomic — if the topic
+  /// attempt succeeds but the question attempt fails, the topic state will
+  /// already have been updated.
+  Future<Result<void>> recordAttempt({
+    required String studentId,
+    required String topicId,
+    required String questionId,
+    required bool isCorrect,
+    required int confidence,
+    required int timeSpentMs,
+    String? subtopicId,
+  }) async {
+    final topicResult = await recordTopicAttempt(
+      studentId: studentId,
+      topicId: topicId,
+      isCorrect: isCorrect,
+      confidence: confidence,
+      timeSpentMs: timeSpentMs,
+      subtopicId: subtopicId,
+    );
+    if (topicResult.isFailure) return topicResult;
+
+    return recordQuestionAttempt(
+      studentId: studentId,
+      questionId: questionId,
+      isCorrect: isCorrect,
+      confidence: confidence,
+      timeSpentMs: timeSpentMs,
+    );
   }
 
   Future<Result<MasteryState>> getTopicMastery(

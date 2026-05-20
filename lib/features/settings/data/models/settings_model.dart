@@ -114,13 +114,15 @@ class UsageRecord {
 
   String priceDisplayWithLocale(String localeName) => formatCurrency(totalCost, localeName, minFractionDigits: 4, maxFractionDigits: 4);
 
-  String get priceDisplay => formatCurrency(totalCost, 'en', minFractionDigits: 4, maxFractionDigits: 4);
+  @Deprecated('Use priceDisplayWithLocale(localeName) instead')
+  String get priceDisplay => priceDisplayWithLocale('en');
 
   String get tokenDisplay => '($inputTokens in / $outputTokens out)';
 
   String formattedTextWithLocale(String localeName) => '${timestamp.toIso8601String().split(' ')[0]}: ${priceDisplayWithLocale(localeName)}, cost/tk: ${formatDecimal(totalCost / totalTokens, localeName, minFractionDigits: 10, maxFractionDigits: 10)}';
 
-  String get formattedText => '${timestamp.toIso8601String().split(' ')[0]}: $priceDisplay, cost/tk: ${formatDecimal(totalCost / totalTokens, 'en', minFractionDigits: 10, maxFractionDigits: 10)}';
+  @Deprecated('Use formattedTextWithLocale(localeName) instead')
+  String get formattedText => formattedTextWithLocale('en');
 
   String formattedTextWithL10n(AppLocalizations l10n) => l10n.usageRecordFormat(
     timestamp.toIso8601String().split(' ')[0],

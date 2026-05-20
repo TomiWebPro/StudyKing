@@ -5,14 +5,14 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
-import 'package:studyking/features/practice/data/models/mastery_improvement_metric_model.dart';
+import 'package:studyking/core/data/models/mastery_improvement_metric_model.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 

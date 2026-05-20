@@ -2,10 +2,10 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show attemptRepositoryProvider;
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
@@ -99,10 +99,10 @@ void main() {
       expect(tracker, isA<StudyProgressTracker>());
 
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 3);
-      expect(stats['correctAttempts'], 2);
-      expect(stats['accuracy'], 2.0 / 3.0);
-      expect(stats['avgTimePerQuestion'], (5000 + 10000 + 3000) / 3);
+      expect(stats.data!['totalAttempts'], 3);
+      expect(stats.data!['correctAttempts'], 2);
+      expect(stats.data!['accuracy'], 2.0 / 3.0);
+      expect(stats.data!['avgTimePerQuestion'], (5000 + 10000 + 3000) / 3);
     });
 
     test('dashboardStudyProgressTrackerProvider handles error-state when attemptRepo fails', () async {
@@ -118,9 +118,9 @@ void main() {
       expect(tracker, isA<StudyProgressTracker>());
 
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 0);
-      expect(stats['correctAttempts'], 0);
-      expect(stats['accuracy'], 0.0);
+      expect(stats.data!['totalAttempts'], 0);
+      expect(stats.data!['correctAttempts'], 0);
+      expect(stats.data!['accuracy'], 0.0);
     });
 
     test('dashboardInstrumentationServiceProvider uses shared adherence repo', () {

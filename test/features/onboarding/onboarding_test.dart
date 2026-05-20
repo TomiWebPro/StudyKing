@@ -4,16 +4,15 @@ import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 
 void main() {
   group('OnboardingService isOnboardingNeeded', () {
-    setUp(() {
-      OnboardingService.setStorage(InMemoryOnboardingStorage());
-    });
+    late OnboardingService service;
 
-    tearDown(() {
-      OnboardingService.setStorage(HiveOnboardingStorage());
+    setUp(() {
+      service = OnboardingService(storage: InMemoryOnboardingStorage());
     });
 
     test('returns true when no flags are set', () async {
-      expect(await OnboardingService.isOnboardingNeeded(), isTrue);
+      final result = await service.isOnboardingNeeded();
+      expect(result.data, isTrue);
     });
   });
 }

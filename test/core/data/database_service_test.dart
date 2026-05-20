@@ -2,11 +2,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 

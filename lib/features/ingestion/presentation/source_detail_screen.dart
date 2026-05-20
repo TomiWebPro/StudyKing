@@ -13,8 +13,9 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -40,7 +41,7 @@ class SourceDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
-  final _logger = const Logger('SourceDetailScreen');
+  static final _logger = const Logger('SourceDetailScreen');
   late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
   late final SubjectRepository _subjectRepo = widget.subjectRepo ?? SubjectRepository();
   late final TopicRepository _topicRepo = widget.topicRepo ?? TopicRepository();
@@ -124,7 +125,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         });
       }
     } catch (e) {
-      _logger.e('_load failed', e);
+      _logger.w('_load failed', e);
       if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
     }
   }
@@ -189,7 +190,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _logger.e('Reprocess failed', e);
+        _logger.w('Reprocess failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.somethingWentWrong)),
         );
@@ -249,7 +250,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final theme = Theme.of(context);
 
     if (_isLoading) {
-      return Scaffold(appBar: AppBar(), body: const LoadingScreen());
+      return Scaffold(appBar: AppBar(title: Text(l10n.loading)), body: const LoadingScreen());
     }
     if (_error != null || _source == null) {
       return Scaffold(
@@ -521,9 +522,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         content: Text(l10n.deleteSourceBody),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(ctx),
             child: Text(l10n.delete),
           ),
         ],

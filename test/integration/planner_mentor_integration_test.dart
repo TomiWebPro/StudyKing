@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 
 class _FakeNudgeRepo extends EngagementNudgeRepository {
   final List<EngagementNudgeModel> _nudges = [];

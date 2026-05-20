@@ -30,6 +30,9 @@ String evaluationPromptTemplate({
       '  "score": <0.0 to 1.0>,\n'
       '  "$explanationKey": "<detailed feedback explaining what was correct/incorrect>",\n'
       '  "$partialCreditKey": <optional 0.0-1.0 for partially correct parts>,\n'
-      '  "$conceptBreakdownKey": {<optional map of concept name to mastery score 0.0-1.0>}\n'
+      '  "$conceptBreakdownKey": {<optional map of concept name to mastery score 0.0-1.0>},\n'
+      '  "correctAnswer": "<the correct answer to the exercise question>",\n'
+      '  "type": "<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>",\n'
+      '  "options": [<for singleChoice/multiChoice, list of answer options; otherwise empty>]\n'
       '}';
 }

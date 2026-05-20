@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
@@ -10,10 +10,10 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
@@ -272,7 +272,9 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   }
 
   @override
-  Future<void> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {}
+  Future<Result<void>> recordActivity({required String studentId, required int actualMinutes, int actualQuestions = 0, String? planId}) async {
+    return Result.success(null);
+  }
 }
 
 class _FakeErrorPlannerService extends PlannerService {
@@ -306,7 +308,7 @@ class _FakeErrorPlannerService extends PlannerService {
   );
 
   @override
-  Future<bool> scheduleLesson({
+  Future<Result<bool>> scheduleLesson({
     required String topicId,
     required String topicTitle,
     required String subjectId,
@@ -324,21 +326,20 @@ class _FakeErrorPlannerService extends PlannerService {
   }
 
   @override
-  Future<bool> acceptPendingAction(String actionId) async {
+  Future<Result<bool>> acceptPendingAction(String actionId) async {
     if (throwOnAcceptPendingAction) throw Exception('accept error');
     return super.acceptPendingAction(actionId);
   }
 
   @override
-  Future<bool> dismissPendingAction(String actionId) async {
+  Future<Result<bool>> dismissPendingAction(String actionId) async {
     if (throwOnDismissPendingAction) throw Exception('dismiss error');
     return super.dismissPendingAction(actionId);
   }
 
-  @override
-  Future<void> redistributeWorkload(int missedMinutes, {String strategy = 'days:3'}) async {
+  Future<Result<void>> redistributeWorkload(int missedMinutes, {String strategy = 'days:3'}) async {
     if (throwOnRedistribute) throw Exception('redistribute error');
-    return super.redistributeWorkload(missedMinutes, strategy: strategy);
+    return Result.success(null);
   }
 }
 
@@ -381,6 +382,21 @@ PlannerService _createService({
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('planner_providers_test_').path;
+    Hive.init(hivePath);
+    registerPlannerAdapters();
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    try {
+      await Directory(hivePath).delete(recursive: true);
+    } catch (_) {}
+  });
+
   group('PlannerState', () {
     test('default state has correct initial values', () {
       const state = PlannerState();
@@ -433,9 +449,6 @@ void main() {
     late PlannerNotifier notifier;
 
     setUp(() {
-      Hive.init(Directory.systemTemp.createTempSync('planner_providers_test_').path);
-      registerPlannerAdapters();
-
       planRepo = _FakePlanRepository();
       masteryRepo = _FakeMasteryRepository();
       l10n = AppLocalizationsEn();

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 
@@ -16,13 +17,12 @@ class FakePlannerService extends PlannerService {
   void setScheduleResult(bool v) => _scheduleResult = v;
 
   @override
-  Future<bool> scheduleLesson({
+  Future<Result<bool>> scheduleLesson({
     required String topicId,
     required String topicTitle,
     required String subjectId,
     required DateTime scheduledTime,
     int durationMinutes = 30,
-    bool generateContent = false,
   }) async {
     scheduleCallCount++;
     lastTopicId = topicId;
@@ -30,7 +30,7 @@ class FakePlannerService extends PlannerService {
     lastSubjectId = subjectId;
     lastScheduledTime = scheduledTime;
     lastDurationMinutes = durationMinutes;
-    return _scheduleResult;
+    return Result.success(_scheduleResult);
   }
 }
 

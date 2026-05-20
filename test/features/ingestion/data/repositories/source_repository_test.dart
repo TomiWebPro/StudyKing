@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -404,4 +408,360 @@ void main() {
       });
     });
   });
+
+  group('SourceRepository.init() with Hive', () {
+    late String hivePath;
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('hive_source_test_');
+      hivePath = dir.path;
+      Hive.init(hivePath);
+      if (!Hive.isAdapterRegistered(26)) {
+        Hive.registerAdapter(_TestSourceAdapter());
+      }
+      final box = await Hive.openBox<Source>('sources');
+      await box.clear();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        await Directory(hivePath).delete(recursive: true);
+      }
+    });
+
+    test('init opens the box and returns empty list', () async {
+      final repo = SourceRepository();
+      await repo.init();
+      final all = await repo.getAll();
+      expect(all.data, isEmpty);
+    });
+
+    test('init is idempotent when called multiple times', () async {
+      final repo = SourceRepository();
+      await repo.init();
+      await repo.init();
+      await repo.create(Source(id: 's1', title: 'Test', type: SourceType.pdf));
+      final all = await repo.getAll();
+      expect(all.data?.length, 1);
+    });
+
+    group('CRUD operations after init', () {
+      test('creates and retrieves a source', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'Test', type: SourceType.pdf));
+        final result = await repo.get('s1');
+        expect(result.data, isNotNull);
+        expect(result.data?.title, 'Test');
+      });
+
+      test('updates existing source via create', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'Original', type: SourceType.pdf));
+        await repo.create(Source(id: 's1', title: 'Updated', type: SourceType.pdf));
+        final result = await repo.get('s1');
+        expect(result.data?.title, 'Updated');
+      });
+
+      test('getAll returns all sources', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 'a', title: 'A', type: SourceType.pdf));
+        await repo.create(Source(id: 'b', title: 'B', type: SourceType.textbook));
+        final all = await repo.getAll();
+        expect(all.data?.length, 2);
+      });
+
+      test('deletes a source', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'Test', type: SourceType.pdf));
+        await repo.delete('s1');
+        final result = await repo.get('s1');
+        expect(result.data, isNull);
+      });
+
+      test('get returns null for non-existent', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        final result = await repo.get('nonexistent');
+        expect(result.data, isNull);
+      });
+    });
+
+    group('Query methods after init', () {
+      test('getBySubject filters correctly', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, subjectId: 'sub1'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, subjectId: 'sub1'));
+        await repo.create(Source(id: 's3', title: 'S3', type: SourceType.pdf, subjectId: 'sub2'));
+        final results = await repo.getBySubject('sub1');
+        expect(results.length, 2);
+      });
+
+      test('getByTopic filters correctly', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, topicId: 't1'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, topicId: 't2'));
+        final results = await repo.getByTopic('t1');
+        expect(results.length, 1);
+        expect(results.first.id, 's1');
+      });
+
+      test('getByStudent filters correctly', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, studentId: 'stu1'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, studentId: 'stu2'));
+        final results = await repo.getByStudent('stu1');
+        expect(results.length, 1);
+        expect(results.first.studentId, 'stu1');
+      });
+
+      test('getByType filters correctly', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.textbook));
+        final results = await repo.getByType('pdf');
+        expect(results.length, 1);
+        expect(results.first.type, SourceType.pdf);
+      });
+
+      test('getByStatus filters correctly', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'pending'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'completed'));
+        final results = await repo.getByStatus(ProcessingStatus.pending);
+        expect(results.length, 1);
+        expect(results.first.id, 's1');
+      });
+
+      test('getPending returns only pending sources', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'pending'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'completed'));
+        final results = await repo.getPending();
+        expect(results.length, 1);
+        expect(results.first.id, 's1');
+      });
+
+      test('getCompleted returns only completed sources', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'completed'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'failed'));
+        final results = await repo.getCompleted();
+        expect(results.length, 1);
+        expect(results.first.id, 's1');
+      });
+
+      test('getFailed returns only failed sources', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'failed'));
+        await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'pending'));
+        final results = await repo.getFailed();
+        expect(results.length, 1);
+        expect(results.first.id, 's1');
+      });
+    });
+
+    group('Data integrity with Hive', () {
+      test('round-trip preserves all fields', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        final now = DateTime(2024, 6, 15, 10, 30, 0);
+        final source = Source(
+          id: 'full',
+          title: 'Full Source',
+          type: SourceType.textbook,
+          content: 'Content',
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          syllabusId: 'syl-1',
+          sourceUrl: 'https://example.com',
+          studentId: 'stu-1',
+          language: 'en',
+          summary: 'Summary',
+          processingStatus: 'completed',
+          extractedText: 'Text',
+          generatedQuestionIds: ['q1', 'q2'],
+          extractionMethod: 'ocr',
+          chunks: '[{"idx":0}]',
+          extractionMeta: '{"pages":3}',
+          createdAt: now,
+        );
+        await repo.create(source);
+        final result = await repo.get('full');
+        expect(result.data, isNotNull);
+        expect(result.data!.id, 'full');
+        expect(result.data!.title, 'Full Source');
+        expect(result.data!.type, SourceType.textbook);
+        expect(result.data!.content, 'Content');
+        expect(result.data!.subjectId, 'sub-1');
+        expect(result.data!.topicId, 'topic-1');
+        expect(result.data!.syllabusId, 'syl-1');
+        expect(result.data!.sourceUrl, 'https://example.com');
+        expect(result.data!.studentId, 'stu-1');
+        expect(result.data!.language, 'en');
+        expect(result.data!.summary, 'Summary');
+        expect(result.data!.processingStatus, 'completed');
+        expect(result.data!.extractedText, 'Text');
+        expect(result.data!.generatedQuestionIds, ['q1', 'q2']);
+        expect(result.data!.extractionMethod, 'ocr');
+        expect(result.data!.chunks, '[{"idx":0}]');
+        expect(result.data!.extractionMeta, '{"pages":3}');
+        expect(result.data!.createdAt, now);
+      });
+
+      test('empty generatedQuestionIds round-trips', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 'e', title: 'E', type: SourceType.pdf));
+        final result = await repo.get('e');
+        expect(result.data!.generatedQuestionIds, []);
+      });
+
+      test('delete preserves other sources', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        await repo.create(Source(id: 'keep', title: 'Keep', type: SourceType.pdf));
+        await repo.create(Source(id: 'remove', title: 'Remove', type: SourceType.pdf));
+        await repo.delete('remove');
+        expect((await repo.get('keep')).data, isNotNull);
+        expect((await repo.get('remove')).data, isNull);
+      });
+
+      test('sequential create and delete cycle', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        for (int i = 0; i < 10; i++) {
+          await repo.create(Source(id: 's$i', title: 'S$i', type: SourceType.pdf));
+        }
+        expect((await repo.getAll()).data?.length, 10);
+
+        for (int i = 0; i < 10; i++) {
+          await repo.delete('s$i');
+        }
+        expect((await repo.getAll()).data, isEmpty);
+      });
+    });
+
+    group('Error handling', () {
+      test('save returns success', () async {
+        final repo = SourceRepository();
+        await repo.init();
+        final result = await repo.save('s1', Source(id: 's1', title: 'T', type: SourceType.pdf));
+        expect(result.isSuccess, isTrue);
+      });
+
+      test('get returns failure result on error', () async {
+        final repo = SourceRepository();
+        // Don't init - uninitialized box will cause an error
+        final result = await repo.get('anything');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getAll returns failure on uninitialized box', () async {
+        final repo = SourceRepository();
+        final result = await repo.getAll();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('delete returns failure on uninitialized box', () async {
+        final repo = SourceRepository();
+        final result = await repo.delete('anything');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('save returns failure on uninitialized box', () async {
+        final repo = SourceRepository();
+        final result = await repo.save('k', Source(id: 'k', title: 'T', type: SourceType.pdf));
+        expect(result.isFailure, isTrue);
+      });
+    });
+  });
+}
+
+class _TestSourceAdapter extends TypeAdapter<Source> {
+  @override
+  final int typeId = 26;
+
+  @override
+  Source read(BinaryReader reader) {
+    final numOfFields = reader.readByte();
+    final fields = <int, dynamic>{
+      for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
+    };
+    return Source(
+      id: fields[0] as String,
+      title: fields[1] as String,
+      type: SourceType.values[fields[2] as int],
+      content: fields[3] as String? ?? '',
+      subjectId: fields[4] as String? ?? '',
+      topicId: fields[5] as String? ?? '',
+      syllabusId: fields[6] as String? ?? '',
+      sourceUrl: fields[7] as String? ?? '',
+      studentId: fields[8] as String? ?? '',
+      language: fields[9] as String? ?? '',
+      summary: fields[10] as String? ?? '',
+      processingStatus: fields[11] as String? ?? 'pending',
+      extractedText: fields[12] as String? ?? '',
+      generatedQuestionIds: fields[13] != null
+          ? List<String>.from(fields[13] as List)
+          : const [],
+      extractionMethod: fields[14] as String? ?? '',
+      chunks: fields[15] as String? ?? '',
+      extractionMeta: fields[16] as String? ?? '',
+      createdAt: fields[17] as DateTime?,
+    );
+  }
+
+  @override
+  void write(BinaryWriter writer, Source obj) {
+    writer.writeByte(18);
+    writer.writeByte(0);
+    writer.write(obj.id);
+    writer.writeByte(1);
+    writer.write(obj.title);
+    writer.writeByte(2);
+    writer.write(obj.type.index);
+    writer.writeByte(3);
+    writer.write(obj.content);
+    writer.writeByte(4);
+    writer.write(obj.subjectId);
+    writer.writeByte(5);
+    writer.write(obj.topicId);
+    writer.writeByte(6);
+    writer.write(obj.syllabusId);
+    writer.writeByte(7);
+    writer.write(obj.sourceUrl);
+    writer.writeByte(8);
+    writer.write(obj.studentId);
+    writer.writeByte(9);
+    writer.write(obj.language);
+    writer.writeByte(10);
+    writer.write(obj.summary);
+    writer.writeByte(11);
+    writer.write(obj.processingStatus);
+    writer.writeByte(12);
+    writer.write(obj.extractedText);
+    writer.writeByte(13);
+    writer.write(obj.generatedQuestionIds);
+    writer.writeByte(14);
+    writer.write(obj.extractionMethod);
+    writer.writeByte(15);
+    writer.write(obj.chunks);
+    writer.writeByte(16);
+    writer.write(obj.extractionMeta);
+    writer.writeByte(17);
+    writer.write(obj.createdAt);
+  }
 }

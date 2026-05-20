@@ -22,11 +22,11 @@ import 'core/data/data.dart';
 import 'core/services/student_id_service.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -37,8 +37,8 @@ import 'core/services/engagement_scheduler.dart';
 import 'core/services/study_progress_tracker.dart';
 import 'core/services/mastery_graph_service.dart';
 import 'core/services/plan_adherence_orchestrator.dart';
-import 'features/planner/data/repositories/engagement_nudge_repository.dart';
-import 'features/planner/data/repositories/plan_adherence_repository.dart';
+import 'core/data/repositories/engagement_nudge_repository.dart';
+import 'core/data/repositories/plan_adherence_repository.dart';
 import 'features/planner/services/planner_service.dart';
 import 'features/settings/data/models/user_profile_model.dart';
 import 'features/settings/data/models/accessibility_preferences.dart';
@@ -48,8 +48,8 @@ import 'features/practice/presentation/screens/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
 import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
+import 'features/onboarding/providers/onboarding_providers.dart';
 import 'features/onboarding/presentation/onboarding_dialog.dart';
-import 'features/onboarding/services/onboarding_service.dart';
 
 final Logger _mainLogger = const Logger('App');
 
@@ -127,7 +127,7 @@ Future<void> _runAutoBackupCheck() async {
       }
     }
   } catch (e) {
-    _mainLogger.e('Auto-backup check at startup failed', e);
+    _mainLogger.w('Auto-backup check at startup failed', e);
   }
 }
 
@@ -169,7 +169,7 @@ void main() async {
     );
     final dbInitResult = await mainDb.init();
     if (dbInitResult.isFailure) {
-      _mainLogger.e('Failed to init database: ${dbInitResult.error}');
+      _mainLogger.w('Failed to init database: ${dbInitResult.error}');
     }
     
     // Initialize settings repository
@@ -177,7 +177,7 @@ void main() async {
     initSettingsRepository(initSettingsRepo);
     final initResult = await initSettingsRepo.init();
     if (initResult.isFailure) {
-      _mainLogger.e('Failed to init settings: ${initResult.error}');
+      _mainLogger.w('Failed to init settings: ${initResult.error}');
     }
 
     // Load saved locale before runApp to prevent locale flicker
@@ -189,10 +189,10 @@ void main() async {
           setInitialLanguageCode(profile.language);
         }
       } else {
-        _mainLogger.e('Error loading profile: ${initProfileResult.error}');
+        _mainLogger.w('Error loading profile: ${initProfileResult.error}');
       }
     } catch (e, stackTrace) {
-      _mainLogger.e('Error loading profile locale', e, stackTrace);
+      _mainLogger.w('Error loading profile locale', e, stackTrace);
     }
 
     // Initialize student ID service (generates UUID on first launch)
@@ -229,7 +229,7 @@ void main() async {
     if (settingsResult.isSuccess) {
       _engagementScheduler?.updateSettings(settingsResult.data!);
     } else {
-      _mainLogger.e('Error loading initial settings: ${settingsResult.error}');
+      _mainLogger.w('Error loading initial settings: ${settingsResult.error}');
     }
 
     // Run auto-backup check on startup (moved from SettingsScreen initState)
@@ -237,7 +237,7 @@ void main() async {
 
     runApp(StudyKingApp());
   } catch (e, stackTrace) {
-    _mainLogger.e('Error during initialization', e, stackTrace);
+    _mainLogger.w('Error during initialization', e, stackTrace);
   }
 }
 
@@ -445,7 +445,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
   Future<void> _handleFirstLaunch() async {
     try {
-      final isFirst = await OnboardingService.isOnboardingNeeded();
+      final result = await ref.read(onboardingServiceProvider).isOnboardingNeeded();
+      final isFirst = result.data ?? false;
       if (isFirst && mounted) {
         await showDialog(
           context: context,
@@ -462,7 +463,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       }
 
       if (mounted) {
-        final settingsBox = await Hive.openBox('settings');
+        final settingsBox = await Hive.openBox(HiveBoxNames.settings);
         final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
         final dismissedTime = settingsBox.get(_bannerDismissedTimeKey) as int?;
         final shouldShow = apiKey.isEmpty && (dismissedTime == null ||
@@ -471,8 +472,55 @@ class _MainScreenState extends ConsumerState<MainScreen> {
           setState(() => _showApiKeyBanner = true);
         }
       }
+
+      if (mounted) {
+        await _checkOrphanedSessions();
+      }
     } catch (e) {
-      _mainLogger.e('_handleFirstLaunch failed', e);
+      _mainLogger.w('_handleFirstLaunch failed', e);
+    }
+  }
+
+  Future<void> _checkOrphanedSessions() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final activeResult = await db.tutorSessionRepository.getActiveSessions();
+      final sessions = activeResult.data ?? [];
+      if (sessions.isEmpty || !mounted) return;
+
+      final session = sessions.first;
+      final l10n = AppLocalizations.of(context)!;
+      final hour = session.startTime.hour.toString().padLeft(2, '0');
+      final minute = session.startTime.minute.toString().padLeft(2, '0');
+      final timeStr = '$hour:$minute';
+
+      final action = await showDialog<String>(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: Text(l10n.orphanedSessionFound),
+          content: Text(l10n.orphanedSessionMessage(session.topicTitle, timeStr)),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'dismiss'),
+              child: Text(l10n.dismiss),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(ctx, 'discard'),
+              child: Text(l10n.discardAndExit),
+            ),
+          ],
+        ),
+      );
+
+      if (action == 'discard' && mounted) {
+        final cancelled = session.copyWith(
+          status: SessionStatus.cancelled,
+          endTime: DateTime.now(),
+        );
+        await db.tutorSessionRepository.saveSession(cancelled);
+      }
+    } catch (e) {
+      _mainLogger.w('Orphaned session cleanup check failed: $e');
     }
   }
 
@@ -550,13 +598,13 @@ class _MainScreenState extends ConsumerState<MainScreen> {
               ApiKeyBanner(
                 onDismiss: () {
                   setState(() => _apiKeyBannerDismissed = true);
-                  Hive.openBox('settings').then((box) {
+                  Hive.openBox(HiveBoxNames.settings).then((box) {
                     box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
                   });
                 },
                 onDontShowAgain: () {
                   setState(() => _apiKeyBannerDismissed = true);
-                  Hive.openBox('settings').then((box) {
+                  Hive.openBox(HiveBoxNames.settings).then((box) {
                     box.put(_bannerDismissedTimeKey, DateTime.now().millisecondsSinceEpoch);
                   });
                 },
@@ -575,8 +623,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                           labelType: NavigationRailLabelType.all,
                           destinations: _buildDestinations(l10n).map((d) {
                             return NavigationRailDestination(
-                              icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
-                              selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                              icon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.icon))),
+                              selectedIcon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon))),
                               label: Text(d.label),
                             );
                           }).toList(),
@@ -598,10 +646,11 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                     _selectedIndex = index;
                   });
                 },
+                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
                 destinations: _buildDestinations(l10n).map((d) {
                   return NavigationDestination(
-                    icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
-                    selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                    icon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.icon))),
+                    selectedIcon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon))),
                     label: d.label,
                   );
                 }).toList(),

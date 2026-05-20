@@ -7,16 +7,16 @@ import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart' show topicRepositoryProvider;
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -25,10 +25,12 @@ import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider, spacedRepetitionServiceProvider, subjectRepositoryProvider;
+    show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart'
+    show subjectRepositoryProvider;
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   final List<MasteryState>? _allMastery;
@@ -93,8 +95,8 @@ class _FakeProgressTracker extends StudyProgressTracker {
         super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async {
-    return _overallStats ?? {
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
+    return Result.success(_overallStats ?? {
       'totalAttempts': 0,
       'correctAttempts': 0,
       'accuracy': 0,
@@ -103,19 +105,19 @@ class _FakeProgressTracker extends StudyProgressTracker {
       'weeklyActivity': 0,
       'dailyActivity': 0,
       'topicsStudied': 0,
-    };
+    });
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks,
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
       {String? studentId}) async {
-    return _weeklyTrend;
+    return Result.success(_weeklyTrend);
   }
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async {
-    if (_failGetBadges) throw Exception('Badges error');
-    return _badges;
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    if (_failGetBadges) return Result.failure('Badges error');
+    return Result.success(_badges);
   }
 }
 

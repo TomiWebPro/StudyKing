@@ -7,12 +7,12 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/services/difficulty_controller.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
@@ -24,7 +24,7 @@ import 'package:studyking/features/practice/services/spaced_repetition_engine.da
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/utils/clock.dart';
 import '../../../helpers/fakes.dart';
@@ -1165,8 +1165,8 @@ void main() {
       );
 
       expect(mistakes, hasLength(1));
-      expect(mistakes.first.correctAnswer, 'Correct Answer');
-      expect(mistakes.first.explanation, 'Exp');
+      expect(mistakes.data!.first.correctAnswer, 'Correct Answer');
+      expect(mistakes.data!.first.explanation, 'Exp');
     });
   });
 
@@ -1342,7 +1342,7 @@ void main() {
   // 8. PRACTICE_DATA_SERVICE additional coverage
   // ==========================================================================
   group('PracticeDataService - coverage gaps', () {
-    test('loadTopics returns empty when questions empty', () async {
+    test('loadTopicsWithNames returns empty when questions empty', () async {
       final questionRepo = _FakeQuestionRepo4([]);
       final service = PracticeDataService(
         srService: _FakeSrService2({}),
@@ -1350,11 +1350,11 @@ void main() {
         subjectRepo: _FakeSubjectRepo2([]),
         studentIdService: FakeStudentIdService(),
       );
-      final topics = await service.loadTopics(questionRepo);
+      final topics = await service.loadTopicsWithNames(questionRepo);
       expect(topics, isEmpty);
     });
 
-    test('loadTopics filters out null topics but keeps non-null ones', () async {
+    test('loadTopicsWithNames returns map of topic id to name', () async {
       final questionRepo = _FakeQuestionRepo4([
         Question(
           id: 'q1',
@@ -1383,9 +1383,9 @@ void main() {
         subjectRepo: _FakeSubjectRepo2([]),
         studentIdService: FakeStudentIdService(),
       );
-      final topics = await service.loadTopics(questionRepo);
+      final topics = await service.loadTopicsWithNames(questionRepo);
       expect(topics, hasLength(1));
-      expect(topics.first, 'Algebra');
+      expect(topics['t2'], 'Algebra');
     });
 
     test('loadDueCounts handles empty subjects list', () async {

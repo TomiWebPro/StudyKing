@@ -28,7 +28,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onPrevious,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                icon: const Icon(Icons.arrow_back),
+                icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward : Icons.arrow_back),
                 label: Text(l10n.previous),
               ),
             ),
@@ -41,7 +41,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onNext,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                icon: const Icon(Icons.arrow_forward),
+                icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back : Icons.arrow_forward),
                 label: Text(l10n.next),
               ),
             ),
@@ -61,7 +61,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onPrevious,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                icon: const Icon(Icons.arrow_back),
+                icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_forward : Icons.arrow_back),
                 label: Text(l10n.previous),
               ),
             ),
@@ -76,7 +76,7 @@ class PracticeSessionNavButtons extends StatelessWidget {
               child: ElevatedButton.icon(
                 onPressed: onNext,
                 style: ElevatedButton.styleFrom(minimumSize: const Size.fromHeight(48)),
-                icon: const Icon(Icons.arrow_forward),
+                icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back : Icons.arrow_forward),
                 label: Text(l10n.next),
               ),
             ),

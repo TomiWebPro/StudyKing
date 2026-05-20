@@ -253,3 +253,31 @@ But roadmaps are custom milestone-based plans, not curriculum-aligned. They don'
 | Planner shows "X topics planned" per subject goal | `subjectPlans['']` is empty because subjectId is empty — shows zero topics | **MAJOR FAIL** |
 | SyllabusResolver resolves prerequisites correctly | Topological sort, learning levels, and workload estimation are correctly implemented | PASS (infrastructure) |
 | Roadmaps use real subject IDs for syllabus resolution | `createRoadmap()` passes valid subjectId to resolver | PASS |
+
+---
+
+## Updated Validation Results (Dry-Run Audit — 2026-05-20)
+
+The following section documents the actual state of the codebase as traced against each step. Many earlier claims are now outdated because the code has evolved since the original scenario was written.
+
+| Step | Scenario Verdict | Actual Status | Evidence & Current Code References |
+|---|---|---|---|
+| **1** — Upload syllabus PDF → auto-create topics | BLOCKER FAIL | **NOT_COMPLETED** | `_extractTopicsFromSyllabus()` at `content_pipeline.dart:379-445` correctly creates topics from syllabus content via LLM parsing and `TopicRepository.create()`. However, the code path at line 173 requires `type == SourceType.syllabus`. `_inferSourceType()` at `upload_screen.dart:329-359` NEVER returns `SourceType.syllabus` — only `SourceType.pdf` for PDF uploads. The syllabus extraction path is unreachable from the upload flow. |
+| **2** — Topic prerequisites UI | BLOCKER FAIL | **COMPLETED** | `SubjectTopicsTab` (`subject_topics_tab.dart`) provides full CRUD (add/edit/delete/reorder). `TopicDependencyDialog` (`topic_dependency_dialog.dart`) provides CheckboxListTile prerequisite picker, mastery threshold slider (0-100%), required toggle, and syllabus weight slider (0.1-3.0). `_addTopic()` (line 67) creates topics and links to subject. |
+| **3** — Study plan from syllabus goals | BLOCKER FAIL | **PARTIAL** | **FIXED**: `subjectId` is valid — uses `e.selectedSubjectId!` from subject picker dropdown (`planner_screen.dart:193-194`, `_SyllabusEntry` at line 37-54). Subject picker exists at line 745. `subject_plans` metadata IS written at `personal_learning_plan_service.dart:238-255`. Topic count in `_buildSubjectProgressTabs` (line 859-894) works from `subjectPlans`. `SyllabusProgressCard` shows real mastery-based progress. **STILL BROKEN**: Empty `topicMastery` (new user with no practice history) causes plan generation failure at line 140-144 — `courseName` is empty when `syllabusGoals != null`, so the empty-mastery bypass at line 133 is skipped. |
+| **4** — Prerequisite enforcement in practice/tutor | MAJOR FAIL | **COMPLETED** | **FIXED vs scenario**: `PrerequisiteCheckService` (`prerequisite_check_service.dart`) is used from ALL practice entry points via `_checkPrerequisitesForTopicIds()` (called at `practice_screen.dart:244, 440, 493, 540, 622, 664, 790, 800`). `_startTopicPractice()` (line 292) handles dialog result correctly: `if (dialogResult == true) return;`. TutorScreen checks at `tutor_screen.dart:99-118`. No entry points skip checking in current code. `TopicReadinessService` is unused but `PrerequisiteCheckService` fulfills the same role. |
+| **5** — Syllabus completion tracking | MAJOR FAIL | **PARTIAL** | **FIXED versus earlier claims**: `SyllabusProgressCard` (`syllabus_progress_card.dart`) shows mastered/total topics with percentage and progress bar in the planner's `_buildSubjectProgressTabs` (line 903). `PlanSummaryCard` (`plan_summary_card.dart:66`) displays `estimatedCoverage` as a percentage. `estimatedCoverage` uses proper `_calculateCoverage(uniqueTopics, totalSyllabusTopics)` at `personal_learning_plan_service.dart:972-977` (not a `/10` heuristic). **STILL BROKEN**: Dashboard shows plan adherence and mastery overview but no syllabus completion percentage. Subject stats tab (`subject_stats_tab.dart`) shows sessions/accuracy/questions/time only. No syllabus completion tracking exists outside the planner screen. |
+| **6** — Syllabus/topic tab in subject detail | MAJOR FAIL | **COMPLETED** | Subjects tab exists at `subject_detail_screen.dart:194` (`Tab(icon: Icon(Icons.topic), text: l10n.topics)`). `SubjectTopicsTab` shows topics with prerequisite indentation, lock icons, count badges, and dependency management. |
+| **7** — Planner's syllabus UI | MAJOR FAIL | **COMPLETED** | **FIXED vs scenario**: Subject picker dropdown exists at `planner_screen.dart:745-770`. `subjectId` is valid (from `_SyllabusEntry.selectedSubjectId`). Topic count preview via FutureBuilder at line 817. Topic count in progress tabs (line 894) works from `subjectPlans` which IS written. `SyllabusProgressCard` (line 903) shows real progress. Minor: no syllabus document selection from content library. |
+| **8** — SyllabusResolver | PARTIAL → COMPLETED | **COMPLETED** | Topological sort (`syllabus_resolver.dart:158-185`), learning levels (187-208), workload estimation (210-221). Receives valid `subjectId` from both plan generation and roadmap creation. |
+| **9** — Roadmaps | PARTIAL → COMPLETED | **COMPLETED** | `PlannerService.createRoadmap()` (`planner_service.dart:141-180`) correctly passes valid `subjectId` to `SyllabusResolver.resolveSyllabus()`. Milestone-based tracking works. |
+
+### Summary
+
+| Status | Count | Steps |
+|---|---|---|
+| COMPLETED | 6 | 2, 4, 6, 7, 8, 9 |
+| PARTIAL | 2 | 3, 5 |
+| NOT_COMPLETED | 1 | 1 |
+
+**Overall progress: ~67% (6/9 complete).** Not yet at the 80% threshold for deletion. The remaining blockers are: (1) no `SourceType.syllabus` trigger from upload, (3) empty mastery state blocks new-user plan generation, and (5) syllabus completion not shown in Dashboard or Subject Stats.

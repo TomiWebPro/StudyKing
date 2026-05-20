@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 
 void main() {
   group('QuestionMasteryState', () {

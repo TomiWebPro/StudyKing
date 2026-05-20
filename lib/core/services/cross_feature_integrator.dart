@@ -1,7 +1,7 @@
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -31,7 +31,7 @@ class UnifiedTimelineEntry {
 }
 
 class CrossFeatureIntegrator {
-  final Logger _logger = const Logger('CrossFeatureIntegrator');
+  static final Logger _logger = const Logger('CrossFeatureIntegrator');
   final SessionRepository _sessionRepo;
   final StudentIdService _studentIdService;
   final Clock _clock;
@@ -90,7 +90,7 @@ class CrossFeatureIntegrator {
     final sid = studentId ?? _studentIdService.getStudentId();
     final result = await _sessionRepo.getByStudent(sid);
     if (result.isFailure || result.data == null) {
-      _logger.e('cross_feature_integrator: failed to load sessions', result.error);
+      _logger.w('cross_feature_integrator: failed to load sessions', result.error);
       return Result.failure(result.error);
     }
     return Result.success(result.data!);

@@ -2,21 +2,25 @@ import 'dart:convert';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 
 class SessionMigrationService {
   static final Logger _logger = const Logger('SessionMigrationService');
   static bool _migrated = false;
 
-  static Future<void> migrateIfNeeded() async {
-    if (_migrated) return;
+  static Future<Result<void>> migrateIfNeeded() async {
+    if (_migrated) return Result.success(null);
 
     try {
       await _migrateFocusSessions();
       _migrated = true;
       _logger.i('Session migration completed successfully');
+      return Result.success(null);
     } catch (e) {
-      _logger.e('Session migration failed', e);
+      _logger.w('Session migration failed', e);
+      return Result.failure(e.toString());
     }
   }
 
@@ -43,7 +47,7 @@ class SessionMigrationService {
         sessionsBox.put(session.id, session);
         migrated++;
       } catch (e) {
-        _logger.e('Error migrating focus session ${entry.key}', e);
+        _logger.w('Error migrating focus session ${entry.key}', e);
       }
     }
 
@@ -67,7 +71,7 @@ class SessionMigrationService {
       startTime: startTime,
       endTime: endTime,
       plannedDurationMinutes: plannedMinutes,
-      actualDurationMs: (actualSeconds as int) * 1000,
+      actualDurationMs: (actualSeconds as int) * msPerSecond,
       completed: json['completed'] ?? false,
       createdAt: json['createdAt'] != null
           ? DateTime.parse(json['createdAt'])

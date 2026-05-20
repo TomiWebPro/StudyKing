@@ -193,6 +193,15 @@ void main() {
           isTrue,
         );
       });
+
+      test('init() returns safe default state when Hive.openBox() throws', () async {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+        await container.read(dashboardLayoutPreferencesProvider.notifier).init();
+        final prefs = container.read(dashboardLayoutPreferencesProvider);
+        expect(prefs.collapsedCards, isEmpty);
+        expect(prefs.isCollapsed('any'), isFalse);
+      });
     });
 
   });

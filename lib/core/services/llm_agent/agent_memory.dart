@@ -4,7 +4,7 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class AgentMemoryStore {
-  final Logger _logger = const Logger('AgentMemoryStore');
+  static final Logger _logger = const Logger('AgentMemoryStore');
   Box? _box;
   bool _migrated = false;
 

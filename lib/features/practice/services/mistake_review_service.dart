@@ -1,7 +1,8 @@
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class MistakeEntry {
@@ -19,7 +20,7 @@ class MistakeEntry {
 }
 
 class MistakeReviewService {
-  final Logger _logger = const Logger('MistakeReviewService');
+  static final Logger _logger = const Logger('MistakeReviewService');
   final AttemptRepository _attemptRepo;
   final QuestionRepository _questionRepo;
 
@@ -29,7 +30,7 @@ class MistakeReviewService {
   })  : _attemptRepo = attemptRepo,
         _questionRepo = questionRepo;
 
-  Future<List<MistakeEntry>> getMistakesFromSession({
+  Future<Result<List<MistakeEntry>>> getMistakesFromSession({
     required String studentId,
     required String subjectId,
     DateTime? after,
@@ -66,14 +67,14 @@ class MistakeReviewService {
         ));
       }
 
-      return mistakes;
+      return Result.success(mistakes);
     } catch (e) {
-      _logger.e('Error getting mistakes from session', e);
-      return [];
+      _logger.w('Error getting mistakes from session', e);
+      return Result.failure(e.toString());
     }
   }
 
-  Future<List<MistakeEntry>> getPendingMistakes({
+  Future<Result<List<MistakeEntry>>> getPendingMistakes({
     required String studentId,
     required String subjectId,
   }) async {
@@ -113,21 +114,21 @@ class MistakeReviewService {
         }
       }
 
-      return pendingMistakes;
+      return Result.success(pendingMistakes);
     } catch (e) {
-      _logger.e('Error getting pending mistakes', e);
-      return [];
+      _logger.w('Error getting pending mistakes', e);
+      return Result.failure(e.toString());
     }
   }
 
-  Future<bool> isQuestionCorrected(String questionId) async {
+  Future<Result<bool>> isQuestionCorrected(String questionId) async {
     try {
       final attemptsResult = await _attemptRepo.getByQuestion(questionId);
       final attempts = attemptsResult.data ?? [];
-      return attempts.any((a) => a.isCorrect);
+      return Result.success(attempts.any((a) => a.isCorrect));
     } catch (e) {
-      _logger.e('Error checking question corrected status', e);
-      return false;
+      _logger.w('Error checking question corrected status', e);
+      return Result.failure(e.toString());
     }
   }
 

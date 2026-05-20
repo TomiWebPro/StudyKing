@@ -24,7 +24,7 @@ class IdleTask {
 }
 
 class IdleExecutor {
-  final Logger _logger = const Logger('IdleExecutor');
+  static final Logger _logger = const Logger('IdleExecutor');
   final LlmTaskManager? _llmTaskManager;
   final List<IdleTask> _queue = [];
   Timer? _idleCheckTimer;

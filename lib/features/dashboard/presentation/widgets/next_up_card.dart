@@ -6,11 +6,13 @@ import 'package:studyking/features/dashboard/providers/dashboard_data_providers.
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/subjects/providers/subjects_list_provider.dart';
 
 final _dashboardUpcomingLessonsProvider =
     FutureProvider.family<List<Session>, String>((ref, studentId) async {
   final plannerService = ref.watch(plannerServiceProvider);
-  return plannerService.getScheduledLessons();
+  final result = await plannerService.getScheduledLessons();
+  return result.data ?? [];
 });
 
 final _dashboardWeakTopicsProvider =
@@ -30,6 +32,7 @@ class NextUpCard extends ConsumerWidget {
     final dueReviewsAsync = ref.watch(dashboardDueReviewsProvider(studentId));
     final upcomingLessonsAsync = ref.watch(_dashboardUpcomingLessonsProvider(studentId));
     final weakCountAsync = ref.watch(_dashboardWeakTopicsProvider(studentId));
+    final subjectsAsync = ref.watch(subjectListProvider);
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
 
@@ -37,6 +40,7 @@ class NextUpCard extends ConsumerWidget {
     final dueCount = dueReviewsAsync.valueOrNull?.totalDue ?? 0;
     final upcomingLessons = upcomingLessonsAsync.valueOrNull ?? [];
     final weakCount = weakCountAsync.valueOrNull ?? 0;
+    final firstSubjectId = subjectsAsync.valueOrNull?.firstOrNull?.id;
 
     if (dueCount == 0 && upcomingLessons.isEmpty && weakCount == 0) {
       return Card(
@@ -94,7 +98,9 @@ class NextUpCard extends ConsumerWidget {
                 iconColor: cs.primary,
                 title: l10n.reviewsDueCount(dueCount),
                 subtitle: l10n.dueForReviewSubtitle,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession),
+                onTap: firstSubjectId != null
+                    ? () => Navigator.pushNamed(context, AppRoutes.practiceSession, arguments: PracticeSessionArgs(subjectId: firstSubjectId, isSpacedRepetition: true))
+                    : () {},
               ),
             if (weakCount > 0)
               _buildActionTile(
@@ -103,7 +109,9 @@ class NextUpCard extends ConsumerWidget {
                 iconColor: cs.error,
                 title: l10n.weakTopicsCount(weakCount),
                 subtitle: l10n.practiceWeakAreas,
-                onTap: () => Navigator.pushNamed(context, AppRoutes.practiceSession),
+                onTap: firstSubjectId != null
+                    ? () => Navigator.pushNamed(context, AppRoutes.practiceSession, arguments: PracticeSessionArgs(subjectId: firstSubjectId))
+                    : () {},
               ),
           ],
         ),
@@ -124,7 +132,7 @@ class NextUpCard extends ConsumerWidget {
       leading: Icon(icon, color: iconColor),
       title: Text(title, style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w500)),
       subtitle: Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-      trailing: Icon(Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right, color: Theme.of(context).colorScheme.onSurfaceVariant),
       onTap: onTap,
     );
   }

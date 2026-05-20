@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
@@ -26,7 +27,7 @@ class SessionSummaryCard extends StatelessWidget {
     final stats = todayStats ?? {};
     final completed = stats['completedSessions'] as int? ?? 0;
     final total = stats['totalSessions'] as int? ?? 0;
-    final todayMs = stats['totalMs'] as int? ?? (stats['totalSeconds'] as int? ?? 0) * 1000;
+    final todayMs = stats['totalMs'] as int? ?? (stats['totalSeconds'] as int? ?? 0) * msPerSecond;
 
     return Card(
       margin: EdgeInsets.zero,

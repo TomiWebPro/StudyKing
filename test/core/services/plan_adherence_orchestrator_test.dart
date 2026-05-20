@@ -6,7 +6,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
@@ -96,7 +96,7 @@ class _FakePlanService extends PersonalLearningPlanService {
       : super(adherenceRepository: adherenceRepo);
 
   @override
-  Future<void> recordDailyAdherence({
+  Future<Result<void>> recordDailyAdherence({
     required String studentId,
     required int actualQuestions,
     required int actualMinutes,
@@ -114,6 +114,7 @@ class _FakePlanService extends PersonalLearningPlanService {
       planId: planId,
     );
     await adherenceRepo.create(model);
+    return Result.success(null);
   }
 }
 

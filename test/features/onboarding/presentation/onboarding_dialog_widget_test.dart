@@ -568,21 +568,20 @@ void main() {
   });
 
   group('persistence', () {
-    setUp(() {
-      OnboardingService.setStorage(InMemoryOnboardingStorage());
-    });
+    late OnboardingService service;
 
-    tearDown(() {
-      OnboardingService.setStorage(HiveOnboardingStorage());
+    setUp(() {
+      service = OnboardingService(storage: InMemoryOnboardingStorage());
     });
 
     testWidgets('Get Started persists onboarding_completed flag', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const OnboardingDialog()));
+      await tester.pumpWidget(_buildTestApp(OnboardingDialog(service: service)));
       await tester.pump();
       await tester.tap(find.text('Get Started'));
       await tester.pump();
 
-      expect(await OnboardingService.isOnboardingNeeded(), isFalse);
+      final result = await service.isOnboardingNeeded();
+      expect(result.data, isFalse);
     });
   });
 }

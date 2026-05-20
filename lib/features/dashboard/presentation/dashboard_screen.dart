@@ -16,12 +16,15 @@ import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence
 import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
+import 'package:studyking/features/dashboard/presentation/screens/topic_detail_screen.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/due_reviews_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/presentation/widgets/syllabus_progress_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class DashboardScreen extends ConsumerStatefulWidget {
@@ -120,6 +123,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final asyncSnapshot =
         ref.watch(dashboardSourceCountProvider(studentId));
+
+    final syllabusGoalsAsync = ref.watch(dashboardSyllabusProgressProvider(studentId));
+    final syllabusGoals = syllabusGoalsAsync.valueOrNull ?? [];
 
     final checklistProgress = checklistProgressAsync.valueOrNull ?? const ChecklistProgress();
 
@@ -282,6 +288,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   loadingSkeleton: _cardSkeleton(context),
                   body: MasteryProgressCard(snapshot: snapshotData),
                 ),
+                if (syllabusGoals.isNotEmpty) ...[
+                  SizedBox(height: vs),
+                  _buildSyllabusProgress(context, syllabusGoals, studentId),
+                ],
                 SizedBox(height: vs),
                 CollapsibleCard(
                   cardId: 'workload',
@@ -372,6 +382,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           allMastery: allMasteryData,
                           resolveTopicName: (id) =>
                               topicNamesData[id] ?? l10n.unknown,
+                          onTopicTap: (topicId) => Navigator.pushNamed(
+                            context,
+                            AppRoutes.topicDetail,
+                            arguments: TopicDetailArgs(
+                              topicId: topicId,
+                              studentId: studentId,
+                            ),
+                          ),
                         )
                       : Padding(
                           padding: const EdgeInsets.all(16),
@@ -408,6 +426,14 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     allMastery: allMasteryData,
                     resolveTopicName: (id) =>
                         topicNamesData[id] ?? l10n.unknown,
+                    onTopicTap: (topicId) => Navigator.pushNamed(
+                      context,
+                      AppRoutes.topicDetail,
+                      arguments: TopicDetailArgs(
+                        topicId: topicId,
+                        studentId: studentId,
+                      ),
+                    ),
                   ),
                 ),
                 SizedBox(height: vs),
@@ -447,6 +473,35 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         ShimmerWidget(width: double.infinity, height: 60, color: color),
       ],
+    );
+  }
+
+  Widget _buildSyllabusProgress(BuildContext context, List<SyllabusGoal> goals, String studentId) {
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.menu_book, color: Theme.of(context).colorScheme.primary, size: 20),
+                const SizedBox(width: 8),
+                Text(l10n.subjectProgress, style: Theme.of(context).textTheme.titleMedium),
+              ],
+            ),
+            const Divider(),
+            ...goals.map((goal) => Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: SyllabusProgressCard(
+                studentId: studentId,
+                goal: goal,
+              ),
+            )),
+          ],
+        ),
+      ),
     );
   }
 

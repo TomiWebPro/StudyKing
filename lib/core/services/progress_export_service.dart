@@ -5,9 +5,11 @@ import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
+import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/utils/study_utils.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -26,7 +28,8 @@ class ProgressExportService {
         _attemptRepo = attemptRepo;
 
   Future<String> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
-    final overallStats = await _tracker.getOverallStats(studentId);
+    final overallStatsResult = await _tracker.getOverallStats(studentId);
+    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
@@ -55,14 +58,17 @@ class ProgressExportService {
     String studentId, {
     AppLocalizations? l10n,
   }) async {
-    final overallStats = await _tracker.getOverallStats(studentId);
+    final overallStatsResult = await _tracker.getOverallStats(studentId);
+    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
     final attemptsResult = await _attemptRepo.getByStudent(studentId);
     final attempts = attemptsResult.data ?? [];
-    final badges = await _tracker.getBadges(studentId);
-    final trend = await _tracker.getWeeklyTrend(4, studentId: studentId);
+    final badgesResult = await _tracker.getBadges(studentId);
+    final badges = badgesResult.data ?? [];
+    final trendResult = await _tracker.getWeeklyTrend(4, studentId: studentId);
+    final trend = trendResult.data ?? [];
 
     final buffer = StringBuffer();
 
@@ -88,7 +94,7 @@ class ProgressExportService {
         'Question ID,Subject ID,Correct,Time (s),Timestamp');
     for (final a in attempts) {
       buffer.writeln(
-          '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ 1000},${a.timestamp.toIso8601String()}');
+          '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ msPerSecond},${a.timestamp.toIso8601String()}');
     }
 
     buffer.writeln();
@@ -126,13 +132,15 @@ class ProgressExportService {
     String studentId,
     AppLocalizations l10n,
   ) async {
-    final overallStats = await _tracker.getOverallStats(studentId);
+    final overallStatsResult = await _tracker.getOverallStats(studentId);
+    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
     final attemptsResult = await _attemptRepo.getByStudent(studentId);
     final attempts = attemptsResult.data ?? [];
-    final badges = await _tracker.getBadges(studentId);
+    final badgesResult = await _tracker.getBadges(studentId);
+    final badges = badgesResult.data ?? [];
 
     final pdf = pw.Document();
 
@@ -153,7 +161,7 @@ class ProgressExportService {
           ),
           pw.SizedBox(height: 8),
           pw.Text(
-            l10n.pdfGenerated(DateFormat.yMd(l10n.localeName).add_Hm().format(DateTime.now())),
+            l10n.pdfGenerated(localizedDateTime(DateTime.now(), l10n.localeName)),
             style: pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
           ),
           pw.SizedBox(height: 8),
@@ -173,7 +181,7 @@ class ProgressExportService {
             data: [
               [l10n.csvColTotalAttempts, '${overallStats['totalAttempts']}'],
               [l10n.correctAnswers, '${overallStats['correctAttempts']}'],
-              [l10n.accuracy, '${overallStats['accuracy']}%'],
+              [l10n.accuracy, formatPercent(double.tryParse('${overallStats['accuracy']}') ?? 0, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)],
               [l10n.avgTime, '${overallStats['avgTimePerQuestion']}s'],
               [l10n.totalStudyTime, '${formatDecimal(double.tryParse(overallStats['totalStudyTimeHours'] as String? ?? '0') ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h'],
               [l10n.csvColWeeklyActivity, '${overallStats['weeklyActivity']}'],
@@ -331,13 +339,15 @@ class ProgressExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    final overallStats = await _tracker.getOverallStats(studentId);
+    final overallStatsResult = await _tracker.getOverallStats(studentId);
+    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
     final attemptsResult = await _attemptRepo.getByStudent(studentId);
     final attempts = attemptsResult.data ?? [];
-    final badges = await _tracker.getBadges(studentId);
+    final badgesResult = await _tracker.getBadges(studentId);
+    final badges = badgesResult.data ?? [];
 
     final json = jsonEncode({
       'exportDate': DateTime.now().toIso8601String(),

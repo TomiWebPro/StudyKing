@@ -282,7 +282,10 @@ void main() {
         MathInputToolbar(controller: controller),
       ));
 
-      final semantics = find.byType(Semantics);
+      final semantics = find.descendant(
+        of: find.byType(MathInputToolbar),
+        matching: find.bySemanticsLabel(RegExp(r'.+')),
+      );
       expect(semantics, findsNWidgets(17));
     });
 

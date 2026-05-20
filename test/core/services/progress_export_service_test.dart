@@ -4,16 +4,16 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 
 class _FakeMasteryGraphService implements MasteryGraphService {
   List<MasteryState> states = [];
@@ -40,6 +40,14 @@ class _FakeMasteryGraphService implements MasteryGraphService {
   @override
   Future<Result<QuestionMasteryState>> getQuestionMastery(String studentId, String questionId) async =>
       Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
+
+  @override
+  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> recordQuestionAttempt({required String studentId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs}) async =>
+      Result.success(null);
 
   @override
   Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async =>
@@ -137,34 +145,34 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
   List<Map<String, dynamic>> trend = [];
 
   @override
-  Future<Map<String, dynamic>> getOverallStats(String studentId) async => overallStats;
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async => Result.success(overallStats);
 
   @override
-  Future<List<Map<String, dynamic>>> getBadges(String studentId) async => badges;
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async => Result.success(badges);
 
   @override
-  Future<List<Map<String, dynamic>>> getWeeklyTrend(int weeks, {String? studentId}) async => trend;
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async => Result.success(trend);
 
   @override
-  Future<Map<String, dynamic>> getTopicProgress(String studentId, String topicId) async => overallStats;
+  Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async => Result.success(overallStats);
 
   @override
-  Future<List<Map<String, dynamic>>> getRecommendations(String studentId) async => [];
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async => Result.success([]);
 
   @override
-  Future<String> getTopicMasteryLevel(String topicId, {String? studentId}) async => '';
+  Future<Result<String>> getTopicMasteryLevel(String topicId, {String? studentId}) async => Result.success('');
 
   @override
-  Future<MasteryLevel> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async => MasteryLevel.novice;
+  Future<Result<MasteryLevel>> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async => Result.success(MasteryLevel.novice);
 
   @override
-  Future<String> exportProgressCSV(String studentId) async => '';
+  Future<Result<String>> exportProgressCSV(String studentId) async => Result.success('');
 
   @override
-  Future<String> exportQuestionsAndAttemptsCSV(String studentId) async => '';
+  Future<Result<String>> exportQuestionsAndAttemptsCSV(String studentId) async => Result.success('');
 
   @override
-  Future<String> exportSessionHistoryCSV(String studentId) async => '';
+  Future<Result<String>> exportSessionHistoryCSV(String studentId) async => Result.success('');
 
   @override
   void updateLocalization(AppLocalizations l10n) {}

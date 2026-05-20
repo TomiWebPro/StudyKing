@@ -33,6 +33,7 @@ class LessonBookingSheet extends StatefulWidget {
 }
 
 class _LessonBookingSheetState extends State<LessonBookingSheet> {
+  static final Logger _logger = const Logger('LessonBookingSheet');
   TimeOfDay _selectedTime = TimeOfDay(
     hour: DateTime.now().hour + 1,
     minute: 0,
@@ -73,7 +74,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
         });
       }
     } catch (e) {
-      const Logger('LessonBookingSheet').e('Failed to load availability: $e');
+      _logger.w('Failed to load availability: $e');
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -256,15 +257,15 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
     if (service == null) return;
     setState(() => _isCheckingConflict = true);
     try {
-      final conflict = await service.hasSchedulingConflict(
+      final conflictResult = await service.hasSchedulingConflict(
         startTime: time,
         durationMinutes: _durationMinutes,
       );
       if (mounted) {
-        setState(() => _hasConflict = conflict);
+        setState(() => _hasConflict = conflictResult.data ?? false);
       }
     } catch (e) {
-      const Logger('LessonBookingSheet').e('Failed to check scheduling conflict', e);
+      _logger.w('Failed to check scheduling conflict', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(

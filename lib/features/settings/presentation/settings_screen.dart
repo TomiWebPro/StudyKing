@@ -3,11 +3,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart';
+import 'package:intl/intl.dart' hide TextDirection;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/constants/app_constants.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
+import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -34,8 +35,8 @@ import 'package:studyking/features/planner/data/models/engagement_nudge_model.da
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 import 'package:studyking/features/planner/data/models/task_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
@@ -47,6 +48,9 @@ import 'package:studyking/features/subjects/data/models/topic_dependency_model.d
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/theme/app_theme.dart';
+import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dart';
+import 'package:studyking/features/onboarding/providers/onboarding_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
@@ -105,7 +109,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         );
       }
     } catch (e) {
-      _logger.e('Auto-backup failed', e);
+      _logger.w('Auto-backup failed', e);
     }
   }
 
@@ -258,7 +262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                 leading: const Icon(Icons.notifications),
                 title: Text(l10n.checkNudgesNow),
                 subtitle: Text(l10n.runNudgeChecks),
-                trailing: const Icon(Icons.arrow_forward_ios),
+                trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
                 onTap: () async {
                   final scheduler = ref.read(engagementSchedulerProvider);
                   try {
@@ -281,6 +285,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             _section(l10n.studyPreferences, [
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                   Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
+            ]),
+            _section('Spaced Repetition', [
+              _tile('Min interval',
+                  '${_getSrValue(SrConfig.keyMinIntervalDays, SrConfig.defaultMinIntervalDays)} ${l10n.days}',
+                  Icons.calendar_today, () => _showSrMinIntervalDialog()),
+              _tile('Max interval',
+                  '${_getSrValue(SrConfig.keyMaxIntervalDays, SrConfig.defaultMaxIntervalDays)} ${l10n.days}',
+                  Icons.date_range, () => _showSrMaxIntervalDialog()),
+              _tile('Daily review limit',
+                  _getDailyReviewLimitLabel(l10n),
+                  Icons.looks_one, () => _showSrDailyReviewLimitDialog()),
             ]),
             _section(l10n.focusMode, [
               _tile(l10n.focusTime, l10n.focusTimerDescription, Icons.timer_outlined,
@@ -332,6 +347,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
                   () => _showAboutDialog(context)),
+              _tile(l10n.showOnboardingTour, '', Icons.tour,
+                  () => _showOnboardingTour(context)),
               ListTile(
                 leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
                 title: Text(l10n.signOut, style: TextStyle(color: Theme.of(context).colorScheme.error)),
@@ -401,7 +418,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: const Icon(Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
       onTap: onTap,
     );
   }
@@ -444,7 +461,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       leading: Icon(healthIcon, color: healthColor),
       title: Text(l10n.connectionHealth),
       subtitle: Text(healthLabel),
-      trailing: const Icon(Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
       onTap: () => Navigator.pushNamed(context, AppRoutes.apiConfig),
     );
   }
@@ -608,7 +625,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final cap = box.get('dailyCapMinutes', defaultValue: 0) as int;
       return cap > 0 ? l10n.minutesValue(cap) : l10n.noLimit;
     } catch (e) {
-      _logger.e('Failed to get daily cap label', e);
+      _logger.w('Failed to get daily cap label', e);
       return l10n.noLimit;
     }
   }
@@ -638,7 +655,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
       );
     } catch (e) {
-      _logger.e('Failed to show daily cap dialog: $e');
+      _logger.w('Failed to show daily cap dialog: $e');
     }
   }
 
@@ -661,7 +678,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         builder: (ctx) => ListView(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+              padding: const EdgeInsetsDirectional.only(start: 16, top: 16, end: 16, bottom: 8),
               child: FilledButton.icon(
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -674,7 +691,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             const Divider(),
             if (lastBackupStr.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                padding: const EdgeInsetsDirectional.only(start: 16, top: 8, end: 16, bottom: 8),
                 child: Text(
                   '${l10n.lastBackup}: ${DateFormat.yMd(l10n.localeName).format(DateTime.parse(lastBackupStr))}',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -684,7 +701,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               ),
             if (lastBackupPath.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                padding: const EdgeInsetsDirectional.only(start: 16, top: 0, end: 16, bottom: 8),
                 child: TextButton.icon(
                   onPressed: () {
                     Navigator.pop(ctx);
@@ -717,7 +734,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
       );
     } catch (e) {
-      _logger.e('Failed to show auto backup dialog: $e');
+      _logger.w('Failed to show auto backup dialog: $e');
     }
   }
 
@@ -756,6 +773,99 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                       : null,
                   onTap: () {
                     ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(breakDurationSeconds: s));
+                    Navigator.pop(context);
+                  },
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  int _getSrValue(String key, int defaultValue) {
+    try {
+      final box = Hive.box(HiveBoxNames.settings);
+      return box.get(key, defaultValue: defaultValue) as int;
+    } catch (e) {
+      return defaultValue;
+    }
+  }
+
+  void _setSrValue(String key, int value) {
+    try {
+      final box = Hive.box(HiveBoxNames.settings);
+      box.put(key, value);
+      (context as Element).markNeedsBuild();
+    } catch (e) {
+      _logger.w('Failed to set SR config: $e');
+    }
+  }
+
+  void _showSrMinIntervalDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final current = _getSrValue(SrConfig.keyMinIntervalDays, SrConfig.defaultMinIntervalDays);
+    final options = [1, 2, 3, 5, 7, 14, 30];
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        children: options
+            .map((d) => ListTile(
+                  title: Text('$d ${l10n.days}'),
+                  trailing: d == current
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    _setSrValue(SrConfig.keyMinIntervalDays, d);
+                    Navigator.pop(context);
+                  },
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  void _showSrMaxIntervalDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final current = _getSrValue(SrConfig.keyMaxIntervalDays, SrConfig.defaultMaxIntervalDays);
+    final options = [30, 60, 90, 180, 365];
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        children: options
+            .map((d) => ListTile(
+                  title: Text('$d ${l10n.days}'),
+                  trailing: d == current
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    _setSrValue(SrConfig.keyMaxIntervalDays, d);
+                    Navigator.pop(context);
+                  },
+                ))
+            .toList(),
+      ),
+    );
+  }
+
+  String _getDailyReviewLimitLabel(AppLocalizations l10n) {
+    final limit = _getSrValue(SrConfig.keyDailyReviewLimit, SrConfig.defaultDailyReviewLimit);
+    return limit == 0 ? l10n.noLimit : l10n.questionsCount(limit);
+  }
+
+  void _showSrDailyReviewLimitDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    final current = _getSrValue(SrConfig.keyDailyReviewLimit, SrConfig.defaultDailyReviewLimit);
+    final options = [0, 5, 10, 15, 20, 30, 50];
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => ListView(
+        children: options
+            .map((d) => ListTile(
+                  title: Text(d == 0 ? l10n.noLimit : l10n.questionsCount(d)),
+                  trailing: d == current
+                      ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
+                      : null,
+                  onTap: () {
+                    _setSrValue(SrConfig.keyDailyReviewLimit, d);
                     Navigator.pop(context);
                   },
                 ))
@@ -1031,7 +1141,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       }
     } catch (e) {
       if (mounted) {
-        _logger.e('Backup export failed', e);
+        _logger.w('Backup export failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.backupExportFailedWithError(l10n.somethingWentWrong))),
         );
@@ -1233,7 +1343,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       }
     } catch (e) {
       if (mounted) {
-        _logger.e('Import backup failed', e);
+        _logger.w('Import backup failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.importFailedWithError(l10n.somethingWentWrong))),
         );
@@ -1362,7 +1472,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final obj = value as dynamic;
       return obj.toJson() as Map<String, dynamic>;
     } catch (e) {
-      _logger.e('Failed to convert map', e);
+      _logger.w('Failed to convert map', e);
       return null;
     }
   }
@@ -1600,9 +1710,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(ctx),
             child: Text(l10n.signOut),
           ),
         ],
@@ -1615,6 +1725,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.signOutComplete)));
     Navigator.of(context).popUntil((route) => route.isFirst);
+  }
+
+  Future<void> _showOnboardingTour(BuildContext context) async {
+    await ref.read(onboardingServiceProvider).resetOnboarding();
+    if (!context.mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const OnboardingDialog(),
+    );
   }
 
 }
@@ -1730,7 +1850,7 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
     }
 
     final filtered = _models!
-        .where((m) => m.name.toLowerCase().contains(widget.searchController.text.toLowerCase()))
+        .where((m) => m.name.normalized.contains(widget.searchController.text.normalized))
         .toList();
 
     return Column(
@@ -1791,7 +1911,7 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
       final failed = await repo.getFailed();
       if (mounted) setState(() => _failedCount = failed.length);
     } catch (e) {
-      _logger.e('Failed to load failed count', e);
+      _logger.w('Failed to load failed count', e);
     }
   }
 
@@ -1809,7 +1929,7 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
       subtitle: Text(_failedCount > 0
           ? l10n.sourceCountFailed(_failedCount)
           : l10n.noFailedUploads),
-      trailing: const Icon(Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
       onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
     );
   }
@@ -1852,7 +1972,7 @@ class _AiTaskMonitorTileState extends ConsumerState<_AiTaskMonitorTile> {
       subtitle: Text(_activeCount > 0 || _failedCount > 0
           ? l10n.viewActiveAiTasks
           : l10n.viewActiveAiTasks),
-      trailing: const Icon(Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
       onTap: () => Navigator.pushNamed(context, AppRoutes.llmTasks),
     );
   }

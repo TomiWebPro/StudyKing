@@ -5,7 +5,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
-  final Logger _logger = const Logger('QuestionEvaluationRepository');
+  static final Logger _logger = const Logger('QuestionEvaluationRepository');
 
   Future<void> init() async {
     await openBox(HiveBoxNames.questionEvaluations);
@@ -19,7 +19,7 @@ class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
       }
       return Result.failure('not_found');
     } catch (e) {
-      _logger.e('Error getting evaluation', e);
+      _logger.w('Error getting evaluation', e);
       return Result.failure(e.toString());
     }
   }
@@ -29,7 +29,7 @@ class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
       await box.put(evaluation.questionId, evaluation);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error saving evaluation', e);
+      _logger.w('Error saving evaluation', e);
       return Result.failure(e.toString());
     }
   }
@@ -55,7 +55,7 @@ class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
       await box.put(questionId, evaluation);
       return Result.success(null);
     } catch (e) {
-      _logger.e('Error migrating legacy evaluation', e);
+      _logger.w('Error migrating legacy evaluation', e);
       return Result.failure(e.toString());
     }
   }

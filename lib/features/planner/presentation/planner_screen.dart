@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/routes/app_router.dart';
 import '../../../l10n/generated/app_localizations.dart';
@@ -9,8 +10,9 @@ import '../../../core/utils/number_format_utils.dart';
 import '../../../core/widgets/loading_indicator.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/subject_model.dart';
+import '../../../core/services/student_id_service.dart';
 import '../../../features/subjects/data/repositories/subject_repository.dart';
-import '../../../features/subjects/data/repositories/topic_repository.dart';
+import '../../../core/data/repositories/topic_repository.dart';
 import '../data/models/personal_learning_plan_model.dart';
 import '../data/models/roadmap_model.dart';
 import '../providers/planner_providers.dart';
@@ -22,6 +24,7 @@ import 'widgets/pending_action_card.dart';
 import 'widgets/lesson_booking_sheet.dart';
 import 'widgets/progress_overlay_widget.dart';
 import 'widgets/calendar_view_widget.dart';
+import 'widgets/syllabus_progress_card.dart';
 
 class PlannerScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;
@@ -53,6 +56,7 @@ class _SyllabusEntry {
 
 class _PlannerScreenState extends ConsumerState<PlannerScreen>
     with SingleTickerProviderStateMixin {
+  static final Logger _logger = const Logger('PlannerScreen');
   late TabController _tabController;
 
   final TextEditingController _courseController = TextEditingController();
@@ -89,7 +93,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         });
       }
     } catch (e) {
-      const Logger('PlannerScreen').e('Failed to load subjects', e);
+      _logger.w('Failed to load subjects', e);
       if (mounted) setState(() => _subjectsError = AppLocalizations.of(context)!.somethingWentWrong);
     }
   }
@@ -224,7 +228,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
     if (_allSubjects.isNotEmpty) {
       final matchingSubject = _allSubjects.where(
-        (s) => s.name.toLowerCase() == course.toLowerCase(),
+        (s) => AnswerComparator.areEquivalent(s.name, course),
       ).firstOrNull;
       if (matchingSubject == null) {
         if (!mounted) return;
@@ -537,7 +541,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
               ),
               if (_allSubjects.isNotEmpty)
                 Padding(
-                    padding: const EdgeInsets.only(top: 4).add(const EdgeInsetsDirectional.only(start: 4)),
+                    padding: const EdgeInsetsDirectional.only(start: 4, top: 4),
                   child: Text(
                     l10n.planSubjectHint,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
@@ -848,40 +852,59 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       final result = await topicRepo.getBySubject(subjectId);
       return result.data?.length ?? 0;
     } catch (e) {
-      const Logger('PlannerScreen').w('Failed to get topic count: $e');
+      _logger.w('Failed to get topic count: $e');
       return 0;
     }
   }
 
   Widget _buildSubjectProgressTabs(AppLocalizations l10n, PlannerState state) {
     final goals = state.plan!.syllabusGoals;
+    final studentId = widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId();
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+      children: [
         Text(l10n.subjectProgress,
             style: Theme.of(context).textTheme.titleMedium),
         SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
         ...goals.map((goal) {
           final subjectPlans = state.plan!.subjectPlans;
-          final topicCount = subjectPlans[goal.subjectId]?.length ?? 0;
+          final plansForSubject = subjectPlans[goal.subjectId] ?? [];
+          final uniqueTopicCount = plansForSubject
+              .expand((plan) => plan.priorityTopics)
+              .map((t) => t.topicId)
+              .toSet()
+              .length;
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
-            child: ListTile(
-              leading: CircleAvatar(
-                child: Text(goal.subjectTitle.isNotEmpty
-                    ? goal.subjectTitle[0]
-                    : 'S'),
-              ),
-              title: Text(goal.subjectTitle.isNotEmpty
-                  ? goal.subjectTitle
-                  : l10n.unknown),
-              subtitle: Text(
-                  '${goal.targetDays} ${l10n.days} ${l10n.planSummary}, $topicCount ${l10n.topics}'),
-              trailing: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(l10n.hoursPerDayAbbrev(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)),
-                      style: Theme.of(context).textTheme.bodySmall),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: CircleAvatar(
+                      child: Text(goal.subjectTitle.isNotEmpty
+                          ? goal.subjectTitle[0]
+                          : 'S'),
+                    ),
+                    title: Text(goal.subjectTitle.isNotEmpty
+                        ? goal.subjectTitle
+                        : l10n.unknown),
+                    subtitle: Text(
+                        '${goal.targetDays} ${l10n.days}, $uniqueTopicCount ${l10n.topics}'),
+                    trailing: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text(l10n.hoursPerDayAbbrev(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)),
+                            style: Theme.of(context).textTheme.bodySmall),
+                      ],
+                    ),
+                  ),
+                  SyllabusProgressCard(
+                    studentId: studentId,
+                    goal: goal,
+                  ),
                 ],
               ),
             ),
@@ -1210,7 +1233,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
                   arguments: LessonListArgs(
                     topicId: first.topicId ?? '',
                     topicTitle: l10n.scheduledLessons,
-                    subjectId: first.subjectId ?? '',
+                    subjectId: first.subjectId,
                   ));
             },
             child: Text(l10n.moreLessonsCount(
@@ -1284,7 +1307,17 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           ...state.plan!.dailyPlans.map(
           (day) => DailyPlanCard(
             day: day,
-            onStartTutoring: _openTutorMode,
+            onStartTutoring: (topicId, topicTitle, subjectId) {
+              final matchingLessons = state.scheduledLessons.where(
+                (s) => s.topicId == topicId && s.status == SessionStatus.planned,
+              ).toList();
+              final session = matchingLessons.isNotEmpty ? matchingLessons.first : null;
+              _openTutorMode(
+                topicId, topicTitle, subjectId,
+                durationMinutes: session?.plannedDurationMinutes ?? 45,
+                scheduledSessionId: session?.id,
+              );
+            },
             onScheduleLesson: _openLessonBooking,
             onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
                 ? () => _showCatchUpSheet(l10n, state)
@@ -1377,7 +1410,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: Align(
-                alignment: Alignment.centerLeft,
+                alignment: AlignmentDirectional.centerStart,
                 child: Text(
                   l10n.myRoadmaps,
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(

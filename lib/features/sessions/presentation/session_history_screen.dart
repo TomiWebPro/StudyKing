@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -10,8 +11,8 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -28,7 +29,7 @@ class SessionHistoryScreen extends StatefulWidget {
 }
 
 class _SessionHistoryScreenState extends State<SessionHistoryScreen> with AutomaticKeepAliveClientMixin {
-  final Logger _logger = const Logger('SessionHistoryScreen');
+  static final Logger _logger = const Logger('SessionHistoryScreen');
   late SessionRepository _sessionRepository;
   List<Session> _allSessions = [];
   List<Session> _filteredSessions = [];
@@ -64,7 +65,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
         _filterSessions();
       }
     } catch (e) {
-      _logger.e('Error loading sessions', e);
+      _logger.w('Error loading sessions', e);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -176,7 +177,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
           }
       }
     } catch (e) {
-      _logger.e('Export failed', e);
+      _logger.w('Export failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.exportFailed(''))),
@@ -312,7 +313,6 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
     return Scaffold(
       appBar: AppBar(
         title: Text(l10n.sessionHistory),
-        elevation: 0,
         actions: [
           if (_selectedDate != null || _selectedSubject != null)
             Semantics(
@@ -499,7 +499,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
   bool _isStale(Session session) {
     return session.endTime == null &&
         !session.completed &&
-        session.startTime.isBefore(DateTime.now().subtract(const Duration(hours: 1)));
+        session.startTime.isBefore(DateTime.now().subtract(Timeouts.recentSessionWindow));
   }
 
   Future<void> _dismissStaleSession(Session session) async {

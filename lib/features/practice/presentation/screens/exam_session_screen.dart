@@ -65,6 +65,8 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   int _mediumCount = 0;
   int _hardCount = 0;
 
+  int _currentConfidence = 3;
+
   @override
   void initState() {
     super.initState();
@@ -214,7 +216,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       topicId: question.topicId,
       isCorrect: isCorrect,
       timeSpentMs: timeSpentMs,
-      confidence: isCorrect ? 4 : 2,
+      confidence: _currentConfidence,
       userAnswer: _currentAnswer!,
     );
 
@@ -231,6 +233,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         _currentAnswer = null;
         _isSubmitted = false;
         _isFeedbackVisible = false;
+        _currentConfidence = 3;
         _questionStartTime = DateTime.now();
       });
     } else {
@@ -397,13 +400,15 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                       style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                       child: Text(l10n.submitAnswer),
                     ),
-                  if (_isSubmitted)
+                    if (_isSubmitted)
                     Column(
                       children: [
                         PracticeFeedbackWidget(
                           isCorrect: _isCorrect,
                           explanation: question.explanation,
                         ),
+                        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                        _buildConfidenceSelector(),
                         SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
                         PracticeSessionNavButtons(
                           onPrevious: null,
@@ -445,7 +450,16 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       if (_currentAnswer != null && !_isSubmitted) {
         await _submitAnswer();
       }
-      _finishExam();
+      for (final q in _questions.skip(_currentIndex + (_isSubmitted ? 1 : 0))) {
+        _results.add(ExamQuestionResult(
+          question: q,
+          userAnswer: null,
+          isCorrect: false,
+          timeSpentMs: 0,
+          wasSkipped: true,
+        ));
+      }
+      await _finishExam();
       return false;
     }
     return false;
@@ -505,11 +519,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               child: FilledButton.icon(
                 onPressed: _questions.isEmpty || _isReloadingQuestions ? null : _startExam,
                 icon: _isReloadingQuestions
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? ResponsiveUtils.loaderInTouchTarget()
                     : const Icon(Icons.play_arrow),
                 label: Text(l10n.startExam),
                 style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
@@ -583,6 +593,28 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                   ? Theme.of(context).colorScheme.error
                   : Theme.of(context).colorScheme.onSurfaceVariant),
         ),
+        if (_easyCount + _mediumCount + _hardCount == 0)
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: Text(
+              'Questions will be randomly distributed by difficulty',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontStyle: FontStyle.italic,
+              ),
+            ),
+          ),
+        if (_easyCount + _mediumCount + _hardCount > 0 &&
+            _easyCount + _mediumCount + _hardCount < _questionCount)
+          Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Remaining: ${_questionCount - (_easyCount + _mediumCount + _hardCount)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.tertiary,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -593,12 +625,13 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     required ValueChanged<int> onChanged,
     required Color color,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          SizedBox(
-            width: 80,
+          ConstrainedBox(
+            constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.3),
             child: Text(label, style: Theme.of(context).textTheme.bodyMedium),
           ),
           Expanded(
@@ -613,7 +646,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           ),
           SizedBox(
             width: 32,
-            child: Text('$value',
+            child: Text(formatDecimal(value.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.bold)),
           ),
         ],
@@ -632,7 +665,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         Wrap(
           spacing: 8,
           children: counts.map((c) => ChoiceChip(
-            label: Text('$c'),
+            label: Text(formatDecimal(c.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
             selected: _questionCount == c,
             onSelected: (_) => {
               setState(() {
@@ -648,8 +681,116 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     );
   }
 
+  Widget _buildConfidenceSelector() {
+    final l10n = AppLocalizations.of(context)!;
+    final currentLabel = _getConfidenceLabel(l10n, _currentConfidence);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.howConfident,
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
+        Semantics(
+          label: '${l10n.howConfident}: $_currentConfidence ${l10n.confidenceRatingOf} 5, $currentLabel',
+          child: Wrap(
+            spacing: ResponsiveUtils.horizontalSpacing(context),
+            runSpacing: ResponsiveUtils.verticalSpacing(context) / 2,
+            alignment: WrapAlignment.center,
+            children: List.generate(5, (index) {
+              final rating = index + 1;
+              final isSelected = _currentConfidence == rating;
+              return Semantics(
+                button: true,
+                selected: isSelected,
+                child: InkWell(
+                  onTap: () => setState(() => _currentConfidence = rating),
+                  borderRadius: BorderRadius.circular(24),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
+                    height: (MediaQuery.sizeOf(context).width / 6).clamp(32.0, ResponsiveUtils.minTouchTarget),
+                    decoration: BoxDecoration(
+                      color: isSelected
+                          ? _getConfidenceColor(rating).withValues(alpha: 0.2)
+                          : Theme.of(context).colorScheme.surfaceContainerHighest,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: isSelected ? _getConfidenceColor(rating) : Colors.transparent,
+                        width: 2,
+                      ),
+                    ),
+                    child: Center(
+                      child: Text(
+                        '$rating',
+                        style: TextStyle(
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected
+                              ? _getConfidenceColor(rating)
+                              : Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
+        Center(
+          child: Text(
+            currentLabel,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Color _getConfidenceColor(int rating) {
+    final cs = Theme.of(context).colorScheme;
+    switch (rating) {
+      case 1:
+        return cs.error;
+      case 2:
+        return cs.tertiary;
+      case 3:
+        return cs.tertiary;
+      case 4:
+        return cs.primary;
+      case 5:
+        return cs.primary;
+      default:
+        return cs.onSurfaceVariant;
+    }
+  }
+
+  String _getConfidenceLabel(AppLocalizations l10n, int rating) {
+    switch (rating) {
+      case 1:
+        return l10n.notConfidentAtAll;
+      case 2:
+        return l10n.slightlyConfident;
+      case 3:
+        return l10n.moderatelyConfident;
+      case 4:
+        return l10n.quiteConfident;
+      case 5:
+        return l10n.veryConfident;
+      default:
+        return '';
+    }
+  }
+
   Widget _buildResultsScreen(AppLocalizations l10n) {
     final result = _examResult!;
+    final averageTimeMs = result.averageTimePerQuestionMs;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.sessionResults)),
       body: SingleChildScrollView(
@@ -671,6 +812,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               l10n.accuracy,
               formatPercent(result.accuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
             ),
+            _buildResultRow(l10n.avgTimePerQuestion, _formatDurationMs(averageTimeMs.round())),
             if (result.wasAutoSubmitted)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -679,6 +821,13 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
                   style: TextStyle(color: Theme.of(context).colorScheme.error),
                 ),
               ),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+            Text(
+              l10n.examResultsSrsImpact(result.questionResults.length),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             if (result.topicBreakdown.isNotEmpty) ...[
               Text(
@@ -692,6 +841,51 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
               )),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             ],
+            Text(
+              l10n.questionsAtAGlance,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
+            ),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+            ...result.questionResults.map((qr) {
+              final timeStr = _formatDurationMs(qr.timeSpentMs);
+              final isSlow = averageTimeMs > 0 &&
+                  qr.timeSpentMs > averageTimeMs * 1.5 &&
+                  !qr.wasSkipped;
+              return Padding(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    Icon(
+                      qr.isCorrect ? Icons.check_circle : Icons.cancel,
+                      size: 16,
+                      color: qr.isCorrect
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.error,
+                    ),
+                    const SizedBox(width: 6),
+                    Expanded(
+                      child: Text(
+                        qr.question.text.length > 60
+                            ? '${qr.question.text.substring(0, 60)}...'
+                            : qr.question.text,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      timeStr,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: isSlow ? FontWeight.bold : null,
+                        color: isSlow
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
             Row(
               children: [
                 Expanded(
@@ -715,6 +909,14 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         ),
       ),
     );
+  }
+
+  String _formatDurationMs(int ms) {
+    final minutes = ms ~/ 60000;
+    final seconds = (ms % 60000) ~/ 1000;
+    final l10n = AppLocalizations.of(context)!;
+    if (minutes > 0) return l10n.durationMinutesSeconds(minutes, seconds);
+    return l10n.durationSeconds(seconds);
   }
 
   int _computeTimeSpent() {

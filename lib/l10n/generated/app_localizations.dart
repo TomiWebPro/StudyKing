@@ -2996,36 +2996,6 @@ abstract class AppLocalizations {
   /// **'Voice input'**
   String get voiceInput;
 
-  /// Accessibility setting: bold font weight toggle label
-  ///
-  /// In en, this message translates to:
-  /// **'Bold Text'**
-  String get boldText;
-
-  /// Description for bold text accessibility setting
-  ///
-  /// In en, this message translates to:
-  /// **'Use bold font weight for text throughout the app'**
-  String get boldTextDescription;
-
-  /// Tooltip for voice input button when speech recognition is unavailable
-  ///
-  /// In en, this message translates to:
-  /// **'Voice input not available'**
-  String get voiceInputNotAvailable;
-
-  /// Dialog title when microphone permission is needed
-  ///
-  /// In en, this message translates to:
-  /// **'Microphone Permission Required'**
-  String get microphonePermissionRequired;
-
-  /// Semantics label for voice bar when actively listening
-  ///
-  /// In en, this message translates to:
-  /// **'Listening. Speak now.'**
-  String get voiceListeningHint;
-
   /// Tooltip for capture image button
   ///
   /// In en, this message translates to:
@@ -3566,6 +3536,12 @@ abstract class AppLocalizations {
   /// **'You are a knowledgeable and encouraging AI mentor for a student. Your role is to guide their learning journey, provide motivation, and help them develop effective study habits. Keep responses concise, supportive, and actionable.'**
   String get mentorSystemPrompt;
 
+  /// Additional scheduling instructions appended to Mentor system prompt
+  ///
+  /// In en, this message translates to:
+  /// **'IMPORTANT: When the student asks about scheduling lessons, creating plans, or rescheduling, your response should acknowledge the request and indicate that you will present a confirmation proposal. Do not state or imply that the scheduling or plan change has been committed or completed. Use conditional language such as \"I can help with that\", \"Let me check availability\", or \"I\'ll prepare a proposal for you to confirm\". After your response, the system will present a confirmation dialog to the student before any changes are applied.'**
+  String get mentorSystemPromptScheduling;
+
   /// Application name for About dialog
   ///
   /// In en, this message translates to:
@@ -3613,6 +3589,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Lesson'**
   String get lessonFallbackTitle;
+
+  /// Fallback content template for a lesson when LLM generation fails
+  ///
+  /// In en, this message translates to:
+  /// **'Study the key concepts of {topicTitle}. Focus on understanding the core principles.'**
+  String lessonFallbackContent(String topicTitle);
+
+  /// Fallback title for a lesson plan when JSON parsing fails
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson plan for this session'**
+  String get lessonPlanFallbackTitle;
 
   /// Error message with error details
   ///
@@ -6260,6 +6248,18 @@ abstract class AppLocalizations {
   /// **'Are you sure you want to cancel this lesson?'**
   String get cancelLessonConfirmation;
 
+  /// Dialog title when an incomplete tutor lesson is found on startup
+  ///
+  /// In en, this message translates to:
+  /// **'Incomplete Lesson Found'**
+  String get orphanedSessionFound;
+
+  /// Message shown when an incomplete tutor session is found on startup
+  ///
+  /// In en, this message translates to:
+  /// **'An incomplete lesson on \"{topicTitle}\" from {time} was found. What would you like to do?'**
+  String orphanedSessionMessage(String topicTitle, String time);
+
   /// Semantic label for session progress bar
   ///
   /// In en, this message translates to:
@@ -6457,6 +6457,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I was unable to schedule the lesson. Please try again or check your planner.'**
   String get mentorScheduleFail;
+
+  /// Result message when a lesson is scheduled via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson scheduled: {topicTitle}'**
+  String toolScheduleLessonResult(String topicTitle);
+
+  /// Result message when scheduling fails via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to schedule lesson'**
+  String get toolScheduleLessonFail;
+
+  /// Result message when lesson block generation fails via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to generate lesson blocks'**
+  String get toolGenerateBlocksFail;
+
+  /// Result message when a plan is created via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Plan created for {course} over {days} days'**
+  String toolCreatePlanResult(String course, int days);
+
+  /// Result message when plan creation fails via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to create plan'**
+  String get toolCreatePlanFail;
+
+  /// Message when the session to reschedule is not found
+  ///
+  /// In en, this message translates to:
+  /// **'Could not find the lesson to reschedule. It may have already been removed or completed.'**
+  String get mentorRescheduleNotFound;
 
   /// Message when no free slot found for rescheduling
   ///
@@ -6831,7 +6867,7 @@ abstract class AppLocalizations {
   /// Hours per day abbreviation with separator
   ///
   /// In en, this message translates to:
-  /// **'{hours}/Days'**
+  /// **'{hours}h/day'**
   String hoursPerDayAbbrev(String hours);
 
   /// Lesson time status with topic and completion marker
@@ -7826,7 +7862,7 @@ abstract class AppLocalizations {
   /// Label showing number of sources with capital S
   ///
   /// In en, this message translates to:
-  /// **'{count, plural, =1{1 Source} other{{count} Source(s)}}'**
+  /// **'{count, plural, =1{1 Source} other{{count} Sources}}'**
   String sourcesCountLabel(int count);
 
   /// Title for difficulty tier selection in exam config
@@ -7882,6 +7918,216 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Topic: {topicTitle}'**
   String mentorScheduleTopic(String topicTitle);
+
+  /// Warning about late-night study sessions in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'WARNING: {count} session(s) started after 10 PM (late-night study detected)'**
+  String mentorContextLateNightWarning(int count);
+
+  /// Label for average time per question in exam results
+  ///
+  /// In en, this message translates to:
+  /// **'Avg time/question'**
+  String get avgTimePerQuestion;
+
+  /// Message about spaced repetition impact in exam results
+  ///
+  /// In en, this message translates to:
+  /// **'Results will affect spaced repetition scheduling for {count} questions.'**
+  String examResultsSrsImpact(int count);
+
+  /// Section header for question overview in exam results
+  ///
+  /// In en, this message translates to:
+  /// **'Questions at a glance'**
+  String get questionsAtAGlance;
+
+  /// Message shown when no exam history exists
+  ///
+  /// In en, this message translates to:
+  /// **'No exam history available'**
+  String get noExamHistory;
+
+  /// Title for exam history dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Exam History'**
+  String get examHistory;
+
+  /// Duration format with minutes and seconds
+  ///
+  /// In en, this message translates to:
+  /// **'{minutes}m {seconds}s'**
+  String durationMinutesSeconds(int minutes, int seconds);
+
+  /// Description for exam history card
+  ///
+  /// In en, this message translates to:
+  /// **'View past exam results'**
+  String get viewPastExamResults;
+
+  /// Header for student context section in mentor prompt
+  ///
+  /// In en, this message translates to:
+  /// **'Current student context:'**
+  String get mentorContextHeader;
+
+  /// Label for total attempts count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Total attempts: {count}'**
+  String mentorContextTotalAttempts(int count);
+
+  /// Label for correct attempts count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Correct attempts: {count}'**
+  String mentorContextCorrectAttempts(int count);
+
+  /// Label for accuracy percentage in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy: {percent}%'**
+  String mentorContextAccuracy(String percent);
+
+  /// Label for topics studied count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Topics studied: {count}'**
+  String mentorContextTopicsStudied(int count);
+
+  /// Label for weekly activity count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Weekly activity: {count} attempts'**
+  String mentorContextWeeklyActivity(int count);
+
+  /// Label for total study time in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Total study time: {hours} hours'**
+  String mentorContextTotalStudyTime(String hours);
+
+  /// Label for plan phase in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Plan exists: current phase (day {currentDay} of {totalDays})'**
+  String mentorContextPlanPhase(int currentDay, int totalDays);
+
+  /// Label for plan adherence in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Plan adherence: {percent}%'**
+  String mentorContextPlanAdherence(String percent);
+
+  /// Label for low adherence warning in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Low adherence for {count} consecutive days'**
+  String mentorContextLowAdherence(int count);
+
+  /// Label for days since last activity in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Days since last activity: {count}'**
+  String mentorContextDaysSinceActivity(int count);
+
+  /// Welcome back message after absence in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'IMPORTANT: The student is returning after a {count}-day absence. Provide a warm welcome-back and suggest specific catch-up steps.'**
+  String mentorContextWelcomeBack(int count);
+
+  /// Label for active roadmaps count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Active roadmaps: {count}'**
+  String mentorContextActiveRoadmaps(int count);
+
+  /// Label for roadmap progress in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'{goal}: {completed}/{total} milestones completed'**
+  String mentorContextRoadmapProgress(String goal, int completed, int total);
+
+  /// Label for next milestone in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Next milestone: \"{title}\" due {dueDate}'**
+  String mentorContextNextMilestone(String title, String dueDate);
+
+  /// Label for pending actions count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Pending actions awaiting decision: {count}'**
+  String mentorContextPendingActions(int count);
+
+  /// Format for a pending action item in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'{type}: {topic}'**
+  String mentorContextPendingActionItem(String type, String topic);
+
+  /// Header for upcoming lessons in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming lessons (next {count}):'**
+  String mentorContextUpcomingLessons(int count);
+
+  /// Format for a lesson item in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'\"{title}\" at {time} ({duration}min)'**
+  String mentorContextLessonItem(String title, String time, int duration);
+
+  /// Header for weak topics section in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Weak topics needing attention:'**
+  String get mentorContextWeakTopics;
+
+  /// Format for a weak topic item in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'{topic} (accuracy: {accuracy}%)'**
+  String mentorContextWeakTopicItem(String topic, String accuracy);
+
+  /// Label for today's study time in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s study time: {minutes} minutes'**
+  String mentorContextStudyTimeToday(int minutes);
+
+  /// Warning when daily study cap is exceeded in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'WARNING: Daily study cap ({cap} min) exceeded by {today} minutes'**
+  String mentorContextCapExceeded(int cap, int today);
+
+  /// Label for daily cap remaining in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Daily cap: {cap} minutes ({remaining} min remaining)'**
+  String mentorContextCapRemaining(int cap, int remaining);
+
+  /// Congratulations message for long study streak in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Congratulations! {count} day study streak!'**
+  String mentorContextStreak(int count);
+
+  /// Positive message for good study consistency in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'{count} consecutive study days - good consistency!'**
+  String mentorContextStreakGood(int count);
+
+  /// Label for sessions today count in mentor context
+  ///
+  /// In en, this message translates to:
+  /// **'Sessions today: {count}'**
+  String mentorContextSessionsToday(int count);
 
   /// Button to create a new question
   ///
@@ -8342,13 +8588,13 @@ abstract class AppLocalizations {
   /// Label showing prerequisite count
   ///
   /// In en, this message translates to:
-  /// **'{count} prerequisites'**
+  /// **'{count, plural, =1{1 prerequisite} other{{count} prerequisites}}'**
   String prerequisitesCount(int count);
 
   /// Label showing downstream topic count
   ///
   /// In en, this message translates to:
-  /// **'{count} downstream'**
+  /// **'{count, plural, =1{1 downstream} other{{count} downstream}}'**
   String downstreamCount(int count);
 
   /// Label indicating a topic has a parent
@@ -8366,7 +8612,7 @@ abstract class AppLocalizations {
   /// Warning about downstream dependencies when deleting a topic
   ///
   /// In en, this message translates to:
-  /// **'⚠ {count} downstream topic(s) depend on this topic and may need to be updated.'**
+  /// **'⚠ {count, plural, =1{1 downstream topic depends} other{{count} downstream topics depend}} on this topic and may need to be updated.'**
   String downstreamTopicWarning(int count);
 
   /// Dialog title when prerequisites are not met
@@ -8744,6 +8990,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'(Focus)'**
   String get focusTimerLabel;
+
+  /// Semantics label for voice bar when actively listening
+  ///
+  /// In en, this message translates to:
+  /// **'Listening. Speak now.'**
+  String get voiceListeningHint;
+
+  /// Accessibility setting: bold font weight toggle label
+  ///
+  /// In en, this message translates to:
+  /// **'Bold Text'**
+  String get boldText;
+
+  /// Description for bold text accessibility setting
+  ///
+  /// In en, this message translates to:
+  /// **'Use bold font weight for text throughout the app'**
+  String get boldTextDescription;
+
+  /// Tooltip for voice input button when speech recognition is unavailable
+  ///
+  /// In en, this message translates to:
+  /// **'Voice input not available'**
+  String get voiceInputNotAvailable;
+
+  /// Dialog title when microphone permission is needed
+  ///
+  /// In en, this message translates to:
+  /// **'Microphone Permission Required'**
+  String get microphonePermissionRequired;
+
+  /// Settings option to re-trigger the onboarding tour
+  ///
+  /// In en, this message translates to:
+  /// **'Show onboarding tour'**
+  String get showOnboardingTour;
 }
 
 class _AppLocalizationsDelegate

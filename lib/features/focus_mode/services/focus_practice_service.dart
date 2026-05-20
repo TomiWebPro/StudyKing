@@ -3,11 +3,11 @@ import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 
 class FocusPracticeService {
-  final Logger _logger = const Logger('FocusPracticeService');
+  static final Logger _logger = const Logger('FocusPracticeService');
   final DatabaseService _database;
   final SessionRepository _sessionRepository;
   final AttemptRepository _attemptRepository;

@@ -9,11 +9,13 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider, subjectRepositoryProvider;
+    show masteryGraphServiceProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSubjectRepo extends SubjectRepository {
   final List<Subject> subjects;
@@ -45,7 +47,7 @@ class _FakePlannerService extends PlannerService {
 
 
   @override
-  Future<List<Session>> getScheduledLessons() async => scheduledLessons;
+  Future<Result<List<Session>>> getScheduledLessons() async => Result.success(scheduledLessons);
 }
 
 Session _makeSession({String id = 's1', String topicTitle = 'Algebra 101'}) {
@@ -167,11 +169,13 @@ void main() {
     });
 
     testWidgets('navigates to planner when lesson tile is tapped', (tester) async {
+      final observer = TestNavigatorObserver();
       final lessons = [_makeSession()];
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
         locale: const Locale('en'),
+        navigatorObservers: [observer],
         home: ProviderScope(
           overrides: [
             subjectRepositoryProvider.overrideWith(
@@ -201,7 +205,7 @@ void main() {
       await tester.tap(find.text('Algebra 101'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Planner Page'), findsOneWidget);
+      expect(observer.pushedRoutes.last.settings.name, AppRoutes.planner);
     });
   });
 }

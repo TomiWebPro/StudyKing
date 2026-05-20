@@ -1703,21 +1703,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get voiceInput => 'Voice input';
 
   @override
-  String get boldText => 'Bold Text';
-
-  @override
-  String get boldTextDescription => 'Use bold font weight for text throughout the app';
-
-  @override
-  String get voiceInputNotAvailable => 'Voice input not available';
-
-  @override
-  String get microphonePermissionRequired => 'Microphone Permission Required';
-
-  @override
-  String get voiceListeningHint => 'Listening. Speak now.';
-
-  @override
   String get captureImage => 'Capture Image';
 
   @override
@@ -2053,6 +2038,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'You are a knowledgeable and encouraging AI mentor for a student. Your role is to guide their learning journey, provide motivation, and help them develop effective study habits. Keep responses concise, supportive, and actionable.';
 
   @override
+  String get mentorSystemPromptScheduling =>
+      'IMPORTANT: When the student asks about scheduling lessons, creating plans, or rescheduling, your response should acknowledge the request and indicate that you will present a confirmation proposal. Do not state or imply that the scheduling or plan change has been committed or completed. Use conditional language such as \"I can help with that\", \"Let me check availability\", or \"I\'ll prepare a proposal for you to confirm\". After your response, the system will present a confirmation dialog to the student before any changes are applied.';
+
+  @override
   String get aboutApplicationName => 'StudyKing';
 
   @override
@@ -2076,6 +2065,14 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get lessonFallbackTitle => 'Lesson';
+
+  @override
+  String lessonFallbackContent(String topicTitle) {
+    return 'Study the key concepts of $topicTitle. Focus on understanding the core principles.';
+  }
+
+  @override
+  String get lessonPlanFallbackTitle => 'Lesson plan for this session';
 
   @override
   String errorWithMessage(String error) {
@@ -3692,6 +3689,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'Are you sure you want to cancel this lesson?';
 
   @override
+  String get orphanedSessionFound => 'Incomplete Lesson Found';
+
+  @override
+  String orphanedSessionMessage(String topicTitle, String time) {
+    return 'An incomplete lesson on \"$topicTitle\" from $time was found. What would you like to do?';
+  }
+
+  @override
   String sessionProgressLabel(int current, int total) {
     return 'Session progress: $current of $total';
   }
@@ -3843,6 +3848,29 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get mentorScheduleFail =>
       'I was unable to schedule the lesson. Please try again or check your planner.';
+
+  @override
+  String toolScheduleLessonResult(String topicTitle) {
+    return 'Lesson scheduled: $topicTitle';
+  }
+
+  @override
+  String get toolScheduleLessonFail => 'Failed to schedule lesson';
+
+  @override
+  String get toolGenerateBlocksFail => 'Failed to generate lesson blocks';
+
+  @override
+  String toolCreatePlanResult(String course, int days) {
+    return 'Plan created for $course over $days days';
+  }
+
+  @override
+  String get toolCreatePlanFail => 'Failed to create plan';
+
+  @override
+  String get mentorRescheduleNotFound =>
+      'Could not find the lesson to reschedule. It may have already been removed or completed.';
 
   @override
   String mentorRescheduleNoFreeSlot(String topic) {
@@ -4082,7 +4110,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String hoursPerDayAbbrev(String hours) {
-    return '$hours/Days';
+    return '${hours}h/day';
   }
 
   @override
@@ -4693,7 +4721,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String _temp0 = intl.Intl.pluralLogic(
       count,
       locale: localeName,
-      other: '$count Source(s)',
+      other: '$count Sources',
       one: '1 Source',
     );
     return '$_temp0';
@@ -4727,6 +4755,167 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String mentorScheduleTopic(String topicTitle) {
     return 'Topic: $topicTitle';
+  }
+
+  @override
+  String mentorContextLateNightWarning(int count) {
+    return 'WARNING: $count session(s) started after 10 PM (late-night study detected)';
+  }
+
+  @override
+  String get avgTimePerQuestion => 'Avg time/question';
+
+  @override
+  String examResultsSrsImpact(int count) {
+    return 'Results will affect spaced repetition scheduling for $count questions.';
+  }
+
+  @override
+  String get questionsAtAGlance => 'Questions at a glance';
+
+  @override
+  String get noExamHistory => 'No exam history available';
+
+  @override
+  String get examHistory => 'Exam History';
+
+  @override
+  String durationMinutesSeconds(int minutes, int seconds) {
+    return '${minutes}m ${seconds}s';
+  }
+
+  @override
+  String get viewPastExamResults => 'View past exam results';
+
+  @override
+  String get mentorContextHeader => 'Current student context:';
+
+  @override
+  String mentorContextTotalAttempts(int count) {
+    return 'Total attempts: $count';
+  }
+
+  @override
+  String mentorContextCorrectAttempts(int count) {
+    return 'Correct attempts: $count';
+  }
+
+  @override
+  String mentorContextAccuracy(String percent) {
+    return 'Accuracy: $percent%';
+  }
+
+  @override
+  String mentorContextTopicsStudied(int count) {
+    return 'Topics studied: $count';
+  }
+
+  @override
+  String mentorContextWeeklyActivity(int count) {
+    return 'Weekly activity: $count attempts';
+  }
+
+  @override
+  String mentorContextTotalStudyTime(String hours) {
+    return 'Total study time: $hours hours';
+  }
+
+  @override
+  String mentorContextPlanPhase(int currentDay, int totalDays) {
+    return 'Plan exists: current phase (day $currentDay of $totalDays)';
+  }
+
+  @override
+  String mentorContextPlanAdherence(String percent) {
+    return 'Plan adherence: $percent%';
+  }
+
+  @override
+  String mentorContextLowAdherence(int count) {
+    return 'Low adherence for $count consecutive days';
+  }
+
+  @override
+  String mentorContextDaysSinceActivity(int count) {
+    return 'Days since last activity: $count';
+  }
+
+  @override
+  String mentorContextWelcomeBack(int count) {
+    return 'IMPORTANT: The student is returning after a $count-day absence. Provide a warm welcome-back and suggest specific catch-up steps.';
+  }
+
+  @override
+  String mentorContextActiveRoadmaps(int count) {
+    return 'Active roadmaps: $count';
+  }
+
+  @override
+  String mentorContextRoadmapProgress(String goal, int completed, int total) {
+    return '$goal: $completed/$total milestones completed';
+  }
+
+  @override
+  String mentorContextNextMilestone(String title, String dueDate) {
+    return 'Next milestone: \"$title\" due $dueDate';
+  }
+
+  @override
+  String mentorContextPendingActions(int count) {
+    return 'Pending actions awaiting decision: $count';
+  }
+
+  @override
+  String mentorContextPendingActionItem(String type, String topic) {
+    return '$type: $topic';
+  }
+
+  @override
+  String mentorContextUpcomingLessons(int count) {
+    return 'Upcoming lessons (next $count):';
+  }
+
+  @override
+  String mentorContextLessonItem(String title, String time, int duration) {
+    return '\"$title\" at $time (${duration}min)';
+  }
+
+  @override
+  String get mentorContextWeakTopics => 'Weak topics needing attention:';
+
+  @override
+  String mentorContextWeakTopicItem(String topic, String accuracy) {
+    return '$topic (accuracy: $accuracy%)';
+  }
+
+  @override
+  String mentorContextStudyTimeToday(int minutes) {
+    return 'Today\'s study time: $minutes minutes';
+  }
+
+  @override
+  String mentorContextCapExceeded(int cap, int today) {
+    return 'WARNING: Daily study cap ($cap min) exceeded by $today minutes';
+  }
+
+  @override
+  String mentorContextCapRemaining(int cap, int remaining) {
+    return 'Daily cap: $cap minutes ($remaining min remaining)';
+  }
+
+  @override
+  String mentorContextStreak(int count) {
+    return 'Congratulations! $count day study streak!';
+  }
+
+  @override
+  String mentorContextStreakGood(int count) {
+    return '$count consecutive study days - good consistency!';
+  }
+
+  @override
+  String mentorContextSessionsToday(int count) {
+    return 'Sessions today: $count';
   }
 
   @override
@@ -5012,12 +5201,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String prerequisitesCount(int count) {
-    return '$count prerequisites';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prerequisites',
+      one: '1 prerequisite',
+    );
+    return '$_temp0';
   }
 
   @override
   String downstreamCount(int count) {
-    return '$count downstream';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downstream',
+      one: '1 downstream',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -5028,7 +5229,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String downstreamTopicWarning(int count) {
-    return '⚠ $count downstream topic(s) depend on this topic and may need to be updated.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downstream topics depend',
+      one: '1 downstream topic depends',
+    );
+    return '⚠ $_temp0 on this topic and may need to be updated.';
   }
 
   @override
@@ -5284,4 +5491,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get focusTimerLabel => '(Focus)';
+
+  @override
+  String get voiceListeningHint => 'Listening. Speak now.';
+
+  @override
+  String get boldText => 'Bold Text';
+
+  @override
+  String get boldTextDescription =>
+      'Use bold font weight for text throughout the app';
+
+  @override
+  String get voiceInputNotAvailable => 'Voice input not available';
+
+  @override
+  String get microphonePermissionRequired => 'Microphone Permission Required';
+
+  @override
+  String get showOnboardingTour => 'Show onboarding tour';
 }

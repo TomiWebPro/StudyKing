@@ -327,3 +327,147 @@ Also, if I'm a brand new user with 9 total attempts across any subject, the guar
 | At-risk questions (mastery < 50%) have a practice mode | `getAtRiskQuestions()` exists but is never called from any screen | FAIL (MAJOR) |
 | 10-attempt Weak Areas guard is per-subject | Checks all-subjects total; magic number with no explanation | FAIL (MINOR) |
 | Weak Areas shows clear message for insufficient subject data | Shows "No weak areas found" — misleading when data is insufficient | FAIL (MINOR) |
+
+---
+
+## Dry-Run Validation Results (2026-05-19)
+
+Validation performed against production source code. The analysis below reconciles the scenario's claims with the actual codebase.
+
+### Step 1: Dashboard Weak Topic "Practice" Button
+**Assessment: NOT_COMPLETED** *(claimed MAJOR FAIL — confirmed for individual button)*
+
+| Claim | Actual |
+|---|---|
+| Individual topic "Practice" button doesn't use ReadinessScorer | **Confirmed.** `WeakAreasCard._practiceWeakArea()` at `weak_areas_card.dart:103-113` navigates with only `subjectId: ''` and `topicId`. No scorer. |
+| "Practice All Weak Areas" doesn't use ReadinessScorer | **Incorrect for current code.** `WeakAreasCard._practiceAllWeakAreas()` at `weak_areas_card.dart:134-147` DOES use `ref.read(readinessScorerProvider)` and passes `orderedQuestionIds`. |
+
+**Still missing:** Individual topic practice button on Dashboard WeakAreasCard should use ReadinessScorer for question prioritization within topic.
+
+### Step 2: Weak Areas Mode from Practice Tab
+**Assessment: COMPLETED** *(both BLOCKER FAIL claims resolved)*
+
+| Claim | Actual |
+|---|---|
+| ReadinessScorer created with empty maps | **Incorrect.** `readinessScorerProvider` at `practice_providers.dart:77-84` injects `masteryService` and `studentIdService`. `ReadinessScorer._ensureDataLoaded()` at `readiness_scorer.dart:53-79` loads actual topic and question mastery data from repositories. |
+| Ordered questions list discarded; session reloads and shuffles | **Incorrect.** `_launchWeakAreasForSubject()` at `practice_screen.dart:330-345` passes `orderedQuestionIds`. Session screen's `_loadQuestions()` at `practice_session_screen.dart:114-118` checks for `orderedQuestionIds` first and calls `_loadOrderedQuestions()` which preserves the order. |
+
+### Step 3: Spaced Repetition Due Questions
+**Assessment: COMPLETED** *(claimed MAJOR FAIL — fixed in current code)*
+
+| Claim | Actual |
+|---|---|
+| Session loads ALL subject questions not just due ones | **Incorrect.** `_startSpacedRepetitionSession()` at `practice_screen.dart:234-257` calls `_srService.getPracticeQuestions()` to get due questions, collects their IDs, and passes them as `orderedQuestionIds`. Session screen respects the ordered IDs. |
+
+### Step 4: Session Results Consumption
+**Assessment: COMPLETED** *(claimed MINOR FAIL — fixed)*
+
+| Claim | Actual |
+|---|---|
+| `PracticeSessionResult` never captured | **Incorrect.** `_startPractice()`, `_startTopicPractice()`, `_launchWeakAreasForSubject()`, `_startSpacedRepetitionSession()` all capture the return value via `as PracticeSessionResult?` and pass to `_onSessionResult()`. |
+| Result partially unused | **Minor caveat:** `_startAtRiskPractice()` at `practice_screen.dart:448` does NOT capture the result — only calls `_loadDueCounts()`. `_onSessionResult()` only uses result for `_questionsToday` counter and `_loadDueCounts()`. |
+
+### Step 5: Mastery Improvement Over Time
+**Assessment: NOT_COMPLETED** *(claimed MAJOR FAIL — confirmed)*
+
+| Claim | Actual |
+|---|---|
+| No trend/history of mastery states | **Confirmed.** `MasteryState` at `mastery_state_model.dart:12-192` stores `recentAccuracy` (last 20 values sliding window) — a limited recent history. No long-term snapshot history exists. |
+| No UI for trend visualization | **Confirmed.** Dashboard's "Weekly Activity" chart shows question volume per day, not accuracy trends. `MasterySnapshot` is single-point-in-time. There is no "accuracy over time" chart anywhere in the app. |
+
+**Still missing:** A trend/history chart showing accuracy progression per topic over time. Need either snapshot versioning of mastery states or a chart component that reads recentAccuracy / attempt history.
+
+### Step 6: DifficultyAdapter / DifficultyController
+**Assessment: PARTIAL** *(claimed MAJOR FAIL — partially addressed)*
+
+| Claim | Actual |
+|---|---|
+| DifficultyAdapter never called by any screen | **Incorrect for current code.** `DifficultyController` (not `DifficultyAdapter`) IS instantiated at `practice_session_screen.dart:84` and its methods ARE called at lines 215-216: `_difficultyAdapter.recordResult(isCorrect)` and `_difficultyAdapter.suggestNextDifficulty()`. |
+| Question.difficulty never used for filtering | **Partially incorrect.** Exam mode DOES expose difficulty sliders (`exam_session_screen.dart:549-622`) and `ExamSessionService.selectQuestions()` (`exam_session_service.dart:116-155`) DOES use easyCount/mediumCount/hardCount for difficulty-tier selection. |
+| Output of suggestNextDifficulty() unused | **Confirmed.** The return value of `suggestNextDifficulty()` is never used to filter or order questions in practice sessions. The method is called but the result is thrown away. |
+
+**Still missing:** Practice session should use DifficultyController.currentDifficulty to filter questions at the appropriate difficulty level. Currently it's called but its output has no effect on question selection.
+
+### Step 7: Quick Practice
+**Assessment: COMPLETED** *(PASS confirmed)*
+
+Quick Practice works correctly — 10 random questions, appropriate enable/disable logic.
+
+### Step 8: Topic Focus
+**Assessment: PARTIAL** *(claimed PARTIAL — improved but still incomplete)*
+
+| Claim | Actual |
+|---|---|
+| Fragile string-based matching | **Partially addressed.** `_startTopicPractice()` at `practice_screen.dart:149-157` now uses `q.topicId == trimmedTopic` first (ID-based), falling back to `q.topic!.normalized == trimmedTopic.toLowerCase()` (string-based). This is more robust than pure string matching. |
+| No ReadinessScorer applied | **Confirmed.** Topic Focus mode does not use ReadinessScorer for question ordering within the topic. |
+
+**Still missing:** Topic Focus should apply ReadinessScorer to order questions by urgency within the selected topic.
+
+### Step 9: Exam Mode
+**Assessment: COMPLETED** *(claimed PARTIAL — resolved)*
+
+| Claim | Actual |
+|---|---|
+| Difficulty tiers hidden from users | **Incorrect.** `exam_session_screen.dart:549-622` now has `_buildDifficultySelector()` with Easy/Medium/Hard sliders exposed in the configuration UI. |
+| Question selection identical to regular practice | **Incorrect.** `ExamSessionService.selectQuestions()` at `exam_session_service.dart:116-155` uses difficulty-tier filtering when config has difficulty counts. |
+
+### Step 10: SM-2 Schedule Adaptation
+**Assessment: COMPLETED** *(claimed BLOCKER FAIL — fixed)*
+
+| Claim | Actual |
+|---|---|
+| SR schedule not used for session construction | **Incorrect.** `_startSpacedRepetitionSession()` at `practice_screen.dart:234-257` collects due question IDs and passes them as `orderedQuestionIds`. The session respects these via `_loadOrderedQuestions()`. |
+| Users experience random questions instead of scheduled | **Incorrect.** Due questions from SM-2 scheduling are now correctly used for the session. |
+
+### Step 11: At-Risk Questions
+**Assessment: COMPLETED** *(claimed MAJOR FAIL — resolved)*
+
+| Claim | Actual |
+|---|---|
+| getAtRiskQuestions() never called from any screen | **Incorrect.** `_startAtRiskPractice()` at `practice_screen.dart:428-453` calls `masteryService.getAtRiskQuestions(studentId)`, uses ReadinessScorer, and navigates to practice session. UI entry point exists in `_buildExtraModes()` at `practice_screen.dart:399-403`. |
+
+### Step 12: Dashboard Drill-Down
+**Assessment: PARTIAL** *(claimed PARTIAL — confirmed)*
+
+| Claim | Actual |
+|---|---|
+| Mastery chips navigability uncertain | **Partially resolved.** WeakAreasCard has per-topic "Practice" buttons (`weak_areas_card.dart:77-81`) that navigate to a filtered practice session. TopicBreakdownCard shows per-topic accuracy bars with labels. |
+| No dedicated drill-down screen | **Confirmed.** There is no per-topic detail screen that shows comprehensive stats (accuracy history, attempt timeline, next review date, etc.) accessible from the Dashboard's mastery chips. |
+
+**Still missing:** A topic detail screen accessible from the Dashboard that shows comprehensive stats for a selected topic.
+
+### Step 13: The 10-Attempt Guard
+**Assessment: PARTIAL** *(claimed MINOR FAIL — partially addressed)*
+
+| Claim | Actual |
+|---|---|
+| Checks all-subjects total | **Incorrect.** `_launchWeakAreasForSubject()` at `practice_screen.dart:296-305` now checks `subjectAttempts.length < _minAttemptsForWeakAreas` — per-subject filtering. |
+| Magic number with no explanation | **Confirmed.** `_minAttemptsForWeakAreas = 10` on line 287 is still arbitrary with no explanation to the user. The error message uses `l10n.practiceAtLeastTen` which doesn't explain the rationale. |
+
+**Still missing:** Either make the threshold configurable, derive it from data, or improve the error message to explain the requirement.
+
+---
+
+### Summary Table
+
+| # | Expectation | Scenario Verdict | Validation Result |
+|---|---|---|---|
+| 1 | Dashboard weak topic button uses adaptive ordering | FAIL (MAJOR) | **NOT_COMPLETED** |
+| 2a | Weak Areas uses ReadinessScorer with data | FAIL (BLOCKER) | **COMPLETED** |
+| 2b | Weak Areas passes ordered questions to session | FAIL (BLOCKER) | **COMPLETED** |
+| 3 | Spaced Repetition shows due questions | FAIL (MAJOR) | **COMPLETED** |
+| 4 | Session results consumed by Practice screen | FAIL (MINOR) | **COMPLETED** |
+| 5 | Mastery states show improvement over time | FAIL (MAJOR) | **NOT_COMPLETED** |
+| 6a | DifficultyAdapter adjusts difficulty | FAIL (MAJOR) | **PARTIAL** |
+| 6b | Question difficulty used for selection | FAIL (MAJOR) | **PARTIAL** |
+| 7 | Quick Practice provides random questions | PASS | **COMPLETED** |
+| 8a | Topic Focus uses robust topic matching | FAIL (MINOR) | **PARTIAL** |
+| 8b | Topic Focus uses ReadinessScorer | — (not explicitly listed) | **NOT_COMPLETED** |
+| 9 | Exam mode supports difficulty tier selection | FAIL (MAJOR) | **COMPLETED** |
+| 10 | SM-2 schedule correctly used for sessions | FAIL (BLOCKER) | **COMPLETED** |
+| 11 | At-risk questions have a practice mode | FAIL (MAJOR) | **COMPLETED** |
+| 12 | Dashboard mastery chips have drill-down | PARTIAL | **PARTIAL** |
+| 13a | 10-attempt guard is per-subject | FAIL (MINOR) | **COMPLETED** |
+| 13b | Error message explains magic number | FAIL (MINOR) | **PARTIAL** |
+
+**Overall completion rate: 7/17 items fully COMPLETED (41%).** Including partial completions: ~71%. Below 80% threshold — scenario file retained, issue file created.

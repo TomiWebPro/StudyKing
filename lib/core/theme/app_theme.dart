@@ -42,7 +42,7 @@ class AppTheme {
         centerTitle: false,
         elevation: 0,
         surfaceTintColor: Colors.transparent,
-        scrolledUnderElevation: 0,
+        scrolledUnderElevation: 3,
       ),
       textTheme: createTextTheme(fontSize),
       cardTheme: CardThemeData(

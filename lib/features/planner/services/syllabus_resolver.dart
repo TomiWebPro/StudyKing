@@ -1,11 +1,11 @@
 import '../../../core/errors/result.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../../core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import '../../../core/data/models/question_model.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
 class SyllabusTopicNode {

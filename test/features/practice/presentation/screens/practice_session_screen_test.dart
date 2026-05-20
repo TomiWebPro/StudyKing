@@ -14,7 +14,7 @@ import 'package:studyking/core/providers/app_providers.dart' show settingsProvid
 
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 import '../shared_test_helpers.dart';

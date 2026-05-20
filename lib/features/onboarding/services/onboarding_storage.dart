@@ -8,7 +8,7 @@ abstract class OnboardingStorage {
 }
 
 class HiveOnboardingStorage implements OnboardingStorage {
-  static const _logger = Logger('HiveOnboardingStorage');
+  static final _logger = const Logger('HiveOnboardingStorage');
 
   @override
   Future<bool> getBool(String key, {bool defaultValue = false}) async {
@@ -16,7 +16,7 @@ class HiveOnboardingStorage implements OnboardingStorage {
       final box = await Hive.openBox(HiveBoxNames.settings);
       return box.get(key, defaultValue: defaultValue) as bool;
     } catch (e) {
-      _logger.e('Failed to read onboarding key: $key', e);
+      _logger.w('Failed to read onboarding key', e);
       return true;
     }
   }
@@ -27,7 +27,7 @@ class HiveOnboardingStorage implements OnboardingStorage {
       final box = await Hive.openBox(HiveBoxNames.settings);
       await box.put(key, value);
     } catch (e) {
-      _logger.e('Failed to write onboarding key: $key', e);
+      _logger.w('Failed to write onboarding key', e);
     }
   }
 }

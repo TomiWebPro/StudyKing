@@ -10,10 +10,10 @@ import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeAttemptRepository extends AttemptRepository {
@@ -225,13 +225,13 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['totalAttempts'], equals(0));
-        expect(stats['correctAttempts'], equals(0));
-        expect(stats['accuracy'], equals(0));
-        expect(stats['avgTimePerQuestion'], equals(0));
-        expect(stats['weeklyActivity'], equals(0));
-        expect(stats['dailyActivity'], equals(0));
-        expect(stats['topicsStudied'], equals(0));
+        expect(stats.data!['totalAttempts'], equals(0));
+        expect(stats.data!['correctAttempts'], equals(0));
+        expect(stats.data!['accuracy'], equals(0));
+        expect(stats.data!['avgTimePerQuestion'], equals(0));
+        expect(stats.data!['weeklyActivity'], equals(0));
+        expect(stats.data!['dailyActivity'], equals(0));
+        expect(stats.data!['topicsStudied'], equals(0));
       });
 
       test('calculates correct accuracy', () async {
@@ -245,7 +245,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['accuracy'], equals(50));
+        expect(stats.data!['accuracy'], equals(50));
       });
 
       test('calculates average time per question', () async {
@@ -257,7 +257,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['avgTimePerQuestion'], equals(8));
+        expect(stats.data!['avgTimePerQuestion'], equals(8));
       });
 
       test('calculates total study time in hours', () async {
@@ -269,7 +269,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['totalStudyTimeHours'], equals(1.0));
+        expect(stats.data!['totalStudyTimeHours'], equals(1.0));
       });
 
       test('counts weekly activity', () async {
@@ -282,7 +282,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['weeklyActivity'], greaterThanOrEqualTo(1));
+        expect(stats.data!['weeklyActivity'], greaterThanOrEqualTo(1));
       });
 
       test('counts daily activity', () async {
@@ -294,7 +294,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['dailyActivity'], equals(2));
+        expect(stats.data!['dailyActivity'], equals(2));
       });
 
       test('includes session study time in total study time', () async {
@@ -319,10 +319,10 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['totalStudyTimeHours'], equals(1.5));
-        expect(stats['sessionCount'], equals(2));
-        expect(stats['focusSessionCount'], equals(1));
-        expect(stats['tutorSessionCount'], equals(1));
+        expect(stats.data!['totalStudyTimeHours'], equals(1.5));
+        expect(stats.data!['sessionCount'], equals(2));
+        expect(stats.data!['focusSessionCount'], equals(1));
+        expect(stats.data!['tutorSessionCount'], equals(1));
       });
 
       test('counts unique topics studied', () async {
@@ -335,7 +335,7 @@ void main() {
 
         final stats = await tracker.getOverallStats('student1');
 
-        expect(stats['topicsStudied'], equals(2));
+        expect(stats.data!['topicsStudied'], equals(2));
       });
     });
 
@@ -345,10 +345,10 @@ void main() {
 
         final progress = await tracker.getTopicProgress('student1', 'topic1');
 
-        expect(progress['topicId'], equals('topic1'));
-        expect(progress['attempts'], equals(0));
-        expect(progress['accuracy'], equals(0.0));
-        expect(progress['timeSpentMinutes'], equals(0));
+        expect(progress.data!['topicId'], equals('topic1'));
+        expect(progress.data!['attempts'], equals(0));
+        expect(progress.data!['accuracy'], equals(0.0));
+        expect(progress.data!['timeSpentMinutes'], equals(0));
       });
 
       test('calculates topic progress correctly', () async {
@@ -361,9 +361,9 @@ void main() {
 
         final progress = await tracker.getTopicProgress('student1', 'topic1');
 
-        expect(progress['attempts'], equals(3));
-        expect(progress['accuracy'], equals(67));
-        expect(progress['timeSpentMinutes'], equals(3));
+        expect(progress.data!['attempts'], equals(3));
+        expect(progress.data!['accuracy'], equals(67));
+        expect(progress.data!['timeSpentMinutes'], equals(3));
       });
 
       test('includes last attempted timestamp', () async {
@@ -374,7 +374,7 @@ void main() {
 
         final progress = await tracker.getTopicProgress('student1', 'topic1');
 
-        expect(progress['lastAttempted'], isNotNull);
+        expect(progress.data!['lastAttempted'], isNotNull);
       });
     });
 
@@ -387,7 +387,7 @@ void main() {
 
         final trend = await tracker.getWeeklyTrend(4);
 
-        expect(trend, isA<List>());
+        expect(trend.data!, isA<List>());
       });
 
       test('returns empty list when no attempts', () async {
@@ -395,7 +395,7 @@ void main() {
 
         final trend = await tracker.getWeeklyTrend(4);
 
-        expect(trend.isNotEmpty, isTrue);
+        expect(trend.data!.isNotEmpty, isTrue);
       });
     });
 
@@ -412,7 +412,7 @@ void main() {
 
         final recommendations = await tracker.getRecommendations('student1');
 
-        expect(recommendations.any((r) => r['type'] == 'review'), isTrue);
+        expect(recommendations.data!.any((r) => r['type'] == 'review'), isTrue);
       });
 
       test('returns advanced recommendation for high accuracy', () async {
@@ -428,7 +428,7 @@ void main() {
 
         final recommendations = await tracker.getRecommendations('student1');
 
-        expect(recommendations.any((r) => r['type'] == 'advanced'), isTrue);
+        expect(recommendations.data!.any((r) => r['type'] == 'advanced'), isTrue);
       });
 
       test('returns engagement recommendation for low study time', () async {
@@ -440,7 +440,7 @@ void main() {
 
         final recommendations = await tracker.getRecommendations('student1');
 
-        expect(recommendations.any((r) => r['type'] == 'engagement'), isTrue);
+        expect(recommendations.data!.any((r) => r['type'] == 'engagement'), isTrue);
       });
 
       test('returns reminder for no weekly activity', () async {
@@ -452,14 +452,14 @@ void main() {
 
         final recommendations = await tracker.getRecommendations('student1');
 
-        expect(recommendations.any((r) => r['type'] == 'reminder'), isTrue);
+        expect(recommendations.data!.any((r) => r['type'] == 'reminder'), isTrue);
       });
     });
 
     group('getBadges', () {
       test('returns empty list when no badges have been unlocked', () async {
         final badges = await tracker.getBadges('no_badges_student');
-        expect(badges, isEmpty);
+        expect(badges.data!, isEmpty);
       });
 
       test('returns badges after they are persisted', () async {
@@ -477,7 +477,7 @@ void main() {
 
         final badges = await tracker.getBadges(testStudent);
 
-        expect(badges.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
+        expect(badges.data!.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
       });
 
       test('returns multiple badges when conditions are met', () async {
@@ -496,20 +496,20 @@ void main() {
 
         final badges = await tracker.getBadges(testStudent);
 
-        expect(badges.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
-        expect(badges.any((b) => (b['id'] as String).startsWith('century')), isTrue);
+        expect(badges.data!.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
+        expect(badges.data!.any((b) => (b['id'] as String).startsWith('century')), isTrue);
       });
 
       test('returns empty list for student without attempts', () async {
         final badges = await tracker.getBadges('no_attempts_student');
-        expect(badges, isEmpty);
+        expect(badges.data!, isEmpty);
       });
     });
 
     group('getTopicMasteryLevel', () {
       test('returns Novice for no attempts', () async {
         final level = await tracker.getTopicMasteryLevel('topic1', studentId: 'student1');
-        expect(level, equals('Novice'));
+        expect(level.data!, equals('Novice'));
       });
 
       test('returns Browsing for some attempts with low accuracy', () async {
@@ -518,7 +518,7 @@ void main() {
           StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
         final level = await tracker.getTopicMasteryLevel('topic1', studentId: 'student1');
-        expect(level, equals('Browsing'));
+        expect(level.data!, equals('Browsing'));
       });
     });
 
@@ -531,10 +531,10 @@ void main() {
 
         final csv = await tracker.exportProgressCSV('student1');
 
-        expect(csv, contains('Date'));
-        expect(csv, contains('Metric'));
-        expect(csv, contains('Value'));
-        expect(csv, contains('student1'));
+        expect(csv.data!, contains('Date'));
+        expect(csv.data!, contains('Metric'));
+        expect(csv.data!, contains('Value'));
+        expect(csv.data!, contains('student1'));
       });
     });
 
@@ -545,8 +545,8 @@ void main() {
           StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
         final csv = await tracker.exportQuestionsAndAttemptsCSV('student1');
-        expect(csv, contains('Question ID'));
-        expect(csv, contains('q1'));
+        expect(csv.data!, contains('Question ID'));
+        expect(csv.data!, contains('q1'));
       });
     });
 
@@ -554,15 +554,15 @@ void main() {
       test('getOverallStats returns zero values when repo throws', () async {
         mockRepo.shouldThrow = true;
         final stats = await tracker.getOverallStats('student1');
-        expect(stats['totalAttempts'], equals(0));
-        expect(stats['correctAttempts'], equals(0));
+        expect(stats.data!['totalAttempts'], equals(0));
+        expect(stats.data!['correctAttempts'], equals(0));
       });
 
       test('getTopicProgress returns empty progress when repo throws', () async {
         mockRepo.shouldThrow = true;
         final progress = await tracker.getTopicProgress('student1', 'topic1');
-        expect(progress['attempts'], equals(0));
-        expect(progress['accuracy'], equals(0.0));
+        expect(progress.data!['attempts'], equals(0));
+        expect(progress.data!['accuracy'], equals(0.0));
       });
 
       test('getRecommendations returns empty list when repo throws', () async {

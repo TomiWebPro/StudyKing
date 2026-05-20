@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
@@ -11,16 +11,17 @@ import 'package:studyking/features/subjects/providers/topic_repository_provider.
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
+import 'package:studyking/features/mentor/services/mentor_schedule_handler.dart';
 import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/features/mentor/data/models/chat_message_data.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 
 class MentorScreen extends ConsumerStatefulWidget {
@@ -31,7 +32,7 @@ class MentorScreen extends ConsumerStatefulWidget {
 }
 
 class _MentorScreenState extends ConsumerState<MentorScreen> {
-  final _logger = const Logger('MentorScreen');
+  static final _logger = const Logger('MentorScreen');
   late final MentorService _mentorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
@@ -47,6 +48,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   MentorAction? _suggestedAction;
   bool _suggestedActionError = false;
   bool _didInit = false;
+  List<Session> _upcomingLessons = [];
+  bool _isLoadingUpcoming = false;
 
   @override
   void initState() {
@@ -141,6 +144,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           _sendWelcomeMessage();
         }
         WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCheck());
+        WidgetsBinding.instance.addPostFrameCallback((_) => _loadUpcomingLessons());
       }
     } catch (e) {
       if (mounted) {
@@ -218,6 +222,24 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       _logger.w('Failed to load suggested action', e);
       if (mounted) {
         setState(() => _suggestedActionError = true);
+      }
+    }
+  }
+
+  Future<void> _loadUpcomingLessons() async {
+    setState(() => _isLoadingUpcoming = true);
+    try {
+      final lessons = await _mentorService.getUpcomingLessons();
+      if (mounted) {
+        setState(() {
+          _upcomingLessons = lessons;
+          _isLoadingUpcoming = false;
+        });
+      }
+    } catch (e) {
+      _logger.w('Failed to load upcoming lessons', e);
+      if (mounted) {
+        setState(() => _isLoadingUpcoming = false);
       }
     }
   }
@@ -332,11 +354,32 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     try {
       final schedule = _mentorService.pendingScheduleProposal;
       final plan = _mentorService.pendingPlanProposal;
+      final rescheduleSessionId = _mentorService.pendingRescheduleSessionId;
 
       if (schedule != null) {
         _mentorService.clearPendingSchedule();
         if (!mounted) return;
         await _showScheduleConfirmationDialog(schedule);
+      } else if (rescheduleSessionId != null) {
+        _mentorService.clearPendingReschedule();
+        if (!mounted) return;
+        final result = await _mentorService.suggestReschedule(rescheduleSessionId);
+        if (mounted) {
+          setState(() {
+            _messages.add(ChatMessageData(
+              message: ConversationMessage(
+                id: 'resched_${DateTime.now().millisecondsSinceEpoch}',
+                sessionId: 'mentor',
+                role: MessageRole.mentor,
+                type: MessageType.text,
+                content: result,
+                timestamp: DateTime.now(),
+              ),
+              isComplete: true,
+            ));
+          });
+          _scrollToBottom();
+        }
       } else if (plan != null) {
         _mentorService.clearPendingPlan();
         if (!mounted) return;
@@ -381,6 +424,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _scrollToBottom();
       }
       _loadSuggestedAction();
+      _loadUpcomingLessons();
     } catch (e) {
       _logger.w('Failed to handle post-chat intents', e);
       if (mounted) {
@@ -393,38 +437,86 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Future<void> _showScheduleConfirmationDialog(ScheduleProposal proposal) async {
     final l10n = AppLocalizations.of(context)!;
-    final dateStr = DateFormat.yMd(l10n.localeName).add_Hm().format(proposal.proposedTime.toLocal());
+    final dateStr = localizedDateTime(proposal.proposedTime, l10n.localeName);
+    var editableDuration = proposal.durationMinutes;
 
-    final confirmed = await showDialog<bool>(
+    final resultDuration = await showDialog<int>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.scheduleALesson),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(l10n.scheduleTimeLabel(dateStr)),
-            const SizedBox(height: 8),
-            Text(l10n.scheduleDurationLabel(l10n.minutesValue(proposal.durationMinutes))),
-            const SizedBox(height: 8),
-            Text(l10n.mentorScheduleTopic(proposal.topicTitle)),
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: Text(l10n.scheduleALesson),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.scheduleTimeLabel(dateStr)),
+              const SizedBox(height: 8),
+              MergeSemantics(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.scheduleDurationLabel(l10n.minutesValue(editableDuration))),
+                    const SizedBox(height: 4),
+                    Row(
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.remove_circle_outline),
+                          tooltip: l10n.decreaseDuration,
+                          onPressed: editableDuration > 5
+                              ? () => setDialogState(() => editableDuration -= 5)
+                              : null,
+                        ),
+                        Expanded(
+                          child: Slider(
+                            value: editableDuration.toDouble(),
+                            min: 5,
+                            max: 180,
+                            divisions: 35,
+                            label: l10n.minutesValue(editableDuration),
+                            onChanged: (v) => setDialogState(
+                              () => editableDuration = v.round(),
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add_circle_outline),
+                          tooltip: l10n.increaseDuration,
+                          onPressed: editableDuration < 180
+                              ? () => setDialogState(() => editableDuration += 5)
+                              : null,
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(l10n.mentorScheduleTopic(proposal.topicTitle)),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              child: Text(l10n.cancel),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.of(ctx).pop(editableDuration),
+              child: Text(l10n.confirm),
+            ),
           ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: Text(l10n.cancel),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: Text(l10n.confirm),
-          ),
-        ],
       ),
     );
 
-    if (confirmed == true && mounted) {
-      final result = await _mentorService.confirmSchedule(proposal);
+    if (resultDuration != null && mounted) {
+      final updatedProposal = ScheduleProposal(
+        topicTitle: proposal.topicTitle,
+        topicId: proposal.topicId,
+        subjectId: proposal.subjectId,
+        proposedTime: proposal.proposedTime,
+        durationMinutes: resultDuration,
+      );
+      final result = await _mentorService.confirmSchedule(updatedProposal);
       if (mounted) {
         setState(() {
           _messages.add(ChatMessageData(
@@ -603,6 +695,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 _buildSuggestedActionError(l10n),
               if (_pendingRetryText != null)
                 _buildRetryBanner(l10n),
+              if (!_isLoadingUpcoming && _upcomingLessons.isNotEmpty)
+                _buildRescheduleSection(l10n),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState(l10n)
@@ -674,11 +768,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                               _initializeMentor();
                             },
                       icon: _isRetrying
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
+                          ? ResponsiveUtils.loaderInTouchTarget(size: 18)
                           : const Icon(Icons.refresh),
                       label: Text(_isRetrying ? l10n.retrying : l10n.retry),
                     ),
@@ -820,6 +910,97 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
+  Future<void> _onRescheduleLesson(Session lesson) async {
+    try {
+      final result = await _mentorService.suggestReschedule(lesson.id);
+      if (mounted) {
+        setState(() {
+          _messages.add(ChatMessageData(
+            message: ConversationMessage(
+              id: 'resched_${DateTime.now().millisecondsSinceEpoch}',
+              sessionId: 'mentor',
+              role: MessageRole.mentor,
+              type: MessageType.text,
+              content: result,
+              timestamp: DateTime.now(),
+            ),
+            isComplete: true,
+          ));
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      _logger.w('Failed to suggest reschedule', e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)),
+        );
+      }
+    }
+  }
+
+  Widget _buildRescheduleSection(AppLocalizations l10n) {
+    if (_upcomingLessons.isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: ResponsiveUtils.screenPadding(context),
+      child: Card(
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.event_repeat,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.primary),
+                  const SizedBox(width: 8),
+                  Text(
+                    l10n.upcomingLessons,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ..._upcomingLessons.take(3).map((lesson) {
+                final title = lesson.tutorMetadata?.topicTitle
+                    ?? lesson.topicId
+                    ?? l10n.unknown;
+                final timeStr = localizedDateTime(lesson.startTime, l10n.localeName);
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 6),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          '$title — $timeStr',
+                          style: Theme.of(context).textTheme.bodySmall,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      TextButton.icon(
+                        onPressed: () => _onRescheduleLesson(lesson),
+                        icon: const Icon(Icons.refresh, size: 16),
+                        label: Text(l10n.rescheduleLesson),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          visualDensity: VisualDensity.compact,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessageList(bool reduceMotion) {
     return ListView.builder(
       controller: _scrollController,
@@ -917,7 +1098,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                       '${formatPercent(report.accuracy, localeName)} '
                       '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
                       '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
-                      '${l10n.mentorCompletedLessons('').split(':').first.normalized})',
+                      '${l10n.mentorCompletedLessons('').split(':').first})',
                       style: theme.textTheme.bodyMedium,
                     ),
                     const SizedBox(height: 16),

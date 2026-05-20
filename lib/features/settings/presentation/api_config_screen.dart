@@ -21,7 +21,7 @@ class ApiConfigScreen extends ConsumerStatefulWidget {
 }
 
 class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
-  final Logger _logger = const Logger('ApiConfigScreen');
+  static final Logger _logger = const Logger('ApiConfigScreen');
   final TextEditingController _apiKeyController = TextEditingController();
   final TextEditingController _baseUrlController = TextEditingController();
 
@@ -35,7 +35,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
   LlmProvider _initialProvider = LlmProvider.openRouter;
   bool _hasUnsavedChanges = false;
 
-  static const _knownDefaultUrls = [
+  static final _knownDefaultUrls = [
     ApiConfig.openRouterBaseUrlString,
     ApiConfig.ollamaDefaultUrl,
     ApiConfig.openAIDefaultUrl,
@@ -174,7 +174,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
         Uri.parse(chatUrl),
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': 'Bearer $apiKey',
+          'Authorization': '${ApiConfig.bearerAuth}$apiKey',
         },
         body: jsonEncode({
           'model': ref.read(selectedModelProvider).isNotEmpty
@@ -210,7 +210,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
       }
     } catch (e) {
       if (!mounted) return;
-      _logger.e('Connection test failed', e);
+      _logger.w('Connection test failed', e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(l10n.connectionFailed(l10n.somethingWentWrong)),
@@ -301,11 +301,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               child: ElevatedButton.icon(
                 onPressed: _isSaving ? null : _saveKeys,
                 icon: _isSaving
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? ResponsiveUtils.loaderInTouchTarget()
                     : const Icon(Icons.save),
                 label: Text(l10n.saveApiKeys),
               ),
@@ -316,11 +312,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               child: OutlinedButton.icon(
                 onPressed: _isTesting ? null : _testConnection,
                 icon: _isTesting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
+                    ? ResponsiveUtils.loaderInTouchTarget()
                     : const Icon(Icons.wifi_tethering),
                 label: Text(_isTesting ? l10n.testing : l10n.testConnection),
               ),

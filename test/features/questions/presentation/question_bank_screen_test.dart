@@ -8,12 +8,12 @@ import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/presentation/question_bank_screen.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -678,6 +678,314 @@ void main() {
       expect(find.text('Solve for x: 2x + 3 = 7'), findsNothing);
       expect(find.text('What is the chemical formula for water?'), findsOneWidget);
       expect(find.text('Questions: 1'), findsOneWidget);
+    });
+
+    testWidgets('create question dialog cancel returns to screen', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Question'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Question'), findsNothing);
+      expect(find.text('Question Bank'), findsOneWidget);
+    });
+
+    testWidgets('edit question dialog cancel returns to screen', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('What is Newton\'s first law?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Question'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Question'), findsNothing);
+    });
+
+    testWidgets('multi-delete cancel closes confirmation dialog', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Select multiple'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('What is Newton\'s first law?'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Delete selected'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete Questions'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete Questions'), findsNothing);
+      expect(find.text('Question Bank'), findsOneWidget);
+    });
+
+    testWidgets('source filter chip clears when tapped on clear', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo(sources),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('All sources'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Physics Textbook'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('What is the chemical formula for water?'), findsNothing);
+      expect(find.text('Questions: 1'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is the chemical formula for water?'), findsOneWidget);
+      expect(find.text('Questions: 3'), findsOneWidget);
+    });
+
+    testWidgets('shows AI-generated chip for questions with model', (tester) async {
+      final aiQuestions = [
+        Question(
+          id: 'q-ai',
+          text: 'AI generated question',
+          type: QuestionType.typedAnswer,
+          difficulty: 1,
+          subjectId: 'sub1',
+          topicId: 't1',
+          model: 'gpt-4',
+          createdAt: DateTime(2024, 4, 1),
+          updatedAt: DateTime(2024, 4, 1),
+        ),
+      ];
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(aiQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('AI-generated'), findsOneWidget);
+      expect(find.text('Manual'), findsNothing);
+    });
+
+    testWidgets('initialQuestionId scrolls to question', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+        initialQuestionId: 'q2',
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Question Bank'), findsOneWidget);
+      expect(find.text('What is the chemical formula for water?'), findsOneWidget);
+    });
+
+    testWidgets('delete question confirms and shows undo action', (tester) async {
+      final repo = _FakeQuestionRepo(List.from(mockQuestions));
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsNothing);
+      expect(find.text('Question deleted'), findsOneWidget);
+
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('Questions: 3'), findsOneWidget);
+    });
+
+    testWidgets('create question dialog cancel closes dialog', (tester) async {
+      final repo = _FakeQuestionRepo([]);
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo(sources),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Question'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Create Question'), findsNothing);
+    });
+
+    testWidgets('create question and save adds new question', (tester) async {
+      final repo = _FakeQuestionRepo([]);
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo(sources),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(FloatingActionButton));
+      await tester.pumpAndSettle();
+
+      final questionField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == 'Question text',
+      );
+      expect(questionField, findsOneWidget);
+      await tester.enterText(questionField, 'New test question');
+      await tester.pumpAndSettle();
+
+      final option1Field = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.hintText == 'Add Option 1',
+      );
+      if (option1Field.evaluate().isNotEmpty) {
+        await tester.enterText(option1Field, 'Option 1 text');
+        await tester.pumpAndSettle();
+      }
+
+      final option2Field = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.hintText == 'Add Option 2',
+      );
+      if (option2Field.evaluate().isNotEmpty) {
+        await tester.enterText(option2Field, 'Option 2 text');
+        await tester.pumpAndSettle();
+      }
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('New test question'), findsOneWidget);
+    });
+
+    testWidgets('delete question confirmation cancel does not delete', (tester) async {
+      final repo = _FakeQuestionRepo(List.from(mockQuestions));
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>).first);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Delete').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Cancel').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('Questions: 3'), findsOneWidget);
+    });
+
+    testWidgets('empty state shows no questions message', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo([]),
+        subjectRepo: _FakeSubjectRepo([]),
+        topicRepo: _FakeTopicRepo([]),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No Questions Available'), findsOneWidget);
+      expect(find.byIcon(Icons.help_outline), findsOneWidget);
+    });
+
+    testWidgets('subject filter bottom sheet selects all subjects to clear filter', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('All subjects').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Physics'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Questions: 2'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Questions: 3'), findsOneWidget);
+    });
+
+    testWidgets('source filter bottom sheet selects all sources to clear', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(mockQuestions),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo(sources),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('All sources'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ListTile, 'Khan Academy'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Solve for x: 2x + 3 = 7'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close).first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Questions: 3'), findsOneWidget);
     });
   });
 }

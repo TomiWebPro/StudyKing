@@ -22,6 +22,7 @@ class SubjectTopicsTab extends ConsumerStatefulWidget {
 }
 
 class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
+  static final Logger _logger = const Logger('SubjectTopicsTab');
   List<Topic> _topics = [];
   List<TopicDependency> _dependencies = [];
   bool _isLoading = true;
@@ -58,7 +59,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
         });
       }
     } catch (e) {
-      const Logger('SubjectTopicsTab').e('Failed to load topics: $e');
+      _logger.w('Failed to load topics: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -90,7 +91,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
-        const Logger('SubjectTopicsTab').e('Create topic failed', e);
+        _logger.w('Create topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.topicCreateFailed(l10n.somethingWentWrong))),
         );
@@ -122,7 +123,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
-        const Logger('SubjectTopicsTab').e('Update topic failed', e);
+        _logger.w('Update topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.topicUpdateFailed(l10n.somethingWentWrong))),
         );
@@ -155,7 +156,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
-        const Logger('SubjectTopicsTab').e('Update dependencies failed', e);
+        _logger.w('Update dependencies failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.dependenciesUpdateFailed(l10n.somethingWentWrong))),
         );
@@ -257,7 +258,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
     } catch (e) {
       if (mounted) {
-        const Logger('SubjectTopicsTab').e('Delete topic failed', e);
+        _logger.w('Delete topic failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.topicDeleteFailed(l10n.somethingWentWrong))),
         );
@@ -282,7 +283,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
         await topicRepo.create(updated);
       }
     } catch (e) {
-      const Logger('SubjectTopicsTab').e('Failed to save topic order: $e');
+      _logger.w('Failed to save topic order: $e');
     }
   }
 

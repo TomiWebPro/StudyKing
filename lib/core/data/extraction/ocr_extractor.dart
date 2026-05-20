@@ -26,7 +26,7 @@ class OcrExtractor {
   final LlmService? _llmService;
   final String _modelId;
   final String _localeName;
-  final Logger _logger = const Logger('OcrExtractor');
+  static final Logger _logger = const Logger('OcrExtractor');
 
   OcrExtractor({LlmService? llmService, required String modelId, String localeName = 'en'})
       : _llmService = llmService,
@@ -77,7 +77,7 @@ class OcrExtractor {
       final bytes = await file.readAsBytes();
       return _processImageBytes(bytes, 'image_file');
     } catch (e) {
-      _logger.e('Failed to read image file', e);
+      _logger.w('Failed to read image file', e);
       return const OcrExtractionResult(
         text: '',
         extractionMethod: 'image_file_read_error',
@@ -174,7 +174,7 @@ class OcrExtractor {
         extractionMethod: 'ocr_llm',
       );
     } catch (e) {
-      _logger.e('LLM OCR failed', e);
+      _logger.w('LLM OCR failed', e);
       return OcrExtractionResult(
         text: '',
         extractionMethod: 'ocr_llm_failed',

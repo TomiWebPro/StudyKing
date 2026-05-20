@@ -3,6 +3,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 
 class SrDataCodec {
+  static final Logger _logger = const Logger('SrDataCodec');
   static QuestionSRData deserialize(String? json) {
     if (json == null || json.isEmpty) return const QuestionSRData();
     try {
@@ -18,7 +19,7 @@ class SrDataCodec {
             : null,
       );
     } catch (e) {
-      const Logger('SrDataCodec').e('Failed to deserialize SR data', e);
+      _logger.w('Failed to deserialize SR data', e);
       return const QuestionSRData();
     }
   }

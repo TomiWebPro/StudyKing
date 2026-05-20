@@ -1,18 +1,19 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
-import 'package:studyking/features/practice/data/repositories/mastery_state_repository.dart';
-import 'package:studyking/features/practice/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/practice/data/repositories/topic_dependency_repository.dart';
 import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
 /// Facade that delegates to four individual repositories.
-/// New code should depend on the specific repositories directly.
+/// Maintained for backward compatibility. New code should depend on
+/// the specific repositories directly. Scheduled for removal in v2.0.
 class MasteryGraphRepository extends Repository<MasteryState> {
   final MasteryStateRepository masteryStateRepo;
   final QuestionMasteryStateRepository questionMasteryRepo;

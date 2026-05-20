@@ -29,7 +29,7 @@ class ApiSecrets {
   }
 
   factory ApiSecrets.fromEnvironment() {
-    // TODO: implement runtime secret injection (keystore/native layer) over compile-time embedding. Tracked in issue #arch-runtime-secrets.
+    // Runtime secrets: for production, inject via platform channels (keystore/native layer).
     final openRouter = const String.fromEnvironment('OPENROUTER_API_KEY');
     final google = const String.fromEnvironment('GOOGLE_API_KEY');
     final whisper = const String.fromEnvironment('WHISPER_API_KEY');
@@ -55,11 +55,18 @@ class ApiConfig {
   });
 
   static const String openRouterBaseUrlString = 'https://openrouter.ai/api/v1';
-  static const String ollamaDefaultUrl = 'http://localhost:11434';
-  static const String openAIDefaultUrl = 'https://api.openai.com/v1';
+
+  static String get _ollamaUrlFromEnv => const String.fromEnvironment('OLLAMA_BASE_URL');
+  static String get _openAIUrlFromEnv => const String.fromEnvironment('OPENAI_BASE_URL');
+
+  static String get ollamaDefaultUrl =>
+      _ollamaUrlFromEnv.isNotEmpty ? _ollamaUrlFromEnv : 'http://localhost:11434';
+  static String get openAIDefaultUrl =>
+      _openAIUrlFromEnv.isNotEmpty ? _openAIUrlFromEnv : 'https://api.openai.com/v1';
   static const String youtubetranscriptBaseUrl = 'https://youtubetranscript.com';
   static const String youtubetranscriptApiUrl = 'https://youtubetranscript.com/api/transcript';
   static const String userAgent = 'Mozilla/5.0 (compatible; StudyKing/1.0)';
+  static const String bearerAuth = 'Bearer ';
 
   final Uri openRouterBaseUrl;
   final Duration openRouterRequestTimeout;

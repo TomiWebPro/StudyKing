@@ -171,5 +171,206 @@ void main() {
       final picture = pictureRecorder.endRecording();
       expect(picture, isA<ui.Picture>());
     });
+
+    test('shouldRepaint returns true for larger strokes list', () {
+      final s1 = [Stroke(points: [DrawingPoint(point: const Offset(0, 0))])];
+      final s2 = [
+        Stroke(points: [DrawingPoint(point: const Offset(0, 0))]),
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10))]),
+      ];
+      final painter1 = DrawingPainter(strokes: s1);
+      final painter2 = DrawingPainter(strokes: s2);
+      expect(painter1.shouldRepaint(painter2), isTrue);
+    });
+
+    test('shouldRepaint returns true for smaller strokes list', () {
+      final s1 = [
+        Stroke(points: [DrawingPoint(point: const Offset(0, 0))]),
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10))]),
+      ];
+      final s2 = [Stroke(points: [DrawingPoint(point: const Offset(0, 0))])];
+      final painter1 = DrawingPainter(strokes: s1);
+      final painter2 = DrawingPainter(strokes: s2);
+      expect(painter1.shouldRepaint(painter2), isTrue);
+    });
+
+    test('shouldRepaint returns false for self', () {
+      final strokes = [Stroke(points: [DrawingPoint(point: const Offset(10, 10))])];
+      final painter = DrawingPainter(strokes: strokes);
+      expect(painter.shouldRepaint(painter), isFalse);
+    });
+
+    test('paint with negative coordinates does not crash', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(-50, -50)),
+            DrawingPoint(point: const Offset(-10, -10)),
+          ],
+        ),
+        Stroke(points: [DrawingPoint(point: const Offset(-30, -30))]),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with very large coordinates does not crash', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10000, 10000)),
+            DrawingPoint(point: const Offset(20000, 20000)),
+          ],
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with strokeWidth zero does not crash', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10, 10)),
+            DrawingPoint(point: const Offset(20, 20)),
+          ],
+          strokeWidth: 0,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with many points in stroke does not crash', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final points = List.generate(
+        500,
+        (i) => DrawingPoint(
+          point: Offset((i % 100).toDouble(), (i ~/ 100).toDouble()),
+        ),
+      );
+      final strokes = [Stroke(points: points)];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+  });
+
+  group('DrawingPainter - pixel verification', () {
+    test('paint with multi-point stroke produces non-transparent pixels', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10, 10)),
+            DrawingPoint(point: const Offset(90, 90)),
+          ],
+          color: Colors.black,
+          strokeWidth: 10,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final byteData = await image.toByteData();
+      expect(byteData, isNotNull);
+      final pixels = byteData!.buffer.asUint32List();
+      expect(pixels.length, 100 * 100);
+      final pixel = pixels[50 * 100 + 50];
+      final alpha = (pixel >> 24) & 0xFF;
+      expect(alpha, greaterThan(0));
+    });
+
+    test('paint with single-point stroke produces non-transparent pixels', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(50, 50))],
+          color: Colors.black,
+          strokeWidth: 10,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final byteData = await image.toByteData();
+      expect(byteData, isNotNull);
+      final pixels = byteData!.buffer.asUint32List();
+      final pixel = pixels[50 * 100 + 50];
+      final alpha = (pixel >> 24) & 0xFF;
+      expect(alpha, greaterThan(0));
+    });
+
+    test('paint with empty strokes produces transparent image', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final painter = DrawingPainter(strokes: []);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final byteData = await image.toByteData();
+      expect(byteData, isNotNull);
+      final pixels = byteData!.buffer.asUint32List();
+      final pixel = pixels[50 * 100 + 50];
+      final alpha = (pixel >> 24) & 0xFF;
+      expect(alpha, 0);
+    });
+
+    test('paint with multiple strokes produces pixels at expected positions', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(20, 20))],
+          color: Colors.black,
+          strokeWidth: 6,
+        ),
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(40, 40)),
+            DrawingPoint(point: const Offset(80, 80)),
+          ],
+          color: Colors.black,
+          strokeWidth: 6,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(100, 100);
+      final byteData = await image.toByteData();
+      expect(byteData, isNotNull);
+      final pixels = byteData!.buffer.asUint32List();
+      final pixelAtCircle = pixels[20 * 100 + 20];
+      expect((pixelAtCircle >> 24) & 0xFF, greaterThan(0));
+      final pixelOnPath = pixels[60 * 100 + 60];
+      expect((pixelOnPath >> 24) & 0xFF, greaterThan(0));
+    });
   });
 }

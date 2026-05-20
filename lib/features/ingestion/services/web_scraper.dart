@@ -6,7 +6,7 @@ import 'package:studyking/features/ingestion/services/document_extractor.dart';
 
 class WebScraper {
   final http.Client _httpClient;
-  final Logger _logger = const Logger('WebScraper');
+  static final Logger _logger = const Logger('WebScraper');
 
   WebScraper({http.Client? httpClient})
       : _httpClient = httpClient ?? http.Client();
@@ -38,7 +38,7 @@ class WebScraper {
       }
       return Result.success(extracted);
     } catch (e) {
-      _logger.e('Web scrape error', e);
+      _logger.w('Web scrape error', e);
       return Result.failure(e.toString());
     }
   }

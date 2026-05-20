@@ -7,7 +7,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/subjects/data/curriculum_seed_data.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_form_widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -26,6 +26,7 @@ class SubjectSelectionScreen extends ConsumerStatefulWidget {
 
 class _SubjectSelectionScreenState
     extends ConsumerState<SubjectSelectionScreen> {
+  static final Logger _logger = const Logger('SubjectSelectionScreen');
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _codeController = TextEditingController();
@@ -143,7 +144,7 @@ class _SubjectSelectionScreenState
             );
           }
         } catch (e) {
-          const Logger('SubjectSelectionScreen').w('Failed to auto-create seed topics', e);
+          _logger.w('Failed to auto-create seed topics', e);
         }
       }
 
@@ -189,7 +190,7 @@ class _SubjectSelectionScreenState
       }
     } catch (e) {
       if (mounted) {
-        const Logger('SubjectSelectionScreen').e('Save subject failed', e);
+        _logger.w('Save subject failed', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.errorSavingSubject(l10n.somethingWentWrong))),
         );

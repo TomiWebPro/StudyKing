@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
@@ -106,7 +107,7 @@ class ConversationManager {
     try {
       await _memory.loadFromRepository();
     } catch (e) {
-      _logger.e('Failed to load persisted messages', e);
+      _logger.w('Failed to load persisted messages', e);
     }
   }
 
@@ -172,7 +173,7 @@ class ConversationManager {
       }
     } else if (phase == ConversationPhase.adaptiveReview) {
       _adaptiveReviewExchanges++;
-      final lower = content.toLowerCase();
+      final lower = content.normalized;
       final continueKeywords = _getContinueKeywords();
       if (continueKeywords.any((k) => lower.contains(k))) {
         _logTransition(phase, ConversationPhase.teaching, 'student indicates understanding');
@@ -334,7 +335,7 @@ class ConversationManager {
   }
 
   void _detectExerciseRequest(String content) {
-    final lower = content.toLowerCase();
+    final lower = content.normalized;
     final exerciseKeywords = _exerciseKeywordsByLocale[localeName] ?? _exerciseKeywordsByLocale['en']!;
     if (exerciseKeywords.any((k) => lower.contains(k))) {
       _logTransition(phase, ConversationPhase.exercise, 'keyword detected in student message');

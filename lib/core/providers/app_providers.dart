@@ -2,17 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -24,8 +25,10 @@ import '../services/notification_service.dart';
 import '../services/plan_adherence_orchestrator.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
-import 'package:studyking/features/planner/data/repositories/plan_adherence_repository.dart';
+import '../services/badge_service.dart';
+import '../../features/dashboard/data/repositories/badge_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorServiceProvider;
 import 'package:studyking/core/services/student_id_service.dart';
@@ -54,7 +57,7 @@ void initSettingsRepository(SettingsRepository repo) {
 }
 
 class SettingsController extends StateNotifier<SettingsBox> {
-  final Logger _logger = const Logger('SettingsController');
+  static final Logger _logger = const Logger('SettingsController');
   final SettingsRepository _repository;
   bool _hasLoadedOnce = false;
 
@@ -144,13 +147,15 @@ void setInitialLanguageCode(String code) {
   _initialLanguageCode = code;
 }
 
+final _localeLogger = const Logger('localeProvider');
+
 final localeProvider = StateProvider<Locale>((ref) {
   try {
     if (_initialLanguageCode != null && _initialLanguageCode!.isNotEmpty) {
       return Locale(_initialLanguageCode!);
     }
-    if (Hive.isBoxOpen('profile')) {
-      final box = Hive.box('profile');
+    if (Hive.isBoxOpen(HiveBoxNames.profile)) {
+      final box = Hive.box(HiveBoxNames.profile);
       final lang = box.get('language', defaultValue: '') as String;
       if (lang.isNotEmpty) {
         return Locale(lang);
@@ -163,7 +168,7 @@ final localeProvider = StateProvider<Locale>((ref) {
       }
     }
   } catch (e) {
-    const Logger('localeProvider').w('Failed to get device locale', e);
+    _localeLogger.w('Failed to get device locale', e);
   }
   return const Locale('en');
 });
@@ -247,6 +252,17 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
 
 final notificationServiceProvider = Provider<NotificationService>((ref) {
   return NotificationService();
+});
+
+final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
+  return BadgeRepository();
+});
+
+final badgeServiceProvider = Provider<BadgeService>((ref) {
+  return BadgeService(
+    repository: ref.watch(badgeRepositoryProvider),
+    notificationService: ref.watch(notificationServiceProvider),
+  );
 });
 
 final l10nProvider = StateProvider<AppLocalizations?>((ref) => null);

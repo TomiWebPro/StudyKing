@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 

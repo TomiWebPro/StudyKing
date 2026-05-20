@@ -5,7 +5,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import '../../../helpers/fakes.dart';
 import 'package:studyking/core/utils/clock.dart';
 

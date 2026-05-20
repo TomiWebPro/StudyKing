@@ -24,7 +24,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 }
 
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
-  final Logger _logger = const Logger('ProfileScreen');
+  static final Logger _logger = const Logger('ProfileScreen');
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _learningGoalController = TextEditingController();
@@ -54,7 +54,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final profileResult = await repository.getProfileData();
 
       if (profileResult.isFailure) {
-        _logger.e('Error loading profile: ${profileResult.error}');
+        _logger.w('Error loading profile: ${profileResult.error}');
         if (mounted) {
           setState(() {
             _isLoading = false;
@@ -86,7 +86,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         });
       }
     } catch (e) {
-      _logger.e('Error loading profile', e);
+      _logger.w('Error loading profile', e);
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -150,7 +150,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       }
     } catch (e) {
       if (mounted) {
-        _logger.e('Error saving profile', e);
+        _logger.w('Error saving profile', e);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.somethingWentWrong)),
         );
@@ -234,34 +234,20 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
         icon = Icons.person;
     }
 
-    return MergeSemantics(
-      child: Semantics(
-        label: l10n.selectAvatar(iconKey),
-        button: true,
-        child: InkWell(
-          onTap: () {
-            setState(() => _avatarIconKey = iconKey);
-            Navigator.pop(context);
-          },
-          borderRadius: BorderRadius.circular(30),
-          child: LayoutBuilder(
-            builder: (context, constraints) {
-              final textScale = MediaQuery.textScalerOf(context).scale(1.0);
-              final size = 48.0 * textScale;
-              return Container(
-                width: size,
-                height: size,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: _avatarIconKey == iconKey
-                      ? Border.all(color: Theme.of(context).primaryColor, width: 3)
-                      : null,
-                ),
-                child: Icon(icon, size: size * 0.533),
-              );
-            },
-          ),
-        ),
+    final isSelected = _avatarIconKey == iconKey;
+    return Semantics(
+      label: l10n.selectAvatar(iconKey),
+      selected: isSelected,
+      child: ChoiceChip(
+        avatar: CircleAvatar(child: Icon(icon)),
+        label: const SizedBox.shrink(),
+        selected: isSelected,
+        onSelected: (_) {
+          setState(() => _avatarIconKey = iconKey);
+          Navigator.pop(context);
+        },
+        visualDensity: VisualDensity.compact,
+        showCheckmark: false,
       ),
     );
   }

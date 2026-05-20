@@ -1,16 +1,76 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
-import 'package:studyking/features/practice/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class _AccuracySparkline extends StatelessWidget {
+  final List<double> recentAccuracy;
+  final Color color;
+
+  const _AccuracySparkline({
+    required this.recentAccuracy,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (recentAccuracy.length < 2) return const SizedBox(width: 48, height: 20);
+    return SizedBox(
+      width: 48,
+      height: 20,
+      child: CustomPaint(
+        painter: _SparklinePainter(
+          data: recentAccuracy,
+          color: color,
+        ),
+      ),
+    );
+  }
+}
+
+class _SparklinePainter extends CustomPainter {
+  final List<double> data;
+  final Color color;
+
+  _SparklinePainter({required this.data, required this.color});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    if (data.length < 2) return;
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round;
+    final path = Path();
+    final stepX = size.width / (data.length - 1);
+    for (var i = 0; i < data.length; i++) {
+      final x = i * stepX;
+      final y = size.height - (data[i] * size.height);
+      if (i == 0) {
+        path.moveTo(x, y);
+      } else {
+        path.lineTo(x, y);
+      }
+    }
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(_SparklinePainter oldDelegate) =>
+      data != oldDelegate.data || color != oldDelegate.color;
+}
 
 class TopicBreakdownCard extends StatelessWidget {
   final List<MasteryState> allMastery;
   final String Function(String) resolveTopicName;
+  final void Function(String topicId)? onTopicTap;
 
   const TopicBreakdownCard({
     super.key,
     required this.allMastery,
     required this.resolveTopicName,
+    this.onTopicTap,
   });
 
   @override
@@ -70,15 +130,24 @@ class TopicBreakdownCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Expanded(
-                child: Text(
-                  resolveTopicName(state.topicId),
-                  style: Theme.of(context).textTheme.bodyMedium,
-                  overflow: TextOverflow.ellipsis,
+                child: InkWell(
+                  onTap: onTopicTap != null ? () => onTopicTap!(state.topicId) : null,
+                  borderRadius: BorderRadius.circular(4),
+                  child: Text(
+                    resolveTopicName(state.topicId),
+                    style: Theme.of(context).textTheme.bodyMedium,
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
               ),
               Text(
                 formatPercent(state.accuracy * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0),
                 style: TextStyle(fontWeight: FontWeight.w600, color: color),
+              ),
+              const SizedBox(width: 4),
+              _AccuracySparkline(
+                recentAccuracy: state.recentAccuracy,
+                color: color,
               ),
             ],
           ),

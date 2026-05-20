@@ -261,4 +261,213 @@ The plan is still the original 90-day plan with no duration adjustment. Days 1-1
 | 13 | Stale/orphaned sessions are auto-finalized or flagged | Orphaned sessions remain with no stale indicator; appear in scheduled lessons | FAIL (MAJOR) |
 | 14 | Plan duration adjusts for missed days after return | Original plan unchanged; end date doesn't shift | FAIL (MAJOR) |
 | 15 | Consecutive-day streak correctly reflects break | Streak is 0; correct but no explanation of why | PASS (data) |
-| 16 | `getAdherenceReport()` and `getAverageAdherence()` return consistent results for empty periods | `getAdherenceReport()` returns 1.0 (perfect); `getAverageAdherence()` returns 0.0 — contradictory | FAIL (MINOR) |
+| 16 | `getAdherenceReport()` and `getAverageAdherence()` return consistent results for empty periods | `getAdherenceReport()` returns `null` (not 1.0); `getAverageAdherence()` returns 0.0 — still contradictory | FAIL (MINOR) |
+
+---
+
+## Code Validation Results
+
+*Validated against actual source code at commit HEAD. Each step assessed on whether the user's expectation is met by the current codebase.*
+
+### Step 1: First Launch After 14 Days — Absence Detection
+
+**Status: NOT_COMPLETED**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| `StudentIdService` stores `lastActivityAt` | ✅ EXISTS — `_lastActivityKey = 'lastActivityAt'`, `getLastActivityAt()`, `updateLastActivity()`, `getDaysSinceLastActivity()` all present | `lib/core/services/student_id_service.dart:10,43-63` |
+| `PlanAdherenceOrchestrator.checkAdherence()` checks absence >=3 days | ✅ EXISTS — returns `AbsenceDeviation` with `requiresRegeneration: true` | `lib/core/services/plan_adherence_orchestrator.dart:63-74` |
+| Sequencing bug: `updateLastActivity()` called BEFORE check | ❌ CRITICAL BUG — `main.dart:200-201` calls `updateLastActivity()` during init, which resets the timestamp to "now". By the time `checkAdherence()` runs (later via `PlannerNotifier.loadAdditionalData()`), `daysSinceLastActivity` is 0 | `lib/main.dart:200-201`, `lib/features/planner/providers/planner_providers.dart:222` |
+| User-facing welcome-back UI | ❌ MISSING — no splash screen, no welcome-back dialog, no absence banner on dashboard. l10n strings `welcomeBackDays` and `absenceDetectedTitle` exist but are unused in UI | `lib/features/dashboard/presentation/dashboard_screen.dart`, `lib/l10n/generated/app_localizations_en.dart` |
+
+**What is still missing:**
+1. Fix sequencing bug: read `daysSinceLastActivity` BEFORE calling `updateLastActivity()`, or remove the auto-update on init and only update on explicit user interaction.
+2. Add welcome-back banner/dialog to Dashboard that uses `StudentIdService.getDaysSinceLastActivity()`.
+
+---
+
+### Step 2: Dashboard — Gap Context
+
+**Status: PARTIAL**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| Weekly chart gap annotation | ✅ WORKS — `getWeeklyTrend()` sets `isGap = true` for weeks with no attempts + prior data. `AnimatedBarChart` renders gap weeks as small outlined boxes with dashed border. Legend shows "No activity — you were away this week." | `lib/core/services/study_progress_tracker.dart:136,163`, `lib/core/widgets/animated_bar_chart.dart:57-95` |
+| Adherence card with 0% no explanation | ❌ MISSING — `PlanAdherenceCard` shows `formatPercent(0.0)` with no "absent" vs "failed all targets" distinction | `lib/features/dashboard/presentation/widgets/plan_adherence_card.dart` |
+| Mastery overview stale data warning | ❌ MISSING — `MasterySnapshot` has no timestamp. `MasteryProgressCard` renders data with no "last updated X days ago" indication | `lib/features/dashboard/data/models/dashboard_models.dart:1`, `lib/features/dashboard/presentation/widgets/mastery_progress_card.dart` |
+| Dashboard absence banner | ❌ MISSING — `DashboardHeader` and `DashboardScreen` have no absence/welcome-back widget. `EmptyDashboardChecklist` only shows for new users | `lib/features/dashboard/presentation/widgets/dashboard_header.dart`, `lib/features/dashboard/presentation/dashboard_screen.dart:95` |
+
+**What is still missing:**
+1. `PlanAdherenceCard` should accept a `daysSinceLastActivity` parameter and show absence context when > 0 (e.g., "0% — you were away for 14 days").
+2. `MasteryProgressCard` should show "Last updated X days ago" if the snapshot data is stale.
+3. `DashboardScreen` should read `StudentIdService.getDaysSinceLastActivity()` and show a welcome-back/absence banner at the top.
+
+---
+
+### Step 3: Scheduled Lessons — Stale Lessons
+
+**Status: COMPLETED** ✗ *Scenario claim was: "no time-based filtering", "stale lessons persist indefinitely"*
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| `getScheduledLessons()` has time filter | ✅ EXISTS — filters `!s.startTime.isBefore(now - 1 hour)` | `lib/features/planner/services/planner_service.dart:372-376` |
+| `getMissedLessons()` for older lessons | ✅ EXISTS — inverse filter: `startTime.isBefore(now - 1 hour)` | `lib/features/planner/services/planner_service.dart:385-401` |
+| Missed lessons section in planner | ✅ EXISTS — strikethrough, error icon, "missed" label, dismiss button | `lib/features/planner/presentation/planner_screen.dart:1082-1143` |
+| `dismissAllMissed()` bulk action | ✅ EXISTS — marks all missed sessions as `completed: true` | `lib/features/planner/services/planner_service.dart:404-415` |
+
+**Minor caveat:** 1-hour threshold means lessons 30-min past still appear as "upcoming." This is a UX polish issue, not a functional gap.
+
+---
+
+### Step 4: Daily Plan Cards — Past vs Future Visual Distinction
+
+**Status: COMPLETED** ✗ *Scenario claim was: "past cards look identical to future ones", "no missed badge"*
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| Past completed: opacity 0.6, check icon, strikethrough | ✅ EXISTS | `lib/features/planner/presentation/widgets/daily_plan_card.dart:41,56-62,68-70` |
+| Past missed: error badge ("missed") | ✅ EXISTS | `daily_plan_card.dart:85-96` |
+| Catch Up button for past incomplete | ✅ EXISTS | `daily_plan_card.dart:156-162` |
+| Schedule/Start buttons hidden for past | ✅ EXISTS (`!isPast` guard) | `daily_plan_card.dart:127` |
+| `isCompleted` dynamically annotated from adherence records | ✅ EXISTS | `lib/features/planner/providers/planner_providers.dart:238-244` |
+
+**Minor caveat:** `isCompleted` is not persisted to Hive (no `@HiveField` annotation). It's computed in-memory on every load. This is acceptable for current architecture but could be fragile if plans are exported/imported.
+
+---
+
+### Step 5: Adherence Banner — Absence Detection
+
+**Status: NOT_COMPLETED**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| `PlanAdherenceOrchestrator.checkAdherence()` checks absence >=3d | ✅ EXISTS — returns `AbsenceDeviation` | `lib/core/services/plan_adherence_orchestrator.dart:63-74` |
+| `_buildAdherenceBanner()` handles `AbsenceDeviation` with catch-up button | ✅ EXISTS | `lib/features/planner/presentation/planner_screen.dart:949-1017` |
+| Sequencing bug defeats detection | ❌ CRITICAL BUG — `updateLastActivity()` at `main.dart:201` resets timestamp before the Planner checks | `lib/main.dart:200-201` |
+| `getConsecutiveLowAdherenceDays()` returns 0 for empty records | ✅ CONFIRMED — no records → 0 | `lib/features/planner/data/repositories/plan_adherence_repository.dart:44-56` |
+| `getAdherenceReport()` returns null (not 1.0 as scenario claimed) | ✅ EXISTS — returns `averageAdherence: null`, not `1.0` | `lib/core/services/plan_adherence_orchestrator.dart:150-155` |
+| `getAverageAdherence()` returns 0.0 for empty | ✅ CONFIRMED — inconsistency with `null` above remains | `lib/features/planner/data/repositories/plan_adherence_repository.dart:37-42` |
+
+**What is still missing:**
+1. Fix the sequencing bug: restructure `main.dart` to check last activity BEFORE updating it, or move `updateLastActivity()` out of init.
+2. Align `getAdherenceReport()` and `getAverageAdherence()` to return consistent values for empty periods.
+
+---
+
+### Step 6: Mentor Context — Absence Awareness
+
+**Status: PARTIAL**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| `daysSinceLastActivity` in LLM context | ✅ EXISTS — included at line 254 | `lib/features/mentor/services/mentor_service.dart:228,254-258` |
+| Explicit "welcome back" instruction for >=3 days | ✅ EXISTS — line 257 | `mentor_service.dart:256-258` |
+| Tiered inactivity nudges (48h, 7d, 14d, 30d+) | ✅ EXISTS — differentiated severity and messages | `mentor_service.dart:585-601` |
+| Sequencing bug may cause 0 on first launch | ❌ AFFECTED — same `updateLastActivity()` bug | `lib/main.dart:200-201` |
+| Missed lessons not in context | ❌ MISSING — only loads `upcomingLessons`, not `missedLessons` | `mentor_service.dart:223` |
+| Redistribution status not in context | ❌ MISSING — no info about what adjustments were made | `mentor_service.dart:216-259` |
+
+**What is still missing:**
+1. Add `missedLessons` to mentor context so the LLM knows what was missed.
+2. Include redistribution/catch-up status (e.g., "workload redistributed over next N days with +M min/day").
+3. Fix sequencing bug so `daysSinceLastActivity` is accurate on first launch.
+
+---
+
+### Step 7: Workload Redistribution — Multi-Week Absence
+
+**Status: NOT_COMPLETED**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| Default `days:3` redistribution | ❌ UNREASONABLE for 14-day absence — 14×60=840min → 280min/day extra | `lib/features/planner/services/personal_learning_plan_service.dart:643-684` |
+| `redistribute:all` strategy across all remaining days | ✅ EXISTS | `personal_learning_plan_service.dart:646-648` |
+| `extend` strategy (add content-less days) | ✅ EXISTS | `personal_learning_plan_service.dart:686-721` |
+| `regenerate` strategy (new plan from scratch) | ✅ EXISTS | `lib/core/services/plan_adherence_orchestrator.dart:116-143` |
+| Catch-up sheet with all 3 strategies | ✅ EXISTS but gated behind adherence banner | `lib/features/planner/presentation/planner_screen.dart:1019-1079` |
+| Auto-redistribution compounds without dedup | ❌ BUG — `recordDailyAdherence()` calls `redistributeMissedWorkload()` on every low day, compounding on the same 3-day window | `personal_learning_plan_service.dart:570-578` |
+| No dedicated extended-absence handler | ❌ MISSING — no "return-from-14-day-break" flow | nowhere |
+| No gradual catch-up ramp | ❌ MISSING — flat `extraPerDay = ceil(missedMinutes / N)` | `personal_learning_plan_service.dart:651` |
+
+**What is still missing:**
+1. Add absence-duration-aware redistribution: use `daysSinceLastActivity` to pick appropriate `N` days.
+2. Fix compounding bug: deduplicate auto-redistribution calls or only trigger once per absence period.
+3. Add gradual catch-up (e.g., 50% extra day 1, 75% day 2, 100% day 3+).
+4. Make the catch-up sheet accessible even when the adherence banner doesn't show (e.g., via a "Plan" menu action).
+
+---
+
+### Step 8: Engagement Scheduler — Background Execution
+
+**Status: NOT_COMPLETED**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| In-process `Timer.periodic` only | ❌ CONFIRMED — no WorkManager/AndroidAlarmManager/BGTaskScheduler | `lib/core/services/engagement_scheduler.dart:54-55,106,113` |
+| Platform-level scheduled notifications | ❌ MISSING — `flutter_local_notifications` only used for immediate, not future-scheduled | `lib/core/services/notification_service.dart:190` |
+| Missed-nudge accumulation | ❌ MISSING — no backfill or catch-up logic | `engagement_scheduler.dart` (entire file) |
+| Catch-up nudge on return | ❌ MISSING — no code that checks "how long since last daily check" | `engagement_scheduler.dart` (entire file) |
+| `_planOrchestrator.checkAdherence()` called in scheduler | ✅ EXISTS — but also affected by sequencing bug | `engagement_scheduler.dart:299` |
+
+**What is still missing:**
+1. Implement platform-level background scheduling (WorkManager on Android, BGTaskScheduler on iOS).
+2. Add missed-nudge backfill logic that checks "last scheduler run" timestamp on init and generates summary nudges.
+3. Add a "catch-up nudge" that tells returning users what they missed.
+
+---
+
+### Step 9: Stale/Orphaned Sessions
+
+**Status: PARTIAL**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| `Session` model has no persistent stale field | ❌ CONFIRMED — no `isStale`, `expiredAt`, `orphanedSince` | `lib/core/data/models/session_model.dart:93-138` |
+| `getStaleOrphaned()` in repository | ✅ EXISTS — runtime query for `endTime==null && !completed && startTime < now-1h` | `lib/features/sessions/data/repositories/session_repository.dart:206-217` |
+| `_isStale()` in session history screen | ✅ EXISTS — same runtime heuristic | `lib/features/sessions/presentation/session_history_screen.dart:498-502` |
+| Stale session visual indicator (error icon + badge) | ✅ EXISTS — icon background, error icon, "stale" label, dismiss button | `session_history_screen.dart:540,562-590,618-623` |
+| Orphaned tutor session dialog on launch | ✅ EXISTS — `_checkOrphanedSessions()` in `main.dart` shows dialog | `lib/main.dart:483-524` |
+| No auto-finalization/auto-timeout | ❌ MISSING — no mechanism to auto-close stale sessions | nowhere |
+| Orphaned sessions in `getScheduledLessons()` | ✅ MITIGATED — 1-hour filter moves them to "missed" section | `lib/features/planner/services/planner_service.dart:376` |
+
+**What is still missing:**
+1. Add auto-finalization for sessions exceeding a staleness threshold (e.g., 24h without endTime → auto-close with `status: cancelled`).
+2. Consider adding a persistent `isStale` field to avoid recomputation.
+
+---
+
+### Step 10: Post-Return — Gap Adjustment
+
+**Status: NOT_COMPLETED**
+
+| Aspect | Finding | Code Reference |
+|---|---|---|
+| Plan duration unchanged after return | ❌ CONFIRMED — `planDurationDays` never auto-adjusted | `lib/core/services/plan_adherence_orchestrator.dart`, `lib/features/planner/services/personal_learning_plan_service.dart` |
+| No automatic gap adjustment | ❌ CONFIRMED — no code extends plan after detected absence | `lib/main.dart:446-481` (`_handleFirstLaunch` has no plan adjustment logic) |
+| `extendPlan()` exists but needs manual action | ✅ EXISTS | `personal_learning_plan_service.dart:686-721` |
+| `catchUpWithStrategy()` exists | ✅ EXISTS | `lib/features/planner/providers/planner_providers.dart:638-658` |
+| Gap weeks scroll off chart after 8 weeks | ✅ CONFIRMED — eventually forgotten | `lib/core/services/study_progress_tracker.dart:128-157` |
+
+**What is still missing:**
+1. Add automatic plan duration extension on return after extended absence (e.g., after detecting 7+ day gap, prompt user to extend plan by X days).
+2. Add a "Plan Adjustments" tab or panel showing past gaps and their impact.
+3. Consider a "catch-up mode" that temporarily increases targets with a clear end date.
+
+---
+
+## Summary
+
+| Step | Result | Key Gap |
+|---|---|---|
+| 1. Absence detection / welcome-back | NOT_COMPLETED | Sequencing bug + no welcome-back UI |
+| 2. Dashboard gap context | PARTIAL | Chart ok; adherence card, mastery warning, banner missing |
+| 3. Stale lessons filtering | COMPLETED | Lessons handled correctly — 1h filter, missed section, dismiss |
+| 4. Past vs future plan cards | COMPLETED | Missed badge, catch-up button, visual distinction all present |
+| 5. Adherence banner for absence | NOT_COMPLETED | Infrastructure exists but sequencing bug defeats it |
+| 6. Mentor absence awareness | PARTIAL | Context includes daysSinceLastActivity; shallow (no missed lessons, no redistribution status) |
+| 7. Multi-week redistribution | NOT_COMPLETED | Default 3-day only, no absence-aware strategy, compounds |
+| 8. Background scheduling | NOT_COMPLETED | In-process timer only; no platform-level scheduling |
+| 9. Stale/orphaned sessions | PARTIAL | UI detection exists; no auto-finalization, no persistent field |
+| 10. Post-return gap adjustment | NOT_COMPLETED | No auto-extension, gap silently forgotten |
+
+**Overall: 2 COMPLETED, 3 PARTIAL, 5 NOT_COMPLETED — well below 80% threshold. Scenario file retained. Issue file created.**

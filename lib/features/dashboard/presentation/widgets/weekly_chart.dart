@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -51,7 +52,7 @@ class WeeklyChart extends ConsumerWidget {
             accentColor: theme.colorScheme.primary,
             reduceMotion: ref.watch(settingsProvider).reduceMotion,
             semanticsLabelBuilder: (day, count) =>
-                '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
+                '$day: $count ${l10n.sessionsLabel.normalized}',
           )
         else
           _buildChart(trend, l10n, theme, ref),
@@ -85,7 +86,7 @@ class WeeklyChart extends ConsumerWidget {
           gapWeeks: gapWeeks,
           semanticsLabelBuilder: (day, count) => gapWeeks.contains(day)
               ? l10n.noActivity
-              : '$day: $count ${l10n.sessionsLabel.toLowerCase()}',
+              : '$day: $count ${l10n.sessionsLabel.normalized}',
         ),
         if (gapWeeks.isNotEmpty)
           Padding(

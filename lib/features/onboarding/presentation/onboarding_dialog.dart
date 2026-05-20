@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../services/onboarding_service.dart';
-import '../services/onboarding_storage.dart';
 
 class OnboardingDialog extends StatefulWidget {
-  const OnboardingDialog({super.key});
+  final OnboardingService? service;
+
+  const OnboardingDialog({super.key, this.service});
 
   @override
   State<OnboardingDialog> createState() => _OnboardingDialogState();
@@ -22,17 +23,19 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     super.dispose();
   }
 
+  OnboardingService get _service =>
+      widget.service ?? OnboardingService();
+
   Future<void> _completeOnboarding() async {
+    final service = _service;
     try {
       if (_dontShowAgain) {
-        await OnboardingService.markDontShowAgain();
+        await service.markDontShowAgain();
       } else {
-        await OnboardingService.markCompleted();
+        await service.markCompleted();
       }
     } catch (e) {
-      // Ensure user can proceed even if storage fails
-      OnboardingService.setStorage(InMemoryOnboardingStorage());
-      await OnboardingService.markCompleted();
+      await service.markCompleted();
     }
   }
 
@@ -43,7 +46,6 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
     final pages = _buildPages(l10n, theme);
 
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       child: ConstrainedBox(
         constraints: const BoxConstraints(maxWidth: 480),
         child: Padding(

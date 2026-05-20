@@ -4,9 +4,9 @@ import 'package:studyking/core/constants/app_constants.dart' show defaultModelFo
 import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, SettingsController, l10nProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/features/practice/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/planner/data/repositories/engagement_nudge_repository.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
@@ -143,9 +143,9 @@ void main() {
       expect(tracker, isA<StudyProgressTracker>());
 
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 1);
-      expect(stats['correctAttempts'], 1);
-      expect(stats['accuracy'], 100);
+      expect(stats.data!['totalAttempts'], 1);
+      expect(stats.data!['correctAttempts'], 1);
+      expect(stats.data!['accuracy'], 100);
     });
 
     test('mentorProgressTrackerProvider handles error when attempt repo is missing data', () async {
@@ -161,8 +161,8 @@ void main() {
       expect(tracker, isA<StudyProgressTracker>());
 
       final stats = await tracker.getOverallStats('nonexistent');
-      expect(stats['totalAttempts'], 0);
-      expect(stats['correctAttempts'], 0);
+      expect(stats.data!['totalAttempts'], 0);
+      expect(stats.data!['correctAttempts'], 0);
     });
 
     test('mentorEngagementNudgeRepoProvider creates EngagementNudgeRepository', () {
@@ -273,8 +273,8 @@ void main() {
 
       final tracker = container.read(mentorProgressTrackerProvider);
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 0);
-      expect(stats['correctAttempts'], 0);
+      expect(stats.data!['totalAttempts'], 0);
+      expect(stats.data!['correctAttempts'], 0);
     });
 
     test('mentorProgressTrackerProvider recovers after error', () async {
@@ -298,13 +298,13 @@ void main() {
 
       final tracker = container.read(mentorProgressTrackerProvider);
       var stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 0);
+      expect(stats.data!['totalAttempts'], 0);
 
       fakeRepo.shouldThrow = false;
       stats = await tracker.getOverallStats('stu1');
-      expect(stats['totalAttempts'], 1);
-      expect(stats['correctAttempts'], 1);
-      expect(stats['accuracy'], 100);
+      expect(stats.data!['totalAttempts'], 1);
+      expect(stats.data!['correctAttempts'], 1);
+      expect(stats.data!['accuracy'], 100);
     });
 
     test('mentorProgressTrackerProvider handles l10nProvider changes gracefully', () async {

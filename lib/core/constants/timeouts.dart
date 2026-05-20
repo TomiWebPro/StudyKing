@@ -55,4 +55,10 @@ class Timeouts {
 
   // Settings screen timeouts
   static const Duration settingsBackupTimeout = Duration(seconds: 10);
+
+  // Default lesson duration (minutes)
+  static const int defaultLessonDurationMinutes = 45;
+
+  // Overwork threshold in hours
+  static const double overworkThresholdHours = 4.0;
 }

@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/mentor/services/tools/create_plan_tool.dart';
@@ -14,7 +15,7 @@ class FakePlannerService extends PlannerService {
   void setPlan(PersonalLearningPlan? plan) => _plan = plan;
 
   @override
-  Future<PersonalLearningPlan?> generatePlan({
+  Future<Result<PersonalLearningPlan?>> generatePlan({
     required String course,
     required int daysValue,
     required int hoursValue,
@@ -22,7 +23,7 @@ class FakePlannerService extends PlannerService {
     capturedCourse = course;
     capturedDaysValue = daysValue;
     capturedHoursValue = hoursValue;
-    return _plan;
+    return Result.success(_plan);
   }
 }
 

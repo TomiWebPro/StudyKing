@@ -1,4 +1,6 @@
 
+import 'package:studyking/core/utils/answer_comparator.dart';
+
 
 class CurriculumSeedEntry {
   final String curriculumName;
@@ -536,7 +538,7 @@ const curriculumSeedData = <CurriculumSeedEntry>[
 
 CurriculumSeedEntry? findSeedEntry(String curriculumName) {
   for (final entry in curriculumSeedData) {
-    if (entry.curriculumName.toLowerCase() == curriculumName.toLowerCase()) {
+    if (AnswerComparator.areEquivalent(entry.curriculumName, curriculumName)) {
       return entry;
     }
   }

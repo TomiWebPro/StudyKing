@@ -6,7 +6,7 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
-import 'package:studyking/features/sessions/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 
 class FakeSessionRepository extends SessionRepository {
@@ -217,7 +217,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final todayMs = await service.getTodayDurationMs();
-      expect(todayMs, 60000);
+      expect(todayMs.data!, 60000);
     });
 
     test('propagates getByDate failure through getTodayDurationMs', () async {
@@ -232,7 +232,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final todayMs = await service.getTodayDurationMs();
-      expect(todayMs, 0);
+      expect(todayMs.data!, 0);
     });
 
     test('propagates getByDate failure through getTodayStats', () async {
@@ -247,7 +247,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final stats = await service.getTodayStats();
-      expect(stats, isEmpty);
+      expect(stats.data ?? {}, isEmpty);
     });
 
     test('propagates getByDate failure through getTodaySessionCount', () async {
@@ -262,7 +262,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final count = await service.getTodaySessionCount();
-      expect(count, 0);
+      expect(count.data!, 0);
     });
 
     test('propagates getByDate failure through getTodayCompletedSessionCount', () async {
@@ -277,7 +277,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final count = await service.getTodayCompletedSessionCount();
-      expect(count, 0);
+      expect(count.data!, 0);
     });
 
     test('returns today stats through provider with fake repo', () async {
@@ -301,9 +301,9 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final stats = await service.getTodayStats();
-      expect(stats['totalMs'], 1800000);
-      expect(stats['completedSessions'], 1);
-      expect(stats['totalSessions'], 1);
+      expect(stats.data!['totalMs'], 1800000);
+      expect(stats.data!['completedSessions'], 1);
+      expect(stats.data!['totalSessions'], 1);
     });
 
     test('save propagates failure error through provider', () async {
@@ -318,7 +318,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final result = await service.startSession(plannedDurationMinutes: 25);
-      final saved = fakeRepo.sessions.where((s) => s.id == result.id);
+      final saved = fakeRepo.sessions.where((s) => s.id == result.data!.id);
       expect(saved.length, 0);
     });
 
@@ -342,9 +342,9 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final sessions = await service.getRecentSessions(limit: 10);
-      expect(sessions.length, 1);
-      expect(sessions[0].id, 'wired-test');
-      expect(sessions[0].studentId, 'stu1');
+      expect(sessions.data!.length, 1);
+      expect(sessions.data![0].id, 'wired-test');
+      expect(sessions.data![0].studentId, 'stu1');
     });
 
     test('provider container can be disposed safely after reading all providers', () {

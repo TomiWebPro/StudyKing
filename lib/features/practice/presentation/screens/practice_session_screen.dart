@@ -294,21 +294,31 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _difficultyAdapter.recordResult(isCorrect);
     _difficultyAdapter.suggestNextDifficulty();
 
-    if (widget.args.isSpacedRepetition) {
-      _updateNextReview(question.id, isCorrect);
-    }
     setState(() {
       _isSubmitted = true;
       _isFeedbackVisible = true;
     });
   }
 
-  Future<void> _updateNextReview(String questionId, bool isCorrect) async {
-    await _sessionService.updateNextReview(questionId, isCorrect);
+  void _reorderRemainingByDifficulty() {
+    final targetDifficulty = _difficultyAdapter.currentDifficulty;
+    if (_currentIndex >= _questions.length - 1) return;
+    final remaining = _questions.sublist(_currentIndex + 1);
+    remaining.sort((a, b) {
+      final aMatch = a.difficulty == targetDifficulty ? 0 : 1;
+      final bMatch = b.difficulty == targetDifficulty ? 0 : 1;
+      final diff = aMatch - bMatch;
+      if (diff != 0) return diff;
+      return a.difficulty.compareTo(b.difficulty);
+    });
+    _questions
+      ..removeRange(_currentIndex + 1, _questions.length)
+      ..addAll(remaining);
   }
 
   void _nextQuestion() {
     if (_currentIndex < _questions.length - 1) {
+      _reorderRemainingByDifficulty();
       setState(() {
         _previousIndex = _currentIndex;
         _currentIndex++;
@@ -361,11 +371,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<bool> _showMistakeReview() async {
-    final mistakes = await _mistakeReviewService.getMistakesFromSession(
+    final mistakesResult = await _mistakeReviewService.getMistakesFromSession(
       studentId: _studentIdService.getStudentId(),
       subjectId: widget.args.subjectId,
       after: _sessionService.sessionStartTime,
     );
+    final mistakes = mistakesResult.data ?? [];
     if (!mounted || mistakes.isEmpty) return true;
     final completer = Completer<bool>();
     MistakeReviewWidget.show(

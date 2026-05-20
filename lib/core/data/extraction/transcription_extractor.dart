@@ -30,7 +30,7 @@ class TranscriptionExtractor {
   final String _modelId;
   final http.Client _httpClient;
   final String _localeName;
-  final Logger _logger = const Logger('TranscriptionExtractor');
+  static final Logger _logger = const Logger('TranscriptionExtractor');
 
   TranscriptionExtractor({
     LlmService? llmService,
@@ -135,7 +135,7 @@ class TranscriptionExtractor {
         extractionMethod: 'file_no_llm',
       );
     } catch (e) {
-      _logger.e('Failed to read audio/video file', e);
+      _logger.w('Failed to read audio/video file', e);
       return const TranscriptionResult(
         text: '',
         extractionMethod: 'file_read_error',
@@ -177,7 +177,7 @@ class TranscriptionExtractor {
         extractionMethod: 'youtube_no_transcript',
       );
     } catch (e) {
-      _logger.e('YouTube transcript fetch failed', e);
+      _logger.w('YouTube transcript fetch failed', e);
       if (_llmService != null) {
         return _transcribeWithLlm('YouTube URL: $url');
       }
@@ -234,7 +234,7 @@ class TranscriptionExtractor {
                   if (textParts.isNotEmpty) return textParts;
                 }
               } catch (e) {
-                _logger.e('Failed to parse YouTube transcript JSON', e);
+                _logger.w('Failed to parse YouTube transcript JSON', e);
               }
             }
 
@@ -243,13 +243,13 @@ class TranscriptionExtractor {
             }
           }
         } catch (e) {
-          _logger.e('Failed to fetch YouTube transcript from URL', e);
+          _logger.w('Failed to fetch YouTube transcript from URL', e);
         }
       }
 
       return null;
     } catch (e) {
-      _logger.e('Failed to fetch YouTube transcript', e);
+      _logger.w('Failed to fetch YouTube transcript', e);
       return null;
     }
   }
@@ -285,7 +285,7 @@ class TranscriptionExtractor {
       }
       return null;
     } catch (e) {
-      _logger.e('Failed to fetch YouTube page', e);
+      _logger.w('Failed to fetch YouTube page', e);
       return null;
     }
   }
@@ -343,7 +343,7 @@ class TranscriptionExtractor {
         extractionMethod: 'transcribed_llm',
       );
     } catch (e) {
-      _logger.e('LLM transcription failed', e);
+      _logger.w('LLM transcription failed', e);
       return TranscriptionResult(
         text: '',
         extractionMethod: 'transcription_llm_failed',
