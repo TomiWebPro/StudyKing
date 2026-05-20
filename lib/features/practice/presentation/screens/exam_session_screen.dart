@@ -587,7 +587,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         ),
         SizedBox(height: ResponsiveUtils.verticalSpacing(context) / 2),
         Text(
-          '${l10n.totalSelected}: ${_easyCount + _mediumCount + _hardCount} / $_questionCount',
+          '${l10n.totalSelected}: ${formatCompactNumber(_easyCount + _mediumCount + _hardCount, l10n.localeName)} / ${formatCompactNumber(_questionCount, l10n.localeName)}',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
               color: (_easyCount + _mediumCount + _hardCount) > _questionCount
                   ? Theme.of(context).colorScheme.error
@@ -609,7 +609,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
           Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                'Remaining: ${_questionCount - (_easyCount + _mediumCount + _hardCount)}',
+                'Remaining: ${formatCompactNumber(_questionCount - (_easyCount + _mediumCount + _hardCount), l10n.localeName)}',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.tertiary,
               ),

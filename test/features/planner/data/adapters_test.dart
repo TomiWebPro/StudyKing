@@ -7,12 +7,16 @@ import 'package:hive/src/binary/binary_writer_impl.dart';
 import 'package:hive/src/registry/type_registry_impl.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/adapters.dart';
+import 'package:studyking/features/planner/data/adapters/engagement_nudge_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
+import 'package:studyking/features/planner/data/adapters/student_availability_adapter.dart';
+import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 
 void main() {
   group('registerPlannerAdapters', () {
@@ -24,7 +28,9 @@ void main() {
       expect(Hive.isAdapterRegistered(22), isTrue);
       expect(Hive.isAdapterRegistered(23), isTrue);
       expect(Hive.isAdapterRegistered(30), isTrue);
+      expect(Hive.isAdapterRegistered(32), isTrue);
       expect(Hive.isAdapterRegistered(33), isTrue);
+      expect(Hive.isAdapterRegistered(35), isTrue);
     });
 
     test('is idempotent when called multiple times', () {
@@ -36,7 +42,9 @@ void main() {
       expect(Hive.isAdapterRegistered(22), isTrue);
       expect(Hive.isAdapterRegistered(23), isTrue);
       expect(Hive.isAdapterRegistered(30), isTrue);
+      expect(Hive.isAdapterRegistered(32), isTrue);
       expect(Hive.isAdapterRegistered(33), isTrue);
+      expect(Hive.isAdapterRegistered(35), isTrue);
     });
   });
 
@@ -50,7 +58,9 @@ void main() {
         ..registerAdapter(PlanSummaryAdapter())
         ..registerAdapter(PlanRecommendationAdapter())
         ..registerAdapter(PlanAdherenceMetricAdapter())
-        ..registerAdapter(PlanAdherenceModelAdapter());
+        ..registerAdapter(PlanAdherenceModelAdapter())
+        ..registerAdapter(EngagementNudgeModelAdapter())
+        ..registerAdapter(StudentAvailabilityModelAdapter());
     }
 
     test('PersonalLearningPlanAdapter round-trip', () {
@@ -250,6 +260,106 @@ void main() {
       expect(restored.adherenceScore, 0.9);
       expect(restored.planId, 'plan-abc');
       expect(restored.metadata!['source'], 'manual');
+    });
+
+    test('EngagementNudgeModelAdapter round-trip', () {
+      final registry = fullRegistry();
+      final adapter = EngagementNudgeModelAdapter();
+      final now = DateTime.now();
+      final source = EngagementNudgeModel(
+        id: 'nudge-rt',
+        studentId: 'student-1',
+        nudgeType: 'overwork',
+        message: 'Take a break!',
+        severity: 'high',
+        topicId: 'topic-1',
+        sentAt: now,
+        wasActedUpon: true,
+        actedUponAt: now,
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.id, 'nudge-rt');
+      expect(restored.studentId, 'student-1');
+      expect(restored.nudgeType, 'overwork');
+      expect(restored.message, 'Take a break!');
+      expect(restored.severity, 'high');
+      expect(restored.topicId, 'topic-1');
+      expect(restored.wasActedUpon, isTrue);
+    });
+
+    test('EngagementNudgeModelAdapter round-trip with defaults', () {
+      final registry = fullRegistry();
+      final adapter = EngagementNudgeModelAdapter();
+      final now = DateTime.now();
+      final source = EngagementNudgeModel(
+        id: 'nudge-rt2',
+        studentId: 'student-2',
+        nudgeType: 'revision',
+        message: 'Review time',
+        sentAt: now,
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.severity, 'medium');
+      expect(restored.topicId, isNull);
+      expect(restored.wasActedUpon, isFalse);
+      expect(restored.actedUponAt, isNull);
+    });
+
+    test('StudentAvailabilityModelAdapter round-trip', () {
+      final registry = fullRegistry();
+      final adapter = StudentAvailabilityModelAdapter();
+      final blackout1 = DateTime(2025, 12, 25);
+      final blackout2 = DateTime(2026, 1, 1);
+      final source = StudentAvailabilityModel(
+        studentId: 's-rt',
+        preferredStudyDays: [1, 3, 5],
+        preferredStartHour: 8,
+        preferredEndHour: 22,
+        maxSessionsPerDay: 4,
+        defaultSessionDurationMinutes: 45,
+        blackoutDates: [blackout1, blackout2],
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.studentId, 's-rt');
+      expect(restored.preferredStudyDays, [1, 3, 5]);
+      expect(restored.preferredStartHour, 8);
+      expect(restored.preferredEndHour, 22);
+      expect(restored.maxSessionsPerDay, 4);
+      expect(restored.defaultSessionDurationMinutes, 45);
+      expect(restored.blackoutDates.length, 2);
+    });
+
+    test('StudentAvailabilityModelAdapter round-trip with defaults', () {
+      final registry = fullRegistry();
+      final adapter = StudentAvailabilityModelAdapter();
+      final source = StudentAvailabilityModel(studentId: 's-rt2');
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.preferredStudyDays, [1, 2, 3, 4, 5, 6, 7]);
+      expect(restored.preferredStartHour, 9);
+      expect(restored.preferredEndHour, 21);
+      expect(restored.maxSessionsPerDay, 3);
+      expect(restored.defaultSessionDurationMinutes, 30);
+      expect(restored.blackoutDates, isEmpty);
     });
 
     test('reading from empty binary throws', () {

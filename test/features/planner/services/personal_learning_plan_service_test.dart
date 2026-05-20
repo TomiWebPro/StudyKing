@@ -1,6 +1,10 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -14,6 +18,59 @@ import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+
+class FakeMasteryGraphService extends MasteryGraphService {
+  final MasteryGraphRepository _fakeRepo;
+
+  FakeMasteryGraphService(this._fakeRepo)
+      : super(
+          masteryStateRepo: FakeMasteryStateRepository(),
+        );
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return _fakeRepo.getWeakTopics(studentId);
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    return _fakeRepo.getAllMasteryStates(studentId);
+  }
+
+  @override
+  Future<Result<double>> getReadinessScore(String studentId, String topicId) async {
+    final result = await _fakeRepo.getMasteryState(studentId, topicId);
+    if (result.isSuccess && result.data != null) {
+      return Result.success(result.data!.readinessScore);
+    }
+    return Result.success(0.5);
+  }
+
+  @override
+  Future<Result<double>> getReviewUrgency(String studentId, String topicId) async {
+    final result = await _fakeRepo.getMasteryState(studentId, topicId);
+    if (result.isSuccess && result.data != null) {
+      return Result.success(result.data!.reviewUrgency);
+    }
+    return Result.success(0.3);
+  }
+}
+
+class FakeMasteryStateRepository extends MasteryStateRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
+    return Result.success([]);
+  }
+}
 
 class FakeMasteryGraphRepository extends MasteryGraphRepository {
   @override
@@ -223,6 +280,20 @@ class _FakeRoadmapRepository extends RoadmapRepository {
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('planner_plsp_test_').path;
+    Hive.init(hivePath);
+  });
+
+  tearDownAll(() async {
+    await Hive.close();
+    try {
+      await Directory(hivePath).delete(recursive: true);
+    } catch (_) {}
+  });
+
   group('PlanGenerationConfig', () {
     test('creates config with default values', () {
       final config = PlanGenerationConfig();
@@ -266,10 +337,11 @@ void main() {
       mockRepo = FakeMasteryGraphRepository();
       mockTopicRepo = FakeTopicRepository();
       service = PersonalLearningPlanService(
-        masteryService: null,
+        masteryService: FakeMasteryGraphService(mockRepo),
         repository: mockRepo,
         topicRepository: mockTopicRepo,
         config: PlanGenerationConfig(planDurationDays: 3),
+        l10n: AppLocalizationsEn(),
       );
     });
 
@@ -292,9 +364,11 @@ void main() {
         );
 
         final serviceWithConfig = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
           repository: mockRepo,
           topicRepository: mockTopicRepo,
           config: customConfig,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await serviceWithConfig.generatePlan('student1');
@@ -308,8 +382,10 @@ void main() {
       test('returns failure when mastery states fail', () async {
         final failingRepo = _FailingMasteryGraphRepository();
         final failingService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(failingRepo),
           repository: failingRepo,
           topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await failingService.generatePlan('student1');
@@ -341,9 +417,11 @@ void main() {
         );
 
         final serviceWithRest = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
           repository: mockRepo,
           topicRepository: mockTopicRepo,
           config: configWithRest,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await serviceWithRest.generatePlan('student1');
@@ -376,8 +454,10 @@ void main() {
       test('returns failure on error', () async {
         final failingRepo = _FailingMasteryGraphRepository();
         final failingService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(failingRepo),
           repository: failingRepo,
           topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await failingService.getNextStudyTopics('student1');
@@ -397,8 +477,10 @@ void main() {
       test('returns failure on error', () async {
         final failingRepo = _FailingMasteryGraphRepository();
         final failingService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(failingRepo),
           repository: failingRepo,
           topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await failingService.getAtRiskTopicIds('student1');
@@ -418,8 +500,10 @@ void main() {
       test('returns failure on error', () async {
         final failingRepo = _FailingMasteryGraphRepository();
         final failingService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(failingRepo),
           repository: failingRepo,
           topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
         );
 
         final result = await failingService.getReadyToAdvanceTopicIds('student1');
@@ -767,6 +851,7 @@ void main() {
               estimatedCoverage: 0.5, focusAreas: [],
             ),
             recommendations: [],
+            planDurationDays: 3,
           );
           await planRepo.savePlan(plan);
 
@@ -838,6 +923,53 @@ void main() {
           ));
           final days = await svc.getConsecutiveLowAdherenceDays('student1');
           expect(days, greaterThan(0));
+        });
+      });
+
+      group('catch block coverage', () {
+        test('redistributeMissedWorkload handles rest days correctly', () async {
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [
+              DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+                isRestDay: true,
+              ),
+              DailyPlan(date: now.add(const Duration(days: 2)), dayNumber: 2,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(totalQuestions: 30, totalMinutes: 60, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 2,
+          );
+          await planRepo.savePlan(plan);
+          final result = await svc.redistributeMissedWorkload('student1', 30, plan, strategy: 'days:1');
+          expect(result.isSuccess, isTrue);
+        });
+
+        test('redistributeMissedWorkload handles invalid strategy default', () async {
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [
+              DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(totalQuestions: 15, totalMinutes: 30, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 1,
+          );
+          await planRepo.savePlan(plan);
+          final result = await svc.redistributeMissedWorkload('student1', 30, plan, strategy: 'invalid');
+          expect(result.isSuccess, isTrue);
         });
       });
     });

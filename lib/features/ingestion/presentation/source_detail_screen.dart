@@ -55,6 +55,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   String? _error;
   bool _isReprocessing = false;
   String _reprocessingStage = '';
+  bool _keepOldQuestions = false;
 
   final _searchController = TextEditingController();
   final _scrollController = ScrollController();
@@ -135,18 +136,40 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final source = _source;
     if (source == null) return;
 
+    bool keepOld = false;
     final confirmed = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.reprocessSource),
-        content: Text(l10n.reprocessingWarning),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.continueAnyway)),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => AlertDialog(
+          title: Text(l10n.reprocessSource),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(l10n.reprocessingWarning),
+              if (source.generatedQuestionIds.isNotEmpty) ...[
+                const SizedBox(height: 12),
+                CheckboxListTile(
+                  title: Text(l10n.keepOldQuestionsLabel),
+                  subtitle: Text(l10n.keepOldQuestionsHint),
+                  value: keepOld,
+                  onChanged: (v) => setInnerState(() => keepOld = v ?? false),
+                  controlAffinity: ListTileControlAffinity.platform,
+                  contentPadding: EdgeInsets.zero,
+                  dense: true,
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
+            ElevatedButton(onPressed: () => Navigator.pop(ctx, true), child: Text(l10n.continueAnyway)),
+          ],
+        ),
       ),
     );
     if (confirmed != true || !mounted) return;
+    _keepOldQuestions = keepOld;
 
     setState(() {
       _isReprocessing = true;
@@ -164,6 +187,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         }
         return;
       }
+      final oldIds = _keepOldQuestions ? <String>[] : List<String>.from(source.generatedQuestionIds);
       final result = await pipeline.reprocessSource(
         source,
         modelId: modelId,
@@ -171,21 +195,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         onProgress: (status, description) {
           if (mounted) setState(() { _reprocessingStage = description; });
         },
+        oldQuestionIds: oldIds,
       );
 
       if (result.isSuccess && mounted) {
-        final newSource = result.data!;
-        final reprocessed = source.copyWith(
-          processingStatus: newSource.processingStatus,
-          extractedText: newSource.extractedText.isNotEmpty ? newSource.extractedText : source.extractedText,
-          summary: newSource.summary.isNotEmpty ? newSource.summary : source.summary,
-          generatedQuestionIds: newSource.generatedQuestionIds.isNotEmpty ? newSource.generatedQuestionIds : source.generatedQuestionIds,
-          topicId: newSource.topicId.isNotEmpty ? newSource.topicId : source.topicId,
-        );
-        await _sourceRepo.save(widget.sourceId, reprocessed);
-        if (newSource.id != widget.sourceId) {
-          await _sourceRepo.delete(newSource.id);
-        }
         await _load();
       }
     } catch (e) {
@@ -319,7 +332,6 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                   if (subjectName.isNotEmpty)
                     _InfoRow(label: l10n.subject, value: subjectName),
                   _InfoRow(label: l10n.type, value: sourceTypeLabel(source.type, l10n)),
-                  _InfoRow(label: l10n.id, value: source.id),
                   if (source.createdAt != null)
                     _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
 
@@ -333,16 +345,41 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                         color: theme.colorScheme.errorContainer,
                         borderRadius: BorderRadius.circular(8),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.error_outline, color: theme.colorScheme.error),
-                          const SizedBox(width: 8),
-                          Expanded(child: Text(l10n.processingFailed, style: TextStyle(color: theme.colorScheme.error))),
-                          const SizedBox(width: 8),
-                          TextButton.icon(
-                            icon: const Icon(Icons.refresh, size: 18),
-                            label: Text(l10n.retry),
-                            onPressed: _reprocess,
+                          Row(
+                            children: [
+                              Icon(Icons.error_outline, color: theme.colorScheme.error),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  source.errorMessage.isNotEmpty
+                                      ? source.errorMessage
+                                      : l10n.processingFailed,
+                                  style: TextStyle(color: theme.colorScheme.error),
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (source.errorMessage.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 8),
+                              child: Text(
+                                l10n.processingFailed,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.error.withValues(alpha: 0.7),
+                                ),
+                              ),
+                            ),
+                          const SizedBox(height: 8),
+                          Align(
+                            alignment: AlignmentDirectional.centerEnd,
+                            child: TextButton.icon(
+                              icon: const Icon(Icons.refresh, size: 18),
+                              label: Text(l10n.retry),
+                              onPressed: _reprocess,
+                            ),
                           ),
                         ],
                       ),
@@ -463,6 +500,58 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                       );
                     }),
 
+                  if (source.generatedQuestionIds.isNotEmpty) ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _navigateToPractice(source),
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(l10n.practiceAllQuestions),
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 16),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: null,
+                        icon: const Icon(Icons.play_arrow),
+                        label: Text(l10n.noQuestionsToPractice),
+                      ),
+                    ),
+                  ],
+
+                  if (source.topicId.isEmpty && source.generatedQuestionIds.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8),
+                      child: Semantics(
+                        liveRegion: true,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 18, color: theme.colorScheme.tertiary),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  l10n.questionsWithoutTopicWarning,
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.tertiary,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+
                   const SizedBox(height: 24),
                   SizedBox(
                     width: double.infinity,
@@ -509,6 +598,24 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                 },
               )),
         ],
+      ),
+    );
+  }
+
+  void _navigateToPractice(Source source) {
+    final l10n = AppLocalizations.of(context)!;
+    if (source.generatedQuestionIds.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.noQuestionsToPractice)),
+      );
+      return;
+    }
+    Navigator.pushNamed(
+      context,
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(
+        subjectId: source.subjectId,
+        sourceId: source.id,
       ),
     );
   }

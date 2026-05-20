@@ -435,5 +435,80 @@ void main() {
       await tester.drag(syllabusSlider, const Offset(50, 0));
       await tester.pumpAndSettle();
     });
+
+    testWidgets('shows topic description when available', (tester) async {
+      final topicWithDesc = _topic('t-d', 'Derivatives', description: 'Rate of change');
+      final topics = [topicA, topicWithDesc];
+
+      await tester.pumpWidget(_buildTestApp(
+        TopicDependencyDialog(
+          topic: topicA,
+          allTopics: topics,
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Rate of change'), findsOneWidget);
+    });
+
+    testWidgets('available prerequisites excludes current topic', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        TopicDependencyDialog(
+          topic: topicA,
+          allTopics: allTopics,
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CheckboxListTile), findsNWidgets(2));
+    });
+
+    testWidgets('save with no dependency uses topic sortOrder and parentTopicId',
+        (tester) async {
+      TopicDependency? result;
+      final topicWithParent = Topic(
+        id: 't-d',
+        subjectId: 'sub-1',
+        title: 'Derivatives',
+        description: '',
+        syllabusText: 'Syllabus',
+        parentId: 't-a',
+        sortOrder: 5,
+      );
+
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<TopicDependency>(
+                context: context,
+                builder: (_) => TopicDependencyDialog(
+                  topic: topicWithParent,
+                  allTopics: allTopics,
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.sortOrder, 5);
+      expect(result!.parentTopicId, 't-a');
+      expect(result!.downstreamTopics, isEmpty);
+    });
   });
 }

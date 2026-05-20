@@ -137,7 +137,7 @@ void main() {
       ));
       expect(
           find.text(
-              'You have 3 topic(s) that need improvement. Focus on strengthening these areas.'),
+              'You have 3 topics that need improvement. Focus on strengthening these areas.'),
           findsOneWidget);
     });
   });

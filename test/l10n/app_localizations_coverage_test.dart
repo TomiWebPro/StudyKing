@@ -117,7 +117,7 @@ void main() {
 
     test('about application details', () {
       expect(l10n.aboutApplicationName, 'StudyKing');
-      expect(l10n.aboutVersion, 'v0.1.0');
+      expect(l10n.aboutVersion, 'v1.0.0');
       expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
     });
 
@@ -357,7 +357,7 @@ void main() {
       expect(l10n.quickGuideWelcomeMessage, '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúnteme lo que sea sobre sus estudios!');
       expect(l10n.suggestedPromptExplain, 'Explica la fotosíntesis');
       expect(l10n.suggestedPromptQuiz, 'Examíname de historia');
-      expect(l10n.suggestedPromptMath, 'Ayuda con problemas de mates');
+      expect(l10n.suggestedPromptMath, 'Ayuda con problemas de matemáticas');
       expect(l10n.quickGuideHelpContent, 'Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!');
       expect(l10n.semanticsMessageInput, 'Campo de mensaje para Guía Rápida');
     });
@@ -375,7 +375,7 @@ void main() {
 
     test('about application details', () {
       expect(l10n.aboutApplicationName, 'StudyKing');
-      expect(l10n.aboutVersion, 'v0.1.0');
+      expect(l10n.aboutVersion, 'v1.0.0');
       expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
     });
 
@@ -467,7 +467,7 @@ void main() {
     });
 
     test('avgReadinessLabel', () {
-      expect(l10n.avgReadinessLabel('80%'), 'Disposición Prom.: 80%');
+      expect(l10n.avgReadinessLabel('80%'), 'Preparación Prom.: 80%');
     });
 
     test('courseSessionLabel', () {
@@ -630,7 +630,7 @@ void main() {
       });
 
       test('durationMinutes handles zero', () {
-        expect(l10n.durationMinutes(0), '0min');
+        expect(l10n.durationMinutes(0), '0m');
       });
 
       test('durationSeconds handles zero', () {

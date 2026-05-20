@@ -34,6 +34,9 @@ final dashboardAllMasteryProvider =
   await ref.watch(dashboardInitProvider.future);
   final masteryService = ref.watch(masteryGraphServiceProvider);
   final result = await masteryService.getAllTopicMastery(studentId);
+  if (result.isFailure) {
+    _dashboardLogger.w('Failed to load dashboard mastery data: ${result.error}');
+  }
   return result.isSuccess ? (result.data ?? []) : [];
 });
 

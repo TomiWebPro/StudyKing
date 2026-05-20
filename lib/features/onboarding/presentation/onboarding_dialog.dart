@@ -1,18 +1,20 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../services/onboarding_service.dart';
 
-class OnboardingDialog extends StatefulWidget {
+class OnboardingDialog extends ConsumerStatefulWidget {
   final OnboardingService? service;
 
   const OnboardingDialog({super.key, this.service});
 
   @override
-  State<OnboardingDialog> createState() => _OnboardingDialogState();
+  ConsumerState<OnboardingDialog> createState() => _OnboardingDialogState();
 }
 
-class _OnboardingDialogState extends State<OnboardingDialog> {
+class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
   bool _dontShowAgain = false;
   final _pageController = PageController();
   int _currentPage = 0;
@@ -43,6 +45,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final reduceMotion = ref.watch(settingsProvider).reduceMotion;
     final pages = _buildPages(l10n, theme);
 
     return Dialog(
@@ -68,7 +71,19 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                   return Semantics(
                     label: 'Page ${i + 1} of ${pages.length}',
                     selected: _currentPage == i,
-                    child: AnimatedContainer(
+                    child: reduceMotion
+                        ? Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == i ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentPage == i
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          )
+                        : AnimatedContainer(
                       duration: const Duration(milliseconds: 200),
                       margin: const EdgeInsets.symmetric(horizontal: 4),
                       width: _currentPage == i ? 24 : 8,
@@ -91,7 +106,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                     onPressed: () async {
                       await _completeOnboarding();
                       if (!context.mounted) return;
-                      Navigator.pushNamed(context, AppRoutes.subjectSelection);
+                      Navigator.pushNamed(context, AppRoutes.dashboard);
                     },
                     child: Text(l10n.skip),
                   ),
@@ -110,7 +125,7 @@ class _OnboardingDialogState extends State<OnboardingDialog> {
                           onPressed: () async {
                             await _completeOnboarding();
                             if (!context.mounted) return;
-                            Navigator.pushNamed(context, AppRoutes.subjectSelection);
+                            Navigator.pushNamed(context, AppRoutes.dashboard);
                           },
                           icon: const Icon(Icons.rocket_launch),
                           label: Text(l10n.getStarted),

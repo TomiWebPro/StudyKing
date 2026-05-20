@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
@@ -56,6 +58,13 @@ class _FakeHttpClient extends http.BaseClient {
 }
 
 void main() {
+  late String hivePath;
+
+  setUpAll(() {
+    hivePath = Directory.systemTemp.createTempSync('llm_chat_test_').path;
+    Hive.init(hivePath);
+  });
+
   group('LlmConfiguration', () {
     test('creates with required fields', () {
       const config = LlmConfiguration(
@@ -144,7 +153,8 @@ void main() {
         modelId: 'test-model',
       ).toList();
 
-      expect(chunks, isEmpty);
+      expect(chunks.length, 1);
+      expect(chunks[0], contains('API key not configured'));
       expect(client.callCount, 0);
     });
 
@@ -507,7 +517,10 @@ void main() {
           message: 'Hello',
           modelId: 'm',
         );
-        await expectLater(stream, emitsDone);
+        await expectLater(
+          stream,
+          emits('API key not configured. Please set up an API key in Settings to use AI features.'),
+        );
       });
     });
 
@@ -528,6 +541,7 @@ void main() {
         };
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -548,6 +562,7 @@ void main() {
         client.handler = (_) async => http.Response('Error', 500);
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -582,6 +597,7 @@ void main() {
         };
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openAI,
           apiKey: 'key',
@@ -819,6 +835,7 @@ void main() {
         };
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -841,6 +858,7 @@ void main() {
         client.handler = (_) async => throw Exception('Stream error');
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -871,6 +889,7 @@ void main() {
         };
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -1068,6 +1087,7 @@ void main() {
         };
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.ollama,
           apiKey: 'key',
@@ -1083,6 +1103,292 @@ void main() {
       });
     });
 
+    group('LlmConfiguration.hasBackup', () {
+      test('returns true when backup provider and apiKey are configured', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+        );
+        expect(config.hasBackup, isTrue);
+      });
+
+      test('returns false when backupProvider is null', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+        );
+        expect(config.hasBackup, isFalse);
+      });
+
+      test('returns false when backupApiKey is empty', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: '',
+        );
+        expect(config.hasBackup, isFalse);
+      });
+
+      test('returns false when backupApiKey is null', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.openAI,
+        );
+        expect(config.hasBackup, isFalse);
+      });
+    });
+
+    group('LlmConfiguration.copyWithBackup', () {
+      test('overrides all backup fields', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+        );
+        final updated = config.copyWithBackup(
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'new-key',
+          backupBaseUrl: 'https://backup.example.com',
+          backupModel: 'gpt-4',
+        );
+        expect(updated.backupProvider, LlmProvider.openAI);
+        expect(updated.backupApiKey, 'new-key');
+        expect(updated.backupBaseUrl, 'https://backup.example.com');
+        expect(updated.backupModel, 'gpt-4');
+      });
+
+      test('preserves existing fields when not overridden', () {
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.ollama,
+          backupApiKey: 'existing-key',
+          backupBaseUrl: 'http://existing.local',
+          backupModel: 'llama3',
+        );
+        final updated = config.copyWithBackup(backupApiKey: 'new-key');
+        expect(updated.backupProvider, LlmProvider.ollama);
+        expect(updated.backupApiKey, 'new-key');
+        expect(updated.backupBaseUrl, 'http://existing.local');
+        expect(updated.backupModel, 'llama3');
+      });
+    });
+
+    group('backup provider fallback in chat', () {
+      test('uses backup provider on server error', () async {
+        final client = _FakeHttpClient();
+        int callCount = 0;
+        client.handler = (request) async {
+          callCount++;
+          if (callCount == 1) {
+            return http.Response('Server Error', 500);
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {'message': {'content': 'Backup response'}}
+              ],
+              'usage': {'prompt_tokens': 5, 'completion_tokens': 10},
+            }),
+            200,
+            headers: {'Content-Type': 'application/json'},
+          );
+        };
+
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'primary-key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+          backupModel: 'gpt-4',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final result = await service.chat(message: 'Hi', modelId: 'primary-model');
+        expect(result.data, 'Backup response');
+        expect(callCount, 2);
+      });
+
+      test('does not use backup on non-server error', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Bad Request', 400);
+
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final result = await service.chat(message: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('does not use backup when no backup configured', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Server Error', 500);
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final result = await service.chat(message: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('backup provider fallback in chatStream', () {
+      test('uses backup provider on server error', () async {
+        final client = _FakeHttpClient();
+        int callCount = 0;
+        client.handler = (request) async {
+          callCount++;
+          if (callCount == 1) {
+            throw Exception('HTTP 500 Internal Server Error');
+          }
+          return http.Response(
+            'data: ${jsonEncode({"choices": [{"delta": {"content": "Backup stream"}}]})}\n'
+            'data: [DONE]\n'
+            '\n',
+            200,
+          );
+        };
+
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'primary-key',
+          backupProvider: LlmProvider.openRouter,
+          backupApiKey: 'backup-key',
+          backupModel: 'backup-model',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'primary-model');
+        await expectLater(
+          stream,
+          emitsInOrder([
+            '\n\n[Primary provider failed. Trying backup provider...]\n\n',
+            'Backup stream',
+            emitsDone,
+          ]),
+        );
+        expect(callCount, 2);
+      });
+
+      test('does not use backup on non-server error', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => throw Exception('Network error');
+
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'm');
+        await expectLater(stream, emitsError(isA<Exception>()));
+      });
+    });
+
+    group('chatStream non-200 status', () {
+      test('OpenRouter non-200 yields error message', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Unauthorized', 401);
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'bad-key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'm');
+        await expectLater(
+          stream,
+          emits('\n\n[API key is invalid or expired. Update in Settings.]\n\n'),
+        );
+      });
+
+      test('Ollama non-200 yields error message', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Not Found', 404);
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.ollama,
+          apiKey: 'key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'm');
+        await expectLater(
+          stream,
+          emits('\n\n[Model not found. Check model name in Settings.]\n\n'),
+        );
+      });
+
+      test('OpenAI non-200 yields error message', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Too Many Requests', 429);
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.openAI,
+          apiKey: 'key',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'gpt-4');
+        await expectLater(
+          stream,
+          emits('\n\n[Too many requests. Wait and try again.]\n\n'),
+        );
+      });
+    });
+
+    group('Ollama and OpenAI streaming with custom baseUrl', () {
+      test('Ollama stream uses custom baseUrl', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.host, 'my-ollama.local');
+          expect(request.url.port, 8080);
+          return http.Response(
+            '${jsonEncode({"message": {"content": "Hello"}, "done": false})}\n'
+            '${jsonEncode({"message": {"content": ""}, "done": true})}\n',
+            200,
+          );
+        };
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.ollama,
+          apiKey: 'key',
+          baseUrl: 'http://my-ollama.local:8080',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'm');
+        await expectLater(stream, emits('Hello'));
+      });
+
+      test('OpenAI stream uses custom baseUrl', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.host, 'my-openai.local');
+          return http.Response(
+            'data: ${jsonEncode({"choices": [{"delta": {"content": "OK"}}]})}\n'
+            'data: [DONE]\n'
+            '\n',
+            200,
+          );
+        };
+
+        const config = LlmConfiguration(
+          provider: LlmProvider.openAI,
+          apiKey: 'key',
+          baseUrl: 'https://my-openai.local/v1',
+        );
+        final service = LlmService(config: config, httpClient: client);
+        final stream = service.chatStream(message: 'Hi', modelId: 'gpt-4');
+        await expectLater(stream, emits('OK'));
+      });
+    });
+
     group('streaming usage meter for all providers', () {
       test('Ollama streaming records usage', () async {
         final client = _FakeHttpClient();
@@ -1095,6 +1401,7 @@ void main() {
         };
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.ollama,
           apiKey: 'key',
@@ -1122,6 +1429,7 @@ void main() {
         };
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openAI,
           apiKey: 'key',

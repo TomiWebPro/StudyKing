@@ -899,12 +899,12 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
                 _buildActivityItem(
                   icon: Icons.local_fire_department,
                   label: l10n.thisWeek,
-                  value: '$_weeklyActivity',
+                  value: formatCompactNumber(_weeklyActivity, l10n.localeName),
                 ),
                 _buildActivityItem(
                   icon: Icons.star,
                   label: l10n.weeklyActivity,
-                  value: '${_practiceStreak}d',
+                  value: l10n.daysCount(_practiceStreak),
                 ),
               ],
             ),
@@ -949,7 +949,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
                     const SizedBox(height: 4),
                     ...(_recentSessions.take(3).map((s) {
                       final score = s.questionsAnswered > 0
-                          ? '${(s.correctAnswers / s.questionsAnswered * 100).round()}%'
+                          ? formatPercent(s.correctAnswers / s.questionsAnswered * 100, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)
                           : '-';
                       final date = formatDate(s.startTime, l10n: l10n);
                       return Padding(

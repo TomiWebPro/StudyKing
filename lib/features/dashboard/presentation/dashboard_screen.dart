@@ -199,6 +199,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   loadingSkeleton: _cardSkeleton(context),
                   body: Semantics(
                     button: true,
+                    label: l10n.focusMode,
                     child: InkWell(
                       onTap: () =>
                           Navigator.pushNamed(context, AppRoutes.focusMode),

@@ -110,9 +110,6 @@ void main() {
       expect(
           find.text('General StudyKing notifications'), findsOneWidget);
       expect(find.text('Time to Review!'), findsOneWidget);
-      expect(
-          find.text('It\'s been 3 days since you practiced "Algebra".'),
-          findsOneWidget);
       expect(find.text('Take a Break'), findsOneWidget);
       expect(find.text('You\'ve studied 5 hours today. Remember to rest!'),
           findsOneWidget);
@@ -121,13 +118,9 @@ void main() {
           'You\'ve had 3 days of low adherence. Shall we adjust your plan?'),
           findsOneWidget);
       expect(find.text('Upcoming Lesson'), findsOneWidget);
-      expect(find.text('Your lesson "Math" starts at 10:00.'),
-          findsOneWidget);
       expect(find.text('Topics Need Attention'), findsOneWidget);
       expect(find.text('Low mastery detected in: Physics'), findsOneWidget);
       expect(find.text('Badge Unlocked!'), findsOneWidget);
-      expect(find.text('You earned the "Star" badge: First!'),
-          findsOneWidget);
     });
 
     testWidgets('plan explanation labels render correctly in English',

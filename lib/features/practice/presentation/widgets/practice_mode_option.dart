@@ -57,7 +57,7 @@ class PracticeModeOption extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
+                  Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right,
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                   size: 20,
                 ),

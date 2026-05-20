@@ -1,5 +1,77 @@
 # Changelog
 
+- 2026-05-20: UI/UX Master Issue — comprehensive audit fixes from `ui_ux_master.md`:
+  - **B1:** Fixed multi-choice `Checkbox(onChanged: null)` in `question_bank_screen.dart` — now toggles `selectedCorrectOptions` set; multi-choice markscheme stores all correct options via `acceptableAnswers`
+  - **M1:** Replaced raw `Text('$err')` error display in `planner_screen.dart` with `ErrorRetryWidget` + `ref.invalidate(planProgressProvider)`
+  - **M2:** Fixed duplicate `l10n.somethingWentWrong` text in `session_history_screen.dart` and `session_tracker_screen.dart` — replaced with single `l10n.errorOccurred` title and kept retry button
+  - **M3:** Wrapped `LoadingIndicator` inside `Scaffold` with `AppBar` in `lesson_list_screen.dart` (topic title) and `topic_list_screen.dart` (generic title)
+  - **M4:** Removed raw ID `_InfoRow` from `source_detail_screen.dart`; removed duplicate uploaded date row
+  - **M5:** Replaced raw `'$_weeklyActivity'` with `formatCompactNumber`, `'${_practiceStreak}d'` with `l10n.daysCount`, `'${...round()}%'` with `formatPercent` in `practice_screen.dart`; formatted exam counts with `formatCompactNumber` in `exam_session_screen.dart`
+  - **M6:** Fixed "View Sources" tab index from 2 (Topics) to 3 (Sources) in `subject_detail_screen.dart`
+  - **M7:** Added `minFractionDigits: 0, maxFractionDigits: 0` to `formatDecimal` for integer question count in `subject_detail_screen.dart`
+  - **m1:** Reduced bottom navigation to 5 tabs on phone screens (removed Focus Mode); wide tablets retain all 6 via `NavigationRail`
+  - **m2:** Replaced all `arrow_back_ios`/`arrow_forward_ios` with `chevron_left`/`chevron_right` in RTL bidirectional patterns across `settings_screen.dart`, `subject_list_screen.dart`, `practice_mode_option.dart`
+  - **m3:** Replaced `ElevatedButton(styleFrom(backgroundColor: error))` with `FilledButton(style: AppTheme.destructiveButtonStyle())` in `question_bank_screen.dart` and `planner_screen.dart` (2 locations)
+  - **m4:** Replaced `(context as Element).markNeedsBuild()` with `ref.invalidate(settingsProvider)` in 3 locations in `settings_screen.dart`
+  - **m5:** Added `_logger.w()` logging to empty catch block in `focus_timer_screen.dart` (`_checkBadges`)
+  - **m7:** Converted `OnboardingDialog` to `ConsumerStatefulWidget`; page indicator dots now use `Container` (no animation) when `reduceMotion` is enabled
+  - **m8:** Added `label: l10n.focusMode` to focus card `Semantics` in `dashboard_screen.dart`
+  - **m9:** Removed raw exception text (`$e`) from `VoiceService._errorController` stream messages
+  - **m11:** Moved `_startTimer()` from `initState` to success branch of `_loadLesson()` in `lesson_detail_screen.dart`
+  - **m12:** Added `Semantics(label: 'Remove X filter')` to delete icons in filter chips in `question_bank_screen.dart` and `content_library_screen.dart`
+  - **m13:** Replaced fragile try/catch `Navigator.pop()` with `Navigator.canPop()` check in `mentor_screen.dart`
+  - **m14:** Changed `badge['name'] as String` and `rec['message'] as String` to `as String?` with `??` fallback in `mentor_screen.dart`
+  - **m18:** Added `Semantics(label: label)` to stat icons in `focus_timer_screen.dart` `_buildStatItem`
+  - **m19:** Replaced `ElevatedButton(styleFrom(error))` with `FilledButton(AppTheme.destructiveButtonStyle())` in `planner_screen.dart` `_confirmCancelLesson`
+  - **m20:** Onboarding "Skip" and "Get Started" now navigate to `AppRoutes.dashboard` instead of `subjectSelection`
+  - **m21:** Wrapped `ResponsiveUtils.loaderInTouchTarget()` with `Semantics(label: l10n.saving, liveRegion: true)` in `subject_selection_screen.dart`
+  - **m22:** Added `_dashboardLogger.w()` logging to `dashboardAllMasteryProvider` failure branch
+  - **m24:** Added try/catch with logging to `SubjectsRepositoryNotifier.build()`
+  - **m25:** Added try/catch with logging to `subjectListProvider`
+  - **m27:** Added null-check for `first.topicId` before navigation in `planner_screen.dart` "More lessons" button
+  - **m28:** Added `AppBar(title: Text(...))` to loading-state `Scaffold` in `lesson_detail_screen.dart` when `_lesson == null`
+
+- 2026-05-20: Dry-Run Attending Tutor Lesson — fixed 2 issues from `dry_run_result_attending_tutor_lesson.md`:
+  - **Issue 1 (PARTIAL, summary dialog double-pop):** Changed cascade `Navigator.of(context)..pop()..pop()` to pop dialog via `Navigator.of(ctx).pop()` then pop tutor screen in `Future.microtask` to eliminate visual flash
+  - **Issue 2 (NOT_COMPLETED, scheduled session context):** Added `scheduledSessionId` field to `ConversationManager`; added optional `scheduledSessionId` param to `ConversationPromptSet.tutorMessage()` to include scheduled-lesson system context in LLM prompt; added `scheduledLessonGreeting` and `scheduledLessonSystemContext` l10n strings (EN/ES); `TutorScreen._sendInitialGreeting()` now uses scheduled greeting when `scheduledSessionId` is present
+
+- 2026-05-20: Dry-Run Content Pipeline — implemented all 14 issues from `dry_run_usability_validator.md`:
+  - **Issue 1 (BLOCKER, save-only dead code):** Added "Save Only" `OutlinedButton` that calls `processUpload()` directly (bypasses AI pipeline); model check now only blocks when questions/lessons are actually enabled; save-only path is now reachable via UI
+  - **Issue 2 (BLOCKER, error details lost):** `source.errorMessage` now displayed inline in the failed-status error banner on `SourceDetailScreen`; generic `processingFailed` shown as secondary label when specific message exists
+  - **Issue 3 (MAJOR, progress indication):** `LinearProgressIndicator(value:)` now shows fractional stage progress; elapsed time counter via `Stopwatch`; stage counter label ("Stage X of Y"); cancel button on progress card
+  - **Issue 4 (MAJOR, no practice button):** Added "Practice All Questions" `FilledButton` on `SourceDetailScreen` below the questions list; button is disabled with hint when no questions exist; navigates to `PracticeSessionScreen` with `sourceId` filter
+  - **Issue 5 (MAJOR, reprocess orphans):** Added "Keep old questions" checkbox to reprocess confirmation dialog; `reprocessSource()` accepts optional `oldQuestionIds` parameter; removed fragile source-id workaround in `_reprocess()`
+  - **Issue 6 (MAJOR, raw exceptions):** Already implemented via `ContentPipeline.userFriendlyError()` — maps Timeout/429/401/404/parse/PDF errors to user-friendly messages
+  - **Issue 7 (MAJOR, model capability check):** Added warning dialog before processing image/audio/video content when model is configured; user can proceed or cancel
+  - **Issue 8 (MAJOR, duplicate detection):** Already implemented via `_computeContentHash()` (SHA-256) and `_findDuplicateByHash()` in `ContentPipeline`
+  - **Issue 9 (MAJOR, cancel/pop guard):** Added `PopScope` with `canPop: !_isUploading` and confirmation dialog during upload; cancel button on progress card calls `pipeline.cancel()`; elapsed time display
+  - **Issue 10 (MAJOR, empty topicId):** Added warning banner on `SourceDetailScreen` when questions exist but `source.topicId` is empty
+  - **Issue 11 (MAJOR, duplicate status):** Already implemented via `ProcessingStatus.summarizing` enum value
+  - **Issue 12 (MINOR, single-select filters):** Changed `_typeFilter`/`_statusFilter` from `String` to `Set<String>` for multi-select; replaced enum-index comparison with stable `.name` comparison; updated bottom sheets to use `CheckboxListTile`
+  - **Issue 13 (MINOR, hidden practice mode):** Post-upload success shows second snackbar with "Start Practice" action navigating to practice with the uploaded source's questions
+  - **Issue 14 (MINOR, no guidance):** Enhanced success snackbar with `showCloseIcon`; added `postUploadGuidance` snackbar with "Start Practice" action linking to source-question practice
+  - **Chore:** Added `summarizing`, `saveOnly`, `proceedAnyway`, `modelCapabilityWarningTitle`, `modelCapabilityWarningBody`, `processingElapsed`, `progressStageLabel`, `practiceAllQuestions`, `noQuestionsToPractice`, `questionsWithoutTopicWarning`, `keepOldQuestionsLabel`, `keepOldQuestionsHint`, `postUploadGuidance`, `uploadInProgressTitle`, `uploadInProgressBody`, `stay`, `selected` ARB keys (EN/ES); added `crypto` pub dependency for SHA-256; generated l10n
+
+- 2026-05-20: Drawing Canvas Enhancements — implemented eraser tool and canvas background color support for `lib/features/questions/`:
+  - **DrawingTool.eraser** — added eraser to `DrawingTool` enum; eraser strokes render with `canvasBackgroundColor` to simulate erase effect
+  - **DrawingPainter.canvasBackgroundColor** — new `canvasBackgroundColor` parameter (defaults to `Colors.white`); `shouldRepaint` includes background color comparison
+  - **CanvasDrawingWidget** — eraser tool button in toolbar (visible when `showTools: true`); passes `Theme.of(context).colorScheme.surface` as canvas background to painter
+  - **GraphDrawingWidget** — eraser tool button in toolbar alongside other tools; passes theme surface color to drawing painter
+  - **toolEraser locale** — added `toolEraser` ARB key (`"Eraser"` / `"Borrador"`) with EN and ES translations; generated l10n
+  - **Test coverage** — updated `DrawingTool` enum count test (5→6 values); added eraser paint tests, `canvasBackgroundColor` shouldRepaint test; all 666 tests pass
+  - **Chore:** Updated `shouldRepaint` to check `canvasBackgroundColor` diff
+
+- 2026-05-20: Test Coverage & Quality Issue (Round 3) — addressed all MAJOR and MINOR items from `test_master.md`:
+  - **M1 (8 missing tests):** Created `sr_data_codec_test.dart`, `string_extensions_test.dart`, `label_helpers_test.dart`, `spaced_repetition_error_codes_test.dart`, `dialog_utils_test.dart`, `snackbar_utils_test.dart`, `data_test.dart`, `curriculum_seed_data_test.dart`
+  - **M2a (vacuous dashboard test):** Replaced placeholder with 30+ real tests covering `MasterySnapshot`, `OverallStats`, `WeeklyTrendEntry`, `FocusTodayStats`, `AdherenceData`, `BadgeDisplay`, `SubjectDueCount`, `DueReviewsData`, `ChecklistProgress`, `BadgeModel`, `BadgeDefinition`
+  - **M2b (vacuous utils test):** Deleted `test/core/utils/utils_test.dart` (no source barrel)
+  - **M3 (voice bar placeholder):** Replaced `expect(true, isTrue)` with `expect(tester.takeException(), isNull)` in voice_bar_test.dart
+  - **M4 (misplaced test):** Moved `session_utils_test.dart` from `data/repositories/` to `presentation/utils/`
+  - **m1 (18 barrel tests):** Deleted all 18 barrel-level placeholder test files (no source barrels exist)
+  - **m2 (studentIdValueProvider):** Confirmed all 3 widget test files already use narrowed `show studentIdValueProvider` imports
+  - **m3 (Hive.init):** Refactored second `Hive.init()` in `planner_service_test.dart` to use `_FakeAdherenceRepo`; remaining 3 files already have proper `setUpAll`/`tearDownAll`
+  - **m4 (edge-case tests):** Added edge-case coverage to `task_model_test.dart` (empty strings, special chars, long values, missing JSON fields), `pending_action_model_test.dart` (null sessionId, empty payload/lists, long topicTitle), `focus_session_model_test.dart` (null endTime, extreme duration/accuracy, negative accuracy, empty collections)
+
 - 2026-05-20: Code Refactor Master — addressed 9 issues from `code_refactor_master.md`:
   - **M2 (god functions):** Refactored `EngagementScheduler._sendNudgeNotifications()` (118→7 lines) by extracting 5 nudge-type methods + `_persistNudge()` / `_extractInt()` helpers
   - **M5 (thin delegates):** Verified PlannerService already removed all 7 thin delegation methods; remaining non-delegate methods kept

@@ -1253,6 +1253,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get undoLastStroke => 'Undo last stroke';
 
   @override
+  String get redoLastStroke => 'Redo last stroke';
+
+  @override
+  String get openDrawingCanvas => 'Open drawing canvas';
+
+  @override
   String get clearAllDrawings => 'Clear all drawings';
 
   @override
@@ -2274,6 +2280,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String readyToLearnAbout(String topic) {
     return 'I\'m ready to learn about $topic. Please teach me!';
   }
+
+  @override
+  String scheduledLessonGreeting(String topic) {
+    return 'Welcome to my scheduled lesson on $topic. I\'m ready to learn!';
+  }
+
+  @override
+  String get scheduledLessonSystemContext =>
+      'Note: This student has pre-scheduled this lesson session. The session has a fixed duration set in the student\'s study plan. Acknowledge the scheduled nature appropriately and respect the time limit.';
 
   @override
   String correctCount(int count) {
@@ -4579,6 +4594,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get processing => 'Processing';
 
   @override
+  String get summarizing => 'Summarizing';
+
+  @override
   String get generatingQuestions => 'Generating Questions';
 
   @override
@@ -5483,6 +5501,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolPlotPoint => 'Plot Point';
 
   @override
+  String get toolEraser => 'Eraser';
+
+  @override
   String get unableToDisplayEvaluation => 'Unable to display evaluation result';
 
   @override
@@ -5510,4 +5531,58 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get showOnboardingTour => 'Show onboarding tour';
+
+  @override
+  String get saveOnly => 'Save Only';
+
+  @override
+  String get proceedAnyway => 'Proceed Anyway';
+
+  @override
+  String get modelCapabilityWarningTitle => 'Model Capability Notice';
+
+  @override
+  String get modelCapabilityWarningBody =>
+      'Your selected model may not support image or audio analysis. Proceed anyway?';
+
+  @override
+  String processingElapsed(int seconds) {
+    return 'Processing... ${seconds}s elapsed';
+  }
+
+  @override
+  String progressStageLabel(int current, int total) {
+    return 'Stage $current of $total';
+  }
+
+  @override
+  String get practiceAllQuestions => 'Practice All Questions';
+
+  @override
+  String get noQuestionsToPractice => 'No questions to practice';
+
+  @override
+  String get questionsWithoutTopicWarning =>
+      'These questions aren\'t linked to any topic. Use the topic classifier or edit the source\'s topic to enable topic-specific practice.';
+
+  @override
+  String get keepOldQuestionsLabel => 'Keep old questions';
+
+  @override
+  String get keepOldQuestionsHint =>
+      'Old questions will be preserved alongside new ones';
+
+  @override
+  String get postUploadGuidance =>
+      'You can now practice the generated questions in the Practice tab!';
+
+  @override
+  String get uploadInProgressTitle => 'Upload in Progress';
+
+  @override
+  String get uploadInProgressBody =>
+      'An upload is in progress. Cancel and go back?';
+
+  @override
+  String get selected => 'selected';
 }

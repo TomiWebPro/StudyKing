@@ -1033,15 +1033,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       }
 
       if (!mounted) return;
-      try {
+      if (Navigator.of(context).canPop()) {
         Navigator.of(context).pop();
-      } catch (e) {
-        _logger.w('Failed to pop navigator in progress report', e);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.mentorProgressReportError)),
-        );
-        return;
       }
 
       await Future.delayed(const Duration(milliseconds: 50));
@@ -1188,11 +1181,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                         spacing: 8,
                         runSpacing: 4,
                         children: report.badges.map((badge) => Semantics(
-                          label: badge['name'] as String,
+                          label: (badge['name'] as String?) ?? '',
                           child: Chip(
                             avatar: Icon(Icons.emoji_events,
                                 size: 18, color: theme.colorScheme.secondary),
-                            label: Text(badge['name'] as String,
+                            label: Text((badge['name'] as String?) ?? '',
                                 style: theme.textTheme.bodySmall),
                           ),
                         )).toList(),
@@ -1218,7 +1211,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                                     style: theme.textTheme.bodyMedium),
                                 Expanded(
                                   child: Text(
-                                    rec['message'] as String,
+                                    (rec['message'] as String?) ?? '',
                                     style: theme.textTheme.bodyMedium,
                                   ),
                                 ),

@@ -345,7 +345,7 @@ void main() {
         expect(l10n.selectSubjectLabel, 'Select Subject');
         expect(l10n.generateQuestionTypes, 'Generate Question Types');
         expect(l10n.lessonProgress, 'Lesson Progress');
-        expect(l10n.scheduleLesson, 'Schedule Lesson');
+        expect(l10n.scheduleLesson, 'Schedule a Lesson');
         expect(l10n.selectCalendarDate, 'Select calendar date for lesson');
         expect(l10n.done, 'Done');
         expect(l10n.createNewLesson, 'Create New Lesson');
@@ -746,7 +746,7 @@ void main() {
         expect(l10n.practiceComplete, '¡Práctica Completada!');
         expect(l10n.totalQuestions, 'Total de Preguntas');
         expect(l10n.correctAnswers, 'Respuestas Correctas');
-        expect(l10n.accuracy, 'Precisión');
+        expect(l10n.accuracy, 'Exactitud');
         expect(l10n.practiceAgain, 'Practicar de Nuevo');
       });
 
@@ -788,7 +788,7 @@ void main() {
         expect(l10n.learningGoal, 'Objetivo de Aprendizaje');
         expect(l10n.learningGoalHint, 'p. ej., Exámenes Finales, Certificaciones');
         expect(l10n.preferredStudyTime, 'Horario de Estudio Preferido');
-        expect(l10n.preferredStudyTimeHint, 'p. ej., Tarde (6-9 PM)');
+        expect(l10n.preferredStudyTimeHint, 'p. ej., Tarde (6-9 p. m.)');
         expect(l10n.accountInformation, 'Información de la Cuenta');
         expect(l10n.language, 'Idioma');
         expect(l10n.english, 'Inglés');
@@ -832,7 +832,7 @@ void main() {
         expect(l10n.studyReminders, 'Recordatorios de Estudio');
         expect(l10n.enableNotificationAlerts, 'Activar alertas de notificación');
         expect(l10n.sessionDuration, 'Duración de la Sesión');
-        expect(l10n.studyAnalytics, 'Analíticas de Estudio');
+        expect(l10n.studyAnalytics, 'Analítica de Estudio');
         expect(l10n.totalStudySessions, 'Sesiones de Estudio Totales');
         expect(l10n.totalStudyTime, 'Tiempo Total de Estudio');
         expect(l10n.aboutSection, 'Acerca de');
@@ -844,7 +844,7 @@ void main() {
       test('API section', () {
         expect(l10n.apiKeyRequired, 'Clave API Requerida');
         expect(l10n.pleaseConfigureApiKey, 'Por favor configure su clave API primero.');
-        expect(l10n.ok, 'OK');
+        expect(l10n.ok, 'Aceptar');
         expect(l10n.unableToLoadModels, 'No se pueden cargar los modelos en este momento.');
         expect(l10n.searchModels, 'Buscar modelos');
         expect(l10n.modelRequestTimedOut, 'La solicitud del modelo superó el tiempo de espera. Intente de nuevo.');
@@ -941,7 +941,7 @@ void main() {
         expect(l10n.validating, 'Validando...');
         expect(l10n.renderedGraph, 'Gráfico generado');
         expect(l10n.noDataUploaded, 'No hay datos subidos');
-        expect(l10n.uploadOrPasteData, 'Cargue o pegue datos para visualizar');
+        expect(l10n.uploadOrPasteData, 'Suba o pegue datos para visualizar');
         expect(l10n.selectGraphType, 'Seleccione un tipo de gráfico para visualizar');
         expect(l10n.uploadDataFileDialog, 'Subir Archivo de Datos');
         expect(l10n.fileUploadImplemented, 'La funcionalidad de carga de archivos se implementaría aquí.');
@@ -961,7 +961,7 @@ void main() {
         expect(l10n.selectSubjectLabel, 'Seleccionar Materia');
         expect(l10n.generateQuestionTypes, 'Generar Tipos de Preguntas');
         expect(l10n.lessonProgress, 'Progreso de la Lección');
-        expect(l10n.scheduleLesson, 'Programar Lección');
+        expect(l10n.scheduleLesson, 'Programar una Lección');
         expect(l10n.selectCalendarDate, 'Seleccione una fecha de calendario para la lección');
         expect(l10n.done, 'Hecho');
         expect(l10n.createNewLesson, 'Crear Nueva Lección');
@@ -1013,7 +1013,7 @@ void main() {
         expect(l10n.drawingSaved, 'Dibujo guardado.');
         expect(l10n.failedToSaveDrawing, 'Error al guardar el dibujo. Reintente.');
         expect(l10n.drawingCanvas, 'Lienzo de dibujo');
-        expect(l10n.drawYourAnswer, 'Dibuje su respuesta en el lienzo usando su dedo o lápiz');
+        expect(l10n.drawYourAnswer, 'Dibuje su respuesta en el lienzo usando su dedo o lápiz óptico');
       });
 
       test('API configuration section', () {
@@ -1068,9 +1068,9 @@ void main() {
       });
 
       test('sessionDurationMinutes', () {
-        expect(l10n.sessionDurationMinutes(1), 'Sesión de 1 min');
-        expect(l10n.sessionDurationMinutes(30), 'Sesión de 30 min');
-        expect(l10n.sessionDurationMinutes(60), 'Sesión de 60 min');
+        expect(l10n.sessionDurationMinutes(1), '1 min de sesión');
+        expect(l10n.sessionDurationMinutes(30), '30 min de sesión');
+        expect(l10n.sessionDurationMinutes(60), '60 min de sesión');
       });
 
       test('generatedPlanOverDays', () {
@@ -1112,10 +1112,10 @@ void main() {
       });
 
       group('durationMinutes', () {
-        test('one', () => expect(l10n.durationMinutes(1), '1min'));
+        test('one', () => expect(l10n.durationMinutes(1), '1m'));
         test('other', () {
-          expect(l10n.durationMinutes(2), '2min');
-          expect(l10n.durationMinutes(30), '30min');
+          expect(l10n.durationMinutes(2), '2m');
+          expect(l10n.durationMinutes(30), '30m');
         });
       });
 
@@ -1200,8 +1200,8 @@ void main() {
       });
 
       test('percentComplete', () {
-        expect(l10n.percentComplete(50, 5, 10), '50% Completado: 5/10 preguntas generadas');
-        expect(l10n.percentComplete(100, 10, 10), '100% Completado: 10/10 preguntas generadas');
+        expect(l10n.percentComplete(50, 5, 10), '50 % Completado: 5/10 preguntas generadas');
+        expect(l10n.percentComplete(100, 10, 10), '100 % Completado: 10/10 preguntas generadas');
       });
 
       test('difficultyLabel', () {

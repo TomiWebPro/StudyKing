@@ -59,7 +59,7 @@ class VoiceService {
       final available = await _speech!.initialize(
         onError: (error) {
           _isAvailable = false;
-          _errorController.add('Speech recognition error: $error');
+          _errorController.add('Speech recognition error');
         },
         onStatus: (status) {
           if (status == 'notListening' || status == 'done') {
@@ -74,7 +74,7 @@ class VoiceService {
       }
     } catch (e) {
       _logger.w('Failed to check speech availability', e);
-      _errorController.add('Failed to initialize speech recognition: $e');
+      _errorController.add('Failed to initialize speech recognition');
       _isAvailable = false;
     }
   }
@@ -93,7 +93,7 @@ class VoiceService {
       return hasPermission;
     } catch (e) {
       _logger.w('Failed to request speech permission', e);
-      _errorController.add('Failed to request microphone permission: $e');
+      _errorController.add('Failed to request microphone permission');
       return false;
     }
   }
@@ -131,7 +131,7 @@ class VoiceService {
       _listeningStateController.add(true);
     } catch (e) {
       _logger.w('Failed to start listening', e);
-      _errorController.add('Failed to start listening: $e');
+      _errorController.add('Failed to start listening');
       _isListening = false;
       _listeningStateController.add(false);
     }

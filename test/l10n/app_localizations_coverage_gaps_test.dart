@@ -32,7 +32,7 @@ void main() {
         expect(l10n.topicPerformance, 'Topic Performance');
         expect(l10n.achievements, 'Achievements');
         expect(l10n.exportCsv, 'Export CSV');
-        expect(l10n.instrumentation, 'Instrumentation');
+        expect(l10n.instrumentation, 'Progress Analytics');
         expect(l10n.overall, 'Overall');
         expect(l10n.thisWeek, 'This Week');
         expect(l10n.totalTopics, 'Total Topics');
@@ -116,11 +116,11 @@ void main() {
     group('Parameterized Methods', () {
       test('recommendationWeakTopics', () {
         expect(l10n.recommendWeakTopics(1),
-            'You have 1 topic(s) that need improvement. Focus on strengthening these areas.');
+            'You have 1 topic that needs improvement. Focus on strengthening this area.');
         expect(l10n.recommendWeakTopics(3),
-            'You have 3 topic(s) that need improvement. Focus on strengthening these areas.');
+            'You have 3 topics that need improvement. Focus on strengthening these areas.');
         expect(l10n.recommendWeakTopics(0),
-            'You have 0 topic(s) that need improvement. Focus on strengthening these areas.');
+            'You have 0 topics that need improvement. Focus on strengthening these areas.');
       });
     });
   });
@@ -143,7 +143,7 @@ void main() {
       });
 
       test('difficultyMedium', () {
-        expect(l10n.difficultyMedium, 'Medio');
+        expect(l10n.difficultyMedium, 'Mediano');
       });
 
       test('dashboard section', () {
@@ -154,7 +154,7 @@ void main() {
         expect(l10n.topicPerformance, 'Rendimiento por Tema');
         expect(l10n.achievements, 'Logros');
         expect(l10n.exportCsv, 'Exportar CSV');
-        expect(l10n.instrumentation, 'Instrumentación');
+        expect(l10n.instrumentation, 'Estadísticas de Progreso');
         expect(l10n.overall, 'General');
         expect(l10n.thisWeek, 'Esta Semana');
         expect(l10n.totalTopics, 'Temas Totales');
@@ -220,7 +220,7 @@ void main() {
       test('analytics metrics section', () {
         expect(l10n.weeklyActivity, 'Actividad Semanal');
         expect(l10n.topicsLabel, 'Temas');
-        expect(l10n.readiness, 'Disposición');
+        expect(l10n.readiness, 'Preparación');
         expect(l10n.overallMastery, 'Dominio General');
         expect(l10n.avgTime, 'Tiempo Prom.');
         expect(l10n.badges, 'Insignias');
@@ -240,11 +240,11 @@ void main() {
     group('Parameterized Methods', () {
       test('recommendationWeakTopics', () {
         expect(l10n.recommendWeakTopics(1),
-            'Tiene 1 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
+            'Tiene 1 tema que necesita mejorar. Concéntrese en fortalecer esta área.');
         expect(l10n.recommendWeakTopics(3),
-            'Tiene 3 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
+            'Tiene 3 temas que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
         expect(l10n.recommendWeakTopics(0),
-            'Tiene 0 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
+            'Tiene 0 temas que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
       });
     });
   });

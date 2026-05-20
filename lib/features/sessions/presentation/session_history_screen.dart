@@ -445,17 +445,9 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
           Icon(Icons.error_outline, size: 64, color: theme.colorScheme.error),
           const SizedBox(height: 16),
           Text(
-            l10n.somethingWentWrong,
+            l10n.errorOccurred,
             style: theme.textTheme.titleMedium,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32),
-            child: Text(
-              l10n.somethingWentWrong,
-              style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onSurfaceVariant),
-              textAlign: TextAlign.center,
-            ),
+            textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           FilledButton.icon(

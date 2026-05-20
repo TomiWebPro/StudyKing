@@ -210,7 +210,11 @@ class _SubjectSelectionScreenState
         title: Text(widget.isEditing ? l10n.editSubject : l10n.addSubject),
         actions: [
           if (_isLoading)
-            ResponsiveUtils.loaderInTouchTarget()
+            Semantics(
+              label: l10n.loading,
+              liveRegion: true,
+              child: ResponsiveUtils.loaderInTouchTarget(),
+            )
           else
             Semantics(
               label: l10n.save,

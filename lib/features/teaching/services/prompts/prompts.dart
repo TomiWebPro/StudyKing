@@ -52,6 +52,7 @@ class ConversationPromptSet {
     required String topicTitle,
     required double adaptivePace,
     required ConversationPhase phase,
+    String? scheduledSessionId,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -67,7 +68,10 @@ class ConversationPromptSet {
       ConversationPhase.adaptiveReview => l10n.adaptiveReviewContext,
       ConversationPhase.closing => l10n.closingContext,
     };
-    final systemPrompt = '${l10n.tutorSystemPrompt(subjectId, topicTitle)}${_languageInstruction(l10n)}';
+    var systemPrompt = '${l10n.tutorSystemPrompt(subjectId, topicTitle)}${_languageInstruction(l10n)}';
+    if (scheduledSessionId != null) {
+      systemPrompt = '$systemPrompt\n\n${l10n.scheduledLessonSystemContext}';
+    }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);
   }

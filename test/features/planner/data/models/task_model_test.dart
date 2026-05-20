@@ -94,6 +94,25 @@ void main() {
         final model = task.toModel();
         expect(identical(model, task), isFalse);
       });
+
+      test('preserves null date fields', () {
+        final task = TaskModel(id: id, title: title, description: description);
+        final model = task.toModel();
+        expect(model.dueDate, isNull);
+        expect(model.createdAt, isNull);
+        expect(model.updatedAt, isNull);
+      });
+
+      test('preserves all date fields when set', () {
+        final task = TaskModel(
+          id: id, title: title, description: description,
+          dueDate: dueDate, createdAt: createdAt, updatedAt: updatedAt,
+        );
+        final model = task.toModel();
+        expect(model.dueDate, dueDate);
+        expect(model.createdAt, createdAt);
+        expect(model.updatedAt, updatedAt);
+      });
     });
 
     group('equality', () {
@@ -154,6 +173,45 @@ void main() {
         expect(restored.updatedAt, isNull);
         expect(restored.assignee, isNull);
         expect(restored.status, 'todo');
+      });
+    });
+
+    group('edge cases', () {
+      test('handles empty string fields', () {
+        final task = TaskModel(id: '', title: '', description: '');
+        expect(task.id, '');
+        expect(task.title, '');
+        expect(task.description, '');
+      });
+
+      test('handles special characters in fields', () {
+        final task = TaskModel(
+          id: 'task-1',
+          title: r'Special: @#$% & *()',
+          description: 'Unicode: ñ á é í ó ú ¡ ¿',
+        );
+        expect(task.title, r'Special: @#$% & *()');
+        expect(task.description, 'Unicode: ñ á é í ó ú ¡ ¿');
+      });
+
+      test('handles very long string values', () {
+        final longTitle = 'a' * 10000;
+        final task = TaskModel(id: 'task-1', title: longTitle, description: 'desc');
+        expect(task.title.length, 10000);
+      });
+
+      test('missing optional fields in fromJson use defaults', () {
+        final task = TaskModel.fromJson({
+          'id': 't1',
+          'title': 'Test',
+          'description': 'Desc',
+          'status': 'done',
+        });
+        expect(task.assignee, isNull);
+        expect(task.priority, 'medium');
+        expect(task.dueDate, isNull);
+        expect(task.createdAt, isNull);
+        expect(task.updatedAt, isNull);
       });
     });
   });

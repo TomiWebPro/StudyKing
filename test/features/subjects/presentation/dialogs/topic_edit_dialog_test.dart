@@ -386,5 +386,227 @@ void main() {
       expect(find.text('Parent Topic'), findsNothing);
       expect(find.byType(DropdownButtonFormField<String>), findsNothing);
     });
+
+    testWidgets('new topic generates id from IdGenerator', (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: [existingTopics.first],
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Calculus');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.id, startsWith('topic_'));
+    });
+
+    testWidgets('new topic has empty subjectId and null parentId', (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: [existingTopics.first],
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Calculus');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.subjectId, '');
+      expect(result!.parentId, isNull);
+    });
+
+    testWidgets('new topic sort order defaults to existingTopics length',
+        (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: existingTopics,
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Calculus');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.sortOrder, existingTopics.length);
+    });
+
+    testWidgets('sort order not shown for new topics', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        TopicEditDialog(
+          title: 'Add Topic',
+          existingTopics: existingTopics,
+          existingDependencies: const [],
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      expect(find.textContaining('Sort Order'), findsNothing);
+    });
+
+    testWidgets('save with whitespace-only title is blocked', (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        TopicEditDialog(
+          title: 'Add Topic',
+          existingTopics: existingTopics,
+          existingDependencies: const [],
+        ),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      final titleField = find.byType(TextField).first;
+      await tester.enterText(titleField, '   ');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TopicEditDialog), findsOneWidget);
+    });
+
+    testWidgets('selecting root topic in dropdown sets null parentId on save',
+        (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: existingTopics,
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'New Topic');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(DropdownButtonFormField<String>));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('None (Root Topic)').last);
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.parentId, isNull);
+    });
+
+    testWidgets('title with surrounding whitespace is trimmed on save',
+        (tester) async {
+      Topic? result;
+      await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(builder: (context) {
+          return ElevatedButton(
+            onPressed: () async {
+              result = await showDialog<Topic>(
+                context: context,
+                builder: (_) => TopicEditDialog(
+                  title: 'Add Topic',
+                  existingTopics: existingTopics,
+                  existingDependencies: const [],
+                ),
+              );
+            },
+            child: const Text('Open'),
+          );
+        }),
+      ));
+
+      await tester.tap(find.text('Open'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, '  Calculus 101  ');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      expect(result, isNotNull);
+      expect(result!.title, 'Calculus 101');
+    });
   });
 }

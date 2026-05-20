@@ -272,6 +272,173 @@ void main() {
       final picture = pictureRecorder.endRecording();
       expect(picture, isA<ui.Picture>());
     });
+
+    test('paint with line tool draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10, 10)),
+            DrawingPoint(point: const Offset(90, 90)),
+          ],
+          tool: DrawingTool.line,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with line tool and single point skips drawing', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(50, 50))],
+          tool: DrawingTool.line,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with rectangle tool draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10, 10)),
+            DrawingPoint(point: const Offset(90, 90)),
+          ],
+          tool: DrawingTool.rectangle,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with circle tool draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(50, 50)),
+            DrawingPoint(point: const Offset(70, 50)),
+          ],
+          tool: DrawingTool.circle,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with plotPoint tool draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(50, 50))],
+          tool: DrawingTool.plotPoint,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with all tool types draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10))], tool: DrawingTool.freehand),
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10)), DrawingPoint(point: const Offset(90, 90))], tool: DrawingTool.line),
+        Stroke(points: [DrawingPoint(point: const Offset(10, 10)), DrawingPoint(point: const Offset(90, 90))], tool: DrawingTool.rectangle),
+        Stroke(points: [DrawingPoint(point: const Offset(50, 50)), DrawingPoint(point: const Offset(80, 50))], tool: DrawingTool.circle),
+        Stroke(points: [DrawingPoint(point: const Offset(50, 50))], tool: DrawingTool.plotPoint),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with eraser tool draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [
+            DrawingPoint(point: const Offset(10, 10)),
+            DrawingPoint(point: const Offset(50, 50)),
+          ],
+          tool: DrawingTool.eraser,
+          strokeWidth: 20,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with eraser tool uses canvasBackgroundColor', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(50, 50))],
+          tool: DrawingTool.eraser,
+          strokeWidth: 20,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes, canvasBackgroundColor: Colors.blue);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('paint with eraser single point draws without error', () {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(100, 100);
+      final strokes = [
+        Stroke(
+          points: [DrawingPoint(point: const Offset(50, 50))],
+          tool: DrawingTool.eraser,
+          strokeWidth: 15,
+        ),
+      ];
+      final painter = DrawingPainter(strokes: strokes);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
+    });
+
+    test('shouldRepaint returns true when canvasBackgroundColor differs', () {
+      final strokes = [Stroke(points: [DrawingPoint(point: const Offset(0, 0))])];
+      final painter1 = DrawingPainter(strokes: strokes, canvasBackgroundColor: Colors.white);
+      final painter2 = DrawingPainter(strokes: strokes, canvasBackgroundColor: Colors.black);
+      expect(painter1.shouldRepaint(painter2), isTrue);
+    });
   });
 
   group('DrawingPainter - pixel verification', () {

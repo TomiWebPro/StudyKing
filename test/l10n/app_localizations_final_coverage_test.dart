@@ -319,9 +319,9 @@ void main() {
     });
 
     test('planBlocksDownstream', () {
-      expect(l10n.planBlocksDownstream(3), 'Blocks 3 downstream topic(s)');
-      expect(l10n.planBlocksDownstream(1), 'Blocks 1 downstream topic(s)');
-      expect(l10n.planBlocksDownstream(0), 'Blocks 0 downstream topic(s)');
+      expect(l10n.planBlocksDownstream(3), 'Blocks 3 downstream topics');
+      expect(l10n.planBlocksDownstream(1), 'Blocks 1 downstream topic');
+      expect(l10n.planBlocksDownstream(0), 'Blocks 0 downstream topics');
     });
 
     test('notifBodyOverwork', () {
@@ -426,9 +426,9 @@ void main() {
 
     test('recommendWeakTopics', () {
       expect(l10n.recommendWeakTopics(3),
-          'You have 3 topic(s) that need improvement. Focus on strengthening these areas.');
+          'You have 3 topics that need improvement. Focus on strengthening these areas.');
       expect(l10n.recommendWeakTopics(0),
-          'You have 0 topic(s) that need improvement. Focus on strengthening these areas.');
+          'You have 0 topics that need improvement. Focus on strengthening these areas.');
     });
   });
 
@@ -496,7 +496,7 @@ void main() {
       expect(l10n.badgeAccuracyGoldName, 'Precisión de Oro');
       expect(l10n.badgeAccuracyGoldDesc, '¡Alcanzó más del 90% de precisión!');
       expect(l10n.badgeDailyScholarName, 'Estudioso Diario');
-      expect(l10n.badgeDailyScholarDesc, '¡Estudió constantemente hoy!');
+      expect(l10n.badgeDailyScholarDesc, '¡Estudió de manera constante hoy!');
       expect(l10n.badgeDedicatedLearnerName, 'Aprendiz Dedicado');
       expect(l10n.badgeDedicatedLearnerDesc,
           '¡Estudió más de 10 horas en total!');
@@ -722,7 +722,7 @@ void main() {
     });
 
     test('planBlocksDownstream', () {
-      expect(l10n.planBlocksDownstream(3), 'Bloquea 3 tema(s) dependiente(s)');
+      expect(l10n.planBlocksDownstream(3), 'Bloquea 3 temas dependientes');
     });
 
     test('notifBodyOverwork', () {
@@ -794,7 +794,7 @@ void main() {
 
     test('adherenceLow3Days', () {
       expect(l10n.adherenceLowDaysRegenerate(5),
-          '¿Ha tenido 5 días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?');
+          'Ha tenido 5 días consecutivos de bajo cumplimiento. ¿Le gustaría regenerar su plan con objetivos ajustados?');
     });
 
     test('adherenceLowDaysAdjust', () {
@@ -804,7 +804,7 @@ void main() {
 
     test('adherenceLowDaysRegenerate', () {
       expect(l10n.adherenceLowDaysRegenerate(3),
-          '¿Ha tenido 3 días consecutivos de bajo cumplimiento. Le gustaría regenerar su plan con objetivos ajustados?');
+          'Ha tenido 3 días consecutivos de bajo cumplimiento. ¿Le gustaría regenerar su plan con objetivos ajustados?');
     });
 
     test('adherenceLowToday', () {
@@ -824,7 +824,7 @@ void main() {
 
     test('recommendWeakTopics', () {
       expect(l10n.recommendWeakTopics(3),
-          'Tiene 3 tema(s) que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
+          'Tiene 3 temas que necesitan mejorar. Concéntrese en fortalecer estas áreas.');
     });
   });
 

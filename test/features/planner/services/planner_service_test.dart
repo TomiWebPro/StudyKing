@@ -2,6 +2,8 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -23,7 +25,6 @@ import 'package:studyking/features/planner/services/personal_learning_plan_servi
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';
-import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
@@ -81,15 +82,21 @@ class _FakeTopicRepository extends TopicRepository {
 
 class _FakePlanRepository extends PlanRepository {
   PersonalLearningPlan? _plan;
+  bool throwOnLoad = false;
+  bool throwOnSave = false;
 
   @override
   Future<void> init() async {}
 
   @override
-  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async => Result.success(_plan);
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    if (throwOnLoad) throw Exception('load plan error');
+    return Result.success(_plan);
+  }
 
   @override
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
+    if (throwOnSave) throw Exception('save plan error');
     _plan = plan;
     return Result.success(null);
   }
@@ -201,12 +208,21 @@ class _FakePendingActionRepository extends PendingActionRepository {
 }
 
 class _FakeAdherenceRepo extends PlanAdherenceRepository {
+  final List<PlanAdherenceModel> _records = [];
+  bool throwOnGetByStudent = false;
+
   @override
   Future<void> init() async {}
 
   @override
   Future<List<PlanAdherenceModel>> getByStudent(String studentId) async {
-    return [];
+    if (throwOnGetByStudent) throw Exception('get by student error');
+    return _records.where((r) => r.studentId == studentId).toList();
+  }
+
+  @override
+  Future<void> create(PlanAdherenceModel model) async {
+    _records.add(model);
   }
 }
 
@@ -286,6 +302,7 @@ void main() {
       planRepository: planRepo,
       adherenceRepository: fakeAdherenceRepo,
       roadmapRepository: roadmapRepo,
+      l10n: l10n,
     );
 
     final syllabusResolver = SyllabusResolver(
@@ -764,15 +781,13 @@ void main() {
       expect(conflict.data, isFalse);
     });
 
-    test('hasSchedulingConflict propagates exception from getAll', () async {
+    test('hasSchedulingConflict returns failure when getAll throws', () async {
       sessionRepo.throwOnGetAll = true;
-      expect(
-        () => service.hasSchedulingConflict(
-          startTime: DateTime.now(),
-          durationMinutes: 30,
-        ),
-        throwsException,
+      final conflict = await service.hasSchedulingConflict(
+        startTime: DateTime.now(),
+        durationMinutes: 30,
       );
+      expect(conflict.isFailure, isTrue);
     });
 
     test('getAdherenceReport returns empty map on failure', () async {
@@ -877,7 +892,7 @@ void main() {
       expect(result.data, isFalse);
     });
 
-    test('returns false when get session throws', () async {
+    test('returns failure when get session throws', () async {
       await service.scheduleLesson(
         topicId: 'topic-1',
         topicTitle: 'Kinematics',
@@ -891,7 +906,7 @@ void main() {
         newStartTime: DateTime.now(),
         durationMinutes: 30,
       );
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -901,7 +916,7 @@ void main() {
       expect(result.data, isFalse);
     });
 
-    test('returns false when tutorRepo throws', () async {
+    test('returns failure when get throws', () async {
       await service.scheduleLesson(
         topicId: 'topic-1',
         topicTitle: 'Kinematics',
@@ -910,10 +925,10 @@ void main() {
       );
       sessionRepo.throwOnGet = true;
       final result = await service.cancelLesson('nonexistent');
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
 
-    test('returns false when save throws', () async {
+    test('returns failure when save throws', () async {
       await service.scheduleLesson(
         topicId: 'topic-1',
         topicTitle: 'Kinematics',
@@ -923,15 +938,15 @@ void main() {
       final lessons = (await service.getScheduledLessons()).data!;
       sessionRepo.throwOnSave = true;
       final result = await service.cancelLesson(lessons.first.id);
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
   });
 
   group('getScheduledLessons edge cases', () {
-    test('returns empty list when tutorRepo throws', () async {
+    test('returns failure list when getAll throws', () async {
       sessionRepo.throwOnGetAll = true;
       final lessons = await service.getScheduledLessons();
-      expect(lessons.data, isEmpty);
+      expect(lessons.isFailure, isTrue);
     });
 
     test('filters out completed sessions', () async {
@@ -1057,10 +1072,10 @@ void main() {
   });
 
   group('dismissPendingAction edge cases', () {
-    test('returns false when repo throws', () async {
+    test('returns failure when repo throws', () async {
       pendingActionRepo.throwOnMarkRejected = true;
       final result = await service.dismissPendingAction('action-1');
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -1097,20 +1112,17 @@ void main() {
     });
 
     test('aggregates adherence metrics across records', () async {
-      Hive.init(Directory.systemTemp.createTempSync('planner_svc_adh_').path);
-      registerPlannerAdapters();
       final now = DateTime.now();
       final todayStart = DateTime(now.year, now.month, now.day);
 
-      final adherenceRepo2 = PlanAdherenceRepository();
-      await adherenceRepo2.init();
-      await adherenceRepo2.create(PlanAdherenceModel(
+      final fakeAdherenceRepo2 = _FakeAdherenceRepo();
+      await fakeAdherenceRepo2.create(PlanAdherenceModel(
         id: 'metric-1', studentId: 'test-student', date: todayStart,
         plannedMinutes: 60, actualMinutes: 45,
         plannedQuestions: 15, actualQuestions: 10,
         adherenceScore: 0.75,
       ));
-      await adherenceRepo2.create(PlanAdherenceModel(
+      await fakeAdherenceRepo2.create(PlanAdherenceModel(
         id: 'metric-2', studentId: 'test-student', date: todayStart,
         plannedMinutes: 30, actualMinutes: 20,
         plannedQuestions: 10, actualQuestions: 5,
@@ -1126,7 +1138,7 @@ void main() {
         sessionRepo: sessionRepo,
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
-        adherenceRepo: adherenceRepo2,
+        adherenceRepo: fakeAdherenceRepo2,
         fixedStudentId: 'test-student',
       );
 
@@ -1160,7 +1172,7 @@ void main() {
   });
 
   group('scheduleLesson catch block', () {
-    test('returns false when sessionRepo.save throws', () async {
+    test('returns failure when sessionRepo.save throws', () async {
       sessionRepo.throwOnSave = true;
       final result = await service.scheduleLesson(
         topicId: 'topic-1',
@@ -1168,7 +1180,7 @@ void main() {
         subjectId: 'sub_physics',
         scheduledTime: DateTime.now(),
       );
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -1258,10 +1270,10 @@ void main() {
       expect(futureMissed, isEmpty);
     });
 
-    test('returns empty when getAll throws', () async {
+    test('returns failure when getAll throws', () async {
       sessionRepo.throwOnGetAll = true;
       final missed = await service.getMissedLessons();
-      expect(missed, isEmpty);
+      expect(missed.isFailure, isTrue);
     });
 
     test('returns empty when getAll returns failure', () async {
@@ -1350,5 +1362,271 @@ void main() {
       final records = await service.getAdherenceRecords();
       expect(records.data, isEmpty);
     });
+
+    test('returns records when they exist', () async {
+      final now = DateTime.now();
+      final fakeRepo = _FakeAdherenceRepo();
+      await fakeRepo.create(PlanAdherenceModel(
+        id: 'rec-1', studentId: 'test-student', date: now,
+        plannedMinutes: 60, actualMinutes: 45,
+        plannedQuestions: 15, actualQuestions: 10,
+        adherenceScore: 0.75,
+      ));
+      final svc = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeRepo,
+        fixedStudentId: 'test-student',
+      );
+      final records = await svc.getAdherenceRecords();
+      expect(records.data, hasLength(1));
+      expect(records.data!.first.id, 'rec-1');
+    });
   });
+
+  group('scheduleLesson with lessonAgentService', () {
+    late PlannerService svcWithAgent;
+    late _FakeSessionRepository sessionRepo2;
+    late _FakeAdherenceRepo fakeAdherenceRepo;
+    final capturedLessons = <Lesson>[];
+
+    setUp(() {
+      sessionRepo2 = _FakeSessionRepository();
+      fakeAdherenceRepo = _FakeAdherenceRepo();
+      capturedLessons.clear();
+    });
+
+    test('generates lesson when lessonAgentService is provided and returns lesson', () async {
+      final lesson = Lesson(
+        id: 'lesson-1',
+        subjectId: 'sub_physics',
+        title: 'Kinematics Lesson',
+        topicId: 'topic-1',
+        createdAt: DateTime.now(),
+      );
+      svcWithAgent = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        fixedStudentId: 'test-student',
+        lessonAgentService: _StubLessonAgentService((s, t, tt, l) async => lesson),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isTrue);
+      final saved = (await sessionRepo2.getAll()).data!;
+      expect(saved, hasLength(1));
+      expect(saved.first.lessonIds, contains('lesson-1'));
+      expect(saved.first.lessonReady, isTrue);
+    });
+
+    test('sets lessonReady to false when lessonAgentService returns null', () async {
+      svcWithAgent = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        fixedStudentId: 'test-student',
+        lessonAgentService: _StubLessonAgentService((s, t, tt, l) async => null),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isTrue);
+      final saved = (await sessionRepo2.getAll()).data!;
+      expect(saved, hasLength(1));
+      expect(saved.first.lessonReady, isFalse);
+    });
+
+    test('sets lessonReady to false when lessonAgentService throws', () async {
+      svcWithAgent = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        fixedStudentId: 'test-student',
+        lessonAgentService: _StubLessonAgentService((s, t, tt, l) async => throw Exception('gen failed')),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isTrue);
+      final saved = (await sessionRepo2.getAll()).data!;
+      expect(saved, hasLength(1));
+      expect(saved.first.lessonReady, isFalse);
+    });
+  });
+
+  group('catch block coverage', () {
+    test('loadExistingPlan returns failure when planRepo throws', () async {
+      planRepo.throwOnLoad = true;
+      final result = await service.loadExistingPlan();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('loadRoadmaps returns failure when error occurs', () async {
+      final badRepo = _FakeRoadmapRepository();
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: badRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        fixedStudentId: 'test-student',
+      );
+      final result = await svc2.loadRoadmaps();
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('loadPendingActions returns failure when error occurs', () async {
+      final badRepo = _FakePendingActionRepository();
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: badRepo,
+        planOrchestrator: planOrchestrator,
+        fixedStudentId: 'test-student',
+      );
+      final result = await svc2.loadPendingActions();
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('getAdherenceRecords returns failure when adherenceRepo throws', () async {
+      final badRepo = _FakeAdherenceRepo();
+      badRepo.throwOnGetByStudent = true;
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: badRepo,
+        fixedStudentId: 'test-student',
+      );
+      final result = await svc2.getAdherenceRecords();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getAdherenceMetrics returns failure when adherenceRepo throws', () async {
+      final badRepo = _FakeAdherenceRepo();
+      badRepo.throwOnGetByStudent = true;
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: badRepo,
+        fixedStudentId: 'test-student',
+      );
+      final result = await svc2.getAdherenceMetrics();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('dismissAllMissed returns failure when sessionRepo.save throws', () async {
+      final now = DateTime.now();
+      final pastSession = Session(
+        id: 'past-session',
+        studentId: 'test-student',
+        subjectId: 'sub_physics',
+        topicId: 'topic-missed',
+        startTime: now.subtract(const Duration(hours: 3)),
+        type: SessionType.tutoring,
+        status: SessionStatus.planned,
+        tutorMetadata: TutorMetadata(topicTitle: 'Past Topic'),
+      );
+      final localSessionRepo = _FakeSessionRepository();
+      await localSessionRepo.save(pastSession.id, pastSession);
+      localSessionRepo.throwOnSave = true;
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: localSessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        fixedStudentId: 'test-student',
+      );
+      final result = await svc2.dismissAllMissed();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('adjustPace returns failure when planRepo throws', () async {
+      planRepo.throwOnLoad = true;
+      final result = await service.adjustPace(45.0);
+      expect(result.isFailure, isTrue);
+    });
+  });
+}
+
+class _StubLessonAgentService implements LessonAgentService {
+  final Future<Lesson?> Function(String subjectId, String topicId, String topicTitle, String localeName) _generate;
+
+  _StubLessonAgentService(this._generate);
+
+  @override
+  Future<Lesson?> generateLesson({
+    required String subjectId,
+    required String topicId,
+    required String topicTitle,
+    String localeName = 'en',
+  }) {
+    return _generate(subjectId, topicId, topicTitle, localeName);
+  }
+
+  @override
+  Future<Lesson?> generateLessonFromSource({
+    required String subjectId,
+    required String topicId,
+    required String topicTitle,
+    required String sourceContent,
+    String localeName = 'en',
+  }) async => null;
 }

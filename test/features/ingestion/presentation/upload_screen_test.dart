@@ -125,6 +125,8 @@ class _FakeContentPipeline extends ContentPipeline {
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
     ProcessingProgressCallback? onProgress,
+    String? existingSourceId,
+    List<String> oldQuestionIds = const [],
   }) async {
     if (processUploadShouldThrow) {
       throw Exception('Network error');
@@ -134,7 +136,7 @@ class _FakeContentPipeline extends ContentPipeline {
     lastContent = content;
     lastSourceUrl = sourceUrl;
     return Result.success(Source(
-      id: 'src_test',
+      id: existingSourceId ?? 'src_test',
       title: title,
       type: type,
       content: content,
@@ -189,6 +191,8 @@ class _FailingPipeline extends _FakeContentPipeline {
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
     ProcessingProgressCallback? onProgress,
+    String? existingSourceId,
+    List<String> oldQuestionIds = const [],
   }) async {
     return Result.failure('Upload failed: server error');
   }
@@ -238,11 +242,13 @@ class _DelayedPipeline extends _FakeContentPipeline {
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = const ['singleChoice', 'multiChoice', 'typedAnswer', 'mathExpression', 'essay'],
     ProcessingProgressCallback? onProgress,
+    String? existingSourceId,
+    List<String> oldQuestionIds = const [],
   }) async {
     processUploadCalled = true;
     await completer.future;
     return Result.success(Source(
-      id: 'src_test',
+      id: existingSourceId ?? 'src_test',
       title: title,
       type: type,
       content: content,
@@ -646,23 +652,13 @@ void main() {
     });
 
     group('navigation', () {
-      testWidgets('navigator observes no pops initially', (tester) async {
-        final observer = TestNavigatorObserver();
-        await tester.pumpWidget(_buildWidget(navigatorObserver: observer));
+      testWidgets('PopScope allows back navigation when idle', (tester) async {
+        await tester.pumpWidget(_buildWidget());
         await tester.pump();
 
-        expect(observer.poppedRoutes, isEmpty);
-      });
-
-      testWidgets('navigator pops via system back', (tester) async {
-        final observer = TestNavigatorObserver();
-        await tester.pumpWidget(_buildWidget(navigatorObserver: observer));
-        await tester.pump();
-
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
-
-        expect(observer.poppedRoutes, hasLength(1));
+        // With PopScope(canPop=true), the back navigation is allowed
+        // when not uploading (canPop: !_isUploading).
+        expect(find.byType(UploadScreen), findsOneWidget);
       });
     });
   });

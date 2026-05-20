@@ -105,7 +105,12 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (_isLoading) return const LoadingIndicator();
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.args.topicTitle)),
+        body: const LoadingIndicator(),
+      );
+    }
     if (_lessons.isEmpty) {
       return Scaffold(
         appBar: AppBar(title: Text(widget.args.topicTitle)),

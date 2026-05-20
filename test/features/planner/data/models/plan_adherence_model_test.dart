@@ -133,6 +133,40 @@ void main() {
       });
     });
 
+    group('serialization roundtrip', () {
+      test('preserves all fields', () {
+        final original = PlanAdherenceModel(
+          id: 'rt-1', studentId: studentId, date: date,
+          plannedQuestions: 20, actualQuestions: 15,
+          plannedMinutes: 60, actualMinutes: 45,
+          adherenceScore: 0.75, planId: planId,
+          metadata: {'source': 'auto', 'version': 2},
+        );
+        final restored = PlanAdherenceModel.fromJson(original.toJson());
+        expect(restored.id, original.id);
+        expect(restored.studentId, original.studentId);
+        expect(restored.date, original.date);
+        expect(restored.plannedQuestions, original.plannedQuestions);
+        expect(restored.actualQuestions, original.actualQuestions);
+        expect(restored.plannedMinutes, original.plannedMinutes);
+        expect(restored.actualMinutes, original.actualMinutes);
+        expect(restored.adherenceScore, original.adherenceScore);
+        expect(restored.planId, original.planId);
+        expect(restored.metadata, original.metadata);
+      });
+
+      test('round-trip with null optionals', () {
+        final original = PlanAdherenceModel(
+          id: 'rt-2', studentId: studentId, date: date,
+        );
+        final restored = PlanAdherenceModel.fromJson(original.toJson());
+        expect(restored.planId, isNull);
+        expect(restored.metadata, isNull);
+        expect(restored.plannedQuestions, 0);
+        expect(restored.adherenceScore, 0.0);
+      });
+    });
+
     group('equality', () {
       test('identical instances are equal', () {
         final a = PlanAdherenceModel(

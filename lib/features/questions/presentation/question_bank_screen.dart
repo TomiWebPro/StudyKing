@@ -195,9 +195,9 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         content: Text(l10n.deleteQuestionsConfirm(_selectedIds.length)),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: Text(l10n.cancel)),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Theme.of(ctx).colorScheme.error),
+            style: AppTheme.destructiveButtonStyle(ctx),
             child: Text(l10n.delete),
           ),
         ],
@@ -287,6 +287,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     String selectedType = QuestionType.singleChoice.name;
     String selectedDifficulty = 'easy';
     int? selectedCorrectOption;
+    final selectedCorrectOptions = <int>{};
 
     void addOptionField() {
       optionControllers.add(TextEditingController());
@@ -379,8 +380,16 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                 Radio<int?>(value: i)
                               else
                                 Checkbox(
-                                  value: false,
-                                  onChanged: null,
+                                  value: selectedType == QuestionType.multiChoice.name && selectedCorrectOptions.contains(i),
+                                  onChanged: (v) {
+                                    setInnerState(() {
+                                      if (v == true) {
+                                        selectedCorrectOptions.add(i);
+                                      } else {
+                                        selectedCorrectOptions.remove(i);
+                                      }
+                                    });
+                                  },
                                 ),
                               Expanded(
                                 child: TextField(
@@ -448,6 +457,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                     optionControllers.any((c) => c.text.trim().isEmpty)) {
                   return;
                 }
+                final isMulti = selectedType == QuestionType.multiChoice.name;
                 Navigator.pop(ctx, {
                   'text': textController.text.trim(),
                   'subjectId': selectedSubjectId,
@@ -456,7 +466,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                   'difficulty': selectedDifficulty,
                   'explanation': explanationController.text.trim(),
                   'options': optionControllers.map((c) => c.text.trim()).where((s) => s.isNotEmpty).toList(),
-                  'correctOption': selectedCorrectOption,
+                  'correctOption': isMulti ? null : selectedCorrectOption,
+                  'correctOptions': isMulti ? selectedCorrectOptions.toList() : null,
                 });
               },
               child: Text(l10n.save),
@@ -482,6 +493,23 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
 
     final options = (result['options'] as List<dynamic>?)?.cast<String>() ?? <String>[];
     final correctOption = result['correctOption'] as int?;
+    final correctOptions = (result['correctOptions'] as List<dynamic>?)?.cast<int>();
+
+    Markscheme? markscheme;
+    if (correctOption != null && correctOption < options.length) {
+      markscheme = Markscheme(correctAnswer: options[correctOption]);
+    } else if (correctOptions != null && correctOptions.isNotEmpty) {
+      final correctTexts = correctOptions
+          .where((i) => i < options.length)
+          .map((i) => options[i])
+          .toList();
+      if (correctTexts.isNotEmpty) {
+        markscheme = Markscheme(
+          correctAnswer: correctTexts.first,
+          acceptableAnswers: correctTexts.skip(1).toList(),
+        );
+      }
+    }
 
     final question = Question(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -494,9 +522,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       ),
       difficulty: difficultyValue,
       options: options,
-      markscheme: correctOption != null && correctOption < options.length
-          ? Markscheme(correctAnswer: options[correctOption])
-          : null,
+      markscheme: markscheme,
       explanation: (result['explanation'] as String?)?.isNotEmpty == true
           ? result['explanation'] as String
           : null,
@@ -737,6 +763,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     required VoidCallback onTap,
     VoidCallback? onClear,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
       selected: selected,
@@ -745,7 +772,12 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         label: Text(label),
         selected: selected,
         onPressed: onTap,
-        deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
+        deleteIcon: onClear != null
+            ? Semantics(
+                label: '${l10n.delete} $label',
+                child: const Icon(Icons.close, size: 16),
+              )
+            : null,
         onDeleted: onClear,
       ),
     );

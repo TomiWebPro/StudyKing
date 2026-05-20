@@ -281,7 +281,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                   title: Text(l10n.sourcesCountLabel(_sourceCount)),
                   onTap: () {
                     Navigator.pop(context);
-                    _tabController.animateTo(2);
+                    _tabController.animateTo(3);
                   },
                 ),
               ),
@@ -389,7 +389,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
           children: [
             _detailRow(l10n.date, formatDateFromContext(context, session.startTime)),
             _detailRow(l10n.duration, formatDurationFromContext(context, session.actualDuration)),
-            _detailRow(l10n.questions, formatDecimal(questions.toDouble(), l10n.localeName)),
+            _detailRow(l10n.questions, formatDecimal(questions.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)),
             if (correct > 0)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),

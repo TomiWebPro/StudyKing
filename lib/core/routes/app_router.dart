@@ -61,6 +61,7 @@ class AppRoutes {
 class PracticeSessionArgs {
   final String subjectId;
   final String? topicId;
+  final String? sourceId;
   final int? questionCount;
   final bool isSpacedRepetition;
   final List<String>? orderedQuestionIds;
@@ -68,6 +69,7 @@ class PracticeSessionArgs {
   const PracticeSessionArgs({
     required this.subjectId,
     this.topicId,
+    this.sourceId,
     this.questionCount = 10,
     this.isSpacedRepetition = false,
     this.orderedQuestionIds,

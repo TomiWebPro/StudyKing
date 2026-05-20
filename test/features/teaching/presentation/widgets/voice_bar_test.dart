@@ -418,7 +418,7 @@ void main() {
       await tester.pump();
 
       controller.addTranscription('After dispose');
-      expect(true, isTrue);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('voice bar disabled does not start listening on tap', (tester) async {

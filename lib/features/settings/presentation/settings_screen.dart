@@ -262,7 +262,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                 leading: const Icon(Icons.notifications),
                 title: Text(l10n.checkNudgesNow),
                 subtitle: Text(l10n.runNudgeChecks),
-                trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+                trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                 onTap: () async {
                   final scheduler = ref.read(engagementSchedulerProvider);
                   try {
@@ -418,7 +418,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       leading: Icon(icon),
       title: Text(title),
       subtitle: Text(subtitle),
-      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
       onTap: onTap,
     );
   }
@@ -461,7 +461,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       leading: Icon(healthIcon, color: healthColor),
       title: Text(l10n.connectionHealth),
       subtitle: Text(healthLabel),
-      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
       onTap: () => Navigator.pushNamed(context, AppRoutes.apiConfig),
     );
   }
@@ -647,7 +647,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                         : null,
                     onTap: () {
                       box.put('dailyCapMinutes', m);
-                      (context as Element).markNeedsBuild();
+                      ref.invalidate(settingsProvider);
                       Navigator.pop(context);
                     },
                   ))
@@ -725,7 +725,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   if (days > 0) {
                     box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
                   }
-                  (context as Element).markNeedsBuild();
+                  ref.invalidate(settingsProvider);
                   Navigator.pop(ctx);
                 },
               );
@@ -794,7 +794,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
     try {
       final box = Hive.box(HiveBoxNames.settings);
       box.put(key, value);
-      (context as Element).markNeedsBuild();
+      ref.invalidate(settingsProvider);
     } catch (e) {
       _logger.w('Failed to set SR config: $e');
     }
@@ -1929,7 +1929,7 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
       subtitle: Text(_failedCount > 0
           ? l10n.sourceCountFailed(_failedCount)
           : l10n.noFailedUploads),
-      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
       onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
     );
   }
@@ -1972,7 +1972,7 @@ class _AiTaskMonitorTileState extends ConsumerState<_AiTaskMonitorTile> {
       subtitle: Text(_activeCount > 0 || _failedCount > 0
           ? l10n.viewActiveAiTasks
           : l10n.viewActiveAiTasks),
-      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.arrow_back_ios : Icons.arrow_forward_ios),
+      trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
       onTap: () => Navigator.pushNamed(context, AppRoutes.llmTasks),
     );
   }

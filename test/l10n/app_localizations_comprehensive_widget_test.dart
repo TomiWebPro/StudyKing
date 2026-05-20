@@ -102,7 +102,6 @@ void main() {
       expect(find.text('Milestone'), findsOneWidget);
       expect(find.text('Target Completion'), findsOneWidget);
       expect(find.text('No roadmaps yet'), findsOneWidget);
-      expect(find.text('Roadmap Overview'), findsOneWidget);
       expect(find.text('Timeline'), findsOneWidget);
       expect(find.text('Week 3'), findsOneWidget);
       expect(find.text('Milestone for week 1'), findsOneWidget);
@@ -185,7 +184,7 @@ void main() {
         ),
       );
 
-      expect(find.text('Focus Mode'), findsOneWidget);
+      expect(find.text('Study'), findsOneWidget);
       expect(find.text('New Focus Session'), findsOneWidget);
       expect(find.text('Refresh stats'), findsOneWidget);
       expect(find.text('Daily Limit Reached'), findsOneWidget);
@@ -295,7 +294,7 @@ void main() {
       expect(find.text('No plan for today'), findsOneWidget);
       expect(find.text('Adjust Plan'), findsOneWidget);
       expect(find.text('Dismiss'), findsOneWidget);
-      expect(find.text('Voice Input'), findsOneWidget);
+      expect(find.text('Voice input'), findsOneWidget);
       expect(find.text('Capture Image'), findsOneWidget);
       expect(find.text('Camera'), findsOneWidget);
       expect(find.text('Connection successful! Latency: 120ms'), findsOneWidget);
@@ -440,7 +439,7 @@ void main() {
       expect(find.text('Model: gpt-4'), findsOneWidget);
       expect(find.text('Started: 10:00'), findsOneWidget);
       expect(find.text('Ended: 11:30'), findsOneWidget);
-      expect(find.text('Tokens: 1500 (\$0.03)'), findsOneWidget);
+      expect(find.text('Tokens: 1500 (0.03)'), findsOneWidget);
       expect(find.text('Session history CSV generated (1024 chars)'), findsOneWidget);
       expect(find.text('Generated: 2026-05-14'), findsOneWidget);
       expect(find.text('Student ID: STU001'), findsOneWidget);

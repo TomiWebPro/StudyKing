@@ -187,7 +187,7 @@ void main() {
       expect(l10n.noPlanForToday, 'No plan for today');
       expect(l10n.adjustPlan, 'Adjust Plan');
       expect(l10n.dismiss, 'Dismiss');
-      expect(l10n.voiceInput, 'Voice Input');
+      expect(l10n.voiceInput, 'Voice input');
       expect(l10n.captureImage, 'Capture Image');
       expect(l10n.camera, 'Camera');
     });
@@ -358,8 +358,8 @@ void main() {
     });
 
     test('tokensAndCost', () {
-      expect(l10n.tokensAndCost(1500, '0.03'), 'Tokens: 1500 (\$0.03)');
-      expect(l10n.tokensAndCost(0, '0.00'), 'Tokens: 0 (\$0.00)');
+      expect(l10n.tokensAndCost(1500, '0.03'), 'Tokens: 1500 (0.03)');
+      expect(l10n.tokensAndCost(0, '0.00'), 'Tokens: 0 (0.00)');
     });
 
     test('connectionSuccessful', () {
@@ -404,7 +404,7 @@ void main() {
     test('attemptsCount', () {
       expect(l10n.attemptsCount(5), '5 attempts');
       expect(l10n.attemptsCount(0), '0 attempts');
-      expect(l10n.attemptsCount(1), '1 attempts');
+      expect(l10n.attemptsCount(1), '1 attempt');
     });
   });
 
@@ -428,7 +428,7 @@ void main() {
       expect(l10n.mentorSubtitle, 'Su asistente académico personal IA');
       expect(l10n.startingLesson, 'Iniciando su lección...');
       expect(l10n.lessonTimeEnded,
-          'El tiempo de lección terminó. Haga clic en \'Finalizar Lección\' para terminar.');
+          'El tiempo de lección terminó. Toque \'Finalizar Lección\' para terminar.');
       expect(l10n.lessonComplete, 'Lección Completada');
       expect(l10n.errorOccurred, 'Ocurrió un error. Intente de nuevo.');
       expect(l10n.errorWithResponse, 'Lo siento, encontré un error. Intente de nuevo.');
@@ -441,7 +441,7 @@ void main() {
       expect(l10n.roadmaps, 'Rutas de aprendizaje');
       expect(l10n.createRoadmap, 'Crear Roadmap');
       expect(l10n.roadmapGoal, 'Meta de Aprendizaje');
-      expect(l10n.roadmapGoalHint, 'ej., Quiero aprender Física IB en 180 días');
+      expect(l10n.roadmapGoalHint, 'p. ej., Quiero aprender Física IB en 180 días');
       expect(l10n.generateRoadmap, 'Generar Roadmap');
       expect(l10n.myRoadmaps, 'Mis Roadmaps');
       expect(l10n.milestones, 'Hitos');
@@ -498,11 +498,11 @@ void main() {
       expect(l10n.dailyLimitReached, 'Límite Diario Alcanzado');
       expect(l10n.dailyLimitReachedBody,
           'Ha alcanzado su límite diario de estudio. ¡Bien hecho! Descanse y vuelva mañana.');
-      expect(l10n.breakTime, 'Descanso');
+      expect(l10n.breakTime, '¡Descanso!');
       expect(l10n.focusTime, 'Tiempo de Enfoque');
       expect(l10n.timerRemaining, 'restante');
       expect(l10n.timerPaused, 'PAUSADO');
-      expect(l10n.timerDone, 'TERMINADO');
+      expect(l10n.timerDone, '¡TERMINADO!');
       expect(l10n.resume, 'Reanudar');
       expect(l10n.pause, 'Pausar');
       expect(l10n.markComplete, 'Marcar como Completado');
@@ -589,7 +589,7 @@ void main() {
       expect(l10n.noPlanForToday, 'Sin plan para hoy');
       expect(l10n.adjustPlan, 'Ajustar Plan');
       expect(l10n.dismiss, 'Descartar');
-      expect(l10n.voiceInput, 'Entrada de Voz');
+      expect(l10n.voiceInput, 'Entrada de voz');
       expect(l10n.captureImage, 'Capturar Imagen');
       expect(l10n.camera, 'Cámara');
     });
@@ -650,7 +650,7 @@ void main() {
     });
 
     test('allStepsFormat', () {
-      expect(l10n.allStepsFormat(3), '¡Los 3 pasos identificados correctamente!');
+      expect(l10n.allStepsFormat(3), '¡Los 3 pasos se han identificado correctamente!');
     });
 
     test('partialStepsFormat', () {
@@ -738,7 +738,7 @@ void main() {
     });
 
     test('tokensAndCost', () {
-      expect(l10n.tokensAndCost(1500, '0.03'), 'Tokens: 1500 (\$0.03)');
+      expect(l10n.tokensAndCost(1500, '0.03'), 'Fichas: 1500 (0.03)');
     });
 
     test('connectionSuccessful', () {

@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/adapters/personal_learning_plan_adapter.dart';
@@ -52,6 +53,52 @@ PersonalLearningPlan createPlan({
 }
 
 void main() {
+  group('error handling', () {
+    test('create returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final plan = createPlan();
+      final result = await repo.create(plan);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('savePlan returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final plan = createPlan();
+      final result = await repo.savePlan(plan);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('loadPlan returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final result = await repo.loadPlan('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('deletePlan returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final result = await repo.deletePlan('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('hasPlan returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final result = await repo.hasPlan('any');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getAllPlans returns failure when box throws', () async {
+      final repo = PlanRepository();
+      repo.attachBox(_ThrowingPlanBox());
+      final result = await repo.getAllPlans();
+      expect(result.isFailure, isTrue);
+    });
+  });
+
   group('PlanRepository with real Hive', () {
     late String hivePath;
     late PlanRepository repository;
@@ -210,4 +257,11 @@ void main() {
       });
     });
   });
+}
+
+class _ThrowingPlanBox implements Box<PersonalLearningPlan> {
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Simulated Hive error');
+  }
 }

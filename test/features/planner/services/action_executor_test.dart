@@ -1,8 +1,31 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/services/action_executor.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+
+class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  bool suggestFailure = false;
+  bool regenerateCalled = false;
+  double? lastAdjustmentFactor;
+
+  _FakePlanAdherenceOrchestrator() : super();
+
+  @override
+  Future<Result<PersonalLearningPlan?>> suggestRegeneration({required String studentId, double? adjustmentFactor}) async {
+    regenerateCalled = true;
+    lastAdjustmentFactor = adjustmentFactor;
+    if (suggestFailure) return Result.failure('suggest failed');
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
+    return Result.success(const AdherenceDeviation());
+  }
+}
 
 class FakePlannerService extends PlannerService {
   bool scheduleCalled = false;
@@ -22,7 +45,10 @@ class FakePlannerService extends PlannerService {
   bool throwOnCancel = false;
   bool throwOnRegenerate = false;
 
-  FakePlannerService() : super();
+  FakePlannerService()
+      : super(
+          planOrchestrator: _FakePlanAdherenceOrchestrator(),
+        );
 
   @override
   Future<Result<bool>> scheduleLesson({
@@ -316,8 +342,9 @@ void main() {
           );
           final result = await executor.execute(action);
           expect(result, isTrue);
-          expect(plannerService.regenerateCalled, isTrue);
-          expect(plannerService.lastAdjustmentFactor, 0.8);
+          final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
+          expect(orch.regenerateCalled, isTrue);
+          expect(orch.lastAdjustmentFactor, 0.8);
         });
 
         test('returns false when adjustmentFactor is missing', () async {
@@ -329,8 +356,9 @@ void main() {
           expect(result, isFalse);
         });
 
-        test('returns false when suggestPlanRegeneration throws', () async {
-          plannerService.throwOnRegenerate = true;
+        test('returns false when suggestRegeneration fails', () async {
+          final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
+          orch.suggestFailure = true;
           final action = createAction(
             actionType: 'planAdjustment',
             payload: {'adjustmentFactor': 0.8},
@@ -346,8 +374,9 @@ void main() {
           );
           final result = await executor.execute(action);
           expect(result, isTrue);
-          expect(plannerService.regenerateCalled, isTrue);
-          expect(plannerService.lastAdjustmentFactor, 0.0);
+          final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
+          expect(orch.regenerateCalled, isTrue);
+          expect(orch.lastAdjustmentFactor, 0.0);
         });
       });
     });

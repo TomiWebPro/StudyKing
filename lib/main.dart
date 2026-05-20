@@ -259,44 +259,48 @@ class DestinationData {
   });
 }
 
-List<DestinationData> _buildDestinations(AppLocalizations l10n) => [
-  DestinationData(
-    icon: Icons.dashboard_outlined,
-    selectedIcon: Icons.dashboard,
-    label: l10n.dashboard,
-    tooltip: l10n.dashboard,
-  ),
-  DestinationData(
-    icon: Icons.school_outlined,
-    selectedIcon: Icons.school,
-    label: l10n.subjects,
-    tooltip: l10n.subjects,
-  ),
-  DestinationData(
-    icon: Icons.play_arrow_outlined,
-    selectedIcon: Icons.play_arrow,
-    label: l10n.practice,
-    tooltip: l10n.practice,
-  ),
-  DestinationData(
-    icon: Icons.auto_awesome_outlined,
-    selectedIcon: Icons.auto_awesome,
-    label: l10n.mentor,
-    tooltip: l10n.mentor,
-  ),
-  DestinationData(
-    icon: Icons.menu_book_outlined,
-    selectedIcon: Icons.menu_book,
-    label: l10n.focusMode,
-    tooltip: l10n.focusMode,
-  ),
-  DestinationData(
-    icon: Icons.settings_outlined,
-    selectedIcon: Icons.settings,
-    label: l10n.settings,
-    tooltip: l10n.settings,
-  ),
-];
+List<DestinationData> _buildDestinations(AppLocalizations l10n, {bool isWideScreen = false}) {
+  final all = [
+    DestinationData(
+      icon: Icons.dashboard_outlined,
+      selectedIcon: Icons.dashboard,
+      label: l10n.dashboard,
+      tooltip: l10n.dashboard,
+    ),
+    DestinationData(
+      icon: Icons.school_outlined,
+      selectedIcon: Icons.school,
+      label: l10n.subjects,
+      tooltip: l10n.subjects,
+    ),
+    DestinationData(
+      icon: Icons.play_arrow_outlined,
+      selectedIcon: Icons.play_arrow,
+      label: l10n.practice,
+      tooltip: l10n.practice,
+    ),
+    DestinationData(
+      icon: Icons.auto_awesome_outlined,
+      selectedIcon: Icons.auto_awesome,
+      label: l10n.mentor,
+      tooltip: l10n.mentor,
+    ),
+    DestinationData(
+      icon: Icons.menu_book_outlined,
+      selectedIcon: Icons.menu_book,
+      label: l10n.focusMode,
+      tooltip: l10n.focusMode,
+    ),
+    DestinationData(
+      icon: Icons.settings_outlined,
+      selectedIcon: Icons.settings,
+      label: l10n.settings,
+      tooltip: l10n.settings,
+    ),
+  ];
+  if (isWideScreen) return all;
+  return all.where((d) => d.label != l10n.focusMode).toList();
+}
 
 class StudyKingApp extends ConsumerStatefulWidget {
   const StudyKingApp({super.key});
@@ -621,7 +625,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                             });
                           },
                           labelType: NavigationRailLabelType.all,
-                          destinations: _buildDestinations(l10n).map((d) {
+                          destinations: _buildDestinations(l10n, isWideScreen: true).map((d) {
                             return NavigationRailDestination(
                               icon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.icon))),
                               selectedIcon: Semantics(label: d.tooltip, child: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon))),

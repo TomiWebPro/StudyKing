@@ -33,12 +33,14 @@ class SourceAdapter extends TypeAdapter<Source> {
       chunks: fields[15] as String? ?? '',
       extractionMeta: fields[16] as String? ?? '',
       createdAt: fields[17] as DateTime?,
+      errorMessage: fields[18] as String? ?? '',
+      contentHash: fields[19] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, Source obj) {
-    writer.writeByte(18);
+    writer.writeByte(20);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -75,5 +77,9 @@ class SourceAdapter extends TypeAdapter<Source> {
     writer.write(obj.extractionMeta);
     writer.writeByte(17);
     writer.write(obj.createdAt);
+    writer.writeByte(18);
+    writer.write(obj.errorMessage);
+    writer.writeByte(19);
+    writer.write(obj.contentHash);
   }
 }

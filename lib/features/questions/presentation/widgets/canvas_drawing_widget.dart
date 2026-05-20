@@ -15,6 +15,9 @@ class CanvasDrawingWidget extends StatefulWidget {
   final ValueChanged<Uint8List> onDrawingComplete;
   final String? initialDrawing;
   final bool largeTouchTargets;
+  final bool showTools;
+  final bool showColorPicker;
+  final bool showStrokeWidth;
 
   const CanvasDrawingWidget({
     super.key,
@@ -22,6 +25,9 @@ class CanvasDrawingWidget extends StatefulWidget {
     required this.onDrawingComplete,
     this.initialDrawing,
     this.largeTouchTargets = false,
+    this.showTools = false,
+    this.showColorPicker = false,
+    this.showStrokeWidth = false,
   });
 
   @override
@@ -32,9 +38,30 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   static final Logger _logger = const Logger('CanvasDrawingWidget');
   final GlobalKey _paintKey = GlobalKey();
   final List<Stroke> _strokes = <Stroke>[];
+  final List<List<Stroke>> _undoStack = <List<Stroke>>[];
+  final List<List<Stroke>> _redoStack = <List<Stroke>>[];
   bool _isDrawing = false;
   bool _isSaving = false;
   String? _saveMessage;
+
+  DrawingTool _currentTool = DrawingTool.freehand;
+  Color _currentColor = Colors.black;
+  double _currentStrokeWidth = 3.0;
+
+  static const List<Color> _presetColors = [
+    Colors.black,
+    Colors.red,
+    Colors.blue,
+    Colors.green,
+    Colors.orange,
+    Colors.purple,
+    Colors.brown,
+    Colors.grey,
+  ];
+
+  static const double _thinWidth = 2.0;
+  static const double _mediumWidth = 4.0;
+  static const double _thickWidth = 7.0;
 
   @override
   void initState() {
@@ -57,6 +84,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
               child: Text(widget.instruction!, style: const TextStyle(fontSize: 14)),
             ),
           ),
+        if (widget.showTools || widget.showColorPicker || widget.showStrokeWidth)
+          _buildToolbar(l10n),
         Semantics(
           container: true,
           label: widget.instruction ?? l10n.drawingCanvas,
@@ -78,7 +107,13 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                 child: Stack(
                   children: [
                     RepaintBoundary(child: _buildGrid(context)),
-                    CustomPaint(size: Size.infinite, painter: DrawingPainter(strokes: _strokes)),
+                    CustomPaint(
+                      size: Size.infinite,
+                      painter: DrawingPainter(
+                        strokes: _strokes,
+                        canvasBackgroundColor: Theme.of(context).colorScheme.surface,
+                      ),
+                    ),
                     if (isEmpty && !_isDrawing)
                       Semantics(
                         label: l10n.canvasIsEmpty,
@@ -98,6 +133,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           _buildIconButton(icon: Icons.undo, onTap: _handleUndo, label: l10n.undoLastStroke),
+                          const SizedBox(width: 8),
+                          _buildIconButton(icon: Icons.redo, onTap: _handleRedo, label: l10n.redoLastStroke),
                           const SizedBox(width: 8),
                           _buildIconButton(icon: Icons.delete_outline, onTap: _handleClear, label: l10n.clearAllDrawings),
                         ],
@@ -140,6 +177,124 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     );
   }
 
+  Widget _buildToolbar(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.showTools)
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _buildToolButton(l10n.toolFreehand, DrawingTool.freehand, Icons.brush),
+                  const SizedBox(width: 4),
+                  _buildToolButton(l10n.toolLine, DrawingTool.line, Icons.show_chart),
+                  const SizedBox(width: 4),
+                  _buildToolButton(l10n.toolRectangle, DrawingTool.rectangle, Icons.crop_square),
+                  const SizedBox(width: 4),
+                  _buildToolButton(l10n.toolCircle, DrawingTool.circle, Icons.circle_outlined),
+                  const SizedBox(width: 4),
+                  _buildToolButton(l10n.toolPlotPoint, DrawingTool.plotPoint, Icons.gps_fixed),
+                  const SizedBox(width: 4),
+                  _buildToolButton(l10n.toolEraser, DrawingTool.eraser, Icons.auto_fix_high),
+                ],
+              ),
+            ),
+          if (widget.showStrokeWidth) ...[
+            const SizedBox(height: 4),
+            Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                _buildStrokeWidthButton(_thinWidth, Icons.horizontal_rule),
+                const SizedBox(width: 4),
+                _buildStrokeWidthButton(_mediumWidth, Icons.remove),
+                const SizedBox(width: 4),
+                _buildStrokeWidthButton(_thickWidth, Icons.radio_button_unchecked),
+              ],
+            ),
+          ],
+          if (widget.showColorPicker) ...[
+            const SizedBox(height: 4),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: _presetColors.map((color) => Padding(
+                  padding: const EdgeInsets.only(right: 4),
+                  child: _buildColorButton(color),
+                )).toList(),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToolButton(String label, DrawingTool tool, IconData icon) {
+    final isSelected = _currentTool == tool;
+    return Semantics(
+      button: true,
+      label: label,
+      child: Material(
+        color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: () => setState(() => _currentTool = tool),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, size: 20, color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStrokeWidthButton(double width, IconData icon) {
+    final isSelected = _currentStrokeWidth == width;
+    return Semantics(
+      button: true,
+      child: Material(
+        color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surface,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          onTap: () => setState(() => _currentStrokeWidth = width),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(8),
+            child: Icon(icon, size: 20, color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildColorButton(Color color) {
+    final isSelected = _currentColor == color;
+    return Semantics(
+      button: true,
+      child: GestureDetector(
+        onTap: () => setState(() => _currentColor = color),
+        child: Container(
+          width: 28,
+          height: 28,
+          decoration: BoxDecoration(
+            color: color,
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+              width: 2,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildGrid(BuildContext context) {
     return Container(
       decoration: BoxDecoration(border: Border.all(color: Theme.of(context).colorScheme.outlineVariant)),
@@ -177,9 +332,16 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     final box = _paintKey.currentContext?.findRenderObject() as RenderBox?;
     if (box == null) return;
     final point = box.globalToLocal(details.globalPosition);
+    _saveToUndo();
     setState(() {
       _isDrawing = true;
-      _strokes.add(Stroke(points: <DrawingPoint>[DrawingPoint(point: point)], color: Theme.of(context).colorScheme.onSurface));
+      final isEraser = _currentTool == DrawingTool.eraser;
+      _strokes.add(Stroke(
+        points: <DrawingPoint>[DrawingPoint(point: point)],
+        color: isEraser ? Colors.white : _currentColor,
+        strokeWidth: isEraser ? 20.0 : _currentStrokeWidth,
+        tool: _currentTool,
+      ));
     });
   }
 
@@ -189,24 +351,76 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     if (box == null) return;
     final point = box.globalToLocal(details.globalPosition);
     setState(() {
-      _strokes.last.points.add(DrawingPoint(point: point));
+      final lastStroke = _strokes.last;
+      if (lastStroke.tool == DrawingTool.freehand || lastStroke.tool == DrawingTool.plotPoint || lastStroke.tool == DrawingTool.eraser) {
+        lastStroke.points.add(DrawingPoint(point: point));
+      } else {
+        lastStroke.points.last = DrawingPoint(point: point);
+      }
     });
   }
 
   void _handlePanEnd(DragEndDetails details) {
     setState(() {
       _isDrawing = false;
+      if (_strokes.isNotEmpty && _strokes.last.tool != DrawingTool.freehand && _strokes.last.tool != DrawingTool.plotPoint) {
+        if (_strokes.last.points.length < 2) {
+          _strokes.removeLast();
+        }
+      }
     });
+  }
+
+  void _saveToUndo() {
+    _undoStack.add(List<Stroke>.from(_strokes.map((s) => Stroke(
+      points: List<DrawingPoint>.from(s.points.map((p) => DrawingPoint(point: p.point, pressure: p.pressure))),
+      color: s.color,
+      strokeWidth: s.strokeWidth,
+      tool: s.tool,
+    ))));
+    _redoStack.clear();
   }
 
   void _handleUndo() {
     if (_strokes.isEmpty) return;
+    _redoStack.add(List<Stroke>.from(_strokes.map((s) => Stroke(
+      points: List<DrawingPoint>.from(s.points.map((p) => DrawingPoint(point: p.point, pressure: p.pressure))),
+      color: s.color,
+      strokeWidth: s.strokeWidth,
+      tool: s.tool,
+    ))));
+    if (_undoStack.isNotEmpty) {
+      final restored = _undoStack.removeLast();
+      setState(() {
+        _strokes
+          ..clear()
+          ..addAll(restored);
+      });
+    } else {
+      setState(() {
+        _strokes.removeLast();
+      });
+    }
+  }
+
+  void _handleRedo() {
+    if (_redoStack.isEmpty) return;
+    _undoStack.add(List<Stroke>.from(_strokes.map((s) => Stroke(
+      points: List<DrawingPoint>.from(s.points.map((p) => DrawingPoint(point: p.point, pressure: p.pressure))),
+      color: s.color,
+      strokeWidth: s.strokeWidth,
+      tool: s.tool,
+    ))));
+    final restored = _redoStack.removeLast();
     setState(() {
-      _strokes.removeLast();
+      _strokes
+        ..clear()
+        ..addAll(restored);
     });
   }
 
   void _handleClear() {
+    _saveToUndo();
     setState(() {
       _strokes.clear();
     });
@@ -282,4 +496,3 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     }
   }
 }
-

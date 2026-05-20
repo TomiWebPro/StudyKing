@@ -94,7 +94,7 @@ class LlmService {
       403 => 'Access forbidden. Check your API key permissions.',
       404 => 'Model not found. Check model name in Settings.',
       429 => 'Too many requests. Wait and try again.',
-      500 || 502 || 503 => 'Provider experiencing issues. Try again later or switch providers.',
+      500 || 502 || 503 => '$providerName server error (HTTP $code). Try again later or switch providers.',
       _ => '$providerName API Error (HTTP $code)',
     };
   }

@@ -7,7 +7,8 @@ import 'package:intl/intl.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/responsive.dart';
 import '../../../core/utils/number_format_utils.dart';
-import '../../../core/widgets/loading_indicator.dart';
+import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/widgets.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/subject_model.dart';
 import '../../../core/services/student_id_service.dart';
@@ -415,11 +416,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.cancel),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
+            style: AppTheme.destructiveButtonStyle(context),
             child: Text(l10n.delete),
           ),
         ],
@@ -1229,9 +1228,15 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
           TextButton(
             onPressed: () {
               final first = state.scheduledLessons.first;
+              if (first.topicId == null || first.topicId!.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.noTopicsAvailable)),
+                );
+                return;
+              }
               Navigator.pushNamed(context, AppRoutes.lessonList,
                   arguments: LessonListArgs(
-                    topicId: first.topicId ?? '',
+                    topicId: first.topicId!,
                     topicTitle: l10n.scheduledLessons,
                     subjectId: first.subjectId,
                   ));
@@ -1255,11 +1260,9 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.noThanks),
           ),
-          ElevatedButton(
+          FilledButton(
             onPressed: () => Navigator.pop(ctx, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
+            style: AppTheme.destructiveButtonStyle(context),
             child: Text(l10n.cancel),
           ),
         ],
@@ -1359,7 +1362,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       ),
       error: (err, _) => Padding(
         padding: const EdgeInsets.all(16),
-        child: Text('$err', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+        child: ErrorRetryWidget(
+          message: l10n.somethingWentWrong,
+          onRetry: () => ref.invalidate(planProgressProvider),
+        ),
       ),
     );
   }

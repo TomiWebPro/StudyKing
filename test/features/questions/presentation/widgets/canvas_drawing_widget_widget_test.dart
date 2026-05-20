@@ -11,6 +11,9 @@ Widget buildWidget({
   String? instruction,
   ValueChanged<Uint8List>? onDrawingComplete,
   String? initialDrawing,
+  bool showTools = false,
+  bool showColorPicker = false,
+  bool showStrokeWidth = false,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -21,6 +24,9 @@ Widget buildWidget({
         instruction: instruction,
         onDrawingComplete: onDrawingComplete ?? (_) {},
         initialDrawing: initialDrawing,
+        showTools: showTools,
+        showColorPicker: showColorPicker,
+        showStrokeWidth: showStrokeWidth,
       ),
     ),
   );
@@ -709,6 +715,58 @@ void main() {
       testWidgets('border changes during active drawing', (tester) async {
         await tester.pumpWidget(buildWidget());
         expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+    });
+
+    group('redo functionality', () {
+      testWidgets('redo button shown alongside undo', (tester) async {
+        await tester.pumpWidget(buildWidget());
+        expect(find.byIcon(Icons.redo), findsOneWidget);
+        expect(find.byIcon(Icons.undo), findsOneWidget);
+        expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      });
+    });
+
+    group('toolbar options', () {
+      testWidgets('toolbar shows tool buttons when showTools is true', (tester) async {
+        await tester.pumpWidget(buildWidget(showTools: true));
+        await tester.pump();
+        expect(find.byIcon(Icons.brush), findsOneWidget);
+        expect(find.byIcon(Icons.show_chart), findsOneWidget);
+        expect(find.byIcon(Icons.crop_square), findsOneWidget);
+        expect(find.byIcon(Icons.circle_outlined), findsOneWidget);
+        expect(find.byIcon(Icons.gps_fixed), findsOneWidget);
+      });
+
+      testWidgets('toolbar does not show tool buttons when showTools is false', (tester) async {
+        await tester.pumpWidget(buildWidget(showTools: false));
+        await tester.pump();
+        expect(find.byIcon(Icons.brush), findsNothing);
+      });
+
+      testWidgets('tool selection changes highlighted button', (tester) async {
+        await tester.pumpWidget(buildWidget(showTools: true));
+        await tester.pump();
+
+        final lineTool = find.byIcon(Icons.show_chart);
+        await tester.tap(lineTool);
+        await tester.pump();
+
+        expect(lineTool, findsOneWidget);
+      });
+
+      testWidgets('color picker shows color circles when showColorPicker is true', (tester) async {
+        await tester.pumpWidget(buildWidget(showColorPicker: true));
+        await tester.pump();
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('stroke width icons shown when showStrokeWidth is true', (tester) async {
+        await tester.pumpWidget(buildWidget(showStrokeWidth: true));
+        await tester.pump();
+        expect(find.byIcon(Icons.horizontal_rule), findsOneWidget);
+        expect(find.byIcon(Icons.remove), findsOneWidget);
+        expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
       });
     });
   });

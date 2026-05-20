@@ -133,6 +133,35 @@ void main() {
         expect(plan.targetQuestionsPerDay, 15);
         expect(plan.metadata, isNull);
       });
+
+      test('handles explicit null metadata', () {
+        final json = {
+          'studentId': studentId,
+          'generatedAt': now.toIso8601String(),
+          'dailyPlans': [
+            {
+              'date': now.toIso8601String(),
+              'dayNumber': 1,
+              'priorityTopics': [],
+              'reviewQuestionIds': [],
+              'stretchGoalQuestionIds': [],
+              'targetQuestions': 10,
+              'targetMinutes': 30,
+            }
+          ],
+          'summary': {
+            'totalQuestions': 50, 'totalMinutes': 150,
+            'newTopics': 2, 'reviewTopics': 1,
+            'estimatedCoverage': 0.5, 'focusAreas': [],
+          },
+          'recommendations': [],
+          'metadata': null,
+        };
+        final plan = PersonalLearningPlan.fromJson(json);
+        expect(plan.metadata, isNull);
+        expect(plan.syllabusGoals, []);
+        expect(plan.subjectPlans, {});
+      });
     });
 
     group('serialization roundtrip', () {
@@ -195,6 +224,16 @@ void main() {
         expect(plan.syllabusGoals, []);
       });
 
+      test('returns empty list when syllabus_goals is empty', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {'syllabus_goals': <Map<String, dynamic>>[]},
+        );
+        expect(plan.syllabusGoals, []);
+      });
+
       test('parses syllabus goals from metadata', () {
         final plan = PersonalLearningPlan(
           studentId: studentId, generatedAt: now,
@@ -232,6 +271,16 @@ void main() {
           dailyPlans: [defaultDailyPlan], summary: defaultSummary,
           recommendations: [],
           metadata: {'other': 'value'},
+        );
+        expect(plan.subjectPlans, {});
+      });
+
+      test('returns empty map when subject_plans is empty', () {
+        final plan = PersonalLearningPlan(
+          studentId: studentId, generatedAt: now,
+          dailyPlans: [defaultDailyPlan], summary: defaultSummary,
+          recommendations: [],
+          metadata: {'subject_plans': <String, dynamic>{}},
         );
         expect(plan.subjectPlans, {});
       });
@@ -393,6 +442,50 @@ void main() {
         expect(copy.isRestDay, isTrue);
         expect(copy.date, now);
       });
+
+      test('updates isCompleted field', () {
+        final plan = DailyPlan(
+          date: now, dayNumber: 1, priorityTopics: [],
+          reviewQuestionIds: [], stretchGoalQuestionIds: [],
+          targetQuestions: 10, targetMinutes: 30,
+        );
+        expect(plan.isCompleted, isFalse);
+        final copy = plan.copyWith(isCompleted: true);
+        expect(copy.isCompleted, isTrue);
+        expect(copy.dayNumber, 1);
+      });
+    });
+
+    group('isCompleted', () {
+      test('defaults to false', () {
+        final plan = DailyPlan(
+          date: now, dayNumber: 1, priorityTopics: [],
+          reviewQuestionIds: [], stretchGoalQuestionIds: [],
+          targetQuestions: 10, targetMinutes: 30,
+        );
+        expect(plan.isCompleted, isFalse);
+      });
+
+      test('can be set to true', () {
+        final plan = DailyPlan(
+          date: now, dayNumber: 1, priorityTopics: [],
+          reviewQuestionIds: [], stretchGoalQuestionIds: [],
+          targetQuestions: 10, targetMinutes: 30,
+          isCompleted: true,
+        );
+        expect(plan.isCompleted, isTrue);
+      });
+
+      test('is not serialized to JSON', () {
+        final plan = DailyPlan(
+          date: now, dayNumber: 1, priorityTopics: [],
+          reviewQuestionIds: [], stretchGoalQuestionIds: [],
+          targetQuestions: 10, targetMinutes: 30,
+          isCompleted: true,
+        );
+        final json = plan.toJson();
+        expect(json.containsKey('isCompleted'), isFalse);
+      });
     });
   });
 
@@ -489,6 +582,19 @@ void main() {
         expect(restored.topicId, original.topicId);
         expect(restored.priority, original.priority);
         expect(restored.subjectId, original.subjectId);
+      });
+
+      test('round-trip with empty reasons list', () {
+        final original = PlannedTopic(
+          topicId: 't1', topicTitle: 'Kinematics',
+          priority: 0.5, reason: 'Maintenance',
+          readinessScore: 0.6, reviewUrgency: 0.4,
+          estimatedQuestions: 5, estimatedMinutes: 15,
+          reasons: [],
+        );
+        final restored = PlannedTopic.fromJson(original.toJson());
+        expect(restored.reasons, []);
+        expect(restored.subjectId, '');
       });
     });
   });

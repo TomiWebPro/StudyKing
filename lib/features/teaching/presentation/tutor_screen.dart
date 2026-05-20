@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
@@ -26,6 +27,7 @@ import 'widgets/voice_bar.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/presentation/widgets/lesson_block_card.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
@@ -177,8 +179,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
     final l10n = AppLocalizations.of(context)!;
     try {
-      await for (final chunk in _manager!.sendMessage(
-          l10n.readyToLearnAbout(widget.topicTitle))) {
+      final greeting = widget.scheduledSessionId != null
+          ? l10n.scheduledLessonGreeting(widget.topicTitle)
+          : l10n.readyToLearnAbout(widget.topicTitle);
+      await for (final chunk in _manager!.sendMessage(greeting)) {
         buffer.write(chunk);
         setState(() {});
         _scrollToBottom();
@@ -278,6 +282,64 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final base64Image = base64Encode(bytes);
 
     await for (final _ in _manager!.processImage(base64Image)) {
+      setState(() {});
+      _scrollToBottom();
+    }
+
+    if (mounted) setState(() => _isSending = false);
+    _scrollToBottom();
+  }
+
+  Future<void> _openDrawingCanvas() async {
+    if (_manager == null || _isSending) return;
+
+    final l10n = AppLocalizations.of(context)!;
+    final drawingData = await showDialog<Uint8List>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => Dialog(
+        insetPadding: const EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(l10n.drawingCanvas, style: Theme.of(ctx).textTheme.titleMedium),
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Flexible(
+                child: SingleChildScrollView(
+                  child: CanvasDrawingWidget(
+                    onDrawingComplete: (data) => Navigator.pop(ctx, data),
+                    largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
+                    showTools: true,
+                    showColorPicker: true,
+                    showStrokeWidth: true,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (drawingData == null || !mounted) return;
+
+    setState(() => _isSending = true);
+
+    final base64Drawing = base64Encode(drawingData);
+
+    await for (final _ in _manager!.processImage(base64Drawing)) {
       setState(() {});
       _scrollToBottom();
     }
@@ -495,7 +557,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         actions: [
           TextButton(
             onPressed: () {
-              Navigator.of(context)..pop()..pop();
+              final navigator = Navigator.of(context);
+              Navigator.of(ctx).pop();
+              Future.microtask(() => navigator.pop());
             },
             child: Text(l10n.done),
           ),
@@ -701,6 +765,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                       icon: const Icon(Icons.image_outlined),
                       onPressed: _isInitialized && !_isSending ? _pickImage : null,
                       tooltip: l10n.captureImage,
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.draw_outlined),
+                      onPressed: _isInitialized && !_isSending ? _openDrawingCanvas : null,
+                      tooltip: l10n.openDrawingCanvas,
                     ),
                   ],
                 ),

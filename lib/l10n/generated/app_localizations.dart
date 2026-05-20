@@ -2258,6 +2258,18 @@ abstract class AppLocalizations {
   /// **'Undo last stroke'**
   String get undoLastStroke;
 
+  /// Semantic label for redo button
+  ///
+  /// In en, this message translates to:
+  /// **'Redo last stroke'**
+  String get redoLastStroke;
+
+  /// Tooltip for opening the drawing canvas in tutor chat
+  ///
+  /// In en, this message translates to:
+  /// **'Open drawing canvas'**
+  String get openDrawingCanvas;
+
   /// Semantic label for clear button
   ///
   /// In en, this message translates to:
@@ -3931,6 +3943,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'I\'m ready to learn about {topic}. Please teach me!'**
   String readyToLearnAbout(String topic);
+
+  /// Initial greeting prompt from student to AI tutor for a scheduled lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome to my scheduled lesson on {topic}. I\'m ready to learn!'**
+  String scheduledLessonGreeting(String topic);
+
+  /// System prompt context added when lesson is part of a pre-scheduled session
+  ///
+  /// In en, this message translates to:
+  /// **'Note: This student has pre-scheduled this lesson session...'**
+  String get scheduledLessonSystemContext;
 
   /// Label showing correct count in summary
   ///
@@ -6720,7 +6744,7 @@ abstract class AppLocalizations {
   /// **'Your progress in this session will be saved, but you will leave before completing all questions.'**
   String get confirmExitPracticeBody;
 
-  /// Button to stay in current session
+  /// Button label to stay on current screen
   ///
   /// In en, this message translates to:
   /// **'Stay'**
@@ -7612,6 +7636,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Processing'**
   String get processing;
+
+  /// Status label for generating summary
+  ///
+  /// In en, this message translates to:
+  /// **'Summarizing'**
+  String get summarizing;
 
   /// Status label for generating questions
   ///
@@ -8973,6 +9003,12 @@ abstract class AppLocalizations {
   /// **'Plot Point'**
   String get toolPlotPoint;
 
+  /// Tool name for eraser drawing tool
+  ///
+  /// In en, this message translates to:
+  /// **'Eraser'**
+  String get toolEraser;
+
   /// Fallback message when evaluation JSON cannot be parsed
   ///
   /// In en, this message translates to:
@@ -9026,6 +9062,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Show onboarding tour'**
   String get showOnboardingTour;
+
+  /// Button label to save content without AI processing
+  ///
+  /// In en, this message translates to:
+  /// **'Save Only'**
+  String get saveOnly;
+
+  /// Button label to proceed despite a warning
+  ///
+  /// In en, this message translates to:
+  /// **'Proceed Anyway'**
+  String get proceedAnyway;
+
+  /// Dialog title when model may not support image/audio content
+  ///
+  /// In en, this message translates to:
+  /// **'Model Capability Notice'**
+  String get modelCapabilityWarningTitle;
+
+  /// Dialog body warning about model capability for image/audio
+  ///
+  /// In en, this message translates to:
+  /// **'Your selected model may not support image or audio analysis. Proceed anyway?'**
+  String get modelCapabilityWarningBody;
+
+  /// Elapsed time during processing
+  ///
+  /// In en, this message translates to:
+  /// **'Processing... {seconds}s elapsed'**
+  String processingElapsed(int seconds);
+
+  /// Progress stage counter label
+  ///
+  /// In en, this message translates to:
+  /// **'Stage {current} of {total}'**
+  String progressStageLabel(int current, int total);
+
+  /// Button label to practice all questions from a source
+  ///
+  /// In en, this message translates to:
+  /// **'Practice All Questions'**
+  String get practiceAllQuestions;
+
+  /// Disabled button hint when no questions are available
+  ///
+  /// In en, this message translates to:
+  /// **'No questions to practice'**
+  String get noQuestionsToPractice;
+
+  /// Warning when generated questions have no topic assigned
+  ///
+  /// In en, this message translates to:
+  /// **'These questions aren\'t linked to any topic. Use the topic classifier or edit the source\'s topic to enable topic-specific practice.'**
+  String get questionsWithoutTopicWarning;
+
+  /// Checkbox label to keep old questions during reprocess
+  ///
+  /// In en, this message translates to:
+  /// **'Keep old questions'**
+  String get keepOldQuestionsLabel;
+
+  /// Hint text for keep old questions checkbox
+  ///
+  /// In en, this message translates to:
+  /// **'Old questions will be preserved alongside new ones'**
+  String get keepOldQuestionsHint;
+
+  /// Guidance message shown after successful upload
+  ///
+  /// In en, this message translates to:
+  /// **'You can now practice the generated questions in the Practice tab!'**
+  String get postUploadGuidance;
+
+  /// Dialog title when user tries to navigate away during upload
+  ///
+  /// In en, this message translates to:
+  /// **'Upload in Progress'**
+  String get uploadInProgressTitle;
+
+  /// Dialog body when user tries to navigate away during upload
+  ///
+  /// In en, this message translates to:
+  /// **'An upload is in progress. Cancel and go back?'**
+  String get uploadInProgressBody;
+
+  /// Label indicating items are selected
+  ///
+  /// In en, this message translates to:
+  /// **'selected'**
+  String get selected;
 }
 
 class _AppLocalizationsDelegate

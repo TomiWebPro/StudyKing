@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/services/llm/llm_model_service.dart';
 
 class _FakeHttpClient extends http.BaseClient {
@@ -45,6 +46,59 @@ void main() {
         );
         expect(model.contextLength, '8192');
         expect(model.pricing, '0.01');
+      });
+    });
+
+    group('fromOllama', () {
+      test('parses model name correctly', () {
+        final data = {'name': 'llama3.2:latest'};
+        final model = AiModel.fromOllama(data);
+        expect(model.id, 'llama3.2:latest');
+        expect(model.name, 'llama3.2 latest');
+        expect(model.provider, 'Ollama');
+        expect(model.contextLength, isNull);
+        expect(model.pricing, isNull);
+      });
+
+      test('handles missing name field', () {
+        final data = <String, dynamic>{};
+        final model = AiModel.fromOllama(data);
+        expect(model.id, 'unknown');
+        expect(model.name, 'unknown');
+        expect(model.provider, 'Ollama');
+      });
+
+      test('strips colons and hyphens from name', () {
+        final data = {'name': 'mistral-7b:instruct-q4'};
+        final model = AiModel.fromOllama(data);
+        expect(model.name, 'mistral 7b instruct q4');
+        expect(model.provider, 'Ollama');
+      });
+    });
+
+    group('fromOpenAI', () {
+      test('parses model with id', () {
+        final data = {'id': 'gpt-4o'};
+        final model = AiModel.fromOpenAI(data);
+        expect(model.id, 'gpt-4o');
+        expect(model.name, 'gpt 4o');
+        expect(model.provider, 'OpenAI');
+        expect(model.contextLength, isNull);
+        expect(model.pricing, isNull);
+      });
+
+      test('handles underscores in id', () {
+        final data = {'id': 'text_embedding_3_large'};
+        final model = AiModel.fromOpenAI(data);
+        expect(model.name, 'text embedding 3 large');
+      });
+
+      test('handles missing id field', () {
+        final data = <String, dynamic>{};
+        final model = AiModel.fromOpenAI(data);
+        expect(model.id, 'unknown');
+        expect(model.name, 'unknown');
+        expect(model.provider, 'OpenAI');
       });
     });
 
@@ -149,7 +203,7 @@ void main() {
 
       test('handles id with special characters', () {
         final model = AiModel.fromId('provider:model-v2.0');
-        expect(model.name, equals('provider model v2 0'));
+        expect(model.name, equals('providermodel v2.0'));
       });
     });
 
@@ -260,6 +314,177 @@ void main() {
         final service = ModelListingService(apiKey: 'key');
         final result = service.getModelById('model1', models);
         expect(result, isNotNull);
+      });
+    });
+
+    group('fetchAvailableModels with Ollama provider', () {
+      test('returns Ollama models on success', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.path, '/api/tags');
+          expect(request.headers.containsKey('Authorization'), isFalse);
+          return http.Response(
+            jsonEncode({
+              'models': [
+                {'name': 'llama3.2'},
+                {'name': 'mistral:7b'},
+              ],
+            }),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.ollama,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models.length, 2);
+        expect(models[0].id, 'llama3.2');
+        expect(models[0].provider, 'Ollama');
+        expect(models[1].id, 'mistral:7b');
+        expect(models[1].provider, 'Ollama');
+      });
+
+      test('returns empty list on Ollama API error', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Error', 500);
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.ollama,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models, isEmpty);
+      });
+    });
+
+    group('fetchAvailableModels with OpenAI provider', () {
+      test('returns OpenAI models on success', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.path, '/v1/models');
+          expect(request.headers['Authorization'], 'Bearer test_key');
+          return http.Response(
+            jsonEncode({
+              'data': [
+                {'id': 'gpt-4o'},
+                {'id': 'gpt-4o-mini'},
+              ],
+            }),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'test_key',
+          httpClient: client,
+          provider: LlmProvider.openAI,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models.length, 2);
+        expect(models[0].id, 'gpt-4o');
+        expect(models[0].provider, 'OpenAI');
+        expect(models[1].id, 'gpt-4o-mini');
+        expect(models[1].provider, 'OpenAI');
+      });
+
+      test('returns empty list on OpenAI API error', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response('Unauthorized', 401);
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.openAI,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models, isEmpty);
+      });
+    });
+
+    group('fetchAvailableModels with explicit provider parameter', () {
+      test('uses provider parameter over constructor provider', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.path, '/api/tags');
+          return http.Response(
+            jsonEncode({'models': [{'name': 'model'}]}),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.ollama,
+        );
+        final models = await service.fetchAvailableModels(provider: LlmProvider.ollama);
+        expect(models.length, 1);
+      });
+    });
+
+    group('_effectiveBaseUrl behavior', () {
+      test('uses custom baseUrl for Ollama when provided', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.host, 'custom.openrouter.local');
+          expect(request.url.path, '/api/tags');
+          return http.Response(
+            jsonEncode({'models': [{'name': 'm'}]}),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          baseUrl: 'https://custom.openrouter.local',
+          httpClient: client,
+          provider: LlmProvider.ollama,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models.length, 1);
+      });
+
+      test('uses Ollama default baseUrl with Ollama provider', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.host, 'localhost');
+          expect(request.url.port, 11434);
+          return http.Response(
+            jsonEncode({'models': [{'name': 'm'}]}),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.ollama,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models.length, 1);
+      });
+
+      test('uses OpenAI default baseUrl with OpenAI provider', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          expect(request.url.host, 'api.openai.com');
+          return http.Response(
+            jsonEncode({'data': [{'id': 'gpt-4'}]}),
+            200,
+          );
+        };
+
+        final service = ModelListingService(
+          apiKey: 'key',
+          httpClient: client,
+          provider: LlmProvider.openAI,
+        );
+        final models = await service.fetchAvailableModels();
+        expect(models.length, 1);
       });
     });
   });

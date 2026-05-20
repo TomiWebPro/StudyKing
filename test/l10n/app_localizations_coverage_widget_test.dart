@@ -264,7 +264,7 @@ void main() {
       );
 
       expect(find.text('StudyKing'), findsOneWidget);
-      expect(find.text('v0.1.0'), findsOneWidget);
+      expect(find.text('v1.0.0'), findsOneWidget);
       expect(find.text('\u00a9 2026 StudyKing.'), findsOneWidget);
       expect(find.text('unknown-model'), findsOneWidget);
       expect(find.text('Unknown'), findsOneWidget);

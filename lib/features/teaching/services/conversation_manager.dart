@@ -37,6 +37,7 @@ class ConversationManager {
   final String topicTitle;
   final String subjectId;
   final String topicId;
+  final String? scheduledSessionId;
   final DateTime sessionStartTime;
 
   ConversationPhase phase = ConversationPhase.greeting;
@@ -60,6 +61,7 @@ class ConversationManager {
     required this.topicTitle,
     required this.subjectId,
     required this.topicId,
+    this.scheduledSessionId,
     required ExerciseEvaluator exerciseEvaluator,
     ConversationRepository? persistenceRepo,
     ConversationPromptSet? prompts,
@@ -193,6 +195,7 @@ class ConversationManager {
       topicTitle: topicTitle,
       adaptivePace: adaptivePace,
       phase: phase,
+      scheduledSessionId: scheduledSessionId,
     );
 
     try {

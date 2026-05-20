@@ -141,6 +141,7 @@ class TutorService {
       topicTitle: topicTitle,
       subjectId: subjectId,
       topicId: topicId,
+      scheduledSessionId: scheduledSessionId,
       exerciseEvaluator: _exerciseEvaluator,
       persistenceRepo: _conversationRepository,
       clock: _clock,

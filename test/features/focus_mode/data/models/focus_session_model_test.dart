@@ -39,5 +39,65 @@ void main() {
       expect(copy.questionsAnswered, 5);
       expect(copy.id, id);
     });
+
+    group('edge cases', () {
+      test('handles null endTime', () {
+        final session = FocusSession(id: id, studentId: studentId, startTime: now);
+        expect(session.endTime, isNull);
+      });
+
+      test('handles null optional fields in JSON', () {
+        final json = {
+          'id': id,
+          'studentId': studentId,
+          'startTime': now.toIso8601String(),
+          'endTime': null,
+        };
+        final restored = FocusSession.fromJson(json);
+        expect(restored.endTime, isNull);
+        expect(restored.durationMinutes, 25);
+        expect(restored.questionsAnswered, 0);
+      });
+
+      test('handles extreme value for durationMinutes', () {
+        final session = FocusSession(
+          id: id, studentId: studentId, startTime: now,
+          durationMinutes: 999999,
+        );
+        expect(session.durationMinutes, 999999);
+      });
+
+      test('handles negative accuracy', () {
+        final session = FocusSession(
+          id: id, studentId: studentId, startTime: now,
+          accuracy: -1.0,
+        );
+        expect(session.accuracy, -1.0);
+      });
+
+      test('handles extreme accuracy values', () {
+        final session = FocusSession(
+          id: id, studentId: studentId, startTime: now,
+          accuracy: 1.7976931348623157e+308,
+        );
+        expect(session.accuracy, 1.7976931348623157e+308);
+      });
+
+      test('handles empty subjectIds', () {
+        final session = FocusSession(
+          id: id, studentId: studentId, startTime: now,
+          subjectIds: [],
+        );
+        expect(session.subjectIds, isEmpty);
+      });
+
+      test('handles empty masteryChanges', () {
+        final session = FocusSession(
+          id: id, studentId: studentId, startTime: now,
+          masteryChanges: {},
+        );
+        expect(session.masteryChanges, isEmpty);
+      });
+    });
   });
 }

@@ -54,7 +54,12 @@ class _TopicListScreenState extends ConsumerState<TopicListScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    if (_isLoading) return const LoadingIndicator();
+    if (_isLoading) {
+      return Scaffold(
+        appBar: AppBar(title: Text(l10n.topics)),
+        body: const LoadingIndicator(),
+      );
+    }
     if (_topics.isEmpty) {
       return EmptyStateWidget(
         icon: Icons.folder_off,

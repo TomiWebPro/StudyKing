@@ -148,5 +148,41 @@ void main() {
         expect(restored.status, 'pending');
       });
     });
+
+    group('edge cases', () {
+      test('handles null sessionId and topicTitle default', () {
+        final action = PendingActionModel(
+          id: 'ec-1', studentId: 's1', actionType: 'schedule',
+          sessionId: null, topicTitle: '',
+        );
+        expect(action.sessionId, isNull);
+        expect(action.topicTitle, '');
+      });
+
+      test('handles empty payload', () {
+        final action = PendingActionModel(
+          id: 'ec-2', studentId: 's1', actionType: 'reschedule',
+          payload: {},
+        );
+        expect(action.payload, {});
+      });
+
+      test('handles empty lists in payload', () {
+        final action = PendingActionModel(
+          id: 'ec-3', studentId: 's1', actionType: 'planAdjustment',
+          payload: {'items': <String>[]},
+        );
+        expect(action.payload['items'], isEmpty);
+      });
+
+      test('handles very long topicTitle', () {
+        final longTopic = 'a' * 5000;
+        final action = PendingActionModel(
+          id: 'ec-4', studentId: 's1', actionType: 'schedule',
+          topicTitle: longTopic,
+        );
+        expect(action.topicTitle.length, 5000);
+      });
+    });
   });
 }

@@ -30,6 +30,7 @@ enum ProcessingStatus {
   pending,
   extracting,
   classifying,
+  summarizing,
   generatingQuestions,
   validating,
   completed,

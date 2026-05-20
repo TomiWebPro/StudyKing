@@ -126,11 +126,11 @@ class ModelListingService {
     try {
       switch (activeProvider) {
         case LlmProvider.ollama:
-          return _fetchOllamaModels();
+          return await _fetchOllamaModels();
         case LlmProvider.openAI:
-          return _fetchOpenAIModels();
+          return await _fetchOpenAIModels();
         case LlmProvider.openRouter:
-          return _fetchOpenRouterModels();
+          return await _fetchOpenRouterModels();
       }
     } catch (e) {
       _logger.w('Error fetching models', e);

@@ -5,6 +5,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/graph_drawing_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/math_expression_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -181,11 +182,16 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         return MathExpressionWidget(expression: question.text, isSolution: false);
 
       case QuestionType.canvas:
-      case QuestionType.graphDrawing:
         return CanvasDrawingWidget(
           instruction: question.text,
           onDrawingComplete: (data) => onAnswerSelected(base64Encode(data)),
           initialDrawing: null,
+          largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
+        );
+      case QuestionType.graphDrawing:
+        return GraphDrawingWidget(
+          instruction: question.text,
+          onDrawingComplete: (data) => onAnswerSelected(base64Encode(data)),
           largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
         );
 

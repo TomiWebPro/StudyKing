@@ -58,6 +58,9 @@ dependencies:
   # Notifications
   flutter_local_notifications: ^17.2.1
 
+  # Cryptography
+  crypto: ^3.0.3
+
   # Voice
   speech_to_text: ^6.6.2
   flutter_tts: ^4.2.0

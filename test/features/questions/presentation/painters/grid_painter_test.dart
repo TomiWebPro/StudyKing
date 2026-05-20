@@ -122,6 +122,18 @@ void main() {
       final painter = GridPainter();
       expect(painter.shouldRepaint(painter), isFalse);
     });
+
+    test('shouldRepaint returns true for different showAxes', () {
+      final p1 = GridPainter(showAxes: false);
+      final p2 = GridPainter(showAxes: true);
+      expect(p1.shouldRepaint(p2), isTrue);
+    });
+
+    test('shouldRepaint returns true for different axisColor', () {
+      final p1 = GridPainter(showAxes: true, axisColor: Colors.black);
+      final p2 = GridPainter(showAxes: true, axisColor: Colors.red);
+      expect(p1.shouldRepaint(p2), isTrue);
+    });
   });
 
   group('GridPainter - pixel verification', () {
@@ -196,6 +208,38 @@ void main() {
       expect(((pixels[40 * 40 + 5] >> 24) & 0xFF), greaterThan(0));
       // Between lines at y=30, x=30: pixel (30, 30) should be transparent
       expect(((pixels[30 * 40 + 30] >> 24) & 0xFF), 0);
+    });
+
+    test('paint with showAxes draws axis lines without error', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(200, 200);
+      final painter = GridPainter(showAxes: true, gridColor: Colors.grey, axisColor: Colors.black);
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      final image = await picture.toImage(200, 200);
+      final byteData = await image.toByteData();
+      expect(byteData, isNotNull);
+      // Center should have axis pixel
+      final pixels = byteData!.buffer.asUint32List();
+      final centerPixel = pixels[100 * 200 + 100];
+      expect((centerPixel >> 24) & 0xFF, greaterThan(0));
+    });
+
+    test('paint with showAxes and custom origin draws correctly', () async {
+      final pictureRecorder = ui.PictureRecorder();
+      final canvas = Canvas(pictureRecorder);
+      const size = Size(200, 200);
+      final painter = GridPainter(
+        showAxes: true,
+        originX: 50,
+        originY: 150,
+        gridColor: Colors.grey,
+        axisColor: Colors.black,
+      );
+      painter.paint(canvas, size);
+      final picture = pictureRecorder.endRecording();
+      expect(picture, isA<ui.Picture>());
     });
   });
 }

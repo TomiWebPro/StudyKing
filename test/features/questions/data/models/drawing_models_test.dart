@@ -53,6 +53,16 @@ void main() {
       expect(stroke.color, Colors.green);
       expect(stroke.strokeWidth, 2.0);
     });
+
+    test('creates with default tool', () {
+      final stroke = Stroke(points: []);
+      expect(stroke.tool, DrawingTool.freehand);
+    });
+
+    test('creates with custom tool', () {
+      final stroke = Stroke(points: [], tool: DrawingTool.line);
+      expect(stroke.tool, DrawingTool.line);
+    });
   });
 
   group('DrawingPoint', () {
@@ -91,6 +101,24 @@ void main() {
     test('creates with fractional pressure', () {
       final point = DrawingPoint(point: const Offset(0, 0), pressure: 0.75);
       expect(point.pressure, 0.75);
+    });
+  });
+
+  group('DrawingTool', () {
+    test('has all expected enum values', () {
+      expect(DrawingTool.values.length, 6);
+      expect(DrawingTool.values, containsAll([
+        DrawingTool.freehand,
+        DrawingTool.line,
+        DrawingTool.rectangle,
+        DrawingTool.circle,
+        DrawingTool.plotPoint,
+        DrawingTool.eraser,
+      ]));
+    });
+
+    test('freehand is default', () {
+      expect(DrawingTool.values.first, DrawingTool.freehand);
     });
   });
 }

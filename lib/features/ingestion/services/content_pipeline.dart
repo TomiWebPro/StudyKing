@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:crypto/crypto.dart' show sha256;
 
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
@@ -56,6 +57,12 @@ class ContentPipeline {
         _webScraper = webScraper ?? WebScraper(),
         _localeName = localeName;
 
+  bool _cancelled = false;
+
+  void cancel() {
+    _cancelled = true;
+  }
+
   Future<Result<Source>> processUpload({
     required String title,
     required String content,
@@ -68,6 +75,13 @@ class ContentPipeline {
     String language = '',
   }) async {
     try {
+      final contentHash = _computeContentHash(content);
+      final duplicate = await _findDuplicateByHash(contentHash);
+      if (duplicate != null) {
+        return Result.failure(
+          'DUPLICATE:${duplicate.id}:${duplicate.title}',
+        );
+      }
       final source = Source(
         id: IdGenerator.generate('src'),
         title: title,
@@ -81,6 +95,7 @@ class ContentPipeline {
         language: language,
         processingStatus: ProcessingStatus.pending.name,
         createdAt: DateTime.now(),
+        contentHash: contentHash,
       );
 
       await _sourceRepository.create(source);
@@ -90,6 +105,47 @@ class ContentPipeline {
       _logger.w('Failed to save source', e);
       return Result.failure(e.toString());
     }
+  }
+
+  String _computeContentHash(String content) {
+    final bytes = utf8.encode(content);
+    return sha256.convert(bytes).toString();
+  }
+
+  Future<Source?> _findDuplicateByHash(String hash) async {
+    try {
+      final allResult = await _sourceRepository.getAll();
+      final all = allResult.data ?? [];
+      for (final s in all) {
+        if (s.contentHash == hash) return s;
+      }
+    } catch (e) {
+      _logger.w('Failed to check duplicates', e);
+    }
+    return null;
+  }
+
+  static String userFriendlyError(dynamic error) {
+    final msg = error.toString();
+    if (msg.contains('TimeoutException') || msg.contains('timed out')) {
+      return 'The AI service timed out. Check your internet connection or try a different model.';
+    }
+    if (msg.contains('429') || msg.contains('rate limit') || msg.contains('Too many requests')) {
+      return "You've been rate-limited. Please wait a moment and try again.";
+    }
+    if (msg.contains('401') || msg.contains('API key') || msg.contains('auth')) {
+      return 'Your API key is invalid or expired. Update it in Settings.';
+    }
+    if (msg.contains('404') || msg.contains('not found') || msg.contains('Model not found')) {
+      return "The selected model wasn't found. Try a different model.";
+    }
+    if (msg.contains('FormatException') || msg.contains('JSON') || msg.contains('parse')) {
+      return 'The AI response was malformed. Try reprocessing.';
+    }
+    if (msg.contains('pdf') || msg.contains('Could not read')) {
+      return "Could not read this file. Make sure it's a valid PDF or document.";
+    }
+    return msg;
   }
 
   Future<Result<Source>> processFullPipeline({
@@ -109,10 +165,22 @@ class ContentPipeline {
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
+    String? existingSourceId,
+    List<String> oldQuestionIds = const [],
   }) async {
-    final sourceId = IdGenerator.generate('src');
+    _cancelled = false;
+    final sourceId = existingSourceId ?? IdGenerator.generate('src');
     Source source;
     try {
+      final contentHash = _computeContentHash(content);
+      if (existingSourceId == null) {
+        final duplicate = await _findDuplicateByHash(contentHash);
+        if (duplicate != null && duplicate.id != sourceId) {
+          return Result.failure(
+            'DUPLICATE:${duplicate.id}:${duplicate.title}',
+          );
+        }
+      }
       source = Source(
         id: sourceId,
         title: title,
@@ -126,8 +194,13 @@ class ContentPipeline {
         language: language,
         processingStatus: ProcessingStatus.pending.name,
         createdAt: DateTime.now(),
+        contentHash: contentHash,
       );
-      await _sourceRepository.create(source);
+      if (existingSourceId != null) {
+        await _sourceRepository.save(sourceId, source);
+      } else {
+        await _sourceRepository.create(source);
+      }
       _logger.d('Source created: ${source.id}');
     } catch (e) {
       _logger.w('Failed to create initial source', e);
@@ -137,6 +210,7 @@ class ContentPipeline {
     try {
       Source updated = source;
 
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       onProgress?.call(ProcessingStatus.extracting, 'Extracting text from content...');
       updated = _updateStatus(updated, ProcessingStatus.extracting);
       final extractionResult = await _documentExtractor.extractText(
@@ -157,6 +231,7 @@ class ContentPipeline {
           ? extractionResult.text
           : content;
 
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       if (possibleTopics.isNotEmpty) {
         onProgress?.call(ProcessingStatus.classifying, 'Classifying content topic...');
         updated = _updateStatus(updated, ProcessingStatus.classifying);
@@ -186,8 +261,9 @@ class ContentPipeline {
         }
       }
 
-      onProgress?.call(ProcessingStatus.classifying, 'Generating summary...');
-      updated = _updateStatus(updated, ProcessingStatus.classifying);
+      if (_cancelled) return Result.failure('Pipeline cancelled');
+      onProgress?.call(ProcessingStatus.summarizing, 'Generating summary...');
+      updated = _updateStatus(updated, ProcessingStatus.summarizing);
       final summary = await _generateSummary(textToClassify, modelId);
       if (summary.isNotEmpty) {
         updated = updated.copyWith(summary: summary);
@@ -195,9 +271,17 @@ class ContentPipeline {
       }
       _logger.d('Stage 3 complete: summary generated');
 
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateQuestions) {
         onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating questions from content...');
         updated = _updateStatus(updated, ProcessingStatus.generatingQuestions);
+
+        if (oldQuestionIds.isNotEmpty) {
+          for (final oldId in oldQuestionIds) {
+            await _questionRepository.delete(oldId);
+          }
+        }
+
         final questionIds = await _generateQuestions(
           textToClassify,
           subjectId,
@@ -218,6 +302,7 @@ class ContentPipeline {
           'Stage 4 complete: ${questionIds.length} questions generated',
         );
 
+        if (_cancelled) return Result.failure('Pipeline cancelled');
         onProgress?.call(ProcessingStatus.validating, 'Validating generated questions...');
         updated = _updateStatus(updated, ProcessingStatus.validating);
         final validationResults = _validateGeneratedQuestions(
@@ -228,8 +313,13 @@ class ContentPipeline {
           _logger.w('Question validation warnings: $validationResults');
         }
         updated = _updateStatus(updated, ProcessingStatus.completed);
+
+        if (updated.topicId.isEmpty && questionIds.isNotEmpty) {
+          _logger.w('Questions generated with empty topicId for source ${updated.id}');
+        }
       }
 
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateLessons && _lessonAgentService != null && updated.topicId.isNotEmpty) {
         onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating lesson from content...');
         final textForLesson = updated.extractedText.isNotEmpty ? updated.extractedText : content;
@@ -243,6 +333,7 @@ class ContentPipeline {
         _logger.d('Stage 5 complete: lesson generated from source');
       }
 
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
       updated = _updateStatus(updated, ProcessingStatus.completed);
       await _sourceRepository.save(updated.id, updated);
@@ -250,16 +341,18 @@ class ContentPipeline {
 
       return Result.success(updated);
     } catch (e) {
+      final userMsg = userFriendlyError(e);
       _logger.w('Pipeline failed', e);
       try {
         final failed = source.copyWith(
           processingStatus: ProcessingStatus.failed.name,
+          errorMessage: userMsg,
         );
         await _sourceRepository.save(failed.id, failed);
-        return Result.failure(e.toString());
+        return Result.failure(userMsg);
       } catch (e2) {
         _logger.w('Failed to save failed source', e2);
-        return Result.failure(e.toString());
+        return Result.failure(userMsg);
       }
     }
   }
@@ -273,11 +366,13 @@ class ContentPipeline {
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
+    List<String>? oldQuestionIds,
   }) async {
     final textToProcess = source.extractedText.isNotEmpty ? source.extractedText : source.content;
     if (textToProcess.isEmpty) {
       return Result.failure('Source has no content to reprocess');
     }
+    final oldIds = oldQuestionIds ?? List<String>.from(source.generatedQuestionIds);
     return processFullPipeline(
       title: source.title,
       content: textToProcess,
@@ -293,6 +388,8 @@ class ContentPipeline {
       validator: validator,
       allowedQuestionTypes: allowedQuestionTypes,
       onProgress: onProgress,
+      existingSourceId: source.id,
+      oldQuestionIds: oldIds,
     );
   }
 

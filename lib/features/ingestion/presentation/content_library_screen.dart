@@ -44,8 +44,8 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   String? _error;
 
   String _subjectFilter = '';
-  String _typeFilter = '';
-  String _statusFilter = '';
+  Set<String> _typeFilters = {};
+  Set<String> _statusFilters = {};
   SortField _sortField = SortField.uploadDate;
   bool _sortAscending = false;
 
@@ -125,6 +125,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       case ProcessingStatus.pending:
       case ProcessingStatus.extracting:
       case ProcessingStatus.classifying:
+      case ProcessingStatus.summarizing:
       case ProcessingStatus.generatingQuestions:
       case ProcessingStatus.validating:
         return cs.tertiary;
@@ -137,8 +138,8 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         if (s.subjectId != widget.preselectedSubjectId) return false;
       }
       if (_subjectFilter.isNotEmpty && s.subjectId != _subjectFilter) return false;
-      if (_typeFilter.isNotEmpty && s.type.index.toString() != _typeFilter) return false;
-      if (_statusFilter.isNotEmpty && s.statusEnum.index.toString() != _statusFilter) return false;
+      if (_typeFilters.isNotEmpty && !_typeFilters.contains(s.type.name)) return false;
+      if (_statusFilters.isNotEmpty && !_statusFilters.contains(s.statusEnum.name)) return false;
       return true;
     }).toList();
 
@@ -337,21 +338,21 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _typeFilter.isEmpty
+              label: _typeFilters.isEmpty
                   ? l10n.allTypes
-                  : sourceTypeLabel(SourceType.values[int.parse(_typeFilter)], l10n),
-              selected: _typeFilter.isNotEmpty,
+                  : '${_typeFilters.length} ${l10n.selected}',
+              selected: _typeFilters.isNotEmpty,
               onSelected: () => _showTypeFilter(l10n),
-              onClear: _typeFilter.isNotEmpty ? () => setState(() => _typeFilter = '') : null,
+              onClear: _typeFilters.isNotEmpty ? () => setState(() => _typeFilters = {}) : null,
             ),
             const SizedBox(width: 8),
             _filterChip(
-              label: _statusFilter.isEmpty
+              label: _statusFilters.isEmpty
                   ? l10n.allStatuses
-                  : processingStatusLabel(ProcessingStatus.values[int.parse(_statusFilter)], l10n),
-              selected: _statusFilter.isNotEmpty,
+                  : '${_statusFilters.length} ${l10n.selected}',
+              selected: _statusFilters.isNotEmpty,
               onSelected: () => _showStatusFilter(l10n),
-              onClear: _statusFilter.isNotEmpty ? () => setState(() => _statusFilter = '') : null,
+              onClear: _statusFilters.isNotEmpty ? () => setState(() => _statusFilters = {}) : null,
             ),
           ],
         ),
@@ -365,6 +366,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     required VoidCallback onSelected,
     VoidCallback? onClear,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     return Semantics(
       button: true,
       selected: selected,
@@ -373,7 +375,12 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
         label: Text(label),
         selected: selected,
         onPressed: onSelected,
-        deleteIcon: onClear != null ? const Icon(Icons.close, size: 16) : null,
+        deleteIcon: onClear != null
+            ? Semantics(
+                label: '${l10n.delete} $label',
+                child: const Icon(Icons.close, size: 16),
+              )
+            : null,
         onDeleted: onClear,
       ),
     );
@@ -409,26 +416,34 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   void _showTypeFilter(AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text(l10n.allTypes),
-            trailing: _typeFilter.isEmpty ? const Icon(Icons.check) : null,
-            onTap: () {
-              Navigator.pop(ctx);
-              setState(() => _typeFilter = '');
-            },
-          ),
-          ...SourceType.values.map((t) => ListTile(
-                title: Text(sourceTypeLabel(t, l10n)),
-                trailing: _typeFilter == t.index.toString() ? const Icon(Icons.check) : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _typeFilter = t.index.toString());
-                },
-              )),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.allTypes),
+              trailing: _typeFilters.isEmpty ? const Icon(Icons.check) : null,
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() => _typeFilters = {});
+              },
+            ),
+            ...SourceType.values.map((t) => CheckboxListTile(
+                  title: Text(sourceTypeLabel(t, l10n)),
+                  value: _typeFilters.contains(t.name),
+                  onChanged: (val) {
+                    setInnerState(() {
+                      if (val == true) {
+                        setState(() => _typeFilters = {..._typeFilters, t.name});
+                      } else {
+                        setState(() => _typeFilters = {..._typeFilters}..remove(t.name));
+                      }
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.platform,
+                )),
+          ],
+        ),
       ),
     );
   }
@@ -436,26 +451,34 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   void _showStatusFilter(AppLocalizations l10n) {
     showModalBottomSheet(
       context: context,
-      builder: (ctx) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            title: Text(l10n.allStatuses),
-            trailing: _statusFilter.isEmpty ? const Icon(Icons.check) : null,
-            onTap: () {
-              Navigator.pop(ctx);
-              setState(() => _statusFilter = '');
-            },
-          ),
-          ...ProcessingStatus.values.map((s) => ListTile(
-                title: Text(processingStatusLabel(s, l10n)),
-                trailing: _statusFilter == s.index.toString() ? const Icon(Icons.check) : null,
-                onTap: () {
-                  Navigator.pop(ctx);
-                  setState(() => _statusFilter = s.index.toString());
-                },
-              )),
-        ],
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInnerState) => Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text(l10n.allStatuses),
+              trailing: _statusFilters.isEmpty ? const Icon(Icons.check) : null,
+              onTap: () {
+                Navigator.pop(ctx);
+                setState(() => _statusFilters = {});
+              },
+            ),
+            ...ProcessingStatus.values.where((s) => s != ProcessingStatus.extracting && s != ProcessingStatus.validating).map((s) => CheckboxListTile(
+                  title: Text(processingStatusLabel(s, l10n)),
+                  value: _statusFilters.contains(s.name),
+                  onChanged: (val) {
+                    setInnerState(() {
+                      if (val == true) {
+                        setState(() => _statusFilters = {..._statusFilters, s.name});
+                      } else {
+                        setState(() => _statusFilters = {..._statusFilters}..remove(s.name));
+                      }
+                    });
+                  },
+                  controlAffinity: ListTileControlAffinity.platform,
+                )),
+          ],
+        ),
       ),
     );
   }

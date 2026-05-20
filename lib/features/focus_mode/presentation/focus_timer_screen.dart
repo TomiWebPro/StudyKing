@@ -207,7 +207,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       final badgeService = ref.read(badgeServiceProvider);
       await badgeService.checkAndUnlockBadges(studentId);
     } catch (e) {
-      // silent - badge check is non-critical
+      _logger.w('Badge check failed', e);
     }
   }
 
@@ -847,7 +847,10 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Widget _buildStatItem(ThemeData theme, IconData icon, String value, String label) {
     return MergeSemantics(
       child: Column(children: [
-        Icon(icon, color: theme.colorScheme.primary),
+        Semantics(
+          label: label,
+          child: Icon(icon, color: theme.colorScheme.primary),
+        ),
         const SizedBox(height: 4),
         Text(value, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
         Text(label, style: theme.textTheme.bodySmall?.copyWith(

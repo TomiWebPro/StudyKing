@@ -54,13 +54,23 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   String? _selectedFileName;
   ProcessingStatus? _processingStage;
   String _processingStageDescription = '';
+  String? _lastSourceId;
+  int _processingStageIndex = 0;
+  int _processingTotalStages = 6;
+  final Stopwatch _processingStopwatch = Stopwatch();
 
   @override
   void initState() {
     super.initState();
     _selectedSubjectId = widget.preselectedSubjectId;
     _loadSubjects();
-}
+  }
+
+  @override
+  void dispose() {
+    _processingStopwatch.stop();
+    super.dispose();
+  }
 
   Future<void> _loadSubjects() async {
     try {
@@ -199,9 +209,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       _isUploading = true;
       _processingStage = null;
       _processingStageDescription = '';
+      _processingStageIndex = 0;
+      _processingTotalStages = 6;
       _error = null;
       _success = null;
+      _lastSourceId = null;
     });
+    _processingStopwatch
+      ..reset()
+      ..start();
 
     try {
       final l10n = AppLocalizations.of(context)!;
@@ -224,6 +240,38 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           return;
         }
 
+        final isImageOrAudio = sourceType == SourceType.image ||
+            sourceType == SourceType.audio ||
+            sourceType == SourceType.video;
+        if (isImageOrAudio && resolvedModelId.isNotEmpty && mounted) {
+          final proceed = await showDialog<bool>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: Text(l10n.modelCapabilityWarningTitle),
+              content: Text(isImageOrAudio
+                  ? l10n.modelCapabilityWarningBody
+                  : l10n.modelCapabilityWarningBody),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx, false),
+                  child: Text(l10n.cancel),
+                ),
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(ctx, true),
+                  child: Text(l10n.proceedAnyway),
+                ),
+              ],
+            ),
+          );
+          if (proceed != true) {
+            setState(() {
+              _error = null;
+              _isUploading = false;
+            });
+            return;
+          }
+        }
+
         List<String> possibleTopics = [];
         if (_selectedSubjectId != null && _selectedSubjectId!.isNotEmpty) {
           try {
@@ -243,6 +291,10 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             ? 'file://$_selectedFilePath'
             : content;
 
+        final stageOrder = [
+          'extracting', 'classifying', 'summarizing',
+          'generatingQuestions', 'validating', 'completed',
+        ];
         final result = await pipeline.processFullPipeline(
           title: title,
           content: actualContent,
@@ -259,6 +311,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               setState(() {
                 _processingStage = status;
                 _processingStageDescription = description;
+                _processingStageIndex = stageOrder.indexOf(status.name).clamp(0, stageOrder.length - 1);
+                _processingTotalStages = stageOrder.length;
               });
             }
           },
@@ -268,7 +322,11 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             _error = l10n.uploadFailed(result.error ?? '');
             _isUploading = false;
           });
+          _processingStopwatch.stop();
           return;
+        }
+        if (result.isSuccess && result.data != null) {
+          _lastSourceId = result.data!.id;
         }
       } else {
         final actualContent = _useFilePicker && _selectedFilePath != null
@@ -288,10 +346,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             _error = l10n.uploadFailed(result.error ?? '');
             _isUploading = false;
           });
+          _processingStopwatch.stop();
           return;
+        }
+        if (result.isSuccess && result.data != null) {
+          _lastSourceId = result.data!.id;
         }
       }
 
+      _processingStopwatch.stop();
       setState(() {
         _success = l10n.contentUploadedSuccessfully;
         _isUploading = false;
@@ -305,6 +368,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         _useFilePicker = false;
       });
       if (mounted) {
+        final sourceId = _lastSourceId;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(_success!),
@@ -313,11 +377,33 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               label: l10n.contentLibrary,
               onPressed: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
             ),
+            showCloseIcon: true,
           ),
         );
+        if (sourceId != null && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.postUploadGuidance),
+              duration: Timeouts.snackbarSuccess,
+              action: SnackBarAction(
+                label: l10n.startPractice,
+                onPressed: () => Navigator.pushNamed(
+                  context,
+                  AppRoutes.practiceSession,
+                  arguments: PracticeSessionArgs(
+                    subjectId: _selectedSubjectId ?? '',
+                    sourceId: sourceId,
+                  ),
+                ),
+              ),
+              showCloseIcon: true,
+            ),
+          );
+        }
         setState(() => _success = null);
       }
     } catch (e) {
+      _processingStopwatch.stop();
       setState(() {
         _error = AppLocalizations.of(context)!.uploadFailed('');
         _isUploading = false;
@@ -362,10 +448,48 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.uploadContent),
-      ),
+    return PopScope(
+      canPop: !_isUploading,
+      onPopInvokedWithResult: (didPop, _) {
+        if (didPop) return;
+        if (!_isUploading) {
+          if (mounted) Navigator.of(context).pop();
+          return;
+        }
+        final navigator = Navigator.of(context);
+        showDialog<bool>(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text(l10n.uploadInProgressTitle),
+            content: Text(l10n.uploadInProgressBody),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                child: Text(l10n.stay),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.pop(ctx, true),
+                child: Text(l10n.discard),
+              ),
+            ],
+          ),
+        ).then((confirmed) {
+          if (confirmed == true && mounted) {
+            final pipeline = _getPipeline();
+            pipeline.cancel();
+            setState(() {
+              _isUploading = false;
+              _processingStage = null;
+              _processingStageDescription = '';
+            });
+            navigator.pop();
+          }
+        });
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(l10n.uploadContent),
+        ),
       body: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         physics: const AlwaysScrollableScrollPhysics(),
@@ -608,20 +732,39 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
               FocusTraversalOrder(
                 order: const NumericFocusOrder(5),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _isUploading ? null : () => _submitContent(fullPipeline: true),
-                    icon: _isUploading
-                        ? ResponsiveUtils.loaderInTouchTarget()
-                        : const Icon(Icons.cloud_upload),
-                    label: Text(_isUploading
-                        ? l10n.uploading
-                        : l10n.uploadAndAnalyze),
-                    style: FilledButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _isUploading ? null : () => _submitContent(fullPipeline: true),
+                        icon: _isUploading
+                            ? ResponsiveUtils.loaderInTouchTarget()
+                            : const Icon(Icons.cloud_upload),
+                        label: Text(_isUploading
+                            ? l10n.uploading
+                            : l10n.uploadAndAnalyze),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                        ),
+                      ),
                     ),
-                  ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: OutlinedButton.icon(
+                        onPressed: _isUploading
+                            ? null
+                            : () => _submitContent(fullPipeline: false),
+                        icon: const Icon(Icons.save),
+                        label: Text(l10n.saveOnly),
+                        style: OutlinedButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               if (_isUploading && _processingStage != null)
@@ -634,7 +777,25 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          LinearProgressIndicator(),
+                          LinearProgressIndicator(
+                            value: _processingTotalStages > 0
+                                ? (_processingStageIndex + 1) / _processingTotalStages
+                                : null,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '${l10n.progressStageLabel(_processingStageIndex + 1, _processingTotalStages)} — $_processingStageDescription',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l10n.processingElapsed(_processingStopwatch.elapsed.inSeconds),
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
                           const SizedBox(height: 12),
                           Row(
                             children: [
@@ -646,6 +807,18 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                                   style: Theme.of(context).textTheme.bodyMedium,
                                 ),
                               ),
+                              TextButton.icon(
+                                icon: const Icon(Icons.close, size: 18),
+                                label: Text(l10n.cancel),
+                                  onPressed: () {
+                                    _getPipeline().cancel();
+                                    setState(() {
+                                      _isUploading = false;
+                                      _processingStage = null;
+                                      _processingStageDescription = '';
+                                    });
+                                  },
+                              ),
                             ],
                           ),
                         ],
@@ -653,7 +826,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                     ),
                   ),
                 ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

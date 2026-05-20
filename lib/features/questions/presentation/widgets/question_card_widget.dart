@@ -8,6 +8,7 @@ import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
 import 'canvas_drawing_widget.dart';
+import 'graph_drawing_widget.dart';
 
 class QuestionCardWidget extends StatefulWidget {
   final Question question;
@@ -207,8 +208,9 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
         return _buildEssayContent(context);
 
       case QuestionType.canvas:
-      case QuestionType.graphDrawing:
         return _buildCanvasContent(context);
+      case QuestionType.graphDrawing:
+        return _buildGraphContent(context);
 
       case QuestionType.stepByStep:
         return _buildTextAnswerContent(context);
@@ -329,6 +331,17 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
 
   Widget _buildCanvasContent(BuildContext context) {
     return CanvasDrawingWidget(
+      onDrawingComplete: (data) {
+        _updateAnswer(base64Encode(data));
+      },
+      largeTouchTargets: widget.largeTouchTargets,
+    );
+  }
+
+  Widget _buildGraphContent(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return GraphDrawingWidget(
+      instruction: l10n.drawYourGraphHere,
       onDrawingComplete: (data) {
         _updateAnswer(base64Encode(data));
       },

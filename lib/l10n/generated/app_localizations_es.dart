@@ -1267,6 +1267,12 @@ class AppLocalizationsEs extends AppLocalizations {
   String get undoLastStroke => 'Deshacer último trazo';
 
   @override
+  String get redoLastStroke => 'Rehacer último trazo';
+
+  @override
+  String get openDrawingCanvas => 'Abrir lienzo de dibujo';
+
+  @override
   String get clearAllDrawings => 'Borrar todos los dibujos';
 
   @override
@@ -2300,6 +2306,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String readyToLearnAbout(String topic) {
     return 'Estoy listo para aprender sobre $topic. ¡Enséñeme!';
   }
+
+  @override
+  String scheduledLessonGreeting(String topic) {
+    return 'Bienvenido a mi lección programada sobre $topic. ¡Estoy listo para aprender!';
+  }
+
+  @override
+  String get scheduledLessonSystemContext =>
+      'Nota: Este estudiante ha programado esta sesión de lección con antelación. La sesión tiene una duración fija establecida en su plan de estudio. Reconoce adecuadamente la naturaleza programada y respeta el límite de tiempo.';
 
   @override
   String correctCount(int count) {
@@ -4076,7 +4091,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'Su progreso en esta sesión se guardará, pero saldrá antes de completar todas las preguntas.';
 
   @override
-  String get stay => 'Quedarse';
+  String get stay => 'Permanecer';
 
   @override
   String get exit => 'Salir';
@@ -4626,6 +4641,9 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get processing => 'Procesando';
+
+  @override
+  String get summarizing => 'Resumiendo';
 
   @override
   String get generatingQuestions => 'Generando Preguntas';
@@ -5535,6 +5553,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get toolPlotPoint => 'Punto';
 
   @override
+  String get toolEraser => 'Borrador';
+
+  @override
   String get unableToDisplayEvaluation =>
       'No se puede mostrar el resultado de la evaluación';
 
@@ -5563,4 +5584,58 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get showOnboardingTour => 'Mostrar tour de introducción';
+
+  @override
+  String get saveOnly => 'Solo Guardar';
+
+  @override
+  String get proceedAnyway => 'Continuar de Todos Modos';
+
+  @override
+  String get modelCapabilityWarningTitle => 'Aviso de Capacidad del Modelo';
+
+  @override
+  String get modelCapabilityWarningBody =>
+      'Es posible que su modelo seleccionado no admita el análisis de imágenes o audio. ¿Continuar de todos modos?';
+
+  @override
+  String processingElapsed(int seconds) {
+    return 'Procesando... ${seconds}s transcurridos';
+  }
+
+  @override
+  String progressStageLabel(int current, int total) {
+    return 'Etapa $current de $total';
+  }
+
+  @override
+  String get practiceAllQuestions => 'Practicar Todas las Preguntas';
+
+  @override
+  String get noQuestionsToPractice => 'Sin preguntas para practicar';
+
+  @override
+  String get questionsWithoutTopicWarning =>
+      'Estas preguntas no están vinculadas a ningún tema. Use el clasificador de temas o edite el tema de la fuente para habilitar la práctica específica de temas.';
+
+  @override
+  String get keepOldQuestionsLabel => 'Conservar preguntas antiguas';
+
+  @override
+  String get keepOldQuestionsHint =>
+      'Las preguntas antiguas se conservarán junto con las nuevas';
+
+  @override
+  String get postUploadGuidance =>
+      '¡Ahora puede practicar las preguntas generadas en la pestaña de Práctica!';
+
+  @override
+  String get uploadInProgressTitle => 'Subida en Progreso';
+
+  @override
+  String get uploadInProgressBody =>
+      'Hay una subida en progreso. ¿Cancelar y volver atrás?';
+
+  @override
+  String get selected => 'seleccionado(s)';
 }

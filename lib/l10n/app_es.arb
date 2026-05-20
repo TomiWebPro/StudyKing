@@ -1625,6 +1625,14 @@
   "@undoLastStroke": {
     "description": "Semantic label for undo button"
   },
+  "redoLastStroke": "Rehacer último trazo",
+  "@redoLastStroke": {
+    "description": "Semantic label for redo button"
+  },
+  "openDrawingCanvas": "Abrir lienzo de dibujo",
+  "@openDrawingCanvas": {
+    "description": "Tooltip for opening the drawing canvas in tutor chat"
+  },
   "clearAllDrawings": "Borrar todos los dibujos",
   "@clearAllDrawings": {
     "description": "Semantic label for clear button"
@@ -2989,6 +2997,19 @@
         "type": "String"
       }
     }
+  },
+  "scheduledLessonGreeting": "Bienvenido a mi lección programada sobre {topic}. ¡Estoy listo para aprender!",
+  "@scheduledLessonGreeting": {
+    "description": "Initial greeting prompt from student to AI tutor for a scheduled lesson",
+    "placeholders": {
+      "topic": {
+        "type": "String"
+      }
+    }
+  },
+  "scheduledLessonSystemContext": "Nota: Este estudiante ha programado esta sesión de lección con antelación. La sesión tiene una duración fija establecida en su plan de estudio. Reconoce adecuadamente la naturaleza programada y respeta el límite de tiempo.",
+  "@scheduledLessonSystemContext": {
+    "description": "System prompt context added when lesson is part of a pre-scheduled session"
   },
   "correctCount": "{count, plural, =1{1 correcta} other{{count} correctas}}",
   "@correctCount": {
@@ -6061,6 +6082,10 @@
   "@processing": {
     "description": "Status label for processing data"
   },
+  "summarizing": "Resumiendo",
+  "@summarizing": {
+    "description": "Status label for generating summary"
+  },
   "generatingQuestions": "Generando Preguntas",
   "@generatingQuestions": {
     "description": "Status label for generating questions"
@@ -7269,6 +7294,10 @@
     "@toolPlotPoint": {
       "description": "Tool name for plot point drawing tool"
     },
+    "toolEraser": "Borrador",
+    "@toolEraser": {
+      "description": "Tool name for eraser drawing tool"
+    },
     "failedToLoadPlan": "Error al cargar el plan de estudio",
     "@failedToLoadPlan": {
       "description": "User-facing error message when plan fails to load"
@@ -7324,5 +7353,82 @@
     "showOnboardingTour": "Mostrar tour de introducción",
     "@showOnboardingTour": {
       "description": "Opción de configuración para volver a mostrar el tour de introducción"
+    },
+    "saveOnly": "Solo Guardar",
+    "@saveOnly": {
+      "description": "Button label to save content without AI processing"
+    },
+    "proceedAnyway": "Continuar de Todos Modos",
+    "@proceedAnyway": {
+      "description": "Button label to proceed despite a warning"
+    },
+    "modelCapabilityWarningTitle": "Aviso de Capacidad del Modelo",
+    "@modelCapabilityWarningTitle": {
+      "description": "Dialog title when model may not support image/audio content"
+    },
+    "modelCapabilityWarningBody": "Es posible que su modelo seleccionado no admita el análisis de imágenes o audio. ¿Continuar de todos modos?",
+    "@modelCapabilityWarningBody": {
+      "description": "Dialog body warning about model capability for image/audio"
+    },
+    "processingElapsed": "Procesando... {seconds}s transcurridos",
+    "@processingElapsed": {
+      "description": "Elapsed time during processing",
+      "placeholders": {
+        "seconds": {
+          "type": "int"
+        }
+      }
+    },
+    "progressStageLabel": "Etapa {current} de {total}",
+    "@progressStageLabel": {
+      "description": "Progress stage counter label",
+      "placeholders": {
+        "current": {
+          "type": "int"
+        },
+        "total": {
+          "type": "int"
+        }
+      }
+    },
+    "practiceAllQuestions": "Practicar Todas las Preguntas",
+    "@practiceAllQuestions": {
+      "description": "Button label to practice all questions from a source"
+    },
+    "noQuestionsToPractice": "Sin preguntas para practicar",
+    "@noQuestionsToPractice": {
+      "description": "Disabled button hint when no questions are available"
+    },
+    "questionsWithoutTopicWarning": "Estas preguntas no están vinculadas a ningún tema. Use el clasificador de temas o edite el tema de la fuente para habilitar la práctica específica de temas.",
+    "@questionsWithoutTopicWarning": {
+      "description": "Warning when generated questions have no topic assigned"
+    },
+    "keepOldQuestionsLabel": "Conservar preguntas antiguas",
+    "@keepOldQuestionsLabel": {
+      "description": "Checkbox label to keep old questions during reprocess"
+    },
+    "keepOldQuestionsHint": "Las preguntas antiguas se conservarán junto con las nuevas",
+    "@keepOldQuestionsHint": {
+      "description": "Hint text for keep old questions checkbox"
+    },
+    "postUploadGuidance": "¡Ahora puede practicar las preguntas generadas en la pestaña de Práctica!",
+    "@postUploadGuidance": {
+      "description": "Guidance message shown after successful upload"
+    },
+    "uploadInProgressTitle": "Subida en Progreso",
+    "@uploadInProgressTitle": {
+      "description": "Dialog title when user tries to navigate away during upload"
+    },
+    "uploadInProgressBody": "Hay una subida en progreso. ¿Cancelar y volver atrás?",
+    "@uploadInProgressBody": {
+      "description": "Dialog body when user tries to navigate away during upload"
+    },
+    "stay": "Permanecer",
+    "@stay": {
+      "description": "Button label to stay on current screen"
+    },
+    "selected": "seleccionado(s)",
+    "@selected": {
+      "description": "Label indicating items are selected"
     }
   }

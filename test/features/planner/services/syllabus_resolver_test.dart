@@ -480,5 +480,49 @@ void main() {
         expect(result.data!, hasLength(3));
       });
     });
+
+    group('additional edge cases', () {
+      test('resolveSyllabus catches topicRepository init failure', () async {
+        final throwingTopicRepo = _FakeTopicRepository();
+        throwingTopicRepo.throwOnInit = true;
+        final res = SyllabusResolver(
+          topicRepository: throwingTopicRepo,
+          masteryRepository: masteryRepo,
+          questionRepository: questionRepo,
+        );
+        final result = await res.resolveSyllabus(subjectId: 'sub_physics');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getQuestionsForTopics returns failure when init throws', () async {
+        questionRepo.throwOnInit = true;
+        final result = await resolver.getQuestionsForTopics(['topic-1']);
+        expect(result.isFailure, isTrue);
+      });
+
+      test('buildLearningLevels returns empty when all ids already visited', () {
+        final node = SyllabusTopicNode(
+          topic: Topic(id: 'only', subjectId: 'sub', title: 'Only', description: '', syllabusText: ''),
+        );
+        final levels = resolver.buildLearningLevels([node]);
+        expect(levels, hasLength(1));
+      });
+
+      test('estimateWorkload returns max with zero topics', () {
+        final workload = resolver.estimateWorkload(totalTopics: 0, targetDays: 10, hoursPerDay: 2);
+        expect(workload, equals(3.0));
+      });
+
+      test('resolveSyllabus handles empty topic list from repo', () async {
+        final emptyRepo = _FakeTopicRepository();
+        final res = SyllabusResolver(
+          topicRepository: emptyRepo,
+          masteryRepository: masteryRepo,
+          questionRepository: questionRepo,
+        );
+        final result = await res.resolveSyllabus(subjectId: 'nonexistent');
+        expect(result.isFailure, isTrue);
+      });
+    });
   });
 }

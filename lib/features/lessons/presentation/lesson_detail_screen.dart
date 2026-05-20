@@ -35,7 +35,6 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   void initState() {
     super.initState();
     _loadLesson();
-    _startTimer();
   }
 
   void _startTimer() {
@@ -57,6 +56,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
           _lesson = lessonResult.data;
           _loadError = false;
         });
+        _startTimer();
       }
     } catch (e) {
       if (mounted) {
@@ -143,8 +143,9 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       );
     }
     if (_lesson == null) {
-      return const Scaffold(
-        body: LoadingIndicator(),
+      return Scaffold(
+        appBar: AppBar(title: Text(widget.args.topicTitle)),
+        body: const LoadingIndicator(),
       );
     }
     final lesson = _lesson!;
