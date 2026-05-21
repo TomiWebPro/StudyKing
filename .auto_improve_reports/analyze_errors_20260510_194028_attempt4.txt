@@ -1,0 +1,87 @@
+Analyzing StudyKing...                                          
+
+   info • Dangling library doc comment • lib/core/constants/app_constants.dart:1:1 • dangling_library_doc_comments
+   info • Don't invoke 'print' in production code • lib/core/data/database_migration.dart:27:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/data/database_migration.dart:33:5 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/data/database_migration.dart:44:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/data/database_migration.dart:46:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/core/data/database_migration.dart:49:7 • avoid_print
+   info • The import of 'package:studyking/features/subjects/data/repositories/subject_repository.dart' is unnecessary because all of the used elements are also provided by the import of 'package:studyking/core/data/data.dart' • lib/core/data/database_service.dart:2:8 • unnecessary_import
+   info • Don't invoke 'print' in production code • lib/core/data/hive_initializer.dart:25:5 • avoid_print
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:45:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:46:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:47:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:48:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:49:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:50:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:51:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:52:9 • unnecessary_this
+   info • Unnecessary 'this.' qualifier • lib/core/data/models/task_model.dart:53:9 • unnecessary_this
+warning • Unused import: 'package:studyking/core/data/enums.dart' • lib/core/data/repositories/spaced_repetition_repository.dart:5:8 • unused_import
+warning • The value of the local variable 'dueTimes' isn't used • lib/core/data/repositories/spaced_repetition_repository.dart:124:13 • unused_local_variable
+   info • Dangling library doc comment • lib/core/errors/exceptions.dart:4:1 • dangling_library_doc_comments
+warning • Unused import: 'package:studyking/core/data/models/markscheme_model.dart' • lib/features/practice/services/answer_validation_service.dart:3:8 • unused_import
+warning • The '!' will have no effect because the receiver can't be null • lib/features/questions/services/answer_validator.dart:83:31 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/features/questions/services/answer_validator.dart:83:69 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/features/questions/services/answer_validator.dart:105:31 • unnecessary_non_null_assertion
+warning • The '!' will have no effect because the receiver can't be null • lib/features/questions/services/answer_validator.dart:105:69 • unnecessary_non_null_assertion
+   info • 'groupValue' is deprecated and shouldn't be used. Use a RadioGroup ancestor to manage group value instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/questions/ui/widgets/single_answer_widget.dart:62:23 • deprecated_member_use
+   info • 'onChanged' is deprecated and shouldn't be used. Use RadioGroup to handle value change instead. This feature was deprecated after v3.32.0-0.0.pre • lib/features/questions/ui/widgets/single_answer_widget.dart:63:23 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/questions/ui/widgets/single_answer_widget.dart:86:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/questions/ui/widgets/single_answer_widget.dart:87:34 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/questions/ui/widgets/single_answer_widget.dart:123:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/questions/ui/widgets/single_answer_widget.dart:126:27 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_history_screen.dart:160:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_history_screen.dart:250:68 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_history_screen.dart:297:45 • deprecated_member_use
+warning • Unused import: 'package:studyking/features/sessions/widgets/session_analytics.dart' • lib/features/sessions/presentation/session_tracker_screen.dart:9:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_tracker_screen.dart:217:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_tracker_screen.dart:218:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_tracker_screen.dart:225:47 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_tracker_screen.dart:387:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/presentation/session_tracker_screen.dart:389:41 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/widgets/session_analytics.dart:109:44 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/widgets/session_analytics.dart:110:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/widgets/session_analytics.dart:165:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/widgets/session_analytics.dart:166:19 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/sessions/widgets/session_analytics.dart:170:41 • deprecated_member_use
+warning • The value of the local variable 'settings' isn't used • lib/features/settings/data/repositories/settings_repository.dart:27:11 • unused_local_variable
+warning • Unused import: '../data/repositories/settings_repository.dart' • lib/features/settings/presentation/profile_screen.dart:4:8 • unused_import
+   info • The 'child' argument should be last in widget constructor invocations • lib/features/settings/presentation/profile_screen.dart:353:23 • sort_child_properties_last
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/profile_screen.dart:384:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/profile_screen.dart:385:31 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps, guarded by an unrelated 'mounted' check • lib/features/settings/presentation/profile_screen.dart:386:31 • use_build_context_synchronously
+warning • Unused import: 'package:studyking/core/data/data.dart' • lib/features/settings/presentation/settings_screen.dart:5:8 • unused_import
+warning • Unused import: 'package:studyking/features/settings/presentation/api_config_screen.dart' • lib/features/settings/presentation/settings_screen.dart:6:8 • unused_import
+warning • Unused import: 'package:studyking/features/settings/presentation/profile_screen.dart' • lib/features/settings/presentation/settings_screen.dart:7:8 • unused_import
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/presentation/settings_screen.dart:417:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/presentation/settings_screen.dart:424:11 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/presentation/settings_screen.dart:466:30 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/presentation/settings_screen.dart:471:21 • use_build_context_synchronously
+   info • Don't use 'BuildContext's across async gaps • lib/features/settings/presentation/settings_screen.dart:472:28 • use_build_context_synchronously
+warning • Unused import: 'package:studyking/main.dart' • lib/features/subjects/presentation/subject_detail_view.dart:2:8 • unused_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:67:36 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:80:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:81:29 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:126:65 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:256:74 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:390:40 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:392:45 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:393:42 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:579:22 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_detail_view.dart:581:41 • deprecated_member_use
+warning • Dead code • lib/features/subjects/presentation/subject_list_view.dart:117:43 • dead_code
+warning • The left operand can't be null, so the right operand is never executed • lib/features/subjects/presentation/subject_list_view.dart:117:46 • dead_null_aware_expression
+warning • The library 'package:studyking/main.dart' doesn't export a member with the shown name 'AppErrorHandler' • lib/features/subjects/presentation/subject_management_screen.dart:4:53 • undefined_shown_name
+  error • Undefined name 'AppErrorHandler' • lib/features/subjects/presentation/subject_management_screen.dart:82:7 • undefined_identifier
+   info • Don't use 'BuildContext's across async gaps • lib/features/subjects/presentation/subject_management_screen.dart:83:9 • use_build_context_synchronously
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_management_screen.dart:155:59 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/subjects/presentation/subject_selection_screen.dart:227:24 • deprecated_member_use
+warning • Unused import: 'package:flutter/foundation.dart' • lib/main.dart:2:8 • unused_import
+   info • The import of 'core/data/hive_initializer.dart' is unnecessary because all of the used elements are also provided by the import of 'core/data/data.dart' • lib/main.dart:8:8 • unnecessary_import
+   info • Don't invoke 'print' in production code • lib/models/dynamic_lesson_types.dart:30:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/models/dynamic_lesson_types.dart:71:7 • avoid_print
+   info • Don't invoke 'print' in production code • lib/models/dynamic_lesson_types.dart:82:7 • avoid_print
+
+
+82 issues found. (ran in 1.7s)

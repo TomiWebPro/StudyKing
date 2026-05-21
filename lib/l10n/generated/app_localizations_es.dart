@@ -5909,15 +5909,14 @@ class AppLocalizationsEs extends AppLocalizations {
   String get practiceTheseTopics => 'Practicar Estos Temas';
 
   @override
-  String get practiceLessonBlocks => 'Repasar Bloques de Lección';
-
-  @override
-  String get tutorInitFailedGeneric =>
-      'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
+  String get tutorInitFailedGeneric => 'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
 
   @override
   String get tagline => 'Compañero de Aprendizaje con IA';
 
   @override
   String get preparingTutorLesson => 'Preparando tu lección...';
+
+  @override
+  String get practiceLessonBlocks => 'Repasar Bloques de Lección';
 }

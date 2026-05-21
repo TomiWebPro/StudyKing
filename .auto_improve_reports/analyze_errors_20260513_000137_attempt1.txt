@@ -1,0 +1,69 @@
+Analyzing StudyKing...                                          
+
+   info • The local variable '_createState' starts with an underscore • test/core.data.models.question_mastery_state_model.test.dart:119:28 • no_leading_underscores_for_local_identifiers
+warning • The value of the field '_initCalled' isn't used • test/core.data.repositories.attempt_repository.test.dart:7:8 • unused_field
+warning • The value of the field '_initCalled' isn't used • test/core.data.repositories.lesson_repository.test.dart:10:8 • unused_field
+   info • The private field _isOpen could be 'final' • test/core.data.repositories.mastery_graph_repository.test.dart:11:8 • prefer_final_fields
+  error • Expected to find ';' • test/core.data.repositories.mastery_graph_repository.test.dart:14:26 • expected_token
+  error • Non-nullable instance field 'values' must be initialized • test/core.data.repositories.mastery_graph_repository.test.dart:14:26 • not_initialized_non_nullable_instance_field
+   info • The member 'get' overrides an inherited member but isn't annotated with '@override' • test/core.data.repositories.mastery_graph_repository.test.dart:14:33 • annotate_overrides
+  error • 'MockMasteryBox.get' ('MasteryState? Function()') isn't a valid override of 'Box.get' ('MasteryState? Function(dynamic, {MasteryState? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:14:33 • invalid_override
+  error • Methods must have an explicit list of parameters • test/core.data.repositories.mastery_graph_repository.test.dart:14:33 • missing_method_parameters
+  error • A value of type 'Iterable<MasteryState>' can't be returned from the method 'get' because it has a return type of 'MasteryState?' • test/core.data.repositories.mastery_graph_repository.test.dart:14:40 • return_of_invalid_type
+  error • 'MockMasteryBox.get' ('MasteryState? Function(dynamic)') isn't a valid override of 'Box.get' ('MasteryState? Function(dynamic, {MasteryState? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:17:17 • invalid_override
+  error • The name 'get' is already defined • test/core.data.repositories.mastery_graph_repository.test.dart:17:17 • duplicate_definition
+   info • The private field _isOpen could be 'final' • test/core.data.repositories.mastery_graph_repository.test.dart:51:8 • prefer_final_fields
+  error • Expected to find ';' • test/core.data.repositories.mastery_graph_repository.test.dart:54:34 • expected_token
+  error • Non-nullable instance field 'values' must be initialized • test/core.data.repositories.mastery_graph_repository.test.dart:54:34 • not_initialized_non_nullable_instance_field
+   info • The member 'get' overrides an inherited member but isn't annotated with '@override' • test/core.data.repositories.mastery_graph_repository.test.dart:54:41 • annotate_overrides
+  error • 'MockQuestionMasteryBox.get' ('QuestionMasteryState? Function()') isn't a valid override of 'Box.get' ('QuestionMasteryState? Function(dynamic, {QuestionMasteryState? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:54:41 • invalid_override
+  error • Methods must have an explicit list of parameters • test/core.data.repositories.mastery_graph_repository.test.dart:54:41 • missing_method_parameters
+  error • A value of type 'Iterable<QuestionMasteryState>' can't be returned from the method 'get' because it has a return type of 'QuestionMasteryState?' • test/core.data.repositories.mastery_graph_repository.test.dart:54:48 • return_of_invalid_type
+  error • 'MockQuestionMasteryBox.get' ('QuestionMasteryState? Function(dynamic)') isn't a valid override of 'Box.get' ('QuestionMasteryState? Function(dynamic, {QuestionMasteryState? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:57:25 • invalid_override
+  error • The name 'get' is already defined • test/core.data.repositories.mastery_graph_repository.test.dart:57:25 • duplicate_definition
+   info • The private field _isOpen could be 'final' • test/core.data.repositories.mastery_graph_repository.test.dart:91:8 • prefer_final_fields
+  error • Expected to find ';' • test/core.data.repositories.mastery_graph_repository.test.dart:94:29 • expected_token
+  error • Non-nullable instance field 'values' must be initialized • test/core.data.repositories.mastery_graph_repository.test.dart:94:29 • not_initialized_non_nullable_instance_field
+   info • The member 'get' overrides an inherited member but isn't annotated with '@override' • test/core.data.repositories.mastery_graph_repository.test.dart:94:36 • annotate_overrides
+  error • 'MockDependencyBox.get' ('TopicDependency? Function()') isn't a valid override of 'Box.get' ('TopicDependency? Function(dynamic, {TopicDependency? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:94:36 • invalid_override
+  error • Methods must have an explicit list of parameters • test/core.data.repositories.mastery_graph_repository.test.dart:94:36 • missing_method_parameters
+  error • A value of type 'Iterable<TopicDependency>' can't be returned from the method 'get' because it has a return type of 'TopicDependency?' • test/core.data.repositories.mastery_graph_repository.test.dart:94:43 • return_of_invalid_type
+  error • 'MockDependencyBox.get' ('TopicDependency? Function(dynamic)') isn't a valid override of 'Box.get' ('TopicDependency? Function(dynamic, {TopicDependency? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:97:20 • invalid_override
+  error • The name 'get' is already defined • test/core.data.repositories.mastery_graph_repository.test.dart:97:20 • duplicate_definition
+   info • The private field _isOpen could be 'final' • test/core.data.repositories.mastery_graph_repository.test.dart:131:8 • prefer_final_fields
+  error • Expected to find ';' • test/core.data.repositories.mastery_graph_repository.test.dart:134:32 • expected_token
+  error • Non-nullable instance field 'values' must be initialized • test/core.data.repositories.mastery_graph_repository.test.dart:134:32 • not_initialized_non_nullable_instance_field
+   info • The member 'get' overrides an inherited member but isn't annotated with '@override' • test/core.data.repositories.mastery_graph_repository.test.dart:134:39 • annotate_overrides
+  error • 'MockEvalBox.get' ('QuestionEvaluation? Function()') isn't a valid override of 'Box.get' ('QuestionEvaluation? Function(dynamic, {QuestionEvaluation? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:134:39 • invalid_override
+  error • Methods must have an explicit list of parameters • test/core.data.repositories.mastery_graph_repository.test.dart:134:39 • missing_method_parameters
+  error • A value of type 'Iterable<QuestionEvaluation>' can't be returned from the method 'get' because it has a return type of 'QuestionEvaluation?' • test/core.data.repositories.mastery_graph_repository.test.dart:134:46 • return_of_invalid_type
+  error • 'MockEvalBox.get' ('QuestionEvaluation? Function(dynamic)') isn't a valid override of 'Box.get' ('QuestionEvaluation? Function(dynamic, {QuestionEvaluation? defaultValue})') • test/core.data.repositories.mastery_graph_repository.test.dart:137:23 • invalid_override
+  error • The name 'get' is already defined • test/core.data.repositories.mastery_graph_repository.test.dart:137:23 • duplicate_definition
+  error • The setter '_masteryBox' isn't defined for the type 'MasteryGraphRepository' • test/core.data.repositories.mastery_graph_repository.test.dart:183:18 • undefined_setter
+  error • The setter '_questionMasteryBox' isn't defined for the type 'MasteryGraphRepository' • test/core.data.repositories.mastery_graph_repository.test.dart:184:18 • undefined_setter
+  error • The setter '_dependencyBox' isn't defined for the type 'MasteryGraphRepository' • test/core.data.repositories.mastery_graph_repository.test.dart:185:18 • undefined_setter
+  error • The setter '_evaluationBox' isn't defined for the type 'MasteryGraphRepository' • test/core.data.repositories.mastery_graph_repository.test.dart:186:18 • undefined_setter
+warning • The value of the field '_initCalled' isn't used • test/core.data.repositories.session_repository.test.dart:7:8 • unused_field
+warning • The value of the field '_initCalled' isn't used • test/core.data.repositories.spaced_repetition_repository.test.dart:8:8 • unused_field
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:11:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:13:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:17:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:24:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:28:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:31:14 • undefined_identifier
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:47:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:51:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:55:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:59:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:62:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:66:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:68:12 • undefined_identifier
+  error • The name 'Result' isn't a type, so it can't be used as a type argument • test/core.data.repositories.spaced_repetition_repository.test.dart:72:10 • non_type_as_type_argument
+  error • Undefined name 'Result' • test/core.data.repositories.spaced_repetition_repository.test.dart:79:12 • undefined_identifier
+warning • The value of the field '_initCalled' isn't used • test/core.data.repositories.topic_repository.test.dart:7:8 • unused_field
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core.utils.color_utils.test.dart:7:38 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core.utils.color_utils.test.dart:21:22 • deprecated_member_use
+   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/core.utils.color_utils.test.dart:26:22 • deprecated_member_use
+
+
+64 issues found. (ran in 2.1s)

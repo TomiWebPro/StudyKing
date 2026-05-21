@@ -1,0 +1,38 @@
+Analyzing StudyKing...                                          
+
+  error • The property 'accuracy' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:116:29 • unchecked_use_of_nullable_value
+  error • The property 'studyTime' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:125:29 • unchecked_use_of_nullable_value
+  error • The property 'weeklyActivity' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:134:29 • unchecked_use_of_nullable_value
+  error • The property 'topicsLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:143:29 • unchecked_use_of_nullable_value
+  error • The property 'weeklyActivity' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:175:22 • unchecked_use_of_nullable_value
+  error • The property 'masteryOverview' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:213:24 • unchecked_use_of_nullable_value
+  error • The property 'totalTopicsLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:224:26 • unchecked_use_of_nullable_value
+  error • The property 'masteredLabel' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:231:26 • unchecked_use_of_nullable_value
+  error • The property 'inProgress' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:238:26 • unchecked_use_of_nullable_value
+  error • The property 'overallMastery' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:246:20 • unchecked_use_of_nullable_value
+  error • The property 'accuracy' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:268:41 • unchecked_use_of_nullable_value
+  error • The property 'readiness' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:269:41 • unchecked_use_of_nullable_value
+  error • The property 'weakAreas' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:270:41 • unchecked_use_of_nullable_value
+  error • The property 'noTopicDataYet' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:329:20 • unchecked_use_of_nullable_value
+  error • The property 'topicPerformance' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:354:24 • unchecked_use_of_nullable_value
+  error • The method 'questionsCountMetric' can't be unconditionally invoked because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:408:22 • unchecked_use_of_nullable_value
+  error • The property 'masteryLevelNovice' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:434:21 • unchecked_use_of_nullable_value
+  error • The property 'masteryLevelBrowsing' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:436:21 • unchecked_use_of_nullable_value
+  error • The property 'masteryLevelDeveloping' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:438:21 • unchecked_use_of_nullable_value
+  error • The property 'masteryLevelProficient' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:440:21 • unchecked_use_of_nullable_value
+  error • The property 'masteryLevelExpert' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:442:21 • unchecked_use_of_nullable_value
+  error • The property 'achievements' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:462:24 • unchecked_use_of_nullable_value
+  error • The property 'sessionHistory' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:509:24 • unchecked_use_of_nullable_value
+  error • The property 'totalQuestions' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:521:26 • unchecked_use_of_nullable_value
+  error • The property 'correct' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:528:26 • unchecked_use_of_nullable_value
+  error • The property 'avgTime' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:536:26 • unchecked_use_of_nullable_value
+  error • The property 'today' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:548:26 • unchecked_use_of_nullable_value
+  error • The property 'badges' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:555:26 • unchecked_use_of_nullable_value
+  error • The property 'thisWeek' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:563:26 • unchecked_use_of_nullable_value
+  error • The property 'exportCsv' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:609:32 • unchecked_use_of_nullable_value
+  error • The property 'sessionHistoryExport' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:614:32 • unchecked_use_of_nullable_value
+  error • The property 'progressExportedCsv' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:625:35 • unchecked_use_of_nullable_value
+  error • The property 'sessionHistoryExportedCsv' can't be unconditionally accessed because the receiver can be 'null' • lib/features/practice/presentation/analytics_dashboard.dart:632:35 • unchecked_use_of_nullable_value
+
+
+33 issues found. (ran in 2.2s)

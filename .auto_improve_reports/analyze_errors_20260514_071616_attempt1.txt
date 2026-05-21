@@ -1,0 +1,7 @@
+Analyzing StudyKing...                                          
+
+warning • The value of the local variable 'sent' isn't used • test/features/quickguide/presentation/widgets/message_composer_widget_test.dart:22:12 • unused_local_variable
+warning • The value of the local variable 'tapped' isn't used • test/features/quickguide/presentation/widgets/message_composer_widget_test.dart:311:12 • unused_local_variable
+
+
+2 issues found. (ran in 4.3s)

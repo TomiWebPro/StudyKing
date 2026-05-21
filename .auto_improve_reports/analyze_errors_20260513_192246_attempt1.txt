@@ -1,0 +1,31 @@
+Analyzing StudyKing...                                          
+
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:207:28 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:208:28 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:254:28 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:255:28 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:344:31 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:345:30 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:346:29 • invalid_null_aware_operator
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:347:28 • invalid_null_aware_operator
+   info • Use a 'SizedBox' to add whitespace to a layout • test/core/theme/app_theme_test.dart:414:26 • sized_box_for_whitespace
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:423:24 • invalid_null_aware_operator
+   info • Use a 'SizedBox' to add whitespace to a layout • test/core/theme/app_theme_test.dart:438:26 • sized_box_for_whitespace
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • test/core/theme/app_theme_test.dart:447:24 • invalid_null_aware_operator
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:662:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:663:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:664:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:686:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:687:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:688:23 • undefined_getter
+  error • The getter 'updateCalls' isn't defined for the type 'FakeSpacedRepetitionRepository' • test/features/practice/presentation/practice_session_screen_test.dart:710:23 • undefined_getter
+  error • Undefined name 'questionRepositoryProvider' • test/features/practice/presentation/shared_test_helpers.dart:89:7 • undefined_identifier
+  error • The argument type 'Result<List<Question>>' can't be assigned to the parameter type 'Future<Result<List<Question>>>'.  • test/features/practice/presentation/shared_test_helpers.dart:89:75 • argument_type_not_assignable
+  error • Undefined name 'studySessionRepositoryProvider' • test/features/practice/presentation/shared_test_helpers.dart:91:9 • undefined_identifier
+  error • Undefined name 'spacedRepetitionRepositoryProvider' • test/features/practice/presentation/shared_test_helpers.dart:93:9 • undefined_identifier
+  error • Undefined name 'AppLocalizations' • test/features/practice/presentation/shared_test_helpers.dart:96:31 • undefined_identifier
+  error • Undefined name 'AppLocalizations' • test/features/practice/presentation/shared_test_helpers.dart:97:25 • undefined_identifier
+  error • The function 'PracticeSessionScreen' isn't defined • test/features/practice/presentation/shared_test_helpers.dart:106:35 • undefined_function
+
+
+26 issues found. (ran in 2.2s)

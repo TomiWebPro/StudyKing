@@ -1,0 +1,32 @@
+Analyzing StudyKing...                                          
+
+  error • The unnamed constructor of superclass 'SettingsRepository' (called by the default constructor of 'MockSettingsRepository') must be a generative constructor, but factory found • test/features/settings/data/repositories/settings_repository_test.dart:36:7 • non_generative_implicit_constructor
+warning • The declaration '_requireSettingsBox' isn't referenced • test/features/settings/data/repositories/settings_repository_test.dart:55:11 • unused_element
+warning • The getter doesn't override an inherited getter • test/features/settings/data/repositories/settings_repository_test.dart:55:11 • override_on_non_overriding_member
+warning • The declaration '_requireProfileBox' isn't referenced • test/features/settings/data/repositories/settings_repository_test.dart:61:11 • unused_element
+warning • The getter doesn't override an inherited getter • test/features/settings/data/repositories/settings_repository_test.dart:61:11 • override_on_non_overriding_member
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:97:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:98:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:99:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:100:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:101:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:102:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:104:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:106:22 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:112:21 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:113:21 • undefined_operator
+  error • The operator '[]' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:118:39 • undefined_operator
+  error • The operator '[]' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:120:39 • undefined_operator
+warning • Dead code • test/features/settings/data/repositories/settings_repository_test.dart:124:5 • dead_code
+  error • The operator '[]' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:125:37 • undefined_operator
+  error • The operator '[]=' isn't defined for the type 'MockBox' • test/features/settings/data/repositories/settings_repository_test.dart:127:25 • undefined_operator
+  error • The named parameter 'totalSessionCount' isn't defined • test/features/settings/data/repositories/settings_repository_test.dart:308:11 • undefined_named_parameter
+  error • The named parameter 'totalStudyTimeMs' isn't defined • test/features/settings/data/repositories/settings_repository_test.dart:309:11 • undefined_named_parameter
+  error • The named parameter 'totalQuestions' isn't defined • test/features/settings/data/repositories/settings_repository_test.dart:310:11 • undefined_named_parameter
+warning • A value for optional parameter 'delay' isn't ever given • test/features/settings/presentation/settings_screen_test.dart:686:10 • unused_element_parameter
+warning • The method doesn't override an inherited method • test/features/settings/presentation/settings_screen_test.dart:697:29 • override_on_non_overriding_member
+  error • Undefined class 'URL' • test/features/settings/presentation/settings_screen_test.dart:697:40 • undefined_class
+  error • The method 'processUrl' isn't defined in a superclass of '_MockHttpOverride' • test/features/settings/presentation/settings_screen_test.dart:698:33 • undefined_super_member
+
+
+27 issues found. (ran in 3.5s)

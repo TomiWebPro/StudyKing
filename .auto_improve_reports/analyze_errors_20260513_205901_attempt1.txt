@@ -1,0 +1,7 @@
+Analyzing StudyKing...                                          
+
+   info • 'value' is deprecated and shouldn't be used. Use initialValue instead. This will set the initial value for the form field. This feature was deprecated after v3.33.0-1.0.pre • lib/features/ingestion/presentation/upload_screen.dart:144:15 • deprecated_member_use
+warning • The value of the local variable 'consecutiveIncorrect' isn't used • test/features/teaching/services/conversation_manager_test.dart:315:15 • unused_local_variable
+
+
+2 issues found. (ran in 2.2s)

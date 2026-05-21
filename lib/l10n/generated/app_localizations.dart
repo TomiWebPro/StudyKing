@@ -9597,12 +9597,6 @@ abstract class AppLocalizations {
   /// **'Practice These Topics'**
   String get practiceTheseTopics;
 
-  /// Button label in lesson summary to replay lesson blocks as quiz questions
-  ///
-  /// In en, this message translates to:
-  /// **'Practice Lesson Blocks'**
-  String get practiceLessonBlocks;
-
   /// Generic error message when tutor initialization fails (no error details exposed to user)
   ///
   /// In en, this message translates to:
@@ -9620,6 +9614,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preparing your lesson...'**
   String get preparingTutorLesson;
+
+  /// Button label in lesson summary to replay lesson blocks as quiz questions
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Lesson Blocks'**
+  String get practiceLessonBlocks;
 }
 
 class _AppLocalizationsDelegate

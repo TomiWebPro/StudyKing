@@ -1,0 +1,6 @@
+Analyzing StudyKing...                                          
+
+warning • Unused import: 'package:studyking/core/constants/app_build_config.dart' • test/advanced/core.constants.app_encryption_config.test.dart:3:8 • unused_import
+
+
+1 issue found. (ran in 3.6s)

@@ -1,0 +1,23 @@
+Analyzing StudyKing...                                          
+
+warning • The getter doesn't override an inherited getter • test/core/data/repositories/plan_adherence_repository_test.dart:12:12 • override_on_non_overriding_member
+warning • A value for optional parameter 'shouldThrow' isn't ever given • test/features/dashboard/services/dashboard_data_loader_test.dart:139:63 • unused_element_parameter
+   info • The local variable '_buildApp' starts with an underscore • test/features/lessons/presentation/widgets/lesson_block_card_test.dart:9:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_block' starts with an underscore • test/features/lessons/presentation/widgets/lesson_block_card_test.dart:18:15 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_lesson' starts with an underscore • test/features/lessons/presentation/widgets/lesson_list_item_test.dart:10:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/lessons/presentation/widgets/lesson_list_item_test.dart:30:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/planner/presentation/widgets/daily_plan_card_test.dart:8:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_plan' starts with an underscore • test/features/planner/presentation/widgets/daily_plan_card_test.dart:17:13 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_topic' starts with an underscore • test/features/planner/presentation/widgets/daily_plan_card_test.dart:38:16 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/planner/presentation/widgets/milestone_timeline_test.dart:8:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/planner/presentation/widgets/pending_action_card_test.dart:8:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/planner/presentation/widgets/plan_summary_card_test.dart:8:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_buildApp' starts with an underscore • test/features/planner/presentation/widgets/roadmap_card_test.dart:9:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_roadmap' starts with an underscore • test/features/planner/presentation/widgets/roadmap_card_test.dart:18:16 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_milestone' starts with an underscore • test/features/planner/presentation/widgets/roadmap_card_test.dart:36:18 • no_leading_underscores_for_local_identifiers
+warning • The value of the local variable 'capturedVal' isn't used • test/features/planner/presentation/widgets/roadmap_card_test.dart:85:13 • unused_local_variable
+   info • The local variable '_buildApp' starts with an underscore • test/features/practice/presentation/widgets/practice_session_question_card_test.dart:13:10 • no_leading_underscores_for_local_identifiers
+   info • The local variable '_question' starts with an underscore • test/features/practice/presentation/widgets/practice_session_question_card_test.dart:29:12 • no_leading_underscores_for_local_identifiers
+
+
+18 issues found. (ran in 6.6s)

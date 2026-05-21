@@ -1,0 +1,8 @@
+Analyzing StudyKing...                                          
+
+  error • Methods can't be invoked in constant expressions • lib/core/data/hive_type_ids.dart:75:28 • const_eval_method_invocation
+warning • The value of the field '_mockBox' isn't used • test/features/subjects/providers/subjects_repository_provider_test.dart:108:24 • unused_field
+warning • The value of the local variable 'asyncValue' isn't used • test/features/subjects/providers/subjects_repository_provider_test.dart:176:15 • unused_local_variable
+
+
+3 issues found. (ran in 4.6s)

@@ -1,0 +1,32 @@
+Analyzing StudyKing...                                          
+
+  error • The getter 'stepNumber' isn't defined for the type 'String' • lib/core/services/evaluation_adapter_service.dart:20:33 • undefined_getter
+  error • The getter 'requiredAnswer' isn't defined for the type 'String' • lib/core/services/evaluation_adapter_service.dart:21:37 • undefined_getter
+  error • The getter 'points' isn't defined for the type 'String' • lib/core/services/evaluation_adapter_service.dart:22:29 • undefined_getter
+  error • The getter 'description' isn't defined for the type 'String' • lib/core/services/evaluation_adapter_service.dart:23:34 • undefined_getter
+  error • The method 'debugPrint' isn't defined for the type 'InstrumentationService' • lib/core/services/instrumentation_service.dart:307:7 • undefined_method
+warning • Unused import: '../data/models/student_attempt_model.dart' • lib/core/services/mastery_graph_service.dart:5:8 • unused_import
+  error • Undefined class 'QuestionMasteryState' • lib/core/services/mastery_integration_service.dart:117:45 • undefined_class
+warning • The value of the field '_questionRepository' isn't used • lib/core/services/personal_learning_plan_service.dart:34:28 • unused_field
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:49:10 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:56:14 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:61:14 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:137:12 • ambiguous_import
+warning • The receiver can't be null, so the null-aware operator '?.' is unnecessary • lib/core/services/personal_learning_plan_service.dart:255:19 • invalid_null_aware_operator
+  error • The getter 'title' isn't defined for the type 'Future<Topic?>' • lib/core/services/personal_learning_plan_service.dart:255:21 • undefined_getter
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:321:10 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:327:14 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:345:12 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:348:10 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:351:14 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:354:12 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:357:10 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:360:14 • ambiguous_import
+  error • The name 'Result' is defined in the libraries 'package:studyking/core/data/repositories/mastery_graph_repository.dart' and 'package:studyking/core/data/repositories/question_repository.dart' • lib/core/services/personal_learning_plan_service.dart:368:12 • ambiguous_import
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/practice/presentation/learning_plan_dashboard.dart:166:60 • deprecated_member_use
+   info • 'withOpacity' is deprecated and shouldn't be used. Use .withValues() to avoid precision loss • lib/features/practice/presentation/learning_plan_dashboard.dart:299:30 • deprecated_member_use
+warning • Unused import: 'package:studyking/main.dart' • test/features/settings/presentation/profile_screen_test.dart:6:8 • unused_import
+   info • Parameter 'initial' could be a super parameter • test/features/settings/presentation/settings_screen_test.dart:49:3 • use_super_parameters
+
+
+27 issues found. (ran in 3.9s)
