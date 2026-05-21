@@ -1,0 +1,427 @@
+import 'dart:typed_data';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
+import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/graph_drawing_widget.dart';
+import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+
+void main() {
+  Widget buildApp(Widget widget) {
+    return ProviderScope(
+      overrides: [
+        settingsProvider.overrideWith(
+          (ref) => SettingsController(SettingsRepository()),
+        ),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Scaffold(body: SingleChildScrollView(child: widget)),
+      ),
+    );
+  }
+
+  Question question({
+    String id = 'q1',
+    String text = 'What is 2+2?',
+    QuestionType type = QuestionType.singleChoice,
+    String correctAnswer = '4',
+    List<String> options = const ['3', '4', '5', '6'],
+  }) {
+    return Question(
+      id: id,
+      text: text,
+      type: type,
+      subjectId: 'subj-1',
+      topicId: 'topic-1',
+      markscheme: Markscheme(questionId: id, correctAnswer: correctAnswer),
+      options: options,
+      createdAt: DateTime.now(),
+      updatedAt: DateTime.now(),
+    );
+  }
+
+  group('PracticeSessionQuestionCard', () {
+    testWidgets('renders question text and type badge', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.text('What is 2+2?'), findsOneWidget);
+      expect(find.text('Multiple Choice'), findsOneWidget);
+    });
+
+    testWidgets('renders multi choice options', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.multiChoice),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.text('Multiple Select'), findsOneWidget);
+    });
+
+    testWidgets('calls onAnswerSelected when multi choice option tapped', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B', 'Option C'],
+            correctAnswer: 'Option B',
+          ),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option B'));
+      expect(captured, 'Option B');
+    });
+
+    testWidgets('does not call onAnswerSelected when submitted for multi choice', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 'Option A',
+          ),
+          currentAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option A'));
+      expect(captured, isNull);
+    });
+
+    testWidgets('shows feedback when submitted and feedback is visible for multi choice', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 'Option A',
+          ),
+          currentAnswer: 'Option A',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(CheckboxListTile), findsNWidgets(2));
+    });
+
+    testWidgets('renders typed answer input', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.typedAnswer),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('renders essay input with character count', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.essay),
+          currentAnswer: 'Hello',
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('renders file upload button for fileUpload type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.fileUpload),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.textContaining('Upload file'), findsOneWidget);
+    });
+
+    testWidgets('renders audio recording button for audioRecording type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.audioRecording),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.textContaining('Start recording'), findsOneWidget);
+    });
+
+    testWidgets('onAnswerSelected is called for typed answer', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.typedAnswer),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+
+      await tester.enterText(find.byType(TextField), 'my answer');
+      expect(captured, 'my answer');
+    });
+
+    testWidgets('shows selected answer for single choice', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(),
+          currentAnswer: '4',
+          isSubmitted: true,
+          isFeedbackVisible: true,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+
+      expect(find.text('What is 2+2?'), findsOneWidget);
+      expect(find.text('Multiple Choice'), findsOneWidget);
+      expect(find.byType(SingleAnswerWidget), findsOneWidget);
+    });
+
+    testWidgets('renders math expression question type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.mathExpression),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Math'), findsOneWidget);
+      expect(find.text('What is 2+2?'), findsOneWidget);
+    });
+
+    testWidgets('shows no options available for single choice without options', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.singleChoice, options: []),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No options available'), findsOneWidget);
+    });
+
+    testWidgets('calls onAnswerSelected when single choice option tapped', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.singleChoice,
+            options: ['3', '4', '5'],
+            correctAnswer: '4',
+          ),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('4'));
+      expect(captured, '4');
+    });
+
+    testWidgets('renders canvas drawing question type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Diagram'), findsOneWidget);
+      expect(find.text('What is 2+2?'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('canvas onDrawingComplete calls onAnswerSelected with base64 encoded data', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final canvas = tester.widget<CanvasDrawingWidget>(find.byType(CanvasDrawingWidget));
+      canvas.onDrawingComplete(Uint8List(0));
+
+      expect(captured, equals(''));
+    });
+
+    testWidgets('renders graph drawing question type', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.graphDrawing),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Graph'), findsOneWidget);
+      expect(find.text('What is 2+2?'), findsAtLeastNWidgets(1));
+      expect(find.byType(GraphDrawingWidget), findsOneWidget);
+    });
+
+    testWidgets('graph onDrawingComplete calls onAnswerSelected with base64 encoded data', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.graphDrawing),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final graph = tester.widget<GraphDrawingWidget>(find.byType(GraphDrawingWidget));
+      graph.onDrawingComplete(Uint8List(0));
+
+      expect(captured, equals(''));
+    });
+
+    testWidgets('renders step by step input', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.stepByStep),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(TextField), findsOneWidget);
+    });
+
+    testWidgets('shows no options for multi choice with empty options', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: [],
+            correctAnswer: '4',
+          ),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('No options available'), findsOneWidget);
+    });
+
+    testWidgets('handles multi choice deselecting an option', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(
+            type: QuestionType.multiChoice,
+            options: ['Option A', 'Option B'],
+            correctAnswer: 'Option A',
+          ),
+          currentAnswer: 'Option A||Option B',
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Option A'));
+      expect(captured, 'Option B');
+    });
+
+    testWidgets('handles essay onChanged callback', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.essay),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'my essay');
+      expect(captured, 'my essay');
+    });
+  });
+}

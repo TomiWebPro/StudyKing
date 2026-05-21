@@ -1,0 +1,61 @@
+#!/bin/bash
+set -e
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+COVERAGE_DIR="$PROJECT_DIR/coverage"
+
+cd "$PROJECT_DIR"
+
+echo "=== Step 1: Run base constants tests (no special defines) ==="
+flutter test --coverage test/core/constants/*_test.dart
+cp coverage/lcov.info coverage/lcov_base.info
+
+echo ""
+echo "=== Step 2: Run production env tests (APP_ENV=production, empty key) ==="
+flutter test --coverage \
+  --dart-define=APP_ENV=production \
+  test/advanced/core.constants.app_production_config.test.dart
+cp coverage/lcov.info coverage/lcov_prod.info
+
+echo ""
+echo "=== Step 3: Run combined production + encryption tests ==="
+flutter test --coverage \
+  --dart-define=APP_ENV=production \
+  --dart-define=STUDYKING_ENCRYPTION_KEY=MyKeyWithNumbers123456789012345678 \
+  test/advanced/core.constants.app_encryption_config.test.dart
+cp coverage/lcov.info coverage/lcov_combined.info
+
+echo ""
+echo "=== Step 4: Run core model tests ==="
+flutter test --coverage test/core/data/models/
+cp coverage/lcov.info coverage/lcov_core_models.info
+
+echo ""
+echo "=== Step 5: Run core service tests ==="
+flutter test --coverage test/core/services/
+cp coverage/lcov.info coverage/lcov_core_services.info
+
+echo ""
+echo "=== Step 6: Run feature tests ==="
+flutter test --coverage test/features/
+cp coverage/lcov.info coverage/lcov_features.info
+
+echo ""
+echo "=== Step 7: Merge all coverage files ==="
+python3 scripts/merge_lcov.py \
+  coverage/lcov.info \
+  coverage/lcov_base.info \
+  coverage/lcov_prod.info \
+  coverage/lcov_combined.info \
+  coverage/lcov_core_models.info \
+  coverage/lcov_core_services.info \
+  coverage/lcov_features.info
+
+echo ""
+echo "=== Step 8: Coverage summary ==="
+python3 scripts/coverage_summary.py coverage/lcov.info
+
+echo ""
+echo "=== Test suite complete ==="
+echo "Run 'flutter test' for quick verification without coverage."

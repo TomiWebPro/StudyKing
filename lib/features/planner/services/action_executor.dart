@@ -1,0 +1,97 @@
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'planner_service.dart';
+
+class ActionExecutor {
+  static final Logger _logger = const Logger('ActionExecutor');
+
+  final PlannerService _plannerService;
+
+  ActionExecutor({
+    required PlannerService plannerService,
+  }) : _plannerService = plannerService;
+
+  Future<bool> execute(PendingActionModel action) async {
+    try {
+      switch (action.actionType) {
+        case 'schedule':
+          return await _executeSchedule(action);
+        case 'reschedule':
+          return await _executeReschedule(action);
+        case 'planAdjustment':
+          return await _executePlanAdjustment(action);
+        default:
+          return false;
+      }
+    } catch (e) {
+      _logger.w('Failed to execute action: $e');
+      return false;
+    }
+  }
+
+  Future<bool> _executeSchedule(PendingActionModel action) async {
+    final topicId = action.payload['topicId'] as String?;
+    final subjectId = action.payload['subjectId'] as String?;
+    final topicTitle = action.topicTitle;
+    final scheduledTimeStr = action.payload['scheduledTime'] as String?;
+
+    if (topicId == null || subjectId == null || scheduledTimeStr == null) {
+      return false;
+    }
+
+    final scheduledTime = DateTime.tryParse(scheduledTimeStr);
+    if (scheduledTime == null) return false;
+
+    final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
+
+    final result = await _plannerService.scheduleLesson(
+      topicId: topicId,
+      topicTitle: topicTitle,
+      subjectId: subjectId,
+      scheduledTime: scheduledTime,
+      durationMinutes: durationMinutes,
+    );
+    return result.data ?? false;
+  }
+
+  Future<bool> _executeReschedule(PendingActionModel action) async {
+    final sessionId = action.payload['sessionId'] as String?;
+    final topicId = action.payload['topicId'] as String?;
+    final subjectId = action.payload['subjectId'] as String?;
+    final topicTitle = action.topicTitle;
+    final scheduledTimeStr = action.payload['scheduledTime'] as String?;
+
+    if (sessionId != null) {
+      await _plannerService.cancelLesson(sessionId);
+    }
+
+    if (topicId == null || subjectId == null || scheduledTimeStr == null) {
+      return false;
+    }
+
+    final scheduledTime = DateTime.tryParse(scheduledTimeStr);
+    if (scheduledTime == null) return false;
+
+    final durationMinutes = (action.payload['durationMinutes'] as num?)?.toInt() ?? 30;
+
+    final result = await _plannerService.scheduleLesson(
+      topicId: topicId,
+      topicTitle: topicTitle,
+      subjectId: subjectId,
+      scheduledTime: scheduledTime,
+      durationMinutes: durationMinutes,
+    );
+    return result.data ?? false;
+  }
+
+  Future<bool> _executePlanAdjustment(PendingActionModel action) async {
+    final adjustmentFactor = (action.payload['adjustmentFactor'] as num?)?.toDouble();
+    if (adjustmentFactor == null) return false;
+
+    final result = await _plannerService.planOrchestrator.suggestRegeneration(
+      studentId: action.studentId,
+      adjustmentFactor: adjustmentFactor,
+    );
+    return result.isSuccess;
+  }
+}

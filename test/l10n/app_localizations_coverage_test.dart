@@ -1,0 +1,733 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
+
+void main() {
+  group('ARB Key Parity Between Locales', () {
+    late Map<String, dynamic> enKeys;
+    late Map<String, dynamic> esKeys;
+
+    setUp(() {
+      final enFile = File('lib/l10n/app_en.arb');
+      final esFile = File('lib/l10n/app_es.arb');
+      final enJson = jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;
+      final esJson = jsonDecode(esFile.readAsStringSync()) as Map<String, dynamic>;
+
+      // Extract only the keys that start with a letter (not @@locale, @key metadata)
+      enKeys = Map.fromEntries(
+        enJson.entries.where((e) => RegExp(r'^[a-zA-Z]').hasMatch(e.key) && !e.key.startsWith('@')),
+      );
+      esKeys = Map.fromEntries(
+        esJson.entries.where((e) => RegExp(r'^[a-zA-Z]').hasMatch(e.key) && !e.key.startsWith('@')),
+      );
+    });
+
+    test('every app_en.arb key has a corresponding app_es.arb key', () {
+      final missing = enKeys.keys.where((key) => !esKeys.containsKey(key)).toList();
+      if (missing.isNotEmpty) {
+        fail('The following keys are present in app_en.arb but missing in app_es.arb:\n'
+            '  ${missing.join('\n  ')}');
+      }
+    });
+
+    test('every app_es.arb key has a corresponding app_en.arb key', () {
+      final missing = esKeys.keys.where((key) => !enKeys.containsKey(key)).toList();
+      if (missing.isNotEmpty) {
+        fail('The following keys are present in app_es.arb but missing in app_en.arb:\n'
+            '  ${missing.join('\n  ')}');
+      }
+    });
+  });
+  group('AppLocalizationsEn - Missing Simple Getters', () {
+    late AppLocalizationsEn l10n;
+
+    setUp(() {
+      l10n = AppLocalizationsEn();
+    });
+
+    test('analytics and metrics section', () {
+      expect(l10n.avgSession, 'Avg Session');
+      expect(l10n.totalSessionsLabel, 'Total Sessions');
+      expect(l10n.currentStreakLabel, 'Current Streak');
+      expect(l10n.sessionsByDayOfWeek, 'Sessions by Day of Week');
+      expect(l10n.performanceMetrics, 'Performance Metrics');
+    });
+
+    test('topic and lesson empty states', () {
+      expect(l10n.noTopicsYetAddSome, 'No topics yet - add some!');
+      expect(l10n.noLessonsUsePlanner, 'No lessons - use Planner to generate!');
+    });
+
+    test('block types', () {
+      expect(l10n.blockTypeExplanation, 'Explanation');
+      expect(l10n.blockTypeExample, 'Example');
+      expect(l10n.blockTypeExercise, 'Exercise');
+      expect(l10n.blockTypeSlide, 'Slide');
+      expect(l10n.blockTypeQuiz, 'Quiz');
+      expect(l10n.blockTypeSummary, 'Summary');
+    });
+
+    test('drawing submitted', () {
+      expect(l10n.drawingSubmitted, 'Drawing submitted');
+    });
+
+    test('study plan section', () {
+      expect(l10n.todaysPlan, 'Today\'s Plan');
+      expect(l10n.noStudyPlanToday, 'No study plan for today');
+    });
+
+    test('at risk and ready to advance', () {
+      expect(l10n.atRiskTopics, 'At Risk Topics');
+      expect(l10n.noAtRiskTopics, 'No at-risk topics. Keep up the good work!');
+      expect(l10n.readyToAdvance, 'Ready to Advance');
+      expect(l10n.keepPracticingToUnlock, 'Keep practicing to unlock advanced topics!');
+    });
+
+    test('mastery overview section', () {
+      expect(l10n.masteryOverview, 'Mastery Overview');
+      expect(l10n.totalTopicsLabel, 'Total Topics');
+      expect(l10n.masteredLabel, 'Mastered');
+      expect(l10n.weakLabel, 'Weak');
+    });
+
+    test('quick guide additional messages', () {
+      expect(l10n.quickGuideWelcomeMessage, 'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything about your studies!');
+      expect(l10n.suggestedPromptExplain, 'Explain photosynthesis');
+      expect(l10n.suggestedPromptQuiz, 'Quiz me on history');
+      expect(l10n.suggestedPromptMath, 'Help with math problems');
+      expect(l10n.quickGuideHelpContent, 'Quick Guide is your AI study assistant. You can:\n\n\u2022 Ask questions about any subject\n\u2022 Request explanations for concepts\n\u2022 Get help with practice problems\n\nJust type your question and tap send!');
+      expect(l10n.semanticsMessageInput, 'Message input for Quick Guide');
+    });
+
+    test('quick guide system prompt', () {
+      expect(l10n.quickGuideSystemPrompt, 'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.');
+    });
+
+    test('fallback AI responses', () {
+      expect(l10n.fallbackExplainResponse, 'Sure! I can help explain concepts. What topic would you like me to explain?');
+      expect(l10n.fallbackQuizResponse, 'I can help with questions! Ask away and I\'ll do my best.');
+      expect(l10n.fallbackMathResponse, 'I\'d be happy to help with math! What specific problem or topic would you like to work on?');
+      expect(l10n.fallbackGeneralResponse, 'That\'s an interesting question! Let me help you understand it better.');
+    });
+
+    test('about application details', () {
+      expect(l10n.aboutApplicationName, 'StudyKing');
+      expect(l10n.aboutVersion, 'v1.0.0');
+      expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
+    });
+
+    test('model and miscellaneous helpers', () {
+      expect(l10n.unknownModelId, 'unknown-model');
+      expect(l10n.unknownProviderName, 'Unknown');
+      expect(l10n.examDateOptionalLabel, 'Exam Date (Optional):');
+      expect(l10n.lessonFallbackTitle, 'Lesson');
+      expect(l10n.questionTypeDefault, 'Question');
+      expect(l10n.durationSeparator, ' ');
+    });
+
+    test('mentor service localized strings', () {
+      expect(l10n.mentorRejectionResponse, 'No problem! I won\'t make any changes. Let me know if you need anything else.');
+      expect(l10n.mentorNoLessonsScheduled, 'You don\'t have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.');
+      expect(l10n.mentorUpcomingLessonsHeader, 'Here are your upcoming lessons:\n');
+      expect(l10n.mentorReschedulePrompt, '\nWould you like to reschedule any of these?');
+      expect(l10n.mentorNotStarted, 'It looks like you haven\'t started yet. Would you like me to help you schedule your first lesson?');
+      expect(l10n.mentorScheduleError, 'I had trouble looking up your schedule. Please try again later.');
+      expect(l10n.mentorProgressError, 'I had trouble generating your progress report. Please try again later.');
+      expect(l10n.mentorNotStartedStudying, 'You haven\'t started studying yet! Would you like me to help you create a study plan to get started?');
+      expect(l10n.mentorToday, 'today');
+      expect(l10n.mentorWelcomeStart, 'Welcome! Let\'s get started with your studies. Would you like to schedule a lesson?');
+      expect(l10n.mentorActivityCheckError, 'I had trouble checking your activity. How can I help you today?');
+      expect(l10n.mentorNewSessionAdded, 'Great! I\'ve added a new study session to your schedule. You can check your planner for details.');
+      expect(l10n.mentorChangesDone, 'Done! The changes have been made to your schedule.');
+      expect(l10n.mentorProgressReportTitle, '📊 **Your Study Progress Report**\n');
+      expect(l10n.mentorAreasNeedingAttention, '\n**Areas needing attention:**');
+      expect(l10n.mentorBadgesEarned, '\n**Badges earned:**');
+      expect(l10n.mentorRecommendations, '\n**Recommendations:**');
+      expect(l10n.mentorProgressReportError, 'Unable to generate progress report. Please try again later.');
+      expect(l10n.mentorNoSubjects, 'You haven\'t added any subjects yet. Would you like help setting up your first subject?');
+      expect(l10n.mentorDoingWell, 'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?');
+    });
+  });
+
+  group('AppLocalizationsEn - Missing Parameterized Methods', () {
+    late AppLocalizationsEn l10n;
+
+    setUp(() {
+      l10n = AppLocalizationsEn();
+    });
+
+    group('daysCount', () {
+      test('one', () => expect(l10n.daysCount(1), '1 day'));
+      test('other', () {
+        expect(l10n.daysCount(2), '2 days');
+        expect(l10n.daysCount(7), '7 days');
+        expect(l10n.daysCount(30), '30 days');
+      });
+    });
+
+    group('blocksCount', () {
+      test('one', () => expect(l10n.blocksCount(1), '1 block'));
+      test('other', () {
+        expect(l10n.blocksCount(2), '2 blocks');
+        expect(l10n.blocksCount(10), '10 blocks');
+      });
+    });
+
+    test('practiceModeType', () {
+      expect(l10n.practiceModeType('Quick Practice', 'MCQ'), 'Quick Practice - MCQ');
+      expect(l10n.practiceModeType('Spaced Repetition', 'Text'), 'Spaced Repetition - Text');
+    });
+
+    test('fallbackOption', () {
+      expect(l10n.fallbackOption(1), 'Option 1');
+      expect(l10n.fallbackOption(2), 'Option 2');
+      expect(l10n.fallbackOption(10), 'Option 10');
+    });
+
+    test('unsupportedQuestionType', () {
+      expect(l10n.unsupportedQuestionType('audio'), 'Unsupported question type: audio');
+      expect(l10n.unsupportedQuestionType('video'), 'Unsupported question type: video');
+    });
+
+    test('questionsCountMetric', () {
+      expect(l10n.questionsCountMetric(0), '0 questions');
+      expect(l10n.questionsCountMetric(5), '5 questions');
+      expect(l10n.questionsCountMetric(100), '100 questions');
+    });
+
+    test('minutesCountMetric', () {
+      expect(l10n.minutesCountMetric(0), '0 min');
+      expect(l10n.minutesCountMetric(15), '15 min');
+      expect(l10n.minutesCountMetric(60), '60 min');
+    });
+
+    test('courseSessionLabel', () {
+      expect(l10n.courseSessionLabel('Math', 1), 'Math - Session 1');
+      expect(l10n.courseSessionLabel('Physics', 5), 'Physics - Session 5');
+    });
+
+    test('semanticsYouSaid', () {
+      expect(l10n.semanticsYouSaid('Hello'), 'You said: Hello');
+      expect(l10n.semanticsYouSaid('What is 2+2?'), 'You said: What is 2+2?');
+    });
+
+    test('semanticsQuickGuideSaid', () {
+      expect(l10n.semanticsQuickGuideSaid('The answer is 4'), 'Quick Guide said: The answer is 4');
+    });
+
+    test('semanticsSendPrompt', () {
+      expect(l10n.semanticsSendPrompt('Explain physics'), 'Send prompt: Explain physics');
+    });
+
+    test('errorWithMessage', () {
+      expect(l10n.errorWithMessage('Network failure'), 'Error: Network failure');
+      expect(l10n.errorWithMessage(''), 'Error: ');
+    });
+
+    test('mentorLessonEntry', () {
+      expect(l10n.mentorLessonEntry('Math', '5/15', 30), '• Math on 5/15 (30 min)\n');
+    });
+
+    test('mentorRecentSessionOnDate', () {
+      expect(l10n.mentorRecentSessionOnDate('2026-05-10'), 'Your most recent study session was on 2026-05-10. Would you like to schedule a new lesson?');
+    });
+
+    test('mentorDaysAgo', () {
+      expect(l10n.mentorDaysAgo(3), '3 days ago');
+      expect(l10n.mentorDaysAgo(1), '1 day ago');
+    });
+
+    test('mentorInactiveDays', () {
+      expect(l10n.mentorInactiveDays(5), 'I noticed you haven\'t studied in 5 days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!');
+    });
+
+    test('mentorGreatJobStayingActive', () {
+      expect(l10n.mentorGreatJobStayingActive('today'), 'Great job staying active! Your last study session was today. Keep up the good work!');
+      expect(l10n.mentorGreatJobStayingActive('3 days ago'), 'Great job staying active! Your last study session was 3 days ago. Keep up the good work!');
+    });
+
+    test('mentorRescheduledConfirmation', () {
+      expect(l10n.mentorRescheduledConfirmation('Algebra'), 'I\'ve noted the change. Your lesson "Algebra" has been rescheduled. Is there anything else I can help with?');
+    });
+
+    test('mentorOverallAccuracy', () {
+      expect(l10n.mentorOverallAccuracy('85', '17', '20'), '**Overall Accuracy:** 85% (17/20 correct)');
+    });
+
+    test('mentorTotalStudyTime', () {
+      expect(l10n.mentorTotalStudyTime('12.5'), '**Total Study Time:** 12.5 hours');
+    });
+
+    test('mentorWeeklyActivity', () {
+      expect(l10n.mentorWeeklyActivity('42'), '**Weekly Activity:** 42 attempts');
+    });
+
+    test('mentorCompletedLessons', () {
+      expect(l10n.mentorCompletedLessons('8'), '**Completed Lessons:** 8');
+    });
+
+    test('mentorTopicsStudied', () {
+      expect(l10n.mentorTopicsStudied('15'), '**Topics Studied:** 15');
+    });
+
+    test('mentorTopicAccuracyEntry', () {
+      expect(l10n.mentorTopicAccuracyEntry('Algebra', 75), '• Algebra (accuracy: 75%)');
+    });
+
+    test('mentorBadgeEntry', () {
+      expect(l10n.mentorBadgeEntry('Star', 'First completed lesson'), '• Star: First completed lesson');
+    });
+
+    test('mentorRecommendationEntry', () {
+      expect(l10n.mentorRecommendationEntry('Review Algebra topics'), '• Review Algebra topics');
+    });
+  });
+
+  group('AppLocalizationsEs - Missing Simple Getters', () {
+    late AppLocalizationsEs l10n;
+
+    setUp(() {
+      l10n = AppLocalizationsEs();
+    });
+
+    test('analytics and metrics section', () {
+      expect(l10n.avgSession, 'Sesión Prom.');
+      expect(l10n.totalSessionsLabel, 'Sesiones Totales');
+      expect(l10n.currentStreakLabel, 'Racha Actual');
+      expect(l10n.sessionsByDayOfWeek, 'Sesiones por Día de la Semana');
+      expect(l10n.performanceMetrics, 'Métricas de Rendimiento');
+    });
+
+    test('topic and lesson empty states', () {
+      expect(l10n.noTopicsYetAddSome, '¿No hay temas? ¡Agregue algunos!');
+      expect(l10n.noLessonsUsePlanner, '¿No hay lecciones? ¡Use el Planificador para generar!');
+    });
+
+    test('block types', () {
+      expect(l10n.blockTypeExplanation, 'Explicación');
+      expect(l10n.blockTypeExample, 'Ejemplo');
+      expect(l10n.blockTypeExercise, 'Ejercicio');
+      expect(l10n.blockTypeSlide, 'Diapositiva');
+      expect(l10n.blockTypeQuiz, 'Cuestionario');
+      expect(l10n.blockTypeSummary, 'Resumen');
+    });
+
+    test('drawing submitted', () {
+      expect(l10n.drawingSubmitted, 'Dibujo enviado');
+    });
+
+    test('study plan section', () {
+      expect(l10n.todaysPlan, 'Plan de Hoy');
+      expect(l10n.noStudyPlanToday, 'No hay plan de estudio para hoy');
+    });
+
+    test('at risk and ready to advance', () {
+      expect(l10n.atRiskTopics, 'Temas en riesgo');
+      expect(l10n.noAtRiskTopics, 'No hay temas en riesgo. ¡Siga así!');
+      expect(l10n.readyToAdvance, 'Listo para Avanzar');
+      expect(l10n.keepPracticingToUnlock, '¡Siga practicando para desbloquear temas avanzados!');
+    });
+
+    test('mastery overview section', () {
+      expect(l10n.masteryOverview, 'Resumen de Dominio');
+      expect(l10n.totalTopicsLabel, 'Total de Temas');
+      expect(l10n.masteredLabel, 'Dominados');
+      expect(l10n.weakLabel, 'Por mejorar');
+    });
+
+    test('quick guide additional messages', () {
+      expect(l10n.quickGuideWelcomeMessage, '¡Hola! Soy la Guía Rápida de StudyKing. ¡Pregúnteme lo que sea sobre sus estudios!');
+      expect(l10n.suggestedPromptExplain, 'Explica la fotosíntesis');
+      expect(l10n.suggestedPromptQuiz, 'Examíname de historia');
+      expect(l10n.suggestedPromptMath, 'Ayuda con problemas de matemáticas');
+      expect(l10n.quickGuideHelpContent, 'Guía Rápida es su asistente de estudio con IA. Puede:\n\n\u2022 Hacer preguntas sobre cualquier materia\n\u2022 Solicitar explicaciones de conceptos\n\u2022 Obtener ayuda con problemas de práctica\n\n¡Solo escriba su pregunta y presione enviar!');
+      expect(l10n.semanticsMessageInput, 'Campo de mensaje para Guía Rápida');
+    });
+
+    test('quick guide system prompt', () {
+      expect(l10n.quickGuideSystemPrompt, 'Es la Guía Rápida de StudyKing, un asistente de estudio de IA útil. Proporciona respuestas concisas y educativas. Ayuda con explicaciones, preguntas de examen y problemas matemáticos. Responde en español de manera conversacional.');
+    });
+
+    test('fallback AI responses', () {
+      expect(l10n.fallbackExplainResponse, '¡Claro! Puedo ayudar a explicar conceptos. ¿Qué tema le gustaría que explique?');
+      expect(l10n.fallbackQuizResponse, '¡Puedo ayudar con preguntas! Pregunte lo que quiera y haré lo mejor posible.');
+      expect(l10n.fallbackMathResponse, '¡Estaré encantado de ayudar con matemáticas! ¿Qué problema o tema específico le gustaría trabajar?');
+      expect(l10n.fallbackGeneralResponse, '¡Esa es una pregunta interesante! Déjeme ayudarle a entenderla mejor.');
+    });
+
+    test('about application details', () {
+      expect(l10n.aboutApplicationName, 'StudyKing');
+      expect(l10n.aboutVersion, 'v1.0.0');
+      expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
+    });
+
+    test('model and miscellaneous helpers', () {
+      expect(l10n.unknownModelId, 'unknown-model');
+      expect(l10n.unknownProviderName, 'Desconocido');
+      expect(l10n.examDateOptionalLabel, 'Fecha de Examen (Opcional):');
+      expect(l10n.lessonFallbackTitle, 'Lección');
+      expect(l10n.questionTypeDefault, 'Pregunta');
+      expect(l10n.durationSeparator, ' ');
+    });
+
+    test('mentor service localized strings', () {
+      expect(l10n.mentorRejectionResponse, '¡No hay problema! No haré ningún cambio. Avíseme si necesita algo más.');
+      expect(l10n.mentorNoLessonsScheduled, 'Aún no tiene lecciones programadas. ¿Le gustaría que le ayude a crear un plan de estudio? Puedo ayudarle a establecer sesiones de estudio regulares para sus materias.');
+      expect(l10n.mentorUpcomingLessonsHeader, 'Aquí están sus próximas lecciones:\n');
+      expect(l10n.mentorReschedulePrompt, '\n¿Le gustaría reprogramar alguna de estas?');
+      expect(l10n.mentorNotStarted, 'Parece que aún no ha empezado. ¿Le gustaría que le ayude a programar su primera lección?');
+      expect(l10n.mentorScheduleError, 'Tuve problemas al consultar su horario. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorProgressError, 'Tuve problemas al generar su informe de progreso. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorNotStartedStudying, '¡Aún no ha empezado a estudiar! ¿Le gustaría que le ayude a crear un plan de estudio para empezar?');
+      expect(l10n.mentorToday, 'hoy');
+      expect(l10n.mentorWelcomeStart, '¡Bienvenido! Comencemos con sus estudios. ¿Le gustaría programar una lección?');
+      expect(l10n.mentorActivityCheckError, 'Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?');
+      expect(l10n.mentorNewSessionAdded, '¡Genial! He agregado una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.');
+      expect(l10n.mentorChangesDone, '¡Listo! Los cambios se han realizado en su horario.');
+      expect(l10n.mentorProgressReportTitle, '📊 **Su Informe de Progreso de Estudio**\n');
+      expect(l10n.mentorAreasNeedingAttention, '\n**Áreas que necesitan atención:**');
+      expect(l10n.mentorBadgesEarned, '\n**Insignias obtenidas:**');
+      expect(l10n.mentorRecommendations, '\n**Recomendaciones:**');
+      expect(l10n.mentorProgressReportError, 'No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.');
+      expect(l10n.mentorNoSubjects, 'Aún no ha añadido ninguna materia. ¿Le gustaría ayuda para configurar su primera materia?');
+      expect(l10n.mentorDoingWell, '¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?');
+    });
+  });
+
+  group('AppLocalizationsEs - Missing Parameterized Methods', () {
+    late AppLocalizationsEs l10n;
+
+    setUp(() {
+      l10n = AppLocalizationsEs();
+    });
+
+    group('daysCount', () {
+      test('one', () => expect(l10n.daysCount(1), '1 día'));
+      test('other', () {
+        expect(l10n.daysCount(2), '2 días');
+        expect(l10n.daysCount(7), '7 días');
+      });
+    });
+
+    group('blocksCount', () {
+      test('one', () => expect(l10n.blocksCount(1), '1 bloque'));
+      test('other', () {
+        expect(l10n.blocksCount(2), '2 bloques');
+        expect(l10n.blocksCount(10), '10 bloques');
+      });
+    });
+
+    test('practiceModeType', () {
+      expect(l10n.practiceModeType('Rápida', 'Opción Múltiple'), 'Rápida - Opción Múltiple');
+    });
+
+    test('fallbackOption', () {
+      expect(l10n.fallbackOption(1), 'Opción 1');
+      expect(l10n.fallbackOption(3), 'Opción 3');
+    });
+
+    test('unsupportedQuestionType', () {
+      expect(l10n.unsupportedQuestionType('audio'), 'Tipo de pregunta no compatible: audio');
+    });
+
+    test('questionsCountMetric', () {
+      expect(l10n.questionsCountMetric(0), '0 preguntas');
+      expect(l10n.questionsCountMetric(5), '5 preguntas');
+    });
+
+    test('minutesCountMetric', () {
+      expect(l10n.minutesCountMetric(0), '0 min');
+      expect(l10n.minutesCountMetric(30), '30 min');
+    });
+
+    test('courseSessionLabel', () {
+      expect(l10n.courseSessionLabel('Matemáticas', 1), 'Matemáticas - Sesión 1');
+    });
+
+    test('semanticsYouSaid', () {
+      expect(l10n.semanticsYouSaid('Hola'), 'Usted dijo: Hola');
+    });
+
+    test('semanticsQuickGuideSaid', () {
+      expect(l10n.semanticsQuickGuideSaid('La respuesta es 4'), 'Guía Rápida dijo: La respuesta es 4');
+    });
+
+    test('semanticsSendPrompt', () {
+      expect(l10n.semanticsSendPrompt('Explica física'), 'Enviar sugerencia: Explica física');
+    });
+
+    test('errorWithMessage', () {
+      expect(l10n.errorWithMessage('Error de red'), 'Error: Error de red');
+    });
+
+    test('mentorLessonEntry', () {
+      expect(l10n.mentorLessonEntry('Matemáticas', '15/5', 30), '• Matemáticas el 15/5 (30 min)\n');
+    });
+
+    test('mentorRecentSessionOnDate', () {
+      expect(l10n.mentorRecentSessionOnDate('2026-05-10'), 'Su sesión de estudio más reciente fue el 2026-05-10. ¿Le gustaría programar una nueva lección?');
+    });
+
+    test('mentorDaysAgo', () {
+      expect(l10n.mentorDaysAgo(3), 'hace 3 días');
+      expect(l10n.mentorDaysAgo(1), 'hace 1 día');
+    });
+
+    test('mentorInactiveDays', () {
+      expect(l10n.mentorInactiveDays(5), 'Noté que no ha estudiado en 5 días. ¿Le gustaría programar una sesión de estudio para retomar el ritmo? ¡La constancia es clave para progresar!');
+    });
+
+    test('mentorGreatJobStayingActive', () {
+      expect(l10n.mentorGreatJobStayingActive('hoy'), '¡Buen trabajo manteniéndose activo! Su última sesión de estudio fue hoy. ¡Siga así!');
+    });
+
+    test('mentorRescheduledConfirmation', () {
+      expect(l10n.mentorRescheduledConfirmation('Álgebra'), 'He notado el cambio. Su lección "Álgebra" ha sido reprogramada. ¿Hay algo más en lo que pueda ayudar?');
+    });
+
+    test('mentorOverallAccuracy', () {
+      expect(l10n.mentorOverallAccuracy('85', '17', '20'), '**Precisión General:** 85% (17/20 correctas)');
+    });
+
+    test('mentorTotalStudyTime', () {
+      expect(l10n.mentorTotalStudyTime('12.5'), '**Tiempo Total de Estudio:** 12.5 horas');
+    });
+
+    test('mentorWeeklyActivity', () {
+      expect(l10n.mentorWeeklyActivity('42'), '**Actividad Semanal:** 42 intentos');
+    });
+
+    test('mentorCompletedLessons', () {
+      expect(l10n.mentorCompletedLessons('8'), '**Lecciones Completadas:** 8');
+    });
+
+    test('mentorTopicsStudied', () {
+      expect(l10n.mentorTopicsStudied('15'), '**Temas Estudiados:** 15');
+    });
+
+    test('mentorTopicAccuracyEntry', () {
+      expect(l10n.mentorTopicAccuracyEntry('Álgebra', 75), '• Álgebra (precisión: 75%)');
+    });
+
+    test('mentorBadgeEntry', () {
+      expect(l10n.mentorBadgeEntry('Estrella', 'Primera lección completada'), '• Estrella: Primera lección completada');
+    });
+
+    test('mentorRecommendationEntry', () {
+      expect(l10n.mentorRecommendationEntry('Repasar temas de Álgebra'), '• Repasar temas de Álgebra');
+    });
+  });
+
+  group('Edge Case Tests for Plural Rules', () {
+    group('English additional plurals', () {
+      late AppLocalizationsEn l10n;
+      setUp(() => l10n = AppLocalizationsEn());
+
+      test('daysCount handles zero correctly', () {
+        expect(l10n.daysCount(0), '0 days');
+      });
+
+      test('blocksCount handles zero correctly', () {
+        expect(l10n.blocksCount(0), '0 blocks');
+      });
+
+      test('durationDays handles zero', () {
+        expect(l10n.durationDays(0), '0d');
+      });
+
+      test('durationHours handles zero', () {
+        expect(l10n.durationHours(0), '0h');
+      });
+
+      test('durationMinutes handles zero', () {
+        expect(l10n.durationMinutes(0), '0m');
+      });
+
+      test('durationSeconds handles zero', () {
+        expect(l10n.durationSeconds(0), '0s');
+      });
+
+      test('overDaysPlural handles large numbers', () {
+        expect(l10n.overDaysPlural(365), 'over 365 days');
+        expect(l10n.overDaysPlural(1000), 'over 1000 days');
+      });
+
+      test('totalHoursPlural handles zero', () {
+        expect(l10n.totalHoursPlural(0), '0 total hours');
+      });
+
+      test('randomQuestions plural', () {
+        expect(l10n.randomQuestions(1), '1 random question');
+        expect(l10n.randomQuestions(3), '3 random questions');
+      });
+
+      test('sessionsCount plural', () {
+        expect(l10n.sessionsCount(1), '1 session');
+        expect(l10n.sessionsCount(5), '5 sessions');
+      });
+
+      test('questionsCountLabel plural', () {
+        expect(l10n.questionsCountLabel(1), '1 question');
+        expect(l10n.questionsCountLabel(10), '10 questions');
+      });
+
+      test('questionsCountMetric plural', () {
+        expect(l10n.questionsCountMetric(1), '1 question');
+        expect(l10n.questionsCountMetric(0), '0 questions');
+        expect(l10n.questionsCountMetric(5), '5 questions');
+        expect(l10n.questionsCountMetric(100), '100 questions');
+      });
+    });
+
+    group('Spanish additional plurals', () {
+      late AppLocalizationsEs l10n;
+      setUp(() => l10n = AppLocalizationsEs());
+
+      test('daysCount handles zero correctly', () {
+        expect(l10n.daysCount(0), '0 días');
+      });
+
+      test('blocksCount handles zero correctly', () {
+        expect(l10n.blocksCount(0), '0 bloques');
+      });
+
+      test('durationDays handles zero', () {
+        expect(l10n.durationDays(0), '0d');
+      });
+
+      test('durationHours handles zero', () {
+        expect(l10n.durationHours(0), '0h');
+      });
+
+      test('durationMinutes handles zero', () {
+        expect(l10n.durationMinutes(0), '0m');
+      });
+
+      test('durationSeconds handles zero', () {
+        expect(l10n.durationSeconds(0), '0s');
+      });
+
+      test('overDaysPlural handles large numbers', () {
+        expect(l10n.overDaysPlural(365), 'en 365 días');
+      });
+
+      test('totalHoursPlural handles zero', () {
+        expect(l10n.totalHoursPlural(0), '0 horas totales');
+      });
+
+      test('randomQuestions plural', () {
+        expect(l10n.randomQuestions(1), '1 pregunta aleatoria');
+        expect(l10n.randomQuestions(3), '3 preguntas aleatorias');
+      });
+
+      test('sessionsCount plural', () {
+        expect(l10n.sessionsCount(1), '1 sesión');
+        expect(l10n.sessionsCount(5), '5 sesiones');
+      });
+
+      test('questionsCountLabel plural', () {
+        expect(l10n.questionsCountLabel(1), '1 pregunta');
+        expect(l10n.questionsCountLabel(10), '10 preguntas');
+      });
+
+      test('questionsCountMetric plural', () {
+        expect(l10n.questionsCountMetric(1), '1 pregunta');
+        expect(l10n.questionsCountMetric(0), '0 preguntas');
+        expect(l10n.questionsCountMetric(5), '5 preguntas');
+      });
+    });
+  });
+
+  group('Constructor Custom Locale Tests', () {
+    test('AppLocalizationsEn accepts custom locale string', () {
+      final en = AppLocalizationsEn('en-US');
+      expect(en.localeName, 'en_US');
+    });
+
+    test('AppLocalizationsEn accepts empty locale string', () {
+      final en = AppLocalizationsEn('');
+      expect(en.localeName, '');
+    });
+
+    test('AppLocalizationsEs accepts custom locale string', () {
+      final es = AppLocalizationsEs('es-AR');
+      expect(es.localeName, 'es_AR');
+    });
+
+    test('AppLocalizationsEs accepts empty locale string', () {
+      final es = AppLocalizationsEs('');
+      expect(es.localeName, '');
+    });
+
+    test('AppLocalizationsEn is an AppLocalizations', () {
+      expect(AppLocalizationsEn(), isA<AppLocalizations>());
+    });
+
+    test('AppLocalizationsEs is an AppLocalizations', () {
+      expect(AppLocalizationsEs(), isA<AppLocalizations>());
+    });
+  });
+
+  group('Additional AppLocalizations Static Tests', () {
+    test('supportedLocales contains only en and es', () {
+      expect(AppLocalizations.supportedLocales.length, 2);
+      for (final locale in AppLocalizations.supportedLocales) {
+        expect(['en', 'es'], contains(locale.languageCode));
+      }
+    });
+
+    test('localizationsDelegates is const and contains expected count', () {
+      const delegates = AppLocalizations.localizationsDelegates;
+      expect(delegates.length, 4);
+    });
+
+    test('delegate hashcode is stable across calls', () {
+      final d1 = AppLocalizations.delegate;
+      final d2 = AppLocalizations.delegate;
+      expect(d1.hashCode, equals(d2.hashCode));
+    });
+
+    test('delegate toString returns something', () {
+      expect(AppLocalizations.delegate.toString(), isNotEmpty);
+    });
+  });
+
+
+
+  group('lookupAppLocalizations Edge Cases', () {
+    test('returns AppLocalizationsEn for en-US', () {
+      final result = lookupAppLocalizations(const Locale('en', 'US'));
+      expect(result, isA<AppLocalizationsEn>());
+    });
+
+    test('returns AppLocalizationsEs for es-ES', () {
+      final result = lookupAppLocalizations(const Locale('es', 'ES'));
+      expect(result, isA<AppLocalizationsEs>());
+    });
+
+    test('throws FlutterError for null-like unsupported locale', () {
+      expect(
+        () => lookupAppLocalizations(const Locale('xx')),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+  });
+
+  group('delegate.shouldReload', () {
+    test('shouldReload returns false for same delegate type', () {
+      final delegate = AppLocalizations.delegate;
+      expect(delegate.shouldReload(delegate), isFalse);
+    });
+
+    test('shouldReload returns false for new delegate', () {
+      final delegate1 = AppLocalizations.delegate;
+      final delegate2 = AppLocalizations.delegate;
+      expect(delegate1.shouldReload(delegate2), isFalse);
+    });
+  });
+}

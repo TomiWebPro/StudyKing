@@ -1,0 +1,135 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
+
+void main() {
+  group('QuestionType', () {
+    test('has all expected values', () {
+      expect(QuestionType.values.length, 10);
+      expect(QuestionType.singleChoice.index, 0);
+      expect(QuestionType.multiChoice.index, 1);
+      expect(QuestionType.typedAnswer.index, 2);
+      expect(QuestionType.canvas.index, 3);
+      expect(QuestionType.essay.index, 4);
+      expect(QuestionType.stepByStep.index, 5);
+      expect(QuestionType.mathExpression.index, 6);
+      expect(QuestionType.graphDrawing.index, 7);
+      expect(QuestionType.fileUpload.index, 8);
+      expect(QuestionType.audioRecording.index, 9);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in QuestionType.values) {
+        expect(QuestionType.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in QuestionType.values) {
+        final found = QuestionType.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+
+  group('SourceType', () {
+    test('has all expected values', () {
+      expect(SourceType.values.length, 10);
+      expect(SourceType.pdf.index, 0);
+      expect(SourceType.syllabus.index, 1);
+      expect(SourceType.textbook.index, 2);
+      expect(SourceType.video.index, 3);
+      expect(SourceType.lectureNotes.index, 4);
+      expect(SourceType.externalResource.index, 5);
+      expect(SourceType.image.index, 6);
+      expect(SourceType.webPage.index, 7);
+      expect(SourceType.audio.index, 8);
+      expect(SourceType.document.index, 9);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in SourceType.values) {
+        expect(SourceType.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in SourceType.values) {
+        final found = SourceType.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+
+  group('ProcessingStatus', () {
+    test('has all expected values', () {
+      expect(ProcessingStatus.values.length, 7);
+      expect(ProcessingStatus.pending.index, 0);
+      expect(ProcessingStatus.extracting.index, 1);
+      expect(ProcessingStatus.classifying.index, 2);
+      expect(ProcessingStatus.generatingQuestions.index, 3);
+      expect(ProcessingStatus.validating.index, 4);
+      expect(ProcessingStatus.completed.index, 5);
+      expect(ProcessingStatus.failed.index, 6);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in ProcessingStatus.values) {
+        expect(ProcessingStatus.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in ProcessingStatus.values) {
+        final found = ProcessingStatus.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+
+  group('LessonBlockType', () {
+    test('has all expected values', () {
+      expect(LessonBlockType.values.length, 6);
+      expect(LessonBlockType.text.index, 0);
+      expect(LessonBlockType.example.index, 1);
+      expect(LessonBlockType.exercise.index, 2);
+      expect(LessonBlockType.slide.index, 3);
+      expect(LessonBlockType.quiz.index, 4);
+      expect(LessonBlockType.summary.index, 5);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in LessonBlockType.values) {
+        expect(LessonBlockType.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in LessonBlockType.values) {
+        final found = LessonBlockType.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+
+  group('GeneratedBy', () {
+    test('has all expected values', () {
+      expect(GeneratedBy.values.length, 3);
+      expect(GeneratedBy.ai.index, 0);
+      expect(GeneratedBy.manual.index, 1);
+      expect(GeneratedBy.hybrid.index, 2);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in GeneratedBy.values) {
+        expect(GeneratedBy.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in GeneratedBy.values) {
+        final found = GeneratedBy.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+}

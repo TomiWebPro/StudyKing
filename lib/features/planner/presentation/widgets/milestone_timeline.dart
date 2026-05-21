@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class MilestoneTimeline extends StatelessWidget {
+  final RoadmapModel roadmap;
+
+  const MilestoneTimeline({super.key, required this.roadmap});
+
+  static Widget _buildTimelineContent(
+    BuildContext context,
+    AppLocalizations l10n,
+    DateTime now,
+    DateTime startDate,
+    DateTime endDate,
+    double totalDuration,
+    double totalWidth,
+    RoadmapModel roadmap,
+  ) {
+    final theme = Theme.of(context);
+    return Stack(
+      children: [
+        Container(
+          height: 4,
+          margin: const EdgeInsets.only(top: 8),
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.circular(2),
+          ),
+        ),
+        ...roadmap.milestones.map((milestone) {
+          final msDuration = milestone.deadline
+              .difference(startDate)
+              .inMilliseconds
+              .toDouble();
+          final left = (msDuration / totalDuration * totalWidth)
+              .clamp(0.0, totalWidth);
+          final isPast = milestone.deadline.isBefore(now);
+          final isCompleted = milestone.isCompleted;
+          final color = isCompleted
+              ? theme.colorScheme.primary
+              : isPast
+                  ? theme.colorScheme.error
+                  : theme.colorScheme.tertiary;
+
+          return Positioned(
+            left: left - 6,
+            top: 0,
+            child: Semantics(
+              label: l10n.milestoneOfWithDeadline(
+                  milestone.title, DateFormat.yMMMd(l10n.localeName).format(milestone.deadline)),
+              child: Column(
+                children: [
+                  Container(
+                    width: 12,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: color,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: theme.colorScheme.surface,
+                        width: 2,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 0.5),
+                  Text(
+                    l10n.milestoneShort(milestone.order),
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      color: color,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (roadmap.milestones.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Text(l10n.noLessonsYet,
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            )),
+      );
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.timeline,
+          style: Theme.of(context)
+              .textTheme
+              .titleSmall
+              ?.copyWith(fontWeight: FontWeight.w600),
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        SizedBox(
+          height: ResponsiveUtils.verticalSpacing(context) * 5,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final totalWidth = constraints.maxWidth;
+              final now = DateTime.now();
+              final startDate = roadmap.createdAt;
+              final endDate = roadmap.targetCompletionDate ??
+                  startDate.add(Timeouts.defaultPlanSpan);
+              final totalDuration =
+                  endDate.difference(startDate).inMilliseconds.toDouble();
+              if (totalDuration <= 0) return const SizedBox.shrink();
+
+              final totalMilestones = roadmap.milestones.length;
+              final minGap = 24.0;
+              final overflow = totalWidth < totalMilestones * minGap;
+              final timelineContent = MilestoneTimeline._buildTimelineContent(
+                context, l10n, now, startDate, endDate, totalDuration, totalWidth, roadmap,
+              );
+              if (overflow) {
+                return SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: SizedBox(
+                    width: (totalMilestones * minGap).clamp(totalWidth, double.infinity),
+                    height: ResponsiveUtils.verticalSpacing(context) * 5,
+                    child: timelineContent,
+                  ),
+                );
+              }
+              return timelineContent;
+            },
+          ),
+        ),
+        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+        Wrap(
+          spacing: 8,
+          runSpacing: 4,
+          children: roadmap.milestones.map((ms) {
+            final isPast = ms.deadline.isBefore(DateTime.now());
+            return Semantics(
+              label: l10n.milestoneOfWithDeadline(
+                  ms.title, DateFormat.yMMMd(l10n.localeName).format(ms.deadline)),
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: ms.isCompleted
+                      ? Theme.of(context).colorScheme.primaryContainer
+                      : isPast
+                          ? Theme.of(context).colorScheme.errorContainer
+                          : Theme.of(context).colorScheme.tertiaryContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                  child: Text(
+                    '${ms.title}: ${DateFormat.MMMd(l10n.localeName).format(ms.deadline)}',
+                    style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: ms.isCompleted
+                        ? Theme.of(context).colorScheme.primary
+                        : isPast
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.tertiary,
+                  ),
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ],
+    );
+  }
+}

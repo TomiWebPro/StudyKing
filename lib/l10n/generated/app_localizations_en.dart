@@ -1,0 +1,5859 @@
+// ignore: unused_import
+import 'package:intl/intl.dart' as intl;
+import 'app_localizations.dart';
+
+// ignore_for_file: type=lint
+
+/// The translations for English (`en`).
+class AppLocalizationsEn extends AppLocalizations {
+  AppLocalizationsEn([String locale = 'en']) : super(locale);
+
+  @override
+  String get appTitle => 'StudyKing';
+
+  @override
+  String get subjects => 'Subjects';
+
+  @override
+  String get practice => 'Practice';
+
+  @override
+  String get settings => 'Settings';
+
+  @override
+  String get studyPlanner => 'Study Planner';
+
+  @override
+  String get createStudyPlan => 'Create Study Plan';
+
+  @override
+  String get courseSubject => 'Course/Subject';
+
+  @override
+  String get courseHint => 'e.g., IB Physics';
+
+  @override
+  String get days => 'Days';
+
+  @override
+  String get hoursPerDay => 'Hours/Day';
+
+  @override
+  String get generatePlan => 'Generate Plan';
+
+  @override
+  String get generating => 'Generating...';
+
+  @override
+  String get generatingReport => 'Generating report...';
+
+  @override
+  String get yourStudySchedule => 'Your Study Schedule';
+
+  @override
+  String topicLabel(int number) {
+    return 'Topic $number';
+  }
+
+  @override
+  String sessionDurationMinutes(int minutes) {
+    return '$minutes min session';
+  }
+
+  @override
+  String get fillAllFieldsCorrectly => 'Please fill in all fields correctly';
+
+  @override
+  String generatedPlanOverDays(String course, int days, int totalHours) {
+    return 'Generated plan for $course over $days days ($totalHours total hours)';
+  }
+
+  @override
+  String overDaysPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+      zero: 'no days',
+    );
+    return 'over $_temp0';
+  }
+
+  @override
+  String totalHoursPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count total hours',
+      one: '1 total hour',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get today => 'Today';
+
+  @override
+  String get yesterday => 'Yesterday';
+
+  @override
+  String get unknown => 'Unknown';
+
+  @override
+  String durationDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}d',
+      one: '1d',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String durationHours(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}h',
+      one: '1h',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String durationMinutes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}m',
+      one: '1m',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String durationSeconds(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '${count}s',
+      one: '1s',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get practiceMode => 'Practice Mode';
+
+  @override
+  String get practiceOptions => 'Practice Options';
+
+  @override
+  String get noSubjects => 'No Subjects';
+
+  @override
+  String get noPracticeSessionsYet => 'No Practice Sessions Yet';
+
+  @override
+  String get addSubjectsAndQuestionsToStartPracticing =>
+      'Add subjects and questions to start practicing';
+
+  @override
+  String get addSubjectsFromSubjectsTab => 'Add subjects from the Subjects tab';
+
+  @override
+  String get addSubject => 'Add Subject';
+
+  @override
+  String get practiceModes => 'Practice Modes';
+
+  @override
+  String get quickPractice => 'Quick Practice';
+
+  @override
+  String randomQuestions(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count random questions',
+      one: '1 random question',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get comingSoon => 'Coming soon';
+
+  @override
+  String get spacedRepetition => 'Spaced Repetition';
+
+  @override
+  String get topicFocus => 'Topic Focus';
+
+  @override
+  String get practiceSpecificTopics => 'Practice specific topics';
+
+  @override
+  String get weakAreas => 'Weak Areas';
+
+  @override
+  String get focusOnMistakes => 'Focus on mistakes';
+
+  @override
+  String get yourSubjects => 'Your Subjects';
+
+  @override
+  String get readyForPractice => 'Ready for practice';
+
+  @override
+  String get practiceAvailable => 'Practice available';
+
+  @override
+  String get selectSubject => 'Select Subject';
+
+  @override
+  String get practiceModeTitle => 'Practice Mode';
+
+  @override
+  String get autoSelect => 'Auto Select';
+
+  @override
+  String get aiPicksOptimalQuestions => 'AI picks optimal questions';
+
+  @override
+  String get chooseSubject => 'Choose Subject';
+
+  @override
+  String get noCode => 'No code';
+
+  @override
+  String get topicSelectionComingSoon => 'Topic selection coming soon!';
+
+  @override
+  String get noWeakAreasFound => 'No weak areas found. Keep up the great work!';
+
+  @override
+  String get atRiskQuestions => 'At-Risk Questions';
+
+  @override
+  String get atRiskQuestionsDescription =>
+      'Practice questions with lowest mastery scores';
+
+  @override
+  String get noWeakAreasQuestions =>
+      'No questions available for your weak areas.';
+
+  @override
+  String get noQuestionsAvailable => 'No Questions Available';
+
+  @override
+  String get noQuestionsForSelectedSubject =>
+      'There are no questions for the selected subject/topic. Start creating questions!';
+
+  @override
+  String get time => 'Time';
+
+  @override
+  String get score => 'Score';
+
+  @override
+  String get correct => 'Correct';
+
+  @override
+  String get yourAnswer => 'Your Answer';
+
+  @override
+  String yourAnswerCharacters(int count) {
+    return 'Your Answer ($count characters)';
+  }
+
+  @override
+  String get submitAnswer => 'Submit Answer';
+
+  @override
+  String get correctFeedback => 'Correct!';
+
+  @override
+  String get incorrectFeedback => 'Incorrect';
+
+  @override
+  String get previous => 'Previous';
+
+  @override
+  String get next => 'Next';
+
+  @override
+  String get sessionResults => 'Session Results';
+
+  @override
+  String get practiceComplete => 'Practice Complete!';
+
+  @override
+  String get totalQuestions => 'Total Questions';
+
+  @override
+  String get correctAnswers => 'Correct Answers';
+
+  @override
+  String get accuracy => 'Accuracy';
+
+  @override
+  String get examConfiguration => 'Exam Configuration';
+
+  @override
+  String get startExam => 'Start Exam';
+
+  @override
+  String get examDuration => 'Exam Duration';
+
+  @override
+  String get numberOfQuestions => 'Number of Questions';
+
+  @override
+  String get incorrectLabel => 'Incorrect';
+
+  @override
+  String get skippedLabel => 'Skipped';
+
+  @override
+  String get examAutoSubmitted => 'Exam was auto-submitted when time ran out.';
+
+  @override
+  String get topicBreakdown => 'Topic Breakdown';
+
+  @override
+  String get masteryDelta => 'Mastery Change';
+
+  @override
+  String startingPractice(String mode) {
+    return 'Starting $mode...';
+  }
+
+  @override
+  String get backToPractice => 'Back to Practice';
+
+  @override
+  String get swipeToDelete => 'Swipe to delete';
+
+  @override
+  String get valueMustBePositive => 'Value must be positive';
+
+  @override
+  String get correctExceedsQuestions =>
+      'Correct answers cannot exceed total questions';
+
+  @override
+  String get practiceAgain => 'Practice Again';
+
+  @override
+  String get allCaughtUp => 'All caught up!';
+
+  @override
+  String get noReviewsScheduled => 'No reviews scheduled.';
+
+  @override
+  String dueQuestionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count due',
+      one: '1 due',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get reviewDueQuestions => 'Review due questions';
+
+  @override
+  String get selectTopic => 'Select Topic';
+
+  @override
+  String get noTopicsAvailable => 'No topics available';
+
+  @override
+  String get questionsDueForReview => 'questions due for review';
+
+  @override
+  String get spacedRepetitionMode => 'Spaced Repetition';
+
+  @override
+  String get colorBlue => 'Blue';
+
+  @override
+  String get colorGreen => 'Green';
+
+  @override
+  String get colorOrange => 'Orange';
+
+  @override
+  String get colorPurple => 'Purple';
+
+  @override
+  String get colorPink => 'Pink';
+
+  @override
+  String get colorCyan => 'Cyan';
+
+  @override
+  String get colorAmber => 'Amber';
+
+  @override
+  String get colorDeepOrange => 'Deep Orange';
+
+  @override
+  String get colorBlueGrey => 'Blue Grey';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get nameIsRequired => 'Name is required';
+
+  @override
+  String get studentIdMustBeNumeric => 'Student ID must be numeric';
+
+  @override
+  String get profileSavedSuccessfully => 'Profile saved successfully';
+
+  @override
+  String errorSavingProfile(String error) {
+    return 'Error saving profile: $error';
+  }
+
+  @override
+  String get chooseAvatar => 'Choose Avatar';
+
+  @override
+  String get confirm => 'Confirm';
+
+  @override
+  String get cancel => 'Cancel';
+
+  @override
+  String selectAvatar(String iconKey) {
+    return 'Select avatar $iconKey';
+  }
+
+  @override
+  String get fullName => 'Full Name';
+
+  @override
+  String get enterYourName => 'Enter your name';
+
+  @override
+  String get studentIdOptional => 'Student ID (Optional)';
+
+  @override
+  String get yourStudentIdNumber => 'Your student ID number';
+
+  @override
+  String get learningGoal => 'Learning Goal';
+
+  @override
+  String get learningGoalHint => 'e.g., Final Exams, Certifications';
+
+  @override
+  String get preferredStudyTime => 'Preferred Study Time';
+
+  @override
+  String get preferredStudyTimeHint => 'e.g., Evening (6-9 PM)';
+
+  @override
+  String get accountInformation => 'Account Information';
+
+  @override
+  String get language => 'Language';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get spanish => 'Spanish';
+
+  @override
+  String get notifications => 'Notifications';
+
+  @override
+  String get deleteAccountWarning =>
+      'Deleting your account will permanently remove all study data';
+
+  @override
+  String get delete => 'Delete';
+
+  @override
+  String get deleteAccount => 'Delete Account';
+
+  @override
+  String get deleteAccountConfirmation =>
+      'Are you sure you want to delete your account? This action cannot be undone and will permanently delete all your study data.';
+
+  @override
+  String get save => 'Save';
+
+  @override
+  String get userManagement => 'User Management';
+
+  @override
+  String get currentUser => 'Current User';
+
+  @override
+  String get manageYourProfile => 'Manage your profile';
+
+  @override
+  String get quickAccess => 'Quick Access';
+
+  @override
+  String get quickGuide => 'Quick Guide';
+
+  @override
+  String get aiPoweredStudyAssistant => 'AI-powered study assistant';
+
+  @override
+  String get appearance => 'Appearance';
+
+  @override
+  String get theme => 'Theme';
+
+  @override
+  String get light => 'Light';
+
+  @override
+  String get dark => 'Dark';
+
+  @override
+  String get system => 'System';
+
+  @override
+  String get fontSize => 'Font Size';
+
+  @override
+  String get small => 'Small';
+
+  @override
+  String get fontSizeMedium => 'Medium';
+
+  @override
+  String get large => 'Large';
+
+  @override
+  String get leaveAnyway => 'Leave anyway';
+
+  @override
+  String get extraLarge => 'Extra Large';
+
+  @override
+  String get aiConfiguration => 'AI Configuration';
+
+  @override
+  String get apiKeys => 'API Keys';
+
+  @override
+  String get configured => 'Configured';
+
+  @override
+  String get notConfigured => 'Not configured';
+
+  @override
+  String get aiModel => 'AI Model';
+
+  @override
+  String get selectModelFromApi => 'Select a model from API';
+
+  @override
+  String get requestTimeout => 'Request Timeout';
+
+  @override
+  String secondsValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seconds',
+      one: '1 second',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get studyPreferences => 'Study Preferences';
+
+  @override
+  String get studyReminders => 'Study Reminders';
+
+  @override
+  String get enableNotificationAlerts => 'Enable notification alerts';
+
+  @override
+  String get sessionDuration => 'Session Duration';
+
+  @override
+  String minutesValue(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count minutes',
+      one: '1 minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get studyAnalytics => 'Study Analytics';
+
+  @override
+  String get totalStudySessions => 'Total Study Sessions';
+
+  @override
+  String sessionsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sessions',
+      one: '1 session',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get totalStudyTime => 'Total Study Time';
+
+  @override
+  String get aboutSection => 'About';
+
+  @override
+  String get aboutStudyKing => 'About StudyKing';
+
+  @override
+  String get versionInfo => 'Version 0.1.0';
+
+  @override
+  String get signOut => 'Sign Out';
+
+  @override
+  String get apiKeyRequired => 'API Key Required';
+
+  @override
+  String get pleaseConfigureApiKey => 'Please configure your API key first.';
+
+  @override
+  String get ok => 'OK';
+
+  @override
+  String get unableToLoadModels => 'Unable to load models right now.';
+
+  @override
+  String get searchModels => 'Search models';
+
+  @override
+  String get modelRequestTimedOut =>
+      'Model request timed out. Please try again.';
+
+  @override
+  String get unableToLoadModelsTryAgain =>
+      'Unable to load models. Please try again.';
+
+  @override
+  String mentorInitFailed(String error) {
+    return 'Mentor initialization failed: $error. Go to Settings to configure your AI provider, or retry.';
+  }
+
+  @override
+  String get contentPipelineNotAvailable => 'Content pipeline not available';
+
+  @override
+  String get mentorInitFailedHint =>
+      'Connectivity issue — configure AI provider in Settings';
+
+  @override
+  String tutorInitFailed(String error) {
+    return 'Tutor initialization failed: $error. Go to Settings to configure your AI provider, or retry.';
+  }
+
+  @override
+  String get goBack => 'Go Back';
+
+  @override
+  String get tapToRefreshSection => 'Tap to refresh this section';
+
+  @override
+  String get retry => 'Retry';
+
+  @override
+  String get signOutConfirmation => 'Are you sure you want to sign out?';
+
+  @override
+  String get sessionsLabel => 'Sessions';
+
+  @override
+  String get noActivity => 'No activity — you were away this week.';
+
+  @override
+  String get questionsLabel => 'Questions';
+
+  @override
+  String get mySubjects => 'My Subjects';
+
+  @override
+  String get addNewSubject => 'Add New Subject';
+
+  @override
+  String get subjectName => 'Subject Name';
+
+  @override
+  String get subjectNameHint => 'e.g., Physics';
+
+  @override
+  String get subjectCodeOptional => 'Subject Code (Optional)';
+
+  @override
+  String get subjectCodeHint => 'e.g., IB-PHYS';
+
+  @override
+  String get themeColor => 'Theme Color';
+
+  @override
+  String get subjectColor => 'Subject Color';
+
+  @override
+  String get examDateOptional => 'Exam Date (Optional)';
+
+  @override
+  String get backupAndRestore => 'Backup & Restore';
+
+  @override
+  String get backupAndRestoreTooltip => 'Backup & Restore';
+
+  @override
+  String get exportBackup => 'Export Backup';
+
+  @override
+  String get exportAllDataDescription => 'Export all your study data';
+
+  @override
+  String get importBackup => 'Import Backup';
+
+  @override
+  String get importFromFileDescription => 'Restore from a backup file';
+
+  @override
+  String get backupExported => 'Backup exported successfully';
+
+  @override
+  String get backupExportFailed => 'Failed to export backup';
+
+  @override
+  String get importConfirmTitle => 'Import Backup';
+
+  @override
+  String importPreview(int boxes, int records) {
+    String _temp0 = intl.Intl.pluralLogic(
+      boxes,
+      locale: localeName,
+      other: '$boxes sections',
+      one: '1 section',
+    );
+    String _temp1 = intl.Intl.pluralLogic(
+      records,
+      locale: localeName,
+      other: '$records records',
+      one: '1 record',
+    );
+    return 'This backup contains $_temp0 with $_temp1. Existing data may be overwritten. Continue?';
+  }
+
+  @override
+  String get importSuccess => 'Data restored successfully';
+
+  @override
+  String get importFailed => 'Failed to restore data';
+
+  @override
+  String get invalidBackupFile => 'Invalid backup file';
+
+  @override
+  String get selectBackupFile => 'Select backup file';
+
+  @override
+  String get selectDate => 'Select date';
+
+  @override
+  String get createSubject => 'Create Subject';
+
+  @override
+  String get subjectCreatedSuccessfully => 'Subject created successfully';
+
+  @override
+  String uploadPrompt(String subject) {
+    return 'Would you like to upload study material for $subject?';
+  }
+
+  @override
+  String get noThanks => 'No thanks';
+
+  @override
+  String errorCreatingSubject(String error) {
+    return 'Error creating subject: $error';
+  }
+
+  @override
+  String get pleaseEnterSubjectName => 'Please enter a subject name';
+
+  @override
+  String get descriptionOptional => 'Description (Optional)';
+
+  @override
+  String get descriptionHint => 'Brief description of the subject';
+
+  @override
+  String get teacherOptional => 'Teacher (Optional)';
+
+  @override
+  String get teacherHint => 'e.g., Dr. John Smith';
+
+  @override
+  String get syllabusScopeOptional => 'Syllabus/Scope (Optional)';
+
+  @override
+  String get syllabusHint => 'Brief overview of the syllabus';
+
+  @override
+  String get teacherNameHint => 'Enter teacher name';
+
+  @override
+  String get syllabusDescriptionHint => 'Enter syllabus description';
+
+  @override
+  String get noSubjectsYet => 'No subjects yet';
+
+  @override
+  String get addFirstSubject => 'Add your first subject to begin studying';
+
+  @override
+  String get practiceSessions => 'Practice sessions';
+
+  @override
+  String get startPractice => 'Start Practice';
+
+  @override
+  String get noPracticeHistory => 'No practice history';
+
+  @override
+  String get viewAllSessions => 'View All Sessions';
+
+  @override
+  String get editSubject => 'Edit Subject';
+
+  @override
+  String get deleteSubject => 'Delete Subject';
+
+  @override
+  String get deleteSubjectConfirmation =>
+      'Are you sure you want to delete this subject? This will also delete all associated lessons and questions.';
+
+  @override
+  String get sessionDetails => 'Session Details';
+
+  @override
+  String get close => 'Close';
+
+  @override
+  String get date => 'Date';
+
+  @override
+  String get duration => 'Duration';
+
+  @override
+  String get questions => 'Questions';
+
+  @override
+  String get lessonsTab => 'Lessons';
+
+  @override
+  String get practiceTab => 'Practice';
+
+  @override
+  String get historyTab => 'History';
+
+  @override
+  String get statsTab => 'Stats';
+
+  @override
+  String get noLessonsYet => 'No lessons yet';
+
+  @override
+  String get startLearningByCreatingTopics =>
+      'Start learning by creating topics and questions';
+
+  @override
+  String get addTopic => 'Add Topic';
+
+  @override
+  String get lesson => 'Lesson';
+
+  @override
+  String questionsCount(int count) {
+    return 'Questions: $count';
+  }
+
+  @override
+  String practiceQuestionsFrom(String subjectName) {
+    return 'Practice questions from $subjectName';
+  }
+
+  @override
+  String get practiceProgress => 'Practice Progress';
+
+  @override
+  String get overallScore => 'Overall Score';
+
+  @override
+  String get keepPracticing => 'Keep practicing to improve your score!';
+
+  @override
+  String sessionNumber(int number) {
+    return 'Session $number';
+  }
+
+  @override
+  String get selectFormat => 'Select question format:';
+
+  @override
+  String get studySessionTracker => 'Study Session Tracker';
+
+  @override
+  String get start => 'Start';
+
+  @override
+  String get end => 'End';
+
+  @override
+  String get sessionComplete => 'Session Complete';
+
+  @override
+  String get howManyQuestions => 'How many questions did you answer?';
+
+  @override
+  String get questionsAnswered => 'Questions Answered';
+
+  @override
+  String get skip => 'Skip';
+
+  @override
+  String get graphRenderer => 'Graph Renderer';
+
+  @override
+  String get refreshGraph => 'Refresh graph';
+
+  @override
+  String get validateGraphType => 'Validate graph type';
+
+  @override
+  String get uploadData => 'Upload Data';
+
+  @override
+  String get uploadDataFile => 'Upload Data File';
+
+  @override
+  String get orPasteDataDirectly => 'Or paste data directly:';
+
+  @override
+  String get pasteDataHint => 'Paste comma-separated data...';
+
+  @override
+  String get graphTypeDetection => 'Graph Type Detection';
+
+  @override
+  String get autoDetectFromData => 'Auto-detect from data:';
+
+  @override
+  String get lineGraph => 'Line Graph';
+
+  @override
+  String get barChart => 'Bar Chart';
+
+  @override
+  String get scatterPlot => 'Scatter Plot';
+
+  @override
+  String get pieChart => 'Pie Chart';
+
+  @override
+  String get llmValidation => 'LLM Validation';
+
+  @override
+  String get useLlmToValidateGraph => 'Use LLM to validate graph:';
+
+  @override
+  String get describeWhatYouSee => 'Describe what you see in the graph...';
+
+  @override
+  String get validateWithLlm => 'Validate with LLM';
+
+  @override
+  String get validating => 'Validating...';
+
+  @override
+  String get renderedGraph => 'Rendered Graph';
+
+  @override
+  String get noDataUploaded => 'No data uploaded';
+
+  @override
+  String get uploadOrPasteData => 'Upload or paste data to visualize';
+
+  @override
+  String get selectGraphType => 'Select a graph type to visualize';
+
+  @override
+  String graphVisualization(String graphType) {
+    return '$graphType Visualization';
+  }
+
+  @override
+  String dataPointsCount(int count) {
+    return 'Data points: $count';
+  }
+
+  @override
+  String graphTypeSetTo(String graphType) {
+    return 'Graph type set to $graphType';
+  }
+
+  @override
+  String get uploadDataFileDialog => 'Upload Data File';
+
+  @override
+  String get fileUploadImplemented =>
+      'File upload functionality would be implemented here.';
+
+  @override
+  String get graphValidation => 'Graph Validation';
+
+  @override
+  String typeLabel(String graphType) {
+    return 'Type: $graphType';
+  }
+
+  @override
+  String get considerUsingPieChart =>
+      'Consider using Pie Chart for small datasets';
+
+  @override
+  String get considerUsingBarChart =>
+      'Consider using Bar Chart for larger datasets';
+
+  @override
+  String get graphTypeMatchesData => 'Graph type matches data structure';
+
+  @override
+  String get graphRefreshed => 'Graph refreshed';
+
+  @override
+  String get pleaseSelectGraphType => 'Please select a graph type first';
+
+  @override
+  String get validationComplete => 'Validation complete';
+
+  @override
+  String validationFailed(String error) {
+    return 'Validation failed: $error';
+  }
+
+  @override
+  String get graphTypeDetectionError => 'Graph type detection failed';
+
+  @override
+  String get imageCaptured =>
+      'Image captured. You can add notes in the content field above.';
+
+  @override
+  String cameraError(String error) {
+    return 'Camera error: $error';
+  }
+
+  @override
+  String get lessonScheduler => 'Lesson Scheduler';
+
+  @override
+  String get upcomingLessons => 'Upcoming Lessons';
+
+  @override
+  String get selectSubjectLabel => 'Select Subject';
+
+  @override
+  String get generateQuestionTypes => 'Generate Question Types';
+
+  @override
+  String get lessonProgress => 'Lesson Progress';
+
+  @override
+  String percentComplete(int percent, int completed, int total) {
+    return '$percent% Complete: $completed/$total questions generated';
+  }
+
+  @override
+  String get scheduleLesson => 'Schedule Lesson';
+
+  @override
+  String get selectCalendarDate => 'Select calendar date for lesson';
+
+  @override
+  String get done => 'Done';
+
+  @override
+  String get createNewLesson => 'Create New Lesson';
+
+  @override
+  String get editExistingLesson => 'Edit Existing Lesson';
+
+  @override
+  String get mcq => 'MCQ';
+
+  @override
+  String get inputLabel => 'Input';
+
+  @override
+  String get graphLabel => 'Graph';
+
+  @override
+  String get quickGuideHelp => 'Quick Guide help';
+
+  @override
+  String get help => 'Help';
+
+  @override
+  String get quickGuideIsThinking => 'Quick Guide is thinking...';
+
+  @override
+  String get suggestedPrompts => 'Suggested prompts';
+
+  @override
+  String get askAnything => 'Ask anything...';
+
+  @override
+  String get sendMessage => 'Send message';
+
+  @override
+  String get messageInputHint => 'Type your question here';
+
+  @override
+  String get quickGuideHelpTitle => 'Quick Guide Help';
+
+  @override
+  String get gotIt => 'Got it';
+
+  @override
+  String get addAnswerBeforeSubmitting => 'Add an answer before submitting.';
+
+  @override
+  String get nextQuestion => 'Next Question';
+
+  @override
+  String get type => 'Type';
+
+  @override
+  String get pdfLabel => 'PDF';
+
+  @override
+  String get syllabusLabel => 'Syllabus';
+
+  @override
+  String get textbookLabel => 'Textbook';
+
+  @override
+  String get videoLabel => 'Video';
+
+  @override
+  String get lectureNotesLabel => 'Lecture Notes';
+
+  @override
+  String get externalResourceLabel => 'External Resource';
+
+  @override
+  String get imageLabel => 'Image';
+
+  @override
+  String get webPageLabel => 'Web Page';
+
+  @override
+  String get audioLabel => 'Audio';
+
+  @override
+  String get documentLabel => 'Document';
+
+  @override
+  String get typeYourAnswerHere => 'Type your answer here...';
+
+  @override
+  String get writeYourEssayAnswer => 'Write your essay answer...';
+
+  @override
+  String get questionTypeNotSupported =>
+      'This question type is not yet supported in this view.';
+
+  @override
+  String get multipleChoice => 'Multiple Choice';
+
+  @override
+  String get multipleSelect => 'Multiple Select';
+
+  @override
+  String get textAnswer => 'Text Answer';
+
+  @override
+  String get math => 'Math';
+
+  @override
+  String get essay => 'Essay';
+
+  @override
+  String get diagram => 'Diagram';
+
+  @override
+  String get graphQuestion => 'Graph';
+
+  @override
+  String get stepByStep => 'Step-by-Step';
+
+  @override
+  String get audioRecording => 'Audio Recording';
+
+  @override
+  String get canvas => 'Canvas';
+
+  @override
+  String get fileUpload => 'File Upload';
+
+  @override
+  String get graphDrawing => 'Graph Drawing';
+
+  @override
+  String difficultyLabel(String level) {
+    return 'Difficulty: $level';
+  }
+
+  @override
+  String get easy => 'Easy';
+
+  @override
+  String get difficultyMedium => 'Medium';
+
+  @override
+  String get hard => 'Hard';
+
+  @override
+  String get selectAsAnswer => 'Select as answer';
+
+  @override
+  String get selectedRightOption => 'Selected right option';
+
+  @override
+  String get tryAgain => 'Try again';
+
+  @override
+  String get drawHere => 'Draw here...';
+
+  @override
+  String get undoLastStroke => 'Undo last stroke';
+
+  @override
+  String get redoLastStroke => 'Redo last stroke';
+
+  @override
+  String get openDrawingCanvas => 'Open drawing canvas';
+
+  @override
+  String get clearAllDrawings => 'Clear all drawings';
+
+  @override
+  String get canvasIsEmpty => 'Canvas is empty';
+
+  @override
+  String drawingWithStrokes(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Drawing with $count strokes',
+      one: 'Drawing with 1 stroke',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get saveDrawing => 'Save Drawing';
+
+  @override
+  String get drawingSaved => 'Drawing saved.';
+
+  @override
+  String get failedToSaveDrawing => 'Failed to save drawing. Retry.';
+
+  @override
+  String get drawingCanvas => 'Drawing canvas';
+
+  @override
+  String get drawYourAnswer =>
+      'Draw your answer on the canvas using your finger or stylus';
+
+  @override
+  String get apiConfiguration => 'API Configuration';
+
+  @override
+  String get configureApiKeys => 'Configure API Keys';
+
+  @override
+  String get configureApiKeysDescription =>
+      'Enter your OpenRouter API credentials below. These are used to power the AI features.';
+
+  @override
+  String get openRouterApiKey => 'OpenRouter API Key';
+
+  @override
+  String get apiBaseUrl => 'API Base URL';
+
+  @override
+  String get apiKeyHint => 'sk-or-v1-...';
+
+  @override
+  String get apiBaseUrlHint => 'https://openrouter.ai/api/v1';
+
+  @override
+  String get apiKeyDescription =>
+      'Required for LLM content generation. Get your key from https://openrouter.ai/keys';
+
+  @override
+  String get apiBaseUrlDescription => 'The endpoint URL for the AI service';
+
+  @override
+  String get saveApiKeys => 'Save API Keys';
+
+  @override
+  String get apiKeyCannotBeEmpty => 'API key cannot be empty';
+
+  @override
+  String get apiKeysSavedSuccessfully => 'API keys saved successfully';
+
+  @override
+  String get unableToSaveApiConfig =>
+      'Unable to save API configuration. Please try again.';
+
+  @override
+  String get currentSession => 'Current Session';
+
+  @override
+  String get noActiveSession => 'No Active Session';
+
+  @override
+  String get tapStartToBegin => 'Tap start to begin tracking';
+
+  @override
+  String get recentSessions => 'Recent Sessions';
+
+  @override
+  String ofLabel(int count1, int count2) {
+    return '$count1 of $count2';
+  }
+
+  @override
+  String get viewAll => 'View All';
+
+  @override
+  String get noSessionsYet => 'No sessions yet';
+
+  @override
+  String get startYourFirstSession => 'Start your first session!';
+
+  @override
+  String get filterByDate => 'Filter by Date';
+
+  @override
+  String get filterBySubject => 'Filter by Subject';
+
+  @override
+  String get clearFilters => 'Clear filters';
+
+  @override
+  String get clearFilterLabel => 'Clear';
+
+  @override
+  String get totalTime => 'Total Time';
+
+  @override
+  String get average => 'Average';
+
+  @override
+  String get noSessionsFoundForFilters =>
+      'No sessions found for selected filters';
+
+  @override
+  String get tryAdjustingFilters => 'Try adjusting your filters';
+
+  @override
+  String get startStudyingToTrack => 'Start studying to track your progress';
+
+  @override
+  String get sessionDeleted => 'Session deleted';
+
+  @override
+  String get undo => 'Undo';
+
+  @override
+  String failedToDeleteSession(String error) {
+    return 'Failed to delete session: $error';
+  }
+
+  @override
+  String get deleteSession => 'Delete Session';
+
+  @override
+  String get deleteSessionConfirmation =>
+      'Are you sure you want to delete this session?';
+
+  @override
+  String get noQuestions => 'No questions';
+
+  @override
+  String questionsCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions',
+      one: '1 question',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String correctOf(int correct, int total) {
+    return 'Correct: $correct/$total';
+  }
+
+  @override
+  String get selectDateToFilter => 'Select a date to filter sessions';
+
+  @override
+  String get filterBySubjectTitle => 'Filter by Subject';
+
+  @override
+  String get sessionHistory => 'Session History';
+
+  @override
+  String get dashboard => 'Dashboard';
+
+  @override
+  String get studyDashboard => 'Study Dashboard';
+
+  @override
+  String get studyTime => 'Study Time';
+
+  @override
+  String get planAdherence => 'Plan Adherence';
+
+  @override
+  String get masteryOverview => 'Mastery Overview';
+
+  @override
+  String get topicPerformance => 'Topic Performance';
+
+  @override
+  String get achievements => 'Achievements';
+
+  @override
+  String get exportCsv => 'Export CSV';
+
+  @override
+  String get instrumentation => 'Progress Analytics';
+
+  @override
+  String get overall => 'Overall';
+
+  @override
+  String get thisWeek => 'This Week';
+
+  @override
+  String get totalTopics => 'Total Topics';
+
+  @override
+  String get mastered => 'Mastered';
+
+  @override
+  String get topics => 'Topics';
+
+  @override
+  String get practiceAllWeakAreas => 'Practice All Weak Areas';
+
+  @override
+  String get practiceThisTopic => 'Practice this topic';
+
+  @override
+  String get noTopicDataYet =>
+      'No topic data yet. Start studying to see your progress!';
+
+  @override
+  String get masteryLevelNovice => 'Novice';
+
+  @override
+  String get masteryLevelBrowsing => 'Browsing';
+
+  @override
+  String get masteryLevelDeveloping => 'Developing';
+
+  @override
+  String get masteryLevelProficient => 'Proficient';
+
+  @override
+  String get masteryLevelExpert => 'Expert';
+
+  @override
+  String get masteryLevel => 'Mastery Level';
+
+  @override
+  String get bestStreak => 'Best Streak';
+
+  @override
+  String progressCsvGenerated(int length) {
+    return 'Progress CSV generated ($length chars)';
+  }
+
+  @override
+  String exportFailed(String error) {
+    return 'Export failed: $error';
+  }
+
+  @override
+  String get instrumentationDataExported => 'Instrumentation data exported';
+
+  @override
+  String attemptsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count attempts',
+      one: '1 attempt',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get weakAreasAccuracy => 'Weak Areas (Accuracy < 60%)';
+
+  @override
+  String get uploadContent => 'Upload Content';
+
+  @override
+  String get addStudyMaterials => 'Add study materials to your library';
+
+  @override
+  String get titleRequired => 'Title *';
+
+  @override
+  String get titleHint => 'e.g. Chapter 5 Notes';
+
+  @override
+  String get subjectOptional => 'Subject (optional)';
+
+  @override
+  String get none => 'None';
+
+  @override
+  String get pasteText => 'Paste Text';
+
+  @override
+  String get urlLink => 'URL / Link';
+
+  @override
+  String get urlRequired => 'URL *';
+
+  @override
+  String get urlHint => 'https://example.com/notes';
+
+  @override
+  String get contentRequired => 'Content *';
+
+  @override
+  String get contentHint => 'Paste your study material here...';
+
+  @override
+  String get uploading => 'Uploading...';
+
+  @override
+  String get fillRequiredFields => 'Please fill in all required fields.';
+
+  @override
+  String get contentUploadedSuccessfully => 'Content uploaded successfully!';
+
+  @override
+  String uploadFailed(String error) {
+    return 'Upload failed: $error';
+  }
+
+  @override
+  String get planSummary => 'Plan Summary';
+
+  @override
+  String get total => 'Total';
+
+  @override
+  String get newTopics => 'new';
+
+  @override
+  String get reviewTopics => 'review';
+
+  @override
+  String get coverage => 'Coverage';
+
+  @override
+  String focusLabel(String areas) {
+    return 'Focus: $areas';
+  }
+
+  @override
+  String get studyDay => 'Study Day';
+
+  @override
+  String get rest => 'Rest';
+
+  @override
+  String get startTutoring => 'Start tutoring';
+
+  @override
+  String questionsAndMinutes(int questions, int minutes) {
+    return '${questions}Q · ${minutes}min';
+  }
+
+  @override
+  String topicQuestionsAndMinutes(int questions, int minutes) {
+    return '${questions}Q · ${minutes}min';
+  }
+
+  @override
+  String get failedToGeneratePlan => 'Failed to generate plan';
+
+  @override
+  String get llmTaskManager => 'LLM Task Manager';
+
+  @override
+  String activeCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count active',
+      one: '1 active',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noLlmTasksYet => 'No LLM tasks yet';
+
+  @override
+  String modelLabel(String modelId) {
+    return 'Model: $modelId';
+  }
+
+  @override
+  String startedLabel(String time) {
+    return 'Started: $time';
+  }
+
+  @override
+  String endedLabel(String time) {
+    return 'Ended: $time';
+  }
+
+  @override
+  String tokensAndCost(int count, String cost) {
+    return 'Tokens: $count ($cost)';
+  }
+
+  @override
+  String get cancelTask => 'Cancel';
+
+  @override
+  String get testConnection => 'Test Connection';
+
+  @override
+  String get testing => 'Testing...';
+
+  @override
+  String connectionSuccessful(int latency) {
+    return 'Connection successful! Latency: ${latency}ms';
+  }
+
+  @override
+  String connectionFailed(String error) {
+    return 'Connection failed: $error';
+  }
+
+  @override
+  String sessionHistoryCsvGenerated(int length) {
+    return 'Session history CSV generated ($length chars)';
+  }
+
+  @override
+  String dailyPlanTarget(int questions, int minutes) {
+    return 'Today: ${questions}Q, ${minutes}min';
+  }
+
+  @override
+  String get noPlanForToday => 'No plan for today';
+
+  @override
+  String planAdjustmentSuggested(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return 'You\'ve had $_temp0 of low plan adherence. Would you like to adjust your study plan?';
+  }
+
+  @override
+  String get adjustPlan => 'Adjust Plan';
+
+  @override
+  String get dismiss => 'Dismiss';
+
+  @override
+  String get voiceInput => 'Voice Input';
+
+  @override
+  String get captureImage => 'Capture Image';
+
+  @override
+  String get camera => 'Camera';
+
+  @override
+  String errorSavingSubject(String error) {
+    return 'Error saving subject: $error';
+  }
+
+  @override
+  String failedToSaveSession(String error) {
+    return 'Failed to save session: $error';
+  }
+
+  @override
+  String get avgSession => 'Avg Session';
+
+  @override
+  String get totalSessionsLabel => 'Total Sessions';
+
+  @override
+  String get currentStreakLabel => 'Current Streak';
+
+  @override
+  String get sessionsByDayOfWeek => 'Sessions by Day of Week';
+
+  @override
+  String get performanceMetrics => 'Performance Metrics';
+
+  @override
+  String daysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noTopicsYetAddSome => 'No topics yet - add some!';
+
+  @override
+  String get noLessonsUsePlanner => 'No lessons - use Planner to generate!';
+
+  @override
+  String get mentor => 'Mentor';
+
+  @override
+  String get startAiTutoring => 'Start AI Tutoring';
+
+  @override
+  String get endLesson => 'End Lesson';
+
+  @override
+  String get typeYourMessage => 'Type your message...';
+
+  @override
+  String get send => 'Send';
+
+  @override
+  String get progressReport => 'Progress Report';
+
+  @override
+  String get askMentorAnything => 'Ask your mentor anything...';
+
+  @override
+  String get mentorGreeting => 'AI Mentor';
+
+  @override
+  String get mentorSubtitle => 'Your personal AI academic assistant';
+
+  @override
+  String get startingLesson => 'Starting your lesson...';
+
+  @override
+  String get lessonTimeEnded =>
+      'Lesson time has ended. Click \'End Lesson\' to finish.';
+
+  @override
+  String get lessonComplete => 'Lesson Complete';
+
+  @override
+  String get errorOccurred => 'An error occurred. Please try again.';
+
+  @override
+  String get inProgress => 'In Progress';
+
+  @override
+  String get completed => 'Completed';
+
+  @override
+  String get notStarted => 'Not Started';
+
+  @override
+  String blocksCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count blocks',
+      one: '1 block',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get blockTypeExplanation => 'Explanation';
+
+  @override
+  String get blockTypeExample => 'Example';
+
+  @override
+  String get blockTypeExercise => 'Exercise';
+
+  @override
+  String get blockTypeSlide => 'Slide';
+
+  @override
+  String get blockTypeQuiz => 'Quiz';
+
+  @override
+  String get blockTypeSummary => 'Summary';
+
+  @override
+  String practiceModeType(String mode, String type) {
+    return '$mode - $type';
+  }
+
+  @override
+  String get examMode => 'Exam Mode';
+
+  @override
+  String get examModeDescription => 'Timed exam simulation';
+
+  @override
+  String get sourcePractice => 'Source Practice';
+
+  @override
+  String get sourcePracticeDescription => 'Practice by source';
+
+  @override
+  String get noSourcesAvailable => 'No sources available';
+
+  @override
+  String get howConfident => 'How confident are you?';
+
+  @override
+  String get confidenceRatingOf => 'of';
+
+  @override
+  String get notConfidentAtAll => 'Not confident at all';
+
+  @override
+  String get slightlyConfident => 'Slightly confident';
+
+  @override
+  String get moderatelyConfident => 'Moderately confident';
+
+  @override
+  String get quiteConfident => 'Quite confident';
+
+  @override
+  String get veryConfident => 'Very confident';
+
+  @override
+  String get reviewMistakes => 'Review Mistakes';
+
+  @override
+  String reviewMistakesDescription(int count) {
+    return 'Review $count mistakes from this session';
+  }
+
+  @override
+  String get noMistakesToReview => 'No mistakes to review';
+
+  @override
+  String get redoIncorrectQuestions => 'Redo Incorrect Questions';
+
+  @override
+  String get noAnswerProvided => 'No answer provided';
+
+  @override
+  String get correctAnswer => 'Correct Answer';
+
+  @override
+  String get practiceBySource => 'Practice by Source';
+
+  @override
+  String get practiceBySourceDescription =>
+      'Select a source to practice questions from';
+
+  @override
+  String fallbackOption(int number) {
+    return 'Option $number';
+  }
+
+  @override
+  String get drawingSubmitted => 'Drawing submitted';
+
+  @override
+  String unsupportedQuestionType(String type) {
+    return 'Unsupported question type: $type';
+  }
+
+  @override
+  String get todaysPlan => 'Today\'s Plan';
+
+  @override
+  String get noStudyPlanToday => 'No study plan for today';
+
+  @override
+  String questionsCountMetric(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions',
+      one: '1 question',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String questionsAbbreviation(int count) {
+    return '${count}Q';
+  }
+
+  @override
+  String minutesCountMetric(int count) {
+    return '$count min';
+  }
+
+  @override
+  String get atRiskTopics => 'At Risk Topics';
+
+  @override
+  String get noAtRiskTopics => 'No at-risk topics. Keep up the good work!';
+
+  @override
+  String get readyToAdvance => 'Ready to Advance';
+
+  @override
+  String get keepPracticingToUnlock =>
+      'Keep practicing to unlock advanced topics!';
+
+  @override
+  String get totalTopicsLabel => 'Total Topics';
+
+  @override
+  String get masteredLabel => 'Mastered';
+
+  @override
+  String get weakLabel => 'Weak';
+
+  @override
+  String courseSessionLabel(String course, int number) {
+    return '$course - Session $number';
+  }
+
+  @override
+  String get quickGuideWelcomeMessage =>
+      'Hello! I\'m StudyKing\'s Quick Guide. Ask me anything about your studies!';
+
+  @override
+  String get suggestedPromptExplain => 'Explain photosynthesis';
+
+  @override
+  String get suggestedPromptQuiz => 'Quiz me on history';
+
+  @override
+  String get suggestedPromptMath => 'Help with math problems';
+
+  @override
+  String get quickGuideHelpContent =>
+      'Quick Guide is your AI study assistant. You can:\n\n• Ask questions about any subject\n• Request explanations for concepts\n• Get help with practice problems\n\nJust type your question and tap send!';
+
+  @override
+  String semanticsYouSaid(String message) {
+    return 'You said: $message';
+  }
+
+  @override
+  String semanticsQuickGuideSaid(String message) {
+    return 'Quick Guide said: $message';
+  }
+
+  @override
+  String semanticsSendPrompt(String prompt) {
+    return 'Send prompt: $prompt';
+  }
+
+  @override
+  String get semanticsMessageInput => 'Message input for Quick Guide';
+
+  @override
+  String get fallbackExplainResponse =>
+      'Sure! I can help explain concepts. What topic would you like me to explain?';
+
+  @override
+  String get fallbackQuizResponse =>
+      'I can help with questions! Ask away and I\'ll do my best.';
+
+  @override
+  String get fallbackMathResponse =>
+      'I\'d be happy to help with math! What specific problem or topic would you like to work on?';
+
+  @override
+  String get fallbackGeneralResponse =>
+      'That\'s an interesting question! Let me help you understand it better.';
+
+  @override
+  String get quickGuideSystemPrompt =>
+      'You are StudyKing Quick Guide, a helpful AI study assistant. Provide concise, educational answers. Help with explanations, quiz questions, and math problems. Respond conversationally.';
+
+  @override
+  String get mentorSystemPrompt =>
+      'You are a knowledgeable and encouraging AI mentor for a student. Your role is to guide their learning journey, provide motivation, and help them develop effective study habits. Keep responses concise, supportive, and actionable.';
+
+  @override
+  String get mentorSystemPromptScheduling =>
+      'IMPORTANT: When the student asks about scheduling lessons, creating plans, or rescheduling, your response should acknowledge the request and indicate that you will present a confirmation proposal. Do not state or imply that the scheduling or plan change has been committed or completed. Use conditional language such as \"I can help with that\", \"Let me check availability\", or \"I\'ll prepare a proposal for you to confirm\". After your response, the system will present a confirmation dialog to the student before any changes are applied.';
+
+  @override
+  String get aboutApplicationName => 'StudyKing';
+
+  @override
+  String get aboutVersion => 'v1.0.0';
+
+  @override
+  String get aboutLegalese => '© 2026 StudyKing.';
+
+  @override
+  String get activeLessonTimer =>
+      'You have an active lesson timer. Leave anyway?';
+
+  @override
+  String get unknownModelId => 'unknown-model';
+
+  @override
+  String get unknownProviderName => 'Unknown';
+
+  @override
+  String get examDateOptionalLabel => 'Exam Date (Optional):';
+
+  @override
+  String get lessonFallbackTitle => 'Lesson';
+
+  @override
+  String lessonFallbackContent(String topicTitle) {
+    return 'Study the key concepts of $topicTitle. Focus on understanding the core principles.';
+  }
+
+  @override
+  String get lessonPlanFallbackTitle => 'Lesson plan for this session';
+
+  @override
+  String errorWithMessage(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get questionTypeDefault => 'Question';
+
+  @override
+  String get durationSeparator => ' ';
+
+  @override
+  String get accessibility => 'Accessibility';
+
+  @override
+  String get highContrastMode => 'High Contrast Mode';
+
+  @override
+  String get highContrastDescription =>
+      'Increase contrast for better visibility';
+
+  @override
+  String get largeTouchTargets => 'Large Touch Targets';
+
+  @override
+  String get largeTouchTargetsDescription => 'Increase tap target sizes';
+
+  @override
+  String get reduceMotion => 'Reduce Motion';
+
+  @override
+  String get reduceMotionDescription => 'Reduce or disable motion animations';
+
+  @override
+  String get errorNetworkConnection =>
+      'Unable to connect to the server. Please check your internet connection and try again.';
+
+  @override
+  String get errorApiKeyMissing =>
+      'API key is required. Please configure it in Settings.';
+
+  @override
+  String get errorInvalidApiKey =>
+      'Invalid API key. Please check your credentials in Settings.';
+
+  @override
+  String get errorApiRateLimit =>
+      'Too many requests. Please wait a moment and try again.';
+
+  @override
+  String get errorApiNotFound => 'The requested resource was not found.';
+
+  @override
+  String get errorApiInternalServer =>
+      'The server encountered an error. Please try again later.';
+
+  @override
+  String get errorDatabase => 'A database error occurred. Please try again.';
+
+  @override
+  String get errorPdfParse =>
+      'Unable to parse the PDF file. Please ensure it is a valid PDF.';
+
+  @override
+  String get errorContentGeneration =>
+      'Failed to generate content. Please try again.';
+
+  @override
+  String get errorLlmUnavailable =>
+      'The AI service is temporarily unavailable. Please try again.';
+
+  @override
+  String get errorApiAuth =>
+      'Authentication failed. Please check your API credentials.';
+
+  @override
+  String get errorUnexpected =>
+      'An unexpected error occurred. Please try again.';
+
+  @override
+  String get retryConnection => 'Retry Connection';
+
+  @override
+  String get retryAfterWait => 'Retry After Wait';
+
+  @override
+  String get weeklyActivity => 'Weekly Activity';
+
+  @override
+  String get topicsLabel => 'Topics';
+
+  @override
+  String get readiness => 'Readiness';
+
+  @override
+  String get confidence => 'Confidence';
+
+  @override
+  String get forgettingRisk => 'Forgetting Risk';
+
+  @override
+  String get reviewUrgency => 'Review Urgency';
+
+  @override
+  String get lastAttempted => 'Last Attempted';
+
+  @override
+  String get lastUpdated => 'Last Updated';
+
+  @override
+  String get accuracyTrend => 'Accuracy Trend';
+
+  @override
+  String get loadingSyllabusProgress => 'Loading syllabus progress...';
+
+  @override
+  String pageIndicatorAria(int count, int total) {
+    return 'Page $count of $total';
+  }
+
+  @override
+  String get overallMastery => 'Overall Mastery';
+
+  @override
+  String get avgTime => 'Avg Time';
+
+  @override
+  String get badges => 'Badges';
+
+  @override
+  String get sessionHistoryExport => 'Session History';
+
+  @override
+  String get progressExportedCsv => 'Progress exported to CSV';
+
+  @override
+  String get sessionHistoryExportedCsv => 'Session history exported to CSV';
+
+  @override
+  String get exportPdf => 'Export PDF';
+
+  @override
+  String get sessionHistoryExportedPdf => 'Session history exported to PDF';
+
+  @override
+  String get sessionHistoryExportedJson => 'Session history exported to JSON';
+
+  @override
+  String get labelJson => 'JSON';
+
+  @override
+  String get unsavedChanges => 'Unsaved Changes';
+
+  @override
+  String get unsavedChangesDescription =>
+      'You have unsaved changes. Are you sure you want to discard them?';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get goToSettings => 'Go to Settings';
+
+  @override
+  String get failedToLoadLesson =>
+      'Failed to load lesson. Please check your connection and try again.';
+
+  @override
+  String get failedToStartPractice => 'Failed to start practice session';
+
+  @override
+  String get aiTutor => 'AI Tutor';
+
+  @override
+  String get interactiveConversationalLessons =>
+      'Interactive conversational lessons';
+
+  @override
+  String get personalStudyAssistantPlanner =>
+      'Personal study assistant & planner';
+
+  @override
+  String get chooseStudyMode => 'Choose a study mode';
+
+  @override
+  String get clearConversation => 'Clear conversation';
+
+  @override
+  String get senderYou => 'You';
+
+  @override
+  String get senderTutor => 'Tutor';
+
+  @override
+  String get senderSystem => 'System';
+
+  @override
+  String remainingMinLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count min remaining',
+      one: '1 min remaining',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String correctCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count correct',
+      one: '1 correct',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mentorWelcomeBody =>
+      'I can help with:\n• Scheduling and rescheduling lessons\n• Reviewing your study progress\n• Planning long-term study goals\n• Motivation and encouragement\n• Deciding what to study next\n\nHow can I help you today?';
+
+  @override
+  String readyToLearnAbout(String topic) {
+    return 'I\'m ready to learn about $topic. Please teach me!';
+  }
+
+  @override
+  String scheduledLessonGreeting(String topic) {
+    return 'Welcome to my scheduled lesson on $topic. I\'m ready to learn!';
+  }
+
+  @override
+  String get scheduledLessonSystemContext =>
+      'Note: This student has pre-scheduled this lesson session. The session has a fixed duration set in the student\'s study plan. Acknowledge the scheduled nature appropriately and respect the time limit.';
+
+  @override
+  String correctCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count correct',
+      one: '1 correct',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String paceLabel(int pace) {
+    return '$pace% pace';
+  }
+
+  @override
+  String get errorWithResponse =>
+      'Sorry, I encountered an error. Please try again.';
+
+  @override
+  String get mentorRejectionResponse =>
+      'No problem! I won\'t make any changes. Let me know if you need anything else.';
+
+  @override
+  String get mentorNoLessonsScheduled =>
+      'You don\'t have any lessons scheduled yet. Would you like me to help you create a study plan? I can help you set up regular study sessions for your subjects.';
+
+  @override
+  String get mentorUpcomingLessonsHeader => 'Here are your upcoming lessons:\n';
+
+  @override
+  String mentorLessonEntry(String topic, String date, int duration) {
+    return '• $topic on $date ($duration min)\n';
+  }
+
+  @override
+  String get mentorReschedulePrompt =>
+      '\nWould you like to reschedule any of these?';
+
+  @override
+  String mentorRecentSessionOnDate(String date) {
+    return 'Your most recent study session was on $date. Would you like to schedule a new lesson?';
+  }
+
+  @override
+  String get mentorNotStarted =>
+      'It looks like you haven\'t started yet. Would you like me to help you schedule your first lesson?';
+
+  @override
+  String get mentorScheduleError =>
+      'I had trouble looking up your schedule. Please try again later.';
+
+  @override
+  String get mentorProgressError =>
+      'I had trouble generating your progress report. Please try again later.';
+
+  @override
+  String get mentorNotStartedStudying =>
+      'You haven\'t started studying yet! Would you like me to help you create a study plan to get started?';
+
+  @override
+  String get mentorToday => 'today';
+
+  @override
+  String mentorDaysAgo(int daysCount) {
+    String _temp0 = intl.Intl.pluralLogic(
+      daysCount,
+      locale: localeName,
+      other: '$daysCount days ago',
+      one: '1 day ago',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String mentorInactiveDays(int daysCount) {
+    return 'I noticed you haven\'t studied in $daysCount days. Would you like to schedule a study session to get back on track? Consistency is key to making progress!';
+  }
+
+  @override
+  String mentorGreatJobStayingActive(String daysAgo) {
+    return 'Great job staying active! Your last study session was $daysAgo. Keep up the good work!';
+  }
+
+  @override
+  String get mentorWelcomeStart =>
+      'Welcome! Let\'s get started with your studies. Would you like to schedule a lesson?';
+
+  @override
+  String get mentorActivityCheckError =>
+      'I had trouble checking your activity. How can I help you today?';
+
+  @override
+  String mentorRescheduledConfirmation(String topic) {
+    return 'I\'ve noted the change. Your lesson \"$topic\" has been rescheduled. Is there anything else I can help with?';
+  }
+
+  @override
+  String get mentorNewSessionAdded =>
+      'Great! I\'ve added a new study session to your schedule. You can check your planner for details.';
+
+  @override
+  String get mentorChangesDone =>
+      'Done! The changes have been made to your schedule.';
+
+  @override
+  String get mentorAccuracy => 'Accuracy';
+
+  @override
+  String get mentorBadges => 'Badges';
+
+  @override
+  String get mentorRecommendationsSection => 'Recommendations';
+
+  @override
+  String get mentorProgressReportTitle => '📊 **Your Study Progress Report**\n';
+
+  @override
+  String mentorOverallAccuracy(String accuracy, String correct, String total) {
+    return '**Overall Accuracy:** $accuracy% ($correct/$total correct)';
+  }
+
+  @override
+  String mentorTotalStudyTime(String hours) {
+    return '**Total Study Time:** $hours hours';
+  }
+
+  @override
+  String mentorWeeklyActivity(String attempts) {
+    return '**Weekly Activity:** $attempts attempts';
+  }
+
+  @override
+  String mentorCompletedLessons(String count) {
+    return '**Completed Lessons:** $count';
+  }
+
+  @override
+  String mentorTopicsStudied(String count) {
+    return '**Topics Studied:** $count';
+  }
+
+  @override
+  String get mentorAreasNeedingAttention => '\n**Areas needing attention:**';
+
+  @override
+  String mentorTopicAccuracyEntry(String topic, int accuracy) {
+    return '• $topic (accuracy: $accuracy%)';
+  }
+
+  @override
+  String get mentorBadgesEarned => '\n**Badges earned:**';
+
+  @override
+  String mentorBadgeEntry(String name, String description) {
+    return '• $name: $description';
+  }
+
+  @override
+  String get mentorRecommendations => '\n**Recommendations:**';
+
+  @override
+  String mentorRecommendationEntry(String message) {
+    return '• $message';
+  }
+
+  @override
+  String get mentorProgressReportError =>
+      'Unable to generate progress report. Please try again later.';
+
+  @override
+  String get mentorApiKeyMissing => 'AI service not configured.';
+
+  @override
+  String get mentorNoSubjects =>
+      'You haven\'t added any subjects yet. Would you like help setting up your first subject?';
+
+  @override
+  String get mentorDoingWell =>
+      'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?';
+
+  @override
+  String get roadmaps => 'Roadmaps';
+
+  @override
+  String get createRoadmap => 'Create Roadmap';
+
+  @override
+  String get roadmapGoal => 'Learning Goal';
+
+  @override
+  String get roadmapGoalHint => 'e.g., I want to learn IB Physics in 180 days';
+
+  @override
+  String get generateRoadmap => 'Generate Roadmap';
+
+  @override
+  String get myRoadmaps => 'My Roadmaps';
+
+  @override
+  String get milestones => 'Milestones';
+
+  @override
+  String get milestone => 'Milestone';
+
+  @override
+  String milestoneShort(int order) {
+    return 'M$order';
+  }
+
+  @override
+  String get targetCompletion => 'Target Completion';
+
+  @override
+  String get noRoadmapsYet => 'No roadmaps yet';
+
+  @override
+  String get timeline => 'Timeline';
+
+  @override
+  String completionOfValue(String value) {
+    return '$value Complete';
+  }
+
+  @override
+  String milestoneOfWithDeadline(String title, String deadline) {
+    return '$title - Due $deadline';
+  }
+
+  @override
+  String get enableNotifications => 'Enable Notifications';
+
+  @override
+  String get notificationPreferences => 'Notification Preferences';
+
+  @override
+  String get dailyReminders => 'Daily Reminders';
+
+  @override
+  String get revisionReminders => 'Revision Reminders';
+
+  @override
+  String get overworkAlerts => 'Overwork Alerts';
+
+  @override
+  String get planAdjustmentNotifications => 'Plan Adjustment Alerts';
+
+  @override
+  String get quietHours => 'Quiet Hours';
+
+  @override
+  String get quietHoursStart => 'Quiet Hours Start';
+
+  @override
+  String get quietHoursEnd => 'Quiet Hours End';
+
+  @override
+  String get exportComprehensiveReport => 'Export Full Progress Report';
+
+  @override
+  String get comprehensiveCsv => 'Full Progress CSV';
+
+  @override
+  String get comprehensivePdf => 'Full Progress PDF';
+
+  @override
+  String get comprehensiveJson => 'Full Progress JSON';
+
+  @override
+  String get comprehensiveReportExported =>
+      'Comprehensive progress report exported';
+
+  @override
+  String get exportCsvDetail =>
+      'CSV: overall stats, topic mastery, all attempts (one per row), weekly trend, badges.';
+
+  @override
+  String get exportPdfDetail =>
+      'PDF: formatted report with tables, charts, and mastery breakdowns suitable for printing.';
+
+  @override
+  String get exportJsonDetail =>
+      'JSON: structured data export for programmatic analysis.';
+
+  @override
+  String get exportProgressCsvDetail =>
+      'Stats CSV: summary statistics and progress overview (lighter than full CSV).';
+
+  @override
+  String get exportInstrumentationDetail =>
+      'Progress Analytics: plan adherence and mastery improvement metrics for analysis.';
+
+  @override
+  String get backupRestoreHint =>
+      'For a full data backup (subjects, questions, settings), go to Settings → Backup & Restore.';
+
+  @override
+  String get activeRoadmaps => 'Active Roadmaps';
+
+  @override
+  String get completedRoadmaps => 'Completed Roadmaps';
+
+  @override
+  String get progressBySubject => 'Progress by Subject';
+
+  @override
+  String weekNumber(int number) {
+    return 'Week $number';
+  }
+
+  @override
+  String milestoneForWeek(int number) {
+    return 'Milestone for week $number';
+  }
+
+  @override
+  String get markschemeUnavailable => 'No markscheme available';
+
+  @override
+  String get answerTooShort =>
+      'Answer is too short. Please provide more details.';
+
+  @override
+  String get goodResponseLength => 'Good response length.';
+
+  @override
+  String get answerTooShortForCredit => 'Answer too short for full credit.';
+
+  @override
+  String get noDrawingDetected => 'No drawing detected. Please draw something.';
+
+  @override
+  String get invalidDrawingData => 'Invalid drawing data. Please redraw.';
+
+  @override
+  String get allStepsIdentified => 'All required steps identified.';
+
+  @override
+  String get specialHandlingRequired =>
+      'This question type requires special handling.';
+
+  @override
+  String get someAnswersIncorrect => 'Some answers are incorrect';
+
+  @override
+  String correctAnswerIs(String answer) {
+    return 'The correct answer is: $answer';
+  }
+
+  @override
+  String allStepsFormat(int count) {
+    return 'All $count steps identified correctly!';
+  }
+
+  @override
+  String partialStepsFormat(int matched, int total, String missing) {
+    return 'Identified $matched of $total steps. Missing: $missing';
+  }
+
+  @override
+  String noStepsFormat(String steps) {
+    return 'No required steps found in your answer. Key steps to include: $steps';
+  }
+
+  @override
+  String get allRequiredStepsMissing => 'Some required steps missing';
+
+  @override
+  String get focusMode => 'Study';
+
+  @override
+  String get newFocusSession => 'New Focus Session';
+
+  @override
+  String get refreshStats => 'Refresh stats';
+
+  @override
+  String errorStartingSession(String error) {
+    return 'Error starting session: $error';
+  }
+
+  @override
+  String get dailyLimitReached => 'Daily Limit Reached';
+
+  @override
+  String get dailyLimitReachedBody =>
+      'You\'ve reached your daily study limit — well done! Take a rest and come back tomorrow.';
+
+  @override
+  String get breakTime => 'Break Time!';
+
+  @override
+  String sessionCompleted(int minutes) {
+    return 'Session completed: ${minutes}m';
+  }
+
+  @override
+  String get focus => 'Study';
+
+  @override
+  String focusForMinutes(int minutes) {
+    String _temp0 = intl.Intl.pluralLogic(
+      minutes,
+      locale: localeName,
+      other: 'Focus for $minutes minutes',
+      one: 'Focus for 1 minute',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get focusTime => 'Focus Time';
+
+  @override
+  String get timerRemaining => 'remaining';
+
+  @override
+  String get timerPaused => 'PAUSED';
+
+  @override
+  String get title => 'Title';
+
+  @override
+  String get timerDone => 'DONE!';
+
+  @override
+  String get resume => 'Resume';
+
+  @override
+  String get pause => 'Pause';
+
+  @override
+  String get markComplete => 'Mark Complete';
+
+  @override
+  String get csvOverallStats => 'OVERALL STATS';
+
+  @override
+  String get csvTopicMastery => 'TOPIC MASTERY';
+
+  @override
+  String get csvAllAttempts => 'ALL ATTEMPTS';
+
+  @override
+  String get csvWeeklyTrend => 'WEEKLY TREND';
+
+  @override
+  String get csvBadges => 'BADGES';
+
+  @override
+  String get csvColTotalAttempts => 'Total Attempts';
+
+  @override
+  String get csvColCorrect => 'Correct';
+
+  @override
+  String get csvColAccuracy => 'Accuracy (%)';
+
+  @override
+  String get csvColAvgTime => 'Avg Time (s)';
+
+  @override
+  String get csvColTotalHours => 'Total Hours';
+
+  @override
+  String get csvColWeeklyActivity => 'Weekly Activity';
+
+  @override
+  String get csvColDailyActivity => 'Daily Activity';
+
+  @override
+  String get csvColTopicsStudied => 'Topics Studied';
+
+  @override
+  String get csvColTopicId => 'Topic ID';
+
+  @override
+  String get csvColMasteryLevel => 'Mastery Level';
+
+  @override
+  String get csvColLastPracticed => 'Last Practiced';
+
+  @override
+  String get csvColReviewUrgency => 'Review Urgency';
+
+  @override
+  String get csvColQuestionId => 'Question ID';
+
+  @override
+  String get csvColSubjectId => 'Subject ID';
+
+  @override
+  String get csvColTime => 'Time (s)';
+
+  @override
+  String get csvColTimestamp => 'Timestamp';
+
+  @override
+  String get csvColWeek => 'Week';
+
+  @override
+  String get csvColAttempts => 'Attempts';
+
+  @override
+  String get csvColImprovement => 'Improvement';
+
+  @override
+  String get csvColBadgeName => 'Badge Name';
+
+  @override
+  String get csvColBadgeDescription => 'Description';
+
+  @override
+  String get csvColDateUnlocked => 'Date Unlocked';
+
+  @override
+  String get pdfProgressReport => 'StudyKing Progress Report';
+
+  @override
+  String pdfGenerated(String date) {
+    return 'Generated: $date';
+  }
+
+  @override
+  String pdfStudentId(String id) {
+    return 'Student ID: $id';
+  }
+
+  @override
+  String get pdfOverallStatistics => 'Overall Statistics';
+
+  @override
+  String get pdfMetric => 'Metric';
+
+  @override
+  String get pdfValue => 'Value';
+
+  @override
+  String get pdfTopicMasteryBreakdown => 'Topic Mastery Breakdown';
+
+  @override
+  String get pdfTableAttempts => 'Attempts';
+
+  @override
+  String get pdfTableLevel => 'Level';
+
+  @override
+  String get pdfTableTopic => 'Topic';
+
+  @override
+  String get pdfBadgesEarned => 'Badges Earned';
+
+  @override
+  String get pdfRecentActivitySummary => 'Recent Activity Summary';
+
+  @override
+  String get pdfNoMasteryData => 'No mastery data available yet.';
+
+  @override
+  String get pdfNoBadges => 'No badges earned yet. Keep studying!';
+
+  @override
+  String pdfTotalAttemptsRecorded(int count) {
+    return 'Total attempts recorded: $count';
+  }
+
+  @override
+  String pdfDateRange(String start, String end) {
+    return 'Date range: $start to $end';
+  }
+
+  @override
+  String pdfCorrectFraction(int correct, int total) {
+    return 'Correct: $correct/$total';
+  }
+
+  @override
+  String get gettingStarted => 'Getting Started';
+
+  @override
+  String get gettingStartedDesc =>
+      'Complete these steps to get the most out of StudyKing';
+
+  @override
+  String get addSubjectDesc =>
+      'Create your first subject to organize your study material';
+
+  @override
+  String get uploadMaterial => 'Upload Study Material';
+
+  @override
+  String get uploadAndAnalyze => 'Upload & Analyze';
+
+  @override
+  String get uploadMaterialDesc =>
+      'Upload PDFs, notes, and question banks to get started';
+
+  @override
+  String get takePracticeQuiz => 'Take Your First Practice Quiz';
+
+  @override
+  String get takePracticeQuizDesc =>
+      'Test your knowledge with adaptive practice questions';
+
+  @override
+  String get scheduleAiTutor => 'Schedule an AI Tutor Session';
+
+  @override
+  String get scheduleAiTutorDesc =>
+      'Get personalized one-on-one tutoring with AI';
+
+  @override
+  String get nextStep => 'Next Step';
+
+  @override
+  String topicsAutoCreated(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics auto-created from curriculum',
+      one: '1 topic auto-created from curriculum',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get fileSaved => 'File saved successfully';
+
+  @override
+  String get fileShared => 'File shared successfully';
+
+  @override
+  String get noBadgesYet => 'No achievements yet. Keep studying!';
+
+  @override
+  String get noOptionsAvailable => 'No options available';
+
+  @override
+  String get subjectProgress => 'Subject Progress';
+
+  @override
+  String get pendingActions => 'Pending Actions';
+
+  @override
+  String get scheduledLessons => 'Scheduled Lessons';
+
+  @override
+  String get regeneratePlan => 'Regenerate Plan';
+
+  @override
+  String get viewAllLessons => 'View All Lessons';
+
+  @override
+  String get change => 'Change';
+
+  @override
+  String get scheduling => 'Scheduling...';
+
+  @override
+  String get accept => 'Accept';
+
+  @override
+  String get scheduleALesson => 'Schedule a lesson';
+
+  @override
+  String get rescheduleLesson => 'Reschedule lesson';
+
+  @override
+  String get planAdjustmentTitle => 'Plan adjustment suggested';
+
+  @override
+  String get actionNeeded => 'Action needed';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong';
+
+  @override
+  String get openPlanner => 'Open Planner';
+
+  @override
+  String get studyPlanOverview => 'Study Plan Overview';
+
+  @override
+  String moreLessonsCount(int count) {
+    return '$count more...';
+  }
+
+  @override
+  String get badgeFirstStepName => 'First Step';
+
+  @override
+  String get badgeFirstStepDesc => 'Answered your first question!';
+
+  @override
+  String get badgeAccuracyGoldName => 'Accuracy Gold';
+
+  @override
+  String get badgeAccuracyGoldDesc => 'Achieved 90%+ accuracy!';
+
+  @override
+  String get badgeDailyScholarName => 'Daily Scholar';
+
+  @override
+  String get badgeDailyScholarDesc => 'Studied consistently today!';
+
+  @override
+  String get badgeDedicatedLearnerName => 'Dedicated Learner';
+
+  @override
+  String get badgeDedicatedLearnerDesc => 'Studied 10+ hours total!';
+
+  @override
+  String get badgeWeeklyWarriorName => 'Weekly Warrior';
+
+  @override
+  String get badgeWeeklyWarriorDesc => 'Active for a full week!';
+
+  @override
+  String get notifChannelGeneral => 'StudyKing Notifications';
+
+  @override
+  String get notifChannelGeneralDesc => 'General StudyKing notifications';
+
+  @override
+  String get notifChannelRevision => 'Revision Reminders';
+
+  @override
+  String get notifChannelWellbeing => 'Wellbeing Alerts';
+
+  @override
+  String get notifChannelPlanning => 'Planning Suggestions';
+
+  @override
+  String get notifChannelLessons => 'Lesson Notifications';
+
+  @override
+  String get notifChannelMastery => 'Mastery Alerts';
+
+  @override
+  String get notifChannelBadges => 'Badge Notifications';
+
+  @override
+  String get notifChannelDailyReminder => 'Daily Study Reminders';
+
+  @override
+  String get notifChannelDailyReminderDesc => 'Daily reminders to study';
+
+  @override
+  String get notifTitleTimeToReview => 'Time to Review!';
+
+  @override
+  String get notifTitleTakeBreak => 'Take a Break';
+
+  @override
+  String notifBodyOverwork(int hours) {
+    String _temp0 = intl.Intl.pluralLogic(
+      hours,
+      locale: localeName,
+      other: '$hours hours',
+      one: '1 hour',
+    );
+    return 'You\'ve studied $_temp0 today. Remember to rest!';
+  }
+
+  @override
+  String get notifTitlePlanAdjustment => 'Plan Adjustment';
+
+  @override
+  String notifBodyPlanAdjustment(int days) {
+    return 'You\'ve had $days days of low adherence. Shall we adjust your plan?';
+  }
+
+  @override
+  String get notifTitleUpcomingLesson => 'Upcoming Lesson';
+
+  @override
+  String get notifTitleTopicsNeedAttention => 'Topics Need Attention';
+
+  @override
+  String notifBodyLowMastery(String topics) {
+    return 'Low mastery detected in: $topics';
+  }
+
+  @override
+  String get notifTitleBadgeUnlocked => 'Badge Unlocked!';
+
+  @override
+  String get recommendAccuracyBelow60 =>
+      'Your overall accuracy is below 60%. Focus on reviewing fundamental concepts.';
+
+  @override
+  String get recommendReviewBasics => 'Review basic topics before advancing';
+
+  @override
+  String get recommendAccuracyExcellent =>
+      'Excellent progress! Ready for advanced topics.';
+
+  @override
+  String get recommendChallengingQuestions =>
+      'Try challenging practice questions';
+
+  @override
+  String get recommendConsistency =>
+      'You studied less than 1 hour total. Consistency is key!';
+
+  @override
+  String get recommendSetDailyGoal => 'Set a daily study goal of 30 minutes';
+
+  @override
+  String get recommendNoActivity =>
+      'No study activity this week. Get back on track!';
+
+  @override
+  String get recommendQuickReview =>
+      'Start with a quick 15-minute review session';
+
+  @override
+  String recommendWeakTopics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You have $count topics that need improvement. Focus on strengthening these areas.',
+      one:
+          'You have 1 topic that needs improvement. Focus on strengthening this area.',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recommendAiTutor => 'Review weak topics with the AI tutor';
+
+  @override
+  String nudgeOverwork(String hours) {
+    return 'You have studied $hours hours today. Consider taking a break!';
+  }
+
+  @override
+  String nudgeRevision(int days, String topic) {
+    return 'It has been $days days since you practiced \"$topic\". Time for a review!';
+  }
+
+  @override
+  String nudgePlanAdjustment(int days) {
+    return 'You have had $days days of low plan adherence. Would you like to adjust your study plan?';
+  }
+
+  @override
+  String get planReasonRequiredDependent => 'Required for dependent topics';
+
+  @override
+  String get planReasonWeakPerformance => 'Weak performance';
+
+  @override
+  String get planReasonHighForgettingRisk => 'High forgetting risk';
+
+  @override
+  String get planReasonNewSyllabusTopic => 'New syllabus topic';
+
+  @override
+  String get planReasonPartOfGoal => 'Part of syllabus goal';
+
+  @override
+  String get planFocusGeneralReview => 'General review';
+
+  @override
+  String get planFocusWeakAreas => 'Focus on weak areas';
+
+  @override
+  String get planFocusPracticeReview => 'Practice and review';
+
+  @override
+  String get planFocusRestAndReview => 'Rest and review';
+
+  @override
+  String get adapSuggestionFundamentals => 'Review basic concepts first';
+
+  @override
+  String get adapSuggestionMorePractice =>
+      'More practice questions recommended';
+
+  @override
+  String get adapSuggestionAdvancedTopics => 'Ready for advanced topics';
+
+  @override
+  String get badgeCenturyClubName => 'Century Club';
+
+  @override
+  String get badgeCenturyClubDesc => 'Answered 100+ questions!';
+
+  @override
+  String nudgeWeeklyDigest(
+    int weeklyActivity,
+    int accuracy,
+    String totalHours,
+    int weakCount,
+    int badgeCount,
+  ) {
+    return 'Weekly Digest: $weeklyActivity questions answered, $accuracy% accuracy, $totalHours hours studied, $weakCount weak areas, $badgeCount badges earned.';
+  }
+
+  @override
+  String notificationTimeToReviewBody(int days, String topic) {
+    return 'It\'s been $days days since you practiced \"$topic\".';
+  }
+
+  @override
+  String notificationUpcomingLessonBody(String lesson, String time) {
+    return 'Your lesson \"$lesson\" starts at $time';
+  }
+
+  @override
+  String notificationBadgeUnlockedBody(String badge, String description) {
+    return 'You earned the \"$badge\" badge: $description';
+  }
+
+  @override
+  String get notifChannelRevisionDesc =>
+      'Reminders to review topics that need practice';
+
+  @override
+  String get notifChannelWellbeingDesc =>
+      'Alerts about study-life balance and overwork';
+
+  @override
+  String get notifChannelPlanningDesc =>
+      'Suggestions about study plan adjustments';
+
+  @override
+  String get notifChannelLessonsDesc => 'Notifications about upcoming lessons';
+
+  @override
+  String get notifChannelMasteryDesc =>
+      'Alerts about low topic mastery and weak areas';
+
+  @override
+  String get notifChannelBadgesDesc =>
+      'Notifications about earned badges and achievements';
+
+  @override
+  String get notifChannelMentor => 'Mentor Messages';
+
+  @override
+  String get notifChannelMentorDesc => 'Proactive mentor check-ins and nudges';
+
+  @override
+  String lessonReadyBody(String topicTitle) {
+    return '$topicTitle has a lesson ready';
+  }
+
+  @override
+  String get planAccuracyLow =>
+      'Accuracy is below 60% — needs focused practice';
+
+  @override
+  String get planReviewOverdue => 'Review is overdue — forgetting risk is high';
+
+  @override
+  String get planStreakLow => 'Streak is low — consistency needed';
+
+  @override
+  String get planPrerequisite =>
+      'Prerequisite for upcoming topics — must master first';
+
+  @override
+  String planBlocksDownstream(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Blocks $count downstream topics',
+      one: 'Blocks 1 downstream topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get planRequiredForDependent => 'Required for dependent topics';
+
+  @override
+  String get planWeakPerformance => 'Weak performance';
+
+  @override
+  String get planHighForgettingRisk => 'High forgetting risk';
+
+  @override
+  String get planNewSyllabusTopic => 'New syllabus topic';
+
+  @override
+  String get planPartOfSyllabusGoal => 'Part of syllabus goal';
+
+  @override
+  String get planHighMastery => 'High mastery — ready to advance';
+
+  @override
+  String get planGoodProgress => 'Good progress — maintain consistency';
+
+  @override
+  String get planDeveloping => 'Developing — needs more practice';
+
+  @override
+  String get planAtRisk => 'At risk — review overdue';
+
+  @override
+  String get planNeedsAttention => 'Needs attention — focus on fundamentals';
+
+  @override
+  String get planRestAndReview => 'Rest and review';
+
+  @override
+  String get planGeneralReview => 'General review';
+
+  @override
+  String get planPracticeAndReview => 'Practice and review';
+
+  @override
+  String adherenceLowDaysAdjust(int days) {
+    return 'You have had $days consecutive days of low adherence. Consider adjusting your study plan or discussing with your mentor.';
+  }
+
+  @override
+  String adherenceLowDaysRegenerate(int days) {
+    return 'You have had $days consecutive days of low adherence. Would you like to regenerate your plan with adjusted targets?';
+  }
+
+  @override
+  String get shareSessionsText => 'Study Sessions';
+
+  @override
+  String get summary => 'Summary';
+
+  @override
+  String get noLimit => 'No limit';
+
+  @override
+  String get focusTimerDescription => 'Start a focused study session';
+
+  @override
+  String get dailyStudyCap => 'Daily Study Cap';
+
+  @override
+  String get tokenUsageSummary => 'Token Usage Summary';
+
+  @override
+  String get totalTokens => 'Total Tokens';
+
+  @override
+  String get totalCost => 'Total Cost';
+
+  @override
+  String get failed => 'Failed';
+
+  @override
+  String get llmStatusQueued => 'Queued';
+
+  @override
+  String get llmStatusCancelled => 'Cancelled';
+
+  @override
+  String get subjectIdHint => 'e.g. sub_physics';
+
+  @override
+  String adherenceLowToday(int actualMinutes, int plannedMinutes) {
+    return 'You studied $actualMinutes min today vs $plannedMinutes min planned. Consider redistributing the remaining workload.';
+  }
+
+  @override
+  String adherencePartialToday(int actualMinutes, int plannedMinutes) {
+    return 'You studied $actualMinutes min today vs $plannedMinutes min planned. Try to catch up with the remaining topics.';
+  }
+
+  @override
+  String adherenceExceededToday(int actualMinutes, int plannedMinutes) {
+    return 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
+  }
+
+  @override
+  String overtimeLabel(int minutes) {
+    return '+${minutes}m';
+  }
+
+  @override
+  String get correctAnswerKeywords =>
+      'correct,right,yes,got it,understood,i see,that makes sense,true,exactly';
+
+  @override
+  String get incorrectAnswerKeywords =>
+      'wrong,incorrect,not sure,confused,don\'t know,don\'t understand,no,mistake,error';
+
+  @override
+  String get exerciseKeywords =>
+      'exercise,practice,question,quiz,problem,test me,challenge,example';
+
+  @override
+  String get timeConflict => 'Time conflict with existing scheduled lesson';
+
+  @override
+  String get planGeneratedSuccessfully => 'Plan generated successfully';
+
+  @override
+  String get syllabusPlanGenerated =>
+      'Syllabus-based plan generated successfully';
+
+  @override
+  String get failedToGenerateSyllabusPlan => 'Failed to generate syllabus plan';
+
+  @override
+  String get failedToCreateRoadmap => 'Failed to create roadmap';
+
+  @override
+  String get failedToUpdateMilestone => 'Failed to update milestone';
+
+  @override
+  String roadmapCreated(String goal) {
+    return 'Roadmap \"$goal\" created!';
+  }
+
+  @override
+  String get roadmapDeleted => 'Roadmap deleted';
+
+  @override
+  String get roadmapDeleteConfirm => 'Delete this roadmap?';
+
+  @override
+  String get roadmapUpdated => 'Roadmap updated';
+
+  @override
+  String get milestoneUpdated => 'Milestone updated';
+
+  @override
+  String get enterValidNumber => 'Enter a valid number';
+
+  @override
+  String get actionAccepted => 'Action accepted';
+
+  @override
+  String get failedToExecuteAction =>
+      'Failed to execute action — missing parameters';
+
+  @override
+  String get failedToAcceptAction => 'Failed to accept action';
+
+  @override
+  String get failedToDismissAction => 'Failed to dismiss action';
+
+  @override
+  String get lessonScheduled => 'Lesson scheduled';
+
+  @override
+  String get failedToScheduleLesson => 'Failed to schedule lesson';
+
+  @override
+  String get planRegeneratedFromAdherence =>
+      'Plan regenerated based on your adherence';
+
+  @override
+  String get failedToRegeneratePlan => 'Failed to regenerate plan';
+
+  @override
+  String get missedWorkloadRedistributed =>
+      'Missed workload redistributed over next 3 days';
+
+  @override
+  String get failedToRedistributeWorkload => 'Failed to redistribute workload';
+
+  @override
+  String get planAdjusted => 'Study pace adjusted successfully';
+
+  @override
+  String get failedToAdjustPlan => 'Failed to adjust study pace';
+
+  @override
+  String get failedToAddSubjectToPlan => 'Failed to add subject to study plan';
+
+  @override
+  String get progressOverview => 'Progress Overview';
+
+  @override
+  String get todaysProgress => 'Today\'s Progress';
+
+  @override
+  String get weekly => 'Weekly';
+
+  @override
+  String get actual => 'Actual';
+
+  @override
+  String get planned => 'Planned';
+
+  @override
+  String get noStudyPlanYet => 'No study plan yet';
+
+  @override
+  String get calendar => 'Calendar';
+
+  @override
+  String get redistribute => 'Redistribute';
+
+  @override
+  String topicCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics',
+      one: '1 topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String syllabusTopics(int count) {
+    return 'Topics: $count syllabus topics';
+  }
+
+  @override
+  String get masteryRequirement => 'Mastery >= 80% on all milestone topics';
+
+  @override
+  String noTopicsFoundForSubject(String subjectId) {
+    return 'No topics found for subject $subjectId';
+  }
+
+  @override
+  String failedToResolveSyllabus(String error) {
+    return 'Failed to resolve syllabus: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopic(String error) {
+    return 'Failed to get questions for topic: $error';
+  }
+
+  @override
+  String failedToGetQuestionsForTopics(String error) {
+    return 'Failed to get questions for topics: $error';
+  }
+
+  @override
+  String filePickerError(String error) {
+    return 'File picker error: $error';
+  }
+
+  @override
+  String get urlFetchSuccess => 'URL content fetched successfully';
+
+  @override
+  String urlFetchFailed(String error) {
+    return 'Failed to fetch URL: $error';
+  }
+
+  @override
+  String urlFetchError(String error) {
+    return 'URL fetch error: $error';
+  }
+
+  @override
+  String get file => 'File';
+
+  @override
+  String get fetchAndScrape => 'Fetch & Scrape';
+
+  @override
+  String hoursAbbreviation(String hours) {
+    return '${hours}h';
+  }
+
+  @override
+  String tokensLabel(String count) {
+    return '$count tokens';
+  }
+
+  @override
+  String usageRecordFormat(String date, String cost, String costPerToken) {
+    return '$date: $cost, cost/tk: $costPerToken';
+  }
+
+  @override
+  String usageSummary(String totalCost, String totalTokens, String avgCost) {
+    return 'Usage: $totalCost over $totalTokens tokens, avg: $avgCost per 1k tokens';
+  }
+
+  @override
+  String get tapToExpand => 'Tap to expand';
+
+  @override
+  String get tapToCollapse => 'Tap to collapse';
+
+  @override
+  String get sendHint => 'Press Enter to send, Ctrl+Enter for new line';
+
+  @override
+  String get shareProgressReport => 'StudyKing Progress Report';
+
+  @override
+  String get shareSessionHistory => 'StudyKing Session History';
+
+  @override
+  String get shareInstrumentationData => 'StudyKing Instrumentation Data';
+
+  @override
+  String get instrumentationDashboard => '=== Instrumentation Dashboard ===';
+
+  @override
+  String instrumentationGenerated(String date) {
+    return 'Generated: $date';
+  }
+
+  @override
+  String get instrumentationPlanAdherence => '--- Plan Adherence ---';
+
+  @override
+  String get instrumentationMasteryImprovement => '--- Mastery Improvement ---';
+
+  @override
+  String get partialLabel => 'Partial';
+
+  @override
+  String get localeEn => 'English';
+
+  @override
+  String get localeEs => 'Spanish';
+
+  @override
+  String get welcomeToStudyKing => 'Welcome to StudyKing';
+
+  @override
+  String get onboardingDescription =>
+      'Your AI-native learning companion. StudyKing helps you master any subject with intelligent planning, adaptive practice, and AI tutoring.';
+
+  @override
+  String get onboardingSubjectsDesc =>
+      'Add and organize your subjects and topics';
+
+  @override
+  String get onboardingPracticeDesc =>
+      'Practice with adaptive questions and spaced repetition';
+
+  @override
+  String get onboardingMentorDesc =>
+      'Get personalized study recommendations and nudges';
+
+  @override
+  String get onboardingFocusDesc =>
+      'Quick practice hub with timer — practice questions and track focus';
+
+  @override
+  String get onboardingSettingsDesc =>
+      'Configure API keys, appearance, and preferences';
+
+  @override
+  String get dontShowAgain => 'Don\'t show again';
+
+  @override
+  String get needApiKeyNotice =>
+      'Note: AI features require an API key. Configure one in Settings.';
+
+  @override
+  String get getStarted => 'Get Started';
+
+  @override
+  String get apiKeyNeeded =>
+      'StudyKing needs an API key to use AI features. Configure one now.';
+
+  @override
+  String get configureNow => 'Configure Now';
+
+  @override
+  String get dataStorageNotice => 'Local Data Storage';
+
+  @override
+  String get dataStorageDescription =>
+      'StudyKing stores all your data locally on this device. To avoid data loss, use the Backup & Restore feature in Settings (Settings > Backup & Restore).';
+
+  @override
+  String get toggleVisibility => 'Toggle visibility';
+
+  @override
+  String get moreOptions => 'More options';
+
+  @override
+  String get iUnderstand => 'I Understand';
+
+  @override
+  String get tutorNeedsSubject =>
+      'Please create a subject and study plan first before using the AI Tutor. The tutor needs a topic context to provide effective lessons.';
+
+  @override
+  String get aiTaskMonitor => 'AI Task Monitor';
+
+  @override
+  String get viewActiveAiTasks =>
+      'View active AI inference tasks and token usage';
+
+  @override
+  String get noActiveAiTasks => 'No active AI tasks';
+
+  @override
+  String get addSubjectFirst => 'Add a subject first to start practicing';
+
+  @override
+  String get failedToLoadSubjects => 'Failed to load subjects';
+
+  @override
+  String insufficientAttemptsForWeakAreas(String subjectName, int minAttempts) {
+    return 'Need at least $minAttempts attempted questions for $subjectName to identify weak areas';
+  }
+
+  @override
+  String get endLessonConfirmation =>
+      'End your lesson? Your progress will be saved.';
+
+  @override
+  String get continueLesson => 'Continue Lesson';
+
+  @override
+  String get backNavigationConfirm => 'End lesson and save progress?';
+
+  @override
+  String get discardAndExit => 'Discard and Exit';
+
+  @override
+  String get saveAndExit => 'Save and Exit';
+
+  @override
+  String get lessonSavedMessage => 'Your lesson has been saved successfully.';
+
+  @override
+  String get cancelLessonConfirmation =>
+      'Are you sure you want to cancel this lesson?';
+
+  @override
+  String get orphanedSessionFound => 'Incomplete Lesson Found';
+
+  @override
+  String orphanedSessionMessage(String topicTitle, String time) {
+    return 'An incomplete lesson on \"$topicTitle\" from $time was found. What would you like to do?';
+  }
+
+  @override
+  String sessionProgressLabel(int current, int total) {
+    return 'Session progress: $current of $total';
+  }
+
+  @override
+  String examProgressLabel(int current, int total) {
+    return 'Exam progress: $current of $total';
+  }
+
+  @override
+  String get decreaseDuration => 'Decrease duration';
+
+  @override
+  String get increaseDuration => 'Increase duration';
+
+  @override
+  String nudgeOverworkMinutes(int minutes, int cap) {
+    return 'You have studied $minutes minutes today, which exceeds your daily cap of $cap minutes. Consider taking a break!';
+  }
+
+  @override
+  String nudgeLateNight(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'I noticed you had $count late-night study sessions. Remember that rest is important for effective learning!',
+      one:
+          'I noticed you had 1 late-night study session. Remember that rest is important for effective learning!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nudgeRevisionNeeded(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other:
+          'You have $count questions approaching their review date. Time for a revision session!',
+      one:
+          'You have 1 question approaching its review date. Time for a revision session!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String nudgeStreakDays(int count) {
+    return 'Congratulations on your $count-day study streak! Keep up the amazing consistency!';
+  }
+
+  @override
+  String get nudgeInactive48h =>
+      'It has been over 48 hours since your last study session. Is everything okay? Would you like to schedule a short review?';
+
+  @override
+  String nudgeInactive7d(int days) {
+    return 'It\'s been $days days. Let\'s ease back in with a short review session!';
+  }
+
+  @override
+  String nudgeInactive14d(int days) {
+    return 'Welcome back! It\'s been $days days. Let\'s plan your re-engagement.';
+  }
+
+  @override
+  String nudgeInactive30d(int days) {
+    return 'It\'s been $days days since your last session. Would you like help creating a personalized return plan?';
+  }
+
+  @override
+  String welcomeBackDays(int days) {
+    return 'Welcome back! You\'ve been away for $days days.';
+  }
+
+  @override
+  String get absenceDetectedTitle => 'Absence Detected';
+
+  @override
+  String absenceDetectedBody(int days) {
+    return 'You haven\'t used StudyKing in $days days. How would you like to proceed?';
+  }
+
+  @override
+  String extendPlan(int days) {
+    return 'Extend study plan by $days days';
+  }
+
+  @override
+  String get missedLessonLabel => 'Missed';
+
+  @override
+  String get staleSessionLabel => 'Not completed';
+
+  @override
+  String get catchUp => 'Catch Up';
+
+  @override
+  String get catchUpTitle => 'How would you like to catch up?';
+
+  @override
+  String catchUpDescription(int days) {
+    return 'You were away for $days days. Choose a catch-up strategy:';
+  }
+
+  @override
+  String get catchUpRedistribute => 'Redistribute across remaining days';
+
+  @override
+  String catchUpExtend(int days) {
+    return 'Extend plan by $days days';
+  }
+
+  @override
+  String planExtended(int days) {
+    return 'Study plan extended by $days days';
+  }
+
+  @override
+  String get failedToExtendPlan => 'Failed to extend study plan';
+
+  @override
+  String get failedToCatchUp => 'Failed to process catch-up strategy';
+
+  @override
+  String get missedDismissed => 'Missed lessons dismissed';
+
+  @override
+  String get failedToDismissMissed => 'Failed to dismiss missed lessons';
+
+  @override
+  String get dismissAllMissed => 'Dismiss All Missed';
+
+  @override
+  String missedLessonsCount(int count) {
+    return 'Missed Lessons ($count)';
+  }
+
+  @override
+  String mentorScheduleConflict(String time, String freeSlot) {
+    return 'The proposed time ($time) conflicts with an existing lesson. Suggested free slot: $freeSlot. Shall I book it there?';
+  }
+
+  @override
+  String mentorScheduleSuccess(String topic, String time) {
+    return 'Lesson on \"$topic\" scheduled for $time (30 min). You can review or reschedule anytime.';
+  }
+
+  @override
+  String get mentorScheduleFail =>
+      'I was unable to schedule the lesson. Please try again or check your planner.';
+
+  @override
+  String toolScheduleLessonResult(String topicTitle) {
+    return 'Lesson scheduled: $topicTitle';
+  }
+
+  @override
+  String get toolScheduleLessonFail => 'Failed to schedule lesson';
+
+  @override
+  String get toolGenerateBlocksFail => 'Failed to generate lesson blocks';
+
+  @override
+  String toolCreatePlanResult(String course, int days) {
+    return 'Plan created for $course over $days days';
+  }
+
+  @override
+  String get toolCreatePlanFail => 'Failed to create plan';
+
+  @override
+  String get mentorRescheduleNotFound =>
+      'Could not find the lesson to reschedule. It may have already been removed or completed.';
+
+  @override
+  String mentorRescheduleNoFreeSlot(String topic) {
+    return 'Unable to find a free slot for rescheduling \"$topic\". Please check your availability in the planner.';
+  }
+
+  @override
+  String mentorReschedulePending(String topic, String time) {
+    return 'Suggested rescheduling \"$topic\" to $time - pending confirmation stored in repository.';
+  }
+
+  @override
+  String mentorPlanDaysPrompt(int days) {
+    return 'I can help create a study plan. Would you like me to set up a $days-day learning roadmap? Please confirm and provide the subject or goal you\'d like to focus on.';
+  }
+
+  @override
+  String get lessonPlanSystemPrompt =>
+      'You are a curriculum designer creating lesson plans. Respond only with valid JSON.';
+
+  @override
+  String lessonPlanUserPrompt(
+    String subjectId,
+    String topicTitle,
+    int durationMinutes,
+  ) {
+    return 'You are a knowledgeable AI tutor for $subjectId. Create a structured lesson plan for the topic \"$topicTitle\".\n\nThe lesson should be $durationMinutes minutes long.\n\nReturn a JSON object.';
+  }
+
+  @override
+  String tutorSystemPrompt(String subjectId, String topicTitle) {
+    return 'You are an AI tutor for $subjectId teaching \"$topicTitle\". Be conversational, warm, and educational.';
+  }
+
+  @override
+  String tutorInstructionPrompt(String timeContext, String paceContext) {
+    return 'Guidelines:\n- $timeContext\n- $paceContext\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning';
+  }
+
+  @override
+  String get summarySystemPrompt => 'You are a tutor writing lesson notes.';
+
+  @override
+  String summaryUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String adaptivePace,
+  ) {
+    return 'Summarize what was covered in this lesson about \"$topicTitle\".\nInclude:\n1. Key concepts explained\n2. Questions answered ($exerciseCount exercises, $correctCount correct)\n3. Student\'s apparent understanding level (confidence: $confidencePercent%)\n4. Adaptive pace used (${adaptivePace}x)\n5. Recommendations for next lesson\n\nKeep it concise and constructive.';
+  }
+
+  @override
+  String languageInstruction(String localeName) {
+    return 'IMPORTANT: Respond in the same language as the student (locale: $localeName). Do not use English unless the student does.';
+  }
+
+  @override
+  String get evaluationSystemPrompt =>
+      'You are an expert academic evaluator. Return only valid JSON.';
+
+  @override
+  String get evaluatorSystemPrompt =>
+      'You are an expert academic evaluator. Assess the student\'s answer and return a JSON object with: score (0.0-1.0), explanation, partialCredit (optional), conceptBreakdown (optional map of concept->score). Be fair and encouraging. Consider partial credit for partially correct answers.';
+
+  @override
+  String get classifySystemPrompt =>
+      'You are a content classifier. Respond only with the topic name.';
+
+  @override
+  String classifyUserPrompt(String topics, String content) {
+    return 'Classify the following content into one of these topics: $topics.\n\nContent:\n$content\n\nReturn only the single most relevant topic name from the list. Do not explain. Do not add extra text.';
+  }
+
+  @override
+  String get summarizeSystemPrompt =>
+      'You are a summarization assistant. Provide concise summaries.';
+
+  @override
+  String summarizeUserPrompt(String content) {
+    return 'Summarize the following content in 3-5 concise sentences.\n\nContent:\n$content\n\nProvide only the summary text.';
+  }
+
+  @override
+  String get generateQuestionSystemPrompt =>
+      'You are a question generator. Return only valid JSON array.';
+
+  @override
+  String generateQuestionUserPrompt(String content) {
+    return 'Analyze the following content and extract any existing questions it contains.\nAlso generate 3-5 new practice questions based on the content.\nReturn ONLY a JSON array of question objects.\nEach object must have: \"text\" (the question), \"type\" (one of: \"singleChoice\", \"multiChoice\", \"typedAnswer\", \"mathExpression\", \"essay\"), \"options\" (list of answer strings, required for singleChoice and multiChoice), \"correctAnswer\" (the correct option text), \"explanation\" (brief explanation).\nFor multiChoice questions, correctAnswer should be the first correct option and include an \"acceptableAnswers\" array with all correct options.\nFor typedAnswer and mathExpression, provide options as an empty list and correctAnswer as the expected answer.\n\nContent:\n$content';
+  }
+
+  @override
+  String get aiDefaultSystemPrompt =>
+      'You are a helpful AI study assistant called StudyKing. Keep responses concise and educational.';
+
+  @override
+  String get transcribeSystemPrompt =>
+      'You are a transcription assistant. Transcribe audio/video content accurately.';
+
+  @override
+  String transcribeUserPrompt(String content) {
+    return 'Transcribe the following audio/video content.\nReturn only the transcribed text. Preserve the natural language and formatting.\n\nContent: $content';
+  }
+
+  @override
+  String get ocrSystemPrompt =>
+      'You are an OCR assistant. Extract text from images accurately.';
+
+  @override
+  String ocrUserPrompt(String content) {
+    return 'Extract all text visible in this image content.\nReturn only the extracted text, preserving the original formatting as much as possible.\nIf no text is visible, return an empty string.\n\nImage content (base64 or reference): $content';
+  }
+
+  @override
+  String get modelNotConfigured =>
+      'No AI model is configured. Please go to Settings and select a model provider before generating questions.';
+
+  @override
+  String get generateQuestionsFromContent =>
+      'Generate questions from this content';
+
+  @override
+  String get generateQuestionsFromContentHint =>
+      'AI will create practice questions based on the uploaded material';
+
+  @override
+  String get uploadMaterialsToCreateQuestions =>
+      'Upload materials to create questions';
+
+  @override
+  String get noQuestionsPracticeHint =>
+      'You don\'t have any practice questions yet. Upload study materials to generate questions.';
+
+  @override
+  String get uploadMaterials => 'Upload Materials';
+
+  @override
+  String get questionsToday => 'Questions Today';
+
+  @override
+  String get currentStreak => 'Current Streak';
+
+  @override
+  String get dueForReview => 'Due for Review';
+
+  @override
+  String get practiceAtLeastTen =>
+      'Practice at least 10 questions to identify weak areas';
+
+  @override
+  String get uploadMaterialsToGenerateTopics =>
+      'Upload materials to generate topics';
+
+  @override
+  String get confirmExitPractice => 'Exit practice session?';
+
+  @override
+  String get confirmExitPracticeBody =>
+      'Your progress in this session will be saved, but you will leave before completing all questions.';
+
+  @override
+  String get stay => 'Stay';
+
+  @override
+  String get exit => 'Exit';
+
+  @override
+  String get noQuestionsForSubject =>
+      'No practice questions found for this subject. Try uploading study materials first.';
+
+  @override
+  String get confirmExitFocus => 'End focus session?';
+
+  @override
+  String get confirmExitFocusBody =>
+      'You have an active focus session. Ending it early will save your progress so far.';
+
+  @override
+  String get endSession => 'End Session';
+
+  @override
+  String get sourceWithNoQuestions =>
+      '0 questions — generate questions from this source';
+
+  @override
+  String get requiredField => 'Required field';
+
+  @override
+  String get gallery => 'Gallery';
+
+  @override
+  String get requiredFieldIndicator => '*';
+
+  @override
+  String get expressionLabel => 'Expression: ';
+
+  @override
+  String get defaultLessonGoal => 'Understand the topic';
+
+  @override
+  String get sectionIntroduction => 'Introduction';
+
+  @override
+  String get sectionMainContent => 'Main Content';
+
+  @override
+  String get sectionPractice => 'Practice';
+
+  @override
+  String get checkpointStarted => 'Lesson started';
+
+  @override
+  String get checkpointTopicCovered => 'Topic covered';
+
+  @override
+  String get checkpointPracticeCompleted => 'Practice completed';
+
+  @override
+  String get sessionType => 'Type';
+
+  @override
+  String get sessionTypePractice => 'Practice';
+
+  @override
+  String get sessionTypeFocus => 'Focus';
+
+  @override
+  String get sessionTypeTutoring => 'Tutoring';
+
+  @override
+  String get sessionTypeManual => 'Manual';
+
+  @override
+  String get addCourseSubject => 'Add Course/Subject';
+
+  @override
+  String hoursPerDayAbbrev(String hours) {
+    return '${hours}h/day';
+  }
+
+  @override
+  String lessonTimeStatus(String topicId, String time, String completedSuffix) {
+    return '$topicId, $time$completedSuffix';
+  }
+
+  @override
+  String practiceModeWithSubject(String mode, String subject) {
+    return '$mode - $subject';
+  }
+
+  @override
+  String mentorWelcomeFull(String greeting, String body) {
+    return '$greeting\n\n$body';
+  }
+
+  @override
+  String get unknownError => 'Unknown error';
+
+  @override
+  String failedToLoadPlan(String error) {
+    return 'Failed to load plan: $error';
+  }
+
+  @override
+  String backupExportFailedWithError(String error) {
+    return 'Failed to export backup: $error';
+  }
+
+  @override
+  String invalidBackupFileWithError(String error) {
+    return 'Invalid backup file: $error';
+  }
+
+  @override
+  String get backupBoxSubjects => 'Subjects';
+
+  @override
+  String get backupBoxTopics => 'Topics';
+
+  @override
+  String get backupBoxQuestions => 'Questions';
+
+  @override
+  String get backupBoxSources => 'Sources';
+
+  @override
+  String get backupBoxLessons => 'Lessons';
+
+  @override
+  String get backupBoxLessonBlocks => 'Lesson Blocks';
+
+  @override
+  String get backupBoxSessionsTyped => 'Sessions';
+
+  @override
+  String get backupBoxSessions => 'Sessions (old)';
+
+  @override
+  String get backupBoxMasteryStates => 'Mastery States';
+
+  @override
+  String get backupBoxQuestionMasteryStates => 'Question Mastery';
+
+  @override
+  String get backupBoxQuestionEvaluations => 'Question Evaluations';
+
+  @override
+  String get backupBoxLearningPlans => 'Learning Plans';
+
+  @override
+  String get backupBoxPlanAdherence => 'Plan Adherence';
+
+  @override
+  String get backupBoxPlanAdherenceMetrics => 'Plan Metrics';
+
+  @override
+  String get backupBoxMasteryImprovementMetrics => 'Mastery Metrics';
+
+  @override
+  String get backupBoxConversations => 'Conversations';
+
+  @override
+  String get backupBoxTutorSessions => 'Tutor Sessions';
+
+  @override
+  String get backupBoxTopicDependencies => 'Topic Dependencies';
+
+  @override
+  String get backupBoxSettings => 'Settings';
+
+  @override
+  String get backupBoxProfile => 'Profile';
+
+  @override
+  String get backupBoxAnswers => 'Answers';
+
+  @override
+  String get backupBoxAttempts => 'Attempts';
+
+  @override
+  String get backupBoxBadges => 'Badges';
+
+  @override
+  String get backupBoxEngagementNudges => 'Engagement Nudges';
+
+  @override
+  String get backupBoxFocusSessions => 'Focus Sessions';
+
+  @override
+  String get backupBoxPendingActions => 'Pending Actions';
+
+  @override
+  String get backupBoxProgress => 'Progress';
+
+  @override
+  String get backupBoxTasks => 'Tasks';
+
+  @override
+  String get backupBoxStudentAvailability => 'Student Availability';
+
+  @override
+  String get backupBoxRoadmaps => 'Roadmaps';
+
+  @override
+  String get backupBoxLlmTasks => 'LLM Tasks';
+
+  @override
+  String get backupBoxLlmUsageRecords => 'LLM Usage Records';
+
+  @override
+  String get apiKeyPlaintextWarning =>
+      'Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.';
+
+  @override
+  String boxCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count boxes',
+      one: '1 box',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String andMoreCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count more',
+      one: '1 more',
+    );
+    return '... and $_temp0';
+  }
+
+  @override
+  String get signOutClearList => 'What will be cleared:';
+
+  @override
+  String get signOutClearsApiKey => 'API key';
+
+  @override
+  String get signOutClearsAiModel => 'Selected AI model';
+
+  @override
+  String get signOutPreservesStudyData => 'Your study data will be preserved.';
+
+  @override
+  String get signOutClearAllData => 'Clear all study data';
+
+  @override
+  String get signOutRemovesAllData =>
+      'Removes all subjects, questions, attempts, and progress';
+
+  @override
+  String get signOutBackupBeforeSignOut => 'Back up before signing out';
+
+  @override
+  String get signOutCreatesBackupFile =>
+      'Creates a backup file before clearing data';
+
+  @override
+  String get importRestartHint =>
+      'A restart may be needed for all changes to appear.';
+
+  @override
+  String get studentIdMismatchTitle => 'Student ID mismatch detected';
+
+  @override
+  String studentIdMismatchBody(String currentId, String backupId) {
+    return 'Current: $currentId\nBackup: $backupId';
+  }
+
+  @override
+  String get studentIdMismatchAction =>
+      'Update student records to match current ID?';
+
+  @override
+  String questionsCountPlural(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count questions available',
+      one: '1 question available',
+      zero: 'No questions available',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get mentorBulletPoint => '• ';
+
+  @override
+  String get pageNotFound => 'Page not found';
+
+  @override
+  String get pageNotFoundDescription =>
+      'The page you are looking for does not exist or the link may be invalid.';
+
+  @override
+  String get goToDashboard => 'Go to Dashboard';
+
+  @override
+  String get sending => 'Sending';
+
+  @override
+  String get dailyReminderDescription =>
+      'Get a daily reminder to study at your preferred time';
+
+  @override
+  String get reminderTime => 'Reminder Time';
+
+  @override
+  String get dailyReminderTimeHelp => 'Daily Reminder Time';
+
+  @override
+  String get checkNudgesNow => 'Check Nudges Now';
+
+  @override
+  String get runNudgeChecks => 'Run nudge checks immediately';
+
+  @override
+  String get nudgeCheckComplete => 'Nudge check complete';
+
+  @override
+  String get nudgeCheckFailed => 'Nudge check failed';
+
+  @override
+  String get dailyCapWarningTitle => 'Daily Cap Warning';
+
+  @override
+  String dailyCapWarningBody(int selectedMinutes, int remaining) {
+    return 'Starting this session will exceed your daily cap. $selectedMinutes min selected, $remaining min remaining. Continue?';
+  }
+
+  @override
+  String get continueAnyway => 'Continue Anyway';
+
+  @override
+  String get focusFirstVisitHelp =>
+      'Focus Mode has two modes: Practice (study hub with inline and full practice sessions) and Timer (silent focus timer). Session types (Quick Practice, Spaced Repetition, Weak Areas, Free Focus) affect which questions appear in inline practice. Timer mode is for distraction-free focus without questions. Session stats appear below.';
+
+  @override
+  String get contentManagement => 'Content Management';
+
+  @override
+  String get myUploads => 'My Uploads';
+
+  @override
+  String get viewMyUploads => 'View your uploaded materials';
+
+  @override
+  String get questionBank => 'Question Bank';
+
+  @override
+  String get browseAndManageQuestions => 'Browse and manage questions';
+
+  @override
+  String get failedUploads => 'Failed Uploads';
+
+  @override
+  String sourceCountFailed(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sources failed to process',
+      one: '1 source failed to process',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get noFailedUploads => 'No failed uploads';
+
+  @override
+  String get breakDuration => 'Break Duration';
+
+  @override
+  String get sessionTracking => 'Session Tracking';
+
+  @override
+  String get manualSessionTracker => 'Manual Session Tracker';
+
+  @override
+  String get manualSessionTrackerDescription =>
+      'Track your study sessions manually';
+
+  @override
+  String get sessionHistoryDescription => 'View your session history';
+
+  @override
+  String get exportProgressCsv => 'Export Progress CSV';
+
+  @override
+  String get featureLabelIngestion => 'Ingestion';
+
+  @override
+  String get featureLabelGeneral => 'General';
+
+  @override
+  String get deleteSourceTitle => 'Delete Source';
+
+  @override
+  String get deleteSourceBody => 'Are you sure you want to delete this source?';
+
+  @override
+  String get dailyReminderNotificationTitle => 'Daily Study Reminder';
+
+  @override
+  String get dailyReminderNotificationBody =>
+      'Time to study! You have study tasks planned for today.';
+
+  @override
+  String get addSubjectsForFocusHint =>
+      'Add subjects in Settings to track focus by subject.';
+
+  @override
+  String get retrying => 'Retrying...';
+
+  @override
+  String get unableToResolveSubject => 'Could not find subject for this topic.';
+
+  @override
+  String get questionDeleted => 'Question deleted';
+
+  @override
+  String get deleteQuestion => 'Delete Question';
+
+  @override
+  String get deleteQuestionConfirm =>
+      'Are you sure you want to delete this question?';
+
+  @override
+  String get deleteQuestions => 'Delete Questions';
+
+  @override
+  String deleteQuestionsConfirm(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'questions',
+      one: 'question',
+    );
+    return 'Are you sure you want to delete $count $_temp0?';
+  }
+
+  @override
+  String questionsDeleted(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'questions',
+      one: 'question',
+    );
+    return '$count $_temp0 deleted';
+  }
+
+  @override
+  String get editQuestion => 'Edit Question';
+
+  @override
+  String get questionText => 'Question text';
+
+  @override
+  String get questionBankScreen => 'Question Bank';
+
+  @override
+  String questionSubtitle(String questionType, String difficulty) {
+    return '$questionType • $difficulty';
+  }
+
+  @override
+  String get cancelSelection => 'Cancel selection';
+
+  @override
+  String get deleteSelected => 'Delete selected';
+
+  @override
+  String get selectMultiple => 'Select multiple';
+
+  @override
+  String get searchQuestions => 'Search questions';
+
+  @override
+  String get allSubjects => 'All subjects';
+
+  @override
+  String get allTypes => 'All types';
+
+  @override
+  String get allSources => 'All sources';
+
+  @override
+  String get acceleratePace => 'The student is doing well. Accelerate pace.';
+
+  @override
+  String get slowDownPace =>
+      'The student seems to be struggling. Slow down, simplify explanations, and provide more examples.';
+
+  @override
+  String get maintainPace => 'Maintain a steady teaching pace.';
+
+  @override
+  String get greetingContext => 'Start the lesson warmly.';
+
+  @override
+  String get teachingContext =>
+      'Teach the concept step by step. Engage the student with questions.';
+
+  @override
+  String get exerciseContext =>
+      'Give the student a practice question to assess understanding.';
+
+  @override
+  String get feedbackContext =>
+      'Provide constructive feedback on their answer.';
+
+  @override
+  String get adaptiveReviewContext =>
+      'The student needs extra help. Re-explain the concept more simply. Use different examples.';
+
+  @override
+  String get closingContext => 'Wrap up the lesson. Summarize key points.';
+
+  @override
+  String evaluateStudentAnswerIntro(
+    String subjectId,
+    String topicTitle,
+    String question,
+    String studentAnswer,
+  ) {
+    return 'Evaluate this student answer for the subject \"$subjectId\" on topic \"$topicTitle\".\n\nQuestion: $question\n\nStudent Answer: $studentAnswer\n\nReturn a JSON object with:';
+  }
+
+  @override
+  String get evalScoreDesc => '<0.0 to 1.0>';
+
+  @override
+  String get evalExplanationDesc =>
+      '<detailed feedback explaining what was correct/incorrect>';
+
+  @override
+  String get evalPartialCreditDesc =>
+      '<optional 0.0-1.0 for partially correct parts>';
+
+  @override
+  String get evalConceptBreakdownDesc =>
+      '<optional map of concept name to mastery score 0.0-1.0>';
+
+  @override
+  String get evalCorrectAnswerDesc =>
+      '<the correct answer to the exercise question>';
+
+  @override
+  String get evalTypeDesc =>
+      '<question type: typedAnswer|singleChoice|multiChoice|essay|mathExpression>';
+
+  @override
+  String get evalOptionsDesc =>
+      '<for singleChoice/multiChoice, list of answer options; otherwise empty>';
+
+  @override
+  String minutesSemantics(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'minutes',
+      one: 'minute',
+    );
+    return '$count $_temp0';
+  }
+
+  @override
+  String breakRemainingLabel(String formattedTime) {
+    return 'Break remaining $formattedTime';
+  }
+
+  @override
+  String get loading => 'Loading...';
+
+  @override
+  String get pending => 'Pending';
+
+  @override
+  String get extracting => 'Extracting';
+
+  @override
+  String get processing => 'Processing';
+
+  @override
+  String get summarizing => 'Summarizing';
+
+  @override
+  String get generatingQuestions => 'Generating Questions';
+
+  @override
+  String get contentLibrary => 'Content Library';
+
+  @override
+  String get sortOrder => 'Sort order';
+
+  @override
+  String get sortBy => 'Sort by';
+
+  @override
+  String get allStatuses => 'All statuses';
+
+  @override
+  String get sourceDeleted => 'Source deleted';
+
+  @override
+  String get alsoDeleteQuestions =>
+      'Also delete questions generated from this source';
+
+  @override
+  String get reprocess => 'Reprocess';
+
+  @override
+  String sourcesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count sources',
+      one: '1 source',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get sourceNotFound => 'Source not found';
+
+  @override
+  String get errorLoadingSource =>
+      'An error occurred while loading the source. Please try again.';
+
+  @override
+  String errorLoadingSourceWithDetail(String error) {
+    return 'An error occurred while loading the source: $error';
+  }
+
+  @override
+  String get reprocessSource => 'Reprocess Source';
+
+  @override
+  String get reprocessingWarning =>
+      'Reprocessing will replace existing generated questions. Continue?';
+
+  @override
+  String get reprocessing => 'Reprocessing...';
+
+  @override
+  String get sourceDetail => 'Source Detail';
+
+  @override
+  String get status => 'Status';
+
+  @override
+  String get subject => 'Subject';
+
+  @override
+  String get id => 'ID';
+
+  @override
+  String get uploaded => 'Uploaded';
+
+  @override
+  String get processingFailed => 'Processing failed';
+
+  @override
+  String get topicClassification => 'Topic Classification';
+
+  @override
+  String get notYetClassified => 'Not yet classified';
+
+  @override
+  String get classifyNow => 'Classify Now';
+
+  @override
+  String get summarySection => 'Summary';
+
+  @override
+  String get noSummaryAvailable => 'No summary available';
+
+  @override
+  String get extractedText => 'Extracted Text';
+
+  @override
+  String extractedTextCount(int count) {
+    return 'Extracted Text ($count)';
+  }
+
+  @override
+  String get searchInText => 'Search in text';
+
+  @override
+  String get noExtractedText => 'No extracted text available';
+
+  @override
+  String get generatedQuestions => 'Generated Questions';
+
+  @override
+  String generatedQuestionsCount(int count) {
+    return 'Generated Questions ($count)';
+  }
+
+  @override
+  String get noQuestionsFromSource => 'No questions from this source';
+
+  @override
+  String get difficulty => 'Difficulty';
+
+  @override
+  String get edit => 'Edit';
+
+  @override
+  String get aiGenerated => 'AI-generated';
+
+  @override
+  String get manual => 'Manual';
+
+  @override
+  String get sources => 'Sources';
+
+  @override
+  String get viewSources => 'View Sources';
+
+  @override
+  String get noSourcesForSubject => 'No sources for this subject';
+
+  @override
+  String get remainingWorkload => 'Remaining Workload';
+
+  @override
+  String get explanation => 'Explanation';
+
+  @override
+  String sourcesCountLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Sources',
+      one: '1 Source',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get difficultyDistribution => 'Difficulty Distribution';
+
+  @override
+  String get difficultyDistributionHint =>
+      'Set the number of Easy, Medium, and Hard questions. Leave all at 0 for balanced random selection.';
+
+  @override
+  String get easyQuestions => 'Easy';
+
+  @override
+  String get mediumQuestions => 'Medium';
+
+  @override
+  String get hardQuestions => 'Hard';
+
+  @override
+  String get totalSelected => 'Total Selected';
+
+  @override
+  String get practiceAction => 'Practice';
+
+  @override
+  String get viewDetailsAction => 'View Details';
+
+  @override
+  String mentorScheduleTopic(String topicTitle) {
+    return 'Topic: $topicTitle';
+  }
+
+  @override
+  String mentorContextLateNightWarning(int count) {
+    return 'WARNING: $count session(s) started after 10 PM (late-night study detected)';
+  }
+
+  @override
+  String get avgTimePerQuestion => 'Avg time/question';
+
+  @override
+  String examResultsSrsImpact(int count) {
+    return 'Results will affect spaced repetition scheduling for $count questions.';
+  }
+
+  @override
+  String get questionsAtAGlance => 'Questions at a glance';
+
+  @override
+  String get noExamHistory => 'No exam history available';
+
+  @override
+  String get examHistory => 'Exam History';
+
+  @override
+  String durationMinutesSeconds(int minutes, int seconds) {
+    return '${minutes}m ${seconds}s';
+  }
+
+  @override
+  String get viewPastExamResults => 'View past exam results';
+
+  @override
+  String get mentorContextHeader => 'Current student context:';
+
+  @override
+  String mentorContextTotalAttempts(int count) {
+    return 'Total attempts: $count';
+  }
+
+  @override
+  String mentorContextCorrectAttempts(int count) {
+    return 'Correct attempts: $count';
+  }
+
+  @override
+  String mentorContextAccuracy(String percent) {
+    return 'Accuracy: $percent%';
+  }
+
+  @override
+  String mentorContextTopicsStudied(int count) {
+    return 'Topics studied: $count';
+  }
+
+  @override
+  String mentorContextWeeklyActivity(int count) {
+    return 'Weekly activity: $count attempts';
+  }
+
+  @override
+  String mentorContextTotalStudyTime(String hours) {
+    return 'Total study time: $hours hours';
+  }
+
+  @override
+  String mentorContextPlanPhase(int currentDay, int totalDays) {
+    return 'Plan exists: current phase (day $currentDay of $totalDays)';
+  }
+
+  @override
+  String mentorContextPlanAdherence(String percent) {
+    return 'Plan adherence: $percent%';
+  }
+
+  @override
+  String mentorContextLowAdherence(int count) {
+    return 'Low adherence for $count consecutive days';
+  }
+
+  @override
+  String mentorContextDaysSinceActivity(int count) {
+    return 'Days since last activity: $count';
+  }
+
+  @override
+  String mentorContextWelcomeBack(int count) {
+    return 'IMPORTANT: The student is returning after a $count-day absence. Provide a warm welcome-back and suggest specific catch-up steps.';
+  }
+
+  @override
+  String mentorContextActiveRoadmaps(int count) {
+    return 'Active roadmaps: $count';
+  }
+
+  @override
+  String mentorContextRoadmapProgress(String goal, int completed, int total) {
+    return '$goal: $completed/$total milestones completed';
+  }
+
+  @override
+  String mentorContextNextMilestone(String title, String dueDate) {
+    return 'Next milestone: \"$title\" due $dueDate';
+  }
+
+  @override
+  String mentorContextPendingActions(int count) {
+    return 'Pending actions awaiting decision: $count';
+  }
+
+  @override
+  String mentorContextPendingActionItem(String type, String topic) {
+    return '$type: $topic';
+  }
+
+  @override
+  String mentorContextUpcomingLessons(int count) {
+    return 'Upcoming lessons (next $count):';
+  }
+
+  @override
+  String mentorContextLessonItem(String title, String time, int duration) {
+    return '\"$title\" at $time (${duration}min)';
+  }
+
+  @override
+  String get mentorContextWeakTopics => 'Weak topics needing attention:';
+
+  @override
+  String mentorContextWeakTopicItem(String topic, String accuracy) {
+    return '$topic (accuracy: $accuracy%)';
+  }
+
+  @override
+  String mentorContextStudyTimeToday(int minutes) {
+    return 'Today\'s study time: $minutes minutes';
+  }
+
+  @override
+  String mentorContextCapExceeded(int cap, int today) {
+    return 'WARNING: Daily study cap ($cap min) exceeded by $today minutes';
+  }
+
+  @override
+  String mentorContextCapRemaining(int cap, int remaining) {
+    return 'Daily cap: $cap minutes ($remaining min remaining)';
+  }
+
+  @override
+  String mentorContextStreak(int count) {
+    return 'Congratulations! $count day study streak!';
+  }
+
+  @override
+  String mentorContextStreakGood(int count) {
+    return '$count consecutive study days - good consistency!';
+  }
+
+  @override
+  String mentorContextSessionsToday(int count) {
+    return 'Sessions today: $count';
+  }
+
+  @override
+  String get createQuestion => 'Create Question';
+
+  @override
+  String get questionTextHint => 'Enter the question text';
+
+  @override
+  String get answerOptions => 'Answer Options';
+
+  @override
+  String get addOption => 'Add Option';
+
+  @override
+  String get correctAnswerLabel => 'Correct Answer';
+
+  @override
+  String get selectCorrectAnswer => 'Select correct answer';
+
+  @override
+  String get questionCreated => 'Question created successfully';
+
+  @override
+  String get manageQuestions => 'Manage Questions';
+
+  @override
+  String get backupContainsSensitiveData =>
+      'This backup contains sensitive data (API key, model configuration). Be cautious when sharing this file.';
+
+  @override
+  String get excludeSensitiveData => 'Exclude sensitive data';
+
+  @override
+  String get sensitiveDataWillBeExcluded =>
+      'Sensitive data will be excluded. You will need to re-enter your API key after restore.';
+
+  @override
+  String get selectBoxesToRestore => 'Select sections to restore';
+
+  @override
+  String get selectAll => 'Select All';
+
+  @override
+  String get deselectAll => 'Deselect All';
+
+  @override
+  String get selectedBoxesWillBeOverwritten =>
+      'Selected sections will be completely overwritten.';
+
+  @override
+  String get autoBackup => 'Automatic Backup';
+
+  @override
+  String get autoBackupDescription => 'Schedule automatic backups';
+
+  @override
+  String get backupIntervalDaily => 'Daily';
+
+  @override
+  String get backupIntervalWeekly => 'Weekly';
+
+  @override
+  String get backupIntervalNever => 'Never';
+
+  @override
+  String get lastBackup => 'Last backup';
+
+  @override
+  String aiTaskFailedNotification(String feature) {
+    return 'AI task failed: $feature';
+  }
+
+  @override
+  String aiTaskFailedBody(String feature, String error) {
+    return 'Task \'$feature\' failed. $error';
+  }
+
+  @override
+  String get questionBankLink => 'Question Bank';
+
+  @override
+  String get overwriteRestore => 'Overwrite all';
+
+  @override
+  String get mergeRestore => 'Merge (skip existing)';
+
+  @override
+  String get backupCompleted => 'Backup completed automatically';
+
+  @override
+  String get viewInSettings => 'Open Settings';
+
+  @override
+  String get phaseGreeting => 'Greeting';
+
+  @override
+  String get phaseTeaching => 'Teaching';
+
+  @override
+  String get phaseExercise => 'Exercise';
+
+  @override
+  String get phaseFeedback => 'Feedback';
+
+  @override
+  String get phaseAdaptiveReview => 'Adaptive Review';
+
+  @override
+  String get phaseClosing => 'Closing';
+
+  @override
+  String examSessionTitle(String mode, String subject) {
+    return '$mode – $subject';
+  }
+
+  @override
+  String get signOutComplete => 'Sign out – Done';
+
+  @override
+  String importFailedWithError(String error) {
+    return 'Import failed: $error';
+  }
+
+  @override
+  String scheduleTimeLabel(String time) {
+    return 'Time: $time';
+  }
+
+  @override
+  String scheduleDurationLabel(String duration) {
+    return 'Duration: $duration';
+  }
+
+  @override
+  String recordCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count records',
+      one: '1 record',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get couldNotEvaluateAnswer => 'Could not evaluate answer.';
+
+  @override
+  String couldNotEvaluateAnswerWithError(String error) {
+    return 'Could not evaluate answer: $error';
+  }
+
+  @override
+  String tutorImageAnalysisUserPrompt(String imageData) {
+    return 'The student submitted handwritten work / an image. Analyze and provide feedback, identifying any errors and suggesting improvements.\n\n$imageData';
+  }
+
+  @override
+  String get tutorImageAnalysisSystemPrompt =>
+      'The student submitted this work. Analyze and provide feedback.';
+
+  @override
+  String dependenciesTitle(String topic) {
+    return '$topic — Dependencies';
+  }
+
+  @override
+  String get prerequisites => 'Prerequisites';
+
+  @override
+  String get noTopicsForPrerequisites =>
+      'No other topics available for prerequisites.';
+
+  @override
+  String get noDescription => 'No description';
+
+  @override
+  String masteryThreshold(String percent) {
+    return 'Mastery Threshold: $percent%';
+  }
+
+  @override
+  String get requiredTopic => 'Required Topic';
+
+  @override
+  String get requiredTopicOn => 'Student must master this topic';
+
+  @override
+  String get requiredTopicOff => 'Optional topic — can be skipped';
+
+  @override
+  String syllabusWeight(String weight) {
+    return 'Syllabus Weight: $weight';
+  }
+
+  @override
+  String get parentTopic => 'Parent Topic';
+
+  @override
+  String get rootTopic => 'None (Root Topic)';
+
+  @override
+  String sortOrderValue(int order) {
+    return 'Sort Order: $order';
+  }
+
+  @override
+  String topicCreated(String title) {
+    return 'Topic \"$title\" created';
+  }
+
+  @override
+  String topicCreateFailed(String error) {
+    return 'Failed to create topic: $error';
+  }
+
+  @override
+  String get editTopicTitle => 'Edit Topic';
+
+  @override
+  String topicUpdated(String title) {
+    return 'Topic \"$title\" updated';
+  }
+
+  @override
+  String topicUpdateFailed(String error) {
+    return 'Failed to update topic: $error';
+  }
+
+  @override
+  String get dependenciesUpdated => 'Dependencies updated';
+
+  @override
+  String dependenciesUpdateFailed(String error) {
+    return 'Failed to update dependencies: $error';
+  }
+
+  @override
+  String get deleteTopicTitle => 'Delete Topic';
+
+  @override
+  String deleteTopicConfirm(String topic) {
+    return 'Delete \"$topic\"? This will remove it from all dependency lists.';
+  }
+
+  @override
+  String get topicDeleted => 'Topic deleted';
+
+  @override
+  String topicDeleteFailed(String error) {
+    return 'Failed to delete topic: $error';
+  }
+
+  @override
+  String get topicTitleLabel => 'Topic Title';
+
+  @override
+  String get topicTitleHint => 'e.g. Atomic Structure';
+
+  @override
+  String get topicDescriptionLabel => 'Topic Description';
+
+  @override
+  String get topicDescriptionHint => 'Describe the topic scope';
+
+  @override
+  String get syllabusTextLabel => 'Syllabus Text';
+
+  @override
+  String get syllabusTextHint => 'Syllabus points covered';
+
+  @override
+  String get addTopicTitle => 'Add Topic';
+
+  @override
+  String topicCountTemplate(int count) {
+    return '$count topics';
+  }
+
+  @override
+  String get dependenciesNav => 'Dependencies';
+
+  @override
+  String prerequisitesCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prerequisites',
+      one: '1 prerequisite',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String downstreamCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downstream',
+      one: '1 downstream',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get hasParent => 'Has parent';
+
+  @override
+  String get addTopicTooltip => 'Add Topic';
+
+  @override
+  String downstreamTopicWarning(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count downstream topics depend',
+      one: '1 downstream topic depends',
+    );
+    return '⚠ $_temp0 on this topic and may need to be updated.';
+  }
+
+  @override
+  String get prerequisitesNotMet => 'Prerequisites Not Met';
+
+  @override
+  String get practicePrerequisites => 'Practice Prerequisites';
+
+  @override
+  String prerequisiteMasteryRequired(String topicNames) {
+    return 'This topic requires mastery of: $topicNames. Would you like to practice those first?';
+  }
+
+  @override
+  String get inlinePracticeSubtitle =>
+      'Practice directly in focus mode — timer keeps running';
+
+  @override
+  String get fullPracticeSubtitle => 'Navigate to full practice session screen';
+
+  @override
+  String get timerOnlyDescription =>
+      'Timer mode is a silent focus timer. Questions and practice are available in the Practice tab.';
+
+  @override
+  String get generateLessonFromContent => 'Generate lesson from this material';
+
+  @override
+  String get generateLessonFromContentHint =>
+      'Creates an AI-generated lesson with slides, exercises, and summary blocks';
+
+  @override
+  String subjectNoTopics(String subjectName) {
+    return '$subjectName has no topics. Add topics first or upload a syllabus.';
+  }
+
+  @override
+  String get noActivityShort => '—';
+
+  @override
+  String courseNotFound(String courseName) {
+    return 'Course \'$courseName\' not found. Create it first in the Subjects tab, or select from existing subjects using multi-syllabus mode.';
+  }
+
+  @override
+  String get planSubjectHint =>
+      'Enter an existing subject name to base the plan on its syllabus';
+
+  @override
+  String get chat => 'Chat';
+
+  @override
+  String get slides => 'Slides';
+
+  @override
+  String get connectionHealth => 'Connection Health';
+
+  @override
+  String get notTested => 'Not tested';
+
+  @override
+  String get messageFailedRetry => 'Message failed. Tap to retry.';
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String backupShareText(String date) {
+    return 'StudyKing Backup — $date';
+  }
+
+  @override
+  String get backupNow => 'Back Up Now';
+
+  @override
+  String get shareLastBackup => 'Share last backup';
+
+  @override
+  String get exportReports => 'Export Reports';
+
+  @override
+  String get readAloud => 'Read aloud';
+
+  @override
+  String get uploadFile => 'Upload file';
+
+  @override
+  String get fileAttached => 'File attached';
+
+  @override
+  String get recordAudio => 'Record audio';
+
+  @override
+  String get recordingComplete => 'Recording complete';
+
+  @override
+  String get recordingInProgress => 'Recording in progress';
+
+  @override
+  String get startRecording => 'Start recording';
+
+  @override
+  String lessonSystemPrompt(String localeName) {
+    return 'You are a lesson planning AI. Generate educational content in $localeName. Your response must be valid JSON.';
+  }
+
+  @override
+  String lessonBuildPrompt(String topicTitle, String localeName) {
+    return 'Generate a structured lesson plan for the topic: \"$topicTitle\". Include slides (key concepts), examples, exercises, and a summary. Respond in $localeName. Format your response as a JSON array of blocks, each with \"type\" (slide, text, example, exercise, quiz, summary) and \"content\" fields.';
+  }
+
+  @override
+  String lessonBuildPromptFromSource(
+    String sourceContent,
+    String topicTitle,
+    String localeName,
+  ) {
+    return 'Based on the following source material, generate a structured lesson:\n\n$sourceContent\n\nTopic: $topicTitle\nGenerate slides, examples, exercises, and a summary. Respond in $localeName as a JSON array of blocks.';
+  }
+
+  @override
+  String get mentorCheckIn => 'Mentor Check-In';
+
+  @override
+  String get nextUp => 'Next Up';
+
+  @override
+  String get scheduledLesson => 'Scheduled lesson';
+
+  @override
+  String upcomingLessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count upcoming lessons',
+      one: '1 upcoming lesson',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String reviewsDueCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count reviews due',
+      one: '1 review due',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get dueForReviewSubtitle => 'Due for spaced repetition review';
+
+  @override
+  String weakTopicsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count weak topics',
+      one: '1 weak topic',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get practiceWeakAreas => 'Practice weak areas';
+
+  @override
+  String lessonsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '~$count lessons',
+      one: '~$count lesson',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String topicsNeedAttention(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count topics need attention',
+      one: '1 topic needs attention',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get stopRecording => 'Stop recording';
+
+  @override
+  String get incorrectAnswer => 'Incorrect answer';
+
+  @override
+  String get loadingWithEllipsis => 'Loading...';
+
+  @override
+  String get whileYouWereAway => '--- While you were away ---';
+
+  @override
+  String get endOfPendingMessages => '--- End of pending messages ---';
+
+  @override
+  String get lessonPractice => 'Lesson Practice';
+
+  @override
+  String lessonPracticeWithTopic(String topic) {
+    return 'Lesson Practice: $topic';
+  }
+
+  @override
+  String pageIndicator(int current, int total) {
+    return '$current / $total';
+  }
+
+  @override
+  String get mentorMessages => 'Mentor Messages';
+
+  @override
+  String get readyToContinueLearning => 'Ready to continue learning?';
+
+  @override
+  String get graphCanvas => 'Graph canvas';
+
+  @override
+  String get drawYourGraphHere => 'Draw your graph here';
+
+  @override
+  String strokesCountPoints(int strokes, int points) {
+    return '$strokes strokes, $points points';
+  }
+
+  @override
+  String get toolFreehand => 'Freehand';
+
+  @override
+  String get toolLine => 'Line';
+
+  @override
+  String get toolRectangle => 'Rectangle';
+
+  @override
+  String get toolCircle => 'Circle';
+
+  @override
+  String get toolText => 'Text';
+
+  @override
+  String get toolPlotPoint => 'Plot Point';
+
+  @override
+  String get toolEraser => 'Eraser';
+
+  @override
+  String get unableToDisplayEvaluation => 'Unable to display evaluation result';
+
+  @override
+  String get micPermissionDenied =>
+      'Microphone access denied. Please enable it in Settings to use voice input.';
+
+  @override
+  String get focusTimerLabel => '(Focus)';
+
+  @override
+  String get voiceListeningHint => 'Listening. Speak now.';
+
+  @override
+  String get boldText => 'Bold Text';
+
+  @override
+  String get boldTextDescription =>
+      'Use bold font weight for text throughout the app';
+
+  @override
+  String get voiceInputNotAvailable => 'Voice input not available';
+
+  @override
+  String get microphonePermissionRequired => 'Microphone Permission Required';
+
+  @override
+  String get showOnboardingTour => 'Show onboarding tour';
+
+  @override
+  String get saveOnly => 'Save Only';
+
+  @override
+  String get proceedAnyway => 'Proceed Anyway';
+
+  @override
+  String get modelCapabilityWarningTitle => 'Model Capability Notice';
+
+  @override
+  String get modelCapabilityWarningBody =>
+      'Your selected model may not support image or audio analysis. Proceed anyway?';
+
+  @override
+  String processingElapsed(int seconds) {
+    return 'Processing... ${seconds}s elapsed';
+  }
+
+  @override
+  String progressStageLabel(int current, int total) {
+    return 'Stage $current of $total';
+  }
+
+  @override
+  String get practiceAllQuestions => 'Practice All Questions';
+
+  @override
+  String get noQuestionsToPractice => 'No questions to practice';
+
+  @override
+  String get questionsWithoutTopicWarning =>
+      'These questions aren\'t linked to any topic. Use the topic classifier or edit the source\'s topic to enable topic-specific practice.';
+
+  @override
+  String get keepOldQuestionsLabel => 'Keep old questions';
+
+  @override
+  String get keepOldQuestionsHint =>
+      'Old questions will be preserved alongside new ones';
+
+  @override
+  String get postUploadGuidance =>
+      'You can now practice the generated questions in the Practice tab!';
+
+  @override
+  String get uploadInProgressTitle => 'Upload in Progress';
+
+  @override
+  String get uploadInProgressBody =>
+      'An upload is in progress. Cancel and go back?';
+
+  @override
+  String get selected => 'selected';
+
+  @override
+  String get syllabusUploadToggle => 'Upload as syllabus';
+
+  @override
+  String get syllabusUploadToggleHint =>
+      'Marks this upload as a syllabus for structured topic generation';
+
+  @override
+  String get backupProvider => 'Backup Provider';
+
+  @override
+  String get backupProviderDescription =>
+      'Optional secondary AI provider for failover';
+
+  @override
+  String get backupApiKey => 'Backup API Key';
+
+  @override
+  String get backupApiKeyDescription => 'API key for the backup provider';
+
+  @override
+  String get backupBaseUrl => 'Backup Base URL';
+
+  @override
+  String get backupModel => 'Backup Model';
+
+  @override
+  String get backupModelHint => 'e.g., gpt-4o-mini';
+
+  @override
+  String get backupModelDescription => 'Model ID for the backup provider';
+
+  @override
+  String providerTimedOut(String providerName) {
+    return '$providerName timed out. Please try again.';
+  }
+
+  @override
+  String providerConnectionFailed(String providerName) {
+    return 'Connection to $providerName failed. Please check your network and API key.';
+  }
+
+  @override
+  String get responseInterrupted => 'Response interrupted. Please try again.';
+
+  @override
+  String get whatIsApiKey => 'What is an API key?';
+
+  @override
+  String get whatIsApiKeyDescription =>
+      'An API key lets StudyKing use AI services like generating questions and tutoring. You can get one for free from providers like OpenRouter or OpenAI, or run a local model with Ollama.';
+
+  @override
+  String get statsAppearAfterLearning =>
+      'You\'ll see your stats here once you start learning!';
+
+  @override
+  String get topicsCreatedTitle => 'Topics Created';
+
+  @override
+  String get topicsCreatedDescription =>
+      'Topics were automatically created based on our standard curriculum. You can review and edit them anytime.';
+
+  @override
+  String get reviewAndEdit => 'Review & Edit';
+
+  @override
+  String topicSubtopicsCount(int count) {
+    return '$count subtopics';
+  }
+
+  @override
+  String get apiKeyRequiredForUploadTitle => 'API Key Required';
+
+  @override
+  String get apiKeyRequiredForUpload =>
+      'You\'ll need to configure an API key first to upload and process content. Would you like to configure it now?';
+
+  @override
+  String get configureApiKey => 'Configure API Key';
+
+  @override
+  String get maybeLater => 'Maybe Later';
+
+  @override
+  String get recommended => 'Recommended';
+
+  @override
+  String get openRouterSetupGuide =>
+      'Visit openrouter.ai/keys → Create account → Copy API key → Paste here';
+
+  @override
+  String get ollamaSetupGuide =>
+      'Download Ollama from ollama.ai → Run locally → Use default URL';
+
+  @override
+  String get openAiSetupGuide =>
+      'Visit platform.openai.com/api-keys → Create new key → Copy here';
+
+  @override
+  String get firstPracticeBanner =>
+      'First time practicing? Quick Practice is a great place to start!';
+
+  @override
+  String get recommendedForBeginners => 'Recommended for beginners';
+
+  @override
+  String get letsCreatePlanTitle => 'Let\'s create your study plan!';
+
+  @override
+  String get letsCreatePlanDesc =>
+      'Tell me what you want to learn and for how long. I\'ll create a personalized plan.';
+
+  @override
+  String get quickPlan => 'Quick Plan';
+
+  @override
+  String get startPracticing => 'Start Practicing';
+
+  @override
+  String get setupCompleteTitle => 'Great job setting up!';
+
+  @override
+  String get setupCompleteDesc =>
+      'You\'re ready to start learning. Here\'s what you can do next:';
+
+  @override
+  String get suggestedNextActions => 'Suggested next actions';
+
+  @override
+  String providerSetupGuide(String providerName) {
+    return 'How to get started with $providerName:';
+  }
+
+  @override
+  String get curriculumBasedTopics =>
+      'These topics are based on our standard curriculum. You can edit them anytime.';
+
+  @override
+  String get pleaseWait => 'Please wait…';
+
+  @override
+  String get difficultyRandomDistribution =>
+      'Questions will be randomly distributed by difficulty';
+
+  @override
+  String questionsRemainingCount(String count) {
+    return 'Remaining: $count';
+  }
+
+  @override
+  String get profileDeleted => 'Profile deleted successfully';
+
+  @override
+  String get backupEncryptionPassword => 'Encryption password (optional)';
+
+  @override
+  String get backupEncryptionPasswordHint => 'Leave empty for no encryption';
+
+  @override
+  String get practiceTheseTopics => 'Practice These Topics';
+
+  @override
+  String get practiceLessonBlocks => 'Practice Lesson Blocks';
+
+  @override
+  String get tutorInitFailedGeneric =>
+      'Failed to initialize tutor. Please check your API configuration in Settings and try again.';
+
+  @override
+  String get tagline => 'AI-Native Learning Companion';
+
+  @override
+  String get preparingTutorLesson => 'Preparing your lesson...';
+}

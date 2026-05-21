@@ -1,0 +1,4 @@
+enum SpacedRepetitionErrorCode {
+  boxClosed,
+  notFound,
+}

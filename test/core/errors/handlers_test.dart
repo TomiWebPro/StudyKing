@@ -1,0 +1,261 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/exceptions.dart';
+import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+
+class _SpyLogger extends Logger {
+  final List<String> errorMessages = [];
+
+  _SpyLogger() : super('AppErrorHandler');
+
+  @override
+  void e(String message, [Object? error, StackTrace? stack]) {
+    errorMessages.add(message);
+  }
+}
+
+final _en = AppLocalizationsEn();
+
+void main() {
+  group('AppErrorHandler.getRetryText', () {
+    test('returns "Retry Connection" for NetworkException', () {
+      const exception = AppException(message: 'test', type: ExceptionType.network);
+      expect(AppErrorHandler.getRetryText(exception, _en), equals('Retry Connection'));
+    });
+
+    test('returns "Retry After Wait" for ApiRateLimitException', () {
+      const exception = AppException(message: 'test', type: ExceptionType.apiRateLimit);
+      expect(AppErrorHandler.getRetryText(exception, _en), equals('Retry After Wait'));
+    });
+
+    test('returns "Try again" for ApiInternalServerError', () {
+      const exception = AppException(message: 'test', type: ExceptionType.apiInternalServer);
+      expect(AppErrorHandler.getRetryText(exception, _en), equals('Try again'));
+    });
+
+    test('returns "Retry" for other exception types', () {
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.apiAuth), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.database), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.validation), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.llm), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.apiNotFound), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.contentGeneration), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.apiKeyMissing), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.invalidApiKey), _en), equals('Retry'));
+      expect(AppErrorHandler.getRetryText(const AppException(message: 'test', type: ExceptionType.pdfParse), _en), equals('Retry'));
+    });
+  });
+
+  group('AppErrorHandler.convertToAppException', () {
+    test('passes through existing AppException without conversion', () {
+      const original = AppException(message: 'network error', type: ExceptionType.network);
+      final result = AppErrorHandler.convertToAppException(original, _en);
+      expect(result, same(original));
+      expect(result.type, ExceptionType.network);
+    });
+
+    test('converts ConnectionFailedError to AppException(network)', () {
+      final error = Exception('ConnectionFailedError: timeout');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.network);
+    });
+
+    test('converts SocketException to AppException(network)', () {
+      final error = Exception('SocketException: connection refused');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.network);
+    });
+
+    test('converts error with Network keyword to AppException(network)', () {
+      final error = Exception('Network timeout');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.network);
+    });
+
+    test('converts error with "401" to AppException(invalidApiKey)', () {
+      final error = Exception('401 Unauthorized');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.invalidApiKey);
+    });
+
+    test('converts error with "unauthorized" to AppException(invalidApiKey)', () {
+      final error = Exception('unauthorized access');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.invalidApiKey);
+    });
+
+    test('converts error with "invalid" keyword to AppException(invalidApiKey)', () {
+      final error = Exception('invalid credentials');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.invalidApiKey);
+    });
+
+    test('converts error with "403" to AppException(apiRateLimit)', () {
+      final error = Exception('403 Forbidden');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiRateLimit);
+    });
+
+    test('converts error with "forbidden" keyword to AppException(apiRateLimit)', () {
+      final error = Exception('forbidden access');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiRateLimit);
+    });
+
+    test('converts error with "404" to AppException(apiNotFound)', () {
+      final error = Exception('404 Not Found');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiNotFound);
+    });
+
+    test('converts error with "not found" to AppException(apiNotFound)', () {
+      final error = Exception('resource not found');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiNotFound);
+    });
+
+    test('converts error with "500" to AppException(apiInternalServer)', () {
+      final error = Exception('500 Internal Server Error');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiInternalServer);
+    });
+
+    test('converts error with "502" to AppException(apiInternalServer)', () {
+      final error = Exception('502 Bad Gateway');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiInternalServer);
+    });
+
+    test('converts error with "503" to AppException(apiInternalServer)', () {
+      final error = Exception('503 Service Unavailable');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.apiInternalServer);
+    });
+
+    test('converts FormatException to AppException(validation)', () {
+      final error = const FormatException('Invalid data format');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.validation);
+    });
+
+    test('converts StateError to AppException(database)', () {
+      final error = StateError('Bad state');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.database);
+    });
+
+    test('converts AssertionError to AppException(database)', () {
+      final error = AssertionError('assertion failed');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.database);
+    });
+
+    test('converts unknown generic error to AppException(unknown)', () {
+      final error = Exception('Some random error');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.unknown);
+    });
+
+    test('priority: Network keyword takes precedence over invalid keyword', () {
+      final error = Exception('Network invalid request');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.network);
+    });
+
+    test('error with "501" maps to default AppException(unknown)', () {
+      final error = Exception('501 Not Implemented');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.unknown);
+    });
+
+    test('error with status 400 maps to default AppException(unknown)', () {
+      final error = Exception('HTTP 400 Bad Request');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.unknown);
+    });
+
+    test('TypeError is converted to default AppException(unknown)', () {
+      final error = TypeError();
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.type, ExceptionType.unknown);
+    });
+  });
+
+  group('AppErrorHandler.convertToAppException - edge cases', () {
+    test('converts plain String to unknown AppException', () {
+      final result = AppErrorHandler.convertToAppException('some plain error', _en);
+      expect(result.type, ExceptionType.unknown);
+      expect(result.originalError, equals('some plain error'));
+    });
+
+    test('preserves originalError in converted exceptions', () {
+      final original = Exception('SocketException: timeout');
+      final result = AppErrorHandler.convertToAppException(original, _en);
+      expect(result.type, ExceptionType.network);
+      expect(result.originalError, same(original));
+    });
+
+    test('converts int error to unknown AppException', () {
+      final result = AppErrorHandler.convertToAppException(42, _en);
+      expect(result.type, ExceptionType.unknown);
+      expect(result.originalError, equals(42));
+    });
+
+    test('message matches exception type for network', () {
+      final error = Exception('SocketException');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.message, equals('Unable to connect to the server. Please check your internet connection and try again.'));
+    });
+
+    test('message matches exception type for database', () {
+      final error = StateError('Bad state');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.message, equals('A database error occurred. Please try again.'));
+    });
+
+    test('message matches exception type for validation', () {
+      final error = const FormatException('Invalid input');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.message, equals('Invalid input'));
+    });
+
+    test('message matches exception type for unknown', () {
+      final error = Exception('random error');
+      final result = AppErrorHandler.convertToAppException(error, _en);
+      expect(result.message, equals('An unexpected error occurred. Please try again.'));
+    });
+  });
+
+  group('AppErrorHandler.logError (via logger spy)', () {
+    test('logs error with correct tag and message', () {
+      final spy = _SpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+
+      AppErrorHandler.logError(
+        AppException(message: 'connection failed', type: ExceptionType.network),
+        'TEST_OP',
+      );
+
+      AppErrorHandler.logger = originalLogger;
+
+      expect(spy.errorMessages, isNotEmpty);
+      expect(spy.errorMessages.first, contains('TEST_OP'));
+      expect(spy.errorMessages.first, contains('connection failed'));
+    });
+
+    test('logs correct context name for different operations', () {
+      final spy = _SpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+
+      AppErrorHandler.logError(AppException(message: 'bad input', type: ExceptionType.validation), 'VALIDATION');
+
+      AppErrorHandler.logger = originalLogger;
+
+      expect(spy.errorMessages, isNotEmpty);
+      expect(spy.errorMessages.first, contains('VALIDATION'));
+    });
+  });
+}
