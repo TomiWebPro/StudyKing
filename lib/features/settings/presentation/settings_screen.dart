@@ -55,9 +55,13 @@ import 'package:studyking/features/onboarding/providers/onboarding_providers.dar
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
 import 'package:studyking/core/providers/shared_providers.dart' show databaseProvider;
+import 'package:studyking/core/providers/study_progress_provider.dart' show studyProgressTrackerProvider;
 import 'package:studyking/features/subjects/providers/subjects_list_provider.dart' show subjectListProvider;
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorServiceProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
 import 'package:studyking/core/providers/secure_api_key_provider.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/settings/providers/settings_providers.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
@@ -341,12 +345,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               ),
             ]),
             _section(l10n.backupAndRestore, [
-              _tile(l10n.exportBackup, l10n.exportAllDataDescription,
-                  Icons.backup, _exportBackup),
-              _tile(l10n.importBackup, l10n.importFromFileDescription,
-                  Icons.restore_page, _importBackup),
-              _tile(l10n.autoBackup, l10n.autoBackupDescription,
-                  Icons.schedule, () => _showAutoBackupDialog()),
+              Card(
+                margin: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
+                  children: [
+                    _tile(l10n.exportBackup, l10n.exportAllDataDescription,
+                        Icons.backup, _exportBackup),
+                    _tile(l10n.importBackup, l10n.importFromFileDescription,
+                        Icons.restore_page, _importBackup),
+                    _tile(l10n.autoBackup, l10n.autoBackupDescription,
+                        Icons.schedule, () => _showAutoBackupDialog()),
+                  ],
+                ),
+              ),
             ]),
             _section(l10n.aboutSection, [
               _tile(l10n.aboutStudyKing, l10n.versionInfo, Icons.info,
@@ -724,9 +735,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                     : null,
                 onTap: () {
                   box.put('autoBackupIntervalDays', days);
-                  if (days > 0) {
-                    box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
-                  }
                   ref.invalidate(settingsProvider);
                   Navigator.pop(ctx);
                 },
@@ -992,10 +1000,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
 
     // If user chose to exclude sensitive data
     if (includeSensitive == true) {
-      // Remove settings box from backup (it contains API key)
       boxData.remove(HiveBoxNames.settings);
     } else {
-      // Full export warning for sensitive data
       final proceed = await showDialog<bool>(
         context: context,
         builder: (ctx) => AlertDialog(
@@ -1014,100 +1020,124 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ),
       );
       if (proceed != true || !mounted) return;
-      // Re-collect to ensure fresh data after dialog
       boxData = _collectAllBoxData();
     }
 
     final backupService = ref.read(dataBackupServiceProvider);
     try {
-      // Compute backup summary
       int totalRecords = 0;
       for (final records in boxData.values) {
         totalRecords += records.length;
       }
       final boxCount = boxData.length;
 
-      // Show backup summary dialog (M4)
       final boxSummaries = boxData.entries
           .where((e) => e.value.isNotEmpty)
           .map((e) => '${_boxDisplayName(e.key)}: ${l10n.recordCount(e.value.length)}')
           .toList()
         ..sort();
-      final proceed = await showDialog<bool>(
+      final encryptionPassword = await showDialog<String>(
         context: context,
-        builder: (ctx) => AlertDialog(
-          title: Text(l10n.exportBackup),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(l10n.recordCount(totalRecords)),
-              const SizedBox(height: 8),
-              Text(
-                l10n.boxCountLabel(boxCount),
-                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              if (includeSensitive == false) ...[
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Theme.of(ctx).colorScheme.errorContainer.withValues(alpha: 0.3),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(Icons.warning_amber, size: 16, color: Theme.of(ctx).colorScheme.error),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          l10n.apiKeyPlaintextWarning,
-                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                            color: Theme.of(ctx).colorScheme.error,
-                          ),
+        builder: (ctx) {
+          var password = '';
+          return StatefulBuilder(
+            builder: (ctx, setInnerState) => AlertDialog(
+              title: Text(l10n.exportBackup),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(l10n.recordCount(totalRecords)),
+                    const SizedBox(height: 8),
+                    Text(
+                      l10n.boxCountLabel(boxCount),
+                      style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    if (includeSensitive == false) ...[
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Theme.of(ctx).colorScheme.errorContainer.withValues(alpha: 0.3),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.warning_amber, size: 16, color: Theme.of(ctx).colorScheme.error),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.apiKeyPlaintextWarning,
+                                style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                                  color: Theme.of(ctx).colorScheme.error,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                    ],
+                    if (boxSummaries.length <= 20)
+                      ...boxSummaries.take(20).map((s) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
+                      ))
+                    else ...[
+                      ...boxSummaries.take(19).map((s) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 1),
+                        child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
+                      )),
+                      Text(
+                        l10n.andMoreCount(boxSummaries.length - 19),
+                        style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(ctx).colorScheme.onSurfaceVariant,
                         ),
                       ),
                     ],
-                  ),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const SizedBox(height: 8),
+                    TextField(
+                      decoration: InputDecoration(
+                        labelText: l10n.backupEncryptionPassword,
+                        hintText: l10n.backupEncryptionPasswordHint,
+                        border: const OutlineInputBorder(),
+                        suffixIcon: password.isNotEmpty
+                            ? Icon(Icons.lock, color: Theme.of(ctx).colorScheme.primary)
+                            : const Icon(Icons.lock_open),
+                      ),
+                      obscureText: true,
+                      onChanged: (v) => setInnerState(() => password = v),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 12),
-              ],
-              if (boxSummaries.length <= 20)
-                ...boxSummaries.take(20).map((s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 1),
-                  child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
-                ))
-              else ...[
-                ...boxSummaries.take(19).map((s) => Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 1),
-                  child: Text(s, style: Theme.of(ctx).textTheme.bodySmall),
-                )),
-                Text(
-                  l10n.andMoreCount(boxSummaries.length - 19),
-                  style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(ctx).colorScheme.onSurfaceVariant,
-                  ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(l10n.cancel),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, password),
+                  child: Text(l10n.exportBackup),
                 ),
               ],
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: Text(l10n.cancel),
             ),
-            FilledButton(
-              onPressed: () => Navigator.pop(ctx, true),
-              child: Text(l10n.exportBackup),
-            ),
-          ],
-        ),
+          );
+        },
       );
-      if (proceed != true || !mounted) return;
+      if (encryptionPassword == null || !mounted) return;
 
-      final result = await backupService.exportAllData(boxData: boxData);
+      final effectivePassword = encryptionPassword.isEmpty ? null : encryptionPassword;
+
+      final result = await backupService.exportAllData(
+        boxData: boxData,
+        encryptionPassword: effectivePassword,
+      );
       if (result.isSuccess) {
         final filePath = result.data!;
         late String sizeStr;
@@ -1315,10 +1345,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         await _writeBoxData(filteredData);
       }
       if (mounted) {
-        // Invalidate key providers to refresh UI after restore
         ref.invalidate(settingsProvider);
         ref.invalidate(databaseProvider);
         ref.invalidate(subjectListProvider);
+        ref.invalidate(masteryGraphServiceProvider);
+        ref.invalidate(studyProgressTrackerProvider);
+        ref.invalidate(mentorServiceProvider(StudentIdService().getStudentId()));
+        ref.invalidate(engagementSchedulerProvider);
         showDialog(
           context: context,
           barrierDismissible: false,

@@ -159,7 +159,7 @@ Question typedQuestion({
   );
 }
 
-void _noopOnComplete(int correct, int total, Map<String, SubjectAccuracy> accuracies) {}
+void _noopOnComplete(int correct, int total, Map<String, TopicAccuracy> accuracies) {}
 
 void main() {
   group('InlinePracticeWidget', () {
@@ -337,7 +337,7 @@ void main() {
     testWidgets('calls onComplete with correct and total when all questions answered', (tester) async {
       int? capturedCorrect;
       int? capturedTotal;
-      Map<String, SubjectAccuracy>? capturedAccuracies;
+      Map<String, TopicAccuracy>? capturedAccuracies;
       final questions = [typedQuestion(id: 'q1')];
 
       await tester.pumpWidget(_buildTestApp(
@@ -365,9 +365,9 @@ void main() {
       expect(capturedCorrect, 1);
       expect(capturedTotal, 1);
       expect(capturedAccuracies, isNotNull);
-      expect(capturedAccuracies!.keys, contains('sub-1'));
-      expect(capturedAccuracies!['sub-1']!.correct, 1);
-      expect(capturedAccuracies!['sub-1']!.total, 1);
+      expect(capturedAccuracies!.keys, contains('top-1'));
+      expect(capturedAccuracies!['top-1']!.correct, 1);
+      expect(capturedAccuracies!['top-1']!.total, 1);
     });
 
     testWidgets('shows completion card with score after finishing', (tester) async {

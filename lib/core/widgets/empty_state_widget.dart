@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/responsive.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final IconData icon;
@@ -26,7 +27,7 @@ class EmptyStateWidget extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             ExcludeSemantics(
-              child: Icon(icon, size: 64, color: theme.colorScheme.onSurfaceVariant),
+              child: Icon(icon, size: ResponsiveUtils.emptyStateIconSize(context), color: theme.colorScheme.onSurfaceVariant),
             ),
             const SizedBox(height: 16),
             Semantics(

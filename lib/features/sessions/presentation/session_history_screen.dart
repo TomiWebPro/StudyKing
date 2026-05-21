@@ -48,6 +48,11 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
     _loadSessions();
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+  }
+
   Future<void> _loadSessions() async {
     setState(() {
       _isLoading = true;

@@ -7398,10 +7398,10 @@ abstract class AppLocalizations {
   /// **'Continue Anyway'**
   String get continueAnyway;
 
-  /// Help text shown on first visit to focus timer
+  /// Help text shown on first visit to focus mode explaining the dual-mode design
   ///
   /// In en, this message translates to:
-  /// **'Set a timer and study distraction-free. Completed sessions count toward your daily plan.'**
+  /// **'Focus Mode has two modes: Practice (study hub with inline and full practice sessions) and Timer (silent focus timer). Session types (Quick Practice, Spaced Repetition, Weak Areas, Free Focus) affect which questions appear in inline practice. Timer mode is for distraction-free focus without questions. Session stats appear below.'**
   String get focusFirstVisitHelp;
 
   /// Section title for content management settings
@@ -8831,6 +8831,12 @@ abstract class AppLocalizations {
   /// **'Navigate to full practice session screen'**
   String get fullPracticeSubtitle;
 
+  /// Description shown in the mode toggle when timer mode is selected
+  ///
+  /// In en, this message translates to:
+  /// **'Timer mode is a silent focus timer. Questions and practice are available in the Practice tab.'**
+  String get timerOnlyDescription;
+
   /// Checkbox label to generate AI lesson from uploaded content
   ///
   /// In en, this message translates to:
@@ -9572,6 +9578,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Profile deleted successfully'**
   String get profileDeleted;
+
+  /// Label for optional encryption password field in backup dialog
+  ///
+  /// In en, this message translates to:
+  /// **'Encryption password (optional)'**
+  String get backupEncryptionPassword;
+
+  /// Hint text for encryption password field
+  ///
+  /// In en, this message translates to:
+  /// **'Leave empty for no encryption'**
+  String get backupEncryptionPasswordHint;
+
+  /// Button label in lesson summary to practice lesson topics in study hub
+  ///
+  /// In en, this message translates to:
+  /// **'Practice These Topics'**
+  String get practiceTheseTopics;
+
+  /// Generic error message when tutor initialization fails (no error details exposed to user)
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to initialize tutor. Please check your API configuration in Settings and try again.'**
+  String get tutorInitFailedGeneric;
+
+  /// Tagline shown on splash screen
+  ///
+  /// In en, this message translates to:
+  /// **'AI-Native Learning Companion'**
+  String get tagline;
+
+  /// Loading message shown while tutor initializes
+  ///
+  /// In en, this message translates to:
+  /// **'Preparing your lesson...'**
+  String get preparingTutorLesson;
+
+  /// Button label in lesson summary to replay lesson blocks as quiz questions
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Lesson Blocks'**
+  String get practiceLessonBlocks;
 }
 
 class _AppLocalizationsDelegate

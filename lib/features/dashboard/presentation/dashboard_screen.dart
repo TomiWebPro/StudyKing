@@ -11,6 +11,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/collapsible_ca
 import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/absence_banner.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/dashboard_nav_card.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
@@ -87,6 +88,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ref.watch(dashboardDueReviewsProvider(studentId));
     final checklistProgressAsync =
         ref.watch(dashboardChecklistProgressProvider(studentId));
+    final lastFocusSessionAsync =
+        ref.watch(dashboardLastFocusSessionProvider(studentId));
 
     final allMasteryData = allMasteryAsync.valueOrNull ?? [];
     final snapshotData = snapshotAsync.valueOrNull;
@@ -99,6 +102,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final badgesData = badgesAsync.valueOrNull ?? [];
     final workloadData = workloadAsync.valueOrNull;
     final dueReviewsData = dueReviewsAsync.valueOrNull;
+    final lastFocusSession = lastFocusSessionAsync.valueOrNull;
 
     final hasAnyData = allMasteryData.isNotEmpty ||
         snapshotData != null ||
@@ -249,6 +253,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                                             l10n.localeName),
                                       }
                                     : null,
+                                lastPracticeSession: lastFocusSession,
                               ),
                             ),
                             Icon(
@@ -535,47 +540,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildSessionHistoryCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Card(
-      child: Semantics(
-        button: true,
-        label: l10n.sessionHistory,
-        child: InkWell(
-          onTap: () =>
-              Navigator.pushNamed(context, AppRoutes.sessionHistory),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: MergeSemantics(
-              child: Row(
-                children: [
-                  Icon(Icons.history,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.sessionHistory,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(l10n.sessionHistoryDescription,
-                            style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left
-                        : Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return DashboardNavCard(
+      icon: Icons.history,
+      iconColor: Theme.of(context).colorScheme.primary,
+      title: l10n.sessionHistory,
+      subtitle: l10n.sessionHistoryDescription,
+      onTap: () => Navigator.pushNamed(context, AppRoutes.sessionHistory),
     );
   }
 
@@ -583,140 +553,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       BuildContext context, AsyncValue<int> sourceCountAsync) {
     final l10n = AppLocalizations.of(context)!;
     final count = sourceCountAsync.valueOrNull ?? 0;
-    if (count == 0 && !sourceCountAsync.isLoading) {
-      return Card(
-        child: Semantics(
-          button: true,
-          label: l10n.contentLibrary,
-          child: InkWell(
-            onTap: () =>
-                Navigator.pushNamed(context, AppRoutes.contentLibrary),
-            borderRadius: BorderRadius.circular(12),
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  Icon(Icons.source,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.contentLibrary,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(
-                          l10n.noSourcesAvailable,
-                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.chevron_right,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-    }
-    return Card(
-      child: Semantics(
-        button: true,
-        label: l10n.contentLibrary,
-        child: InkWell(
-          onTap: () =>
-              Navigator.pushNamed(context, AppRoutes.contentLibrary),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: MergeSemantics(
-              child: Row(
-                children: [
-                  Icon(Icons.source,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.contentLibrary,
-                            style:
-                                Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(
-                          sourceCountAsync.isLoading
-                              ? l10n.loading
-                              : l10n.sourcesCount(count),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left
-                        : Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    final isZero = count == 0 && !sourceCountAsync.isLoading;
+    return DashboardNavCard(
+      icon: Icons.source,
+      iconColor: isZero
+          ? Theme.of(context).colorScheme.onSurfaceVariant
+          : Theme.of(context).colorScheme.primary,
+      title: l10n.contentLibrary,
+      subtitle: isZero
+          ? l10n.noSourcesAvailable
+          : (sourceCountAsync.isLoading
+              ? l10n.loading
+              : l10n.sourcesCount(count)),
+      onTap: () => Navigator.pushNamed(context, AppRoutes.contentLibrary),
     );
   }
 
   Widget _buildQuestionBankCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Card(
-      child: Semantics(
-        button: true,
-        label: l10n.questionBank,
-        child: InkWell(
-          onTap: () =>
-              Navigator.pushNamed(context, AppRoutes.questionBank),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: MergeSemantics(
-              child: Row(
-                children: [
-                  Icon(Icons.quiz,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.questionBank,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(l10n.manageQuestions,
-                            style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left
-                        : Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return DashboardNavCard(
+      icon: Icons.quiz,
+      iconColor: Theme.of(context).colorScheme.primary,
+      title: l10n.questionBank,
+      subtitle: l10n.manageQuestions,
+      onTap: () => Navigator.pushNamed(context, AppRoutes.questionBank),
     );
   }
 
@@ -747,46 +607,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
   Widget _buildPlannerCard(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return Card(
-      child: Semantics(
-        button: true,
-        label: l10n.studyPlanner,
-        child: InkWell(
-          onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: MergeSemantics(
-              child: Row(
-                children: [
-                  Icon(Icons.calendar_month,
-                      color: Theme.of(context).colorScheme.primary,
-                      size: 32),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(l10n.studyPlanner,
-                            style: Theme.of(context).textTheme.titleMedium),
-                        const SizedBox(height: 4),
-                        Text(l10n.studyPlanOverview,
-                            style: Theme.of(context).textTheme.bodySmall),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    Directionality.of(context) == TextDirection.rtl
-                        ? Icons.chevron_left
-                        : Icons.chevron_right,
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
+    return DashboardNavCard(
+      icon: Icons.calendar_month,
+      iconColor: Theme.of(context).colorScheme.primary,
+      title: l10n.studyPlanner,
+      subtitle: l10n.studyPlanOverview,
+      onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
     );
   }
 

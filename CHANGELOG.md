@@ -1,5 +1,69 @@
 # Changelog
 
+- 2026-05-21: UI/UX Master — Round 2 issue report fixes (ui_ux_master.md):
+  - **B-2 (BLOCKER):** ContentLibraryScreen — replaced inline `SourceRepository()`/`QuestionRepository()`/`SubjectRepository()` with Riverpod providers (`sourceRepositoryProvider`, `questionRepositoryProvider`, `subjectRepositoryProvider`); removed widget constructor fallback params; added `dispose()` override
+  - **M-1 (MAJOR):** TutorScreen — replaced `l10n.tutorInitFailed(e.toString())` with generic `l10n.tutorInitFailedGeneric` in both catch blocks; full exception logged to `_logger`
+  - **M-2/m-6 (MAJOR):** Dashboard — extracted reusable `DashboardNavCard` widget; replaced 4 inline card builders (`_buildSessionHistoryCard`, `_buildSourcesCard`, `_buildQuestionBankCard`, `_buildPlannerCard`) with 9-line `DashboardNavCard` calls; eliminated ~178 lines of duplicated layout code
+  - **M-3 (MAJOR):** PracticeScreen — replaced direct `Hive.openBox(HiveBoxNames.examResults)` with `ExamSessionService.getSavedExamResults()`; added `dispose()` override
+  - **M-4 (MAJOR):** SessionHistoryScreen — added `dispose()` override
+  - **M-7 (MAJOR):** PlannerScreen — extracted shared `_buildPaceAdjustmentCard` wrapper; eliminated ~60% code duplication between single-subject and multi-subject branches
+  - **M-10 (MAJOR):** QuestionBankScreen — verified `_searchController.dispose()` already present; no change needed
+  - **m-1 (MINOR):** SplashScreen — replaced hardcoded `'StudyKing'` and `'AI-Native Learning Companion'` with `l10n?.appTitle` / `l10n?.tagline` fallback pattern
+  - **m-2 (MINOR):** ApiKeyBanner — removed `.withValues(alpha: 0.3)` from `errorContainer` background; uses full opacity per design spec
+  - **m-3 (MINOR):** FocusTimerScreen — removed `_service.dispose()` from `dispose()`; shared `StudyTimerService` lifecycle now managed by Riverpod
+  - **m-4 (MINOR):** NavigationBar/NavigationRail — moved `Tooltip` from wrapping only `Icon` to wrapping the full `NavigationDestination`/`NavigationRailDestination` widget for larger hover target
+  - **m-5 (MINOR):** EmptyStateWidget — replaced hardcoded `size: 64` with `ResponsiveUtils.emptyStateIconSize(context)`
+  - **m-7 (MINOR):** PlannerScreen — extracted shared `_buildPaceAdjustmentCard` widget from `_buildPaceAdjustment` (captured under M-7 above)
+  - **m-9 (MINOR):** DashboardHeader — made `onExportTap` required (non-nullable); removed fallback `() => Navigator.pushNamed(context, AppRoutes.settings)`
+  - **l10n:** Added `tutorInitFailedGeneric`, `tagline`, `preparingTutorLesson` keys to EN/ES ARB files and generated Dart localizations
+
+- 2026-05-21: Post-Lesson Practice Integration — Future Functionality Planner M10:
+  - **M10.1:** Updated `_showSummaryDialog()` in `tutor_screen.dart` — replaced timer-focused Quick Practice and Practice Mode buttons with "Practice These Topics" (navigates to Focus Mode study hub with subject/topic preselected) and "Practice Lesson Blocks" (navigates to practice session with spaced repetition for lesson's topic)
+  - **M10.2:** Added `_markTopicsForPriorityReview()` in `tutor_service.dart` — marks all questions for the lesson's topic as due for review by setting `nextReview` to past time, so spaced repetition surfaces them immediately
+  - **M10.3:** Added `spacedRepetitionServiceProvider` wiring in `teaching_providers.dart` — `TutorService` now receives `SpacedRepetitionService` for priority review marking
+  - **m4:** Fixed empty catch blocks in `audio_recording_widget.dart` (lines 61, 76) and `file_upload_widget.dart` (line 50) — added `_logger.w()` with descriptive error messages per AGENTS.md convention
+  - Added `practiceTheseTopics`, `practiceLessonBlocks` ARB keys (EN/ES) with generated l10n
+  - **Test:** Fixed `tutor_service_test.dart` — added Hive initialization (init + adapters + close/cleanup) so `startLesson` tests that call `LessonRepository.init()` no longer crash
+  - Added `SpacedRepetitionService` param to `_FailingTutorService`/`_FakeTutorService` constructors in `tutor_screen_test.dart`
+
+- 2026-05-21: Focus Mode & Study Hub — Dry-Run Usability Validation:
+  - **B1:** Moved session type selector from timer setup to study hub; added descriptive label explaining it affects practice question selection
+  - **B2:** `initState()` now reads `widget.defaultDurationMinutes` and sets `_selectedMinutes` accordingly; duration presets reflect pre-set value
+  - **B3:** Created `FocusSessionRepository` (persists `FocusSession` as JSON in `focusSessions` Hive box); inline practice results are saved and loaded on Focus Mode init; exposed via `dashboardLastFocusSessionProvider` for Dashboard display
+  - **M1:** Updated `focusFirstVisitHelp` ARB text to explain dual-mode (Practice vs Timer), session types, inline vs full practice, and stats location (EN/ES)
+  - **M2:** Renamed `_startQuickPractice()` → `_startFullPracticeSession()` for clarity
+  - **M3:** Added `ConfidenceSelector` (1-5 scale) to inline practice after each answer; actual confidence is passed to `MasteryRecorder.recordAttempt()`
+  - **M4:** Changed inline practice tracking from `question.subjectId` → `question.topicId`; renamed `SubjectAccuracy` → `TopicAccuracy`; fixed `TopicPerformance.topicId` assignment
+  - **M5:** Added description text in mode toggle: `inlinePracticeSubtitle` for Practice mode, `timerOnlyDescription` for Timer mode
+  - **M6:** Wrapped `FocusPracticeService.startPracticeSession()` / `endPracticeSession()` return types in `Result<T>` per AGENTS.md convention
+  - **M7:** Session type selector is now shown in Study Hub (affects inline practice question selection)
+  - **M8:** Added configurable question count chips (5/10/15/20/30/50) in study hub; `_startAllSubjectsInlinePractice` uses 50 questions; no hardcoded 10
+  - **m1:** Added "Skip" button to break view
+  - **m3:** Added `await` to `_loadStats()` calls; used `unawaited` for fire-and-forget in `_onSessionComplete`
+  - Added `timerOnlyDescription` ARB key (EN/ES)
+
+- 2026-05-21: Test Coverage & Convention Audit — full implementation of test_master.md:
+  - **M1:** Created 5 test files for uncovered sources (focus_session_type, secure_api_key_service, secure_api_key_provider, ai_config_provider, practice_performance_card)
+  - **M2:** Deleted 5 misplaced test files (source_model_test in ingestion, adapter tests in core/data, sr_data_codec_test in practice/utils, session_repository_integration_test in sessions); merged Hive annotation check into correct source_model_test
+  - **M3:** Deleted orphaned onboarding_test.dart and duplicate question_model_test.dart
+  - **M4:** Deleted construction-only data_test.dart; replaced isNotNull assertions with actual string values in label_helpers_test.dart; folded quick_guide_screen_constructor_test.dart into main test
+  - **M5:** Merged 19 fragmented widget test files into 8 source-aligned files (practice_screen, exam_session_screen, practice_results_screen, practice_session_screen, api_config_screen, settings_screen, profile_screen)
+  - **M6:** Replaced real Hive I/O with fakes in 3 settings_screen test fragments (behavioral/extended/gaps) during M5 merge
+  - **M7:** Deleted redundant spaced_repetition_service_fake_repo_test.dart
+  - **M8:** Renamed topic_detail_screen_unit_test.dart to topic_detail_screen_args_test.dart
+  - **m1:** Strengthened subject_repository_provider_test.dart with data-flow and error-path tests
+  - **m2:** Standardized naming of 14 _widget_test suffix files (renamed to _test, _ui_test, _fake_repo_test, or _theme_integration_test as appropriate)
+  - **m3:** Deleted test/features/onboarding/onboarding_test.dart (duplicate, same as M3)
+
+- 2026-05-21: Backup/Restore/Data Portability — remaining items:
+  - **Issue 1:** Added `Timer.periodic` (1h interval) in `_StudyKingAppState` for auto-backup schedule trigger; refactored `_runAutoBackupCheck()` to use `DataBackupService` for consistent `.skbak` output
+  - **Issue 1a:** Removed premature `lastAutoBackupDate` write from `_showAutoBackupDialog()` interval selection — timestamp is now only set after a successful backup in `_performAutoBackup()`
+  - **Issue 2:** Added optional AES-256-CBC encryption (via `encrypt` package) to `DataBackupService.exportAllData()` / `restoreData()`; added password field to backup summary dialog
+  - **Issue 3:** Fixed `_exportBackupDirect()` in `export_section.dart` — replaced wrong `l10n.exportCsvDetail` label, added sensitive data dialog before backup
+  - **Issue 4:** Broadened post-restore provider invalidation — now also invalidates `masteryGraphServiceProvider`, `studyProgressTrackerProvider`, `mentorServiceProvider`, `engagementSchedulerProvider`
+  - **Issue 5:** Wrapped backup section tiles in a `Card` in Settings screen for better visual discoverability
+  - Added `backupEncryptionPassword` / `backupEncryptionPasswordHint` l10n keys (EN/ES)
+
 - 2026-05-21: Internationalisation Master — comprehensive i18n fixes across the codebase:
   - **B1:** Added 4 ARB keys (`signOutClearAllData`, `signOutRemovesAllData`, `signOutBackupBeforeSignOut`, `signOutCreatesBackupFile`) with EN/ES translations; replaced hardcoded `const Text(...)` in `settings_screen.dart` sign-out dialog with `l10n`
   - **M1:** Replaced `EdgeInsets.only(right: 4)` with `EdgeInsetsDirectional.only(end: 4)` in `graph_drawing_widget.dart` and `canvas_drawing_widget.dart` for RTL support

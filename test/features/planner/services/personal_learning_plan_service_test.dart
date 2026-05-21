@@ -12,6 +12,7 @@ import 'package:studyking/features/planner/data/repositories/plan_repository.dar
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
+import 'package:studyking/features/planner/services/planner_advisor_strategy.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -434,6 +435,39 @@ void main() {
         expect(result.isSuccess, isTrue);
         final hasRestDay = result.data!.dailyPlans.any((d) => d.isRestDay);
         expect(hasRestDay, isTrue);
+      });
+
+      test('returns failure when topicMastery isEmpty and no courseName or syllabusGoals', () async {
+        final emptyRepo = _EmptyMasteryGraphRepository();
+        final emptyService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(emptyRepo),
+          repository: emptyRepo,
+          topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
+        );
+
+        final result = await emptyService.generatePlan('student1');
+
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('add a subject'));
+      });
+
+      test('generates plan with advisor metadata when advisor is provided', () async {
+        final advisor = FakePlannerAdvisorStrategy();
+        final serviceWithAdvisor = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
+          repository: mockRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 3),
+          l10n: AppLocalizationsEn(),
+          advisor: advisor,
+        );
+
+        final result = await serviceWithAdvisor.generatePlan('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.metadata, isNotNull);
+        expect(result.data!.metadata!.containsKey('advisor_analysis'), isTrue);
       });
     });
 
@@ -957,6 +991,31 @@ void main() {
           expect(result.isSuccess, isTrue);
         });
 
+        test('redistributeMissedWorkload skips when lastRedistributionDate is recent', () async {
+          final now = DateTime.now();
+          final yesterday = now.subtract(const Duration(days: 1));
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 2)),
+            dailyPlans: [
+              DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(totalQuestions: 15, totalMinutes: 30, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 3,
+            metadata: {'lastRedistributionDate': yesterday.toIso8601String()},
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.redistributeMissedWorkload('student1', 30, plan, strategy: 'days:1');
+          expect(result.isSuccess, isTrue);
+          final stored = planRepo.storedPlan!;
+          expect(stored.metadata!['lastRedistributionDate'], yesterday.toIso8601String());
+        });
+
         test('redistributeMissedWorkload handles invalid strategy default', () async {
           final now = DateTime.now();
           final plan = PersonalLearningPlan(
@@ -979,6 +1038,101 @@ void main() {
       });
     });
   });
+}
+
+class FakePlannerAdvisorStrategy implements PlannerAdvisorStrategy {
+  @override
+  Future<Result<AdvisorAnalysis>> analyzeForPlanGeneration({
+    required String studentId,
+    required String courseName,
+    required int planDurationDays,
+    required double targetMinutesPerDay,
+    List<String> weakTopicIds = const [],
+    List<String> atRiskTopicIds = const [],
+    double currentAdherence = 0.0,
+    int consecutiveLowAdherenceDays = 0,
+  }) async {
+    return Result.success(const AdvisorAnalysis(
+      workloadEstimate: 'Moderate',
+      pathwaySuggestion: 'Start with basics',
+      motivationalReasoning: 'Keep going',
+      adaptationReasoning: 'On track',
+    ));
+  }
+
+  @override
+  Future<Result<AdvisorAnalysis>> analyzeForAdaptation({
+    required String studentId,
+    required double currentAdherence,
+    required int consecutiveLowDays,
+    required String planSummary,
+  }) async {
+    return Result.success(const AdvisorAnalysis(
+      workloadEstimate: 'Reduced',
+      pathwaySuggestion: 'Focus on weak areas',
+      motivationalReasoning: 'Adjust pace',
+      adaptationReasoning: 'Student needs lighter load',
+    ));
+  }
+}
+
+class _EmptyMasteryGraphRepository extends MasteryGraphRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+    return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
+  }
+
+  @override
+  Future<Result<void>> updateMasteryState(MasteryState state) async => Result.success(null);
+
+  @override
+  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
+    return Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
+  }
+
+  @override
+  Future<Result<void>> updateQuestionMasteryState(QuestionMasteryState state) async => Result.success(null);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getDueQuestions(String studentId, {DateTime? asOf}) async => Result.success([]);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(String studentId, {double threshold = 0.5}) async => Result.success([]);
+
+  @override
+  Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});
+
+  @override
+  Future<Result<void>> migrateFromLegacy({required String questionId, String? markscheme, String? correctAnswer, List<String>? options, String? explanation}) async => Result.success(null);
+
+  @override
+  Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async => Result.failure('Failed');
+
+  @override
+  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async => Result.success(null);
+
+  @override
+  Future<Result<List<TopicDependency>>> getAllDependencies() async => Result.success([]);
+
+  @override
+  Future<Result<TopicDependency>> getTopicDependency(String topicId) async => Result.success(TopicDependency(topicId: topicId));
+
+  @override
+  Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
 class _FailingMasteryGraphRepository extends MasteryGraphRepository {

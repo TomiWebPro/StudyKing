@@ -1,5 +1,6 @@
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
@@ -117,31 +118,46 @@ class FocusPracticeService {
     }
   }
 
-  Future<Session> startPracticeSession({
+  Future<Result<Session>> startPracticeSession({
     required String studentId,
     List<String>? subjectIds,
     int durationMinutes = 25,
   }) async {
-    final session = Session(
-      id: 'focus_${DateTime.now().millisecondsSinceEpoch}',
-      studentId: studentId,
-      type: SessionType.focus,
-      startTime: DateTime.now(),
-      plannedDurationMinutes: durationMinutes,
-      subjectId: subjectIds?.firstOrNull,
-    );
-    await _sessionRepository.save(session.id, session);
-    return session;
+    try {
+      final session = Session(
+        id: 'focus_${DateTime.now().millisecondsSinceEpoch}',
+        studentId: studentId,
+        type: SessionType.focus,
+        startTime: DateTime.now(),
+        plannedDurationMinutes: durationMinutes,
+        subjectId: subjectIds?.firstOrNull,
+      );
+      await _sessionRepository.save(session.id, session);
+      return Result.success(session);
+    } catch (e) {
+      _logger.w('Failed to start practice session', e);
+      return Result.failure('FocusPracticeService.startPracticeSession: $e');
+    }
   }
 
-  Future<void> endPracticeSession(Session session, {int questionsAnswered = 0, int correctAnswers = 0}) async {
-    final updated = session.copyWith(
-      status: SessionStatus.completed,
-      completed: true,
-      endTime: DateTime.now(),
-      questionsAnswered: questionsAnswered,
-      correctAnswers: correctAnswers,
-    );
-    await _sessionRepository.save(updated.id, updated);
+  Future<Result<void>> endPracticeSession(Session session, {int questionsAnswered = 0, int correctAnswers = 0}) async {
+    try {
+      final updated = session.copyWith(
+        status: SessionStatus.completed,
+        completed: true,
+        endTime: DateTime.now(),
+        questionsAnswered: questionsAnswered,
+        correctAnswers: correctAnswers,
+      );
+      final saveResult = await _sessionRepository.save(updated.id, updated);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to save ended practice session: ${saveResult.error}');
+        return Result.failure(saveResult.error);
+      }
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to end practice session', e);
+      return Result.failure('FocusPracticeService.endPracticeSession: $e');
+    }
   }
 }

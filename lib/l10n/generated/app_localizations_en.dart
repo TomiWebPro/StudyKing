@@ -4428,7 +4428,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get focusFirstVisitHelp =>
-      'Set a timer and study distraction-free. Completed sessions count toward your daily plan.';
+      'Focus Mode has two modes: Practice (study hub with inline and full practice sessions) and Timer (silent focus timer). Session types (Quick Practice, Spaced Repetition, Weak Areas, Free Focus) affect which questions appear in inline practice. Timer mode is for distraction-free focus without questions. Session stats appear below.';
 
   @override
   String get contentManagement => 'Content Management';
@@ -5364,6 +5364,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fullPracticeSubtitle => 'Navigate to full practice session screen';
 
   @override
+  String get timerOnlyDescription =>
+      'Timer mode is a silent focus timer. Questions and practice are available in the Practice tab.';
+
+  @override
   String get generateLessonFromContent => 'Generate lesson from this material';
 
   @override
@@ -5830,4 +5834,25 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profileDeleted => 'Profile deleted successfully';
+
+  @override
+  String get backupEncryptionPassword => 'Encryption password (optional)';
+
+  @override
+  String get backupEncryptionPasswordHint => 'Leave empty for no encryption';
+
+  @override
+  String get practiceTheseTopics => 'Practice These Topics';
+
+  @override
+  String get tutorInitFailedGeneric => 'Failed to initialize tutor. Please check your API configuration in Settings and try again.';
+
+  @override
+  String get tagline => 'AI-Native Learning Companion';
+
+  @override
+  String get preparingTutorLesson => 'Preparing your lesson...';
+
+  @override
+  String get practiceLessonBlocks => 'Practice Lesson Blocks';
 }

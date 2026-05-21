@@ -7,11 +7,12 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeVoiceService extends VoiceService {
   bool _fakeIsListening = false;
-  final bool _fakeIsAvailable = true;
+  bool _fakeIsAvailable = true;
   final StreamController<String> _transcriptionCtrl =
       StreamController<String>.broadcast();
   bool requestPermissionCalled = false;
   String? lastLocaleName;
+  bool _fakePermissionResult = true;
 
   @override
   bool get isListening => _fakeIsListening;
@@ -36,11 +37,19 @@ class FakeVoiceService extends VoiceService {
   @override
   Future<bool> requestPermission() async {
     requestPermissionCalled = true;
-    return true;
+    return _fakePermissionResult;
   }
 
   void addTranscription(String text) {
     _transcriptionCtrl.add(text);
+  }
+
+  void setAvailable(bool available) {
+    _fakeIsAvailable = available;
+  }
+
+  void setPermissionResult(bool result) {
+    _fakePermissionResult = result;
   }
 
   @override
@@ -561,6 +570,187 @@ void main() {
       final customPaint = tester.widget<CustomPaint>(waveformPaint);
       final painter = customPaint.painter;
       expect(painter, isNotNull);
+    });
+
+    testWidgets('cancel review overlay clears transcription and hides close button', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Review me');
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.close), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.close), findsNothing);
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pump();
+
+      expect(submitted, isEmpty);
+    });
+
+    testWidgets('permission denied shows dialog and retry re-requests permission', (tester) async {
+      final deniedController = FakeVoiceService();
+      deniedController.setPermissionResult(false);
+
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: deniedController,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Microphone Permission Required'), findsOneWidget);
+      expect(find.text('Microphone permission is required to use voice input.'), findsOneWidget);
+      expect(find.text('Cancel'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      await tester.tap(find.text('Cancel'));
+      await tester.pump();
+      expect(find.text('Microphone Permission Required'), findsNothing);
+
+      deniedController.setPermissionResult(false);
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Microphone Permission Required'), findsOneWidget);
+
+      await tester.tap(find.text('Retry'));
+      await tester.pump();
+      expect(find.text('Microphone Permission Required'), findsNothing);
+
+      deniedController.dispose();
+    });
+
+    testWidgets('service unavailable shows snackbar with retry action', (tester) async {
+      final unavailableController = FakeVoiceService();
+      unavailableController.setAvailable(false);
+
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: unavailableController,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Microphone permission is required to use voice input.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      unavailableController.dispose();
+    });
+
+    testWidgets('reduceMotion skips review overlay and submits immediately', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+          reduceMotion: true,
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      controller.addTranscription('Quick submit');
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(find.byIcon(Icons.close), findsNothing);
+      expect(submitted, ['Quick submit']);
+    });
+
+    testWidgets('reduceMotion with empty transcription does not submit', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+          reduceMotion: true,
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(submitted, isEmpty);
+    });
+
+    testWidgets('locale name passed to startListening on mic tap', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+
+      expect(controller.lastLocaleName, 'en');
+    });
+
+    testWidgets('WaveformPainter shouldRepaint behavior via repeated listening', (tester) async {
+      // Test that starting and stopping listening doesn't crash,
+      // indirectly verifying the painter lifecycle.
+      await tester.pumpWidget(wrapApp(
+        VoiceBar(
+          controller: controller,
+          onTranscriptionSubmitted: (text) => submitted.add(text),
+        ),
+      ));
+
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      controller.addTranscription('');
+      await tester.pump();
+
+      final waveformPaint = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.size.width == 24 && w.size.height == 24,
+      );
+      expect(waveformPaint, findsOneWidget);
+
+      // Stop listening
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      controller.addTranscription('');
+      await tester.pump();
+
+      // Start again - verify painter recreated
+      await tester.tap(find.byType(IconButton));
+      await tester.pump();
+      controller.addTranscription('');
+      await tester.pump();
+
+      final waveformPaint2 = find.byWidgetPredicate(
+        (w) => w is CustomPaint && w.size.width == 24 && w.size.height == 24,
+      );
+      expect(waveformPaint2, findsOneWidget);
     });
   });
 }

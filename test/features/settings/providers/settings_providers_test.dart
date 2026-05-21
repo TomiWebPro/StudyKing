@@ -7,8 +7,9 @@ import 'package:studyking/features/settings/services/data_backup_service.dart';
 class _FakeDataBackupService extends DataBackupService {
   @override
   Future<Result<Map<String, List<Map<String, dynamic>>>>> restoreData(
-    String filePath,
-  ) async {
+    String filePath, {
+    String? encryptionPassword,
+  }) async {
     return Result.success({
       'sessions': [
         {'id': 's1', 'data': 'test'},
@@ -22,16 +23,18 @@ class _FakeDataBackupService extends DataBackupService {
     String? filename,
     String? outputDir,
     bool compress = true,
+    String? encryptionPassword,
   }) async {
-    return Result.success('/fake/backup/path.json');
+    return Result.success('/fake/backup/path.skbak');
   }
 }
 
 class _ThrowingDataBackupService extends DataBackupService {
   @override
   Future<Result<Map<String, List<Map<String, dynamic>>>>> restoreData(
-    String filePath,
-  ) async {
+    String filePath, {
+    String? encryptionPassword,
+  }) async {
     return Result.failure('Backup restore failed');
   }
 }
@@ -109,7 +112,7 @@ void main() {
         ],
       });
       expect(result.isSuccess, isTrue);
-      expect(result.data, endsWith('.json'));
+      expect(result.data, endsWith('.skbak'));
     });
   });
 }

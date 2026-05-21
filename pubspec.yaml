@@ -66,6 +66,7 @@ dependencies:
   speech_to_text: ^6.6.2
   flutter_tts: ^4.2.0
   record: ^5.0.5
+  encrypt: ^5.0.3
 
 dev_dependencies:
   flutter_test:

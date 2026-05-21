@@ -22,20 +22,17 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false, this.throwOnGetAll = false})
+  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false})
       : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnSave;
-  final bool throwOnGetAll;
 
   @override
   Future<Result<List<Session>>> getAll() async {
-    if (throwOnGetAll) throw Exception('getAll failed');
     return Result.success(List<Session>.from(sessions));
   }
 
-  @override
   @override
   Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) {
@@ -56,7 +53,6 @@ class _FakeSubjectRepository extends SubjectRepository {
   Future<Result<List<Subject>>> getAll() async => Result.success(List<Subject>.from(_subjects));
 
   @override
-  @override
   Future<Result<void>> save(String key, Subject subject) async {
     _subjects.add(subject);
     return Result.success(null);
@@ -72,7 +68,6 @@ class _FakeSubjectRepository extends SubjectRepository {
     return Result.success(null);
   }
 
-  @override
   Future<Result<void>> clearAll() async {
     _subjects.clear();
     return Result.success(null);
@@ -126,17 +121,17 @@ Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? 
 }
 
 void main() {
-  late String _hivePath;
+  late String hivePath;
 
   setUpAll(() async {
-    _hivePath = (await Directory.systemTemp.createTemp('tracker_test_')).path;
-    Hive.init(_hivePath);
+    hivePath = (await Directory.systemTemp.createTemp('tracker_test_')).path;
+    Hive.init(hivePath);
   });
 
   tearDownAll(() async {
     await Hive.close();
-    if (_hivePath.isNotEmpty) {
-      await Directory(_hivePath).delete(recursive: true);
+    if (hivePath.isNotEmpty) {
+      await Directory(hivePath).delete(recursive: true);
     }
   });
 

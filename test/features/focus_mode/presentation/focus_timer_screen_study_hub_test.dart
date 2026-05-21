@@ -6,7 +6,8 @@ import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, notificationServiceProvider, planOrchestratorProvider, SettingsController;
+import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, notificationServiceProvider, planOrchestratorProvider, SettingsController, badgeServiceProvider;
+import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
@@ -14,7 +15,10 @@ import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.da
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
@@ -308,6 +312,8 @@ Widget _buildApp({
       planOrchestratorProvider.overrideWithValue(planOrchestrator ?? _FakePlanAdherenceOrchestrator()),
       settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepo(settings ?? SettingsBox()))),
       notificationServiceProvider.overrideWithValue(NotificationService()),
+      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepository()),
+      badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
       if (masteryGraphService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryGraphService),
     ],
@@ -344,6 +350,31 @@ class _FakePathProvider extends Fake
     implements PathProviderPlatform {
   @override
   Future<String> getApplicationDocumentsPath() async => '/tmp/test';
+}
+
+class _FakeFocusSessionRepository extends FocusSessionRepository {
+  FocusSession? _latest;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<FocusSession?>> getLatest() async => Result.success(_latest);
+
+  @override
+  Future<Result<void>> save(FocusSession session) async {
+    _latest = session;
+    return Result.success(null);
+  }
+}
+
+class _FakeBadgeService extends BadgeService {
+  _FakeBadgeService() : super();
+
+  @override
+  Future<Result<List<BadgeModel>>> checkAndUnlockBadges(String studentId) async {
+    return Result.success([]);
+  }
 }
 
 void main() {
@@ -512,14 +543,9 @@ void main() {
         srService: srService,
       ));
 
-      final srButton = find.text('Spaced Repetition');
+      final srButton = find.widgetWithText(OutlinedButton, 'Spaced Repetition');
       expect(srButton, findsOneWidget);
-
-      final outlinedButton = find.ancestor(
-        of: srButton,
-        matching: find.byType(OutlinedButton),
-      ).first;
-      final button = tester.widget<OutlinedButton>(outlinedButton);
+      final button = tester.widget<OutlinedButton>(srButton);
       expect(button.onPressed, isNull);
     });
 
@@ -531,7 +557,7 @@ void main() {
         masteryGraphService: _FakeMasteryGraphService([]),
       ));
 
-      await tester.tap(find.text('Weak Areas'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Weak Areas'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -549,7 +575,7 @@ void main() {
         masteryGraphService: masteryGraph,
       ));
 
-      await tester.tap(find.text('Weak Areas'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Weak Areas'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
@@ -573,7 +599,7 @@ void main() {
         navigatorObserver: observer,
       ));
 
-      await tester.tap(find.text('Weak Areas'));
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Weak Areas'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 

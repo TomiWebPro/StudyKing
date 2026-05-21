@@ -1,209 +1,243 @@
-# Test Coverage & Convention Audit
+# Test Coverage & Convention Compliance Audit
 
-**Author:** Test Master
-**Date:** 2026-05-20
-**Scope:** Full cross-reference of `lib/` source files against `test/` files and AGENTS.md conventions.
+## Summary
 
----
-
-## Context
-
-Audited every source file under `lib/features/*/` and `lib/core/*/` against the test-mapping table in AGENTS.md. Reviewed all ~300 test files for conformance with provider coverage bar, unit/widget separation, fake-class convention, NavigatorObserver guidance, Hive-avoidance guidance, and error-state coverage.
+Cross-referenced 263 source files in `lib/features/*/` against AGENTS.md test conventions. **15 source files lack test coverage entirely.** Beyond missing files, the codebase has significant gaps in error-state testing (25 files), mixed unit/widget tests (2 files), unnecessary Hive I/O in widget tests, and anomalous test file placement.
 
 ---
 
-## MAJOR Issues
+## BLOCKER — App crashes or user cannot proceed
 
-### M1 — 5 source files have zero test coverage
+*(None identified. All features have at least partial test coverage.)*
 
-| Source file | Expected test location |
+---
+
+## MAJOR — Feature is broken or misleading
+
+### M1: 15 source files missing corresponding test files
+
+**Rationale:** AGENTS.md defines exact source-to-test mappings. Every source file without a test represents untested logic that can silently regress.
+
+#### Lessons (1 missing)
+
+| Source file | Expected test file |
 |---|---|
-| `lib/features/focus_mode/data/models/focus_session_type.dart` | `test/features/focus_mode/data/models/focus_session_type_test.dart` |
-| `lib/core/services/secure_api_key_service.dart` | `test/core/services/secure_api_key_service_test.dart` |
-| `lib/core/providers/secure_api_key_provider.dart` | `test/core/providers/secure_api_key_provider_test.dart` |
-| `lib/core/providers/ai_config_provider.dart` | `test/core/providers/ai_config_provider_test.dart` |
-| `lib/core/widgets/practice_performance_card.dart` | `test/core/widgets/practice_performance_card_test.dart` |
+| `lib/features/lessons/services/session_query_service.dart` | `test/features/lessons/services/session_query_service_test.dart` |
 
-**Rationale:** These are reachable production files. `secure_api_key_service` handles secrets; `ai_config_provider` gates app startup via `aiConfigReadyProvider`; `practice_performance_card` is a reusable widget used in dashboards and summaries.
+#### Planner (12 missing)
+
+| Source file | Expected test file |
+|---|---|
+| `lib/features/planner/presentation/widgets/daily_plans_section.dart` | `test/features/planner/presentation/widgets/daily_plans_section_test.dart` |
+| `lib/features/planner/presentation/widgets/roadmaps_tab.dart` | `test/features/planner/presentation/widgets/roadmaps_tab_test.dart` |
+| `lib/features/planner/presentation/widgets/study_plan_tab.dart` | `test/features/planner/presentation/widgets/study_plan_tab_test.dart` |
+| `lib/features/planner/presentation/widgets/multi_syllabus_input.dart` | `test/features/planner/presentation/widgets/multi_syllabus_input_test.dart` |
+| `lib/features/planner/presentation/widgets/pace_adjustment_card.dart` | `test/features/planner/presentation/widgets/pace_adjustment_card_test.dart` |
+| `lib/features/planner/presentation/widgets/subject_progress_tabs.dart` | `test/features/planner/presentation/widgets/subject_progress_tabs_test.dart` |
+| `lib/features/planner/presentation/widgets/scheduled_lessons_section.dart` | `test/features/planner/presentation/widgets/scheduled_lessons_section_test.dart` |
+| `lib/features/planner/presentation/widgets/missed_lessons_section.dart` | `test/features/planner/presentation/widgets/missed_lessons_section_test.dart` |
+| `lib/features/planner/presentation/widgets/adherence_banner.dart` | `test/features/planner/presentation/widgets/adherence_banner_test.dart` |
+| `lib/features/planner/presentation/widgets/pending_actions_section.dart` | `test/features/planner/presentation/widgets/pending_actions_section_test.dart` |
+| `lib/features/planner/providers/plan_providers.dart` | `test/features/planner/providers/plan_providers_test.dart` |
+| `lib/features/planner/services/planner_advisor_strategy.dart` | `test/features/planner/services/planner_advisor_strategy_test.dart` |
+
+#### Questions (2 missing)
+
+| Source file | Expected test file |
+|---|---|
+| `lib/features/questions/presentation/widgets/audio_recording_widget.dart` | `test/features/questions/presentation/widgets/audio_recording_widget_test.dart` |
+| `lib/features/questions/presentation/widgets/file_upload_widget.dart` | `test/features/questions/presentation/widgets/file_upload_widget_test.dart` |
 
 **Acceptance criteria:**
-- `focus_session_type_test.dart` — verify enum values, `toString`, `fromString` or any parse/serialize methods.
-- `secure_api_key_service_test.dart` — verify save/load/delete/validate with an in-memory backing.
-- `secure_api_key_provider_test.dart` — verify provider exposes service methods; test error propagation when service throws.
-- `ai_config_provider_test.dart` — verify `aiConfigReadyProvider` completes only after `markAiConfigReady()`; verify `isAiConfigReady` toggles; verify double-complete is idempotent.
-- `practice_performance_card_test.dart` — widget test verifying rendering with minimal FocusSession data; verify compact mode.
+- Each missing test file exists at the expected path
+- Widget tests use `ProviderScope` with overrides, `fixedStudentId`, and `NavigatorObserver`
+- Service/repository tests stub dependencies with hand-written fakes
+- Provider tests include behavioral assertions verifying dependency wiring
 
 ---
 
-### M2 — 5 misplaced test files fragmenting coverage
+### M2: Mixed unit tests and widget tests in same file (2 files)
 
-Each file below tests a source that already has a correctly-located test. The misplaced file creates duplicate maintenance burden:
+**Rationale:** AGENTS.md states: *"Keep unit tests and widget tests in separate files — never mix them in the same file."* Mixing them makes test organization unclear, complicates CI filtering, and allows logic tests to accidentally depend on widget infrastructure.
 
-| Misplaced test | Source belongs to | Correct location already exists |
+#### Affected files
+
+| File | Pure `test()` blocks | `testWidgets()` blocks |
 |---|---|---|
-| `test/features/ingestion/data/models/source_model_test.dart` | `lib/core/data/models/source_model.dart` | `test/core/data/models/source_model_test.dart` |
-| `test/core/data/engagement_nudge_adapter_test.dart` | `lib/features/planner/data/adapters/engagement_nudge_adapter.dart` | `test/features/planner/data/adapters/engagement_nudge_adapter_test.dart` |
-| `test/core/data/student_availability_adapter_test.dart` | `lib/features/planner/data/adapters/student_availability_adapter.dart` | `test/features/planner/data/adapters/student_availability_adapter_test.dart` |
-| `test/features/practice/utils/sr_data_codec_test.dart` | `lib/core/utils/sr_data_codec.dart` | `test/core/utils/sr_data_codec_test.dart` |
-| `test/features/sessions/data/repositories/session_repository_integration_test.dart` | `lib/core/data/repositories/session_repository.dart` | `test/core/data/repositories/session_repository_test.dart` |
-
-**Rationale:** CI confusion, ambiguous `git blame`, dead code risk, and wasted test-runner time.
-
-**Acceptance criteria:** Delete each misplaced file after confirming its assertions are a subset of (or fully redundant with) the correctly-located test. If the misplaced file contains unique coverage, merge those tests into the correct location first.
-
----
-
-### M3 — Orphaned and duplicate test files
-
-| File | Problem |
-|---|---|
-| `test/features/onboarding/onboarding_test.dart` | No corresponding barrel source. Tests `OnboardingService.isOnboardingNeeded()` which is already tested in `test/features/onboarding/services/onboarding_service_test.dart`. Likely a legacy file. |
-| `test/features/questions/data/models/question_model_test.dart` | The source `lib/core/data/models/question_model.dart` lives in core. A correct test exists at `test/core/data/models/question_model_test.dart`. This is a duplicate. |
-
-**Rationale:** Files with no source or that duplicate existing coverage add noise, increase CI time, and confuse developers.
-
-**Acceptance criteria:** Delete `test/features/onboarding/onboarding_test.dart` after verifying no unique coverage is lost. Delete `test/features/questions/data/models/question_model_test.dart` after merging any unique assertions into `test/core/data/models/question_model_test.dart`.
-
----
-
-### M4 — Construction-only test files (no behavioral assertions)
-
-| File | Tests | Issue |
-|---|---|---|
-| `test/core/data/data_test.dart` | Single `expect(DatabaseService, isNotNull)` | Barrel smoke test, zero behavior |
-| `test/core/utils/label_helpers_test.dart` | 3 tests, each only `expect(…, isNotNull)` | All 30 enum values checked for null only — never verify actual string value |
-| `test/features/quickguide/presentation/quick_guide_screen_constructor_test.dart` | 5 tests verifying default constructor arguments | Verifies constants declared in source, not runtime behavior |
-
-**Rationale:** AGENTS.md requires "at least one behavioral assertion beyond construction checks" for provider tests. While `data_test.dart` and `label_helpers_test.dart` are not provider files, they demonstrate the same anti-pattern: they assert the test infrastructure works but never exercise business logic. A null check is not a behavioral assertion.
+| `test/features/practice/presentation/widgets/confidence_selector_test.dart` | 6 (`getConfidenceColor`) | 12 |
+| `test/features/practice/presentation/widgets/source_practice_sheet_status_test.dart` | 3 (`SourceItemData` constructor) | 5 |
 
 **Acceptance criteria:**
-- `data_test.dart` — either add a meaningful barrel-import test that exercises behavior, or delete the file (if `DatabaseService` is tested elsewhere).
-- `label_helpers_test.dart` — replace all `isNotNull` with `equals(expectedValue)` assertions. Verify the actual localized string for each enum value.
-- `quick_guide_screen_constructor_test.dart` — add at least one behavioral test (e.g., verify that `showModeNavigation: false` hides navigation) or fold into the existing `quick_guide_screen_test.dart`.
+- `getConfidenceColor` tests extracted to a separate unit test file (e.g., `test/features/practice/services/...` or alongside the source)
+- `SourceItemData` constructor tests extracted to `test/features/practice/data/models/` (since `SourceItemData` is a model)
+- The original files retain only `testWidgets` rendering tests
 
 ---
 
-### M5 — Extreme test file fragmentation in practice and settings
+### M3: Unnecessary Hive I/O in widget test
 
-| Source file | # of test files | Fragments |
+**Rationale:** AGENTS.md says: *"Prefer `fixedStudentId` over `StudentIdService` singleton in widget tests to avoid Hive I/O dependencies."* The `session_tracker_screen_test.dart` widget test calls `Hive.init()` despite faking all repositories and already passing `fixedStudentId`.
+
+#### Affected file
+
+`test/features/sessions/presentation/session_tracker_screen_test.dart`:
+- Line 6: `import 'package:hive_flutter/hive_flutter.dart';`
+- Line 80: defines `_FakeStudentIdService extends StudentIdService` (redundant — `fixedStudentId` is already passed at line 115)
+- Line 109: `studentIdServiceProvider.overrideWithValue(_FakeStudentIdService())` (redundant override)
+- Line 128: `Hive.init(hivePath);` (unnecessary — no real Hive-backed repos used)
+- Line 284: second `_FakeStudentIdService` override (redundant)
+
+**Acceptance criteria:**
+- Remove `import 'package:hive_flutter/hive_flutter.dart'`
+- Remove `_FakeStudentIdService` class and all `studentIdServiceProvider` overrides
+- Remove `Hive.init()` call
+- Verify the test passes without any Hive initialization
+
+---
+
+### M4: 25 files missing error-state tests
+
+**Rationale:** AGENTS.md mandates `Result<T>` return types for public repository and service methods. Tests that only verify success paths give false confidence — silent failures propagate through `Result.failure` paths undetected.
+
+#### Core services (19 gaps — most critical)
+
+| File | Notes |
+|---|---|
+| `test/core/services/secure_api_key_service_test.dart` | No error path tests at all |
+| `test/core/services/answer_validation_service_test.dart` | No error path tests |
+| `test/core/services/engagement_scheduler_test.dart` | Imports `Result` but no failure tests |
+| `test/core/services/voice_service_test.dart` | Also uses empty `catch (_) {}` (see M5) |
+| `test/core/services/student_id_service_test.dart` | No error path tests |
+| `test/core/services/progress_export_service_test.dart` | No error path tests |
+| `test/core/services/badge_service_test.dart` | "runs without errors" only, no failure propagation |
+| `test/core/services/remaining_workload_estimator_test.dart` | No error path tests |
+| `test/core/services/llm_usage_meter_test.dart` | No error path tests |
+| `test/core/services/conversation_memory_test.dart` | Imports `Result` but no failure tests |
+| `test/core/services/mastery_calculation_service_test.dart` | Edge-case tests only (zero inputs), no `Result.failure` |
+| `test/core/services/notification_service_test.dart` | Also uses empty `catch (_) {}` (see M5) |
+| `test/core/services/long_term_memory_test.dart` | No error path tests |
+| `test/core/services/llm_agent/agent_tool_test.dart` | No error path tests |
+| `test/core/services/llm_agent/idle_executor_test.dart` | No error path tests |
+| `test/core/services/llm_agent/llm_agent_test.dart` | No error path tests |
+| `test/core/services/llm_agent/agent_memory_test.dart` | No error path tests |
+| `test/core/services/llm_agent/agent_loop_test.dart` | No error path tests |
+| `test/core/services/prerequisite_check_service_ui_test.dart` | Widget test, no error-state testing |
+
+#### Core data repositories (4 gaps)
+
+| File | Notes |
+|---|---|
+| `test/core/data/repositories/question_mastery_state_repository_test.dart` | Happy-path only — no failure box |
+| `test/core/data/repositories/topic_repository_test.dart` | Happy-path only — no failure box |
+| `test/core/data/repositories/engagement_nudge_repository_test.dart` | Happy-path only — no failure box |
+| `test/core/data/repositories/mastery_state_repository_test.dart` | Happy-path only — no failure box |
+
+#### Feature repositories (2 gaps)
+
+| File | Notes |
+|---|---|
+| `test/features/subjects/data/repositories/subject_repository_test.dart` | Fallback tests only, no Hive failure paths |
+| `test/features/questions/data/repositories/question_repository_hive_test.dart` | Integration test — no error paths |
+
+**Acceptance criteria:**
+- Each service/repository test file includes a dedicated error-handling `group` or equivalent
+- Repositories: inject a throwing fake box and verify `Result.failure` is returned
+- Services: inject a throwing fake repository and verify the service returns `Result.failure` or handles gracefully
+- Minimum coverage: at least one error-path test per public method that returns `Result<T>`
+
+---
+
+### M5: Empty `catch (_) {}` blocks in tests (2 files)
+
+**Rationale:** AGENTS.md: *"Empty `catch (_) {}` blocks are forbidden. Every catch must log the error with a descriptive message."* This applies to both production and test code.
+
+#### Affected files
+
+| File | Line numbers | Count |
 |---|---|---|
-| `lib/features/practice/presentation/screens/practice_screen.dart` | 3 | `practice_screen_test.dart`, `practice_screen_additional_test.dart`, `practice_screen_more_test.dart` |
-| `lib/features/practice/presentation/screens/exam_session_screen.dart` | 2 | `exam_session_screen_test.dart`, `exam_session_screen_additional_test.dart` |
-| `lib/features/practice/presentation/screens/practice_results_screen.dart` | 2 | `practice_results_screen_test.dart`, `practice_results_screen_additional_test.dart` |
-| `lib/features/practice/presentation/screens/practice_session_screen.dart` | 2 | `practice_session_screen_test.dart`, `practice_session_screen_additional_test.dart` |
-| `lib/features/settings/presentation/api_config_screen.dart` | 4 | `api_config_screen_test.dart`, `_behavioral_test.dart`, `_extended_test.dart`, `_gaps_test.dart` |
-| `lib/features/settings/presentation/settings_screen.dart` | 4 | `settings_screen_test.dart`, `_behavioral_test.dart`, `_extended_test.dart`, `_gaps_test.dart` |
-| `lib/features/settings/presentation/profile_screen.dart` | 4 | `profile_screen_test.dart`, `_behavioral_test.dart`, `_extended_test.dart`, `_gaps_test.dart` |
+| `test/core/services/notification_service_test.dart` | 23, 33, 40, 48, 55, 62, 69, 76, 83, 90, 97, 104, 111 | 13 |
+| `test/core/services/voice_service_test.dart` | 37, 46, 55, 64, 79 | 5 |
 
-**Rationale:** 8 source files spread across 19 test files. This makes it impossible to tell at a glance whether a screen is covered, forces developers to open multiple files to understand test scope, and encourages further fragmentation.
-
-**Acceptance criteria:** Merge all fragments for each source file into a single test file. Use `group()` to organize scenarios (happy path, error state, edge cases). Delete the `_additional`, `_behavioral`, `_extended`, `_gaps` variants after merging.
+**Acceptance criteria:**
+- Each `catch (_) {}` is replaced with `catch (e) { /* log or assert */ }`
+- Minimum: add a comment or an `expect` assertion inside each catch block
+- Better: assert the caught exception type or verify error logging behavior
 
 ---
 
-### M6 — 3 widget test files use real Hive I/O instead of fakes
+## MINOR — Code quality / UX friction
 
-| File | Hive usage |
+### m1: Misplaced test files
+
+**Rationale:** Files that test data models belong in `test/features/*/data/models/`, not `presentation/widgets/`. Misplacement confuses future contributors and violates the AGENTS.md directory mapping.
+
+#### Affected files
+
+| File | Tests | Should be in |
+|---|---|---|
+| `test/features/dashboard/presentation/screens/topic_detail_screen_args_test.dart` | `TopicDetailArgs` constructor | `data/models/` (if model exists) |
+| `test/features/practice/presentation/widgets/source_practice_sheet_test.dart` | `SourceItemData` model | `data/models/source_item_data_test.dart` |
+| `test/features/questions/presentation/widgets/canvas_drawing_widget_test.dart` | `Stroke`, `DrawingPoint` models | `data/models/` |
+| `test/features/questions/presentation/widgets/graph_drawing_widget_test.dart` | `Stroke` model with tool types | `data/models/` |
+
+**Acceptance criteria:**
+- Model tests are moved to the appropriate `data/models/` directory
+- File renaming follows the AGENTS.md convention (`<model_name>_test.dart`)
+- UI companion files (e.g., `canvas_drawing_widget_ui_test.dart`) remain in `presentation/widgets/`
+
+---
+
+## Conventions that PASSED inspection
+
+The following areas were found to be fully compliant with AGENTS.md and require no action:
+
+| Convention | Result |
 |---|---|
-| `test/features/settings/presentation/settings_screen_extended_test.dart` | `Hive.init(dir.path)` + `Hive.openBox(HiveBoxNames.sources)` — comment says "needed for `_FailedUploadsTile`" |
-| `test/features/settings/presentation/settings_screen_gaps_test.dart` | `Hive.init(hiveDir.path)` + `Hive.openBox(HiveBoxNames.settings)` |
-| `test/features/settings/presentation/settings_screen_behavioral_test.dart` | `Hive.init` + `Hive.openBox(HiveBoxNames.settings)` |
-
-**Rationale:** AGENTS.md says "Use `fixedStudentId` over `StudentIdService` singleton in widget tests to avoid Hive I/O dependencies." Real Hive calls create flaky tests (temp dir cleanup, cross-test pollution, filesystem dependency), slow down the suite, and break in headless CI if Hive isn't properly initialized.
-
-**Acceptance criteria:** Replace each real `Hive.init`/`Hive.openBox` with a fake. For `_FailedUploadsTile`'s `SourceRepository` dependency, inject a `FakeSourceRepository` via provider overrides. Delete all `Directory.systemTemp` / `Hive.init` boilerplate from these files.
+| No mockito/mocktail usage | PASS — 0 violations out of 300+ test files |
+| Provider tests include behavioral assertions beyond construction checks | PASS — all 21 provider test files verified |
+| Provider tests verify dependency wiring via overrides | PASS — all 21 provider test files verified |
+| NavigatorObserver used for navigation verification | PASS — 45/110 presentation files use it; no gaps in screen-level tests |
+| Feature services test error states | PASS — 36/36 applicable files (3 are pure algorithm/static data, N/A) |
 
 ---
 
-### M7 — Redundant test file testing a hand-rolled fake
+## Quick-reference checklist
 
-`test/features/practice/services/spaced_repetition_service_fake_repo_test.dart` creates `_FakeSpacedRepetitionService` extending `SpacedRepetitionService`, overrides `getQuestionsDue`, `updateNextReviewDate`, etc. with custom logic, then tests those overridden methods. The real SM-2 engine is never exercised.
+### Create new test files (15)
+- [ ] `test/features/lessons/services/session_query_service_test.dart`
+- [ ] `test/features/planner/presentation/widgets/daily_plans_section_test.dart`
+- [ ] `test/features/planner/presentation/widgets/roadmaps_tab_test.dart`
+- [ ] `test/features/planner/presentation/widgets/study_plan_tab_test.dart`
+- [ ] `test/features/planner/presentation/widgets/multi_syllabus_input_test.dart`
+- [ ] `test/features/planner/presentation/widgets/pace_adjustment_card_test.dart`
+- [ ] `test/features/planner/presentation/widgets/subject_progress_tabs_test.dart`
+- [ ] `test/features/planner/presentation/widgets/scheduled_lessons_section_test.dart`
+- [ ] `test/features/planner/presentation/widgets/missed_lessons_section_test.dart`
+- [ ] `test/features/planner/presentation/widgets/adherence_banner_test.dart`
+- [ ] `test/features/planner/presentation/widgets/pending_actions_section_test.dart`
+- [ ] `test/features/planner/providers/plan_providers_test.dart`
+- [ ] `test/features/planner/services/planner_advisor_strategy_test.dart`
+- [ ] `test/features/questions/presentation/widgets/audio_recording_widget_test.dart`
+- [ ] `test/features/questions/presentation/widgets/file_upload_widget_test.dart`
 
-**Rationale:** The file tests the fake's implementation, not the production code. The correctly-located `spaced_repetition_service_test.dart` (816 lines) already covers all paths with proper fakes at the repository layer and exercises the real SM-2 algorithm.
+### Split mixed tests (2 files)
+- [ ] Split `test/features/practice/presentation/widgets/confidence_selector_test.dart`
+- [ ] Split `test/features/practice/presentation/widgets/source_practice_sheet_status_test.dart`
 
-**Acceptance criteria:** Delete `spaced_repetition_service_fake_repo_test.dart` after verifying no unique coverage exists that is absent from `spaced_repetition_service_test.dart`. If any edge case is missing from the main test, port it first.
+### Remove unnecessary Hive I/O
+- [ ] Fix `test/features/sessions/presentation/session_tracker_screen_test.dart`
 
----
+### Add error-state tests (25 files)
+- [ ] 19 core service files (see M4 table)
+- [ ] 4 core data repository files (see M4 table)
+- [ ] 2 feature repository files (see M4 table)
 
-### M8 — `TopicDetailScreen` has fragmented test files (unit vs widget separation is correct but naming is non-standard)
+### Fix empty catch blocks (2 files)
+- [ ] `test/core/services/notification_service_test.dart` (13 blocks)
+- [ ] `test/core/services/voice_service_test.dart` (5 blocks)
 
-Noted here for tracking: `test/features/dashboard/presentation/screens/topic_detail_screen_test.dart` (widget tests) and `topic_detail_screen_unit_test.dart` (unit test for `TopicDetailArgs`). This follows AGENTS.md separation but the `_unit_test` suffix is inconsistent with the rest of the project.
-
-**Acceptance criteria:** Rename `topic_detail_screen_unit_test.dart` to `topic_detail_screen_args_test.dart` or merge its single `TopicDetailArgs` test into the widget test file (since the args object is purely a data class and doesn't warrant a separate file).
-
----
-
-## MINOR Issues
-
-### m1 — Weakest provider test: `subject_repository_provider_test.dart`
-
-This file has 4 tests: `isA<SubjectRepository>()`, 2x `identical()` singleton checks, and `returnsNormally`. It passes only because AGENTS.md explicitly lists singleton verification as an acceptable behavioral assertion. No data flows through the provider; no error path is tested.
-
-**Acceptance criteria:** Add a test that seeds data into an overridden fake repo and retrieves it through the provider (as `topic_repository_provider_test.dart` does). Add an error-path test showing the provider propagates failures.
-
----
-
-### m2 — 14 files use non-standard `_widget_test` suffix
-
-These files have `_widget_test` in their name rather than the standard location-based naming:
-
-| File |
-|---|
-| `test/features/settings/data/models/settings_box_widget_test.dart` |
-| `test/features/settings/data/models/settings_model_widget_test.dart` |
-| `test/core/errors/handlers_widget_test.dart` |
-| `test/core/services/prerequisite_check_service_widget_test.dart` |
-| `test/core/routes/app_router_widget_test.dart` |
-| `test/core/theme/app_theme_widget_test.dart` |
-| `test/features/practice/presentation/widgets/source_practice_sheet_widget_test.dart` |
-| `test/features/subjects/presentation/subject_form_widgets_widget_test.dart` |
-| `test/features/subjects/providers/subjects_repository_provider_widget_test.dart` |
-| `test/features/subjects/providers/topic_repository_provider_widget_test.dart` |
-| `test/features/onboarding/presentation/onboarding_dialog_widget_test.dart` |
-| `test/features/questions/presentation/painters/drawing_painter_widget_test.dart` |
-| `test/features/questions/presentation/painters/grid_painter_widget_test.dart` |
-| `test/features/questions/presentation/widgets/canvas_drawing_widget_widget_test.dart` |
-
-Note: `canvas_drawing_widget_widget_test.dart` has a doubled `_widget` suffix (typo).
-
-Also: `settings_box_widget_test.dart` and `settings_model_widget_test.dart` test data models using `testWidgets` — these should either be pure unit tests on the model or be clearly named to indicate they test widget-tree integration of model properties.
-
-**Acceptance criteria:** Remove `_widget` suffix from all files and use the standard location-based naming. For model widget tests (`settings_box_widget_test.dart`, `settings_model_widget_test.dart`), either convert to pure unit tests or rename to reflect their purpose (e.g., `settings_box_theme_integration_test.dart`).
-
----
-
-### m3 — Naming convention violation: `onboarding_test.dart`
-
-This file at `test/features/onboarding/onboarding_test.dart` tests `OnboardingService` but sits at the top of the `onboarding/` test tree instead of in `features/onboarding/services/`.
-
-**Acceptance criteria:** Delete the file (it duplicates `onboarding_service_test.dart`).
-
----
-
-## Summary of Remaining Gaps (No Action Needed)
-
-The following areas were reviewed and found **compliant**:
-
-| Check | Result |
-|---|---|
-| mockito/mocktail usage | **None found** — all fakes are hand-written ✅ |
-| Unit/widget test mixing in same file | **None found** — all files are cleanly separated ✅ |
-| NavigatorObserver usage in widget tests | **Widely adopted** — `TestNavigatorObserver` used across dashboard, planner, mentor, settings, onboarding, practice ✅ |
-| Error-state tests (`Result.failure` paths) | **Widespread** — dedicated `group('error-state')` blocks in mistake_review_service, session_export_service, spaced_repetition_service, focus_practice_service, etc. ✅ |
-| Provider test behavioral assertions | **26/27 pass** with override wiring, data-flow verification, error propagation ✅ (only `subject_repository_provider` is borderline — see m1) |
-
----
-
-## Acceptance Criteria Summary (Checklist)
-
-- [ ] **M1:** Create test files for 5 uncovered sources
-- [ ] **M2:** Delete 5 misplaced test files (or merge unique coverage first)
-- [ ] **M3:** Delete orphaned `onboarding_test.dart` and duplicate `question_model_test.dart`
-- [ ] **M4:** Add behavioral assertions to 3 construction-only test files
-- [ ] **M5:** Merge 19 fragmented test files into 8 source-aligned files
-- [ ] **M6:** Replace real Hive I/O with fakes in 3 settings screen tests
-- [ ] **M7:** Delete redundant `spaced_repetition_service_fake_repo_test.dart`
-- [ ] **M8:** Rename or merge `topic_detail_screen_unit_test.dart`
-- [ ] **m1:** Strengthen `subject_repository_provider_test.dart` with data-flow test
-- [ ] **m2:** Standardize naming of 14 `_widget_test` suffix files
-- [ ] **m3:** Delete `test/features/onboarding/onboarding_test.dart`
+### Relocate misplaced tests (4 files)
+- [ ] `topic_detail_screen_args_test.dart` → model tests directory
+- [ ] `source_practice_sheet_test.dart` → model tests directory
+- [ ] `canvas_drawing_widget_test.dart` → model tests directory
+- [ ] `graph_drawing_widget_test.dart` → model tests directory

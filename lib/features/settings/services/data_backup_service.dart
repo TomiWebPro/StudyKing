@@ -2,6 +2,8 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:typed_data';
 import 'package:archive/archive.dart';
+import 'package:crypto/crypto.dart' show sha256;
+import 'package:encrypt/encrypt.dart' as encrypt;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:path_provider/path_provider.dart';
@@ -45,6 +47,7 @@ class DataBackupService {
     String? filename,
     String? outputDir,
     bool compress = true,
+    String? encryptionPassword,
   }) async {
     if (kIsWeb) {
       return Result.failure('Backup/restore is not supported on web');
@@ -64,10 +67,18 @@ class DataBackupService {
       final file = File('${dir.path}/${filename ?? 'studyking_backup'}$ext');
 
       if (compress) {
-        final compressed = GZipEncoder().encode(utf8.encode(json)) as Uint8List;
-        await file.writeAsBytes(compressed);
-        _logger.i('Backup exported to ${file.path} (${compressed.length} bytes, gzip)');
+        var data = GZipEncoder().encode(utf8.encode(json)) as Uint8List;
+
+        if (encryptionPassword != null && encryptionPassword.isNotEmpty) {
+          data = _encryptData(data, encryptionPassword);
+        }
+
+        await file.writeAsBytes(data);
+        _logger.i('Backup exported to ${file.path} (${data.length} bytes, gzip${encryptionPassword != null ? ', encrypted' : ''})');
       } else {
+        if (encryptionPassword != null && encryptionPassword.isNotEmpty) {
+          _logger.w('Encryption not supported for uncompressed backups; saving without encryption');
+        }
         await file.writeAsString(json);
         _logger.i('Backup exported to ${file.path} (${json.length} bytes)');
       }
@@ -76,6 +87,28 @@ class DataBackupService {
       _logger.w('Failed to export backup', e);
       return Result.failure(e.toString());
     }
+  }
+
+  Uint8List _encryptData(Uint8List data, String password) {
+    final key = encrypt.Key.fromUtf8(sha256.convert(utf8.encode(password)).toString().substring(0, 32));
+    final iv = encrypt.IV.fromLength(16);
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
+    final encrypted = encrypter.encryptBytes(data, iv: iv);
+    final combined = Uint8List(16 + encrypted.bytes.length);
+    combined.setRange(0, 16, iv.bytes);
+    combined.setRange(16, combined.length, encrypted.bytes);
+    return combined;
+  }
+
+  Uint8List _decryptData(Uint8List data, String password) {
+    if (data.length < 16) {
+      throw ArgumentError('Encrypted data too short');
+    }
+    final iv = encrypt.IV(data.sublist(0, 16));
+    final ciphertext = data.sublist(16);
+    final key = encrypt.Key.fromUtf8(sha256.convert(utf8.encode(password)).toString().substring(0, 32));
+    final encrypter = encrypt.Encrypter(encrypt.AES(key, mode: encrypt.AESMode.cbc));
+    return Uint8List.fromList(encrypter.decryptBytes(encrypt.Encrypted(ciphertext), iv: iv));
   }
 
   Future<Result<String>> exportSingleBox({
@@ -89,8 +122,9 @@ class DataBackupService {
   }
 
   Future<Result<Map<String, List<Map<String, dynamic>>>>> restoreData(
-    String filePath,
-  ) async {
+    String filePath, {
+    String? encryptionPassword,
+  }) async {
     if (kIsWeb) {
       return Result.failure('Backup/restore is not supported on web');
     }
@@ -102,7 +136,17 @@ class DataBackupService {
 
       late Map<String, dynamic> data;
       if (filePath.endsWith('.skbak')) {
-        final bytes = await file.readAsBytes();
+        var bytes = await file.readAsBytes();
+
+        // Try to decrypt if password provided or if data looks encrypted
+        if (encryptionPassword != null && encryptionPassword.isNotEmpty) {
+          try {
+            bytes = _decryptData(bytes, encryptionPassword);
+          } catch (e) {
+            return Result.failure('Decryption_failed: ${e.toString()}');
+          }
+        }
+
         final decompressed = GZipDecoder().decodeBytes(bytes);
         final jsonStr = utf8.decode(decompressed);
         data = jsonDecode(jsonStr) as Map<String, dynamic>;

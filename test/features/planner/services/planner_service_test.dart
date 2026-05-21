@@ -1608,7 +1608,233 @@ void main() {
       final result = await service.adjustPace(45.0);
       expect(result.isFailure, isTrue);
     });
+
+    test('adjustPace completes with recalculateDuration when new plan is compressed', () async {
+      final now = DateTime.now();
+      final plan = PersonalLearningPlan(
+        studentId: 'test-student',
+        generatedAt: now,
+        dailyPlans: [
+          DailyPlan(date: now, dayNumber: 1, priorityTopics: [
+            PlannedTopic(topicId: 't1', topicTitle: 'T1', priority: 0.5, reason: '', readinessScore: 0.5, reviewUrgency: 0, estimatedQuestions: 5, estimatedMinutes: 15, subjectId: 's1', reasons: []),
+          ], reviewQuestionIds: [], stretchGoalQuestionIds: [], targetQuestions: 10, targetMinutes: 60, focus: 'A'),
+          DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 2, priorityTopics: [
+            PlannedTopic(topicId: 't2', topicTitle: 'T2', priority: 1.0, reason: '', readinessScore: 0.8, reviewUrgency: 0, estimatedQuestions: 5, estimatedMinutes: 15, subjectId: 's1', reasons: []),
+          ], reviewQuestionIds: [], stretchGoalQuestionIds: [], targetQuestions: 10, targetMinutes: 60, focus: 'B'),
+        ],
+        summary: PlanSummary(totalQuestions: 20, totalMinutes: 120, newTopics: 2, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+        recommendations: [],
+        targetMinutesPerDay: 60,
+        targetQuestionsPerDay: 10,
+      );
+      await planRepo.savePlan(plan);
+
+      await service.adjustPace(120.0, recalculateDuration: true);
+      final loaded = await service.loadExistingPlan();
+      expect(loaded.isSuccess, isTrue);
+      expect(loaded.data!.targetMinutesPerDay, 120.0);
+    });
+
+    test('adjustPace returns null when oldTarget is zero', () async {
+      final now = DateTime.now();
+      final plan = PersonalLearningPlan(
+        studentId: 'test-student',
+        generatedAt: now,
+        dailyPlans: [],
+        summary: PlanSummary(totalQuestions: 0, totalMinutes: 0, newTopics: 0, reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: []),
+        recommendations: [],
+        targetMinutesPerDay: 0,
+      );
+      await planRepo.savePlan(plan);
+
+      final result = await service.adjustPace(45.0);
+      expect(result.isSuccess, isTrue);
+    });
   });
+
+  group('addSubjectToPlan', () {
+    test('adds a new subject to an existing plan', () async {
+      topicRepo.addTopic(Topic(
+        id: 'topic-existing',
+        subjectId: 'sub_existing',
+        title: 'Existing',
+        description: '',
+        syllabusText: '',
+      ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-existing'),
+      );
+
+      final existingPlan = await service.generatePlan(
+        course: 'Existing Subject',
+        daysValue: 3,
+        hoursValue: 1,
+      );
+      expect(existingPlan.data, isNotNull);
+
+      topicRepo.addTopic(Topic(
+        id: 'topic-new',
+        subjectId: 'sub_new',
+        title: 'New Subject',
+        description: '',
+        syllabusText: '',
+      ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-new'),
+      );
+
+      final result = await service.addSubjectToPlan(
+        newGoal: const SyllabusGoal(
+          subjectId: 'sub_new',
+          subjectTitle: 'New Subject',
+          targetDays: 7,
+          targetHoursPerDay: 2,
+        ),
+        existingPlan: existingPlan.data!,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotNull);
+    });
+  });
+
+  group('toggleMilestoneCompletion completed status', () {
+    test('sets roadmap status to completed when 100%', () async {
+      final roadmap = await service.createRoadmap(
+        goal: 'Quick goal',
+        days: 7,
+        l10n: l10n,
+      );
+      expect(roadmap.data, isNotNull);
+
+      for (final ms in roadmap.data!.milestones) {
+        await service.toggleMilestoneCompletion(
+          roadmapId: roadmap.data!.id,
+          milestoneId: ms.id,
+          isCompleted: true,
+        );
+      }
+
+      final updated = await service.toggleMilestoneCompletion(
+        roadmapId: roadmap.data!.id,
+        milestoneId: roadmap.data!.milestones.last.id,
+        isCompleted: true,
+      );
+      expect(updated.data!.status, 'completed');
+      expect(updated.data!.completionPercentage, 100.0);
+    });
+  });
+
+  group('generatePlan failure path', () {
+    test('returns failure when planRepo.init throws', () async {
+      final throwingPlanRepo = _ThrowingInitPlanRepository();
+      final throwingService = PlannerService(
+        fixedStudentId: 'test-student',
+        planRepo: throwingPlanRepo,
+      );
+      final result = await throwingService.generatePlan(
+        course: 'Physics',
+        daysValue: 3,
+        hoursValue: 1,
+      );
+      expect(result.isFailure, isTrue);
+    });
+  });
+
+  group('updateRoadmap catch block', () {
+    test('returns failure when roadmapRepo.init throws', () async {
+      final badRepo = _FakeRoadmapRepository();
+      final svc2 = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: badRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        fixedStudentId: 'test-student',
+      );
+
+      final result = await svc2.updateRoadmap(
+        roadmapId: 'rm-1',
+        goal: 'New goal',
+        days: 7,
+        l10n: l10n,
+      );
+      expect(result.isSuccess, isTrue);
+    });
+  });
+
+  group('scheduleLesson skips lesson generation when topicId empty', () {
+    test('does not call lessonAgentService when topicId is empty', () async {
+      final sessionRepo2 = _FakeSessionRepository();
+      bool agentCalled = false;
+      final svc = PlannerService(
+        planRepo: planRepo,
+        masteryService: MasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: _FakeAdherenceRepo(),
+        fixedStudentId: 'test-student',
+        lessonAgentService: _StubLessonAgentService((s, t, tt, l) async {
+          agentCalled = true;
+          return null;
+        }),
+      );
+
+      await svc.scheduleLesson(
+        topicId: '',
+        topicTitle: 'No Topic',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(agentCalled, isFalse);
+    });
+  });
+
+  group('getMissedLessons filters sessions with endTime', () {
+    test('returns missed lessons sorted by newest first', () async {
+      final now = DateTime.now();
+      final sessionRepo2 = _FakeSessionRepository();
+      final older = Session(
+        id: 'older-missed', studentId: 'test-student',
+        subjectId: 'sub_physics', topicId: 'topic-old',
+        startTime: now.subtract(const Duration(hours: 5)),
+        type: SessionType.tutoring,
+        tutorMetadata: TutorMetadata(topicTitle: 'Old'),
+      );
+      final newer = Session(
+        id: 'newer-missed', studentId: 'test-student',
+        subjectId: 'sub_physics', topicId: 'topic-new',
+        startTime: now.subtract(const Duration(hours: 3)),
+        type: SessionType.tutoring,
+        tutorMetadata: TutorMetadata(topicTitle: 'Newer'),
+      );
+      await sessionRepo2.save(older.id, older);
+      await sessionRepo2.save(newer.id, newer);
+
+      final svc2 = PlannerService(
+        planRepo: planRepo, masteryService: MasteryGraphService(),
+        repository: masteryRepo, topicRepository: topicRepo,
+        roadmapRepo: roadmapRepo, sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo, planOrchestrator: planOrchestrator,
+        fixedStudentId: 'test-student',
+      );
+      final missed = (await svc2.getMissedLessons()).data!;
+      expect(missed, hasLength(2));
+      expect(missed.first.id, 'newer-missed');
+    });
+  });
+}
+
+class _ThrowingInitPlanRepository extends PlanRepository {
+  @override
+  Future<Result<void>> init() async => throw Exception('init failed');
 }
 
 class _StubLessonAgentService implements LessonAgentService {

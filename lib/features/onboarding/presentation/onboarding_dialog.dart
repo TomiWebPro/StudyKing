@@ -331,7 +331,7 @@ class ApiKeyBanner extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+      color: theme.colorScheme.errorContainer,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,

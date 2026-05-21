@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'loading_indicator.dart';
 
 class SplashScreen extends StatelessWidget {
@@ -9,6 +10,7 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context);
     return Scaffold(
       body: Center(
         child: Column(
@@ -21,7 +23,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 24),
             Text(
-              'StudyKing',
+              l10n?.appTitle ?? 'StudyKing',
               style: theme.textTheme.headlineLarge?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: theme.colorScheme.primary,
@@ -29,7 +31,7 @@ class SplashScreen extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'AI-Native Learning Companion',
+              l10n?.tagline ?? 'AI-Native Learning Companion',
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),

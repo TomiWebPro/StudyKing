@@ -399,6 +399,43 @@ void main() {
         expect(result.isFailure, isTrue);
         expect(result.error, contains('Lesson_not_found'));
       });
+
+      test('adds multiple blocks to lesson preserving all blocks', () async {
+        await repo.create(createTestLesson(id: 'multi-block'));
+        await repo.addBlock(LessonBlock(id: 'b1', subjectId: 'math', lessonId: 'multi-block', type: LessonBlockType.text, content: 'First'));
+        await repo.addBlock(LessonBlock(id: 'b2', subjectId: 'math', lessonId: 'multi-block', type: LessonBlockType.example, content: 'Second'));
+        final blocksResult = await repo.getBlocksForLesson('multi-block');
+        expect(blocksResult.data!.length, 2);
+        expect(blocksResult.data!.any((b) => b.id == 'b1'), isTrue);
+        expect(blocksResult.data!.any((b) => b.id == 'b2'), isTrue);
+      });
+
+      test('appends block to lesson with existing blocks preserving old and new', () async {
+        await repo.create(Lesson(
+          id: 'existing-blocks',
+          subjectId: 'math',
+          title: 'Test Lesson',
+          topicId: 'algebra',
+          blocks: [
+            LessonBlock(id: 'existing-b1', subjectId: 'math', lessonId: 'existing-blocks', type: LessonBlockType.text, content: 'Existing Block'),
+          ],
+          createdAt: DateTime(2026, 5, 12),
+        ));
+        await repo.addBlock(LessonBlock(id: 'new-b1', subjectId: 'math', lessonId: 'existing-blocks', type: LessonBlockType.example, content: 'New Block'));
+        final blocksResult = await repo.getBlocksForLesson('existing-blocks');
+        expect(blocksResult.data!.length, 2);
+        expect(blocksResult.data!.any((b) => b.id == 'existing-b1'), isTrue);
+        expect(blocksResult.data!.any((b) => b.id == 'new-b1'), isTrue);
+      });
+
+      test('preserves lesson fields after adding block via copyWith', () async {
+        await repo.create(createTestLesson(id: 'preserve-fields', title: 'Original Title', subjectId: 'original-sub', topicId: 'original-topic'));
+        await repo.addBlock(LessonBlock(id: 'b-preserve', subjectId: 'original-sub', lessonId: 'preserve-fields', type: LessonBlockType.text, content: 'Block'));
+        final lesson = await repo.get('preserve-fields');
+        expect(lesson.data!.title, 'Original Title');
+        expect(lesson.data!.subjectId, 'original-sub');
+        expect(lesson.data!.topicId, 'original-topic');
+      });
     });
 
     group('getBlocksForLesson', () {
@@ -577,8 +614,22 @@ void main() {
         expect(result.isFailure, isTrue);
         expect(result.error, isNotNull);
       });
+
+      test('returns empty list when getAll returns failure result (null data fallback)', () async {
+        final repo = _FailureGetAllLessonRepository();
+        final result = await repo.getBlocksBySubject('math');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
     });
   });
+}
+
+class _FailureGetAllLessonRepository extends LessonRepository {
+  @override
+  Future<Result<List<Lesson>>> getAll() async {
+    return Result.failure('getAll failed');
+  }
 }
 
 class _FailingInitLessonRepository extends LessonRepository {

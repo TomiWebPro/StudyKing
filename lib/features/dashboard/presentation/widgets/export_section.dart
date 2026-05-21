@@ -4,6 +4,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
@@ -284,16 +285,89 @@ class ExportSection extends ConsumerWidget {
 
   Future<void> _exportBackupDirect(BuildContext context, WidgetRef ref) async {
     final l10n = AppLocalizations.of(context)!;
-    final confirmed = await _showExportConfirmation(
-      context,
-      l10n.exportBackup,
-      l10n.comprehensiveReportExported,
-      l10n.exportCsvDetail,
+
+    // Show sensitive data dialog before backup
+    if (!context.mounted) return;
+    final includeSensitive = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.exportBackup),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.backupContainsSensitiveData),
+            const SizedBox(height: 8),
+            Text(
+              l10n.sensitiveDataWillBeExcluded,
+              style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                color: Theme.of(ctx).colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Theme.of(ctx).colorScheme.errorContainer.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber, size: 20, color: Theme.of(ctx).colorScheme.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          l10n.sensitiveDataWillBeExcluded,
+                          style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(ctx).colorScheme.error,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.apiKeyPlaintextWarning,
+                    style: Theme.of(ctx).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(ctx).colorScheme.error,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, null),
+            child: Text(l10n.cancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: Text(l10n.excludeSensitiveData),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text(l10n.exportBackup),
+          ),
+        ],
+      ),
     );
-    if (!confirmed || !context.mounted) return;
+
+    if (includeSensitive == null || !context.mounted) return;
+
     try {
       final backupService = ref.read(dataBackupServiceProvider);
-      final boxData = backupService.collectAllBoxData();
+      var boxData = backupService.collectAllBoxData();
+
+      // Exclude sensitive data if user chose so
+      if (includeSensitive == true) {
+        boxData.remove(HiveBoxNames.settings);
+      }
+
       final result = await backupService.exportAllData(boxData: boxData);
       if (result.isSuccess && context.mounted) {
         final filePath = result.data!;

@@ -10,7 +10,9 @@ import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/theme/app_theme.dart';
@@ -18,16 +20,10 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ContentLibraryScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
-  final SourceRepository? sourceRepo;
-  final QuestionRepository? questionRepo;
-  final SubjectRepository? subjectRepo;
 
   const ContentLibraryScreen({
     super.key,
     this.preselectedSubjectId,
-    this.sourceRepo,
-    this.questionRepo,
-    this.subjectRepo,
   });
 
   @override
@@ -36,8 +32,8 @@ class ContentLibraryScreen extends ConsumerStatefulWidget {
 
 class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   static final Logger _logger = const Logger('ContentLibraryScreen');
-  late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
-  late final QuestionRepository _questionRepo = widget.questionRepo ?? QuestionRepository();
+  late final SourceRepository _sourceRepo;
+  late final QuestionRepository _questionRepo;
   List<Source> _sources = [];
   List<Subject> _subjects = [];
   bool _isLoading = true;
@@ -52,7 +48,14 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   @override
   void initState() {
     super.initState();
+    _sourceRepo = ref.read(sourceRepositoryProvider);
+    _questionRepo = ref.read(questionRepositoryProvider);
     _load();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -63,7 +66,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     try {
       await _sourceRepo.init();
       await _questionRepo.init();
-      final subjectsRepo = widget.subjectRepo ?? SubjectRepository();
+      final subjectsRepo = ref.read(subjectRepositoryProvider);
       await subjectsRepo.init();
       final subjectsResult = await subjectsRepo.getAll();
       final sourcesResult = await _sourceRepo.getAll();

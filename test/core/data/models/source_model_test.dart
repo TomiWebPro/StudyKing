@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/data/enums.dart';
 
@@ -411,6 +412,13 @@ void main() {
         );
         final copy = original.copyWith(generatedQuestionIds: null);
         expect(copy.generatedQuestionIds, ['q1', 'q2']);
+      });
+    });
+
+    group('Hive annotations', () {
+      test('extends HiveObject', () {
+        final source = Source(id: 's1', title: 'Test', type: SourceType.pdf);
+        expect(source, isA<HiveObject>());
       });
     });
 

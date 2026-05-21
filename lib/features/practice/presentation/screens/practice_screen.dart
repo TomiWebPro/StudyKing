@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive/hive.dart';
-import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -27,6 +25,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/practice_data_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_empty_state.dart';
@@ -98,6 +97,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       studentIdService: _studentIdService,
     );
     _loadSubjects();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _loadSubjects() async {
@@ -557,13 +561,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   Future<void> _showExamHistory() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final box = await Hive.openBox(HiveBoxNames.examResults);
-      final allResults = box.values.cast<Map<String, dynamic>>().toList()
-        ..sort((a, b) {
-          final aTime = (a['result'] as Map<String, dynamic>?)?['startTime'] as String? ?? '';
-          final bTime = (b['result'] as Map<String, dynamic>?)?['startTime'] as String? ?? '';
-          return bTime.compareTo(aTime);
-        });
+      final allResults = await ExamSessionService.getSavedExamResults();
       if (!mounted || allResults.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

@@ -25,6 +25,7 @@ import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 
@@ -33,6 +34,7 @@ class TutorService {
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
+  final SpacedRepetitionService _spacedRepetitionService;
   final String _modelId;
   final PlanAdherenceOrchestrator _planOrchestrator;
   final ExerciseEvaluator _exerciseEvaluator;
@@ -52,6 +54,7 @@ class TutorService {
     required DatabaseService database,
     required LlmService llmService,
     required MasteryGraphService masteryService,
+    required SpacedRepetitionService spacedRepetitionService,
     required String modelId,
     required ExerciseEvaluator exerciseEvaluator,
     required ConversationRepository conversationRepository,
@@ -64,6 +67,7 @@ class TutorService {
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
+        _spacedRepetitionService = spacedRepetitionService,
         _modelId = modelId,
         _exerciseEvaluator = exerciseEvaluator,
         _conversationRepository = conversationRepository,
@@ -204,6 +208,7 @@ class TutorService {
     await _saveCurrentSession(session);
     await _recordMasteryAttempt(session);
     await _persistExercisesAsQuestions(session);
+    await _markTopicsForPriorityReview(session);
     await _recordLessonActivity(session);
     await _saveAsSessionModel(session);
     await _updateScheduledSession(session);
@@ -227,6 +232,21 @@ class TutorService {
       confidence: session.confidenceRating.clamp(0, 5).round(),
       timeSpentMs: _elapsedMinutes(session) * msPerMinute,
     );
+  }
+
+  Future<void> _markTopicsForPriorityReview(TutorSession session) async {
+    try {
+      final questionsResult = await _spacedRepetitionService.getTopicTimeDue(session.topicId);
+      final questions = questionsResult.data ?? [];
+      if (questions.isEmpty) return;
+      final now = _clock.now();
+      for (final q in questions) {
+        final updated = q.copyWith(nextReview: now.subtract(const Duration(hours: 1)));
+        await _database.questionRepository.save(q.id, updated);
+      }
+    } catch (e) {
+      _logger.w('Failed to mark topics for priority review', e);
+    }
   }
 
   Future<void> _recordLessonActivity(TutorSession session) async {

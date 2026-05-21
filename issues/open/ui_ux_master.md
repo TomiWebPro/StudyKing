@@ -1,505 +1,611 @@
-# UI/UX Master — Round 2 Issue Report
+# UI/UX Master — Round 3 Issue Report
 
-**Date:** 2026-05-20
-**Scope:** Full codebase re-exploration — state management patterns, DI bypass, monolith screens, loading/error surfaces, missing dispose
-**Method:** Screen-by-screen state management audit, dispose audit, async loading gap analysis, DI consistency check
-**Note:** This is a supplement to the existing `issues/completed/ui_ux_master.md`. Findings below are **new** — not present in the Round 1 report.
+**Date:** 2026-05-21
+**Scope:** Web platform (PWA/manifest/meta), loading/error/empty state audit, route transitions, inline vs reusable widgets, locale switching, accessibility
+**Method:** Screen-by-screen audit, web asset inspection, transition/animation analysis, accessibility semantics review, locale-switch behavior testing
+**Note:** This report supplements the Round 1 and Round 2 reports in `issues/completed/`. Findings below are **new** — not present in earlier rounds.
 
 ---
 
 ## BLOCKER — App crashes or user cannot proceed
 
-### B-1: PracticeScreen fragmented state — 15+ mutable fields, no dispose, silent failures never surfaced
+### B-1: Web PWA manifest and viewport missing — app unresponsive on mobile web
 
-**Context:** `lib/features/practice/presentation/screens/practice_screen.dart`
+**Context:**
+- `web/index.html:1-46`
+- `web/manifest.json:1-35`
 
-**Issue:** The screen manages state with 15+ individual mutable class fields scattered across the class body:
-
-```dart
-bool _isLoading = true;
-String? _loadError;
-Map<String, int> _dueCounts = {};
-bool _isLoadingDueCounts = false;
-bool _dueCountsLoadFailed = false;
-int _totalQuestionCount = 0;
-int _questionsToday = 0;
-bool _questionCountLoadFailed = false;
-bool _isLoadingActivity = true;
-int _weeklyAccuracy = 0;
-int _weeklyActivity = 0;
-int _practiceStreak = 0;
-int _weakTopicCount = 0;
-int _mediumTopicCount = 0;
-int _strongTopicCount = 0;
-List<Session> _recentSessions = [];
+**Issue (a): Missing `<meta name="viewport">` tag.** The `web/index.html` does NOT include:
+```html
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 ```
+Without this tag, mobile browsers render the app at a desktop-width viewport (typically 980px). The user must manually pinch-zoom to see any content. All `ResponsiveUtils` breakpoints (xs=600px, sm=840px) become meaningless because the effective CSS pixel width is always —980px on every phone.
 
-Four parallel async load methods (`_loadSubjects`, `_loadDueCounts`, `_loadQuestionCount`, `_loadActivity`) race against each other and the widget lifecycle. There is **no `dispose()` override**. The `_dueCountsLoadFailed` and `_questionCountLoadFailed` booleans are **never surfaced in the UI** — the user sees zero-valued defaults as if no data exists. When `_loadDueCounts` fails silently, spaced repetition cards show "0 due reviews" and the user misses review sessions entirely.
+**Issue (b): PWA manifest colors use default Flutter blue instead of app brand purple.**
+```json
+{
+  "background_color": "#0175C2",
+  "theme_color": "#0175C2"
+}
+```
+The app's seed color is `#673AB7` (deep purple). The manifest's blue (`#0175C2`) creates a jarring color mismatch on the PWA splash screen, task switcher, and browser chrome. Users installing the PWA see a blue splash screen that transitions to a purple app.
 
-**Root cause:** The screen predates the current Riverpod architecture and was never migrated. It uses imperative `setState` + manual `initState` loading instead of `AsyncValue.when()`.
+**Issue (c): `<title>studyking</title>` uses lowercase.** The app brand is "StudyKing" (capital S, capital K). The HTML title and `apple-mobile-web-app-title` use lowercase "studyking".
 
-**Rationale:** A user with due reviews sees "0 due" because `_dueCountsLoadFailed` silently defaults the map. This directly prevents spaced repetition practice — a core feature.
+**Rationale:** On mobile web (the most accessible entry point for new users without app store installation), the missing viewport tag makes the app functionally unusable — all UI renders at ~41% scale on a typical 400px-wide phone. The brand color mismatch erodes trust: the PWA looks like a generic template.
+
+**Affected files:**
+- `web/index.html` — add viewport meta tag, fix casing
+- `web/manifest.json` — update colors to seed color `#673AB7`
 
 **Acceptance criteria (fixed):**
-- Replace all 15+ mutable fields with a single `AsyncValue<PracticeScreenData>` sealed class or equivalent.
-- Each data load method returns a `Result` or throws, caught at a single point in the widget tree.
-- Loading, error, and data states are rendered via `AsyncValue.when()` for the aggregate state.
-- A `dispose()` override is added (even if no resources need cleanup — prevents future leaks).
-- Error states show the `ErrorRetryWidget` with a retry callback that re-runs all loads.
-- Verify with a test: mock a failing due-count provider → UI shows error, not "0 due."
+- Add `<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">` to `web/index.html` `<head>` before the `<base>` tag.
+- Change `manifest.json` `background_color` and `theme_color` to `#673AB7` (matching `ColorScheme.fromSeed` seed color in `app_theme.dart:169`).
+- Update `<title>` and `apple-mobile-web-app-title` to "StudyKing".
+- Verify on a 375px-wide emulated mobile device: content fills the viewport, no horizontal scroll, no pinch-zoom required.
 
 ---
 
-### B-2: ContentLibraryScreen creates fresh Repository instances, bypassing DI — stale data after navigation
+### B-2: `onGenerateRoute` always uses fade transition — violates `reduceMotion` setting
 
-**Context:** `lib/features/ingestion/presentation/content_library_screen.dart:39–41`
+**Context:** `lib/core/routes/app_router.dart:323-335`
 
 ```dart
-late final SourceRepository _sourceRepo = widget.sourceRepo ?? SourceRepository();
-late final QuestionRepository _questionRepo = widget.questionRepo ?? QuestionRepository();
+PageRouteBuilder<dynamic> _materialPageRoute(Widget page, RouteSettings settings) {
+  return PageRouteBuilder(
+    settings: settings,
+    pageBuilder: (context, animation, secondaryAnimation) => page,
+    transitionsBuilder: (context, animation, secondaryAnimation, child) {
+      return FadeTransition(opacity: animation, child: child);
+    },
+    transitionDuration: Timeouts.routeTransition,
+  );
+}
 ```
 
-**Issue:** The screen creates fresh `SourceRepository()`, `QuestionRepository()`, and `SubjectRepository()` instances in `initState`. These bypass the `DatabaseService`-managed lifecycle. When the user uploads a source via `UploadScreen` (which uses providers connected to `DatabaseService`), then navigates to `ContentLibraryScreen`, the new inline `SourceRepository` may not see the uploaded data because it's a different Hive box connection. If Hive boxes were opened by `DatabaseService` and the new instance tries to re-open, it may read stale cached values.
+**Issue:** The route transition animation ignores the user's `reduceMotion` setting entirely. Every navigation — including trivial route pushes like opening a dialog-equivalent screen — uses a 200ms `FadeTransition`. For users with `reduceMotion: true` in Settings or with the system `Accessibility > Reduce Motion` enabled, the animation still plays.
 
-There is also no `dispose()` override on a `StatefulWidget` that creates disposable resources.
+Per AGENTS.md: `"Use `pumpAndSettle` for widget tests that involve async operations"` — but the production code doesn't check the setting.
 
-**Rationale:** ContentLibraryScreen is the primary way users verify their uploaded materials. Stale data here means users re-upload content they think was "lost," creating wasted API calls and confusion.
+**Rationale:** For users with vestibular disorders or who prefer reduced motion, unnecessary animations can cause discomfort. The `MainScreen` already reads `settingsProvider.reduceMotion` but applies it only to tab switching (line 664 of `main.dart`), not to route transitions.
+
+**Affected files:**
+- `lib/core/routes/app_router.dart:323-335`
 
 **Acceptance criteria (fixed):**
-- Remove inline `SourceRepository()` / `QuestionRepository()` / `SubjectRepository()` creation.
-- Use existing Riverpod providers (`sourceRepositoryProvider`, `questionRepositoryProvider`, `subjectRepositoryProvider`).
-- Add a `dispose()` override (even if the provider-refactored version has nothing to dispose).
-- Test: upload a source → navigate to ContentLibrary → assert the new source appears.
+- Pass `reduceMotion` flag to `_materialPageRoute` (via a global or provider).
+- When `reduceMotion == true`, use `TransitionBuilder.none` (instant transition) or `OpacityTransition` with `0ms` duration.
+- Verify: with `reduceMotion: true`, navigation is instant (no fade); with `reduceMotion: false`, existing 200ms fade is preserved.
+- Test: widget test asserting route transition duration == 0 when reduceMotion is enabled.
 
 ---
 
 ## MAJOR — Feature is broken or misleading
 
-### M-1: TutorScreen initialization shows raw `e.toString()` in user-facing error message
+### M-1: Locale-switch stale text on `AutomaticKeepAliveClientMixin` screens (TutorScreen, MentorScreen, FocusTimerScreen, etc.)
 
-**Context:** `lib/features/teaching/presentation/tutor_screen.dart:168`
+**Context (per AGENTS.md i18n Locale Switching Gotcha):**
+- `lib/features/teaching/presentation/tutor_screen.dart:54` — `AutomaticKeepAliveClientMixin`
+- `lib/features/mentor/presentation/mentor_screen.dart:33` — no mixin, but caches `l10n` via `AppLocalizations.of(context)!`
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart:44` — `AutomaticKeepAliveClientMixin`
+- `lib/features/settings/presentation/settings_screen.dart:76` — `AutomaticKeepAliveClientMixin`
+- `lib/features/dashboard/presentation/dashboard_screen.dart:46` — `AutomaticKeepAliveClientMixin`
+- `lib/features/sessions/presentation/session_tracker_screen.dart:37` — `AutomaticKeepAliveClientMixin`
+- `lib/features/practice/presentation/screens/practice_screen.dart:55` — `AutomaticKeepAliveClientMixin`
+- `lib/features/subjects/presentation/subject_detail_screen.dart` — likely also affected
 
+**Issue:** Any screen with `AutomaticKeepAliveClientMixin` that also calls `AppLocalizations.of(context)!` at the top of `build` is vulnerable to stale locale text. When the user changes language in Profile screen:
 ```dart
-_initErrorMessage = l10n.tutorInitFailed(e.toString());
+ref.read(localeProvider.notifier).state = Locale(value);
 ```
 
-**Issue:** The raw exception string is passed as a placeholder to the localized template. Users see messages like:
+The `MaterialApp` rebuilds with the new locale. However, screens with `wantKeepAlive = true` are in a preserved subtree. Their `build` method IS called (because `ref.watch(localeProvider)` is triggered), BUT if the screen uses `AutomaticKeepAliveClientMixin`, the `KeepAlive` parent may short-circuit the full build. The l10n captured via `AppLocalizations.of(context)!` references a `Localizations` widget that may have already been replaced, returning stale strings.
 
-> "Failed to initialize tutor: SocketException: Connection refused (OS Error: Connection refused, errno = 111)"
+At minimum, `TutorScreen` (line 643+ in its build) caches `l10n` locally:
+```dart
+final l10n = AppLocalizations.of(context)!;
+```
+And then uses it for ALL strings. After locale switch, these strings remain unchanged until the user re-enters the screen.
 
-This exposes internal architecture, hostnames (if embedded in error), and implementation details.
+**Rationale:** The AGENTS.md explicitly warns: "any screen that caches l10n in a local variable will display stale strings until the screen is re-entered." This affects the most-used screens (Dashboard, Practice, FocusTimer, Settings) and the most AI-intensive screens (Tutor, Mentor). A user who switches from English to Spanish will see a mix of English and Spanish text.
 
-**Rationale:** Violates the project's Error Handling Conventions (AGENTS.md: "log the error with a descriptive message" for internal handling). This is the tutor screen — the most AI-intensive screen. Errors here should be empathetic and actionable.
+**Affected files:**
+- ALL screens with `AutomaticKeepAliveClientMixin` that read `l10n` at build time
 
 **Acceptance criteria (fixed):**
-- Replace `e.toString()` with a generic localized message: `l10n.tutorInitFailedGeneric`.
-- Log the full exception to the Logger with a descriptive tag.
-- If additional details help the user (e.g., "Check your API key in Settings"), provide a separate localized string.
+- For screens using `AutomaticKeepAliveClientMixin`, ensure they also `ref.watch(localeProvider)` in `build` to force rebuild on locale change, AND call `AppLocalizations.of(context)!` inside `build` (not cached).
+- Add a `ref.watch(localeProvider)` call before any `l10n` usage in all affected screens.
+- Verify: switch locale → navigate to Dashboard → all text is in the new locale.
+- Write a test: mock locale provider → change locale → assert screen re-renders with new strings.
 
 ---
 
-### M-2: Dashboard `_buildSourcesCard` duplicates ~80 lines of identical layout between zero/has-sources branches
+### M-2: SettingsScreen has no loading indicator — blank screen until provider resolves
 
-**Context:** `lib/features/dashboard/presentation/dashboard_screen.dart:560–650` (~90 lines)
-
-**Issue:** The method has two branches — one for `count == 0` (loading not in progress) and one for `count > 0 || isLoading`. Both branches produce a `Card` with an identical structure: `Semantics(button:) > InkWell > Padding > Row > Icon + Column(Text + Text/Text) + chevron`. Only the icon color, subtitle text, and RTL chevron handling differ. Any design change (new padding, different icon, different chevron behavior) must be made in both branches. Missing one creates a visual inconsistency.
-
-**Rationale:** This pattern appears 4+ times in the same file (SessionHistoryCard, PlannerCard, QuestionBankCard, SourcesCard). Each duplicates ~30-50 lines. The total duplication exceeds 200 lines within one file.
-
-**Acceptance criteria (fixed):**
-- Extract a reusable `DashboardNavCard` widget with parameters: `icon`, `iconColor`, `title`, `subtitle`, `onTap`.
-- Replace all 4 inline card builders (`_buildSessionHistoryCard`, `_buildSourcesCard`, `_buildPlannerCard`, `_buildQuestionBankCard`) with the new widget.
-- Verify: no visual change, all semantics preserved.
-
----
-
-### M-3: PracticeScreen bypasses all repository layers by reading Hive directly
-
-**Context:** `lib/features/practice/presentation/screens/practice_screen.dart:~155`
+**Context:** `lib/features/settings/presentation/settings_screen.dart:69-82`
 
 ```dart
-final settingsBox = await Hive.openBox(HiveBoxNames.settings);
-final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
+class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final settings = ref.watch(settingsProvider);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.settings)),
+      body: _buildSettingsBody(settings, l10n, theme),
+    );
+  }
 ```
 
-**Issue:** The practice screen reads the Hive settings box directly instead of going through `SettingsRepository` > `settingsProvider`. This bypasses caching, secure storage abstraction, and the provider-based reactivity system. If the settings repository implements encryption or migration in the future, the practice screen will read stale/unencrypted data.
+**Issue:** `settingsProvider` is an async provider. On first load (or after invalidation), the provider is in `AsyncLoading` state. However, the screen doesn't check `settings.isLoading` — it just reads `ref.watch(settingsProvider)` and passes whatever value comes through. If the provider returns a default/empty `Settings` object during loading, the screen renders empty sections. If it returns `AsyncValue.loading()`, the `.value` access may throw or return null.
 
-**Rationale:** Direct Hive access in presentation layer violates the layered architecture. The AGENTS.md conventions specify repositories as the data access boundary.
-
-**Acceptance criteria (fixed):**
-- Remove the direct `Hive.openBox` call.
-- Read the API key from `ref.watch(settingsProvider).apiKey` or the secure API key provider.
-- The `_loadQuestionCount` method should be refactored as part of B-1 to use providers.
-
----
-
-### M-4: SessionHistoryScreen — 715-line StatefulWidget with no Riverpod, manual state, no dispose
-
-**Context:** `lib/features/sessions/presentation/session_history_screen.dart`
-
-**Issue:** This is the only major screen in the app that uses `StatefulWidget` + `setState` exclusively — no Riverpod at all. It manages 8+ mutable fields manually:
-
+There is no `AsyncValue.when()` pattern here, unlike most other screens. Compare with `SubjectListScreen` which correctly uses:
 ```dart
-List<Session> _allSessions = [];
-List<Session> _filteredSessions = [];
-DateTime? _selectedDate;
-String? _selectedSubject;
-bool _isLoading = true;
-String? _error;
-// ... plus _filterError from _buildFilterSection
+subjectsAsync.when(
+  data: ...,
+  loading: () => const Center(child: LoadingIndicator()),
+  error: (error, stack) => ErrorRetryWidget(...),
+);
 ```
 
-It creates `SubjectRepository()` directly. No `dispose()` override. No `AsyncValue` patterns. The data loading and client-side filtering all run on the main isolate.
+**Rationale:** A blank Settings screen on first load (especially on slow devices where Hive takes time) appears broken. Users who navigate to Settings to fix an API key error see nothing — a frustrating dead end.
 
-**Rationale:** Inconsistency with the rest of the app. Manual state management is more error-prone for async data (missing mounted checks, stale closures). The lack of Riverpod means no reactivity — sessions added elsewhere don't appear without manual refresh.
+**Affected files:**
+- `lib/features/settings/presentation/settings_screen.dart`
 
 **Acceptance criteria (fixed):**
-- Migrate to Riverpod: create `sessionHistoryProvider` or `allSessionsProvider`.
-- Use `AsyncValue.when()` for loading/data/error.
-- Remove direct `SubjectRepository()` creation; use provider.
-- Add a `dispose()` override.
-- Retain client-side filtering but derive from a single async provider.
+- Use `ref.watch(settingsProvider)` with `.when()` pattern (loading / error / data).
+- Show `LoadingScreen()` during loading state.
+- Show `ErrorRetryWidget` with `ref.invalidate(settingsProvider)` on error.
+- Use `settings.valueOrNull` for the data case, or add a proper `.when()` builder.
+- Verify: invalidate `settingsProvider` → see loading indicator → data appears.
 
 ---
 
-### M-5: PlannerScreen (1706 lines) and SettingsScreen (1987 lines) — monolithic screens violating Single Responsibility
+### M-3: LessonDetailScreen builds inline error/empty UIs instead of using reusable widgets
 
-**Context:**
-- `lib/features/planner/presentation/planner_screen.dart` (1706 lines)
-- `lib/features/settings/presentation/settings_screen.dart` (1987 lines)
+**Context:** `lib/features/lessons/presentation/lesson_detail_screen.dart:103-181`
 
-**Issue (PlannerScreen):** This single file contains 5+ distinct responsibilities:
-1. Plan generation form (course input, days, hours)
-2. Multi-syllabus entry management
-3. Plan display (daily plans, summary, pace adjustment)
-4. Calendar tab view
-5. Roadmap CRUD (create, edit, delete)
-6. Pending action handling
-7. Adherence warnings and catch-up flows
-8. Syllabus progress display
-9. Pace adjustment slider with completion date estimation
+**Issue:** The screen has three manual state branches:
+1. **Error state (lines 103-144):** Builds its own `Scaffold` with inline `Icon(Icons.error_outline)`, `Text(l10n.failedToLoadLesson)`, `OutlinedButton.icon` for back, and `FilledButton.icon` for retry. This is a custom layout that duplicates the functionality of `ErrorRetryWidget` and `NotFoundScreen`.
+2. **Loading state (lines 146-151):** Shows `LoadingIndicator()` — correct use of reusable widget.
+3. **Empty blocks state (lines 154-182):** Builds its own `Icon(Icons.hourglass_top)`, `Text(l10n.generating)`, `Text(l10n.inProgress)`, and `OutlinedButton.icon` for refresh. This duplicates `EmptyStateWidget`.
 
-Internal methods like `_buildStudyPlanTab` are 300+ lines. `_buildPaceAdjustment` duplicates ~60% of its code between single-subject and multi-subject paths.
+The error state (lines 103-144) is particularly wasteful — it duplicates the `Scaffold` wrapper and AppBar that's already present in the loading and success states. If the AppBar title, back button behavior, or error icon changes, it must be updated in three places.
 
-**Issue (SettingsScreen):** 1987 lines mixing:
-1. Auto/manual backup & restore
-2. Theme mode (light/dark/high-contrast)
-3. Font size slider
-4. Accessibility options (bold, reduce motion, touch targets)
-5. API key management (with secure storage)
-6. LLM provider selection + model search
-7. LLM usage/cost display
-8. Notification settings
-9. Data management (clear all data)
-10. Profile link, onboarding re-trigger, about section
+**Rationale:** The project has well-designed reusable widgets (`ErrorRetryWidget`, `EmptyStateWidget`, `LoadingIndicator`) in `lib/core/widgets/`. Not using them creates code duplication, inconsistent error layouts across screens (LessonDetail's error has back+retry buttons side by side, while other screens use the centered `ErrorRetryWidget` with retry only), and maintenance burden.
 
-**Rationale:** A developer changing roadmap creation must understand the entire 1706-line PlannerScreen context. Merge conflicts are more likely. Test coverage is harder to reason about. Widget rebuilds are broader than necessary.
+**Affected files:**
+- `lib/features/lessons/presentation/lesson_detail_screen.dart:103-181`
 
 **Acceptance criteria (fixed):**
-- PlannerScreen: Extract calendar tab into `PlannerCalendarTab`, roadmap tab into `PlannerRoadmapsTab`, plan generation into `PlanGenerationForm`. Each extracted widget gets its own file in `features/planner/presentation/widgets/`.
-- SettingsScreen: Extract backup section into `BackupRestoreSection`, accessibility into `AccessibilitySection`, LLM config into `LlmConfigSection`. Each gets its own file in `features/settings/presentation/widgets/`.
-- Verify: no visual change, all functionality preserved.
+- Replace the error state block (lines 103-144) with `ErrorRetryWidget(message: l10n.failedToLoadLesson, onRetry: _retryLoadLesson)`.
+- Add a "go back" action by wrapping in a `Scaffold` with AppBar that has a back button (or make `ErrorRetryWidget` support an optional back callback).
+- Replace the empty blocks state (lines 154-182) with `EmptyStateWidget(icon: Icons.hourglass_top, title: l10n.generating, subtitle: l10n.inProgress, actionLabel: l10n.retry, onAction: _loadLesson)`.
+- Verify: error/empty states render with consistent styling compared to other screens.
 
 ---
 
-### M-6: Dashboard rebuilds 10+ times on first load due to 10+ individual `ref.watch` calls
+### M-4: PlannerScreen shows raw `Exception` strings to users via SnackBar
 
-**Context:** `lib/features/dashboard/presentation/dashboard_screen.dart:128–156`
-
-**Issue:** The build method watches 10+ providers independently:
+**Context:** `lib/features/planner/presentation/planner_screen.dart:221-228`
 
 ```dart
-final allMasteryAsync = ref.watch(dashboardAllMasteryProvider(studentId));
-final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
-final overallStatsAsync = ref.watch(dashboardOverallStatsProvider(studentId));
-final weeklyTrendAsync = ref.watch(dashboardWeeklyTrendProvider(studentId));
-final focusStatsAsync = ref.watch(dashboardFocusStatsProvider(studentId));
-final adherenceAsync = ref.watch(dashboardAdherenceDataProvider(studentId));
-final topicNamesAsync = ref.watch(dashboardTopicNamesProvider(studentId));
-final badgesAsync = ref.watch(dashboardBadgesProvider(studentId));
-final workloadAsync = ref.watch(dashboardWorkloadProvider(studentId));
-final dueReviewsAsync = ref.watch(dashboardDueReviewsProvider(studentId));
-final checklistProgressAsync = ref.watch(dashboardChecklistProgressProvider(studentId));
-// + syllabusGoalsAsync
-// + asyncSnapshot
+ref.listen<PlannerState>(plannerProvider, (prev, next) {
+  if (next.error != null && prev?.error != next.error) {
+    final l = AppLocalizations.of(context)!;
+    ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+      SnackBar(content: Text(next.error!.contains('{') || next.error!.contains('Exception')
+          ? l.somethingWentWrong
+          : next.error!)),
+    );
 ```
 
-Each provider transitions through `AsyncLoading → AsyncData` (or `AsyncError`). Each transition triggers a full widget rebuild. During first load, the dashboard rebuilds 13+ times. The skeleton shimmer appears, disappears, and reappears as each provider resolves.
+**Issue:** The error display logic attempts to filter raw errors by checking for `{` or `Exception` substrings. This heuristic is fragile:
+- `next.error!.contains('{')` — catches JSON-like errors but misses exceptions with messages like `"HiveBoxNotOpen"` or `"SocketException: Connection refused"`.
+- `next.error!.contains('Exception')` — case-sensitive, misses lowercase "exception" in some platforms and Dart's `Error` types.
+- If neither pattern matches, the **raw error string is shown to the user**. For example, a database error like `"Failed to load roadmap: Null check operator used on a null value"` would pass through.
 
-**Rationale:** Excessive rebuilds cause visible flickering, especially on slower devices where the gap between provider resolutions is larger. The `showSkeleton` variable only checks if ALL are loading at the exact moment of build, so partial loading states show partial content mixed with placeholders.
+This violates the AGENTS.md Error Handling Convention: `"Public repository and service method return types must be Result<T>"` and `"throw is only allowed in private helper methods"`. If PlannerState.errors contain uncaught exceptions from the service layer, this indicates a deeper architecture issue.
+
+**Rationale:** Users seeing "Null check operator used on a null value" or "type 'String' is not a subtype of type 'int'" in a SnackBar will be confused and may lose trust in the app. The planner is a critical feature for goal-oriented students.
+
+**Affected files:**
+- `lib/features/planner/presentation/planner_screen.dart:221-228`
+- `lib/features/planner/providers/planner_providers.dart` (PlannerState model — errors should use ErrorCode or sealed class)
 
 **Acceptance criteria (fixed):**
-- Combine the 10+ stat providers into 2-3 aggregate providers (e.g., `dashboardStatsProvider` returning a record/class, `dashboardLearningProvider`, `dashboardEngagementProvider`).
-- Or: wrap the section in a single `AsyncValue.when()` that shows a unified skeleton until all data is ready.
-- Measure: verify dashboard builds < 5 times during initial load.
+- Replace `PlannerState.error` (String) with a sealed `PlannerError` class (or use `SpacedRepetitionErrorCode` pattern) so the UI can switch on error type.
+- Ensure all planner service methods return `Result<T>` — no `throw`.
+- Remove the fragile heuristic filtering. Every SnackBar message must be a localized string from `l10n`.
+- Log the raw error to Logger with descriptive message.
+- Test: inject a planner service that returns `Result.failure(PlannerError.databaseError)` → UI shows localized "Something went wrong", not the raw error.
 
 ---
 
-### M-7: ResponsiveUtils is partially implemented — LayoutBuilder used instead in some screens
+### M-5: SubjectListScreen uses dual async pattern (Riverpod.when + FutureBuilder)
 
-**Context:** `lib/features/planner/presentation/planner_screen.dart:680` and others
+**Context:** `lib/features/subjects/presentation/subject_list_screen.dart:39-103`
 
 ```dart
-// planner_screen.dart uses LayoutBuilder instead of ResponsiveUtils
-LayoutBuilder(
-  builder: (context, constraints) {
-    final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
-    ...
-  },
+subjectsAsync.when(
+  data: (repository) => _buildSubjectList(context, ref, repository),
+  loading: () => const Center(child: LoadingIndicator()),
+  error: (error, stack) => ErrorRetryWidget(...),
+),
+
+// Then inside _buildSubjectList:
+FutureBuilder<List<Subject>>(
+  future: repository.getAll().then((r) => r.data ?? []),
+  builder: (context, snapshot) { ... },
 )
 ```
 
-**Issue:** `lib/core/utils/responsive.dart` defines `breakpointOf()`, `screenPadding()`, `cardPadding()`, `gridCrossAxisCount()`, and extension methods. However:
-- Many screens only use `screenPadding` and `verticalSpacing` — not breakpoint-aware layout
-- `planner_screen.dart:680` uses `LayoutBuilder` with manual responsive detection instead of `ResponsiveUtils.breakpointOf(context)`
-- `summary_row.dart` (via m-16 in Round 1) uses manual width breakpoints
-- There is no standard responsive grid system — `gridCrossAxisCount` returns 2 or 4 with no gap configuration
+**Issue:** The Riverpod provider already fetches the subject list. The `when()` data callback receives a `SubjectRepository` instance. But instead of using the already-loaded data, `_buildSubjectList` calls `repository.getAll()` again via `FutureBuilder`, creating a second async fetch. This means:
+1. Two async requests to Hive for the same data.
+2. The `FutureBuilder` shows its own loading state (briefly) after Riverpod's loading state cleared.
+3. The `FutureBuilder` error state duplicates Riverpod's error handling.
+4. If the repository uses Riverpod's `ref.watch`, the `FutureBuilder` may not react to data changes.
 
-**Rationale:** Partial adoption creates inconsistent responsive behavior. On a 900px-wide tablet, some views use tablet layouts while others use phone layouts.
+**Rationale:** The dual pattern adds unnecessary complexity and an extra Hive read on every build. The `FutureBuilder` shows a flash of `LoadingIndicator()` between Riverpod's data resolution and the `FutureBuilder`'s completion.
+
+**Affected files:**
+- `lib/features/subjects/presentation/subject_list_screen.dart:64-104`
 
 **Acceptance criteria (fixed):**
-- Add `ResponsiveUtils` breakpoint-based layout helpers for common patterns (single-column vs multi-column, narrow vs wide form layout).
-- Replace `LayoutBuilder` + manual breakpoints in `planner_screen.dart` with `ResponsiveUtils` calls.
-- Remove the `summary_row.dart` manual breakpoints (from Round 1 m-16) as part of this change.
-- Test on xs (360px), sm (600px), md (900px), lg (1400px) widths.
+- Remove the `FutureBuilder` entirely. Pass the subjects list directly from the Riverpod provider.
+- Create a dedicated `subjectListProvider` (or extend `subjectsRepositoryProvider`) that returns `List<Subject>` (not `SubjectRepository`).
+- Use the data from Riverpod's `.when()` directly in `ListView.builder`.
+- Verify: subject list loads exactly once on navigation, no flash between loading states.
 
 ---
 
-### M-8: Dashboard skeleton loading is synchronous — all shimmer cards pulse in unison
+### M-6: LLM Task Manager has no loading state — flashes "No LLM tasks yet" before data arrives
 
-**Context:** `lib/features/dashboard/presentation/dashboard_screen.dart:_buildSkeletonLoading()`
+**Context:** `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:91-143`
 
-**Issue:** The skeleton builder creates 6 `ShimmerWidget` instances. Each `ShimmerWidget` uses its own `AnimationController` that starts in `initState` and `repeat(reverse: true)`. Since all 6 are created in the same build call, all 6 controllers start at the same time. The opacity fades in/out on all cards simultaneously, creating a single pulsing block rather than a cascading shimmer effect.
+```dart
+Widget build(BuildContext context) {
+  final tasks = taskService.getAllTasks();
+  // ...
+  return Scaffold(
+    body: tasks.isEmpty
+        ? Center(child: Column(children: [
+            Icon(Icons.check_circle_outline),
+            Text(l10n.noLlmTasksYet),
+          ]))
+        : Column(children: [ ... ]),
+  );
+}
+```
 
-**Rationale:** Cascading animations (each card slightly delayed) feel more natural and are the standard for skeleton loading patterns (Facebook, GitHub, Slack). The current synchronous pulse looks like a rendering glitch.
+**Issue:** The screen uses a listener pattern (`addListener → _onTasksChanged → setState`). On first build, `_onTasksChanged` may not have fired yet (or the task service may not have completed its initial async load). The `tasks` list is empty, so the screen renders "No LLM tasks yet" — then immediately replaces it with the task list when the listener fires.
+
+This flash is especially noticeable because:
+- The `llmTaskServiceProvider` may need to read from Hive or memory
+- The empty state icon (`check_circle_outline`) is misleading — it suggests "all clear" rather than "loading"
+
+**Rationale:** A flash of "no data" before showing data is a common UX anti-pattern that creates visual noise and can confuse users about whether their data has been lost.
+
+**Affected files:**
+- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:113-125`
 
 **Acceptance criteria (fixed):**
-- Create a single shared `AnimationController` in the parent and pass staggered delays to each `ShimmerWidget` (e.g., `delay: index * 150ms`).
-- Or: use a single `AnimatedBuilder` wrapping all skeleton cards with a staggered opacity curve.
-- Verify: shimmer appears as a wave from top to bottom.
+- Add an `_isInitialized` flag that transitions from false to true after the first `_onTasksChanged` callback.
+- While `!_isInitialized`, show `LoadingIndicator()` instead of the empty state.
+- Use `EmptyStateWidget` for the empty state after initialization (instead of inline layout).
+- Verify: screen shows loading → transitions to data or empty (no flash).
 
 ---
 
-### M-9: TutorScreen shows empty body during async initialization (no loading indicator)
+### M-7: OnboardingDialog has hardcoded 360px content height — not responsive
 
-**Context:** `lib/features/teaching/presentation/tutor_screen.dart`
+**Context:** `lib/features/onboarding/presentation/onboarding_dialog.dart:74-76`
 
-**Issue:** From `initState` (or post-frame callback) until `_startLesson()` completes and `_isInitialized = true`, the user sees the Scaffold with AppBar and an empty body. The initialization sequence includes:
-1. Prerequisite check (async Hive reads)
-2. `_tutorService.startLesson()` (calls LLM agent, generates lesson plan)
-3. `_sendInitialGreeting()` (streams first LLM response)
+```dart
+SizedBox(
+  height: 360,
+  child: PageView(
+    controller: _pageController,
+    ...
+```
 
-This can take 3-10+ seconds (especially on slow networks). No `LinearProgressIndicator`, `CircularProgressIndicator`, or skeleton placeholder is shown during this window.
+**Issue:** The onboarding dialog constrains its content area to exactly 360px. On small phones (e.g., iPhone SE at 667px screen height with status bar and dialog padding), this leaves little room for the page indicators, buttons, and checkbox below — potentially overflowing the dialog. On tablets, the 360px is dwarfed by the available space, wasting the opportunity for larger illustrations.
 
-**Rationale:** A 5-second empty screen looks like the app froze or the navigation didn't work. Users may tap back or re-tap the tutor button, creating duplicate sessions.
+**Rationale:** The onboarding dialog is the first thing new users see. A cramped or overflowing dialog creates a poor first impression. The content height should adapt to screen size.
+
+**Affected files:**
+- `lib/features/onboarding/presentation/onboarding_dialog.dart:74-76`
 
 **Acceptance criteria (fixed):**
-- Show a `LoadingScreen` or `LoadingIndicator` with a localized message (e.g., `l10n.preparingTutorLesson`) while `_isInitialized == false`.
-- Add a timeout (30 seconds) that shows an error state if initialization doesn't complete.
-- Show a `LinearProgressIndicator` in the AppBar during streaming (already partially done via `_isSending`).
+- Replace the fixed 360px height with a responsive value: `MediaQuery.sizeOf(context).height * 0.4` or `ResponsiveUtils`-based min/max.
+- Set a minimum height of 320px (for very small screens) and maximum of 480px (for large screens).
+- Verify on: iPhone SE (667px height), Pixel 7 (900px), iPad (1080px) — no overflow, no wasted space.
 
 ---
 
-### M-10: QuestionBankScreen `_searchController` never disposed — leaked listener
+### M-8: PracticeScreen FloatingActionButton overflows on very narrow widths
 
-**Context:** `lib/features/questions/presentation/question_bank_screen.dart`
+**Context:** `lib/features/practice/presentation/screens/practice_screen.dart:858-887`
 
-**Issue:** The screen creates `final _searchController = TextEditingController();` for the search field. The `addListener` at line ~70 sets up a callback but there is no `dispose()` override to dispose the controller. The previous Round 1 report (B-2) mentioned dialog-level controllers in this file but not the main `_searchController`. Confirmed: no `dispose()` exists in the file.
+```dart
+floatingActionButton: LayoutBuilder(
+  builder: (context, constraints) {
+    final isXs = constraints.maxWidth < 360;
+    if (isXs) {
+      return FloatingActionButton.small(...);
+    }
+    return SizedBox(
+      width: constraints.maxWidth - 64,
+      child: FloatingActionButton.extended(
+        // ... width is (constraints.maxWidth - 64)
+      ),
+    );
+  },
+),
+```
 
-**Rationale:** Every keystroke listener fires a `setState`. If the widget is removed from the tree (tab switch), the listener callback closes over a potentially stale `State`. Combined with the missing `dispose()`, the controller leaks.
+**Issue:** When `constraints.maxWidth` is between 360 and ~380, the FAB width `constraints.maxWidth - 64` is still very narrow (296-316px). The FAB's internal padding (horizontal 24dp on each side) plus the icon (24dp) and text can exceed this width on longer localized strings. For example, Spanish "Practicar" or German "Üben" may overflow.
+
+More critically, `constraints.maxWidth - 64` could be 0 or negative if `constraints.maxWidth < 64`, causing a `SizedBox` with negative/zero dimension.
+
+**Rationale:** A truncated or overlapped FAB makes the primary CTA (starting practice) inaccessible.
+
+**Affected files:**
+- `lib/features/practice/presentation/screens/practice_screen.dart:858-887`
 
 **Acceptance criteria (fixed):**
-- Add a `dispose()` override that calls `_searchController.dispose()`.
-- Verify with `leak_tracker_flutter_testing` that no controller leaks after navigation.
+- Add a minimum width clamp: `max(constraints.maxWidth - 64, 200)` or use `FloatingActionButton.extended` with `Constraints.tightFor(width: ...)`.
+- Use `Flexible` child: if the text doesn't fit, the FAB should still render with ellipsis.
+- Verify on a 320px-wide emulated device: FAB renders without overflow, text is readable.
 
 ---
 
 ## MINOR — Code quality / UX friction
 
-### m-1: `SplashScreen` uses hardcoded English strings for tagline and loading
+### m-1: Chat bubble has nested/conflicting Semantics wrappers
 
-**Context:** `lib/core/widgets/splash_screen.dart:31-36`
+**Context:** `lib/features/teaching/presentation/widgets/chat_bubble.dart:32-100`
 
-```dart
-Text('AI-Native Learning Companion', ...)
-```
+**Issue:** The chat bubble builds several layers of semantics:
+1. **Outer `Row`** (line 32-100): No explicit Semantics wrapper (OK).
+2. **Inner text content** (lines 130-149):
+   ```dart
+   final textWidget = Text(content, ...);
+   if (message.isStreaming) {
+     return Semantics(liveRegion: ..., child: textWidget);
+   }
+   return Semantics(label: message.content, child: textWidget);
+   ```
+3. **Evaluation content** (lines 158-218): Has its own `Semantics(label: _evaluationSemanticLabel(...))`.
 
-**Issue:** The tagline "AI-Native Learning Companion" is hardcoded. While the app title "StudyKing" is a proper noun and acceptable, the tagline is descriptive content that should be localized. This displays before `AppLocalizations` is loaded, but a `Builder` could defer rendering until locale is available or use `l10n?.tagline ?? 'AI-Native Learning Companion'` per the AGENTS.md null-coalesce pattern.
+When both the outer `InkWell` (via `Semantics(button: true, label: ...)` in the conversation list) and the inner `Semantics(label: content)` read the same message, a screen reader may announce the content twice — once as the button label and once as the static text. The `Semantics(label: message.content)` on line 148 overrides the Text widget's auto-generated semantics but doesn't merge with the parent button semantics.
+
+**Rationale:** Duplicate or conflicting screen reader announcements degrade the experience for blind and low-vision users — one of the app's stated audiences given the voice-input features.
+
+**Affected files:**
+- `lib/features/teaching/presentation/widgets/chat_bubble.dart:32-149`
 
 **Acceptance criteria (fixed):**
-- Either add a `TaglinePlaceholder` l10n key with locale-specific translations, or
-- Use a getter that returns a safe English fallback until l10n loads.
-- Add tests that splash screen renders without crashing before l10n is available.
+- Remove the inner `Semantics(label: message.content)` wrapper on line 146-148. The `Text` widget already exposes its content to accessibility APIs.
+- Keep the `Semantics(liveRegion: ...)` for streaming messages (line 141).
+- For evaluation content, ensure the Row containing the score icon and percentage is labeled once via `Semantics(label: _evaluationSemanticLabel(...), child: Row(...))`.
+- Verify with TalkBack/VoiceOver: message content is announced once, not duplicated.
 
 ---
 
-### m-2: `ApiKeyBanner` uses 30% opacity errorContainer — potential WCAG contrast failure
+### m-2: PlannerScreen uses `ScaffoldMessenger.maybeOf()` — inconsistent error handling pattern
 
-**Context:** `lib/main.dart:728` and `lib/features/onboarding/presentation/onboarding_dialog.dart:331`
+**Context:** `lib/features/planner/presentation/planner_screen.dart:224`
 
 ```dart
-color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
+ScaffoldMessenger.maybeOf(context)?.showSnackBar(...)
 ```
 
-**Issue:** The error container is tinted at 30% opacity. On a white/light scaffold background, the resulting color is a very light pink/purple. The text rendered on top uses `theme.colorScheme.error` (typically red) and `theme.colorScheme.onSurface`. Depending on the theme seed color, this may produce a contrast ratio below WCAG AA (4.5:1 for normal text at 14pt, 3:1 for large text at 18pt).
+**Issue:** The planner is the only screen in the app that uses `ScaffoldMessenger.maybeOf()`. All other screens use `ScaffoldMessenger.of(context)` (which throws if no `ScaffoldMessenger` is found). The `maybeOf` pattern silently swallows errors if the context is not inside a MaterialApp (which should never happen in this app's architecture). This inconsistency suggests the planner screen was built with defensive coding that masks potential bugs.
 
-**Rationale:** The API key banner is critical — it warns users they cannot use AI features. Low contrast makes it easy to miss or dismiss without reading.
+**Rationale:** Silent error swallowing in critical user feedback (error SnackBars) means failures in the planner go completely unnoticed. Other screens trust the architecture and use `of()` consistently.
+
+**Affected files:**
+- `lib/features/planner/presentation/planner_screen.dart:224, 233`
 
 **Acceptance criteria (fixed):**
-- Remove the 0.3 alpha multiplier, or use a pre-defined semi-transparent color with verified contrast.
-- Use `theme.colorScheme.errorContainer` at full opacity (it's already a light container color by design).
-- Test contrast ratio ≥ 4.5:1 for body text using a color contrast analyzer.
+- Replace `ScaffoldMessenger.maybeOf(context)?.showSnackBar` with `ScaffoldMessenger.of(context).showSnackBar`.
+- Add a comment if the `maybeOf` was intentional (explaining the edge case), or remove it for consistency.
+- Verify: planner error SnackBars display correctly in all navigation contexts.
 
 ---
 
-### m-3: FocusTimerScreen calls `_service.dispose()` — may affect shared StudyTimerService
+### m-3: `ShimmerWidget` has `didChangeDependencies` that calls `_controller.repeat()` without checking mounted
 
-**Context:** `lib/features/focus_mode/presentation/focus_timer_screen.dart:497`
+**Context:** `lib/core/widgets/shimmer_widget.dart:40-51`
 
 ```dart
-_service.dispose();
+@override
+void didChangeDependencies() {
+  super.didChangeDependencies();
+  final enabled = TickerMode.valuesOf(context).enabled;
+  if (enabled) {
+    if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  } else {
+    if (_controller.isAnimating) {
+      _controller.stop();
+    }
+  }
+}
 ```
 
-**Issue:** The focus timer screen creates `_service = ref.read(studyTimerServiceProvider)` and calls `_service.dispose()` in its own `dispose()`. If `StudyTimerService` is scoped as a shared provider (not auto-disposing), disposing it here kills the service for all other consumers (e.g., SessionTrackerScreen, StudyProgressTracker). The `studyTimerServiceProvider` definition should determine whether this is safe, but the screen should not dispose shared dependencies.
+**Issue:** `didChangeDependencies` can be called multiple times during the widget's lifecycle. If the widget is deactivated and reactivated (e.g., moving between tabs), `TickerMode` may flip. However, there's no `mounted` check before calling `_controller.repeat()`. If the widget is in the process of being unmounted but `didChangeDependencies` fires (due to a parent rebuilding), `_controller.repeat()` could throw because the `Ticker` is already disposed.
+
+**Rationale:** The shimmer is used in the dashboard (the most-loaded screen). A crash in `ShimmerWidget.didChangeDependencies` could crash the entire dashboard, which is the first screen users see.
+
+**Affected files:**
+- `lib/core/widgets/shimmer_widget.dart:40-51`
 
 **Acceptance criteria (fixed):**
-- Remove `_service.dispose()` from `FocusTimerScreen.dispose()`.
-- Let the Riverpod provider lifecycle manage service disposal.
-- If `StudyTimerService` must be cleaned up, do so via `ref.onDispose` in the provider itself.
+- Add `if (!mounted) return;` at the top of `didChangeDependencies`.
 
 ---
 
-### m-4: NavigationBar `Tooltip` only wraps the Icon, not the full destination touch target
+### m-4: `ConversationInput` uses `CallbackShortcuts` with an empty binding for Shift+Enter
 
-**Context:** `lib/main.dart:743-745`
+**Context:** `lib/core/widgets/conversation_input.dart:54-58`
 
 ```dart
-NavigationDestination(
-  icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
-  selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
-  label: d.label,
+CallbackShortcuts(
+  bindings: {
+    const SingleActivator(LogicalKeyboardKey.enter, shift: true): () {},
+  },
+  child: FocusTraversalGroup(...),
+)
+```
+
+**Issue:** The `CallbackShortcuts` widget maps `Shift+Enter` to an empty no-op function. This swallows the `Shift+Enter` event entirely — it cannot bubble up or be handled by a parent. If a user expects `Shift+Enter` to insert a newline in the text field, it does nothing. The underlying `TextField` with `maxLines: 4` supports multi-line input, but there's no way to insert a newline because:
+- `Enter` alone triggers `onSubmitted → _debouncedSend`
+- `Shift+Enter` is consumed by the empty callback
+
+This is a critical usability issue for users typing longer messages that need line breaks.
+
+**Rationale:** The mentor chat and tutor chat both use `ConversationInput` with `maxLines: 4`. Users writing multi-paragraph questions or code snippets cannot format their input. For an AI tutoring app, this is a significant limitation.
+
+**Affected files:**
+- `lib/core/widgets/conversation_input.dart:54-58`
+
+**Acceptance criteria (fixed):**
+- Remove the `CallbackShortcuts` wrapper entirely (it's not needed — `TextField.onSubmitted` only fires on `Enter` without shift by default).
+- Or change the binding to insert a newline: `const SingleActivator(LogicalKeyboardKey.enter, shift: true): () => controller.text += '\n'`.
+- Verify: `Enter` sends the message, `Shift+Enter` inserts a newline, the text field handles multi-line content correctly.
+
+---
+
+### m-5: `PlannerScreen` popup menu items use ListTile with fixed `dense: true, contentPadding: EdgeInsets.zero` — non-standard PopupMenu layout
+
+**Context:** `lib/features/planner/presentation/planner_screen.dart:262-289`
+
+```dart
+PopupMenuItem(
+  value: 'extend',
+  child: ListTile(
+    leading: const Icon(Icons.date_range, size: 20),
+    title: Text(l10n.catchUp),
+    dense: true,
+    contentPadding: EdgeInsets.zero,
+  ),
 ),
 ```
 
-**Issue:** The `Tooltip` wraps only the `Icon` widget (typically 24×24dp), not the entire `NavigationDestination` (which is 48+ dp tall). On desktop/web, the tooltip only appears when the cursor is precisely over the icon, not the larger touch target area. This is especially problematic because `NavigationDestination` already shows the label — the tooltip is most useful during label-only-show-selected mode (which this app uses on mobile), but on desktop (where NavigationRail also shows labels) the tooltip is redundant.
+**Issue:** The popup menu items use `ListTile` inside `PopupMenuItem`. This is non-standard — `PopupMenuItem` already provides the correct Material 3 touch target size and padding. Nesting `ListTile` inside `PopupMenuItem`:
+1. Double-pads the content (ListTile's internal padding + PopupMenuItem's padding).
+2. Uses `contentPadding: EdgeInsets.zero` to compensate, which is fragile.
+3. The `dense: true` reduces the touch target below the recommended 48dp.
 
-**Rationale:** Desktop users (Linux/web) who hover over the destination's label or padding area won't see the tooltip. The tooltip only appears when hovering exactly on the 24dp icon.
+The correct pattern is to use `PopupMenuItem(child: Text(...))` or `PopupMenuItem(child: ListTile(...))` but not both layered.
+
+**Rationale:** Inconsistency with Material 3. The non-standard padding may cause clipped text on some platforms or with larger font sizes.
+
+**Affected files:**
+- `lib/features/planner/presentation/planner_screen.dart:262-289`
 
 **Acceptance criteria (fixed):**
-- Move `Tooltip` to wrap the entire `NavigationDestination` widget, or
-- On desktop/web, increase the `NavigationRail` `minWidth` so labels are always shown and remove Tooltips entirely.
-- For mobile `NavigationBar`, remove redundant Tooltips (m-4 in Round 1 covered this for semantics; now address the hover target issue).
+- Replace `PopupMenuItem(child: ListTile(...))` with either `PopupMenuItem(child: Row(children: [Icon(...), SizedBox(width: 8), Text(...)]))` or use the `PopupMenuButton`'s `itemBuilder` with properly padded items.
+- Ensure touch targets are ≥ 48dp.
+- Verify: popup menu renders with standard Material 3 spacing.
 
 ---
 
-### m-5: `EmptyStateWidget` hardcodes 64px icon — ignores `ResponsiveUtils.emptyStateIconSize`
+### m-6: No Home/End or page-based keyboard navigation in scrollable screens
 
-**Context:** `lib/core/widgets/empty_state_widget.dart:29`
+**Context:** Multiple screens with `ListView` or `ScrollView`:
+- `lib/features/dashboard/presentation/dashboard_screen.dart` — long scrollable content
+- `lib/features/settings/presentation/settings_screen.dart` — very long scrollable content
+- `lib/features/sessions/presentation/session_history_screen.dart` — filterable list
+- `lib/features/questions/presentation/question_bank_screen.dart` — searchable list
+
+**Issue:** None of the scrollable screens handle keyboard navigation beyond default Flutter scroll behavior. On desktop/web platforms (which the app supports via `kIsWeb` and Linux builds), users expect:
+- `Home` / `End` keys to jump to top/bottom
+- `Page Up` / `Page Down` for rapid navigation
+- Focusable section headers for skip-navigation
+
+The app's scroll behavior (`_AppScrollBehavior` in `main.dart:450-477`) correctly enables scrollbars for desktop platforms but doesn't enable keyboard scroll shortcuts.
+
+**Rationale:** Desktop users (especially on Linux where the app can be installed) expect standard keyboard navigation. The Settings screen is 2025+ lines scrolled — keyboard navigation is essential for power users.
+
+**Affected files:**
+- `lib/core/widgets/widgets.dart` — add a `ScrollConfiguration` or `KeyboardScrollConfiguration`
+- All long scrollable screens
+
+**Acceptance criteria (fixed):**
+- Create a `KeyboardScrollConfiguration` (or extend `_AppScrollBehavior`) that binds `Home`, `End`, `PageUp`, `PageDown` to `Scrollable.ensureVisible` or `ScrollController.jumpTo`.
+- Apply it to the `MaterialApp` scrollBehavior or wrap individual scrollable screens.
+- Verify: on desktop web/Linux, pressing `Home` scrolls to top, `End` scrolls to bottom.
+
+---
+
+### m-7: `LlmTaskManagerScreen` empty state uses inline layout instead of `EmptyStateWidget`
+
+**Context:** `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:113-125`
 
 ```dart
-ExcludeSemantics(
-  child: Icon(icon, size: 64, color: ...),
-),
+body: tasks.isEmpty
+    ? Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_outline,
+                size: 64, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 16),
+            Text(l10n.noLlmTasksYet,
+                style: Theme.of(context).textTheme.titleMedium),
+          ],
+        ),
+      )
+    : ...
 ```
 
-**Issue:** The icon size is hardcoded to 64px. `ResponsiveUtils.emptyStateIconSize(context)` exists and returns responsive values (64/80/96/96 for xs/sm/md/lg breakpoints) but is not used here.
+**Issue:** The inline empty state duplicates `EmptyStateWidget` but with missing features:
+- No responsive icon size (hardcoded 64px)
+- No subtitle (while the existing EmptyStateWidget supports it)
+- No action button (cannot navigate to generate a task)
+- Uses `check_circle_outline` icon, which looks like "success" rather than "empty"
+
+**Affected files:**
+- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart:113-125`
 
 **Acceptance criteria (fixed):**
-- Use `ResponsiveUtils.emptyStateIconSize(context)` for the icon size.
+- Replace inline empty state with `EmptyStateWidget(icon: Icons.auto_awesome_outlined, title: l10n.noLlmTasksYet, subtitle: l10n.llmTasksEmptyHint, actionLabel: l10n.learnMore, onAction: () => Navigator.pushNamed(context, AppRoutes.quickGuide))`.
 
 ---
 
-### m-6: Dashboard has 4 structurally identical inline card builders
+### m-8: PWA `display: standalone` but no offline fallback page
 
-**Context:** `lib/features/dashboard/presentation/dashboard_screen.dart`
-- `_buildSessionHistoryCard` (~35 lines)
-- `_buildSourcesCard` (~90 lines, duplicated for zero/has-sources)
-- `_buildPlannerCard` (~30 lines)
-- `_buildQuestionBankCard` (~30 lines)
+**Context:** `web/manifest.json:5`
 
-**Issue:** All four use the same pattern: `Card > Semantics(button:, label:) > InkWell(onTap:, borderRadius:) > Padding > Row > Icon + Column(Text + Text) + RTL-aware chevron`. This is identical structure with different icons, colors, and text. Together they represent ~220 lines of duplicated layout code.
-
-**Rationale:** M-2 calls out the sources card duplication specifically. This expands the scope: all four cards should be a single reusable widget.
-
-**Acceptance criteria (fixed):**
-- Extract a `DashboardNavCard` (linked to M-2 acceptance criteria).
-- Verify all four cards render identically before and after.
-
----
-
-### m-7: `PlannerScreen._buildPaceAdjustment` has two branches with ~60% shared code
-
-**Context:** `lib/features/planner/presentation/planner_screen.dart:_buildPaceAdjustment()`
-
-**Issue:** The method has three branches:
-1. `state.plan == null` — simple "no plan yet" card
-2. `!hasMultipleSubjects` — single-subject pace slider with estimated completion date
-3. `hasMultipleSubjects` — per-subject sliders
-
-Branches 2 and 3 share the same card layout (Row with icon + title, Column of controls, Slider, apply button) but duplicate it entirely. Changing the card shape, adding a help tooltip, or adjusting padding must be replicated.
-
-**Acceptance criteria (fixed):**
-- Extract the common card wrapper into a shared widget.
-- Parameterize the content (single slider vs multiple sliders).
-- No visual change to either branch.
-
----
-
-### m-8: Auto-backup check runs on every app resume, iterating all Hive boxes
-
-**Context:** `lib/main.dart:75-150` (`_runAutoBackupCheck`), called at line 271 (startup) and line 371 (`didChangeAppLifecycleState.resumed`)
-
-**Issue:** `_runAutoBackupCheck()` iterates 35+ Hive box names, opens each box (if not already open), reads ALL values, and serializes each to a Map. This runs synchronously in the Flutter event loop. On every app resume — even just switching apps and switching back — this potentially serializes thousands of records. For a user with 6+ months of data, this causes a visible UI freeze of 100-500ms.
-
-**Rationale:** `didChangeAppLifecycleState` is called on every app foreground transition, even lock/unlock. Unnecessary I/O on every resume drains battery and janks the UI.
-
-**Acceptance criteria (fixed):**
-- Only run backup check once per day (check `lastAutoBackupDate` before iterating boxes).
-- Move backup serialization to an isolate (via `compute` or `Isolate.run`) to avoid blocking the UI thread.
-- Show a brief notification/snackbar if backup is running, so the user understands any brief stutter.
-
----
-
-### m-9: `DashboardHeader` export button opens Settings as fallback — non-obvious navigation
-
-**Context:** `lib/features/dashboard/presentation/widgets/dashboard_header.dart:41`
-
-```dart
-onPressed: onExportTap ?? () => Navigator.pushNamed(context, AppRoutes.settings),
+```json
+"display": "standalone"
 ```
 
-**Issue:** The export icon button's fallback (when `onExportTap` is null) navigates to Settings. The export section is actually on the dashboard (below the fold), so if the user taps the export icon, they expect to see export options — not Settings. This fallback is misleading. If `onExportTap` is null, the export button should either be hidden or the scroll-to-export should work unconditionally.
+**Issue:** The app is configured as a PWA with `display: standalone` (full-screen app-like experience), but there's no service worker registration or offline fallback page. When the user installs the PWA and has no network:
+- The app shows Flutter's default white-screen error
+- No "You are offline" message
+- No cached assets from a service worker
+
+This is a partial issue: Flutter web already bundles assets in the initial download, so the app may work offline for previously loaded routes. But without a service worker, new data fetches silently fail.
+
+**Affected files:**
+- Any new file `web/service_worker.dart` or equivalent
+- `web/manifest.json`
 
 **Acceptance criteria (fixed):**
-- Remove the fallback navigation to Settings.
-- Make `onExportTap` required (not nullable), or scroll to the export section unconditionally.
-- If export section isn't available, hide the icon button.
-
----
-
-### m-10: `DialogUtils.showConfirmationDialog` doesn't read `context` for l10n fallback
-
-**Context:** `lib/core/widgets/dialog_utils.dart` (Round 1 B-4 addressed the hardcoded English. This expands: even if English fallback is fixed, the function signature doesn't accept `AppLocalizations`, relying on the caller to pass labels every time.)
-
-**Issue:** Every caller of `showConfirmationDialog` must provide `cancelLabel` and `confirmLabel` manually. This creates the pattern seen across the codebase:
-
-```dart
-showConfirmationDialog(
-  context,
-  title: l10n.deleteTitle,
-  message: l10n.deleteMessage,
-  cancelLabel: l10n.cancel,  // manual every time
-  confirmLabel: l10n.delete,  // manual every time
-);
-```
-
-If a caller forgets to pass localized labels, the hardcoded English fallback is used.
-
-**Acceptance criteria (fixed):**
-- Change function signature to read `AppLocalizations.of(context)` internally for default labels.
-- Add `String? cancelLabel` and `String? confirmLabel` (optional, defaults to `l10n.cancel` / `l10n.confirm` or localized equivalent).
-- Migrate all callers to remove redundant label passing.
-- Verify with tests: no caller passes hardcoded English strings.
+- Register a basic Flutter service worker via `flutter_bootstrap.js` or a custom service worker script.
+- Add a network connectivity listener that shows a banner when offline (similar to `ApiKeyBanner` pattern).
+- Not a full offline mode — just graceful degradation.
 
 ---
 
@@ -507,6 +613,6 @@ If a caller forgets to pass localized labels, the hardcoded English fallback is 
 
 | Severity | Count | Key themes |
 |---|---|---|
-| BLOCKER | 2 | Fragmented state with silent failures, DI bypass causing stale data |
-| MAJOR | 10 | Raw error leaks, massive code duplication, direct Hive access, non-Riverpod screens, monoliths, excessive rebuilds, incomplete responsive layer, missing loading states, leaked controllers |
-| MINOR | 10 | Hardcoded strings, contrast issues, shared service disposal, tooltip target, responsive gaps, duplicated code patterns, startup jank, non-obvious navigation, dialog patterns |
+| BLOCKER | 2 | Web viewport/PWA missing (mobile web unusable), reduceMotion ignored in all route transitions |
+| MAJOR | 8 | Stale locale text on kept-alive screens, no loading in Settings, inline error UIs in LessonDetail, raw error leaks in Planner, dual async in SubjectList, LLM screen flashes empty, non-responsive onboarding dialog, FAB overflow |
+| MINOR | 8 | Nested chat semantics, inconsistent SnackBar pattern, shimmer mounted check, no Shift+Enter newline, non-standard popup menu layout, no desktop keyboard nav, LLM screen doesn't use EmptyStateWidget, no offline PWA fallback |

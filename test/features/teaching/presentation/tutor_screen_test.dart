@@ -14,6 +14,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
@@ -95,6 +96,10 @@ class _FailingTutorService extends TutorService {
           ),
           llmService: _FakeLlmService(),
           masteryService: MasteryGraphService(),
+          spacedRepetitionService: SpacedRepetitionService(
+            questionRepo: QuestionRepository(),
+            attemptRepo: AttemptRepository(),
+          ),
           modelId: 'test-model',
           exerciseEvaluator: _FakeExerciseEvaluator(),
           conversationRepository: ConversationRepository(),
@@ -132,6 +137,10 @@ class _FakeTutorService extends TutorService {
           ),
           llmService: _FakeLlmService(),
           masteryService: MasteryGraphService(),
+          spacedRepetitionService: SpacedRepetitionService(
+            questionRepo: QuestionRepository(),
+            attemptRepo: AttemptRepository(),
+          ),
           modelId: 'test-model',
           exerciseEvaluator: _FakeExerciseEvaluator(),
           conversationRepository: ConversationRepository(),

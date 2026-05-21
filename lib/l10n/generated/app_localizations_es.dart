@@ -4476,7 +4476,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get focusFirstVisitHelp =>
-      'Configure un temporizador y estudie sin distracciones. Las sesiones completadas cuentan para su plan diario.';
+      'El Modo de Enfoque tiene dos modos: Práctica (centro de estudio con sesiones de práctica integradas y completas) y Temporizador (temporizador de enfoque silencioso). Los tipos de sesión (Práctica Rápida, Repetición Espaciada, Áreas Débiles, Enfoque Libre) afectan qué preguntas aparecen en la práctica integrada. El modo Temporizador es para enfoque sin distracciones sin preguntas. Las estadísticas de sesión aparecen abajo.';
 
   @override
   String get contentManagement => 'Gestión de Contenido';
@@ -5424,6 +5424,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Navegar a la pantalla de práctica completa';
 
   @override
+  String get timerOnlyDescription =>
+      'El modo temporizador es un temporizador de enfoque silencioso. Las preguntas y la práctica están disponibles en la pestaña Práctica.';
+
+  @override
   String get generateLessonFromContent => 'Generar lección desde este material';
 
   @override
@@ -5894,4 +5898,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get profileDeleted => 'Perfil eliminado exitosamente';
+
+  @override
+  String get backupEncryptionPassword => 'Contraseña de cifrado (opcional)';
+
+  @override
+  String get backupEncryptionPasswordHint => 'Dejar vacío sin cifrado';
+
+  @override
+  String get practiceTheseTopics => 'Practicar Estos Temas';
+
+  @override
+  String get tutorInitFailedGeneric => 'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
+
+  @override
+  String get tagline => 'Compañero de Aprendizaje con IA';
+
+  @override
+  String get preparingTutorLesson => 'Preparando tu lección...';
+
+  @override
+  String get practiceLessonBlocks => 'Repasar Bloques de Lección';
 }

@@ -15,7 +15,7 @@ import 'package:studyking/features/focus_mode/presentation/widgets/inline_practi
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
-import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart' show focusSessionRepositoryProvider, studyTimerServiceProvider;
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
@@ -70,6 +70,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   bool _inlinePracticeActive = false;
   Subject? _inlinePracticeSubject;
   FocusSession? _lastFocusSession;
+  int _inlinePracticeQuestionCount = 10;
 
   bool _subjectsError = false;
   bool _dueCountsError = false;
@@ -85,6 +86,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _service = ref.read(studyTimerServiceProvider);
+    if (widget.defaultDurationMinutes != null && widget.defaultDurationMinutes! > 0) {
+      _selectedMinutes = widget.defaultDurationMinutes!;
+    }
     _initService();
   }
 
@@ -119,6 +123,17 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       _service.addOnSessionComplete(_onSessionComplete);
       _service.addOnTick(_onTick);
       await _loadStats();
+
+      try {
+        final focusSessionRepo = ref.read(focusSessionRepositoryProvider);
+        await focusSessionRepo.init();
+        final lastSessionResult = await focusSessionRepo.getLatest();
+        if (lastSessionResult.isSuccess && lastSessionResult.data != null) {
+          _lastFocusSession = lastSessionResult.data;
+        }
+      } catch (e) {
+        _logger.w('Failed to load persisted focus session', e);
+      }
 
       final settings = ref.read(settingsProvider);
       _breakDuration = settings.breakDurationSeconds;
@@ -201,7 +216,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       _breakRemaining = _breakDuration;
       _startBreakTimer();
     });
-    _loadStats();
+    unawaited(_loadStats());
     _recordAdherence(session);
     _checkBadges(session);
   }
@@ -403,7 +418,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     }
   }
 
-  void _startQuickPractice(Subject subject) async {
+  void _startFullPracticeSession(Subject subject) async {
     await Navigator.pushNamed(context, AppRoutes.practiceSession,
       arguments: PracticeSessionArgs(subjectId: subject.id),
     );
@@ -494,7 +509,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     _breakTimer?.cancel();
     _service.removeOnSessionComplete(_onSessionComplete);
     _service.removeOnTick(_onTick);
-    _service.dispose();
     super.dispose();
   }
 
@@ -521,7 +535,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     if (result == true) {
       await _service.cancelSession();
       setState(() {});
-      _loadStats();
+      await _loadStats();
     }
     return result ?? false;
   }
@@ -695,27 +709,39 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(
-              _studyMode ? Icons.menu_book_outlined : Icons.timer_outlined,
-              size: 20,
-              color: cs.primary,
+            Row(
+              children: [
+                Icon(
+                  _studyMode ? Icons.menu_book_outlined : Icons.timer_outlined,
+                  size: 20,
+                  color: cs.primary,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _studyMode ? l10n.practice : l10n.focus,
+                  style: Theme.of(context).textTheme.titleSmall,
+                ),
+                const Spacer(),
+                Semantics(
+                  button: true,
+                  label: _studyMode ? l10n.focusMode : l10n.practice,
+                  child: Switch(
+                    value: _studyMode,
+                    onChanged: (_service.hasActiveSession || _inBreak)
+                        ? null
+                        : (v) => setState(() => _studyMode = v),
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 8),
+            const SizedBox(height: 4),
             Text(
-              _studyMode ? l10n.practice : l10n.focus,
-              style: Theme.of(context).textTheme.titleSmall,
-            ),
-            const Spacer(),
-            Semantics(
-              button: true,
-              label: _studyMode ? l10n.focusMode : l10n.practice,
-              child: Switch(
-                value: _studyMode,
-                onChanged: (_service.hasActiveSession || _inBreak)
-                    ? null
-                    : (v) => setState(() => _studyMode = v),
+              _studyMode ? l10n.inlinePracticeSubtitle : l10n.timerOnlyDescription,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: cs.onSurfaceVariant,
               ),
             ),
           ],
@@ -817,7 +843,11 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               ],
             ),
           ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 8),
+        _buildSessionTypeSelector(theme, l10n),
+        const SizedBox(height: 8),
+        _buildQuestionCountSelector(theme, l10n),
+        const SizedBox(height: 8),
         Text(l10n.yourSubjects, style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         ..._subjects.map((subject) => _buildSubjectPracticeCard(theme, cs, l10n, subject)),
@@ -968,7 +998,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               subtitle: Text(l10n.fullPracticeSubtitle),
               onTap: () {
                 Navigator.pop(ctx);
-                _startQuickPractice(subject);
+                _startFullPracticeSession(subject);
               },
             ),
             const SizedBox(height: 8),
@@ -989,13 +1019,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     setState(() {
       _inlinePracticeActive = true;
       _inlinePracticeSubject = null;
+      if (_inlinePracticeQuestionCount < 50) {
+        _inlinePracticeQuestionCount = 50;
+      }
     });
   }
 
-  Future<void> _onInlinePracticeComplete(int correct, int total, Map<String, SubjectAccuracy> perSubject) async {
+  Future<void> _onInlinePracticeComplete(int correct, int total, Map<String, TopicAccuracy> perTopic) async {
     final studentId = ref.read(studentIdValueProvider);
     final now = DateTime.now();
-    final subjectIds = perSubject.keys.toList();
+    final topicIds = perTopic.keys.toList();
     final accuracy = total > 0 ? correct / total : 0.0;
 
     Map<String, double> masteryChanges = {};
@@ -1004,25 +1037,25 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     try {
       final masteryService = ref.read(masteryGraphServiceProvider);
 
-      for (final entry in perSubject.entries) {
-        final subjectId = entry.key;
-        final subjAccuracy = entry.value;
+      for (final entry in perTopic.entries) {
+        final topicId = entry.key;
+        final topicAcc = entry.value;
         final topicPerformance = TopicPerformance(
-          topicId: subjectId,
-          correct: subjAccuracy.correct,
-          total: subjAccuracy.total,
-          accuracyPercent: subjAccuracy.accuracyPercent,
+          topicId: topicId,
+          correct: topicAcc.correct,
+          total: topicAcc.total,
+          accuracyPercent: topicAcc.accuracyPercent,
         );
-        topicBreakdown[subjectId] = topicPerformance;
+        topicBreakdown[topicId] = topicPerformance;
       }
 
       final currentWeakTopics = await masteryService.getWeakTopics(studentId);
       if (currentWeakTopics.isSuccess && currentWeakTopics.data != null) {
         for (final topic in currentWeakTopics.data!) {
-          final topicId = topic.topicId;
-          final beforeValue = _masteryBeforeValues[topicId] ?? 0.0;
+          final tid = topic.topicId;
+          final beforeValue = _masteryBeforeValues[tid] ?? 0.0;
           final afterValue = topic.accuracy;
-          masteryChanges[topicId] = afterValue - beforeValue;
+          masteryChanges[tid] = afterValue - beforeValue;
         }
       }
     } catch (e) {
@@ -1030,24 +1063,35 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     }
 
     if (mounted) {
-      setState(() {
-        _inlinePracticeActive = false;
-        _inlinePracticeSubject = null;
-        _lastFocusSession = FocusSession(
-          id: 'focus_${now.millisecondsSinceEpoch}',
-          studentId: studentId,
-          startTime: now.subtract(const Duration(minutes: 5)),
-          endTime: now,
-          durationMinutes: 5,
-          questionsAnswered: total,
-          correctAnswers: correct,
-          accuracy: accuracy,
-          subjectIds: subjectIds,
-          masteryChanges: masteryChanges,
-          sessionType: _sessionType,
-          topicBreakdown: topicBreakdown,
-        );
-      });
+      final focusSession = FocusSession(
+        id: 'focus_${now.millisecondsSinceEpoch}',
+        studentId: studentId,
+        startTime: now.subtract(const Duration(minutes: 5)),
+        endTime: now,
+        durationMinutes: 5,
+        questionsAnswered: total,
+        correctAnswers: correct,
+        accuracy: accuracy,
+        subjectIds: topicIds,
+        masteryChanges: masteryChanges,
+        sessionType: _sessionType,
+        topicBreakdown: topicBreakdown,
+      );
+
+      try {
+        final repo = ref.read(focusSessionRepositoryProvider);
+        await repo.save(focusSession);
+      } catch (e) {
+        _logger.w('Failed to persist focus session', e);
+      }
+
+      if (mounted) {
+        setState(() {
+          _inlinePracticeActive = false;
+          _inlinePracticeSubject = null;
+          _lastFocusSession = focusSession;
+        });
+      }
     }
     _loadDueCounts();
   }
@@ -1087,6 +1131,24 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: cs.onSurfaceVariant,
               ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      _breakTimer?.cancel();
+                      setState(() {
+                        _inBreak = false;
+                        _completedSession = null;
+                      });
+                    },
+                    icon: const Icon(Icons.skip_next, size: 18),
+                    label: Text(l10n.skip),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -1161,7 +1223,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 physics: const AlwaysScrollableScrollPhysics(),
                 child: InlinePracticeWidget(
                   subjectId: subject?.id,
-                  questionCount: 10,
+                  questionCount: _inlinePracticeQuestionCount,
                   sessionType: _sessionType,
                   onComplete: _onInlinePracticeComplete,
                 ),
@@ -1194,8 +1256,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                 ),
               ],
             ),
-            const SizedBox(height: 16),
-            _buildSessionTypeSelector(theme, l10n),
             const SizedBox(height: 16),
             _buildSubjectPicker(),
             const SizedBox(height: 16),
@@ -1318,6 +1378,41 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       case FocusSessionType.freeFocus:
         return l10n.focus;
     }
+  }
+
+  Widget _buildQuestionCountSelector(ThemeData theme, AppLocalizations l10n) {
+    final counts = [5, 10, 15, 20, 30, 50];
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.questionsLabel,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Wrap(
+              spacing: 6,
+              runSpacing: 6,
+              children: counts.map((n) {
+                final selected = _inlinePracticeQuestionCount == n;
+                return ChoiceChip(
+                  label: Text('$n'),
+                  selected: selected,
+                  onSelected: (_) => setState(() => _inlinePracticeQuestionCount = n),
+                  visualDensity: VisualDensity.compact,
+                );
+              }).toList(),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSubjectPicker() {

@@ -54,72 +54,104 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
       _paceHours = currentHours;
       final estEndDate = _estimateCompletionDate(firstPlanDate, _paceHours, state.plan!.summary.totalMinutes);
 
-      return Card(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Icon(Icons.speed, size: 20, color: Theme.of(context).colorScheme.primary),
-                  const SizedBox(width: 8),
-                  Text(l10n.planAdjusted,
-                      style: Theme.of(context).textTheme.titleMedium),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Row(
-                children: [
-                  Text(l10n.hoursPerDay),
-                  const Spacer(),
-                  Text(
-                    '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+      return _buildPaceAdjustmentCard(
+        onApply: () {
+          final newTargetMinutes = (_paceHours * 60).round();
+          ref.read(plannerProvider.notifier).adjustPace(
+            newTargetMinutes.toDouble(),
+            l10n,
+          );
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Text(l10n.hoursPerDay),
+                const Spacer(),
+                Text(
+                  '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.bold,
                   ),
-                ],
-              ),
-              Text(
-                '→ Estimated finish: ${DateFormat.yMd(l10n.localeName).format(estEndDate)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
+              ],
+            ),
+            Text(
+              '→ Estimated finish: ${DateFormat.yMd(l10n.localeName).format(estEndDate)}',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 8),
-              Slider(
-                value: _paceHours,
-                min: 0.5,
-                max: 8.0,
-                divisions: 15,
-                label: '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
-                onChanged: (value) {
-                  setState(() => _paceHours = value);
-                },
-              ),
-              const SizedBox(height: 8),
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    final newTargetMinutes = (_paceHours * 60).round();
-                    ref.read(plannerProvider.notifier).adjustPace(
-                      newTargetMinutes.toDouble(),
-                      l10n,
-                    );
-                  },
-                  icon: const Icon(Icons.check, size: 18),
-                  label: Text(l10n.planAdjusted),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 8),
+            Slider(
+              value: _paceHours,
+              min: 0.5,
+              max: 8.0,
+              divisions: 15,
+              label: '${formatDecimal(_paceHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+              onChanged: (value) {
+                setState(() => _paceHours = value);
+              },
+            ),
+          ],
         ),
       );
     }
 
+    return _buildPaceAdjustmentCard(
+      onApply: () => _applyPerSubjectPace(state, l10n),
+      child: Column(
+        children: goals.asMap().entries.map((entry) {
+          final goal = entry.value;
+          final goalHours = goal.targetHoursPerDay.toDouble();
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(goal.subjectTitle,
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    )),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    Text(l10n.hoursPerDay),
+                    const Spacer(),
+                    Text(
+                      '${formatDecimal(goalHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                Slider(
+                  value: goalHours,
+                  min: 0.5,
+                  max: 8.0,
+                  divisions: 15,
+                  label: '${formatDecimal(goalHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
+                  onChanged: (value) {
+                    _updateSyllabusHours(goal, value);
+                  },
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildPaceAdjustmentCard({
+    required Widget child,
+    required VoidCallback onApply,
+  }) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -135,52 +167,11 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
               ],
             ),
             const SizedBox(height: 12),
-            ...goals.asMap().entries.map((entry) {
-              final goal = entry.value;
-              final goalHours = goal.targetHoursPerDay.toDouble();
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(goal.subjectTitle,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                        )),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        Text(l10n.hoursPerDay),
-                        const Spacer(),
-                        Text(
-                          '${formatDecimal(goalHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                            color: Theme.of(context).colorScheme.primary,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
-                    Slider(
-                      value: goalHours,
-                      min: 0.5,
-                      max: 8.0,
-                      divisions: 15,
-                      label: '${formatDecimal(goalHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
-                      onChanged: (value) {
-                        _updateSyllabusHours(goal, value);
-                      },
-                    ),
-                  ],
-                ),
-              );
-            }),
+            child,
             SizedBox(
               width: double.infinity,
               child: OutlinedButton.icon(
-                onPressed: () {
-                  _applyPerSubjectPace(state, l10n);
-                },
+                onPressed: onApply,
                 icon: const Icon(Icons.check, size: 18),
                 label: Text(l10n.planAdjusted),
               ),

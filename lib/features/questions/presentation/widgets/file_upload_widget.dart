@@ -1,6 +1,6 @@
-import 'dart:async';
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FileUploadWidget extends StatefulWidget {
@@ -20,6 +20,7 @@ class FileUploadWidget extends StatefulWidget {
 }
 
 class _FileUploadWidgetState extends State<FileUploadWidget> {
+  static final Logger _logger = const Logger('FileUploadWidget');
   String? _localAnswer;
 
   @override
@@ -47,7 +48,9 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
         setState(() => _localAnswer = answer);
         widget.onAnswerChanged(answer);
       }
-    } catch (_) {}
+    } catch (e) {
+      _logger.w('Failed to pick file', e);
+    }
   }
 
   @override

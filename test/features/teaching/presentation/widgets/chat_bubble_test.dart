@@ -322,7 +322,7 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsOneWidget);
     });
 
-    testWidgets('malformed evaluation JSON falls back to plain text', (tester) async {
+    testWidgets('malformed evaluation JSON falls back to error message', (tester) async {
       await tester.pumpWidget(wrapApp(
         ChatBubble(
           message: ConversationMessage(
@@ -336,7 +336,7 @@ void main() {
         ),
       ));
 
-      expect(find.text('{invalid json}'), findsOneWidget);
+      expect(find.text('Unable to display evaluation result'), findsOneWidget);
     });
 
     testWidgets('non-evaluation JSON content renders as plain text', (tester) async {
@@ -536,7 +536,7 @@ void main() {
       expect(find.text('Needs work.'), findsOneWidget);
     });
 
-    testWidgets('empty evaluation score falls back gracefully', (tester) async {
+    testWidgets('empty evaluation score falls back to error message', (tester) async {
       final evalData = {
         'type': 'evaluation',
         'explanation': 'No score',
@@ -555,8 +555,8 @@ void main() {
         ),
       ));
 
-      // score is null → cast to double throws → falls to catch → plain text
-      expect(find.text(jsonEncode(evalData)), findsOneWidget);
+      // score is null → cast to double throws → falls to catch → error message
+      expect(find.text('Unable to display evaluation result'), findsOneWidget);
     });
 
     testWidgets('renders correctly in RTL layout for student message', (tester) async {
@@ -635,7 +635,7 @@ void main() {
       expect(find.byIcon(Icons.check_circle), findsNothing);
     });
 
-    testWidgets('feedback with non-numeric score shows plain text fallback', (tester) async {
+    testWidgets('feedback with non-numeric score shows error message', (tester) async {
       final evalData = {
         'type': 'evaluation',
         'score': 'not_a_number',
@@ -655,7 +655,7 @@ void main() {
         ),
       ));
 
-      expect(find.text(jsonEncode(evalData)), findsOneWidget);
+      expect(find.text('Unable to display evaluation result'), findsOneWidget);
     });
 
     testWidgets('streaming with long content renders correctly', (tester) async {
@@ -836,6 +836,117 @@ void main() {
       expect(find.byIcon(Icons.cancel), findsOneWidget);
       expect(find.text('15%'), findsOneWidget);
       expect(find.text('Keep practicing.'), findsOneWidget);
+    });
+
+    testWidgets('onSpeak button appears for tutor message with callback', (tester) async {
+      String? spokenText;
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '39',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Listen to me',
+            timestamp: now,
+          ),
+          onSpeak: () => spokenText = 'triggered',
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
+      await tester.tap(find.byIcon(Icons.volume_up));
+      expect(spokenText, 'triggered');
+    });
+
+    testWidgets('onSpeak button not shown for student message even with callback', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '40',
+            sessionId: 's1',
+            role: MessageRole.student,
+            type: MessageType.text,
+            content: 'Student says',
+            timestamp: now,
+          ),
+          onSpeak: () {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsNothing);
+    });
+
+    testWidgets('onSpeak button not shown during streaming even with callback', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '41',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Streaming...',
+            timestamp: now,
+            isStreaming: true,
+          ),
+          onSpeak: () {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsNothing);
+    });
+
+    testWidgets('onSpeak button not shown when no callback provided for tutor', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '42',
+            sessionId: 's1',
+            role: MessageRole.tutor,
+            type: MessageType.text,
+            content: 'Just text without speak',
+            timestamp: now,
+          ),
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsNothing);
+    });
+
+    testWidgets('onSpeak button shown for system message with callback', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '43',
+            sessionId: 's1',
+            role: MessageRole.system,
+            type: MessageType.text,
+            content: 'System message',
+            timestamp: now,
+          ),
+          onSpeak: () {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
+    });
+
+    testWidgets('onSpeak button shown for mentor message with callback', (tester) async {
+      await tester.pumpWidget(wrapApp(
+        ChatBubble(
+          message: ConversationMessage(
+            id: '44',
+            sessionId: 's1',
+            role: MessageRole.mentor,
+            type: MessageType.text,
+            content: 'Mentor says',
+            timestamp: now,
+          ),
+          onSpeak: () {},
+        ),
+      ));
+
+      expect(find.byIcon(Icons.volume_up), findsOneWidget);
     });
   });
 }

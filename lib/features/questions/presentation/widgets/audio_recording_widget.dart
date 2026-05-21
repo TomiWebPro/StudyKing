@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:record/record.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class AudioRecordingWidget extends StatefulWidget {
@@ -21,6 +22,7 @@ class AudioRecordingWidget extends StatefulWidget {
 }
 
 class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
+  static final Logger _logger = const Logger('AudioRecordingWidget');
   final _audioRecorder = AudioRecorder();
   bool _isRecording = false;
   StreamSubscription<Amplitude>? _amplitudeSubscription;
@@ -58,7 +60,8 @@ class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
           setState(() => _localAnswer = path);
           widget.onAnswerChanged(path);
         }
-      } catch (_) {
+      } catch (e) {
+        _logger.w('Failed to stop audio recording', e);
         setState(() => _isRecording = false);
       }
     } else {
@@ -73,7 +76,8 @@ class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
             },
           );
         }
-      } catch (_) {
+      } catch (e) {
+        _logger.w('Failed to start audio recording', e);
         setState(() => _isRecording = false);
       }
     }

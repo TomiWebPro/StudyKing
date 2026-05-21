@@ -5910,9 +5910,9 @@
   "@continueAnyway": {
     "description": "Button to proceed despite warning"
   },
-  "focusFirstVisitHelp": "Configure un temporizador y estudie sin distracciones. Las sesiones completadas cuentan para su plan diario.",
+  "focusFirstVisitHelp": "El Modo de Enfoque tiene dos modos: Práctica (centro de estudio con sesiones de práctica integradas y completas) y Temporizador (temporizador de enfoque silencioso). Los tipos de sesión (Práctica Rápida, Repetición Espaciada, Áreas Débiles, Enfoque Libre) afectan qué preguntas aparecen en la práctica integrada. El modo Temporizador es para enfoque sin distracciones sin preguntas. Las estadísticas de sesión aparecen abajo.",
   "@focusFirstVisitHelp": {
-    "description": "Help text shown on first visit to focus timer"
+    "description": "Help text shown on first visit to focus mode explaining the dual-mode design"
   },
   "contentManagement": "Gestión de Contenido",
   "@contentManagement": {
@@ -7095,10 +7095,14 @@
    "@inlinePracticeSubtitle": {
      "description": "Subtitle for inline practice option in focus mode"
    },
-   "fullPracticeSubtitle": "Navegar a la pantalla de práctica completa",
-   "@fullPracticeSubtitle": {
-     "description": "Subtitle for full practice session option in focus mode"
-   },
+    "fullPracticeSubtitle": "Navegar a la pantalla de práctica completa",
+    "@fullPracticeSubtitle": {
+      "description": "Subtitle for full practice session option in focus mode"
+    },
+    "timerOnlyDescription": "El modo temporizador es un temporizador de enfoque silencioso. Las preguntas y la práctica están disponibles en la pestaña Práctica.",
+    "@timerOnlyDescription": {
+      "description": "Description shown in the mode toggle when timer mode is selected"
+    },
    "generateLessonFromContent": "Generar lección desde este material",
    "@generateLessonFromContent": {
      "description": "Checkbox label to generate AI lesson from uploaded content"
@@ -7681,5 +7685,33 @@
     "profileDeleted": "Perfil eliminado exitosamente",
     "@profileDeleted": {
       "description": "Snackbar message after profile deletion"
+    },
+    "backupEncryptionPassword": "Contraseña de cifrado (opcional)",
+    "@backupEncryptionPassword": {
+      "description": "Label for optional encryption password field in backup dialog"
+    },
+    "backupEncryptionPasswordHint": "Dejar vacío sin cifrado",
+    "@backupEncryptionPasswordHint": {
+      "description": "Hint text for encryption password field"
+    },
+    "practiceTheseTopics": "Practicar Estos Temas",
+    "@practiceTheseTopics": {
+      "description": "Button label in lesson summary to practice lesson topics in study hub"
+    },
+    "practiceLessonBlocks": "Repasar Bloques de Lección",
+    "@practiceLessonBlocks": {
+      "description": "Button label in lesson summary to replay lesson blocks as quiz questions"
+    },
+    "tutorInitFailedGeneric": "Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.",
+    "@tutorInitFailedGeneric": {
+      "description": "Generic error message when tutor initialization fails (no error details exposed to user)"
+    },
+    "tagline": "Compañero de Aprendizaje con IA",
+    "@tagline": {
+      "description": "Tagline shown on splash screen"
+    },
+    "preparingTutorLesson": "Preparando tu lección...",
+    "@preparingTutorLesson": {
+      "description": "Loading message shown while tutor initializes"
     }
   }

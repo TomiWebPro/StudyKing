@@ -1,436 +1,680 @@
-# Future Functionality Planner — Vision vs Implementation Gap Analysis (v4)
+# Future Functionality Planner — Vision vs Implementation Gap Analysis (v5)
 
-**Generated:** 2026-05-20
-**Source:** `agent_must_read.md` (product vision) vs codebase audit
+**Generated:** 2026-05-21
+**Source:** `agent_must_read.md` (product vision) vs comprehensive codebase audit
 **Input from beta testers:** `issues/further_issues/open/lessons.md`, `issues/further_issues/open/focus_mode.md`
-**Previous analysis:** `issues/completed/future_functionality_planner.md` (v3 — superseded)
+**Open dry-run issues incorporated:** All 6 files in `issues/open/`
 
 ---
 
-## Progress Since v3 (Items Now Resolved)
+## CORE PRIORITY: Further Issues (Beta Tester Feedback)
 
-| Item | Status | Evidence |
-|------|--------|----------|
-| B1: PlannerService.scheduleLesson() bare session | ✅ Fixed | Now triggers `LessonAgentService.generateLesson()` eagerly after creating session (planner_service.dart:381-403) |
-| B2: Focus mode timer-first UX | ✅ Fixed | Default view is now study hub (`_studyMode = true`), timer is toggle-away option |
-| B2: Post-lesson practice entry point | ✅ Fixed | `TutorScreen._showSummaryDialog()` has two buttons: focus timer (15 min) + practice mode (30 min, 20 Q) with subject/topic pre-selected |
-| M1: LLM planner advisor | ✅ Fixed | `LlmPlannerAdvisorStrategy` (213 lines) exists, integrates via `PlannerAdvisorStrategy` interface called at lines 239-254 of `PersonalLearningPlanService` |
-| m1: FocusTimerScreen timer-first | ✅ Fixed | Study hub is default view. Monolith line count (1374) still needs splitting. |
-| m3: Planner providers split | ✅ Fixed | `plan_providers.dart`, `syllabus_providers.dart`, `adherence_providers.dart` are now separate files |
-| m5: Audio recording + file upload stubs | ✅ Fixed | `AudioRecordingWidget` uses `record` package (134 lines with amplitude viz), `FileUploadWidget` uses `file_picker` (82 lines) |
+The beta tester feedback in `further_issues/open/` is unambiguous and angry. These must be resolved **first** before any other work, as they represent the core product promise failing.
 
-**Still UNRESOLVED from v3:** B1 (rich slides, calendar scheduling, LessonAgentService agentification), M2 (voice VAD), M3 (persistent background tasks via workmanager), M4 (token budget enforcement), M5 (PDF extraction proper), M6 (local OCR), M7 (Whisper STT), M8 (web scraper), M9 (additional locales), m1 (FocusTimerScreen split), m2 (PersonalLearningPlanService split), m4 (LessonAgentService agent refactor), m6 (widget tests).
+Both issues are consolidated here as BLOCKER items. When finished, remove files from `further_issues/open/` and acknowledge in `issues/further_issues/completed/`.
 
 ---
 
 ## BLOCKER — App crashes or user cannot proceed
 
-### B1. Lessons Rich Content, Calendar Scheduling, and Agentification Still Incomplete
+### B-FI1: Lessons Are Fundamentally Broken (further_issues/open/lessons.md)
 
-**Source:** Beta-tester `lessons.md` + vision audit (`agent_must_read.md:27-47`)
-**Severity:** BLOCKER — core teaching loop is the #1 product value
+**Source:** `issues/further_issues/open/lessons.md`
+**Severity:** BLOCKER
 
-**Problem:** Despite incremental fixes, three critical gaps remain:
+**Problem:** The complete lesson experience is not what was envisioned:
 
-1. **`LessonBlock` has no `richContent` field** — `lesson_block_model.dart` only has `String content`. No markdown, LaTeX, image references, or code blocks. `LessonBlockCard` renders everything as plain `Text()` widgets (e.g., `lesson_block_card.dart:76` renders `Text(widget.block.content)` for slides, quizzes, exercises, etc.). The `grep` for `richContent` across the entire codebase returns zero matches.
+1. **No calendar scheduling dashboard** — Lessons are accessed via topic list → detail screen → tutor mode. No Preply-style calendar view where you see your lesson slots on a calendar with time, subject, and prep status.
 
-2. **`CalendarViewWidget` shows roadmap milestones, not lesson time blocks** — `calendar_view_widget.dart:152-160` renders milestone dots from `widget.roadmaps` -> `milestones` -> `deadline`. No individual session/lesson time slots, no hourly blocks, no tap-to-launch-lesson. The beta tester explicitly wants Preply-style calendar with lesson time blocks.
+2. **Lesson block rendering is plain text** — `LessonBlockCard` renders everything as `Text(widget.block.content)`. Slides, quizzes, exercises — all plain text. No markdown, LaTeX, code blocks, images, or rich formatting.
 
-3. **`LessonAgentService` still uses raw `LlmService.chat()`** — `lesson_agent_service.dart:80,276` calls `_llmService.chat()` directly. The `LlmAgent`/`AgentLoop`/`ToolRegistry` infrastructure (which exists at `lib/core/services/llm_agent/` and IS used by `MentorService` and `TutorService` for background tasks) is completely ignored. No tools, no agent memory, no structured output parsing. Note: `GenerateLessonBlocksTool` wraps `LessonAgentService` to make it available as an agent tool, but `LessonAgentService` itself is not agentic.
+3. **LessonAgentService is not a real agent** — It calls `_llmService.chat()` directly. The `LlmAgent` + `AgentLoop` + `ToolRegistry` infrastructure exists (used by `MentorService`) but `LessonAgentService` ignores it entirely. No tools, no memory, no structured output pipeline.
 
-**Affected files:**
-- `lib/features/lessons/data/models/lesson_block_model.dart` — no `richContent` field
-- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` — plain `Text()` rendering, no markdown/LaTeX
-- `lib/features/lessons/services/lesson_agent_service.dart` — raw `LlmService.chat()`, no `LlmAgent`/tools/memory
-- `lib/features/planner/presentation/widgets/calendar_view_widget.dart` — shows roadmaps/milestones, not lesson slots
-- `lib/features/planner/presentation/widgets/lesson_booking_sheet.dart` — creates Session + triggers LLM prep but no rich lesson plan scheduling UX
-- `lib/features/teaching/presentation/tutor_screen.dart` — summary dialog practice buttons exist but navigate to focus mode timer, not lesson-block-based practice
-- `lib/core/services/llm_agent/idle_executor.dart` — no lesson-prep enqueueing path
+4. **No background lesson preparation** — `IdleExecutor` (109 lines) runs only foreground. When a lesson is scheduled, no background task generates the lesson materials ahead of time. The student must wait for generation when they tap "Start."
+
+5. **Scheduling vs lesson plan are conflated** — `PlannerService.scheduleLesson()` creates a Session and eagerly generates a Lesson, but there's no separate "plan a schedule" step vs "generate materials" step. The vision calls for scheduling first, then agent-preparation of materials as a separate step.
+
+6. **Agent tools are mentor-only** — 6 registered tools (`schedule_lesson`, `create_plan`, `search_questions`, `get_student_stats`, `generate_lesson_blocks`, `get_weak_topics`) exist under `mentor/services/tools/`. The lesson agent never uses them. No tools are shared with lesson generation.
+
+7. **No long-term memory in lessons** — `AgentMemoryStore` is used by mentor but not by `LessonAgentService`. Each lesson generation is from scratch — no student profile, no history, no prior session context.
+
+8. **Previous session doesn't inform current lesson** — `LongTermMemory` and `ConversationMemory` exist but are not integrated into lesson generation.
 
 **Acceptance Criteria:**
-- [ ] `LessonBlock` gains `richContent` field (Map or JSON string supporting markdown, LaTeX `$$...$$`, image URLs, code blocks with language tags)
-- [ ] `LessonBlockCard` renders rich content: `flutter_markdown` for markdown, `flutter_math_fork` for LaTeX, cached network images, syntax-highlighted code blocks
+- [ ] **Dashboard shows a calendar view with lesson time slots** (subject + topic + duration + prep status), not just milestone dots
+- [ ] Calendar slots are tappable → launches lesson detail or tutor screen if materials are ready
+- [ ] **`LessonBlock` gains rich content**: markdown via `flutter_markdown`, LaTeX via `flutter_math_fork`, image URLs, code blocks with syntax highlighting
+- [ ] `LessonBlockCard` renders rich content instead of plain `Text()` for all block types (slides, quizzes, exercises, examples, summaries)
 - [ ] Full-screen slide mode renders rich content, not plain text
-- [ ] `CalendarViewWidget` shows scheduled lesson time slots (topic + duration + prep status) with tap-to-view and tap-to-launch
-- [ ] `LessonAgentService` refactored to use `LlmAgent` with agent loop + registered tools + memory context injection
-- [ ] Lesson-prep agent tools registered: `getStudentStats`, `getWeakTopics`, `searchQuestions`, `getSyllabusProgress`, `createLessonPlan`
-- [ ] `IdleExecutor` enqueues lesson-prep tasks when a session is scheduled in advance
-- [ ] `PlannerService.scheduleLesson()` enqueues background lesson prep via `IdleExecutor` for future sessions, not just immediate generation
+- [ ] **`LessonAgentService` refactored to use `LlmAgent`** with `AgentLoop` + `ToolRegistry` + `AgentMemoryStore`
+- [ ] Lesson-prep tools registered (or shared from mentor's tool registry): `getStudentStats`, `getWeakTopics`, `searchQuestions`, `getSyllabusProgress`, `getAtRiskQuestions`
+- [ ] **Background lesson prep**: When a session is scheduled, `IdleExecutor` enqueues `LessonAgentService.generateLesson()` as a background task
+- [ ] Lesson prep status visible in calendar (⏳ generating, ✅ ready, ❌ failed)
+- [ ] **IdleExecutor upgraded from Dart Timer to `workmanager`** for persistent background scheduling that survives app restart (also powers engagement nudges)
+- [ ] **Long-term memory context injected** into lesson generation prompts (student's prior performance, weak topics, preferred learning style)
+- [ ] Exercises generated during tutor conversations are **persisted to the question bank** for later practice
 
-**Rationale:** The beta tester's language is unambiguous — "Current lesson is fucking useless." The teaching loop is the product's core value proposition. Rich content rendering and agent-driven lesson generation are table stakes. The agent infrastructure already exists; lessons simply don't use it.
+**Affected files:**
+- `lib/features/lessons/presentation/widgets/lesson_block_card.dart` — plain Text() rendering
+- `lib/features/lessons/data/models/lesson_block_model.dart` — no richContent field
+- `lib/features/lessons/services/lesson_agent_service.dart` — no LlmAgent integration
+- `lib/features/planner/presentation/widgets/calendar_view_widget.dart` — shows milestones, not lesson slots
+- `lib/features/teaching/services/conversation_manager.dart` — exercises not persisted to question bank
+- `lib/core/services/llm_agent/idle_executor.dart` — foreground-only Dart Timer
+- `lib/core/services/engagement_scheduler.dart` — foreground-only Dart Timer
+- `lib/features/mentor/services/tools/` — tools not accessible to lesson agent
+- `pubspec.yaml` — needs `flutter_markdown`, `flutter_math_fork`, `flutter_workmanager`
 
 ---
 
-### B2. Focus Mode UX Still Misaligned — Further Issues `focus_mode.md`
+### B-FI2: Focus Mode Is Misaligned (further_issues/open/focus_mode.md)
 
-**Source:** Beta-tester `focus_mode.md` + vision audit (`agent_must_read.md:86-87`)
+**Source:** `issues/further_issues/open/focus_mode.md`
 **Severity:** BLOCKER
 
-**Problem:** While the study hub is now the default view and post-lesson practice navigation exists, the beta tester remains deeply unhappy:
+**Problem:** The beta tester explicitly says focus mode is "fucking useless." The current implementation:
 
-1. **Beta tester explicitly says current focus mode is "fucking useless"** — they want it as a place to practice questions from different subjects after lessons. The current flow centers on a timer even if the study hub is default.
+1. **Timer-centric session model** — Even though study hub is default, practice is always behind a timer/session paradigm. The beta tester wants to just browse and answer questions across subjects without timer friction.
 
-2. **`FocusTimerScreen` is still a 1374-line monolith** — mixes timer logic, practice hub, onboarding, analytics, subject picker, session state management. This makes targeted UX improvements risky.
+2. **No browse-and-practice mode** — `FocusTimerScreen` requires a session to start. `InlinePracticeWidget` only activates mid-session. No "open the app → see questions → answer" flow.
 
-3. **No "study without timer" mode** — practice always requires starting a session/timer. The beta tester wants to just browse and answer questions across subjects.
+3. **Session type hidden in code** — `FocusSessionType` is set via internal logic (`_sessionType`), not via a visible UX picker. The user can't choose "Weak Area Attack" or "Quick Practice" as a visible option.
 
-4. **Session type selector is not prominent UX** — the `_sessionType` is set via internal logic, not a visible card-row selector.
+4. **Post-lesson practice navigates to timer** — `TutorScreen.summaryDialog` practice buttons navigate to `FocusTimerScreen` with timer mode. The user wants practice, not a timer.
 
-**Affected files:**
-- `lib/features/focus_mode/presentation/focus_timer_screen.dart` (1374 lines) — monolith, timer-centric session model
-- `lib/features/focus_mode/presentation/widgets/inline_practice_widget.dart` (327 lines) — separate but UX flow still starts from timer/session paradigm
+5. **1374-line monolith** — `FocusTimerScreen` mixes timer logic, practice hub UI, onboarding, analytics, subject picker, and routing. Impossible to iterate on UX safely.
 
 **Acceptance Criteria:**
-- [ ] `FocusTimerScreen` split into: `StudyHubWidget` (subject cards with due question counts), `ActiveFocusSessionWidget` (timer + practice overlay), `PracticeExplorerWidget` (browse and answer without timer)
-- [ ] "Free Practice" mode: browse and answer questions from selected subjects without starting a timer session
-- [ ] Post-lesson practice navigates to `PracticeExplorerWidget` with lesson's subject+topic pre-loaded, not timer
-- [ ] Session type selector is a visible card row (Spaced Repetition / Weak Area Attack / Quick Practice / Free Practice), not a hidden enum
-- [ ] Remove empty catch `(_) {}` blocks in `audio_recording_widget.dart:61,76` and `file_upload_widget.dart:50`
+- [ ] **Add "Free Practice" mode** — browse and answer questions from selected subjects without starting a timer session. Visible as a primary card on the focus mode screen.
+- [ ] **Session type selector is a visible card row**: Spaced Repetition / Weak Area Attack / Quick Practice / Free Practice
+- [ ] Post-lesson summary dialog navigates to practice hub with subject+topic pre-loaded, NOT to timer
+- [ ] `FocusTimerScreen` split into thin orchestrator + sub-widgets: `StudyHubWidget`, `ActiveFocusSessionWidget`, `PracticeExplorerWidget`
+- [ ] Due question counts shown per subject on the main practice hub
+- [ ] "Practice without timer" flow: select subjects → see questions → answer → see results → repeat
 
-**Rationale:** The beta tester validated the timer flow as not what they want. The infrastructure (SR service, mastery recorder, practice service) is solid — the UX flow needs redesign to put practice first and timer as optional overlay.
+**Affected files:**
+- `lib/features/focus_mode/presentation/focus_timer_screen.dart` (1470 lines) — monolith, timer-centric
+- `lib/features/focus_mode/presentation/widgets/inline_practice_widget.dart` — only accessible mid-timer
+- `lib/features/teaching/presentation/tutor_screen.dart` — summary dialog practice buttons target timer
+- `lib/features/focus_mode/providers/focus_mode_providers.dart` — may need new providers for free practice
+
+---
+
+### DR-B1: AI Task Monitor Shows Stale Data; Never Updates (dry_run_usability_validator.md M5)
+
+**Source:** `issues/open/dry_run_usability_validator.md` M5
+**Severity:** BLOCKER — User cannot trust task monitoring
+
+**Problem:** `_AiTaskMonitorTile` reads `llmTaskManagerProvider` once in `initState()` via `ref.read()`. Counts are frozen forever. Starting a content upload or lesson prep after navigating to Settings shows "0 active tasks" indefinitely.
+
+**Affected files:**
+- `lib/features/settings/presentation/settings_screen.dart:1981-2017` — uses `ref.read()` in `initState()`, not `ref.watch()` in `build()`
+
+**Acceptance Criteria:**
+- [ ] Replace `ref.read(llmTaskManagerProvider)` with `ref.watch(llmTaskManagerProvider)` inside `build()`
+- [ ] Remove `_updateCounts()` from `initState()`, compute counts directly from watched state
+- [ ] Remove stale `_activeCount`/`_failedCount` instance variables
+- [ ] Verify: starting a content upload → Settings → badge/tile shows live active task count
+
+---
+
+### DR-B2: EngagementScheduler Uses Stale Settings Reference (dry_run_usability_validator.md M4)
+
+**Source:** `issues/open/dry_run_usability_validator.md` M4
+**Severity:** BLOCKER — Notification toggles are ignored until app restart
+
+**Problem:** `EngagementScheduler._settingsBox` is set once in constructor. `updateSettings()` exists but is never called from production. Toggling "Overwork Alerts" OFF doesn't stop overwork nudges until restart.
+
+**Affected files:**
+- `lib/core/services/engagement_scheduler.dart:88` — stale `_settingsBox` reference
+- `lib/core/providers/app_providers.dart:53-80` — never listens to `settingsProvider`
+
+**Acceptance Criteria:**
+- [ ] In `engagementSchedulerProvider`, add `ref.listen(settingsProvider, ...)` that calls `scheduler.updateSettings(newSettings)`
+- [ ] Verify: toggle notification preference → immediate effect on `_isNotificationEnabled()`
+- [ ] "Check Nudges Now" respects current toggle state
+
+---
+
+### DR-B3: 7+ Settings Keys Persisted via Direct `box.put()` Bypassing Repository (dry_run_usability_validator.md M6+M7)
+
+**Source:** `issues/open/dry_run_usability_validator.md` M6, M7
+**Severity:** BLOCKER — Settings values are orphaned from the SettingsBox model
+
+**Problem:** 7+ Hive keys (`dailyCapMinutes`, `srMinIntervalDays`, `srMaxIntervalDays`, `srDailyReviewLimit`, `autoBackupIntervalDays`, `lastAutoBackupDate`, `lastAutoBackupPath`, `mentorCheckinFrequencyDays`, `defaultScheduleDuration`, `defaultTeachingDuration`) are written via `Hive.box(HiveBoxNames.settings).put(key, value)` instead of `SettingsRepository.updateSettings()`. These values are invisible to `settingsProvider` and any refactoring will silently drop them.
+
+**Affected files:**
+- `lib/features/settings/presentation/settings_screen.dart:662,806,737,103-105`
+- `lib/features/settings/data/models/settings_box.dart` — missing fields
+- `lib/features/settings/data/repositories/settings_repository.dart` — reads/writes unified JSON
+
+**Acceptance Criteria:**
+- [ ] Add all missing fields to `SettingsBox` model with defaults and null handling
+- [ ] Update `SettingsRepository` to read/write them as part of unified JSON `'settings'` key
+- [ ] Replace all `box.put(key, value)` with `settingsProvider.notifier.updateSettings(SettingsUpdate(...))`
+- [ ] Remove `_getSrValue()`/`_setSrValue()` helpers; use `settings.field` directly
+- [ ] Audited all SR config consumers to ensure they read from unified location
+- [ ] Verify migration doesn't drop existing values
+
+---
+
+### DR-B4: No Mechanism to Flag/Report Incorrect AI Content (dry_run_math_scientific M13)
+
+**Source:** `issues/open/dry_run_result_math_scientific_canvas_validation.md` Step 13
+**Severity:** BLOCKER — AI content has no trust mechanism
+
+**Problem:** The vision (`agent_must_read.md:9`) explicitly says "AI-generated content should not be blindly trusted; correctness, consistency, and usefulness should be continuously validated." There is no mechanism to flag incorrect content — no button, no feedback, no UI. Content validation in `content_pipeline.dart:396-405` is an empty stub.
+
+**Additionally from M14-M15:**
+- No `isValidated`, `needsReview`, `verifiedBy`, `trustScore` fields on `QuestionModel`
+- No `GeneratedBy` indicator distinguishing AI vs manual vs hybrid
+- `_isValidGeneratedQuestion()` only does structural/schema validation — no LLM re-check
+
+**Affected files:**
+- `lib/core/data/models/question_model.dart:9-91` — no trust/verification fields
+- `lib/features/ingestion/services/content_pipeline.dart:396-405` — `_validateGeneratedQuestions` is stub
+- `lib/features/ingestion/services/content_pipeline.dart:657-701` — `_isValidGeneratedQuestion` is structural only
+
+**Acceptance Criteria:**
+- [ ] Add `isValidated`, `needsReview`, `verifiedBy`, `reviewedAt`, `generatedBy` fields to `QuestionModel`
+- [ ] Add "Report incorrect" button on question cards (practice session, question bank)
+- [ ] Report feedback persisted to a `ContentFeedbackRepository`
+- [ ] Content pipeline actual LLM re-check for generated questions
+- [ ] GeneratedBy indicator visible: AI-generated / Manual / Hybrid
+- [ ] Settings toggle: "Show AI content trust indicators"
 
 ---
 
 ## MAJOR — Feature is broken, misleading, or contradicts the vision
 
-### M1. Planner is Still Predominantly Deterministic — LLM Advisor is Optional Bolt-On
+### DR-M1: Spaced Repetition Settings Use Hardcoded English Strings (dry_run_usability M1)
 
-**Vision reference:** `agent_must_read.md:73-85`
-**Severity:** MAJOR
+**Source:** `issues/open/dry_run_usability_validator.md` M1
+**Severity:** MAJOR — Breaks l10n for non-English users
 
-**Problem:** `LlmPlannerAdvisorStrategy` (213 lines) exists and is called from `PersonalLearningPlanService` (lines 239-254), but it is an **optional** plugin. The core 1102-line `PersonalLearningPlanService` still uses purely rule-based algorithms: round-robin topic distribution, hardcoded priority scores, deterministic daily plan generation. The LLM advisor produces metadata only — it doesn't influence the plan structure or scheduling decisions.
-
-**Affected files:**
-- `lib/features/planner/services/personal_learning_plan_service.dart` (1102 lines, heuristic-only core)
-- `lib/features/planner/services/llm_planner_advisor_strategy.dart` (213 lines, optional bolt-on, not integrated into decision logic)
-
-**Acceptance Criteria:**
-- [ ] LLM advisor is consulted during plan generation and its recommendations (workloadEstimate, pathwaySuggestion) actually influence dailyPlan distribution
-- [ ] Plan adaptation uses LLM advisor to understand *why* student is falling behind (overwhelmed vs busy vs bored) and suggests specific schedule adjustments
-- [ ] LLM advisor output is stored as structured `PlanAdvisorSuggestionModel` with traceable audit trail
-- [ ] `PersonalLearningPlanService` split into `PlanGeneratorService`, `GoalTrackerService`, `MilestoneManager` (reduces from 1102 to ~400 lines per file)
-
----
-
-### M2. Voice VAD, Review Step, and Interrupt-and-Resume Still Missing
-
-**Vision reference:** `agent_must_read.md:16-22` (voice interaction, natural conversation)
-**Severity:** MAJOR
-
-**Problem:** `VoiceService` (236 lines) has improved locale support for both STT and TTS, but still lacks:
-- No energy-threshold-based VAD — uses `speech_to_text` built-in `pauseFor` timeout
-- No user review step for transcriptions before submission
-- No interrupt-and-resume UX when TTS plays and user speaks (mutual exclusion is enforced by blocking, not duxing)
-- No per-locale TTS voice selection (uses default system voice per language)
-
-**Affected files:**
-- `lib/core/services/voice_service.dart` — no VAD params, no review step, no interrupt-and-resume
-- `lib/features/teaching/presentation/widgets/voice_bar.dart` — timer-based review overlay
-
-**Acceptance Criteria:**
-- [ ] Voice button states: idle → listening (energy wave animation) → processing → done/review
-- [ ] Transcription shown in editable text field before submission
-- [ ] Silence timeout configurable (default 2s); alternative: manual stop button
-- [ ] Per-locale TTS voice mapping (locale → flutter_tts voice name/identifier)
-- [ ] TTS pauses when user speaks; microphone stays active during playback for natural interruption
-- [ ] Consistent voice UX across Tutor, Mentor, and Practice screens
-
----
-
-### M3. No Persistent Background Task Runner
-
-**Vision reference:** `agent_must_read.md:98` (proactive engagement), line 102 (task manager)
-**Severity:** MAJOR
-
-**Problem:** `IdleExecutor` (109 lines) runs only while app is foreground (Dart `Timer.periodic`). `EngagementScheduler` uses a Dart `Timer` + one-shot `Timer`. No `flutter_workmanager` dependency exists in `pubspec.yaml`. Notifications use `periodicallyShow` not `zonedSchedule` — less precise scheduling that doesn't survive app restart.
-
-**Affected files:**
-- `lib/core/services/llm_agent/idle_executor.dart` — foreground-only Dart Timer
-- `lib/core/services/engagement_scheduler.dart` — Dart Timer, not persistent
-- `lib/core/services/notification_service.dart` — uses `periodicallyShow` not `zonedSchedule` (line 190)
-- `pubspec.yaml` — no `workmanager` dependency
-
-**Acceptance Criteria:**
-- [ ] `flutter_workmanager` integrated for background task scheduling
-- [ ] Background tasks: lesson prep (upcoming slots), nudge generation (daily), plan adherence check (periodic), overdue session auto-finalization
-- [ ] `EngagementScheduler` uses workmanager periodic task instead of Dart Timer
-- [ ] Notifications use `zonedSchedule` for precise scheduling that survives app restart
-- [ ] Background tasks respect battery/data constraints; cancellable from Settings
-
----
-
-### M4. Token Usage Tracked but No Budget Enforcement
-
-**Vision reference:** `agent_must_read.md:102`
-**Severity:** MAJOR
-
-**Problem:** `LlmUsageMeter` (142 lines) records everything but enforces nothing. No pre-flight check, no per-feature budgets, no daily caps, no user-facing cost controls. Students using their own API keys cannot cap spending.
-
-**Affected files:**
-- `lib/core/services/llm_usage_meter.dart` — `recordUsage()` has no checks, no budget concept
-- `lib/core/services/llm_task_manager.dart` — no reference to `LlmUsageMeter`, no budget checks
-- `lib/features/llm_tasks/presentation/llm_task_manager_screen.dart` — no budget UI
-- `lib/features/settings/presentation/settings_screen.dart` — shows usage but no budget controls
-- `lib/core/constants/token_pricing_config.dart` — hardcoded pricing, no per-model config
-
-**Acceptance Criteria:**
-- [ ] `TokenBudgetService` tracks rolling usage per-day/per-feature with configurable hard limits
-- [ ] Settings screen has per-feature token budget controls with on/off toggle and numeric limit
-- [ ] Notifications/alerts at 80%/100% of daily budget
-- [ ] `LlmService` rejects calls that would exceed budget with clear `Result.failure('Budget exceeded for feature: ...')`
-- [ ] Per-model pricing configurable (map of model ID → cost per 1K tokens)
-- [ ] System prompt tokens included in input token count
-- [ ] User-facing cost display with estimated monthly cost based on current usage patterns
-
----
-
-### M5. PDF Extraction Still Regex-Based
-
-**Severity:** MAJOR
-
-**Problem:** `PdfExtractor` (152 lines) still uses `String.fromCharCodes(bytes)` + regex extraction from raw PDF bytes. The `pdf: ^3.10.4` package exists in `pubspec.yaml` but is used for PDF **generation**, not extraction. Fails on scanned PDFs, compressed streams, non-standard encoding.
-
-**Affected files:**
-- `lib/core/data/extraction/pdf_extractor.dart` (lines 82-126 regex strategy, 128-143 raw strategy)
-- `lib/features/ingestion/services/document_extractor.dart` — delegates to PdfExtractor
-
-**Acceptance Criteria:**
-- [ ] Use `pdf` package's `PdfDocument.openBytes()` for proper text extraction with page structure
-- [ ] Page structure preserved (headings, order, paragraph grouping)
-- [ ] For scanned PDFs: OCR fallback (ML Kit)
-- [ ] Extraction method string reflects whether it used text extraction or OCR
-- [ ] Unit tests for plain PDF, compressed PDF, and scanned PDF (image-based)
-
----
-
-### M6. OCR is LLM-Only — No Local Engine
-
-**Severity:** MAJOR
-
-**Problem:** `OcrExtractor` (185 lines) base64-encodes images → sends to LLM with vision prompt. No `google_mlkit_text_recognition` or similar dependency. Every image = $0.01-0.05 LLM call + 3-10s latency.
-
-**Affected files:**
-- `lib/core/data/extraction/ocr_extractor.dart` — LLM-only extraction
-- `pubspec.yaml` — no `google_mlkit_text_recognition`
-
-**Acceptance Criteria:**
-- [ ] Primary OCR: `google_mlkit_text_recognition` (free, on-device, fast, <100ms)
-- [ ] LLM vision OCR as fallback when ML Kit confidence is low or text is complex (diagrams, equations, handwritten text)
-- [ ] Per-image confidence scores stored with extraction results
-- [ ] Document scanning mode: multiple images → merge results
-
----
-
-### M7. No Whisper API for Audio/Video Transcription
-
-**Vision reference:** `agent_must_read.md:11` (video/audio ingestion)
-**Severity:** MAJOR
-
-**Problem:** `TranscriptionExtractor` (358 lines) uses:
-- `youtubetranscript.com` third-party API (no SLA, rate-limited, unofficial)
-- LLM service for audio/video files (slow, expensive, no language detection)
-- No Whisper API (OpenAI or OpenRouter) integration
-- No FFMpeg for media inspection or frame extraction
-
-**Affected files:**
-- `lib/core/data/extraction/transcription_extractor.dart` — third-party API + LLM only
-- `lib/features/ingestion/services/document_extractor.dart` — delegates to TranscriptionExtractor
-- `lib/features/ingestion/presentation/upload_screen.dart` — no processing progress for media
-- `lib/core/config/app_api_config.dart` — youtubetranscript.com hardcoded (lines 66-67)
-
-**Acceptance Criteria:**
-- [ ] Whisper API (OpenRouter or direct OpenAI) as primary STT for uploaded audio/video files
-- [ ] YouTube Data API v3 captions endpoint as primary YouTube STT (youtubetranscript.com as fallback)
-- [ ] FFMpeg for media inspection (duration, codec, sample rate) and frame extraction
-- [ ] Processing progress shown: uploading → transcribing → generating content → complete
-- [ ] YouTube API key configurable in Settings > AI Configuration
-- [ ] Language detection from audio for multi-language content
-
----
-
-### M8. WebScraper Too Minimal for Modern Educational Sites
-
-**Severity:** MAJOR
-
-**Problem:** `WebScraper` (49 lines) does HTTP GET + regex HTML stripping. Most educational sites require JS rendering, login sessions, or cookie handling. The "website link" ingestion is unreliable for all but the simplest static pages.
+**Problem:** Lines 297-303 of `settings_screen.dart` use raw string literals `'Spaced Repetition'`, `'Min interval'`, `'Max interval'` while every other section uses `l10n.*` keys. The l10n keys exist but are unused.
 
 **Affected file:**
-- `lib/features/ingestion/services/web_scraper.dart` (49 lines)
+- `lib/features/settings/presentation/settings_screen.dart:297-302`
 
 **Acceptance Criteria:**
-- [ ] Headless browser integration (e.g., `flutter_inappwebview` or server-side headless Chrome) for JS-rendered content
-- [ ] Cookie/session support for login-walled educational resources
-- [ ] Respect robots.txt
-- [ ] Configurable timeout in Settings
-- [ ] Content extraction quality scoring (full text vs partial vs failed)
+- [ ] Replace with `l10n.spacedRepetition`, `l10n.srMinInterval`, `l10n.srMaxInterval`
+- [ ] Verify render in both English and Spanish
 
 ---
 
-### M9. Only 2 Supported Locales
+### DR-M2: Language Change Committed Prematurely (dry_run_usability M2, m4)
 
-**Vision reference:** `agent_must_read.md:104`
-**Severity:** MAJOR
+**Source:** `issues/open/dry_run_usability_validator.md` M2, m4
+**Severity:** MAJOR — Unsaved changes + inconsistent UX
 
-**Problem:** Only `app_en.arb` and `app_es.arb` exist. Key global education markets unsupported.
+**Problem:** Language change in Profile screen immediately mutates `localeProvider` (line 489) but only persists on explicit "Save". If user navigates away without saving, in-memory locale changes but profile language reverts on restart. No `PopScope` to warn.
 
-**Affected files:**
-- `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb` — only 2 locales
-- Generated files in `lib/l10n/generated/` — only en/es
+**Affected file:**
+- `lib/features/settings/presentation/profile_screen.dart:486-491`
 
 **Acceptance Criteria:**
-- [ ] Add `app_fr.arb` (French — key education market in Africa, Europe, Canada)
-- [ ] Add `app_ar.arb` (Arabic — MENA region)
-- [ ] Add `app_de.arb` (German — Germany, Austria)
-- [ ] Add `app_pt_BR.arb` (Portuguese — Brazil, largest education market in Latin America)
-- [ ] Add `app_zh.arb` or `app_zh_CN.arb` (Mandarin — China)
-- [ ] LLM prompts respect the locale for lesson generation, mentor conversations (locale already in system prompts for some features)
+- [ ] Language change only commits inside `_saveProfile()` after persistence succeeds
+- [ ] OR: Commit immediately AND persist immediately, with revert capability
+- [ ] Add `PopScope` with unsaved-changes warning when language differs from persisted value
 
 ---
 
-### M10. Teaching Mode Post-Lesson Practice Integration Is Partial
+### DR-M3: Settings Screen Does Not Watch `localeProvider` (dry_run_usability M3)
 
-**Vision reference:** `agent_must_read.md:38` ("assign exercises and homework during and after class")
-**Severity:** MAJOR
+**Source:** `issues/open/dry_run_usability_validator.md` M3
+**Severity:** MAJOR — Stale l10n strings in Settings
 
-**Problem:** Post-lesson practice buttons exist in `TutorScreen._showSummaryDialog()` (lines 570-632) but:
-- Both buttons navigate to `FocusTimerScreen` with timer paradigm
-- No way to practice lesson-specific questions in a lesson-block-review flow
-- Lesson topics are NOT marked for priority review in spaced repetition after lesson
-- Exercises generated during conversation are not persisted as practice material for later review
+**Problem:** Settings `build()` watches 5 providers but NOT `localeProvider`. With `AutomaticKeepAliveClientMixin`, any future feature changing locale while Settings is visible will display stale strings.
 
-**Affected files:**
-- `lib/features/teaching/presentation/tutor_screen.dart` — practice buttons navigate to focus timer, not practice hub
-- `lib/features/teaching/services/tutor_service.dart` — `endLesson()` doesn't mark topics for priority review
-- `lib/features/teaching/services/conversation_manager.dart` — exercise phase generates exercises but no post-session practice push
+**Affected file:**
+- `lib/features/settings/presentation/settings_screen.dart:125-137`
 
 **Acceptance Criteria:**
-- [ ] Post-lesson summary dialog shows "Practice these topics" button that navigates to Focus Mode practice hub (not timer) with lesson's subject+topic pre-selected
-- [ ] Lesson topics are marked for priority review in spaced repetition system
-- [ ] Exercises generated by ConversationManager are persisted to the question bank for later practice
-- [ ] Practice mode defaults to "Weak Area Attack" or "Spaced Repetition" for the lesson's topic
-- [ ] "Practice lesson blocks" button replays lesson blocks in quiz/exercise mode
+- [ ] Add `ref.watch(localeProvider)` to `build()`
+- [ ] Verify: change language from another tab → return to Settings → text is updated
+
+---
+
+### DR-M4: Roadmap Topic IDs Displayed as Raw UUIDs (dry_run_roadmaps Issue 1)
+
+**Source:** `issues/open/dry_run_result_roadmaps_milestone_planning.md` Issue 1
+**Severity:** MAJOR — Users cannot identify topics
+
+**Problem:** `_formatTopicNames()` at `roadmap_card.dart:24-28` joins raw UUID strings. Human-readable topic names are never resolved from `TopicRepository`.
+
+**Affected files:**
+- `lib/features/planner/presentation/widgets/roadmap_card.dart:24-28`
+- `lib/features/planner/services/planner_service.dart:239`
+
+**Acceptance Criteria:**
+- [ ] Resolve topic IDs to names via `TopicRepository` before display
+- [ ] OR store topic names alongside IDs in `MilestoneModel` (add `topicNames` field)
+
+---
+
+### DR-M5: `plannedVsActual` Not Displayed in UI (dry_run_roadmaps Issue 2)
+
+**Source:** `issues/open/dry_run_result_roadmaps_milestone_planning.md` Issue 2
+**Severity:** MAJOR — Users can't see schedule adherence
+
+**Problem:** `plannedVsActual` map IS populated in `planner_service.dart:329-349` and stored in Hive, but never displayed in any UI component. No indication of being ahead/behind.
+
+**Affected files:**
+- `lib/features/planner/data/models/roadmap_model.dart:33` — Hive field 9, populated but never displayed
+- `lib/features/planner/presentation/widgets/roadmap_card.dart` — no adherence indicator
+
+**Acceptance Criteria:**
+- [ ] Add visual indicator to `RoadmapCard` showing schedule adherence (e.g. "2 days ahead" / "3 days behind")
+- [ ] Add secondary progress bar comparing elapsed time vs milestone completion ratio
+
+---
+
+### DR-M6: Auto-Completion Doesn't Refresh UI State (dry_run_roadmaps Issue 3)
+
+**Source:** `issues/open/dry_run_result_roadmaps_milestone_planning.md` Issue 3
+**Severity:** MAJOR — Stale roadmap display
+
+**Problem:** `PersonalLearningPlanService.linkDailyPlanToRoadmap()` correctly auto-completes milestones and saves to Hive, but `PlannerNotifier` is never updated. User must navigate away and back to see changes.
+
+**Affected files:**
+- `lib/features/planner/services/personal_learning_plan_service.dart:633-661` — service-only, no notifier update
+- `lib/features/planner/providers/planner_providers.dart:145-161` — `loadRoadmaps()` exists but never called after auto-completion
+
+**Acceptance Criteria (choose one):**
+- Callback pattern: `recordDailyAdherence()` returns updated roadmap IDs → caller triggers reload
+- Bridge method: Add `refreshRoadmaps()` to `PlannerNotifier`, call from adapter
+- Reactive: `PlannerNotifier` observes Hive changes via `watch()` on roadmap box
+
+---
+
+### DR-M7: Math Formula Rendering Is Hand-Rolled — No LaTeX Package (dry_run_math M1)
+
+**Source:** `issues/open/dry_run_result_math_scientific_canvas_validation.md` Step 1
+**Severity:** MAJOR — Math rendering is broken
+
+**Problem:** `MathExpressionWidget` is a 394-line hand-rolled parser with ~30 commands. No `\int`, proper stacked `\frac`, `\sum`, `\prod`, `\lim`, matrices, multi-line equations, error handling. No LaTeX package in pubspec.
+
+**Affected files:**
+- `lib/features/questions/presentation/widgets/math_expression_widget.dart` — hand-rolled parser
+- `pubspec.yaml` — no `flutter_math_fork` or `katex_flutter`
+
+**Acceptance Criteria:**
+- [ ] Integrate `flutter_math_fork` or `katex_flutter` for proper LaTeX rendering
+- [ ] Support: integrals, fractions, sums, products, matrices, multi-line equations
+- [ ] Fall back to hand-rolled parser only for non-LaTeX expressions
+
+---
+
+### DR-M8: No Math Answer Input in Practice Sessions (dry_run_math M2)
+
+**Source:** `issues/open/dry_run_result_math_scientific_canvas_validation.md` Step 2
+**Severity:** MAJOR — Math questions are unanswerable
+
+**Problem:** No answer input field exists for `mathExpression` type in practice sessions. `QuestionCardWidget` falls through to plain `TextField`. No math keyboard, LaTeX helpers, or formula preview.
+
+**Affected files:**
+- `lib/features/practice/presentation/widgets/practice_session_question_card.dart:183-184`
+- `lib/features/questions/presentation/widgets/question_card_widget.dart:198-200`
+
+**Acceptance Criteria:**
+- [ ] Create `MathInputWidget` with LaTeX helpers and formula preview
+- [ ] Math keyboard buttons for common symbols (fractions, integrals, Greek letters, etc.)
+- [ ] Preview renders LaTeX in real-time as user types
+
+---
+
+### DR-M9: Math Validation Is Exact String Comparison (dry_run_math M3)
+
+**Source:** `issues/open/dry_run_result_math_scientific_canvas_validation.md` Step 3
+**Severity:** MAJOR — Equivalent math expressions marked wrong
+
+**Problem:** `answer_validation_service.dart:382-397` does exact string comparison after minimal normalization (strip spaces, lowercase, `x`→`*`). No tolerance for equivalent expressions.
+
+**Affected file:**
+- `lib/core/services/answer_validation_service.dart:382-397`
+
+**Acceptance Criteria:**
+- [ ] Add symbolic math comparison or LLM-based math validation
+- [ ] Accept equivalent forms (e.g. `2+3` == `3+2`, `x^2` == `x*x`)
+
+---
+
+### DR-M10: Canvas Drawing Validation Is "Any Scribble Is Correct" (dry_run_math M10, M5)
+
+**Sources:** Steps 5 and 10
+**Severity:** MAJOR — Drawing questions are meaningless
+
+**Problem:** Both canvas drawing and graph drawing validation check only that data is non-empty. Any scribble is "correct."
+
+**Affected file:**
+- `lib/core/services/answer_validation_service.dart:415-426` (canvas), 445-465 (graph)
+
+**Acceptance Criteria:**
+- [ ] Content-based validation for canvas drawings (stroke count, coverage area, basic shape recognition)
+- [ ] Content-based graph validation (line detection, point positions relative to axes)
+- [ ] LLM-assisted evaluation for complex drawings (fallback)
+
+---
+
+### DR-M11: No File Picker for CSV/JSON Question Import (dry_run_custom_questions Item 9)
+
+**Source:** `issues/open/dry_run_result_custom_question_creation.md` Item 9
+**Severity:** MAJOR — Users cannot batch import questions
+
+**Problem:** Text-based batch import (`importFromText`) exists. `QuestionImportUtils.importFromJson()` and `importFromCsv()` exist. But the UI only exposes text-paste dialog — no file picker for CSV/JSON files.
+
+**Affected files:**
+- `lib/features/questions/presentation/screens/question_bank_screen.dart:278-333`
+- `lib/features/questions/services/question_import_utils.dart:16-46`
+
+**Acceptance Criteria:**
+- [ ] Add file picker option (CSV/JSON) to import dialog using `file_picker`
+- [ ] Connect file picker to `importFromJson()` / `importFromCsv()`
+- [ ] Show import preview with conflict resolution options
+
+---
+
+### DR-M12: No "Create Question" FAB on Main Screens (dry_run_custom_questions Item 1)
+
+**Source:** `issues/open/dry_run_result_custom_question_creation.md` Item 1
+**Severity:** MAJOR — Creation flow is buried
+
+**Problem:** "Create Question" FAB lives only inside Question Bank screen. No direct access from Dashboard, Practice tab, or Subjects tab.
+
+**Affected files:**
+- `lib/features/dashboard/presentation/dashboard_screen.dart:682-685`
+- `lib/features/practice/presentation/practice_screen.dart:1192-1194`
+
+**Acceptance Criteria:**
+- [ ] Add "Create Question" button on Dashboard quick-actions and Practice tab
+- [ ] Add "Question Bank" option to Subjects tab's more-options menu
+
+---
+
+### DR-M13: VoiceBar Review Overlay Skipped With Reduce Motion (dry_run_voice Issue 1)
+
+**Source:** `issues/open/dry_run_result_voice_first_accessibility.md` Issue 1
+**Severity:** MAJOR — Accessibility regression
+
+**Problem:** When `widget.reduceMotion` is true, `_toggleListening()` skips the 2-second review overlay and submits transcription immediately. Users who need reduced motion can't review/fix STT errors.
+
+**Affected file:**
+- `lib/features/teaching/presentation/widgets/voice_bar.dart:70-74`
+
+**Acceptance Criteria:**
+- [ ] Show review overlay regardless of `reduceMotion` state
+- [ ] OR add `Semantics` live-region confirmation step for reduced-motion users
 
 ---
 
 ## MINOR — Code quality / UX friction / architectural debt
 
-### m1. FocusTimerScreen is Still a Monolith (1374 lines)
+### DR-m1: No Content-Based Graph Drawing Tools (dry_run_math M4 partial)
 
-**Problem:** At 1374 lines, `FocusTimerScreen` mixes timer logic, practice hub UI, onboarding, analytics loading, subject picker, session state orchestration, inline practice, and routing — all in one stateful widget.
+**Source:** Steps 4, 6
+**Severity:** MINOR — Incremental improvement
 
-**Affected file:** `lib/features/focus_mode/presentation/focus_timer_screen.dart` (1374 lines)
-**Fix:** Extract into composable widgets per B2 requirements:
-- `StudyHubWidget` — subject cards, due counts, session type picker
-- `FocusTimerSetupWidget` — duration selection, start button
-- `ActiveFocusSessionWidget` — timer display, practice overlay
-- `PracticeExplorerWidget` — free practice without timer
-- Keep `FocusTimerScreen` as thin orchestrator with tab-based navigation
-
----
-
-### m2. PersonalLearningPlanService is Too Large (1102 lines)
-
-**Problem:** At 1102 lines, this service handles plan generation, goal tracking, milestone management, schedule computation, and advisor strategy calling — all in one file.
-
-**Affected file:** `lib/features/planner/services/personal_learning_plan_service.dart` (1102 lines)
-**Fix:** Split per M1 acceptance criteria:
-- `PlanGeneratorService` (plan creation from syllabus + goals)
-- `GoalTrackerService` (goal progress, modifications, completion)
-- `MilestoneManager` (milestone CRUD, timeline computation)
-- Thin `PersonalLearningPlanService` that delegates
-
----
-
-### m3. LessonAgentService Still Doesn't Use LlmAgent Infrastructure
-
-**Affected file:** `lib/features/lessons/services/lesson_agent_service.dart` (302 lines)
-**Note:** Same root cause as B1. `LlmAgent`+`AgentLoop`+`ToolRegistry` exists and is used by `MentorService` and `TutorService`. `LessonAgentService` is the last holdout.
-**Fix:** Refactor to use `LlmAgent` with registered tools and `AgentMemoryStore` context injection. This directly enables background lesson preparation, student-aware lesson generation, and tool-using lesson agents.
-
----
-
-### m4. Empty Catch Blocks in Audio and File Upload Widgets
+**Problem:** `GraphDrawingWidget` has freehand, line, plot point, eraser, color picker, stroke width, undo/redo. Missing: snap-to-grid, text tool for labeling axes, measurement/scale indicators. `CanvasDrawingWidget` shape tools hidden in practice/question-bank contexts.
 
 **Affected files:**
-- `lib/features/questions/presentation/widgets/audio_recording_widget.dart` — empty `catch (_) {}` on lines 61 and 76
-- `lib/features/questions/presentation/widgets/file_upload_widget.dart` — empty `catch (_) {}` on line 50
+- `lib/features/questions/presentation/widgets/graph_drawing_widget.dart` — no snap-to-grid/text tool
+- `lib/features/questions/presentation/widgets/canvas_drawing_widget.dart` — shape tools hidden outside tutor
+- `lib/features/practice/presentation/widgets/practice_session_question_card.dart`
 
-**Fix:** Log errors using the class's Logger instance and optionally show a user-facing error message via SnackBar or callback.
+**Acceptance Criteria:**
+- [ ] Add snap-to-grid for precise graph drawing
+- [ ] Add text tool for labeling axes and data points
+- [ ] Enable shape tools in practice/question-bank contexts
+- [ ] Consider measurement/scale indicators
 
 ---
 
-### m5. No Widget/Integration Tests for Critical New Flows
+### DR-m2: Graph Renderer Feature Has Dead l10n Strings (dry_run_math M6)
 
-**Problem:** 400+ test files exist, but several critical flows lack widget tests:
-- Lesson scheduling flow (booking → calendar displays → tutor launch with pre-generated lesson)
-- Focus mode practice hub navigation and session type selection
-- Tutor screen summary dialog practice button interaction
-- Post-lesson practice with pre-selected subject/topic
-- Voice input flow across screens
+**Source:** Step 6
+**Severity:** MINOR — Dead localization cruft
 
-**Fix:** Add widget tests per AGENTS.md pattern. Priority flows match B1 and B2 acceptance criteria.
+**Problem:** 17+ l10n strings defined in `app_en.arb:1194-1364+` and `app_es.arb`. Zero usage in `lib/features/`. No widget, screen, service, or provider references these strings.
+
+**Affected files:**
+- `lib/l10n/app_en.arb`, `lib/l10n/app_es.arb`
+
+**Acceptance Criteria:**
+- [ ] Implement Graph Renderer feature OR remove dead strings
+- [ ] If implemented, add widget/service for rendering mathematical graphs from data
+
+---
+
+### DR-m3: VoiceBar Inconsistent Text Overflow (dry_run_voice Issue 2)
+
+**Source:** Issue 2
+**Severity:** MINOR
+
+**Problem:** No systematic audit of text overflow across card widgets at max font size (scale 2.0).
+
+**Affected files:**
+- `lib/features/dashboard/presentation/dashboard_screen.dart` — card widgets
+- `lib/features/dashboard/presentation/widgets/weak_areas_card.dart`, `workload_card.dart`, `topic_breakdown_card.dart`
+
+**Acceptance Criteria:**
+- [ ] Audit all card widgets for `TextOverflow.ellipsis`, `softWrap`, clipping at max font size
+- [ ] Ensure `Flexible`/`Expanded` wrappers around dynamic text
+
+---
+
+### DR-m4: Color-Blind Accessibility Gaps (dry_run_voice Issue 3)
+
+**Source:** Issue 3
+**Severity:** MINOR
+
+**Problem:** `LinearProgressIndicator` uses color-only fill. `_getProgressColor()` and `AppTheme.progressColor()`/`masteryColor()` use color-only thresholds. No color-blind safe palette.
+
+**Affected files:**
+- `lib/features/dashboard/presentation/widgets/topic_breakdown_card.dart:155-165, 207-212`
+- `lib/core/theme/app_theme.dart:245-264`
+
+**Acceptance Criteria:**
+- [ ] Add pattern overlay (stripes, dots) to `LinearProgressIndicator` via `CustomPainter`
+- [ ] Add color-blind safe theme palette (e.g. blue-orange instead of red-green)
+- [ ] Add icon/shape differentiation alongside color in progress indicators
+
+---
+
+### DR-m5: Large Touch Targets Not Universally Applied (dry_run_voice Issue 4)
+
+**Source:** Issue 4
+**Severity:** MINOR
+
+**Problem:** `largeTouchTargets` setting is respected by theme-level button minimum sizes and practice session drawing widgets, but not by most interactive elements: VoiceBar IconButton, AppBar actions, PopupMenuButtons, chips, sliders, tabs.
+
+**Affected files:**
+- `lib/features/teaching/presentation/widgets/voice_bar.dart:111-118`
+- `lib/features/teaching/presentation/tutor_screen.dart:736-746`
+- `lib/features/dashboard/presentation/dashboard_screen.dart`
+
+**Acceptance Criteria:**
+- [ ] Propagate `largeTouchTargets` via theme extension or query `settingsProvider` in each widget
+- [ ] Apply to: VoiceBar IconButton, tutor screen buttons, dashboard collapsible cards
+
+---
+
+### DR-m6: Mid-Speech TTS Not Restorable After Interruption (dry_run_voice Issue 5)
+
+**Source:** Issue 5
+**Severity:** MINOR — Platform limitation
+
+**Problem:** If user navigates away while TTS speaks, and widget is destroyed/recreated, TTS utterance is lost. `flutter_tts` has no position tracking API.
+
+**Affected files:**
+- `lib/features/teaching/services/conversation_manager.dart:243-255`
+- `lib/core/services/voice_service.dart:185-211`
+
+**Acceptance Criteria:**
+- [ ] Re-read last complete AI response on widget re-creation if `_voiceOutputEnabled` is still true
+- [ ] Add "Replay last response" TTS button visible when returning to in-progress lesson
+- [ ] Document as known limitation
+
+---
+
+### DR-m7: Empty topicId Skips Mastery Attribution (dry_run_custom_questions Item 14)
+
+**Source:** Item 14
+**Severity:** MINOR
+
+**Problem:** If user doesn't select a topic during question creation, empty `topicId` results in zero mastery contribution.
+
+**Affected files:**
+- `lib/features/questions/presentation/screens/question_bank_screen.dart:794-811`
+- `lib/core/services/mastery_graph_service.dart:95-121`
+
+**Acceptance Criteria:**
+- [ ] Add visual warning in create/edit dialog when no topic is selected ("Mastery won't be tracked")
+- [ ] OR auto-assign to default topic / parent subject mastery aggregate
+
+---
+
+### DR-m8: "Check Nudges Now" Gives Vague Feedback (dry_run_usability m1)
+
+**Source:** m1
+**Severity:** MINOR
+
+**Problem:** After tapping "Check Nudges Now," SnackBar shows only "Nudge checks complete." No indication of what was checked.
+
+**Affected files:**
+- `lib/features/settings/presentation/settings_screen.dart:274-291`
+- `lib/core/services/engagement_scheduler.dart:196-199`
+
+**Acceptance Criteria:**
+- [ ] Return result summary from `runDailyChecksNow()` (count per nudge type)
+- [ ] Display summary in SnackBar or brief dialog
+
+---
+
+### DR-m9: "Sign Out" Does Not Explain What Data Survives (dry_run_usability m2)
+
+**Source:** m2
+**Severity:** MINOR
+
+**Problem:** Sign-out dialog says "Are you sure?" but doesn't explain what data survives (profile, language preference).
+
+**Affected file:**
+- `lib/features/settings/presentation/settings_screen.dart:1642-1759`
+
+**Acceptance Criteria:**
+- [ ] Add text to dialog explaining what data survives or gets cleared
+- [ ] Consider "Clear profile" checkbox
+
+---
+
+### DR-m10: Theme Default Mismatch (dry_run_usability m3)
+
+**Source:** m3
+**Severity:** MINOR
+
+**Problem:** `SettingsBox` defaults to `ThemeMode.light` (index 0) but `UiConfig.defaultThemeMode` is `ThemeMode.system`. Discrepancy causes light mode on first launch for system-dark users.
+
+**Affected file:**
+- `lib/features/settings/data/models/settings_box.dart:112`
+
+**Acceptance Criteria:**
+- [ ] Change default to `ThemeMode.system.index` (2) to match `UiConfig`
+- [ ] Verify migration for existing users with stored `themeMode: 0`
+
+---
+
+### DR-m11: No Search or Section Index in Settings (dry_run_usability m5)
+
+**Source:** m5
+**Severity:** MINOR
+
+**Problem:** 15 sections with ~40 controls in a single ListView. No search bar, section index, or quick-jump.
+
+**Affected file:**
+- `lib/features/settings/presentation/settings_screen.dart:143-377`
+
+**Acceptance Criteria (future):**
+- [ ] Add search bar that filters visible sections by label text
+- [ ] Add sticky section header index on right side
 
 ---
 
 ## Execution Plan — Next Development Phase
 
-### Priority Order (Top-Down):
+### Priority Order
 
-| Priority | Item | Type | Effort | Dependencies |
+| Priority | Item ID | Description | Effort | Dependencies |
 |---|---|---|---|---|
-| **P0** | **B2: Focus mode free practice + monolith split** | BLOCKER | 2 weeks | None |
-| **P0** | **Further Issues: focus_mode.md** — address beta tester complaints | BLOCKER | See B2 | B2 |
-| **P0** | **B1: Lesson rich content rendering** (markdown, LaTeX, images) | BLOCKER | 1 week | None |
-| **P0** | **B1: Calendar lesson time slots** (not roadmap milestones) | BLOCKER | 1 week | None |
-| **P0** | **B1: LessonAgentService agentification** (use LlmAgent) | BLOCKER | 1 week | None |
-| **P0** | **Further Issues: lessons.md** — address beta tester lesson complaints | BLOCKER | See B1 | B1 |
-| **P1** | **M3: Background task runner** (WorkManager + zonedSchedule) | MAJOR | 2 weeks | None |
-| **P1** | **M10: Post-lesson practice full integration** (SR priority marking, exercise persistence) | MAJOR | 1 week | B2 |
-| **P1** | **M4: Token budget enforcement** (per-feature budgets, cost alerts) | MAJOR | 1 week | None |
-| **P2** | **M1: LLM advisor integration into plan decisions** (not just metadata) | MAJOR | 1 week | m2 (split) |
-| **P2** | **M2: Voice VAD + review step + interrupt** | MAJOR | 1-2 weeks | None |
-| **P2** | **M5: PDF extraction with pdf package** | MAJOR | 3 days | None |
-| **P2** | **M6: Local OCR with ML Kit** | MAJOR | 3-5 days | None |
-| **P2** | **M7: Whisper API STT + YouTube Data API** | MAJOR | 1-2 weeks | None |
-| **P2** | **M8: Headless web scraper** | MAJOR | 3-5 days | None |
-| **P2** | **M9: Additional locales (fr, ar, de, pt_BR, zh)** | MAJOR | 3-5 days | None |
-| **P3** | **m1: Split FocusTimerScreen** | MINOR | 2 days | B2 |
-| **P3** | **m2: Split PersonalLearningPlanService** | MINOR | 2 days | M1 |
-| **P3** | **m3: LessonAgentService agent refactor** | MINOR | 2-3 days | B1 |
-| **P3** | **m4: Fix empty catch blocks** | MINOR | 1 hour | None |
-| **P3** | **m5: Widget tests for critical flows** | MINOR | 3-5 days | B1, B2 |
+| **P0** | **B-FI2** | Focus Mode: free practice + monolith split + session type picker | 2 weeks | None |
+| **P0** | **B-FI1.1** | Lessons: calendar scheduling dashboard (not milestone dots) | 1 week | None |
+| **P0** | **B-FI1.2** | Lessons: rich content rendering (markdown, LaTeX, images) | 1 week | None |
+| **P0** | **B-FI1.3** | Lessons: LessonAgentService agentification (LlmAgent + tools + memory) | 1 week | None |
+| **P0** | **B-FI1.4** | Lessons: background lesson prep via IdleExecutor | 3 days | B-FI1.3 |
+| **P0** | **DR-B1** | AI Task Monitor stale data fix | 2 hours | None |
+| **P0** | **DR-B2** | EngagementScheduler stale settings fix | 1 day | None |
+| **P0** | **DR-B3** | Settings orphaned keys migration | 2 days | None |
+| **P0** | **DR-B4** | Content trust: flagging + validation fields + LLM re-check | 3-5 days | None |
+| **P1** | **DR-M1** | SR settings hardcoded English | 1 hour | None |
+| **P1** | **DR-M2** | Language premature commit fix | 1 day | None |
+| **P1** | **DR-M3** | Settings watch localeProvider | 1 hour | None |
+| **P1** | **DR-M4** | Roadmap topic UUID display fix | 1 day | None |
+| **P1** | **DR-M5** | plannedVsActual display | 1 day | None |
+| **P1** | **DR-M6** | Auto-completion UI refresh | 1 day | None |
+| **P1** | **DR-M7** | LaTeX rendering integration | 3 days | None |
+| **P1** | **DR-M8** | Math answer input widget | 3 days | DR-M7 |
+| **P2** | **DR-M9** | Math validation improvements | 2 days | DR-M7 |
+| **P2** | **DR-M10** | Canvas/graph drawing validation | 2 days | None |
+| **P2** | **DR-M11** | CSV/JSON file import UI | 1 day | None |
+| **P2** | **DR-M12** | Create Question FAB on main screens | 1 day | None |
+| **P2** | **DR-M13** | VoiceBar reduce motion fix | 2 hours | None |
+| **P3** | DR-m1 to DR-m11 | All MINOR items | Various | Various |
 
-### Key Dependencies:
-- B1 items can be parallelized (richContent rendering is independent from CalendarView, which is independent from LessonAgentService agentification)
-- B2 is independent — can start immediately
-- M10 depends on B2 (practice hub UX)
-- M1 depends on m2 (PersonalLearningPlanService split)
-- M3 unlocks proactive engagement features (scheduled prep, notification scheduling)
-- All MAJOR extraction items (M5, M6, M7, M8) are independent of each other
-- M4 is critical for user trust (API key cost control)
+### Key Dependencies
+- B-FI1 items can be partially parallelized: calendar dashboard (B-FI1.1) is independent from rich content (B-FI1.2), which is independent from agentification (B-FI1.3)
+- B-FI1.4 (background prep) depends on B-FI1.3 (agentification)
+- DR-M8 (math input) depends on DR-M7 (LaTeX rendering)
+- All DR-B (blocker) items are independent — can all be started immediately
+- DR-M1 through DR-M6 are small fixes (1 hour to 1 day each)
 
-### Further Issues Closure:
-When both beta-tester issues are resolved:
-1. `issues/further_issues/open/lessons.md` → delete from `open/`, acknowledge in this file
-2. `issues/further_issues/open/focus_mode.md` → delete from `open/`, acknowledge in this file
-3. Update this section to record resolution date and commit hash
+### Further Issues Closure
+When both beta-tester issues are fully resolved:
+1. Move `issues/further_issues/open/lessons.md` → delete from `open/`
+2. Move `issues/further_issues/open/focus_mode.md` → delete from `open/`
+3. Record resolution date and commit hash here
 
 ---
 
-## Architectural Notes for Future Sprints
+## Architectural Gaps Blocking Vision Features
 
-1. **LLM agent infrastructure is solid but underutilized** — `LlmAgent` + `AgentLoop` + `ToolRegistry` + `AgentMemoryStore` + `IdleExecutor` is a well-designed ReAct agent framework. Only `MentorService` uses it for full agentic chat. `LessonAgentService` is the major gap. `TutorService` uses it only for background tasks.
+### AG-1: No Persistent Background Task System
+- `IdleExecutor` uses Dart `Timer.periodic` — stops when app is backgrounded
+- `EngagementScheduler` uses Dart `Timer` — doesn't survive app restart
+- No `flutter_workmanager` in pubspec
+- **Blocks:** background lesson prep, reliable daily nudges, proactive engagement
 
-2. **6 registered tools** (schedule_lesson, search_questions, get_student_stats, generate_lesson_blocks, create_plan, get_weak_topics) — all under `lib/features/mentor/services/tools/`. Only the mentor's agent uses them. Consider whether tools should be shared across agents (mentor, tutor, lesson prep).
+### AG-2: Token Budget Has No Enforcement
+- `LlmUsageMeter` records but never enforces
+- No per-feature budgets, no daily caps, no pre-flight checks
+- **Blocks:** user trust for API-key-funded students, cost controls
 
-3. **No cloud sync** — all data is local Hive. `supabase_flutter` or similar would be needed for multi-device support.
+### AG-3: Agent Infrastructure Underutilized
+- `LlmAgent` + `AgentLoop` + `ToolRegistry` + `AgentMemoryStore` only used by `MentorService`
+- `TutorService` uses it only for background tasks
+- `LessonAgentService` doesn't use it at all
+- **Blocks:** student-aware lesson generation, cross-session memory in teaching
 
-4. **Batch processing needed** — for students uploading 300-page PDFs, current per-file processing doesn't scale. Page-level chunking with batch LLM processing needed.
+### AG-4: No Content Feedback Loop
+- No mechanism to flag incorrect AI content
+- `QuestionModel` has no trust/verification fields
+- Content validation is structural-only (schema check, no LLM re-check)
+- **Blocks:** trust in AI-generated content, continuous quality improvement
 
-5. **Offline-first is good** — local Hive + Ollama support is strong. But OpenRouter-dependent features (vision, embeddings, Whisper) break offline.
+### AG-5: Exercise Generation Not Persisted
+- `ConversationManager` generates exercises during tutor sessions
+- Exercises are ephemeral — never saved to question bank
+- **Blocks:** post-lesson practice, spaced repetition of lesson material
 
-6. **Multi-language prompt support exists but is inconsistent** — some services pass `localeName` to system prompts, others hardcode English. An audit of all LLM-facing prompts for locale awareness is needed when adding new locales.
-
-7. **Token budget is P1 for user trust** — students using their own API keys will abandon the app if costs spiral without controls. This directly affects retention.
-
-8. **Exercise persistence gap** — `ConversationManager` generates exercises during tutoring but they are not saved to the question bank. This means lesson-generated practice material is lost after the session.
+### AG-6: No Whisper API / Local STT for Media Ingestion
+- `TranscriptionExtractor` uses third-party `youtubetranscript.com` and LLM calls
+- No Whisper API, no YouTube Data API
+- **Blocks:** reliable video/audio ingestion from the vision

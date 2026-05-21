@@ -1,4 +1,6 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -8,6 +10,8 @@ import 'package:studyking/features/teaching/data/models/tutor_session_model.dart
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/lessons/data/models/lesson_model.dart';
+import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -17,6 +21,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
@@ -218,8 +223,71 @@ class FakeSessionRepository extends SessionRepository {
   }
 }
 
+class FakeSpacedRepetitionService extends SpacedRepetitionService {
+  FakeSpacedRepetitionService()
+      : super(
+          questionRepo: QuestionRepository(),
+          attemptRepo: AttemptRepository(),
+        );
+
+  @override
+  Future<Result<List<Question>>> getTopicTimeDue(String topicId) async {
+    return Result.success([]);
+  }
+}
+
+class _TestLessonAdapter extends TypeAdapter<Lesson> {
+  @override
+  final int typeId = 7;
+
+  @override
+  Lesson read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return Lesson.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, Lesson obj) {
+    writer.write(obj.toJson());
+  }
+}
+
+class _TestLessonBlockAdapter extends TypeAdapter<LessonBlock> {
+  @override
+  final int typeId = 6;
+
+  @override
+  LessonBlock read(BinaryReader reader) {
+    final raw = reader.read() as Map;
+    final map = <String, dynamic>{};
+    for (final entry in raw.entries) {
+      map['${entry.key}'] = entry.value;
+    }
+    return LessonBlock.fromJson(map);
+  }
+
+  @override
+  void write(BinaryWriter writer, LessonBlock obj) {
+    writer.write(obj.toJson());
+  }
+}
+
 void main() {
+  setUpAll(() {
+    if (!Hive.isAdapterRegistered(7)) {
+      Hive.registerAdapter(_TestLessonAdapter());
+    }
+    if (!Hive.isAdapterRegistered(6)) {
+      Hive.registerAdapter(_TestLessonBlockAdapter());
+    }
+  });
+
   group('TutorService', () {
+    late String hivePath;
     late FakeConversationRepository conversationRepo;
     late FakeTutorSessionRepository tutorSessionRepo;
     late FakeQuestionRepository fakeQuestionRepo;
@@ -230,7 +298,9 @@ void main() {
     late FakeExerciseEvaluator exerciseEvaluator;
     late TutorService tutorService;
 
-    setUp(() {
+    setUp(() async {
+      hivePath = (await Directory.systemTemp.createTemp('tutor_svc_test_')).path;
+      Hive.init(hivePath);
       conversationRepo = FakeConversationRepository();
       tutorSessionRepo = FakeTutorSessionRepository();
       fakeQuestionRepo = FakeQuestionRepository();
@@ -248,15 +318,28 @@ void main() {
       llmService = FakeLlmService();
       masteryService = FakeMasteryGraphService();
       exerciseEvaluator = FakeExerciseEvaluator();
+      final srService = FakeSpacedRepetitionService();
       tutorService = TutorService(
         database: database,
         llmService: llmService,
         masteryService: masteryService,
+        spacedRepetitionService: srService,
         modelId: 'test-model',
         exerciseEvaluator: exerciseEvaluator,
         conversationRepository: conversationRepo,
         planOrchestrator: FakePlanAdherenceOrchestrator(),
       );
+    });
+
+    tearDown(() async {
+      try {
+        await Hive.close();
+      } catch (_) {}
+      if (hivePath.isNotEmpty) {
+        try {
+          await Directory(hivePath).delete(recursive: true);
+        } catch (_) {}
+      }
     });
 
     group('initial state', () {

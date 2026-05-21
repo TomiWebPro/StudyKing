@@ -3,9 +3,9 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class DashboardHeader extends StatelessWidget {
-  final VoidCallback? onExportTap;
+  final VoidCallback onExportTap;
 
-  const DashboardHeader({super.key, this.onExportTap});
+  const DashboardHeader({super.key, required this.onExportTap});
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +33,7 @@ class DashboardHeader extends StatelessWidget {
           child: IconButton(
             icon: const Icon(Icons.file_download_outlined),
             tooltip: l10n.exportReports,
-            onPressed: onExportTap ?? () => Navigator.pushNamed(context, AppRoutes.settings),
+            onPressed: onExportTap,
           ),
         ),
         Semantics(

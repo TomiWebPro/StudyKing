@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+void _noop() {}
+
 Widget _buildTestApp(Widget child) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -15,35 +17,35 @@ Widget _buildTestApp(Widget child) {
 void main() {
   group('DashboardHeader', () {
     testWidgets('renders dashboard icon', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.dashboard), findsOneWidget);
     });
 
     testWidgets('renders study dashboard title text', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.text('Study Dashboard'), findsOneWidget);
     });
 
     testWidgets('renders export icon button', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);
     });
 
     testWidgets('renders backup icon button', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.backup_outlined), findsOneWidget);
     });
 
     testWidgets('renders help icon button', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.help_outline), findsOneWidget);
@@ -61,7 +63,7 @@ void main() {
     });
 
     testWidgets('renders all icon buttons as tappable', (tester) async {
-      await tester.pumpWidget(_buildTestApp(const DashboardHeader()));
+      await tester.pumpWidget(_buildTestApp(DashboardHeader(onExportTap: _noop)));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.file_download_outlined), findsOneWidget);

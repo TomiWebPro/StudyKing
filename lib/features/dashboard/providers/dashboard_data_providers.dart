@@ -7,6 +7,8 @@ import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
@@ -289,6 +291,20 @@ final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgre
   } catch (e) {
     _dashboardLogger.w('Failed to get checklist progress', e);
     return const ChecklistProgress();
+  }
+});
+
+final dashboardLastFocusSessionProvider =
+    FutureProvider.family<FocusSession?, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final repo = FocusSessionRepository();
+    await repo.init();
+    final result = await repo.getLatest();
+    return result.data;
+  } catch (e) {
+    _dashboardLogger.w('Failed to load last focus session', e);
+    return null;
   }
 });
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:convert';
 
+import 'package:archive/archive.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/settings/services/data_backup_service.dart';
@@ -16,6 +17,9 @@ void main() {
       if (methodCall.method == 'getTemporaryDirectory') {
         return Directory.systemTemp.path;
       }
+      if (methodCall.method == 'getApplicationDocumentsDirectory') {
+        return Directory.systemTemp.path;
+      }
       return null;
     });
   });
@@ -24,6 +28,15 @@ void main() {
     TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
         .setMockMethodCallHandler(pathChannel, null);
   });
+
+  String readBackupFile(String path) {
+    if (path.endsWith('.skbak')) {
+      final bytes = File(path).readAsBytesSync();
+      final decompressed = GZipDecoder().decodeBytes(bytes);
+      return utf8.decode(decompressed);
+    }
+    return File(path).readAsStringSync();
+  }
 
   group('DataBackupService', () {
     late DataBackupService service;
@@ -44,7 +57,7 @@ void main() {
           ],
         };
 
-        final result = await service.exportAllData(boxData: boxData);
+        final result = await service.exportAllData(boxData: boxData, compress: false);
 
         expect(result.isSuccess, isTrue);
         expect(result.data, isA<String>());
@@ -58,7 +71,7 @@ void main() {
           ],
         };
 
-        final result = await service.exportAllData(boxData: boxData);
+        final result = await service.exportAllData(boxData: boxData, compress: false);
         final filePath = result.data!;
         final file = File(filePath);
         expect(await file.exists(), isTrue);
@@ -77,6 +90,7 @@ void main() {
         final result = await service.exportAllData(
           boxData: {},
           filename: 'my_custom_backup',
+          compress: false,
         );
 
         expect(result.isSuccess, isTrue);
@@ -84,7 +98,7 @@ void main() {
       });
 
       test('exports empty box data', () async {
-        final result = await service.exportAllData(boxData: {});
+        final result = await service.exportAllData(boxData: {}, compress: false);
 
         expect(result.isSuccess, isTrue);
         final filePath = result.data!;
@@ -102,7 +116,7 @@ void main() {
           'box3': [{'k': 'v3'}],
         };
 
-        final result = await service.exportAllData(boxData: boxData);
+        final result = await service.exportAllData(boxData: boxData, compress: false);
         expect(result.isSuccess, isTrue);
 
         final content = await File(result.data!).readAsString();
@@ -115,6 +129,7 @@ void main() {
         final result = await service.exportAllData(
           boxData: {'test': [{'k': 'v'}]},
           outputDir: 'persistent',
+          compress: false,
         );
 
         expect(result.isSuccess, isTrue);
@@ -125,6 +140,7 @@ void main() {
         final result = await service.exportAllData(
           boxData: {'test': [{'k': 'v'}]},
           filename: 'custom_name',
+          compress: false,
         );
 
         expect(result.isSuccess, isTrue);
@@ -154,7 +170,7 @@ void main() {
           records: [{'data': 'test'}],
         );
 
-        final content = await File(result.data!).readAsString();
+        final content = readBackupFile(result.data!);
         final decoded = jsonDecode(content) as Map<String, dynamic>;
         final boxes = decoded['boxes'] as Map;
         expect(boxes.containsKey('testBox'), isTrue);

@@ -32,6 +32,51 @@ void main() {
       expect(chunk.heading, 'Introduction');
     });
 
+    test('accepts empty text string', () {
+      final chunk = SourceChunk(chunkIndex: 0, text: '');
+      expect(chunk.text, '');
+    });
+
+    test('accepts empty heading string', () {
+      final chunk = SourceChunk(chunkIndex: 0, text: 't', heading: '');
+      expect(chunk.heading, '');
+    });
+
+    test('accepts negative chunkIndex', () {
+      final chunk = SourceChunk(chunkIndex: -1, text: 'negative');
+      expect(chunk.chunkIndex, -1);
+    });
+
+    test('accepts very large chunkIndex', () {
+      final chunk = SourceChunk(
+        chunkIndex: 2147483647,
+        text: 'large index',
+      );
+      expect(chunk.chunkIndex, 2147483647);
+    });
+
+    test('accepts pageStart greater than pageEnd', () {
+      final chunk = SourceChunk(
+        chunkIndex: 0,
+        pageStart: 10,
+        pageEnd: 5,
+        text: 'reversed pages',
+      );
+      expect(chunk.pageStart, 10);
+      expect(chunk.pageEnd, 5);
+    });
+
+    test('accepts negative page numbers', () {
+      final chunk = SourceChunk(
+        chunkIndex: 0,
+        pageStart: -1,
+        pageEnd: -1,
+        text: 'negative pages',
+      );
+      expect(chunk.pageStart, -1);
+      expect(chunk.pageEnd, -1);
+    });
+
     group('toJson', () {
       test('produces expected map structure with all fields', () {
         final chunk = SourceChunk(
@@ -61,6 +106,31 @@ void main() {
         expect(json['pageEnd'], isNull);
         expect(json['text'], 'test');
         expect(json['heading'], isNull);
+      });
+
+      test('serializes text with special characters', () {
+        final chunk = SourceChunk(
+          chunkIndex: 0,
+          text: 'Line 1\nLine 2\tTabbed',
+          heading: 'Unicode: ñôü',
+        );
+
+        final json = chunk.toJson();
+
+        expect(json['text'], 'Line 1\nLine 2\tTabbed');
+        expect(json['heading'], 'Unicode: ñôü');
+      });
+
+      test('serializes empty heading', () {
+        final chunk = SourceChunk(
+          chunkIndex: 0,
+          text: 'text',
+          heading: '',
+        );
+
+        final json = chunk.toJson();
+
+        expect(json['heading'], '');
       });
     });
 
@@ -169,6 +239,56 @@ void main() {
         expect(chunk.chunkIndex, 7);
         expect(chunk.text, 'ignore extra');
       });
+
+      test('handles text with unicode characters', () {
+        final chunk = SourceChunk.fromJson({
+          'chunkIndex': 0,
+          'text': 'ñôüé€日本語',
+        });
+
+        expect(chunk.text, 'ñôüé€日本語');
+      });
+
+      test('handles text with newlines and tabs', () {
+        final chunk = SourceChunk.fromJson({
+          'chunkIndex': 0,
+          'text': 'line1\nline2\tindented',
+        });
+
+        expect(chunk.text, 'line1\nline2\tindented');
+      });
+
+      test('handles empty string heading', () {
+        final chunk = SourceChunk.fromJson({
+          'chunkIndex': 0,
+          'text': 'text',
+          'heading': '',
+        });
+
+        expect(chunk.heading, '');
+      });
+
+      test('handles negative chunkIndex', () {
+        final chunk = SourceChunk.fromJson({
+          'chunkIndex': -1,
+          'text': 'negative',
+        });
+
+        expect(chunk.chunkIndex, -1);
+      });
+
+      test('handles very large integer values', () {
+        final chunk = SourceChunk.fromJson({
+          'chunkIndex': 2147483647,
+          'pageStart': 999999,
+          'pageEnd': 1000000,
+          'text': 'large',
+        });
+
+        expect(chunk.chunkIndex, 2147483647);
+        expect(chunk.pageStart, 999999);
+        expect(chunk.pageEnd, 1000000);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -199,6 +319,38 @@ void main() {
         expect(restored.pageStart, isNull);
         expect(restored.pageEnd, isNull);
         expect(restored.heading, isNull);
+      });
+
+      test('preserves special characters through roundtrip', () {
+        final original = SourceChunk(
+          chunkIndex: 0,
+          pageStart: 1,
+          pageEnd: 3,
+          text: 'Unicode: ñôüé€日本語\nNewlines\tand tabs',
+          heading: 'Section ñô',
+        );
+        final restored = SourceChunk.fromJson(original.toJson());
+
+        expect(restored.chunkIndex, original.chunkIndex);
+        expect(restored.pageStart, original.pageStart);
+        expect(restored.pageEnd, original.pageEnd);
+        expect(restored.text, original.text);
+        expect(restored.heading, original.heading);
+      });
+
+      test('preserves negative values through roundtrip', () {
+        final original = SourceChunk(
+          chunkIndex: -1,
+          pageStart: -2,
+          pageEnd: -1,
+          text: 'negative',
+        );
+        final restored = SourceChunk.fromJson(original.toJson());
+
+        expect(restored.chunkIndex, -1);
+        expect(restored.pageStart, -2);
+        expect(restored.pageEnd, -1);
+        expect(restored.text, 'negative');
       });
     });
 

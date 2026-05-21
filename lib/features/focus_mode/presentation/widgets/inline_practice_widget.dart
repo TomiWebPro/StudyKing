@@ -9,6 +9,7 @@ import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/data/models/practice_models.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_feedback_widget.dart';
+import 'package:studyking/features/practice/presentation/widgets/confidence_selector.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
@@ -21,7 +22,7 @@ class InlinePracticeWidget extends ConsumerStatefulWidget {
   final String? topicId;
   final int questionCount;
   final FocusSessionType sessionType;
-  final void Function(int correct, int total, Map<String, SubjectAccuracy> perSubjectAccuracies) onComplete;
+  final void Function(int correct, int total, Map<String, TopicAccuracy> perTopicAccuracies) onComplete;
 
   const InlinePracticeWidget({
     super.key,
@@ -38,12 +39,14 @@ class InlinePracticeWidget extends ConsumerStatefulWidget {
   ConsumerState<InlinePracticeWidget> createState() => _InlinePracticeWidgetState();
 }
 
-class SubjectAccuracy {
+class TopicAccuracy {
+  final String topicId;
   final int correct;
   final int total;
   final double accuracyPercent;
 
-  SubjectAccuracy({
+  TopicAccuracy({
+    required this.topicId,
     required this.correct,
     required this.total,
     required this.accuracyPercent,
@@ -60,8 +63,9 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
   bool _isLoading = true;
   bool _isComplete = false;
   int _correctCount = 0;
-  final _perSubjectCorrect = <String, int>{};
-  final _perSubjectTotal = <String, int>{};
+  final _perTopicCorrect = <String, int>{};
+  final _perTopicTotal = <String, int>{};
+  int _selectedConfidence = 3;
   final _answerRecords = <PracticeAnswerRecord>[];
   late AnswerValidationService _validationService;
   late final MasteryRecorder _masteryRecorder;
@@ -140,9 +144,9 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
 
     if (isCorrect) _correctCount++;
 
-    final subjectId = question.subjectId;
-    _perSubjectCorrect[subjectId] = (_perSubjectCorrect[subjectId] ?? 0) + (isCorrect ? 1 : 0);
-    _perSubjectTotal[subjectId] = (_perSubjectTotal[subjectId] ?? 0) + 1;
+    final topicId = question.topicId;
+    _perTopicCorrect[topicId] = (_perTopicCorrect[topicId] ?? 0) + (isCorrect ? 1 : 0);
+    _perTopicTotal[topicId] = (_perTopicTotal[topicId] ?? 0) + 1;
 
     _answerRecords.add(PracticeAnswerRecord(
       questionId: question.id,
@@ -164,7 +168,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
         topicId: question.topicId,
         isCorrect: _isCorrect,
         timeSpentMs: 0,
-        confidence: _isCorrect ? 4 : 2,
+        confidence: _selectedConfidence,
         userAnswer: _currentAnswer ?? '',
       );
     } catch (e) {
@@ -218,7 +222,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
     }
 
     if (_isComplete) {
-      final perSubjectAccuracies = _perSubjectAccuracies;
+      final perTopicAccuracies = _perTopicAccuracies;
       return Card(
         margin: EdgeInsets.zero,
         child: Padding(
@@ -234,9 +238,9 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
                   fontWeight: FontWeight.bold,
                   color: _correctCount == _questions.length ? theme.colorScheme.primary : null,
                 )),
-              if (perSubjectAccuracies.isNotEmpty) ...[
+              if (perTopicAccuracies.isNotEmpty) ...[
                 const SizedBox(height: 12),
-                ...perSubjectAccuracies.entries.map((e) => Padding(
+                ...perTopicAccuracies.entries.map((e) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Text('${formatDecimal(e.value.correct.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)}/${formatDecimal(e.value.total.toDouble(), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)} (${formatPercent(e.value.accuracyPercent, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)})',
                     style: theme.textTheme.bodyMedium),
@@ -244,7 +248,7 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
               ],
               const SizedBox(height: 16),
               FilledButton(
-                onPressed: () => widget.onComplete(_correctCount, _questions.length, _perSubjectAccuracies),
+                onPressed: () => widget.onComplete(_correctCount, _questions.length, _perTopicAccuracies),
                 child: Text(l10n.close),
               ),
             ],
@@ -289,6 +293,11 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
             explanation: question.markscheme?.explanation,
           ),
           const SizedBox(height: 12),
+          ConfidenceSelector(
+            value: _selectedConfidence,
+            onChanged: (v) => setState(() => _selectedConfidence = v),
+          ),
+          const SizedBox(height: 12),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -311,12 +320,13 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
     );
   }
 
-  Map<String, SubjectAccuracy> get _perSubjectAccuracies {
-    final result = <String, SubjectAccuracy>{};
-    for (final subjectId in _perSubjectTotal.keys) {
-      final total = _perSubjectTotal[subjectId] ?? 0;
-      final correct = _perSubjectCorrect[subjectId] ?? 0;
-      result[subjectId] = SubjectAccuracy(
+  Map<String, TopicAccuracy> get _perTopicAccuracies {
+    final result = <String, TopicAccuracy>{};
+    for (final topicId in _perTopicTotal.keys) {
+      final total = _perTopicTotal[topicId] ?? 0;
+      final correct = _perTopicCorrect[topicId] ?? 0;
+      result[topicId] = TopicAccuracy(
+        topicId: topicId,
         correct: correct,
         total: total,
         accuracyPercent: total > 0 ? (correct / total) * 100 : 0,

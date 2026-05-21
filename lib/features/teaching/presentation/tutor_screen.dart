@@ -165,7 +165,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
-          _initErrorMessage = l10n.tutorInitFailed(e.toString());
+          _initErrorMessage = l10n.tutorInitFailedGeneric;
         });
       }
     }
@@ -193,7 +193,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
-          _initErrorMessage = l10n.tutorInitFailed(e.toString());
+          _initErrorMessage = l10n.tutorInitFailedGeneric;
         });
       }
     }
@@ -539,7 +539,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _closingTimer = null;
   }
 
-  Future<void> _startFocusModePractice() async {
+  Future<void> _navigateToFocusPractice() async {
     if (!mounted) return;
     Navigator.of(context).pop();
     await Navigator.pushNamed(
@@ -548,21 +548,20 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       arguments: FocusTimerScreenArgs(
         preselectedSubjectId: widget.subjectId,
         preselectedTopicId: widget.topicId,
-        defaultDurationMinutes: 15,
       ),
     );
   }
 
-  Future<void> _startPostLessonPractice({int questionCount = 5}) async {
+  Future<void> _navigateToLessonBlocksPractice() async {
     if (!mounted) return;
     Navigator.of(context).pop();
     await Navigator.pushNamed(
       context,
-      AppRoutes.focusMode,
-      arguments: FocusTimerScreenArgs(
-        preselectedSubjectId: widget.subjectId,
-        preselectedTopicId: widget.topicId,
-        defaultDurationMinutes: 30,
+      AppRoutes.practiceSession,
+      arguments: PracticeSessionArgs(
+        subjectId: widget.subjectId,
+        topicId: widget.topicId,
+        isSpacedRepetition: true,
       ),
     );
   }
@@ -596,10 +595,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    _startFocusModePractice();
+                    _navigateToFocusPractice();
                   },
-                  icon: const Icon(Icons.timer, size: 18),
-                  label: Text('${l10n.quickPractice} ${l10n.focusTimerLabel}'),
+                  icon: const Icon(Icons.school, size: 18),
+                  label: Text(l10n.practiceTheseTopics),
                 ),
               ),
               const SizedBox(height: 8),
@@ -608,10 +607,10 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                 child: OutlinedButton.icon(
                   onPressed: () {
                     Navigator.of(ctx).pop();
-                    _startPostLessonPractice(questionCount: 20);
+                    _navigateToLessonBlocksPractice();
                   },
-                  icon: const Icon(Icons.playlist_add_check, size: 18),
-                  label: Text(l10n.practiceMode),
+                  icon: const Icon(Icons.replay, size: 18),
+                  label: Text(l10n.practiceLessonBlocks),
                 ),
               ),
             ],

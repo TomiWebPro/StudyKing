@@ -9,7 +9,9 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/presentation/content_library_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -67,16 +69,17 @@ Widget _buildWidget({
   TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
+    overrides: [
+      if (sourceRepo != null) sourceRepositoryProvider.overrideWithValue(sourceRepo),
+      if (questionRepo != null) questionRepositoryProvider.overrideWithValue(questionRepo),
+      if (subjectRepo != null) subjectRepositoryProvider.overrideWithValue(subjectRepo),
+    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
-      home: ContentLibraryScreen(
-        sourceRepo: sourceRepo,
-        questionRepo: questionRepo,
-        subjectRepo: subjectRepo,
-      ),
+      home: const ContentLibraryScreen(),
     ),
   );
 }

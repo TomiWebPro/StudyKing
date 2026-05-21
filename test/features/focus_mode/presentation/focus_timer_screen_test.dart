@@ -6,7 +6,12 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
-import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart' show focusSessionRepositoryProvider, studyTimerServiceProvider;
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/core/providers/app_providers.dart' show badgeServiceProvider;
+import 'package:studyking/core/services/badge_service.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
@@ -265,6 +270,28 @@ class _FakeStatsService extends FakeStudyTimerService {
   }
 }
 
+class _FakeBadgeService extends BadgeService {
+  _FakeBadgeService() : super();
+
+  @override
+  Future<Result<List<BadgeModel>>> checkAndUnlockBadges(String studentId) async {
+    return Result.success([]);
+  }
+}
+
+class _FakeFocusSessionRepo extends FocusSessionRepository {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<FocusSession?>> getLatest() async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(FocusSession session) async {
+    return Result.success(null);
+  }
+}
+
 Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
@@ -274,6 +301,8 @@ Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigato
       else
         studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
+      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepo()),
+      badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -290,6 +319,8 @@ Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) 
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
       studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
+      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepo()),
+      badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

@@ -1,10 +1,8 @@
-import 'dart:convert';
-import 'dart:io' show File;
+import 'dart:async';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:ui' show PlatformDispatcher;
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:path_provider/path_provider.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,6 +23,7 @@ import 'core/utils/responsive.dart';
 import 'core/data/data.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/features/settings/services/data_backup_service.dart';
 import 'package:studyking/features/practice/data/adapters/mastery_improvement_adapter.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -79,73 +78,31 @@ Future<void> _runAutoBackupCheck() async {
     final intervalDays = box.get('autoBackupIntervalDays', defaultValue: 0) as int;
     if (intervalDays <= 0) return;
     final lastBackupStr = box.get('lastAutoBackupDate', defaultValue: '') as String;
-    if (lastBackupStr.isEmpty) {
-      box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
-      return;
-    }
+    if (lastBackupStr.isEmpty) return;
     final lastBackup = DateTime.tryParse(lastBackupStr);
     if (lastBackup == null) return;
     final nextBackup = lastBackup.add(Duration(days: intervalDays));
     if (DateTime.now().isAfter(nextBackup)) {
-      final boxData = <String, List<Map<String, dynamic>>>{};
-      final boxNames = [
-        HiveBoxNames.subjects, HiveBoxNames.topics, HiveBoxNames.questions,
-        HiveBoxNames.answers, HiveBoxNames.sources, HiveBoxNames.attempts,
-        HiveBoxNames.lessons, HiveBoxNames.lessonBlocks, HiveBoxNames.sessions,
-        HiveBoxNames.sessionsTyped, HiveBoxNames.progress, HiveBoxNames.tasks,
-        HiveBoxNames.conversations, HiveBoxNames.tutorSessions,
-        HiveBoxNames.masteryStates, HiveBoxNames.questionMasteryStates,
-        HiveBoxNames.questionEvaluations, HiveBoxNames.learningPlans,
-        HiveBoxNames.planAdherence, HiveBoxNames.planAdherenceMetrics,
-        HiveBoxNames.masteryImprovementMetrics, HiveBoxNames.roadmaps,
-        HiveBoxNames.pendingActions, HiveBoxNames.engagementNudges,
-        HiveBoxNames.badges, HiveBoxNames.focusSessions,
-        HiveBoxNames.studentAvailability, HiveBoxNames.topicDependencies,
-        HiveBoxNames.profile, HiveBoxNames.llmTasks, HiveBoxNames.llmUsageRecords,
-        HiveBoxNames.agentMemory, HiveBoxNames.examResults,
-        HiveBoxNames.studentId, HiveBoxNames.dashboardLayoutPrefs,
-        HiveBoxNames.dbVersion,
-      ];
-      for (final boxName in boxNames) {
-        if (!Hive.isBoxOpen(boxName)) continue;
-        final hiveBox = Hive.box(boxName);
-        final records = <Map<String, dynamic>>[];
-        for (final value in hiveBox.values) {
-          if (value == null) continue;
-          if (value is Map<String, dynamic>) {
-            records.add(value);
-          } else {
-            try {
-              final obj = value as dynamic;
-              records.add(obj.toJson() as Map<String, dynamic>);
-            } catch (e) {
-              _mainLogger.w('Failed to serialize box entry: $e');
-            }
-          }
-        }
-        if (records.isNotEmpty) boxData[boxName] = records;
-      }
+      final backupService = DataBackupService();
+      final boxData = backupService.collectAllBoxData();
       boxData.remove(HiveBoxNames.settings);
-      final backup = {
-        'version': 1,
-        'exportedAt': DateTime.now().toIso8601String(),
-        'boxes': boxData,
-      };
-      final json = const JsonEncoder.withIndent('  ').convert(backup);
       if (kIsWeb) {
         box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
         _mainLogger.i('Auto-backup skipped: not supported on web');
       } else {
-        final dir = await getApplicationDocumentsDirectory();
-        final file = File('${dir.path}/studyking_backup.json');
-        await file.writeAsString(json);
-        box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
-        box.put('lastAutoBackupPath', file.path);
-        _mainLogger.i('Auto-backup completed at startup: ${file.path}');
+        final result = await backupService.exportAllData(
+          boxData: boxData,
+          outputDir: 'persistent',
+        );
+        if (result.isSuccess) {
+          box.put('lastAutoBackupDate', DateTime.now().toIso8601String());
+          box.put('lastAutoBackupPath', result.data);
+          _mainLogger.i('Auto-backup completed: ${result.data}');
+        }
       }
     }
   } catch (e) {
-    _mainLogger.w('Auto-backup check at startup failed', e);
+    _mainLogger.w('Auto-backup check failed', e);
   }
 }
 
@@ -347,6 +304,7 @@ class StudyKingApp extends ConsumerStatefulWidget {
 class _StudyKingAppState extends ConsumerState<StudyKingApp> with WidgetsBindingObserver {
   bool _providersInited = false;
   bool _initialized = false;
+  Timer? _autoBackupTimer;
 
   @override
   void initState() {
@@ -354,13 +312,24 @@ class _StudyKingAppState extends ConsumerState<StudyKingApp> with WidgetsBinding
     WidgetsBinding.instance.addObserver(this);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _runAppInitialization(const StudyKingApp()).then((_) {
-        if (mounted) setState(() => _initialized = true);
+        if (mounted) {
+          setState(() => _initialized = true);
+          _startAutoBackupTimer();
+        }
       });
+    });
+  }
+
+  void _startAutoBackupTimer() {
+    _autoBackupTimer?.cancel();
+    _autoBackupTimer = Timer.periodic(const Duration(hours: 1), (_) {
+      _runAutoBackupCheck();
     });
   }
 
   @override
   void dispose() {
+    _autoBackupTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -752,8 +721,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                           labelType: NavigationRailLabelType.all,
                           destinations: _buildDestinations(l10n, isWideScreen: true).map((d) {
                             return NavigationRailDestination(
-                              icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
-                              selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                              icon: Icon(d.icon),
+                              selectedIcon: Icon(d.selectedIcon),
                               label: Text(d.label),
                             );
                           }).toList(),
@@ -778,8 +747,8 @@ class _MainScreenState extends ConsumerState<MainScreen> {
                 labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
                 destinations: _buildDestinations(l10n).map((d) {
                   return NavigationDestination(
-                    icon: Tooltip(message: d.tooltip, child: Icon(d.icon)),
-                    selectedIcon: Tooltip(message: d.tooltip, child: Icon(d.selectedIcon)),
+                    icon: Icon(d.icon),
+                    selectedIcon: Icon(d.selectedIcon),
                     label: d.label,
                   );
                 }).toList(),

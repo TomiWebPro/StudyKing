@@ -253,11 +253,13 @@ void main() {
 
     group('startPracticeSession', () {
       test('creates a focus session', () async {
-        final session = await service.startPracticeSession(
+        final result = await service.startPracticeSession(
           studentId: 'student-1',
           durationMinutes: 25,
         );
 
+        expect(result.isSuccess, isTrue);
+        final session = result.data!;
         expect(session.id, isNotEmpty);
         expect(session.studentId, 'student-1');
         expect(session.type, SessionType.focus);
@@ -265,19 +267,21 @@ void main() {
       });
 
       test('creates session with default duration when not specified', () async {
-        final session = await service.startPracticeSession(
+        final result = await service.startPracticeSession(
           studentId: 'student-1',
         );
 
-        expect(session.plannedDurationMinutes, 25);
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.plannedDurationMinutes, 25);
       });
     });
 
     group('endPracticeSession', () {
       test('updates session with completion status', () async {
-        final session = await service.startPracticeSession(
+        final startResult = await service.startPracticeSession(
           studentId: 'student-1',
         );
+        final session = startResult.data!;
 
         await service.endPracticeSession(
           session,
@@ -296,19 +300,20 @@ void main() {
       });
 
       test('handles save failure gracefully', () async {
-        final session = await service.startPracticeSession(
+        final startResult = await service.startPracticeSession(
           studentId: 'student-1',
         );
+        final session = startResult.data!;
 
         fakeSessionRepo.shouldThrow = true;
 
-        await service.endPracticeSession(
+        final result = await service.endPracticeSession(
           session,
           questionsAnswered: 5,
           correctAnswers: 3,
         );
 
-        expect(fakeSessionRepo.savedSessions, hasLength(1));
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -316,12 +321,12 @@ void main() {
       test('handles save failure gracefully', () async {
         fakeSessionRepo.shouldThrow = true;
 
-        final session = await service.startPracticeSession(
+        final result = await service.startPracticeSession(
           studentId: 'student-1',
         );
 
-        expect(session, isNotNull);
-        expect(session.studentId, 'student-1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.studentId, 'student-1');
       });
     });
 
@@ -425,30 +430,29 @@ void main() {
       test('startPracticeSession returns session even when save fails', () async {
         fakeSessionRepo.shouldThrow = true;
 
-        final session = await service.startPracticeSession(
+        final result = await service.startPracticeSession(
           studentId: 'student-1',
         );
 
-        expect(session, isNotNull);
-        expect(session.studentId, 'student-1');
-        expect(session.id, isNotEmpty);
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.studentId, 'student-1');
+        expect(result.data!.id, isNotEmpty);
       });
 
       test('endPracticeSession does not throw when save fails', () async {
-        final session = await service.startPracticeSession(
+        final startResult = await service.startPracticeSession(
           studentId: 'student-1',
         );
+        final session = startResult.data!;
 
         fakeSessionRepo.shouldThrow = true;
 
-        await expectLater(
-          service.endPracticeSession(
-            session,
-            questionsAnswered: 5,
-            correctAnswers: 3,
-          ),
-          completes,
+        final result = await service.endPracticeSession(
+          session,
+          questionsAnswered: 5,
+          correctAnswers: 3,
         );
+        expect(result.isFailure, isTrue);
       });
     });
   });
