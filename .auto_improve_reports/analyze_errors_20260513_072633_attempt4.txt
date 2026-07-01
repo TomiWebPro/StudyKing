@@ -1,7 +1,0 @@
-Analyzing StudyKing...                                          
-
-warning • The '!' will have no effect because the receiver can't be null • test/features/subjects/data/repositories/subject_repository_comprehensive_test.dart:308:16 • unnecessary_non_null_assertion
-warning • The '!' will have no effect because the receiver can't be null • test/features/subjects/data/repositories/subject_repository_comprehensive_test.dart:309:16 • unnecessary_non_null_assertion
-
-
-2 issues found. (ran in 2.1s)

@@ -1,9 +1,0 @@
-Analyzing StudyKing...                                          
-
-   info • Don't invoke 'print' in production code • lib/core/utils/logger.dart:21:9 • avoid_print
-   info • Don't invoke 'print' in production code • lib/core/utils/logger.dart:23:9 • avoid_print
-   info • Don't invoke 'print' in production code • lib/core/utils/logger.dart:26:7 • avoid_print
-   info • Don't invoke 'print' in production code • test/features/lessons/presentation/presentation_widget_integration_test.dart:280:7 • avoid_print
-
-
-4 issues found. (ran in 2.1s)

@@ -1,6 +1,0 @@
-Analyzing StudyKing...                                          
-
-   info • Redundant initialization to 'null' • test/validation.answer.test.dart:20:7 • avoid_init_to_null
-
-
-1 issue found. (ran in 2.2s)

@@ -1,8 +1,0 @@
-Analyzing StudyKing...                                          
-
-  error • Undefined name 'AppLocalizations' • lib/core/providers/app_providers.dart:170:29 • undefined_identifier
-   info • 'value' is deprecated and shouldn't be used. Use component accessors like .r or .g, or toARGB32 for an explicit conversion • test/features/subjects/presentation/subject_form_widgets_test.dart:288:20 • deprecated_member_use
-warning • The value of the local variable 'box' isn't used • test/features/subjects/presentation/subject_selection_screen_test.dart:144:13 • unused_local_variable
-
-
-3 issues found. (ran in 5.7s)

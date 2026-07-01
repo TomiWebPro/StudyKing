@@ -66,6 +66,9 @@ coverage/
 .changelogs/
 changelogs/
 
+# Hermes
+.hermes/
+
 # Cache
 .caches/
 .cache/

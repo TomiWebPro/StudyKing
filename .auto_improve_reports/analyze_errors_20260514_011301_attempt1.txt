@@ -1,6 +1,0 @@
-Analyzing StudyKing...                                          
-
-warning • A value for optional parameter 'originalError' isn't ever given • test/core/errors/error_conversion_edge_cases_test.dart:12:11 • unused_element_parameter
-
-
-1 issue found. (ran in 2.2s)

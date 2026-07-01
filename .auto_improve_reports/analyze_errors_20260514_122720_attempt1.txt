@@ -1,6 +1,0 @@
-Analyzing StudyKing...                                          
-
-   info • Use interpolation to compose strings and values • test/features/practice/models/practice_models_test.dart:215:24 • prefer_interpolation_to_compose_strings
-
-
-1 issue found. (ran in 4.4s)

@@ -1,6 +1,0 @@
-Analyzing StudyKing...                                          
-
-   info • 'AlwaysAliveProviderBase' is deprecated and shouldn't be used. Will be removed in 3.0.0. Use ProviderBase instead • test/features/dashboard/providers/dashboard_providers_test.dart:72:37 • deprecated_member_use
-
-
-1 issue found. (ran in 3.2s)

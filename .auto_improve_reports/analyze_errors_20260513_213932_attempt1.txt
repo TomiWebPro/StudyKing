@@ -1,8 +1,0 @@
-Analyzing StudyKing...                                          
-
-warning • The value of the local variable 'dataReceived' isn't used • test/features/questions/ui/widgets/canvas_drawing_widget_test.dart:173:14 • unused_local_variable
-warning • The value of the local variable 'dataReceived' isn't used • test/features/questions/ui/widgets/canvas_drawing_widget_test.dart:206:14 • unused_local_variable
-warning • The value of the local variable 'submittedAnswer' isn't used • test/features/questions/ui/widgets/question_card_widget_test.dart:249:17 • unused_local_variable
-
-
-3 issues found. (ran in 6.1s)

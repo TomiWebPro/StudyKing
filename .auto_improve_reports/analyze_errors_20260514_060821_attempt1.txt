@@ -1,6 +1,0 @@
-Analyzing StudyKing...                                          
-
-warning • The declaration '_buildTestAppWithRoutes' isn't referenced • test/features/sessions/presentation/session_tracker_screen_test.dart:34:8 • unused_element
-
-
-1 issue found. (ran in 6.9s)
