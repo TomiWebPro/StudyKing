@@ -12,6 +12,9 @@ class _FakeBadgeRepository implements BadgeRepository {
   int _badgeCount = 0;
 
   @override
+  bool get isOpen => true;
+
+  @override
   Future<void> init() async {}
 
   @override

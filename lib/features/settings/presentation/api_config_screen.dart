@@ -146,7 +146,7 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
     if (model.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please select a model before saving.'),
+          content: Text(l10n.selectModelWarning),
           backgroundColor: errorColor,
         ),
       );
@@ -587,15 +587,12 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
               showDialog(
                 context: context,
                 builder: (ctx) => AlertDialog(
-                  title: const Text('Provider Changed'),
-                  content: const Text(
-                    'Changing the provider will clear the selected model. '
-                    'You\'ll need to select a new model.',
-                  ),
+                  title: Text(l10n.providerChangedTitle),
+                  content: Text(l10n.providerChangedBody),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(ctx),
-                      child: const Text('OK'),
+                      child: Text(l10n.ok),
                     ),
                   ],
                 ),

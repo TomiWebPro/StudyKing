@@ -206,7 +206,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       sessionId: 'quickguide',
       role: MessageRole.tutor,
       type: MessageType.text,
-      content: '${l10n.pleaseConfigureApiKey}\n\n[${l10n.configureNow}](/settings/api-config)',
+      content: l10n.pleaseConfigureApiKey,
       timestamp: DateTime.now(),
     );
     setState(() => _messages.add(configureMsg));
@@ -296,8 +296,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         ],
       ),
       body: SafeArea(
-        child: FocusTraversalGroup(
-          child: Column(
+        child: Column(
           children: [
             if (_getLlmService().config.apiKey.isEmpty)
               _buildApiKeyBanner(l10n, theme),
@@ -335,7 +334,6 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
             ),
           ],
         ),
-),
       ),
     );
   }

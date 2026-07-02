@@ -1,10 +1,14 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 
 class EngagementNudgeRepository extends Repository<EngagementNudgeModel> {
+  static final Logger _logger = const Logger('EngagementNudgeRepository');
+  EngagementNudgeRepository() : super(boxName: HiveBoxNames.engagementNudges);
+
   Future<void> init() async {
     await openBox(HiveBoxNames.engagementNudges);
   }
@@ -31,6 +35,7 @@ class EngagementNudgeRepository extends Repository<EngagementNudgeModel> {
       }
       return Result.success(allResult.data!.take(limit).toList());
     } catch (e) {
+      _logger.w(e.toString(), e);
       return Result.failure(e.toString());
     }
   }

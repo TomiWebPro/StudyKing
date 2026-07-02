@@ -7,7 +7,7 @@ import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/shimmer_widget.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/badges_card.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart' show DashboardCard;
 import 'package:studyking/features/dashboard/presentation/widgets/dashboard_header.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/empty_dashboard_checklist.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/absence_banner.dart';
@@ -148,8 +148,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       child: SingleChildScrollView(
         padding: ResponsiveUtils.screenPadding(context),
         physics: const AlwaysScrollableScrollPhysics(),
-        child: FocusTraversalGroup(
-          child: Column(
+        child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               DashboardHeader(onExportTap: _scrollToExport),
@@ -191,13 +190,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                 if (showSkeleton)
                   _buildSkeletonLoading(context)
                 else ...[
-                  CollapsibleCard(
-                    cardId: 'summary',
+                  DashboardCard(
                     asyncValue: overallStatsAsync,
                     onRetry:
                         _onRetry(dashboardOverallStatsProvider(studentId)),
-                    title:
-                        _cardTitle(context, Icons.summarize, l10n.summary),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -215,12 +211,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'focus',
+                  DashboardCard(
                     asyncValue: focusStatsAsync,
                     onRetry:
                         _onRetry(dashboardFocusStatsProvider(studentId)),
-                    title: _cardTitle(context, Icons.timer, l10n.focusTime),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -270,13 +264,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'weekly_chart',
+                  DashboardCard(
                     asyncValue: weeklyTrendAsync,
                     onRetry:
                         _onRetry(dashboardWeeklyTrendProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.show_chart, l10n.weeklyActivity),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -286,13 +277,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     body: WeeklyChart(weeklyTrend: weeklyTrendData),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'adherence',
+                  DashboardCard(
                     asyncValue: adherenceAsync,
                     onRetry:
                         _onRetry(dashboardAdherenceDataProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.event_note, l10n.planAdherence),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -306,13 +294,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'mastery',
+                  DashboardCard(
                     asyncValue: snapshotAsync,
                     onRetry:
                         _onRetry(dashboardMasterySnapshotProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.analytics, l10n.masteryOverview),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry: _onRetry(
@@ -326,13 +311,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     _buildSyllabusProgress(context, syllabusGoals, studentId),
                   ],
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'workload',
+                  DashboardCard(
                     asyncValue: workloadAsync,
                     onRetry:
                         _onRetry(dashboardWorkloadProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.trending_up, l10n.remainingWorkload),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -363,13 +345,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'due_reviews',
+                  DashboardCard(
                     asyncValue: dueReviewsAsync,
                     onRetry:
                         _onRetry(dashboardDueReviewsProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.autorenew, l10n.dueForReview),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry: _onRetry(
@@ -397,13 +376,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'weak_areas',
+                  DashboardCard(
                     asyncValue: allMasteryAsync,
                     onRetry:
                         _onRetry(dashboardAllMasteryProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.warning_amber, l10n.weakAreas),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry: _onRetry(
@@ -442,13 +418,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'topic_breakdown',
+                  DashboardCard(
                     asyncValue: allMasteryAsync,
                     onRetry:
                         _onRetry(dashboardAllMasteryProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.pie_chart, l10n.topicPerformance),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry: _onRetry(
@@ -470,13 +443,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     ),
                   ),
                   SizedBox(height: vs),
-                  CollapsibleCard(
-                    cardId: 'badges',
+                  DashboardCard(
                     asyncValue: badgesAsync,
                     onRetry:
                         _onRetry(dashboardBadgesProvider(studentId)),
-                    title: _cardTitle(
-                        context, Icons.emoji_events, l10n.achievements),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
@@ -489,7 +459,6 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ],
             ],
           ),
-        ),
       ),
     );
   }
@@ -616,17 +585,4 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _cardTitle(BuildContext context, IconData icon, String label) {
-    return Semantics(
-      headingLevel: 3,
-      child: Row(
-        children: [
-          Icon(icon,
-              size: 20, color: Theme.of(context).colorScheme.primary),
-          const SizedBox(width: 8),
-          Text(label, style: Theme.of(context).textTheme.titleMedium),
-        ],
-      ),
-    );
-  }
 }

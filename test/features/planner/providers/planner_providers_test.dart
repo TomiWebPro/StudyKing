@@ -1,8 +1,7 @@
-import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
@@ -19,7 +18,6 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
-import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -69,7 +67,7 @@ class _FakeMasteryRepository extends MasteryGraphRepository {
   void addDependency(TopicDependency dep) => _dependencies.add(dep);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
@@ -167,7 +165,7 @@ class _FakeSessionRepo extends SessionRepository {
   void addSession(Session s) => _sessions[s.id] = s;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> save(String key, Session session) async {
@@ -282,6 +280,84 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   }
 }
 
+class _FakeMasteryGraphService extends MasteryGraphService {
+  _FakeMasteryGraphService()
+      : super(
+          masteryStateRepo: null,
+          questionMasteryRepo: null,
+          topicDependencyRepo: null,
+          questionEvaluationRepo: null,
+          calculationService: null,
+        );
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<double>> getReadinessScore(
+      String studentId, String topicId) async {
+    return Result.success(0.5);
+  }
+
+  @override
+  Future<Result<double>> getReviewUrgency(
+      String studentId, String topicId) async {
+    return Result.success(0.0);
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(
+      String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
+    String studentId, {
+    double threshold = 0.5,
+  }) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<MasteryState>> getTopicMastery(
+      String studentId, String topicId) async {
+    return Result.success(
+      MasteryState.initial(studentId: studentId, topicId: topicId),
+    );
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(
+      String studentId) async {
+    return Result.success({});
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getTopicsNeedingReview(
+      String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<void>> recordAttempt({
+    required String studentId,
+    required String topicId,
+    required String questionId,
+    required bool isCorrect,
+    required int confidence,
+    required int timeSpentMs,
+    String? subtopicId,
+  }) async {
+    return Result.success(null);
+  }
+}
+
 class _FakeErrorPlannerService extends PlannerService {
   final bool throwOnScheduleLesson;
   final bool throwOnAcceptPendingAction;
@@ -373,7 +449,7 @@ PlannerService _createService({
   );
   return PlannerService(
     planRepo: pRepo,
-    masteryService: MasteryGraphService(),
+    masteryService: _FakeMasteryGraphService(),
     repository: mRepo,
     topicRepository: tRepo,
     roadmapRepo: rRepo,
@@ -386,22 +462,52 @@ PlannerService _createService({
   );
 }
 
+_FakeErrorPlannerService _createErrorService({
+  _FakePlanRepository? planRepo,
+  _FakeMasteryRepository? masteryRepo,
+  _FakeTopicRepository? topicRepo,
+  _FakeRoadmapRepository? roadmapRepo,
+  _FakeSessionRepo? sessionRepo,
+  _FakePendingActionRepo? pendingActionRepo,
+  _FakePlanAdherenceOrchestrator? planOrchestrator,
+  bool throwOnScheduleLesson = false,
+  bool throwOnAcceptPendingAction = false,
+  bool throwOnDismissPendingAction = false,
+  bool throwOnRedistribute = false,
+}) {
+  return _FakeErrorPlannerService(
+    planRepo: planRepo ?? _FakePlanRepository(),
+    masteryService: _FakeMasteryGraphService(),
+    repository: masteryRepo ?? _FakeMasteryRepository(),
+    topicRepository: topicRepo ?? _FakeTopicRepository(),
+    roadmapRepo: roadmapRepo ?? _FakeRoadmapRepository(),
+    sessionRepo: sessionRepo ?? _FakeSessionRepo(),
+    pendingActionRepo: pendingActionRepo ?? _FakePendingActionRepo(),
+    planOrchestrator: planOrchestrator ?? _FakePlanAdherenceOrchestrator(),
+    fixedStudentId: 'test-student',
+    throwOnScheduleLesson: throwOnScheduleLesson,
+    throwOnAcceptPendingAction: throwOnAcceptPendingAction,
+    throwOnDismissPendingAction: throwOnDismissPendingAction,
+    throwOnRedistribute: throwOnRedistribute,
+  );
+}
+
+ProviderContainer _createContainer({
+  PlannerService? service,
+  List<Override> extraOverrides = const [],
+}) {
+  final overrides = <Override>[
+    plannerServiceProvider.overrideWithValue(
+      service ?? _createService(),
+    ),
+    ...extraOverrides,
+  ];
+  final container = ProviderContainer(overrides: overrides);
+  addTearDown(container.dispose);
+  return container;
+}
+
 void main() {
-  late String hivePath;
-
-  setUpAll(() {
-    hivePath = Directory.systemTemp.createTempSync('planner_providers_test_').path;
-    Hive.init(hivePath);
-    registerPlannerAdapters();
-  });
-
-  tearDownAll(() async {
-    await Hive.close();
-    try {
-      await Directory(hivePath).delete(recursive: true);
-    } catch (_) {}
-  });
-
   group('PlannerState', () {
     test('default state has correct initial values', () {
       const state = PlannerState();
@@ -794,16 +900,14 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        final fakeService = _FakeErrorPlannerService(
+        final fakeService = _createErrorService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(),
-          repository: masteryRepo,
-          topicRepository: topicRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planOrchestrator: planOrchestrator,
-          fixedStudentId: 'test-student',
           throwOnScheduleLesson: true,
         );
         final throwingNotifier = PlannerNotifier(fakeService);
@@ -841,16 +945,14 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        final fakeService = _FakeErrorPlannerService(
+        final fakeService = _createErrorService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(),
-          repository: masteryRepo,
-          topicRepository: topicRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planOrchestrator: planOrchestrator,
-          fixedStudentId: 'test-student',
         );
         final throwingNotifier = PlannerNotifier(fakeService);
 
@@ -956,16 +1058,14 @@ void main() {
       });
 
       test('acceptPendingAction sets error when service throws', () async {
-        final fakeService = _FakeErrorPlannerService(
+        final fakeService = _createErrorService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(),
-          repository: masteryRepo,
-          topicRepository: topicRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planOrchestrator: planOrchestrator,
-          fixedStudentId: 'test-student',
           throwOnAcceptPendingAction: true,
         );
         final throwingNotifier = PlannerNotifier(fakeService);
@@ -983,16 +1083,14 @@ void main() {
       });
 
       test('dismissPendingAction sets error when service throws', () async {
-        final fakeService = _FakeErrorPlannerService(
+        final fakeService = _createErrorService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(),
-          repository: masteryRepo,
-          topicRepository: topicRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planOrchestrator: planOrchestrator,
-          fixedStudentId: 'test-student',
           throwOnDismissPendingAction: true,
         );
         final throwingNotifier = PlannerNotifier(fakeService);
@@ -1343,16 +1441,14 @@ void main() {
       });
 
       test('sets error on failure', () async {
-        final failingService = _FakeErrorPlannerService(
+        final failingService = _createErrorService(
           planRepo: planRepo,
-          masteryService: MasteryGraphService(),
-          repository: masteryRepo,
-          topicRepository: topicRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
           roadmapRepo: roadmapRepo,
           sessionRepo: sessionRepo,
           pendingActionRepo: pendingActionRepo,
           planOrchestrator: planOrchestrator,
-          fixedStudentId: 'test-student',
           throwOnRedistribute: true,
         );
         final failingNotifier = PlannerNotifier(failingService);
@@ -1365,12 +1461,7 @@ void main() {
 
   group('plannerServiceProvider', () {
     test('creates PlannerService with overridden value', () {
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(_createService()),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = _createContainer();
 
       final service = container.read(plannerServiceProvider);
       expect(service, isA<PlannerService>());
@@ -1379,14 +1470,7 @@ void main() {
 
   group('plannerProvider', () {
     test('creates PlannerNotifier with PlannerService', () {
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(
-            _createService(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = _createContainer();
 
       final notifier = container.read(plannerProvider.notifier);
       expect(notifier, isA<PlannerNotifier>());
@@ -1395,14 +1479,7 @@ void main() {
     });
 
     test('can set active tab through provider', () {
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(
-            _createService(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = _createContainer();
 
       final notifier = container.read(plannerProvider.notifier);
       notifier.setActiveTab(2);
@@ -1413,14 +1490,7 @@ void main() {
 
   group('planProgressProvider', () {
     test('returns default data when no plan exists', () async {
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(
-            _createService(),
-          ),
-        ],
-      );
-      addTearDown(container.dispose);
+      final container = _createContainer();
 
       final progress = await container.read(planProgressProvider.future);
       expect(progress.plannedMinutesToday, 0);
@@ -1475,17 +1545,12 @@ void main() {
         adherenceScore: 0.75,
       ));
 
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(
-            _createService(
-              planRepo: planRepo,
-              adherenceRepo: adherenceRepo,
-            ),
-          ),
-        ],
+      final container = _createContainer(
+        service: _createService(
+          planRepo: planRepo,
+          adherenceRepo: adherenceRepo,
+        ),
       );
-      addTearDown(container.dispose);
 
       final progress = await container.read(planProgressProvider.future);
       expect(progress.plannedMinutesToday, 60);
@@ -1539,17 +1604,12 @@ void main() {
         adherenceScore: 1.0,
       ));
 
-      final container = ProviderContainer(
-        overrides: [
-          plannerServiceProvider.overrideWithValue(
-            _createService(
-              planRepo: planRepo,
-              adherenceRepo: adherenceRepo,
-            ),
-          ),
-        ],
+      final container = _createContainer(
+        service: _createService(
+          planRepo: planRepo,
+          adherenceRepo: adherenceRepo,
+        ),
       );
-      addTearDown(container.dispose);
 
       final progress = await container.read(planProgressProvider.future);
       expect(progress.todayProgress, 1.5);

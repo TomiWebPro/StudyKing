@@ -6,7 +6,10 @@ String formatDecimal(
   int minFractionDigits = 0,
   int maxFractionDigits = 2,
 }) {
-  final fmt = NumberFormat('#,##0.${'#' * maxFractionDigits}', localeName)
+  final pattern = maxFractionDigits == 0
+      ? '#,##0'
+      : '#,##0.${'#' * maxFractionDigits}';
+  final fmt = NumberFormat(pattern, localeName)
     ..minimumFractionDigits = minFractionDigits
     ..maximumFractionDigits = maxFractionDigits;
   return fmt.format(value);

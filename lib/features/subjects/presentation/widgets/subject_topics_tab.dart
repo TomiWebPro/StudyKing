@@ -266,9 +266,8 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
     }
   }
 
-  void _onReorder(int oldIndex, int newIndex) {
+  void _onReorderItem(int oldIndex, int newIndex) {
     setState(() {
-      if (newIndex > oldIndex) newIndex--;
       final topic = _topics.removeAt(oldIndex);
       _topics.insert(newIndex, topic);
     });
@@ -343,7 +342,7 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
           Expanded(
             child: ReorderableListView.builder(
               itemCount: _topics.length,
-              onReorder: _onReorder,
+              onReorderItem: _onReorderItem,
               buildDefaultDragHandles: false,
               proxyDecorator: (child, index, animation) => Material(
                 elevation: 2,

@@ -47,13 +47,28 @@ void initSettingsRepository(SettingsRepository repo) {
   _settingsRepo = repo;
 }
 
+SettingsBox? _preloadedSettings;
+
+/// Eagerly pre-load settings before the [SettingsController] is created.
+/// This eliminates the async race where the widget tree renders with default
+/// settings while [SettingsController._loadSettings] is still in flight.
+void preloadSettings(SettingsBox settings) {
+  _preloadedSettings = settings;
+}
+
 class SettingsController extends StateNotifier<SettingsBox> {
   static final Logger _logger = const Logger('SettingsController');
   final SettingsRepository _repository;
   bool _hasLoadedOnce = false;
 
-  SettingsController(this._repository) : super(SettingsBox()) {
-    _loadSettings();
+  SettingsController(this._repository)
+      : super(_preloadedSettings ?? SettingsBox()) {
+    final hadPreloadedData = _preloadedSettings != null;
+    _preloadedSettings = null; // consume the preloaded value
+    if (!hadPreloadedData) {
+      // No preloaded data — load settings asynchronously
+      _loadSettings();
+    }
   }
 
   SettingsBox get currentState => state;

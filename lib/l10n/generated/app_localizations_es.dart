@@ -30,7 +30,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get courseSubject => 'Curso/Materia';
 
   @override
-  String get courseHint => 'p. ej., Física IB';
+  String get courseHint => 'p. ej., Química Orgánica';
 
   @override
   String get days => 'Días';
@@ -417,9 +417,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get nameIsRequired => 'El nombre es obligatorio';
 
   @override
-  String get studentIdMustBeNumeric => 'El ID de estudiante debe ser numérico';
-
-  @override
   String get profileSavedSuccessfully => 'Perfil guardado exitosamente';
 
   @override
@@ -448,22 +445,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get enterYourName => 'Ingrese su nombre';
 
   @override
-  String get studentIdOptional => 'ID de Estudiante (Opcional)';
-
-  @override
-  String get yourStudentIdNumber => 'Su número de ID de estudiante';
-
-  @override
   String get learningGoal => 'Objetivo de Aprendizaje';
 
   @override
   String get learningGoalHint => 'p. ej., Exámenes Finales, Certificaciones';
-
-  @override
-  String get preferredStudyTime => 'Horario de Estudio Preferido';
-
-  @override
-  String get preferredStudyTimeHint => 'p. ej., Tarde (6-9 p. m.)';
 
   @override
   String get accountInformation => 'Información de la Cuenta';
@@ -715,7 +700,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get subjectCodeOptional => 'Código de Materia (Opcional)';
 
   @override
-  String get subjectCodeHint => 'p. ej., IB-FIS';
+  String get subjectCodeHint => 'p. ej., BIO-101';
 
   @override
   String get themeColor => 'Color del Tema';
@@ -2458,36 +2443,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorProgressReportTitle =>
-      '📊 **Su Informe de Progreso de Estudio**\n';
+      '📊 Su Informe de Progreso de Estudio\n';
 
   @override
   String mentorOverallAccuracy(String accuracy, String correct, String total) {
-    return '**Precisión General:** $accuracy% ($correct/$total correctas)';
+    return 'Precisión General: $accuracy% ($correct/$total correctas)';
   }
 
   @override
   String mentorTotalStudyTime(String hours) {
-    return '**Tiempo Total de Estudio:** $hours horas';
+    return 'Tiempo Total de Estudio: $hours horas';
   }
 
   @override
   String mentorWeeklyActivity(String attempts) {
-    return '**Actividad Semanal:** $attempts intentos';
+    return 'Actividad Semanal: $attempts intentos';
   }
 
   @override
   String mentorCompletedLessons(String count) {
-    return '**Lecciones Completadas:** $count';
+    return 'Lecciones Completadas: $count';
   }
 
   @override
   String mentorTopicsStudied(String count) {
-    return '**Temas Estudiados:** $count';
+    return 'Temas Estudiados: $count';
   }
 
   @override
-  String get mentorAreasNeedingAttention =>
-      '\n**Áreas que necesitan atención:**';
+  String get mentorAreasNeedingAttention => '\nÁreas que necesitan atención:';
 
   @override
   String mentorTopicAccuracyEntry(String topic, int accuracy) {
@@ -2495,7 +2479,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mentorBadgesEarned => '\n**Insignias obtenidas:**';
+  String get mentorBadgesEarned => '\nInsignias obtenidas:';
 
   @override
   String mentorBadgeEntry(String name, String description) {
@@ -2503,7 +2487,7 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get mentorRecommendations => '\n**Recomendaciones:**';
+  String get mentorRecommendations => '\nRecomendaciones:';
 
   @override
   String mentorRecommendationEntry(String message) {
@@ -2535,7 +2519,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get roadmapGoal => 'Meta de Aprendizaje';
 
   @override
-  String get roadmapGoalHint => 'p. ej., Quiero aprender Física IB en 180 días';
+  String get roadmapGoalHint => 'p. ej., Quiero aprender Python en 90 días';
 
   @override
   String get generateRoadmap => 'Generar Roadmap';
@@ -5909,7 +5893,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get practiceTheseTopics => 'Practicar Estos Temas';
 
   @override
-  String get tutorInitFailedGeneric => 'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
+  String get practiceLessonBlocks => 'Repasar Bloques de Lección';
+
+  @override
+  String get tutorInitFailedGeneric =>
+      'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
 
   @override
   String get tagline => 'Compañero de Aprendizaje con IA';
@@ -5918,5 +5906,81 @@ class AppLocalizationsEs extends AppLocalizations {
   String get preparingTutorLesson => 'Preparando tu lección...';
 
   @override
-  String get practiceLessonBlocks => 'Repasar Bloques de Lección';
+  String get mentorStartPracticing =>
+      '¡Empieza una sesión de práctica para ver tus estadísticas!';
+
+  @override
+  String get mentorNoPracticeData =>
+      'Aún no hay datos de práctica? ¡empieza a practicar para desbloquear información personalizada!';
+
+  @override
+  String get mentorNoPracticeDataShort => 'Aún no hay datos de práctica.';
+
+  @override
+  String get mentorHelpTitle => 'Lo Que Puedo Hacer';
+
+  @override
+  String get mentorCapabilitiesIntro =>
+      'Soy tu asistente académico IA. Esto es en lo que puedo ayudarte:';
+
+  @override
+  String get mentorCapabilityProgress =>
+      'Revisar tu progreso de estudio y precisión';
+
+  @override
+  String get mentorCapabilitySchedule => 'Programar y reprogramar lecciones';
+
+  @override
+  String get mentorCapabilityPlan =>
+      'Crear planes de estudio y hojas de ruta a largo plazo';
+
+  @override
+  String get mentorCapabilityMotivate => 'Mantenerte motivado y encaminado';
+
+  @override
+  String get mentorCapabilityTopics =>
+      'Ayudarte a decidir qué estudiar a continuación';
+
+  @override
+  String get mentorCapabilityNudge =>
+      'Enviar recordatorios y controles de bienestar';
+
+  @override
+  String get mentorCapabilityProgressShort => 'Ver Progreso';
+
+  @override
+  String get mentorHelpScheduleHint =>
+      'Ayúdame a programar una sesión de estudio';
+
+  @override
+  String get mentorHelpTopicsHint => '¿Qué debería estudiar a continuación?';
+
+  @override
+  String get srSectionTitle => 'Repetición Espaciada';
+
+  @override
+  String get srMinInterval => 'Intervalo mínimo';
+
+  @override
+  String get srMaxInterval => 'Intervalo máximo';
+
+  @override
+  String get srDailyReviewLimit => 'Límite diario de repaso';
+
+  @override
+  String get selectModelWarning =>
+      'Por favor seleccione un modelo antes de guardar.';
+
+  @override
+  String get providerChangedTitle => 'Proveedor Cambiado';
+
+  @override
+  String get providerChangedBody =>
+      'Cambiar de proveedor borrará el modelo seleccionado. Deberá seleccionar un modelo nuevo.';
+
+  @override
+  String get practiceQuestions => 'Preguntas de Práctica';
+
+  @override
+  String get startLesson => 'Comenzar Lección';
 }

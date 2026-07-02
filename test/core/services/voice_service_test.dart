@@ -32,38 +32,22 @@ void main() {
 
     test('requestPermission does not throw', () async {
       final service = VoiceService();
-      try {
-        await service.requestPermission();
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.requestPermission(), completion(isFalse));
     });
 
     test('startListening does not throw', () async {
       final service = VoiceService();
-      try {
-        await service.startListening();
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.startListening(), completes);
     });
 
     test('stopListening does not throw', () async {
       final service = VoiceService();
-      try {
-        await service.stopListening();
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.stopListening(), completes);
     });
 
     test('speak does not throw for non-empty text', () async {
       final service = VoiceService();
-      try {
-        await service.speak('Hello');
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.speak('Hello'), completes);
     });
 
     test('speak does nothing for empty text', () async {
@@ -74,11 +58,7 @@ void main() {
 
     test('stopSpeaking does not throw', () async {
       final service = VoiceService();
-      try {
-        await service.stopSpeaking();
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.stopSpeaking(), completes);
     });
 
     test('voiceServiceProvider creates a provider', () {

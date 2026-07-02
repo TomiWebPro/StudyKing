@@ -1213,7 +1213,7 @@ void main() {
 
         await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 

@@ -1,3 +1,4 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -54,7 +55,7 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeQuestionRepo extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success([]);
@@ -72,7 +73,7 @@ class _FakeQuestionRepo extends QuestionRepository {
 
 class _FakeAttemptRepo extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
@@ -143,11 +144,13 @@ void main() {
       expect(startTime.compareTo(after), lessThanOrEqualTo(0));
     });
 
-    test('elapsedNotifier updates after timer ticks', () async {
-      service.startTimer();
-      await Future.delayed(const Duration(milliseconds: 1100));
-      expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
-      service.cancelTimer();
+    test('elapsedNotifier updates after timer ticks', () {
+      fakeAsync((async) {
+        service.startTimer();
+        async.elapse(const Duration(milliseconds: 1100));
+        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+        service.cancelTimer();
+      });
     });
 
     group('updateNextReview', () {
@@ -213,30 +216,34 @@ void main() {
       });
     });
 
-    test('startTimer cancels previous timer and resets elapsed', () async {
-      service.startTimer();
-      await Future.delayed(const Duration(milliseconds: 1100));
-      expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+    test('startTimer cancels previous timer and resets elapsed', () {
+      fakeAsync((async) {
+        service.startTimer();
+        async.elapse(const Duration(milliseconds: 1100));
+        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
 
-      service.startTimer();
-      expect(service.elapsedNotifier.value, Duration.zero);
+        service.startTimer();
+        expect(service.elapsedNotifier.value, Duration.zero);
 
-      await Future.delayed(const Duration(milliseconds: 500));
-      expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(0));
-      service.dispose();
+        async.elapse(const Duration(milliseconds: 500));
+        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(0));
+        service.dispose();
+      });
     });
 
     group('dispose', () {
-      test('stops the timer from updating elapsed', () async {
-        service.startTimer();
-        await Future.delayed(const Duration(milliseconds: 1100));
-        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+      test('stops the timer from updating elapsed', () {
+        fakeAsync((async) {
+          service.startTimer();
+          async.elapse(const Duration(milliseconds: 1100));
+          expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
 
-        service.dispose();
-        final valueAfterDispose = service.elapsedNotifier.value;
+          service.dispose();
+          final valueAfterDispose = service.elapsedNotifier.value;
 
-        await Future.delayed(const Duration(milliseconds: 500));
-        expect(service.elapsedNotifier.value, equals(valueAfterDispose));
+          async.elapse(const Duration(milliseconds: 500));
+          expect(service.elapsedNotifier.value, equals(valueAfterDispose));
+        });
       });
 
       test('can be called without an active timer', () {

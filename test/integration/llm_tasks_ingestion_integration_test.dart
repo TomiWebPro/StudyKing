@@ -165,7 +165,7 @@ void main() {
       expect(taskService.getActiveTasks(), isEmpty);
 
       final mockClient = MockClient((request) async {
-        await Future.delayed(const Duration(milliseconds: 50));
+        await Future.delayed(const Duration(milliseconds: 1));
         return http.Response(
           jsonEncode({
             'choices': [
@@ -192,7 +192,7 @@ void main() {
         feature: 'content_classification',
       );
 
-      await Future.delayed(const Duration(milliseconds: 10));
+      await Future.delayed(Duration.zero);
       expect(taskService.getActiveTasks(), hasLength(1));
       expect(taskService.getActiveTasks().first.status, LlmTaskStatus.running);
 

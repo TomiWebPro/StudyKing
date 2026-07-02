@@ -4,43 +4,6 @@ import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 const _commonSyllabi = [
-  // International Baccalaureate (IB)
-  'IB Biology',
-  'IB Chemistry',
-  'IB Physics',
-  'IB Mathematics: Analysis & Approaches',
-  'IB Mathematics: Applications & Interpretation',
-  'IB English A: Literature',
-  'IB English A: Language & Literature',
-  'IB History',
-  'IB Economics',
-  'IB Psychology',
-  'IB Computer Science',
-  'IB Environmental Systems & Societies',
-  'IB French B',
-  'IB Spanish B',
-  'IB German B',
-  'IB Chinese B',
-  'IB Visual Arts',
-  'IB Theory of Knowledge',
-  // A-Levels (UK)
-  'A-Level Biology',
-  'A-Level Chemistry',
-  'A-Level Physics',
-  'A-Level Mathematics',
-  'A-Level Further Mathematics',
-  'A-Level English Literature',
-  'A-Level History',
-  'A-Level Economics',
-  'A-Level Geography',
-  'A-Level Psychology',
-  'A-Level Computer Science',
-  'A-Level French',
-  'A-Level Spanish',
-  'A-Level German',
-  'A-Level Business Studies',
-  'A-Level Law',
-  'A-Level Art & Design',
   // Advanced Placement (AP)
   'AP Biology',
   'AP Chemistry',
@@ -67,6 +30,24 @@ const _commonSyllabi = [
   'AP French Language',
   'AP Art History',
   'AP Music Theory',
+  // A-Levels (UK)
+  'A-Level Biology',
+  'A-Level Chemistry',
+  'A-Level Physics',
+  'A-Level Mathematics',
+  'A-Level Further Mathematics',
+  'A-Level English Literature',
+  'A-Level History',
+  'A-Level Economics',
+  'A-Level Geography',
+  'A-Level Psychology',
+  'A-Level Computer Science',
+  'A-Level French',
+  'A-Level Spanish',
+  'A-Level German',
+  'A-Level Business Studies',
+  'A-Level Law',
+  'A-Level Art & Design',
   // GCSE / IGCSE
   'GCSE Biology',
   'GCSE Chemistry',
@@ -86,6 +67,25 @@ const _commonSyllabi = [
   'IGCSE English',
   'IGCSE Economics',
   'IGCSE Business Studies',
+  // International Baccalaureate (IB)
+  'IB Biology',
+  'IB Chemistry',
+  'IB Physics',
+  'IB Mathematics: Analysis & Approaches',
+  'IB Mathematics: Applications & Interpretation',
+  'IB English A: Literature',
+  'IB English A: Language & Literature',
+  'IB History',
+  'IB Economics',
+  'IB Psychology',
+  'IB Computer Science',
+  'IB Environmental Systems & Societies',
+  'IB French B',
+  'IB Spanish B',
+  'IB German B',
+  'IB Chinese B',
+  'IB Visual Arts',
+  'IB Theory of Knowledge',
   // Standardized Tests
   'SAT Math',
   'SAT Reading & Writing',
@@ -245,9 +245,38 @@ class SubjectFormFields extends StatelessWidget {
           const SizedBox(height: 16),
           Autocomplete<String>(
             optionsBuilder: (TextEditingValue value) {
-              if (value.text.isEmpty) return _commonSyllabi;
+              if (value.text.isEmpty) return [];
               return _commonSyllabi.where((s) =>
                   s.normalized.contains(value.text.normalized));
+            },
+            optionsViewBuilder: (context, onSelected, options) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4.0,
+                  borderRadius: BorderRadius.circular(12.0),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxHeight: 250.0),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const ClampingScrollPhysics(),
+                      itemCount: options.length,
+                      itemBuilder: (context, index) {
+                        final option = options.elementAt(index);
+                        return InkWell(
+                          onTap: () => onSelected(option),
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 16.0, vertical: 12.0),
+                            child: Text(option),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              );
             },
             onSelected: (selection) => syllabusController.text = selection,
             fieldViewBuilder: (context, controller, focusNode, onSubmit) {
@@ -260,6 +289,7 @@ class SubjectFormFields extends StatelessWidget {
                   border: OutlineInputBorder(),
                 ),
                 maxLines: 3,
+                onChanged: (value) => syllabusController.text = value,
               );
             },
           ),

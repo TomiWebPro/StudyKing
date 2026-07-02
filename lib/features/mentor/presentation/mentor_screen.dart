@@ -671,6 +671,11 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             tooltip: l10n.progressReport,
             onPressed: _showProgressReport,
           ),
+          IconButton(
+            icon: const Icon(Icons.help_outline),
+            tooltip: l10n.mentorHelpTitle,
+            onPressed: () => _showMentorHelpDialog(context),
+          ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: l10n.moreOptions,
@@ -692,8 +697,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           ),
         ],
       ),
-      body: FocusTraversalGroup(
-        child: Column(
+      body: Column(
           children: [
             if (_initError)
               _buildInitErrorCard(l10n)
@@ -756,7 +760,6 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -820,35 +823,135 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
   }
 
+  void _showMentorHelpDialog(BuildContext ctx) {
+    final theme = Theme.of(ctx);
+    final l10n = AppLocalizations.of(ctx)!;
+    showDialog(
+      context: ctx,
+      builder: (context) => AlertDialog(
+        semanticLabel: l10n.mentorHelpTitle,
+        title: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: theme.colorScheme.primary),
+            const SizedBox(width: 8),
+            Text(l10n.mentorHelpTitle),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.mentorCapabilitiesIntro,
+              style: theme.textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 16),
+            _helpCapabilityRow(theme, Icons.trending_up, l10n.mentorCapabilityProgress),
+            const SizedBox(height: 8),
+            _helpCapabilityRow(theme, Icons.schedule, l10n.mentorCapabilitySchedule),
+            const SizedBox(height: 8),
+            _helpCapabilityRow(theme, Icons.map_outlined, l10n.mentorCapabilityPlan),
+            const SizedBox(height: 8),
+            _helpCapabilityRow(theme, Icons.emoji_events, l10n.mentorCapabilityMotivate),
+            const SizedBox(height: 8),
+            _helpCapabilityRow(theme, Icons.lightbulb_outline, l10n.mentorCapabilityTopics),
+            const SizedBox(height: 8),
+            _helpCapabilityRow(theme, Icons.notifications_outlined, l10n.mentorCapabilityNudge),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text(l10n.close),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _helpCapabilityRow(ThemeData theme, IconData icon, String text) {
+    return Row(
+      children: [
+        Icon(icon, size: 20, color: theme.colorScheme.primary),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Text(
+            text,
+            style: theme.textTheme.bodyMedium,
+          ),
+        ),
+      ],
+    );
+  }
+
   Widget _buildEmptyState(AppLocalizations l10n) {
     return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.auto_awesome,
-            size: ResponsiveUtils.emptyStateIconSize(context),
-            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            l10n.mentorGreeting,
-            style: Theme.of(context).textTheme.titleLarge,
-          ),
-          const SizedBox(height: 8),
-          Padding(
-            padding: ResponsiveUtils.screenPadding(context),
-            child: Text(
+      child: SingleChildScrollView(
+        padding: ResponsiveUtils.screenPadding(context),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.auto_awesome,
+              size: ResponsiveUtils.emptyStateIconSize(context),
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.5),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              l10n.mentorGreeting,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
               l10n.mentorSubtitle,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
               textAlign: TextAlign.center,
             ),
-          ),
-        ],
+            const SizedBox(height: 24),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              alignment: WrapAlignment.center,
+              children: [
+                _buildFeatureChip(
+                  l10n, Icons.schedule, l10n.mentorCapabilitySchedule,
+                  () {
+                    _textController.text = l10n.mentorHelpScheduleHint;
+                    _sendMessage();
+                  },
+                ),
+                _buildFeatureChip(
+                  l10n, Icons.trending_up, l10n.mentorCapabilityProgressShort,
+                  () {
+                    _showProgressReport();
+                  },
+                ),
+                _buildFeatureChip(
+                  l10n, Icons.lightbulb_outline, l10n.mentorCapabilityTopics,
+                  () => _suggestTopicsInput(),
+                ),
+              ],
+            ),
+          ],
+        ),
       ),
     );
+  }
+
+  Widget _buildFeatureChip(AppLocalizations l10n, IconData icon, String label, VoidCallback onTap) {
+    return ActionChip(
+      avatar: Icon(icon, size: 18),
+      label: Text(label, style: Theme.of(context).textTheme.labelMedium),
+      onPressed: onTap,
+    );
+  }
+
+  void _suggestTopicsInput() {
+    final l10n = AppLocalizations.of(context)!;
+    _textController.text = l10n.mentorHelpTopicsHint;
+    _sendMessage();
   }
 
   Widget _buildSuggestedActionCard(AppLocalizations l10n) {
@@ -1134,29 +1237,50 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(4),
-                      child: LinearProgressIndicator(
-                        value: (report.accuracy / 100).clamp(0.0, 1.0),
-                        minHeight: 8,
-                        backgroundColor: theme.colorScheme.surfaceContainerHighest,
-                        valueColor: AlwaysStoppedAnimation(
-                          report.accuracy >= 70
-                              ? theme.colorScheme.primary
-                              : report.accuracy >= 40
-                                  ? theme.colorScheme.tertiary
-                                  : theme.colorScheme.error,
+                    if (report.totalAttempts == 0)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                size: 18, color: theme.colorScheme.onSurfaceVariant),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.mentorNoPracticeDataShort,
+                                style: theme.textTheme.bodyMedium?.copyWith(
+                                  color: theme.colorScheme.onSurfaceVariant,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    else ...[
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(4),
+                        child: LinearProgressIndicator(
+                          value: (report.accuracy / 100).clamp(0.0, 1.0),
+                          minHeight: 8,
+                          backgroundColor: theme.colorScheme.surfaceContainerHighest,
+                          valueColor: AlwaysStoppedAnimation(
+                            report.accuracy >= 70
+                                ? theme.colorScheme.primary
+                                : report.accuracy >= 40
+                                    ? theme.colorScheme.tertiary
+                                    : theme.colorScheme.error,
+                          ),
                         ),
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '${formatPercent(report.accuracy, localeName)} '
-                      '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
-                      '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
-                      '${l10n.mentorCompletedLessons('').split(':').first})',
-                      style: theme.textTheme.bodyMedium,
-                    ),
+                      const SizedBox(height: 4),
+                      Text(
+                        '${formatPercent(report.accuracy, localeName)} '
+                        '(${formatDecimal(report.correctAttempts.toDouble(), localeName)}/'
+                        '${formatDecimal(report.totalAttempts.toDouble(), localeName)} '
+                        '${l10n.mentorCompletedLessons('').split(':').first})',
+                        style: theme.textTheme.bodyMedium,
+                      ),
+                    ],
                     const SizedBox(height: 16),
                     _reportStatRow(ctx, Icons.timer_outlined,
                         l10n.mentorTotalStudyTime(formatDecimal(
@@ -1305,7 +1429,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       try {
         Navigator.of(context).pop();
       } catch (e) {
-        _logger.e('Failed to pop navigator in error handler', e);
+        _logger.w('Failed to pop navigator in error handler', e);
       }
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

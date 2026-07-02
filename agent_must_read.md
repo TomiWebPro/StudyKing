@@ -73,7 +73,7 @@ This assistant should feel like a persistent mentor that understands the student
 Planning should be intelligent and long-term.
 
 Example:
-“I want to learn IB Physics in 180 days.”
+“I want to learn Organic Chemistry in 180 days.”
 
 The platform should:
 - estimate realistic workload

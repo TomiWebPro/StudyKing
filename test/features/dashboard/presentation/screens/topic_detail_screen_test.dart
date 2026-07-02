@@ -47,7 +47,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   _FakeMasteryGraphService({this.allMastery = const []});
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async =>
@@ -69,7 +69,7 @@ class _FakeInstrumentationService extends InstrumentationService {
   _FakeInstrumentationService() : super(adherenceRepository: _FakeAdherenceRepo());
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeAdherenceRepo extends PlanAdherenceRepository {
@@ -85,7 +85,7 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
 
 class _FakeQuestionRepo extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success([]);
@@ -93,7 +93,7 @@ class _FakeQuestionRepo extends QuestionRepository {
 
 class _FakeQuestionRepoWithQuestions extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success([
@@ -119,7 +119,7 @@ class _FakeReadinessScorer extends ReadinessScorer {
 
 class _FakeSessionRepo extends SessionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 MasteryState _state({

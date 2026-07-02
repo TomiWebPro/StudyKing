@@ -324,7 +324,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
               ),
               FilledButton(
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Confirm'),
+                child: Text(l10n.confirm),
               ),
             ],
           ),

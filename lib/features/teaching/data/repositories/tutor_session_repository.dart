@@ -5,6 +5,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 
 class TutorSessionRepository extends Repository<TutorSession> {
+  TutorSessionRepository() : super(boxName: HiveBoxNames.tutorSessions);
+
   Future<void> init() async {
     await openBox(HiveBoxNames.tutorSessions);
   }

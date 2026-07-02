@@ -1,23 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/responsive.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-class CollapsibleCard extends ConsumerWidget {
-  final String cardId;
-  final Widget title;
+/// A plain [Card] wrapper that handles async loading/error/data states.
+///
+/// Unlike the previous collapsible version, this widget has no title header,
+/// no expand/collapse toggle, and no Hive-backed collapse preferences.
+/// Each body widget is expected to provide its own heading if needed.
+class DashboardCard extends StatelessWidget {
   final Widget body;
   final Widget? loadingSkeleton;
   final Widget? errorWidget;
   final AsyncValue? asyncValue;
   final VoidCallback? onRetry;
 
-  const CollapsibleCard({
+  const DashboardCard({
     super.key,
-    required this.cardId,
-    required this.title,
     required this.body,
     this.loadingSkeleton,
     this.errorWidget,
@@ -26,11 +25,7 @@ class CollapsibleCard extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final prefs = ref.watch(dashboardLayoutPreferencesProvider);
-    final isCollapsed = prefs.isCollapsed(cardId);
-    final reduceMotion = ref.watch(settingsProvider).reduceMotion;
-
+  Widget build(BuildContext context) {
     Widget content;
     if (asyncValue != null) {
       content = asyncValue!.when(
@@ -69,68 +64,9 @@ class CollapsibleCard extends ConsumerWidget {
     }
 
     return Card(
-      child: Column(
-        children: [
-          Padding(
-            padding: EdgeInsetsDirectional.only(
-              start: ResponsiveUtils.cardPadding(context).left,
-              end: ResponsiveUtils.cardPadding(context).right,
-              top: 12,
-              bottom: 12,
-            ),
-              child: Semantics(
-                button: true,
-                expanded: !isCollapsed,
-                label: isCollapsed
-                    ? AppLocalizations.of(context)!.tapToExpand
-                    : AppLocalizations.of(context)!.tapToCollapse,
-                child: InkWell(
-                  onTap: () =>
-                      ref.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed(cardId),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: title,
-                      ),
-                      Icon(
-                        isCollapsed ? Icons.expand_more : Icons.expand_less,
-                        size: 20,
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-          ),
-          if (reduceMotion)
-            isCollapsed
-                ? const SizedBox.shrink()
-                : Column(
-                    children: [
-                      const Divider(height: 1),
-                      Padding(
-                        padding: ResponsiveUtils.cardPadding(context),
-                        child: content,
-                      ),
-                    ],
-                  )
-          else
-            AnimatedSize(
-              duration: const Duration(milliseconds: 200),
-              alignment: Alignment.topCenter,
-              child: isCollapsed
-                  ? const SizedBox.shrink()
-                  : Column(
-                      children: [
-                        const Divider(height: 1),
-                        Padding(
-                          padding: ResponsiveUtils.cardPadding(context),
-                          child: content,
-                        ),
-                      ],
-                    ),
-            ),
-        ],
+      child: Padding(
+        padding: ResponsiveUtils.cardPadding(context),
+        child: content,
       ),
     );
   }

@@ -5,10 +5,13 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class MasteryStateRepository extends Repository<MasteryState> {
+  MasteryStateRepository() : super(boxName: HiveBoxNames.masteryStates);
   static final Logger _logger = const Logger('MasteryStateRepository');
 
-  Future<void> init() async {
-    await openBox(HiveBoxNames.masteryStates);
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
+      await openBox(HiveBoxNames.masteryStates);
+    }, context: 'MasteryStateRepository.init');
   }
 
   Future<Result<MasteryState>> getMasteryState(

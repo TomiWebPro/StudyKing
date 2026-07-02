@@ -139,8 +139,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
   Widget _buildSettingsBody(BuildContext context, AppLocalizations l10n, SettingsBox settings, String apiKey, LlmProvider llmProvider, String apiBaseUrl) {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
-      body: FocusTraversalGroup(
-        child: ListView(
+      body: ListView(
           padding: ResponsiveUtils.listPadding(context),
           children: [
             _section(l10n.userManagement, [
@@ -294,14 +293,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               _tile(l10n.sessionDuration, l10n.minutesValue(settings.sessionDurationMinutes),
                   Icons.timer, () => _showSessionDurationDialog(settings.sessionDurationMinutes)),
             ]),
-            _section('Spaced Repetition', [
-              _tile('Min interval',
+            _section(l10n.srSectionTitle, [
+              _tile(l10n.srMinInterval,
                   '${_getSrValue(SrConfig.keyMinIntervalDays, SrConfig.defaultMinIntervalDays)} ${l10n.days}',
                   Icons.calendar_today, () => _showSrMinIntervalDialog()),
-              _tile('Max interval',
+              _tile(l10n.srMaxInterval,
                   '${_getSrValue(SrConfig.keyMaxIntervalDays, SrConfig.defaultMaxIntervalDays)} ${l10n.days}',
                   Icons.date_range, () => _showSrMaxIntervalDialog()),
-              _tile('Daily review limit',
+              _tile(l10n.srDailyReviewLimit,
                   _getDailyReviewLimitLabel(l10n),
                   Icons.looks_one, () => _showSrDailyReviewLimitDialog()),
             ]),
@@ -372,7 +371,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             ]),
           ],
         ),
-      ),
     );
   }
 

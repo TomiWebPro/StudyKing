@@ -4,6 +4,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/plan_advisor_suggestion_model.dart';
 
 class AdvisorSuggestionsRepository extends Repository<PlanAdvisorSuggestionModel> {
+  AdvisorSuggestionsRepository() : super(boxName: HiveBoxNames.planAdvisorSuggestions);
+
   Future<Result<void>> init() async {
     return Result.capture(
       () async => openBox(HiveBoxNames.planAdvisorSuggestions),

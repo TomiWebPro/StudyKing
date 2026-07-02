@@ -4,6 +4,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
 class RoadmapRepository extends Repository<RoadmapModel> {
+  RoadmapRepository() : super(boxName: HiveBoxNames.roadmaps);
+
   Future<Result<void>> init() async {
     return Result.capture(
       () async => openBox(HiveBoxNames.roadmaps),

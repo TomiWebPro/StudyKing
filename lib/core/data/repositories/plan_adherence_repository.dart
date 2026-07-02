@@ -6,6 +6,8 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
 class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
+  PlanAdherenceRepository() : super(boxName: HiveBoxNames.planAdherence);
+
   Future<Result<void>> init() async {
     return Result.capture(() async {
       await openBox(HiveBoxNames.planAdherence);

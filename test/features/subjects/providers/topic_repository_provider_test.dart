@@ -7,6 +7,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 
 class _FakeTopicRepository extends TopicRepository {
@@ -102,6 +103,8 @@ Topic _createTopic({
   );
 }
 
+final _logger = Logger('TopicRepoProviderTest');
+
 void main() {
   late String hivePath;
 
@@ -117,7 +120,9 @@ void main() {
     await Hive.close();
     try {
       await Directory(hivePath).delete(recursive: true);
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('Cleanup failed: $e', e, st);
+    }
   });
 
   group('topicRepositoryProvider', () {

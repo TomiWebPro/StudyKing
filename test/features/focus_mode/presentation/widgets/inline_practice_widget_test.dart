@@ -6,6 +6,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
@@ -36,8 +37,26 @@ class _FakeSessionRepository extends SessionRepository {
 }
 
 class _FakeAttemptRepository extends AttemptRepository {
+  final List<StudentAttempt> _attempts = [];
+
   @override
-  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async {
+    _attempts.add(attempt);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(_attempts.where((a) => a.studentId == studentId).toList());
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    return Result.success(_attempts.where((a) => a.subjectId == subjectId).toList());
+  }
 }
 
 class _FakeSpacedRepetitionService extends SpacedRepetitionService {
@@ -71,11 +90,17 @@ class _FakeMasteryRecorder extends MasteryRecorder {
 
   _FakeMasteryRecorder()
       : super(
-          masteryGraphService: MasteryGraphService(),
+          masteryGraphService: MasteryGraphService(
+            masteryStateRepo: null,
+            questionMasteryRepo: null,
+            topicDependencyRepo: null,
+            questionEvaluationRepo: null,
+            calculationService: null,
+          ),
           srEngine: SpacedRepetitionEngine(),
-          attemptRepo: AttemptRepository(),
-          questionMasteryRepo: QuestionMasteryStateRepository(),
-          questionRepo: QuestionRepository(),
+          attemptRepo: _FakeAttemptRepository(),
+          questionMasteryRepo: _FakeQuestionMasteryStateRepository(),
+          questionRepo: _FakeQuestionRepository([]),
         );
 
   @override
@@ -100,6 +125,44 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
     return Result.success([]);
+  }
+}
+
+class _FakeQuestionMasteryStateRepository extends QuestionMasteryStateRepository {
+  final Map<String, QuestionMasteryState> _states = {};
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<QuestionMasteryState>> getQuestionMasteryState(
+    String studentId,
+    String questionId,
+  ) async {
+    final key = '${studentId}_$questionId';
+    final existing = _states[key];
+    if (existing != null) return Result.success(existing);
+    final newState = QuestionMasteryState.initial(
+      studentId: studentId,
+      questionId: questionId,
+      now: DateTime.now(),
+    );
+    _states[key] = newState;
+    return Result.success(newState);
+  }
+
+  @override
+  Future<Result<void>> updateQuestionMasteryState(QuestionMasteryState state) async {
+    final key = '${state.studentId}_${state.questionId}';
+    _states[key] = state;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAllForStudent(String studentId) async {
+    return Result.success(
+      _states.values.where((s) => s.studentId == studentId).toList(),
+    );
   }
 }
 

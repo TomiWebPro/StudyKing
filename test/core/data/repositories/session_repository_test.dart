@@ -24,7 +24,7 @@ class InMemorySessionRepository extends SessionRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> save(String key, Session item) async {

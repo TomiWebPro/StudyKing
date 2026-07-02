@@ -1,0 +1,121 @@
+# Planner Feature
+
+## Overview
+
+The Planner provides long-term study planning and scheduling. It handles everything from setting goals ("Learn IB Physics in 180 days") to daily lesson scheduling and adherence tracking.
+
+## Key Files
+
+| Layer | Files |
+|---|---|---|
+| Services | `PlannerService`, `PersonalLearningPlanService`, `ActionExecutor`, `SyllabusResolver`, `PlannerAdvisorStrategy`, `LlmPlannerAdvisorStrategy` |
+| Repositories | `PlanRepository`, `RoadmapRepository`, `PendingActionRepository`, `AdvisorSuggestionsRepository`, `StudentAvailabilityRepository` |
+| Models | `PersonalLearningPlan`, `RoadmapModel`, `PlanAdherenceModel`, `PendingActionModel`, `StudentAvailabilityModel`, `TaskModel`, `EngagementNudgeModel`, `MilestoneModel`, `PlanAdherenceMetric`, `PlanAdvisorSuggestionModel` |
+| Screens | `PlannerScreen` |
+| Widgets | `StudyPlanTab`, `RoadmapsTab`, `CalendarViewWidget`, `DailyPlanCard`, `DailyPlansSection`, `LessonBookingSheet`, `MilestoneTimeline`, `MissedLessonsSection`, `MultiSyllabusInput`, `PaceAdjustmentCard`, `PendingActionCard`, `PendingActionsSection`, `PlanSummaryCard`, `ProgressOverlayWidget`, `RoadmapCard`, `ScheduledLessonsSection`, `SubjectProgressTabs`, `SyllabusProgressCard`, `AdherenceBanner` |
+| Providers | `plannerServiceProvider`, `plannerProvider`, `planProgressProvider`, `adherenceSummaryProvider`, `todayAdherenceProvider`, `syllabusProgressProvider`, `roadmapListProvider` |
+
+## Core Services
+
+### PlannerService
+
+The central service coordinating plan creation, loading, and scheduling:
+
+- `loadExistingPlan()` — Load the current study plan
+- `loadRoadmaps()` — Load all roadmaps for the plan
+- `loadPendingActions()` — Load action items from mentor
+- `getScheduledLessons()` — Get booked lessons
+- `getMissedLessons()` — Get missed/past-due lessons
+- `dismissAllMissed()` — Mark all missed lessons as completed
+- `hasSchedulingConflict()` — Detect scheduling overlaps
+- `scheduleLesson()` — Book a new lesson with optional lesson generation
+- `cancelLesson(sessionId)` — Cancel a scheduled lesson
+- `rescheduleLesson(...)` — Reschedule a lesson
+- `generatePlan(course, daysValue, hoursValue)` — Generate a new study plan
+- `generatePlanFromSyllabus(syllabusGoals, daysValue, hoursValue)` — Generate plan from syllabus goals
+- `addSubjectToPlan(newGoal, existingPlan)` — Add a subject to an existing plan
+- `createRoadmap(goal, days, l10n, subjectId?)` — Create a roadmap with milestones
+- `updateRoadmap(roadmapId, goal, days, l10n, subjectId?)` — Update a roadmap
+- `toggleMilestoneCompletion(roadmapId, milestoneId, isCompleted)` — Toggle a milestone
+- `acceptPendingAction(actionId)` — Execute and accept a pending action
+- `dismissPendingAction(actionId)` — Dismiss a pending action
+- `getAdherenceRecords()` — Get adherence records
+- `getAdherenceMetrics()` — Get today's adherence metrics
+- `adjustPace(newTargetMinutesPerDay)` — Adjust daily pace
+
+### PersonalLearningPlanService
+
+Handles the creation and editing of learning plans:
+
+- `generatePlan(studentId, courseName?)` — Generate a new study plan from mastery data
+- `generatePlanFromSyllabus(studentId, syllabusGoals)` — Generate plan from syllabus goals
+- `recordDailyAdherence(studentId, actualQuestions, actualMinutes)` — Record daily adherence
+- `redistributeMissedWorkload(studentId, missedMinutes, plan, strategy?)` — Redistribute missed workload to future days
+- `extendPlan(studentId, extraDays)` — Extend plan after absence
+- `getNextStudyTopics(studentId, limit?)` — Get next topics to study
+- `getAtRiskTopicIds(studentId)` — Get IDs of at-risk topics
+- `getReadyToAdvanceTopicIds(studentId)` — Get topics ready to advance
+- `getCurrentAdherence(studentId)` — Get average adherence score
+- `getConsecutiveLowAdherenceDays(studentId)` — Count consecutive low adherence days
+
+### PlannerAdvisorStrategy / LlmPlannerAdvisorStrategy
+
+Provides AI-powered planning advice:
+
+- `PlannerAdvisorStrategy` — Abstract strategy with `analyzeForPlanGeneration()` and `analyzeForAdaptation()`
+- `AdvisorAnalysis` — Data class holding workload estimate, pathway suggestion, motivation, adaptation reasoning
+- `LlmPlannerAdvisorStrategy` — LLM-backed implementation using `LlmService`
+
+### SyllabusResolver
+
+Resolves syllabus-specific requirements and breaks down high-level goals into actionable topics. Produces `SyllabusTopicNode` objects with dependency-based topological sort, readiness scoring, and learning level grouping.
+
+- `resolveSyllabus(subjectId, studentId?, l10n?)` — Resolve syllabus topics with mastery and dependency data
+- `getQuestionsForTopic(topicId, l10n?)` — Get questions for a topic
+- `getQuestionsForTopics(topicIds, l10n?)` — Get questions for multiple topics
+- `buildLearningLevels(nodes)` — Group topics into learning levels based on prerequisites
+- `estimateWorkload(totalTopics, targetDays, hoursPerDay)` — Estimate workload feasibility
+
+### ActionExecutor
+
+Executes action items generated by the mentor or planner (e.g., "schedule a lesson on topic X"). Supports three action types: `schedule`, `reschedule`, `planAdjustment`.
+
+## Key Models
+
+| Model | Purpose |
+|---|---|
+| `PersonalLearningPlan` | Full plan with goals, deadlines, daily plans, milestones |
+| `RoadmapModel` | Milestone-based learning pathway |
+| `MilestoneModel` | Individual milestone within a roadmap |
+| `PlanAdherenceModel` | Daily/weekly adherence metrics |
+| `PendingActionModel` | Action items for the student |
+| `StudentAvailabilityModel` | Student's available time slots |
+| `TaskModel` | Individual task within a plan |
+| `EngagementNudgeModel` | Proactive nudge record |
+| `PlanAdherenceMetric` | Lightweight adherence metric snapshot |
+| `PlanAdvisorSuggestionModel` | Persisted advisor suggestion record |
+| `SyllabusGoal` | Syllabus goal with subject, duration, and daily target |
+| `DailyPlan` | Single day's planned topics and targets |
+| `PlannedTopic` | Topic planned for a specific day with priority and readiness |
+| `PlanSummary` | Aggregated plan summary with totals and coverage |
+| `PlanRecommendation` | Recommendation for a topic with priority and explanations |
+
+## Workflow
+
+1. **Plan Creation:** Student sets a goal (e.g., "IB Physics in 180 days")
+2. **Goal Breakdown:** The system breaks the goal into syllabus topics
+3. **Roadmap Generation:** Milestones are created with target dates
+4. **Scheduling:** Lessons are booked based on student availability
+5. **Adherence Tracking:** Actual study time is compared to planned time
+6. **Pace Adjustment:** Schedule is adjusted based on current progress
+7. **Auto-extension:** After prolonged absence, the plan can be auto-extended
+
+## Key UI Features
+
+- **Study Plan Tab:** Overview of plan with progress, milestones, and statistics. Shows `PlanSummaryCard`, `DailyPlansSection`, `PendingActionsSection`, `SyllabusProgressCard`
+- **Calendar Tab:** Monthly calendar showing scheduled lessons with day-tap navigation to the tutor
+- **Roadmaps Tab:** Visual timeline of learning milestones (`RoadmapCard`, create/edit/delete roadmaps)
+- **Syllabus Input:** `MultiSyllabusInput` for generating plans from multiple syllabus goals
+- **Progress Overlay:** `ProgressOverlayWidget` shown during plan generation
+- **Missed Lessons:** `MissedLessonsSection` showing past-due lessons with dismiss options
+- **Catch-up Actions:** Redistribute, extend, or regenerate plan after absence

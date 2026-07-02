@@ -143,7 +143,7 @@ abstract class AppLocalizations {
   /// Hint text for course input
   ///
   /// In en, this message translates to:
-  /// **'e.g., IB Physics'**
+  /// **'e.g., Organic Chemistry'**
   String get courseHint;
 
   /// Label for days input
@@ -746,12 +746,6 @@ abstract class AppLocalizations {
   /// **'Name is required'**
   String get nameIsRequired;
 
-  /// Error message when student ID is not numeric
-  ///
-  /// In en, this message translates to:
-  /// **'Student ID must be numeric'**
-  String get studentIdMustBeNumeric;
-
   /// Snackbar message when profile is saved
   ///
   /// In en, this message translates to:
@@ -800,18 +794,6 @@ abstract class AppLocalizations {
   /// **'Enter your name'**
   String get enterYourName;
 
-  /// Label for student ID input field
-  ///
-  /// In en, this message translates to:
-  /// **'Student ID (Optional)'**
-  String get studentIdOptional;
-
-  /// Hint text for student ID input field
-  ///
-  /// In en, this message translates to:
-  /// **'Your student ID number'**
-  String get yourStudentIdNumber;
-
   /// Label for learning goal input field
   ///
   /// In en, this message translates to:
@@ -823,18 +805,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'e.g., Final Exams, Certifications'**
   String get learningGoalHint;
-
-  /// Label for preferred study time input field
-  ///
-  /// In en, this message translates to:
-  /// **'Preferred Study Time'**
-  String get preferredStudyTime;
-
-  /// Hint text for preferred study time input field
-  ///
-  /// In en, this message translates to:
-  /// **'e.g., Evening (6-9 PM)'**
-  String get preferredStudyTimeHint;
 
   /// Section title for account information
   ///
@@ -1265,7 +1235,7 @@ abstract class AppLocalizations {
   /// Hint text for subject code
   ///
   /// In en, this message translates to:
-  /// **'e.g., IB-PHYS'**
+  /// **'e.g., BIO-101'**
   String get subjectCodeHint;
 
   /// Label for theme color selection
@@ -4163,43 +4133,43 @@ abstract class AppLocalizations {
   /// Title for the progress report
   ///
   /// In en, this message translates to:
-  /// **'📊 **Your Study Progress Report**\n'**
+  /// **'📊 Your Study Progress Report\n'**
   String get mentorProgressReportTitle;
 
   /// Overall accuracy line in progress report
   ///
   /// In en, this message translates to:
-  /// **'**Overall Accuracy:** {accuracy}% ({correct}/{total} correct)'**
+  /// **'Overall Accuracy: {accuracy}% ({correct}/{total} correct)'**
   String mentorOverallAccuracy(String accuracy, String correct, String total);
 
   /// Total study time line in progress report
   ///
   /// In en, this message translates to:
-  /// **'**Total Study Time:** {hours} hours'**
+  /// **'Total Study Time: {hours} hours'**
   String mentorTotalStudyTime(String hours);
 
   /// Weekly activity line in progress report
   ///
   /// In en, this message translates to:
-  /// **'**Weekly Activity:** {attempts} attempts'**
+  /// **'Weekly Activity: {attempts} attempts'**
   String mentorWeeklyActivity(String attempts);
 
   /// Completed lessons line in progress report
   ///
   /// In en, this message translates to:
-  /// **'**Completed Lessons:** {count}'**
+  /// **'Completed Lessons: {count}'**
   String mentorCompletedLessons(String count);
 
   /// Topics studied line in progress report
   ///
   /// In en, this message translates to:
-  /// **'**Topics Studied:** {count}'**
+  /// **'Topics Studied: {count}'**
   String mentorTopicsStudied(String count);
 
   /// Section header for weak topics
   ///
   /// In en, this message translates to:
-  /// **'\n**Areas needing attention:**'**
+  /// **'\nAreas needing attention:'**
   String get mentorAreasNeedingAttention;
 
   /// Single topic accuracy entry
@@ -4211,7 +4181,7 @@ abstract class AppLocalizations {
   /// Section header for badges
   ///
   /// In en, this message translates to:
-  /// **'\n**Badges earned:**'**
+  /// **'\nBadges earned:'**
   String get mentorBadgesEarned;
 
   /// Single badge entry
@@ -4223,7 +4193,7 @@ abstract class AppLocalizations {
   /// Section header for recommendations
   ///
   /// In en, this message translates to:
-  /// **'\n**Recommendations:**'**
+  /// **'\nRecommendations:'**
   String get mentorRecommendations;
 
   /// Single recommendation entry
@@ -4277,7 +4247,7 @@ abstract class AppLocalizations {
   /// Hint text for roadmap goal
   ///
   /// In en, this message translates to:
-  /// **'e.g., I want to learn IB Physics in 180 days'**
+  /// **'e.g., I want to learn Python in 90 days'**
   String get roadmapGoalHint;
 
   /// Button to generate a roadmap
@@ -9597,6 +9567,12 @@ abstract class AppLocalizations {
   /// **'Practice These Topics'**
   String get practiceTheseTopics;
 
+  /// Button label in lesson summary to replay lesson blocks as quiz questions
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Lesson Blocks'**
+  String get practiceLessonBlocks;
+
   /// Generic error message when tutor initialization fails (no error details exposed to user)
   ///
   /// In en, this message translates to:
@@ -9615,11 +9591,143 @@ abstract class AppLocalizations {
   /// **'Preparing your lesson...'**
   String get preparingTutorLesson;
 
-  /// Button label in lesson summary to replay lesson blocks as quiz questions
+  /// Mentor suggestion action for new users with no practice data
   ///
   /// In en, this message translates to:
-  /// **'Practice Lesson Blocks'**
-  String get practiceLessonBlocks;
+  /// **'Start a practice session to see your stats!'**
+  String get mentorStartPracticing;
+
+  /// Mentor onboarding message shown when user has no practice attempts
+  ///
+  /// In en, this message translates to:
+  /// **'No practice data yet — start practicing to unlock personalized insights!'**
+  String get mentorNoPracticeData;
+
+  /// Short label for accuracy section when user has no practice data
+  ///
+  /// In en, this message translates to:
+  /// **'No practice data yet.'**
+  String get mentorNoPracticeDataShort;
+
+  /// Title for the mentor capabilities help dialog
+  ///
+  /// In en, this message translates to:
+  /// **'What I Can Do'**
+  String get mentorHelpTitle;
+
+  /// Intro text for the mentor help capabilities dialog
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m your AI academic assistant. Here\'s what I can help you with:'**
+  String get mentorCapabilitiesIntro;
+
+  /// Mentor capability: progress review
+  ///
+  /// In en, this message translates to:
+  /// **'Review your study progress and accuracy'**
+  String get mentorCapabilityProgress;
+
+  /// Mentor capability: scheduling
+  ///
+  /// In en, this message translates to:
+  /// **'Schedule and reschedule lessons'**
+  String get mentorCapabilitySchedule;
+
+  /// Mentor capability: study planning
+  ///
+  /// In en, this message translates to:
+  /// **'Create long-term study plans and roadmaps'**
+  String get mentorCapabilityPlan;
+
+  /// Mentor capability: motivation
+  ///
+  /// In en, this message translates to:
+  /// **'Keep you motivated and on track'**
+  String get mentorCapabilityMotivate;
+
+  /// Mentor capability: topic decisions
+  ///
+  /// In en, this message translates to:
+  /// **'Help you decide what to study next'**
+  String get mentorCapabilityTopics;
+
+  /// Mentor capability: reminders and nudges
+  ///
+  /// In en, this message translates to:
+  /// **'Send reminders and wellbeing check-ins'**
+  String get mentorCapabilityNudge;
+
+  /// Short label for progress chip in mentor empty state
+  ///
+  /// In en, this message translates to:
+  /// **'View Progress'**
+  String get mentorCapabilityProgressShort;
+
+  /// Pre-filled text shown when user taps Schedule chip in mentor empty state
+  ///
+  /// In en, this message translates to:
+  /// **'Help me schedule a study session'**
+  String get mentorHelpScheduleHint;
+
+  /// Pre-filled text shown when user taps Topics chip in mentor empty state
+  ///
+  /// In en, this message translates to:
+  /// **'What should I study next?'**
+  String get mentorHelpTopicsHint;
+
+  /// Section title for Spaced Repetition settings
+  ///
+  /// In en, this message translates to:
+  /// **'Spaced Repetition'**
+  String get srSectionTitle;
+
+  /// Tile title for spaced repetition minimum interval setting
+  ///
+  /// In en, this message translates to:
+  /// **'Min interval'**
+  String get srMinInterval;
+
+  /// Tile title for spaced repetition maximum interval setting
+  ///
+  /// In en, this message translates to:
+  /// **'Max interval'**
+  String get srMaxInterval;
+
+  /// Tile title for spaced repetition daily review limit setting
+  ///
+  /// In en, this message translates to:
+  /// **'Daily review limit'**
+  String get srDailyReviewLimit;
+
+  /// SnackBar error when saving API config without selecting a model
+  ///
+  /// In en, this message translates to:
+  /// **'Please select a model before saving.'**
+  String get selectModelWarning;
+
+  /// AlertDialog title when switching AI provider
+  ///
+  /// In en, this message translates to:
+  /// **'Provider Changed'**
+  String get providerChangedTitle;
+
+  /// AlertDialog body when changing AI provider
+  ///
+  /// In en, this message translates to:
+  /// **'Changing the provider will clear the selected model. You\'ll need to select a new model.'**
+  String get providerChangedBody;
+
+  /// ActionChip label for practice questions
+  ///
+  /// In en, this message translates to:
+  /// **'Practice Questions'**
+  String get practiceQuestions;
+
+  /// ActionChip label to start a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Start Lesson'**
+  String get startLesson;
 }
 
 class _AppLocalizationsDelegate

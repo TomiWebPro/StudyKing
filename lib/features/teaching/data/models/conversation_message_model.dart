@@ -69,6 +69,9 @@ class ConversationMessage extends HiveObject {
   static final Logger _logger = const Logger('ConversationMessage');
 
   static bool _computeIsEvaluation(String content) {
+    // Quick guard: only attempt JSON parsing if content looks like a JSON object.
+    // This avoids throwing FormatException on every plain-text message.
+    if (content.isEmpty || content[0] != '{') return false;
     try {
       final data = jsonDecode(content) as Map<String, dynamic>;
       return data['type'] == 'evaluation';

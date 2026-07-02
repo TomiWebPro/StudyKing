@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -35,7 +34,7 @@ class StudyPlanTab extends ConsumerStatefulWidget {
 
 class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
   static final Logger _logger = const Logger('StudyPlanTab');
-  final TextEditingController _courseController = TextEditingController();
+  String? _selectedSubjectId;
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
   final List<SyllableEntry> _syllabusEntries = [];
@@ -51,7 +50,6 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
 
   @override
   void dispose() {
-    _courseController.dispose();
     _daysController.dispose();
     _hoursController.dispose();
     for (final entry in _syllabusEntries) {
@@ -134,11 +132,13 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
       return;
     }
 
-    final course = _courseController.text.trim();
+    final selectedSubject = _selectedSubjectId != null
+        ? _allSubjects.where((s) => s.id == _selectedSubjectId).firstOrNull
+        : null;
     final daysValue = int.tryParse(_daysController.text);
     final hoursValue = int.tryParse(_hoursController.text);
 
-    if (course.isEmpty ||
+    if (selectedSubject == null ||
         daysValue == null ||
         hoursValue == null ||
         daysValue <= 0 ||
@@ -150,47 +150,33 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
       return;
     }
 
-    if (_allSubjects.isNotEmpty) {
-      final matchingSubject = _allSubjects.where(
-        (s) => AnswerComparator.areEquivalent(s.name, course),
-      ).firstOrNull;
-      if (matchingSubject == null) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10nGen.errorWithMessage(l10nGen.courseNotFound(course))),
+    final topicRepo = TopicRepository();
+    await topicRepo.init();
+    final topicsResult = await topicRepo.getBySubject(selectedSubject.id);
+    final hasTopics = (topicsResult.data ?? []).isNotEmpty;
+    if (!hasTopics) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10nGen.errorWithMessage(l10nGen.subjectNoTopics(selectedSubject.name))),
+          duration: const Duration(seconds: 6),
+          action: SnackBarAction(
+            label: l10nGen.addTopic,
+            onPressed: () {
+              Navigator.pushNamed(
+                context,
+                AppRoutes.subjectDetail,
+                arguments: selectedSubject,
+              );
+            },
           ),
-        );
-        return;
-      }
-      final topicRepo = TopicRepository();
-      await topicRepo.init();
-      final topicsResult = await topicRepo.getBySubject(matchingSubject.id);
-      final hasTopics = (topicsResult.data ?? []).isNotEmpty;
-      if (!hasTopics) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10nGen.errorWithMessage(l10nGen.subjectNoTopics(course))),
-            duration: const Duration(seconds: 6),
-            action: SnackBarAction(
-              label: l10nGen.addTopic,
-              onPressed: () {
-                Navigator.pushNamed(
-                  context,
-                  AppRoutes.subjectDetail,
-                  arguments: matchingSubject,
-                );
-              },
-            ),
-          ),
-        );
-        return;
-      }
+        ),
+      );
+      return;
     }
 
     await ref.read(plannerProvider.notifier).generatePlan(
-          course: course,
+          course: selectedSubject.name,
           daysValue: daysValue,
           hoursValue: hoursValue,
           l10n: l10nGen,
@@ -288,78 +274,117 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
                 },
               )
             else ...[
-              TextField(
-                controller: _courseController,
-                decoration: InputDecoration(
-                  labelText: l10n.courseSubject,
-                  hintText: l10n.courseHint,
-                  border: const OutlineInputBorder(),
-                ),
-              ),
-              if (_allSubjects.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsetsDirectional.only(start: 4, top: 4),
-                  child: Text(
-                    l10n.planSubjectHint,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
-                  ),
-                ),
-              SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-              LayoutBuilder(
-                builder: (context, constraints) {
-                  final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
-                  if (narrow) {
-                    return Column(
+              if (_allSubjects.isEmpty)
+                Card(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        TextField(
-                          controller: _daysController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.days,
-                            border: const OutlineInputBorder(),
+                        Row(
+                          children: [
+                            Icon(Icons.info_outline,
+                                color: Theme.of(context).colorScheme.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.noSubjectsYet,
+                                style: Theme.of(context).textTheme.titleSmall,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text(
+                          l10n.addSubjectFirst,
+                          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),
                         ),
-                        SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-                        TextField(
-                          controller: _hoursController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.hoursPerDay,
-                            border: const OutlineInputBorder(),
+                        const SizedBox(height: 16),
+                        ElevatedButton.icon(
+                          icon: const Icon(Icons.add),
+                          label: Text(l10n.createSubject),
+                          onPressed: () => Navigator.pushNamed(
+                            context,
+                            AppRoutes.subjectSelection,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else ...[
+                DropdownButtonFormField<String>(
+                  initialValue: _selectedSubjectId,
+                  decoration: InputDecoration(
+                    labelText: l10n.courseSubject,
+                    border: const OutlineInputBorder(),
+                  ),
+                  hint: Text(l10n.courseHint),
+                  isExpanded: true,
+                  items: _allSubjects.map((s) => DropdownMenuItem(
+                    value: s.id,
+                    child: Text(s.name, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (v) => setState(() => _selectedSubjectId = v),
+                ),
+                SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final narrow = ResponsiveUtils.breakpointOf(context).isMobile;
+                    if (narrow) {
+                      return Column(
+                        children: [
+                          TextField(
+                            controller: _daysController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: l10n.days,
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                          SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+                          TextField(
+                            controller: _hoursController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: l10n.hoursPerDay,
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                        ],
+                      );
+                    }
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _daysController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: l10n.days,
+                              border: const OutlineInputBorder(),
+                            ),
+                          ),
+                        ),
+                        SizedBox(width: ResponsiveUtils.horizontalSpacing(context)),
+                        Expanded(
+                          child: TextField(
+                            controller: _hoursController,
+                            keyboardType: TextInputType.number,
+                            decoration: InputDecoration(
+                              labelText: l10n.hoursPerDay,
+                              border: const OutlineInputBorder(),
+                            ),
                           ),
                         ),
                       ],
                     );
-                  }
-                  return Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _daysController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.days,
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: ResponsiveUtils.horizontalSpacing(context)),
-                      Expanded(
-                        child: TextField(
-                          controller: _hoursController,
-                          keyboardType: TextInputType.number,
-                          decoration: InputDecoration(
-                            labelText: l10n.hoursPerDay,
-                            border: const OutlineInputBorder(),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                },
-              ),
+                  },
+                ),
+              ],
             ],
             SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Semantics(

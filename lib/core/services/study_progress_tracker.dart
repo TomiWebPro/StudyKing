@@ -208,7 +208,15 @@ class StudyProgressTracker {
 
       final recommendations = <Map<String, dynamic>>[];
 
-      if ((stats['accuracy'] as int) < 60) {
+      final totalAttempts = stats['totalAttempts'] as int? ?? 0;
+      if (totalAttempts == 0) {
+        recommendations.add({
+          'type': 'onboarding',
+          'priority': 'high',
+          'message': _l10n.mentorNoPracticeData,
+          'action': _l10n.mentorStartPracticing,
+        });
+      } else if ((stats['accuracy'] as int) < 60) {
         recommendations.add({
           'type': 'review',
           'priority': 'high',

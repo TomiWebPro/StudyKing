@@ -139,13 +139,15 @@ class FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  void pauseSession() {
+  Result<void> pauseSession() {
     _isPaused = true;
+    return Result.success(null);
   }
 
   @override
-  void resumeSession() {
+  Result<void> resumeSession() {
     _isPaused = false;
+    return Result.success(null);
   }
 
   @override
@@ -281,7 +283,7 @@ class _FakeBadgeService extends BadgeService {
 
 class _FakeFocusSessionRepo extends FocusSessionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<FocusSession?>> getLatest() async => Result.success(null);

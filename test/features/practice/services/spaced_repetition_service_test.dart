@@ -108,7 +108,7 @@ class _FakeQuestionRepository extends QuestionRepository {
   _FakeQuestionRepository(this.fakeBox);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => fakeBox;
@@ -141,7 +141,7 @@ class _FakeAttemptRepository extends AttemptRepository {
   final Map<String, StudentAttempt> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<StudentAttempt?>> get(String id) async {
@@ -696,7 +696,7 @@ class _ThrowingQuestionRepository extends QuestionRepository {
   _ThrowingQuestionRepository(this.fakeBox);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => fakeBox;
@@ -731,7 +731,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<StudentAttempt?>> get(String id) async {
@@ -746,7 +746,7 @@ class _FakeQuestionRepo extends QuestionRepository {
   _FakeQuestionRepo(this.fakeBox);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => fakeBox;
@@ -781,7 +781,7 @@ class _FakeThrowingBoxRepo extends QuestionRepository {
   _FakeThrowingBoxRepo(this._box);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => _box;

@@ -866,7 +866,6 @@ void main() {
 class _SlowInMemoryStorage extends InMemoryOnboardingStorage {
   @override
   Future<void> setBool(String key, bool value) async {
-    await Future.delayed(const Duration(milliseconds: 50));
     await super.setBool(key, value);
   }
 }

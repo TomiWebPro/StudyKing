@@ -191,8 +191,9 @@ class ExportSection extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      final csv = await exportService.exportComprehensiveCSV(studentId, l10n: l10n);
-      if (!context.mounted) return;
+      final csvResult = await exportService.exportComprehensiveCSV(studentId, l10n: l10n);
+      if (csvResult.isFailure || !context.mounted) return;
+      final csv = csvResult.data!;
       await Share.shareXFiles(
         [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
         text: l10n.comprehensiveReportExported,
@@ -216,8 +217,9 @@ class ExportSection extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      final pdfBytes = await exportService.exportComprehensivePDF(studentId, l10n);
-      if (!context.mounted) return;
+      final pdfResult = await exportService.exportComprehensivePDF(studentId, l10n);
+      if (pdfResult.isFailure || !context.mounted) return;
+      final pdfBytes = pdfResult.data!;
       await Share.shareXFiles(
         [XFile.fromData(Uint8List.fromList(pdfBytes), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf', mimeType: 'application/pdf')],
         text: l10n.comprehensiveReportExported,
@@ -241,8 +243,9 @@ class ExportSection extends ConsumerWidget {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      final jsonStr = await exportService.exportComprehensiveJSON(studentId, l10n);
-      if (!context.mounted) return;
+      final jsonResult = await exportService.exportComprehensiveJSON(studentId, l10n);
+      if (jsonResult.isFailure || !context.mounted) return;
+      final jsonStr = jsonResult.data!;
       await Share.shareXFiles(
         [XFile.fromData(Uint8List.fromList(utf8.encode(jsonStr)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
         text: l10n.comprehensiveReportExported,

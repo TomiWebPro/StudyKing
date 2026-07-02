@@ -35,7 +35,7 @@ class _FakeLessonRepository extends LessonRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(Lesson lesson) async => Result.success(null);
@@ -55,7 +55,7 @@ class _FakeSessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 Widget _buildTestApp({

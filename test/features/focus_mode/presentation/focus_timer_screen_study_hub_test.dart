@@ -94,7 +94,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<Result<void>> delete(String key) async => Result.success(null);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 // ── Fake MasteryGraphService ───────────────────────────────────────────
@@ -222,10 +222,10 @@ class _FakeStudyTimerService extends StudyTimerService {
   }
 
   @override
-  void pauseSession() { _isPaused = true; }
+  Result<void> pauseSession() { _isPaused = true; return Result.success(null); }
 
   @override
-  void resumeSession() { _isPaused = false; }
+  Result<void> resumeSession() { _isPaused = false; return Result.success(null); }
 
   @override
   Future<Result<Session>> completeSession() async {
@@ -356,7 +356,7 @@ class _FakeFocusSessionRepository extends FocusSessionRepository {
   FocusSession? _latest;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<FocusSession?>> getLatest() async => Result.success(_latest);

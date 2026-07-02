@@ -20,7 +20,7 @@ import 'package:studyking/features/settings/data/models/settings_box.dart';
 
 class _FakeAttemptRepo extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
@@ -74,7 +74,7 @@ class _FakeNudgeRepository extends EngagementNudgeRepository {
   final List<EngagementNudgeModel> _nudges = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(EngagementNudgeModel model) async {
@@ -201,22 +201,25 @@ void main() {
 
     group('getOverworkNudge', () {
       test('returns empty list when study time is under 4 hours', () async {
-        final nudges = await scheduler.getOverworkNudge('test-student');
-        expect(nudges, isEmpty);
+        final result = await scheduler.getOverworkNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
       });
     });
 
     group('getRevisionNudges', () {
       test('returns empty list when no topics need review', () async {
-        final nudges = await scheduler.getRevisionNudges('test-student');
-        expect(nudges, isEmpty);
+        final result = await scheduler.getRevisionNudges('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
       });
     });
 
     group('getPlanAdjustmentNudge', () {
       test('returns empty when no low adherence days', () async {
-        final nudges = await scheduler.getPlanAdjustmentNudge('test-student');
-        expect(nudges, isEmpty);
+        final result = await scheduler.getPlanAdjustmentNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
       });
 
       test('returns nudge after 3+ low adherence days', () async {
@@ -229,17 +232,19 @@ void main() {
           ));
         }
 
-        final nudges = await scheduler.getPlanAdjustmentNudge('test-student');
-        expect(nudges, hasLength(1));
-        expect(nudges.first.nudgeType, 'planAdjustment');
+        final result = await scheduler.getPlanAdjustmentNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.nudgeType, 'planAdjustment');
       });
     });
 
     group('getWeeklyDigest', () {
       test('returns digest string', () async {
-        final digest = await scheduler.getWeeklyDigest('test-student');
-        expect(digest, contains('Weekly Digest'));
-        expect(digest, contains('questions answered'));
+        final result = await scheduler.getWeeklyDigest('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, contains('Weekly Digest'));
+        expect(result.data, contains('questions answered'));
       });
     });
 
@@ -304,11 +309,12 @@ void main() {
           overworkAlertsEnabled: true,
         );
         scheduler.updateSettings(settings);
-        final nudges = await scheduler.getOverworkNudge('test-student');
+        final result = await scheduler.getOverworkNudge('test-student');
         // Nudge check still returns data, but _sendNudgeNotifications should skip
         // The _isNotificationEnabled check is internal, so we verify by calling
         // the public method and confirming no crash
-        expect(nudges, isEmpty);
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
       });
 
       test('individual toggle gating works via _sendNudgeNotifications', () async {

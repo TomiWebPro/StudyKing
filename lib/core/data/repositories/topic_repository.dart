@@ -4,6 +4,8 @@ import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
 class TopicRepository extends Repository<Topic> {
+  TopicRepository() : super(boxName: HiveBoxNames.topics);
+
   Future<Result<void>> init() async {
     try {
       await openBox(HiveBoxNames.topics);

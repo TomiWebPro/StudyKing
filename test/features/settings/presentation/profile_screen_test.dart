@@ -353,10 +353,8 @@ void main() {
       await fakeRepo.saveProfileData(UserProfile(
         id: 'test-id',
         name: 'Jane Doe',
-        studentId: '12345',
         avatarIcon: 'Icons.school',
         learningGoal: 'Learn Flutter',
-        preferredStudyTime: 'Morning',
         notificationsEnabled: false,
         language: 'es',
       ));
@@ -365,9 +363,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Jane Doe'), findsOneWidget);
-      expect(find.text('12345'), findsOneWidget);
       expect(find.text('Learn Flutter'), findsOneWidget);
-      expect(find.text('Morning'), findsOneWidget);
     });
 
     testWidgets('handles profile load error gracefully', (tester) async {
@@ -386,17 +382,6 @@ void main() {
       expect(nameLabel, findsOneWidget);
 
       expect(find.text('*'), findsOneWidget);
-    });
-
-    testWidgets('student ID field only accepts digits', (tester) async {
-      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
-      await tester.pumpAndSettle();
-
-      final studentIdField = find.widgetWithText(TextField, 'Student ID (Optional)');
-      final textField = tester.widget<TextField>(studentIdField);
-
-      expect(textField.inputFormatters, isNotNull);
-      expect(textField.inputFormatters!.isNotEmpty, isTrue);
     });
 
     testWidgets('avatar picker has proper semantic labels', (tester) async {
@@ -436,19 +421,6 @@ void main() {
       expect(find.text('Master programming'), findsOneWidget);
     });
 
-    testWidgets('enter text in preferred study time field', (tester) async {
-      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
-      await tester.pumpAndSettle();
-
-      await tester.enterText(
-        find.widgetWithText(TextField, 'Preferred Study Time'),
-        'Weekend mornings',
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('Weekend mornings'), findsOneWidget);
-    });
-
     group('Save Verification', () {
       testWidgets('save triggers repository call with correct data', (tester) async {
         await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
@@ -467,28 +439,6 @@ void main() {
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data, isNotNull);
         expect(profileResult.data!.name, equals('Save Test User'));
-      });
-
-      testWidgets('save includes student ID when provided', (tester) async {
-        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Full Name'),
-          'ID Test User',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Student ID (Optional)'),
-          '12345',
-        );
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byIcon(Icons.save));
-        await tester.pumpAndSettle();
-
-        final profileResult = await fakeRepo.getProfileData();
-        expect(profileResult.isSuccess, isTrue);
-        expect(profileResult.data!.studentId, equals('12345'));
       });
 
       testWidgets('save includes learning goal when provided', (tester) async {
@@ -511,28 +461,6 @@ void main() {
         final profileResult = await fakeRepo.getProfileData();
         expect(profileResult.isSuccess, isTrue);
         expect(profileResult.data!.learningGoal, equals('Pass Final Exam'));
-      });
-
-      testWidgets('save includes preferred study time when provided', (tester) async {
-        await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
-        await tester.pumpAndSettle();
-
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Full Name'),
-          'Time Test User',
-        );
-        await tester.enterText(
-          find.widgetWithText(TextField, 'Preferred Study Time'),
-          'Evening 7-10 PM',
-        );
-        await tester.pumpAndSettle();
-
-        await tester.tap(find.byIcon(Icons.save));
-        await tester.pumpAndSettle();
-
-        final profileResult = await fakeRepo.getProfileData();
-        expect(profileResult.isSuccess, isTrue);
-        expect(profileResult.data!.preferredStudyTime, equals('Evening 7-10 PM'));
       });
 
       testWidgets('save shows loading indicator during save', (tester) async {

@@ -11,7 +11,7 @@ class _FakeMasteryStateRepository extends MasteryStateRepository {
   final Map<String, MasteryState> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(

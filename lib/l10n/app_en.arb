@@ -28,7 +28,7 @@
   "@courseSubject": {
     "description": "Label for course/subject text field"
   },
-  "courseHint": "e.g., IB Physics",
+  "courseHint": "e.g., Organic Chemistry",
   "@courseHint": {
     "description": "Hint text for course input"
   },
@@ -503,10 +503,6 @@
   "@nameIsRequired": {
     "description": "Error message when name field is empty"
   },
-  "studentIdMustBeNumeric": "Student ID must be numeric",
-  "@studentIdMustBeNumeric": {
-    "description": "Error message when student ID is not numeric"
-  },
   "profileSavedSuccessfully": "Profile saved successfully",
   "@profileSavedSuccessfully": {
     "description": "Snackbar message when profile is saved"
@@ -549,14 +545,6 @@
   "@enterYourName": {
     "description": "Hint text for name input field"
   },
-  "studentIdOptional": "Student ID (Optional)",
-  "@studentIdOptional": {
-    "description": "Label for student ID input field"
-  },
-  "yourStudentIdNumber": "Your student ID number",
-  "@yourStudentIdNumber": {
-    "description": "Hint text for student ID input field"
-  },
   "learningGoal": "Learning Goal",
   "@learningGoal": {
     "description": "Label for learning goal input field"
@@ -564,14 +552,6 @@
   "learningGoalHint": "e.g., Final Exams, Certifications",
   "@learningGoalHint": {
     "description": "Hint text for learning goal input field"
-  },
-  "preferredStudyTime": "Preferred Study Time",
-  "@preferredStudyTime": {
-    "description": "Label for preferred study time input field"
-  },
-  "preferredStudyTimeHint": "e.g., Evening (6-9 PM)",
-  "@preferredStudyTimeHint": {
-    "description": "Hint text for preferred study time input field"
   },
   "accountInformation": "Account Information",
   "@accountInformation": {
@@ -882,7 +862,7 @@
   "@subjectCodeOptional": {
     "description": "Label for subject code field"
   },
-  "subjectCodeHint": "e.g., IB-PHYS",
+  "subjectCodeHint": "e.g., BIO-101",
   "@subjectCodeHint": {
     "description": "Hint text for subject code"
   },
@@ -3182,11 +3162,11 @@
   "@mentorRecommendationsSection": {
     "description": "Section header for recommendations in progress report"
   },
-  "mentorProgressReportTitle": "📊 **Your Study Progress Report**\n",
+  "mentorProgressReportTitle": "📊 Your Study Progress Report\n",
   "@mentorProgressReportTitle": {
     "description": "Title for the progress report"
   },
-  "mentorOverallAccuracy": "**Overall Accuracy:** {accuracy}% ({correct}/{total} correct)",
+  "mentorOverallAccuracy": "Overall Accuracy: {accuracy}% ({correct}/{total} correct)",
   "@mentorOverallAccuracy": {
     "description": "Overall accuracy line in progress report",
     "placeholders": {
@@ -3201,7 +3181,7 @@
       }
     }
   },
-  "mentorTotalStudyTime": "**Total Study Time:** {hours} hours",
+  "mentorTotalStudyTime": "Total Study Time: {hours} hours",
   "@mentorTotalStudyTime": {
     "description": "Total study time line in progress report",
     "placeholders": {
@@ -3210,7 +3190,7 @@
       }
     }
   },
-  "mentorWeeklyActivity": "**Weekly Activity:** {attempts} attempts",
+  "mentorWeeklyActivity": "Weekly Activity: {attempts} attempts",
   "@mentorWeeklyActivity": {
     "description": "Weekly activity line in progress report",
     "placeholders": {
@@ -3219,7 +3199,7 @@
       }
     }
   },
-  "mentorCompletedLessons": "**Completed Lessons:** {count}",
+  "mentorCompletedLessons": "Completed Lessons: {count}",
   "@mentorCompletedLessons": {
     "description": "Completed lessons line in progress report",
     "placeholders": {
@@ -3228,7 +3208,7 @@
       }
     }
   },
-  "mentorTopicsStudied": "**Topics Studied:** {count}",
+  "mentorTopicsStudied": "Topics Studied: {count}",
   "@mentorTopicsStudied": {
     "description": "Topics studied line in progress report",
     "placeholders": {
@@ -3237,7 +3217,7 @@
       }
     }
   },
-  "mentorAreasNeedingAttention": "\n**Areas needing attention:**",
+  "mentorAreasNeedingAttention": "\nAreas needing attention:",
   "@mentorAreasNeedingAttention": {
     "description": "Section header for weak topics"
   },
@@ -3253,7 +3233,7 @@
       }
     }
   },
-  "mentorBadgesEarned": "\n**Badges earned:**",
+  "mentorBadgesEarned": "\nBadges earned:",
   "@mentorBadgesEarned": {
     "description": "Section header for badges"
   },
@@ -3269,7 +3249,7 @@
       }
     }
   },
-  "mentorRecommendations": "\n**Recommendations:**",
+  "mentorRecommendations": "\nRecommendations:",
   "@mentorRecommendations": {
     "description": "Section header for recommendations"
   },
@@ -3310,7 +3290,7 @@
   "@roadmapGoal": {
     "description": "Label for roadmap goal input"
   },
-  "roadmapGoalHint": "e.g., I want to learn IB Physics in 180 days",
+  "roadmapGoalHint": "e.g., I want to learn Python in 90 days",
   "@roadmapGoalHint": {
     "description": "Hint text for roadmap goal"
   },
@@ -7734,5 +7714,98 @@
     "preparingTutorLesson": "Preparing your lesson...",
     "@preparingTutorLesson": {
       "description": "Loading message shown while tutor initializes"
-    }
+    },
+
+    "mentorStartPracticing": "Start a practice session to see your stats!",
+    "@mentorStartPracticing": {
+      "description": "Mentor suggestion action for new users with no practice data"
+    },
+    "mentorNoPracticeData": "No practice data yet — start practicing to unlock personalized insights!",
+    "@mentorNoPracticeData": {
+      "description": "Mentor onboarding message shown when user has no practice attempts"
+    },
+    "mentorNoPracticeDataShort": "No practice data yet.",
+    "@mentorNoPracticeDataShort": {
+      "description": "Short label for accuracy section when user has no practice data"
+    },
+    "mentorHelpTitle": "What I Can Do",
+    "@mentorHelpTitle": {
+      "description": "Title for the mentor capabilities help dialog"
+    },
+    "mentorCapabilitiesIntro": "I'm your AI academic assistant. Here's what I can help you with:",
+    "@mentorCapabilitiesIntro": {
+      "description": "Intro text for the mentor help capabilities dialog"
+    },
+    "mentorCapabilityProgress": "Review your study progress and accuracy",
+    "@mentorCapabilityProgress": {
+      "description": "Mentor capability: progress review"
+    },
+    "mentorCapabilitySchedule": "Schedule and reschedule lessons",
+    "@mentorCapabilitySchedule": {
+      "description": "Mentor capability: scheduling"
+    },
+    "mentorCapabilityPlan": "Create long-term study plans and roadmaps",
+    "@mentorCapabilityPlan": {
+      "description": "Mentor capability: study planning"
+    },
+    "mentorCapabilityMotivate": "Keep you motivated and on track",
+    "@mentorCapabilityMotivate": {
+      "description": "Mentor capability: motivation"
+    },
+    "mentorCapabilityTopics": "Help you decide what to study next",
+    "@mentorCapabilityTopics": {
+      "description": "Mentor capability: topic decisions"
+    },
+    "mentorCapabilityNudge": "Send reminders and wellbeing check-ins",
+    "@mentorCapabilityNudge": {
+      "description": "Mentor capability: reminders and nudges"
+    },
+    "mentorCapabilityProgressShort": "View Progress",
+    "@mentorCapabilityProgressShort": {
+      "description": "Short label for progress chip in mentor empty state"
+    },
+    "mentorHelpScheduleHint": "Help me schedule a study session",
+    "@mentorHelpScheduleHint": {
+      "description": "Pre-filled text shown when user taps Schedule chip in mentor empty state"
+    },
+    "mentorHelpTopicsHint": "What should I study next?",
+    "@mentorHelpTopicsHint": {
+      "description": "Pre-filled text shown when user taps Topics chip in mentor empty state"
+    },
+  "srSectionTitle": "Spaced Repetition",
+  "@srSectionTitle": {
+    "description": "Section title for Spaced Repetition settings"
+  },
+  "srMinInterval": "Min interval",
+  "@srMinInterval": {
+    "description": "Tile title for spaced repetition minimum interval setting"
+  },
+  "srMaxInterval": "Max interval",
+  "@srMaxInterval": {
+    "description": "Tile title for spaced repetition maximum interval setting"
+  },
+  "srDailyReviewLimit": "Daily review limit",
+  "@srDailyReviewLimit": {
+    "description": "Tile title for spaced repetition daily review limit setting"
+  },
+  "selectModelWarning": "Please select a model before saving.",
+  "@selectModelWarning": {
+    "description": "SnackBar error when saving API config without selecting a model"
+  },
+  "providerChangedTitle": "Provider Changed",
+  "@providerChangedTitle": {
+    "description": "AlertDialog title when switching AI provider"
+  },
+  "providerChangedBody": "Changing the provider will clear the selected model. You'll need to select a new model.",
+  "@providerChangedBody": {
+    "description": "AlertDialog body when changing AI provider"
+  },
+  "practiceQuestions": "Practice Questions",
+  "@practiceQuestions": {
+    "description": "ActionChip label for practice questions"
+  },
+  "startLesson": "Start Lesson",
+  "@startLesson": {
+    "description": "ActionChip label to start a lesson"
+  }
   }

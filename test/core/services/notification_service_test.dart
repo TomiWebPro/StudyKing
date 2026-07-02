@@ -1,10 +1,38 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   group('NotificationService', () {
+    setUp(() {
+      debugDefaultTargetPlatformOverride = TargetPlatform.android;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('dexterous.com/flutter/local_notifications'),
+        (MethodCall methodCall) async {
+          switch (methodCall.method) {
+            case 'initialize':
+              return true;
+            default:
+              return null;
+          }
+        },
+      );
+    });
+
+    tearDown(() {
+      debugDefaultTargetPlatformOverride = null;
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('dexterous.com/flutter/local_notifications'),
+        null,
+      );
+    });
+
     test('is a singleton', () {
       final service1 = NotificationService();
       final service2 = NotificationService();
@@ -13,102 +41,109 @@ void main() {
 
     test('setAppLocalizations stores the l10n', () {
       final service = NotificationService();
-      service.setAppLocalizations(AppLocalizationsEn());
+      expect(
+        () => service.setAppLocalizations(AppLocalizationsEn()),
+        returnsNormally,
+      );
     });
 
     test('init does not throw during initialization', () async {
       final service = NotificationService();
-      try {
-        await service.init();
-      } catch (_) {
-        // Plugin may not be available in test environment
-      }
+      expect(service.init(), completes);
     });
 
     test('init called twice does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.init();
-        await service.init();
-      } catch (_) {}
+      await service.init();
+      expect(service.init(), completes);
     });
 
     test('showNotification does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showNotification(id: 1, title: 'T', body: 'B');
-      } catch (_) {}
+      expect(service.showNotification(id: 1, title: 'T', body: 'B'), completes);
     });
 
     test('showDailyReminder does not throw', () async {
       final service = NotificationService();
-      try {
-        final remindAt = TimeOfDay.now();
-        await service.showDailyReminder(id: 1, title: 'T', body: 'B', remindAt: remindAt);
-      } catch (_) {}
+      final remindAt = TimeOfDay.now();
+      expect(
+        service.showDailyReminder(id: 1, title: 'T', body: 'B', remindAt: remindAt),
+        completes,
+      );
     });
 
     test('showRevisionNudge does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showRevisionNudge(id: 1, topicName: 'Algebra', daysSinceLastPractice: 3);
-      } catch (_) {}
+      expect(
+        service.showRevisionNudge(id: 1, topicName: 'Algebra', daysSinceLastPractice: 3),
+        completes,
+      );
     });
 
     test('showOverworkWarning does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showOverworkWarning(id: 1, hoursStudied: 5.0);
-      } catch (_) {}
+      expect(
+        service.showOverworkWarning(id: 1, hoursStudied: 5.0),
+        completes,
+      );
     });
 
     test('showPlanAdjustmentSuggestion does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showPlanAdjustmentSuggestion(id: 1, consecutiveLowDays: 5);
-      } catch (_) {}
+      expect(
+        service.showPlanAdjustmentSuggestion(id: 1, consecutiveLowDays: 5),
+        completes,
+      );
     });
 
     test('showLessonReminder does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showLessonReminder(id: 1, lessonTitle: 'Math', startTime: DateTime.now());
-      } catch (_) {}
+      expect(
+        service.showLessonReminder(
+          id: 1,
+          lessonTitle: 'Math',
+          startTime: DateTime.now(),
+        ),
+        completes,
+      );
     });
 
     test('showLowMasteryWarning with empty list does nothing', () async {
       final service = NotificationService();
-      try {
-        await service.showLowMasteryWarning(id: 1, weakTopics: []);
-      } catch (_) {}
+      expect(
+        service.showLowMasteryWarning(id: 1, weakTopics: []),
+        completes,
+      );
     });
 
     test('showLowMasteryWarning with topics does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showLowMasteryWarning(id: 1, weakTopics: ['Algebra', 'Geometry']);
-      } catch (_) {}
+      expect(
+        service.showLowMasteryWarning(id: 1, weakTopics: ['Algebra', 'Geometry']),
+        completes,
+      );
     });
 
     test('showBadgeUnlocked does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.showBadgeUnlocked(id: 1, badgeName: 'Test', badgeDescription: 'Desc');
-      } catch (_) {}
+      expect(
+        service.showBadgeUnlocked(
+          id: 1,
+          badgeName: 'Test',
+          badgeDescription: 'Desc',
+        ),
+        completes,
+      );
     });
 
     test('cancelNotification does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.cancelNotification(1);
-      } catch (_) {}
+      expect(service.cancelNotification(1), completes);
     });
 
     test('cancelAll does not throw', () async {
       final service = NotificationService();
-      try {
-        await service.cancelAll();
-      } catch (_) {}
+      expect(service.cancelAll(), completes);
     });
 
     test('public API methods exist', () {

@@ -15,8 +15,7 @@ import '../../../core/data/repositories/attempt_repository.dart';
 import '../data/models/dashboard_models.dart';
 
 AppLocalizations _dashboardServiceDefaultL10n() {
-  const logger = Logger('DashboardService');
-  logger.w('l10n fallback to English in DashboardService constructor');
+  DashboardService._logger.w('l10n fallback to English in DashboardService constructor');
   return lookupAppLocalizations(const Locale('en'));
 }
 

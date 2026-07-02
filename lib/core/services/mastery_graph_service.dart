@@ -31,11 +31,13 @@ class MasteryGraphService {
         questionEvaluationRepo = questionEvaluationRepo ?? QuestionEvaluationRepository(),
         _calculationService = calculationService ?? MasteryCalculationService();
 
-  Future<void> init() async {
-    await masteryStateRepo.init();
-    await questionMasteryRepo.init();
-    await topicDependencyRepo.init();
-    await questionEvaluationRepo.init();
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
+      await masteryStateRepo.init();
+      await questionMasteryRepo.init();
+      await topicDependencyRepo.init();
+      await questionEvaluationRepo.init();
+    }, context: 'MasteryGraphService.init');
   }
 
   Future<Result<void>> recordTopicAttempt({

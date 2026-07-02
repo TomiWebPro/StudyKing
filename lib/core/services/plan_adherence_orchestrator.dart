@@ -112,6 +112,7 @@ class PlanAdherenceOrchestrator {
 
       return Result.success(result);
     } catch (e) {
+      _logger.w('checkAdherence failed', e);
       return Result.failure(e.toString());
     }
   }
@@ -141,6 +142,7 @@ class PlanAdherenceOrchestrator {
 
       return await _planService.generatePlan(studentId);
     } catch (e) {
+      _logger.w('suggestRegeneration failed', e);
       return Result.failure(e.toString());
     }
   }
@@ -172,6 +174,7 @@ class PlanAdherenceOrchestrator {
         'weeklyTrend': weeklyTrend,
       });
     } catch (e) {
+      _logger.w('getAdherenceReport failed', e);
       return Result.failure(e.toString());
     }
   }

@@ -327,7 +327,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
 
   Widget _buildFilterBar(AppLocalizations l10n) {
     return Padding(
-      padding: const EdgeInsetsDirectional.only(start: 16, top: 8, end: 16, bottom: 0),
+      padding: const EdgeInsetsDirectional.only(start: 16, top: 8, end: 16, bottom: 8),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
         physics: const AlwaysScrollableScrollPhysics(),

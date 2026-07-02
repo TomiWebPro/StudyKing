@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -27,6 +28,8 @@ import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
+
+final _logger = Logger('TutorServiceTest');
 
 class FakeConversationRepository extends ConversationRepository {
   final List<ConversationMessage> _messages = [];
@@ -334,11 +337,15 @@ void main() {
     tearDown(() async {
       try {
         await Hive.close();
-      } catch (_) {}
+      } catch (e, st) {
+        _logger.w('Cleanup failed on Hive.close: $e', e, st);
+      }
       if (hivePath.isNotEmpty) {
         try {
           await Directory(hivePath).delete(recursive: true);
-        } catch (_) {}
+        } catch (e, st) {
+          _logger.w('Cleanup failed on Directory.delete: $e', e, st);
+        }
       }
     });
 

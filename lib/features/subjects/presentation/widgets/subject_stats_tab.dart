@@ -29,6 +29,7 @@ class SubjectStatsTab extends StatefulWidget {
 class _SubjectStatsTabState extends State<SubjectStatsTab> {
   late Future<List<Session>> _sessionsFuture;
   late Future<_SyllabusProgressData> _syllabusProgressFuture;
+  static final Logger _logger = const Logger('SubjectStatsTab');
 
   @override
   void initState() {
@@ -70,7 +71,7 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
 
       return _SyllabusProgressData(totalTopics: allTopics.length, masteredCount: masteredCount);
     } catch (e) {
-      Logger('SubjectStatsTab').w('Failed to load syllabus progress', e);
+      _logger.w('Failed to load syllabus progress', e);
       return const _SyllabusProgressData(totalTopics: 0, masteredCount: 0);
     }
   }

@@ -4,6 +4,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 
 class PendingActionRepository extends Repository<PendingActionModel> {
+  PendingActionRepository() : super(boxName: HiveBoxNames.pendingActions);
+
   Future<Result<void>> init() async {
     return Result.capture(() async {
       await openBox(HiveBoxNames.pendingActions);

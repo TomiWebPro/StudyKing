@@ -256,7 +256,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: Text(l10n.cancel)),
           TextButton(onPressed: () => Navigator.pop(ctx, 'csv'), child: Text(l10n.exportCsv)),
-          FilledButton(onPressed: () => Navigator.pop(ctx, 'json'), child: Text('JSON')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, 'json'), child: Text(l10n.labelJson)),
         ],
       ),
     );

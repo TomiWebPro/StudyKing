@@ -39,7 +39,7 @@ void main() {
       expect(l10n.roadmaps, 'Roadmaps');
       expect(l10n.createRoadmap, 'Create Roadmap');
       expect(l10n.roadmapGoal, 'Learning Goal');
-      expect(l10n.roadmapGoalHint, 'e.g., I want to learn IB Physics in 180 days');
+      expect(l10n.roadmapGoalHint, 'e.g., I want to learn Python in 90 days');
       expect(l10n.generateRoadmap, 'Generate Roadmap');
       expect(l10n.myRoadmaps, 'My Roadmaps');
       expect(l10n.milestones, 'Milestones');
@@ -441,7 +441,7 @@ void main() {
       expect(l10n.roadmaps, 'Rutas de aprendizaje');
       expect(l10n.createRoadmap, 'Crear Roadmap');
       expect(l10n.roadmapGoal, 'Meta de Aprendizaje');
-      expect(l10n.roadmapGoalHint, 'p. ej., Quiero aprender Física IB en 180 días');
+      expect(l10n.roadmapGoalHint, 'p. ej., Quiero aprender Python en 90 días');
       expect(l10n.generateRoadmap, 'Generar Roadmap');
       expect(l10n.myRoadmaps, 'Mis Roadmaps');
       expect(l10n.milestones, 'Hitos');

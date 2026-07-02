@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -46,7 +47,6 @@ class TestSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   @override
   Future<SubjectRepository> build() async {
     buildCalled = true;
-    await Future.delayed(const Duration(milliseconds: 10));
     return _repo;
   }
 }
@@ -54,7 +54,6 @@ class TestSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
 class FailingSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
   @override
   Future<SubjectRepository> build() async {
-    await Future.delayed(const Duration(milliseconds: 10));
     throw Exception('Failed to initialize repository');
   }
 }
@@ -119,6 +118,8 @@ Subject _createSubject({
   );
 }
 
+final _logger = Logger('SubjectsRepoProviderTest');
+
 void main() {
   late String hivePath;
 
@@ -134,7 +135,9 @@ void main() {
     await Hive.close();
     try {
       await Directory(hivePath).delete(recursive: true);
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('Cleanup failed: $e', e, st);
+    }
   });
 
   group('subjectsRepositoryProvider', () {
@@ -152,7 +155,11 @@ void main() {
 
     test('shows error on init failure', () async {
       final c = _makeContainer(FailingSubjectsRepositoryNotifier());
-      try { await c.read(subjectsRepositoryProvider.future); } catch (_) {}
+      try {
+        await c.read(subjectsRepositoryProvider.future);
+      } catch (e, st) {
+        _logger.w('Expected init failure: $e', e, st);
+      }
       expect(c.read(subjectsRepositoryProvider).hasError, isTrue);
       c.dispose();
     });
@@ -187,7 +194,11 @@ void main() {
 
     test('error state contains exception message', () async {
       final c = _makeContainer(FailingSubjectsRepositoryNotifier());
-      try { await c.read(subjectsRepositoryProvider.future); } catch (_) {}
+      try {
+        await c.read(subjectsRepositoryProvider.future);
+      } catch (e, st) {
+        _logger.w('Expected init failure for error state test: $e', e, st);
+      }
       final asyncValue = c.read(subjectsRepositoryProvider);
       expect(asyncValue.hasError, isTrue);
       expect(asyncValue.error.toString(), contains('Failed to initialize repository'));
@@ -265,7 +276,9 @@ void main() {
 
       try {
         await c.read(subjectsRepositoryProvider.future);
-      } catch (_) {}
+      } catch (e, st) {
+        _logger.w('Expected error for recovery test: $e', e, st);
+      }
       expect(c.read(subjectsRepositoryProvider).hasError, isTrue);
 
       c.invalidate(subjectsRepositoryProvider);

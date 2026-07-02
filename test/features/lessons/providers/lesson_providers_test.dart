@@ -184,9 +184,10 @@ void main() {
       addTearDown(container.dispose);
 
       final service = container.read(lessonServiceProvider);
-      final lessons = await service.getLessonsForStudent('stu1');
-      expect(lessons, hasLength(1));
-      expect(lessons.first.id, 'wired-session');
+      final result = await service.getLessonsForStudent('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.id, 'wired-session');
     });
 
     test('handles error from session repository gracefully', () async {

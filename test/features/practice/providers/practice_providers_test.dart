@@ -599,7 +599,7 @@ class _FakeQuestionRepo extends QuestionRepository {
   _FakeQuestionRepo([this._questions = const []]);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success(_questions);
@@ -611,7 +611,7 @@ class _FakeQuestionRepo extends QuestionRepository {
 
 class _FailingQuestionRepo extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Question?>> get(String key) async =>
@@ -624,7 +624,7 @@ class _FailingQuestionRepo extends QuestionRepository {
 
 class _FailingMasteryStateRepo extends MasteryStateRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAll() async => Result.failure('Repo failure');
@@ -696,7 +696,7 @@ class _SeededMasteryGraphService extends MasteryGraphService {
         super();
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
@@ -712,7 +712,7 @@ class _SeededMasteryGraphService extends MasteryGraphService {
 
 class _FailingAttemptRepository extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getAll() async =>
@@ -742,7 +742,7 @@ class FakeAttemptRepositoryWithSeed extends AttemptRepository {
   FakeAttemptRepositoryWithSeed(this._attempts);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getAll() async => Result.success(_attempts);

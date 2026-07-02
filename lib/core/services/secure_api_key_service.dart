@@ -1,3 +1,4 @@
+import 'package:flutter/services.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:studyking/core/utils/logger.dart';
 
@@ -18,6 +19,10 @@ class SecureApiKeyService {
       } else {
         await _storage.write(key: _apiKeyKey, value: key);
       }
+    } on PlatformException catch (e) {
+      if (e.code != 'KeyringLocked') {
+        _logger.w('Failed to save API key to secure storage', e);
+      }
     } catch (e) {
       _logger.w('Failed to save API key to secure storage', e);
     }
@@ -27,6 +32,11 @@ class SecureApiKeyService {
     try {
       final key = await _storage.read(key: _apiKeyKey);
       return key ?? '';
+    } on PlatformException catch (e) {
+      if (e.code != 'KeyringLocked') {
+        _logger.w('Failed to read API key from secure storage', e);
+      }
+      return '';
     } catch (e) {
       _logger.w('Failed to read API key from secure storage', e);
       return '';
@@ -40,6 +50,10 @@ class SecureApiKeyService {
       } else {
         await _storage.write(key: _backupApiKeyKey, value: key);
       }
+    } on PlatformException catch (e) {
+      if (e.code != 'KeyringLocked') {
+        _logger.w('Failed to save backup API key to secure storage', e);
+      }
     } catch (e) {
       _logger.w('Failed to save backup API key to secure storage', e);
     }
@@ -49,6 +63,11 @@ class SecureApiKeyService {
     try {
       final key = await _storage.read(key: _backupApiKeyKey);
       return key ?? '';
+    } on PlatformException catch (e) {
+      if (e.code != 'KeyringLocked') {
+        _logger.w('Failed to read backup API key from secure storage', e);
+      }
+      return '';
     } catch (e) {
       _logger.w('Failed to read backup API key from secure storage', e);
       return '';
@@ -59,6 +78,10 @@ class SecureApiKeyService {
     try {
       await _storage.delete(key: _apiKeyKey);
       await _storage.delete(key: _backupApiKeyKey);
+    } on PlatformException catch (e) {
+      if (e.code != 'KeyringLocked') {
+        _logger.w('Failed to clear secure storage', e);
+      }
     } catch (e) {
       _logger.w('Failed to clear secure storage', e);
     }

@@ -163,8 +163,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
           ),
         ],
       ),
-      body: FocusTraversalGroup(
-        child: ListView.builder(
+      body: ListView.builder(
           padding: ResponsiveUtils.listPadding(context),
           itemCount: _lessons.length,
           itemBuilder: (context, index) {
@@ -192,7 +191,7 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
             );
           },
         ),
-      ),
     );
   }
 }
+

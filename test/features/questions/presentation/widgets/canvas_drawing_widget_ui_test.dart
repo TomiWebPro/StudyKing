@@ -6,6 +6,9 @@ import 'package:studyking/features/questions/presentation/painters/drawing_paint
 import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+
+final _l10n = AppLocalizationsEn();
 
 Widget buildWidget({
   String? instruction,
@@ -42,7 +45,7 @@ void main() {
 
       testWidgets('renders placeholder text when empty', (tester) async {
         await tester.pumpWidget(buildWidget());
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('renders instruction text when provided', (tester) async {
@@ -67,12 +70,12 @@ void main() {
 
       testWidgets('renders save button', (tester) async {
         await tester.pumpWidget(buildWidget());
-        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsOneWidget);
+        expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
       });
 
       testWidgets('shows canvas empty status text', (tester) async {
         await tester.pumpWidget(buildWidget());
-        expect(find.text('Canvas is empty'), findsOneWidget);
+        expect(find.text(_l10n.canvasIsEmpty), findsOneWidget);
       });
 
       testWidgets('shows stroke count after drawing', (tester) async {
@@ -83,7 +86,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        expect(find.text('Canvas is empty'), findsNothing);
+        expect(find.text(_l10n.canvasIsEmpty), findsNothing);
       });
 
       testWidgets('renders GridPainter via CustomPaint', (tester) async {
@@ -101,7 +104,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('drawing creates stroke points', (tester) async {
@@ -138,7 +141,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.undo));
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('undo button does nothing when strokes empty', (tester) async {
@@ -147,8 +150,8 @@ void main() {
         await tester.tap(find.byIcon(Icons.undo));
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsOneWidget);
-        expect(find.text('Canvas is empty'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
+        expect(find.text(_l10n.canvasIsEmpty), findsOneWidget);
       });
     });
 
@@ -164,7 +167,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.delete_outline));
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
     });
 
@@ -173,7 +176,7 @@ void main() {
         await tester.pumpWidget(buildWidget());
 
         final saveButton = tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Save Drawing'),
+          find.widgetWithText(ElevatedButton, _l10n.saveDrawing),
         );
         expect(saveButton.onPressed, isNull);
       });
@@ -189,7 +192,7 @@ void main() {
         await tester.pump();
 
         final saveButton = tester.widget<ElevatedButton>(
-          find.widgetWithText(ElevatedButton, 'Save Drawing'),
+          find.widgetWithText(ElevatedButton, _l10n.saveDrawing),
         );
         expect(saveButton.onPressed, isNotNull);
       });
@@ -202,7 +205,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -218,7 +221,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump(const Duration(seconds: 1));
 
         expect(find.byType(CanvasDrawingWidget), findsOneWidget);
@@ -232,7 +235,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -246,12 +249,12 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        final saveButtonsBefore = find.widgetWithText(ElevatedButton, 'Save Drawing');
+        final saveButtonsBefore = find.widgetWithText(ElevatedButton, _l10n.saveDrawing);
         await tester.tap(saveButtonsBefore);
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
-        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsNothing);
+        expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsNothing);
       });
     });
 
@@ -260,47 +263,47 @@ void main() {
         final initialDrawing = '[[{"x":10,"y":20,"pressure":1}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('handles invalid JSON gracefully', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: 'invalid json'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles empty string', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: ''));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles null initial drawing', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: null));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles non-array JSON', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: '{"key": "value"}'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles empty array JSON', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: '[]'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles malformed stroke entries', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: '[[1, 2, 3]]'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles stroke with missing coordinates', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: '[[{"foo":"bar"}]]'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('handles stroke with partial coordinates', (tester) async {
         await tester.pumpWidget(buildWidget(initialDrawing: '[[{"x":10}]]'));
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
     });
 
@@ -385,7 +388,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        expect(find.text('Canvas is empty'), findsNothing);
+        expect(find.text(_l10n.canvasIsEmpty), findsNothing);
       });
 
       testWidgets('shows stroke count after single stroke', (tester) async {
@@ -405,35 +408,35 @@ void main() {
         final initialDrawing = '[[{"x":10,"y":20,"pressure":0.8},{"x":15,"y":25}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('handles empty stroke array within payload', (tester) async {
         final initialDrawing = '[[], [{"x":10,"y":20}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('handles strokes that are maps instead of lists', (tester) async {
         final initialDrawing = '[{"x":10,"y":20}]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
 
       testWidgets('loads drawing with very large coordinates', (tester) async {
         final initialDrawing = '[[{"x":9999,"y":8888}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('handles negative coordinates in initial drawing', (tester) async {
         final initialDrawing = '[[{"x":-10,"y":-20}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
     });
 
@@ -496,7 +499,7 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('multiple strokes update status text', (tester) async {
@@ -512,7 +515,7 @@ void main() {
         await g2.up();
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
     });
 
@@ -528,9 +531,9 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
@@ -548,9 +551,9 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
@@ -565,13 +568,13 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
-        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsOneWidget);
+        expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
       });
     });
 
@@ -586,13 +589,13 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
-        expect(find.textContaining('Failed to save drawing'), findsOneWidget);
+        expect(find.textContaining(_l10n.failedToSaveDrawing), findsOneWidget);
       });
 
       testWidgets('save button re-enabled after error', (tester) async {
@@ -605,13 +608,13 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
-        expect(find.widgetWithText(ElevatedButton, 'Save Drawing'), findsOneWidget);
+        expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
       });
     });
 
@@ -636,13 +639,13 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
         await tester.pump();
-        await tester.runAsync(() => Future.delayed(const Duration(seconds: 1)));
+        await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
-        expect(find.text('Drawing saved.'), findsOneWidget);
+        expect(find.text(_l10n.drawingSaved), findsOneWidget);
       });
     });
 
@@ -651,14 +654,14 @@ void main() {
         final initialDrawing = '[[{"x":10,"y":20}],[{"x":30,"y":40},{"x":50,"y":60}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
 
       testWidgets('loads drawing with all valid points even with mixed data', (tester) async {
         final initialDrawing = '[[{"x":10,"y":20,"foo":"bar"},{"x":30,"y":40}]]';
         await tester.pumpWidget(buildWidget(initialDrawing: initialDrawing));
 
-        expect(find.text('Draw here...'), findsNothing);
+        expect(find.text(_l10n.drawHere), findsNothing);
       });
     });
 
@@ -677,7 +680,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.undo));
         await tester.pump();
 
-        expect(find.text('Draw here...'), findsOneWidget);
+        expect(find.text(_l10n.drawHere), findsOneWidget);
       });
     });
 

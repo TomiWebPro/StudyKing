@@ -1,0 +1,25 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "references": {
+    "docs": {
+      "path": "./docs",
+      "description": "Use for project documentation and feature guides"
+    },
+    "issues": {
+      "path": "./issues",
+      "description": "Use for viewing, creating, or referencing issue reports"
+    },
+    "conventions": {
+      "path": "./AGENTS.md",
+      "description": "Use for code conventions, test rules, error handling, and i18n rules"
+    },
+    "vision": {
+      "path": "./agent_must_read.md",
+      "description": "Use for the product vision, architecture goals, and learning platform design"
+    },
+    "source": {
+      "path": "./lib",
+      "description": "Use for reading and understanding the application source code"
+    }
+  }
+}

@@ -4,6 +4,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class PlanRepository extends Repository<PersonalLearningPlan> {
+  PlanRepository() : super(boxName: HiveBoxNames.learningPlans);
+
   Future<Result<void>> init() async {
     return Result.capture(
       () async => openBox(HiveBoxNames.learningPlans),

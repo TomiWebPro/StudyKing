@@ -4,6 +4,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 
 class StudentAvailabilityRepository extends Repository<StudentAvailabilityModel> {
+  StudentAvailabilityRepository() : super(boxName: HiveBoxNames.studentAvailability);
+
   Future<Result<void>> init() async {
     return Result.capture(
       () async => openBox(HiveBoxNames.studentAvailability),

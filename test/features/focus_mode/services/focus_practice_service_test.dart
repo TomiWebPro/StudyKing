@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -41,7 +42,8 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
       : _fakeQuestionRepo = questionRepo,
         super(
           questionRepo: questionRepo,
-          attemptRepo: AttemptRepository(),
+          attemptRepo: _FakeAttemptRepository(),
+          srEngine: null,
         );
 
   @override
@@ -52,6 +54,56 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
     final due = all.where((q) =>
         (q.nextReview ?? DateTime.now()).isBefore(reviewDate)).toList();
     return Result.success(due);
+  }
+}
+
+class _FakeAttemptRepository extends AttemptRepository {
+  final List<StudentAttempt> _attempts = [];
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
+    return Result.success(_attempts.where((a) => a.studentId == studentId).toList());
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
+    String studentId,
+    String subjectId,
+  ) async {
+    return Result.success(
+      _attempts.where((a) => a.studentId == studentId && a.subjectId == subjectId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async {
+    return Result.success(_attempts.where((a) => a.questionId == questionId).toList());
+  }
+
+  @override
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async {
+    return Result.success(_attempts.where((a) => a.subjectId == subjectId).toList());
+  }
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async {
+    _attempts.add(attempt);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async {
+    final bySubject = _attempts.where((a) => a.subjectId == subjectId).toList();
+    final correct = bySubject.where((a) => a.isCorrect).length;
+    return Result.success({
+      'total': bySubject.length,
+      'correct': correct,
+      'incorrect': bySubject.length - correct,
+      'accuracy': bySubject.isNotEmpty ? correct / bySubject.length : 0.0,
+    });
   }
 }
 

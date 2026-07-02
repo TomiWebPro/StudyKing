@@ -170,12 +170,12 @@ class SyllabusProgressCard extends StatelessWidget {
                   ),
                   ActionChip(
                     avatar: const Icon(Icons.quiz, size: 16),
-                    label: const Text('Practice Questions'),
+                    label: Text(l10n.practiceQuestions),
                     onPressed: () {},
                   ),
                   ActionChip(
                     avatar: const Icon(Icons.school, size: 16),
-                    label: const Text('Start Lesson'),
+                    label: Text(l10n.startLesson),
                     onPressed: () {},
                   ),
                 ],

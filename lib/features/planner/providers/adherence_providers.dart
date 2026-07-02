@@ -4,6 +4,8 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'planner_providers.dart' show plannerServiceProvider;
 
+final _logger = const Logger('AdherenceProviders');
+
 class AdherenceSummaryData {
   final double averageAdherence;
   final int totalDays;
@@ -106,8 +108,7 @@ final adherenceSummaryProvider =
       weeklyTrend: trend,
     );
   } catch (e) {
-    Logger('AdherenceSummaryProvider').w('Failed to compute adherence summary',
-        e);
+    _logger.w('Failed to compute adherence summary', e);
     return const AdherenceSummaryData();
   }
 });
@@ -169,7 +170,7 @@ final todayAdherenceProvider =
       progress: progress,
     );
   } catch (e) {
-    Logger('TodayAdherenceProvider').w('Failed to load today adherence', e);
+    _logger.w('Failed to load today adherence', e);
     return const TodayAdherenceData();
   }
 });

@@ -7,10 +7,27 @@ import '../utils/logger.dart';
 /// See [Result] in `core/errors/result.dart`.
 /// This ensures consistent error handling across all feature repositories.
 class Repository<T> {
-  static final Logger _repoLogger = const Logger('Repository');
-  late Box<T> _box;
+  static final Logger _logger = const Logger('Repository');
+  Box<T>? _box;
   String? _boxName;
-  bool _boxOpened = false;
+
+  Repository({String? boxName}) {
+    _boxName = boxName;
+  }
+
+  bool get isOpen => _box != null;
+
+  Box<T> _requireBox() {
+    if (_box != null) return _box!;
+    if (_boxName != null && Hive.isBoxOpen(_boxName!)) {
+      _box = Hive.box<T>(_boxName!);
+      return _box!;
+    }
+    if (_boxName != null) {
+      throw StateError('Box "$_boxName" is not open. Ensure HiveInitializer.initialize() has been called.');
+    }
+    throw StateError('Repository not initialized. Call openBox(boxName) or attachBox() first.');
+  }
 
   Future<void> openBox(String boxName) async {
     _boxName = boxName;
@@ -20,15 +37,12 @@ class Repository<T> {
       } else {
         _box = await Hive.openBox<T>(boxName);
       }
-      _boxOpened = true;
     } catch (e) {
-      _repoLogger.w('Failed to open box $boxName: $e');
       final existing = Hive.isBoxOpen(boxName) ? Hive.box(boxName) : null;
       if (existing != null) {
         await existing.close();
       }
       _box = await Hive.openBox<T>(boxName);
-      _boxOpened = true;
     }
   }
 
@@ -36,51 +50,54 @@ class Repository<T> {
     _box = box;
   }
 
-  /// Alias for [put] matching the [save] naming convention.
   Future<Result<void>> save(String key, T item) async {
     return put(key, item);
   }
 
   Future<Result<void>> put(String key, T item) async {
     try {
-      await _box.put(key, item);
+      await _requireBox().put(key, item);
       return Result.success(null);
     } catch (e) {
+      _logger.w('Failed to put: $e', e);
       return Result.failure('Failed to put: $e');
     }
   }
 
   Future<Result<T?>> get(String key) async {
     try {
-      final item = _box.get(key);
+      final item = _requireBox().get(key);
       return Result.success(item);
     } catch (e) {
+      _logger.w('Failed to get: $e', e);
       return Result.failure('Failed to get: $e');
     }
   }
 
   Future<Result<List<T>>> getAll() async {
     try {
-      final items = _box.values.toList();
+      final items = _requireBox().values.toList();
       return Result.success(items);
     } catch (e) {
+      _logger.w('Failed to get all: $e', e);
       return Result.failure('Failed to get all: $e');
     }
   }
 
   Future<Result<void>> delete(String key) async {
     try {
-      await _box.delete(key);
+      await _requireBox().delete(key);
       return Result.success(null);
     } catch (e) {
+      _logger.w('Failed to delete: $e', e);
       return Result.failure('Failed to delete: $e');
     }
   }
 
   @protected
   List<T> filterBy<K>(K Function(T) getter, K value) {
-    return _box.values.where((item) => getter(item) == value).toList();
+    return _requireBox().values.where((item) => getter(item) == value).toList();
   }
 
-  Box<T> get box => _box;
+  Box<T> get box => _requireBox();
 }

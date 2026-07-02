@@ -32,7 +32,7 @@ class _FakeMasteryService extends MasteryGraphService {
 
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {

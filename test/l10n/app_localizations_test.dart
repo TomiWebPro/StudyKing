@@ -161,18 +161,13 @@ void main() {
       test('profile section', () {
         expect(l10n.profile, 'Profile');
         expect(l10n.nameIsRequired, 'Name is required');
-        expect(l10n.studentIdMustBeNumeric, 'Student ID must be numeric');
         expect(l10n.profileSavedSuccessfully, 'Profile saved successfully');
         expect(l10n.chooseAvatar, 'Choose Avatar');
         expect(l10n.cancel, 'Cancel');
         expect(l10n.fullName, 'Full Name');
         expect(l10n.enterYourName, 'Enter your name');
-        expect(l10n.studentIdOptional, 'Student ID (Optional)');
-        expect(l10n.yourStudentIdNumber, 'Your student ID number');
         expect(l10n.learningGoal, 'Learning Goal');
         expect(l10n.learningGoalHint, 'e.g., Final Exams, Certifications');
-        expect(l10n.preferredStudyTime, 'Preferred Study Time');
-        expect(l10n.preferredStudyTimeHint, 'e.g., Evening (6-9 PM)');
         expect(l10n.accountInformation, 'Account Information');
         expect(l10n.language, 'Language');
         expect(l10n.english, 'English');
@@ -777,18 +772,13 @@ void main() {
       test('profile section', () {
         expect(l10n.profile, 'Perfil');
         expect(l10n.nameIsRequired, 'El nombre es obligatorio');
-        expect(l10n.studentIdMustBeNumeric, 'El ID de estudiante debe ser numérico');
         expect(l10n.profileSavedSuccessfully, 'Perfil guardado exitosamente');
         expect(l10n.chooseAvatar, 'Elegir Avatar');
         expect(l10n.cancel, 'Cancelar');
         expect(l10n.fullName, 'Nombre Completo');
         expect(l10n.enterYourName, 'Ingrese su nombre');
-        expect(l10n.studentIdOptional, 'ID de Estudiante (Opcional)');
-        expect(l10n.yourStudentIdNumber, 'Su número de ID de estudiante');
         expect(l10n.learningGoal, 'Objetivo de Aprendizaje');
         expect(l10n.learningGoalHint, 'p. ej., Exámenes Finales, Certificaciones');
-        expect(l10n.preferredStudyTime, 'Horario de Estudio Preferido');
-        expect(l10n.preferredStudyTimeHint, 'p. ej., Tarde (6-9 p. m.)');
         expect(l10n.accountInformation, 'Información de la Cuenta');
         expect(l10n.language, 'Idioma');
         expect(l10n.english, 'Inglés');

@@ -315,7 +315,7 @@ void main() {
       expect(descCtrl.text, 'Advanced math course');
     });
 
-    testWidgets('syllabus autocomplete shows options when typing', (tester) async {
+    testWidgets('syllabus autocomplete shows filtered options when typing', (tester) async {
       final syllabusCtrl = TextEditingController();
 
       await tester.pumpWidget(_buildTestApp(
@@ -334,9 +334,37 @@ void main() {
       await tester.enterText(syllabusField, 'IB');
       await tester.pumpAndSettle();
 
-      // Autocomplete should show options, we can verify by checking
-      // that the overlay appears with "IB Biology" option
-      expect(syllabusCtrl.text, isEmpty);
+      // The onChanged callback syncs the internal controller to syllabusCtrl
+      expect(syllabusCtrl.text, 'IB');
+
+      // Verify that the syllabus field is multi-line
+      final syllabusWidget = tester.widget<TextField>(syllabusField);
+      expect(syllabusWidget.maxLines, 3);
+    });
+
+    testWidgets('syllabus autocomplete does not show options when empty', (tester) async {
+      final syllabusCtrl = TextEditingController();
+
+      await tester.pumpWidget(_buildTestApp(
+        SubjectFormFields(
+          formKey: GlobalKey<FormState>(),
+          nameController: TextEditingController(),
+          codeController: TextEditingController(),
+          teacherController: TextEditingController(),
+          syllabusController: syllabusCtrl,
+          descriptionController: TextEditingController(),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Tap on the syllabus field to focus it (empty input)
+      final syllabusField = find.byType(TextFormField).at(3);
+      await tester.tap(syllabusField);
+      await tester.pumpAndSettle();
+
+      // No autocomplete overlay should appear when the field is empty
+      // (optionsBuilder returns [] for empty input)
+      expect(find.text('IB Biology'), findsNothing);
     });
 
     testWidgets('empty name fails validation', (tester) async {

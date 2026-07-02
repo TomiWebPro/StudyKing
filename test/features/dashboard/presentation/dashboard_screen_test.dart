@@ -71,7 +71,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
   });
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
@@ -94,7 +94,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
 
 class _FakeAttemptRepository extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
@@ -178,7 +178,7 @@ class FakeInstrumentationService extends InstrumentationService {
   });
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Map<String, dynamic>>> getInstrumentationDashboard(String studentId) async {
@@ -250,12 +250,12 @@ class _FakeDashboardSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeDashboardQuestionRepo extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeDashboardAttemptRepo extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeDashboardSpacedRepetitionEngine extends SpacedRepetitionEngine {
@@ -275,7 +275,7 @@ class _FakeDashboardSpacedRepetitionEngine extends SpacedRepetitionEngine {
 
 class _FakeDashboardSubjectRepo extends SubjectRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Subject>>> getAll() async => Result.success([]);

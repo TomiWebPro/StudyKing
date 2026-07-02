@@ -1170,8 +1170,8 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               isPaused: _service.isPaused,
               isActive: true,
               reduceMotion: ref.watch(settingsProvider).reduceMotion,
-              onPause: () => setState(() => _service.pauseSession()),
-              onResume: () => setState(() => _service.resumeSession()),
+              onPause: () => setState(() { _service.pauseSession(); }),
+              onResume: () => setState(() { _service.resumeSession(); }),
               onComplete: () async {
                 await _service.completeSession();
               },

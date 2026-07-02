@@ -16,7 +16,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addAttempt(StudentAttempt attempt) {
     _attempts.add(attempt);
@@ -51,7 +51,7 @@ class _FakeQuestionRepo extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addQuestion(Question question) {
     _questions[question.id] = question;

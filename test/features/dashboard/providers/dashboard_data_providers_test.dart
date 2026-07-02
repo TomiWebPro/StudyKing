@@ -7,7 +7,6 @@ import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
@@ -59,8 +58,9 @@ class _FakeMasteryGraphService extends MasteryGraphService {
         _failInit = failInit;
 
   @override
-  Future<void> init() async {
-    if (_failInit) throw Exception('init failed');
+  Future<Result<void>> init() async {
+    if (_failInit) return Result.failure('init failed');
+    return Result.success(null);
   }
 
   @override
@@ -78,7 +78,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
 
 class _FakeAttemptRepo extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
@@ -130,7 +130,7 @@ class _FakeProgressTracker extends StudyProgressTracker {
 
 class _FakeInstrumentationService extends InstrumentationService {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeTopicRepo extends TopicRepository {
@@ -250,7 +250,7 @@ class _FakeSubjectRepo extends SubjectRepository {
   _FakeSubjectRepo({List<Subject> subjects = const []}) : _subjects = subjects;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
@@ -277,7 +277,7 @@ class _FakeQuestionRepository extends QuestionRepository {
   _FakeQuestionRepository({List<Question> questions = const []}) : _questions = questions;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success(_questions);
@@ -310,176 +310,6 @@ class _FakePlannerService extends PlannerService {
 }
 
 void main() {
-  group('DashboardLayoutPreferences', () {
-    group('default constructor', () {
-      test('creates instance with empty collapsedCards', () {
-        final prefs = DashboardLayoutPreferences();
-        expect(prefs.collapsedCards, isEmpty);
-      });
-
-      test('isCollapsed returns false for any card', () {
-        final prefs = DashboardLayoutPreferences();
-        expect(prefs.isCollapsed('any-card'), isFalse);
-      });
-    });
-
-    group('named constructor with values', () {
-      test('creates instance with provided collapsed set', () {
-        final prefs = DashboardLayoutPreferences(
-          collapsedCards: {'card-1', 'card-2'},
-        );
-        expect(prefs.collapsedCards, {'card-1', 'card-2'});
-      });
-
-      test('isCollapsed returns true for cards in the set', () {
-        final prefs = DashboardLayoutPreferences(
-          collapsedCards: {'card-1'},
-        );
-        expect(prefs.isCollapsed('card-1'), isTrue);
-        expect(prefs.isCollapsed('card-2'), isFalse);
-      });
-    });
-
-    group('copyWith', () {
-      test('returns same instance when no arguments provided', () {
-        final prefs = DashboardLayoutPreferences(
-          collapsedCards: {'card-1'},
-        );
-        final copy = prefs.copyWith();
-        expect(copy.collapsedCards, {'card-1'});
-      });
-
-      test('replaces collapsedCards when provided', () {
-        final prefs = DashboardLayoutPreferences(
-          collapsedCards: {'card-1'},
-        );
-        final copy = prefs.copyWith(collapsedCards: {'card-2', 'card-3'});
-        expect(copy.collapsedCards, {'card-2', 'card-3'});
-      });
-
-      test('does not mutate original instance', () {
-        final prefs = DashboardLayoutPreferences(
-          collapsedCards: {'card-1'},
-        );
-        prefs.copyWith(collapsedCards: {'card-2'});
-        expect(prefs.collapsedCards, {'card-1'});
-      });
-    });
-  });
-
-  group('DashboardLayoutNotifier', () {
-    test('default state has empty collapsedCards', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-      expect(container.read(dashboardLayoutPreferencesProvider).collapsedCards, isEmpty);
-    });
-
-    group('toggleCollapsed', () {
-      test('adds card to collapsed set', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        container.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed('test-card');
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isTrue);
-      });
-
-      test('removes card from collapsed set on second toggle', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        notifier.toggleCollapsed('test-card');
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isTrue);
-
-        notifier.toggleCollapsed('test-card');
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('test-card'), isFalse);
-      });
-
-      test('multiple cards independently toggle', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        notifier.toggleCollapsed('card-a');
-        notifier.toggleCollapsed('card-b');
-
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-a'), isTrue);
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-b'), isTrue);
-
-        notifier.toggleCollapsed('card-a');
-
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-a'), isFalse);
-        expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-b'), isTrue);
-      });
-
-      test('emits new state after toggle', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        final states = <DashboardLayoutPreferences>[];
-        notifier.addListener((state) => states.add(state), fireImmediately: false);
-
-        notifier.toggleCollapsed('card');
-        expect(states.length, 1);
-        expect(states[0].isCollapsed('card'), isTrue);
-      });
-
-      test('empty collapsed set works after toggle and untoggle', () {
-        final container = ProviderContainer();
-        addTearDown(container.dispose);
-        final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-        notifier.toggleCollapsed('card');
-        notifier.toggleCollapsed('card');
-        expect(container.read(dashboardLayoutPreferencesProvider).collapsedCards, isEmpty);
-      });
-    });
-
-  });
-
-  group('dashboardLayoutPreferencesProvider', () {
-    test('resolves DashboardLayoutNotifier', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-      expect(notifier, isA<DashboardLayoutNotifier>());
-    });
-
-    test('returns DashboardLayoutPreferences', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final prefs = container.read(dashboardLayoutPreferencesProvider);
-      expect(prefs, isA<DashboardLayoutPreferences>());
-    });
-
-    test('default state has empty collapsed set', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final prefs = container.read(dashboardLayoutPreferencesProvider);
-      expect(prefs.collapsedCards, isEmpty);
-    });
-
-    test('can toggle through provider notifier', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      container.read(dashboardLayoutPreferencesProvider.notifier).toggleCollapsed('card-1');
-      final prefs = container.read(dashboardLayoutPreferencesProvider);
-      expect(prefs.isCollapsed('card-1'), isTrue);
-    });
-
-    test('toggle and untoggle through provider', () {
-      final container = ProviderContainer();
-      addTearDown(container.dispose);
-
-      final notifier = container.read(dashboardLayoutPreferencesProvider.notifier);
-      notifier.toggleCollapsed('card-1');
-      expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-1'), isTrue);
-
-      notifier.toggleCollapsed('card-1');
-      expect(container.read(dashboardLayoutPreferencesProvider).isCollapsed('card-1'), isFalse);
-    });
-  });
-
   group('dashboardAllMasteryProvider', () {
     test('returns list of MasteryState on success', () async {
       final now = DateTime.now();

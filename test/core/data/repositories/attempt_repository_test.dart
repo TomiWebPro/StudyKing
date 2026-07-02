@@ -8,7 +8,7 @@ class _FakeAttemptRepository extends AttemptRepository {
   bool throwOnGetBySubject = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addAttempt(StudentAttempt attempt) {
     _attempts.add(attempt);

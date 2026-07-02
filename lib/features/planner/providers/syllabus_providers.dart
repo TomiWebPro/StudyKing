@@ -4,6 +4,8 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'planner_providers.dart' show plannerServiceProvider;
 
+final _logger = const Logger('SyllabusProviders');
+
 class SyllabusProgressData {
   final int totalTopics;
   final int completedTopics;
@@ -60,7 +62,7 @@ final syllabusProgressProvider =
       focusAreas: focusAreas,
     );
   } catch (e) {
-    Logger('SyllabusProgressProvider').w('Failed to load syllabus progress', e);
+    _logger.w('Failed to load syllabus progress', e);
     return const SyllabusProgressData();
   }
 });
@@ -85,7 +87,7 @@ final roadmapListProvider =
       isLoading: false,
     );
   } catch (e) {
-    Logger('RoadmapListProvider').w('Failed to load roadmaps', e);
+    _logger.w('Failed to load roadmaps', e);
     return const RoadmapListData(isLoading: false);
   }
 });

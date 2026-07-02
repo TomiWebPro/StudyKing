@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
@@ -24,7 +25,10 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../helpers/navigator_observer_helper.dart';
+
+final _l10n = AppLocalizationsEn();
 
 class _FakePlanRepository extends PlanRepository {
   final Map<String, PersonalLearningPlan> _storage = {};
@@ -70,7 +74,7 @@ class _FakeMasteryGraphRepository extends MasteryGraphRepository {
   Completer<Result<List<MasteryState>>>? generateCompleter;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
@@ -170,7 +174,7 @@ class _FakeSessionRepository extends SessionRepository {
   final Map<String, Session> _storage = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> save(String key, Session session) async {
@@ -247,6 +251,51 @@ class _FakeAdherenceRepo extends PlanAdherenceRepository {
   }
 }
 
+class _FakeMasteryGraphService extends MasteryGraphService {
+  _FakeMasteryGraphService()
+      : super(
+          masteryStateRepo: null,
+          questionMasteryRepo: null,
+          topicDependencyRepo: null,
+          questionEvaluationRepo: null,
+          calculationService: null,
+        );
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<double>> getReadinessScore(
+      String studentId, String topicId) async {
+    return Result.success(0.5);
+  }
+
+  @override
+  Future<Result<double>> getReviewUrgency(
+      String studentId, String topicId) async {
+    return Result.success(0.0);
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(
+      String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
+    String studentId, {
+    double threshold = 0.5,
+  }) async {
+    return Result.success([]);
+  }
+}
+
 class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   AdherenceDeviation? customDeviation;
 
@@ -291,7 +340,7 @@ Widget _buildTestApp({
   final repo = masteryGraphRepository ?? _FakeMasteryGraphRepository();
   final svc = PlannerService(
     planRepo: planRepository ?? _FakePlanRepository(),
-    masteryService: MasteryGraphService(),
+    masteryService: _FakeMasteryGraphService(),
     repository: repo,
     topicRepository: topicRepository ?? _FakeTopicRepository(),
     roadmapRepo: roadmapRepository ?? _FakeRoadmapRepository(),
@@ -327,9 +376,9 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Study Planner'), findsWidgets);
-        expect(find.text('Create Study Plan'), findsOneWidget);
-        expect(find.text('Generate Plan'), findsOneWidget);
+        expect(find.text(_l10n.studyPlanner), findsWidgets);
+        expect(find.text(_l10n.createStudyPlan), findsOneWidget);
+        expect(find.text(_l10n.generatePlan), findsOneWidget);
       });
 
       testWidgets('shows three input fields', (tester) async {
@@ -366,10 +415,10 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('days field uses number keyboard type', (tester) async {
@@ -394,7 +443,7 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Your Study Schedule'), findsNothing);
+        expect(find.text(_l10n.yourStudySchedule), findsNothing);
       });
 
       testWidgets('form fields accept user input', (tester) async {
@@ -430,22 +479,22 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Your Study Schedule'), findsNothing);
-        expect(find.text('Plan Summary'), findsNothing);
+        expect(find.text(_l10n.yourStudySchedule), findsNothing);
+        expect(find.text(_l10n.planSummary), findsNothing);
 
         await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
         await tester.enterText(find.byType(TextField).at(1), '30');
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
         await tester.pump();
         await tester.pump();
 
-        expect(find.text('Your Study Schedule'), findsOneWidget);
-        expect(find.text('Plan Summary'), findsOneWidget);
+        expect(find.text(_l10n.yourStudySchedule), findsOneWidget);
+        expect(find.text(_l10n.planSummary), findsOneWidget);
       });
 
       testWidgets('plan summary displays plan stats after generation', (tester) async {
@@ -466,7 +515,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
@@ -497,7 +546,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
@@ -522,7 +571,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -533,7 +582,7 @@ void main() {
         }
 
         expect(find.byIcon(Icons.calendar_today), findsOneWidget);
-        expect(find.text('Your Study Schedule'), findsOneWidget);
+        expect(find.text(_l10n.yourStudySchedule), findsOneWidget);
       });
 
       testWidgets('generate button is disabled while generating', (tester) async {
@@ -553,7 +602,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pump();
 
         final button = tester.widget<ElevatedButton>(find.byType(ElevatedButton));
@@ -585,18 +634,18 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pump();
 
-        expect(find.text('Generating...'), findsOneWidget);
+        expect(find.text(_l10n.generating), findsOneWidget);
 
         masteryRepo.generateCompleter!.complete(Result.success([]));
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
 
-        expect(find.text('Generating...'), findsNothing);
-        expect(find.text('Generate Plan'), findsOneWidget);
+        expect(find.text(_l10n.generating), findsNothing);
+        expect(find.text(_l10n.generatePlan), findsOneWidget);
       });
 
       testWidgets('loads existing plan from repository on init', (tester) async {
@@ -628,8 +677,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Your Study Schedule'), findsOneWidget);
-        expect(find.text('Plan Summary'), findsOneWidget);
+        expect(find.text(_l10n.yourStudySchedule), findsOneWidget);
+        expect(find.text(_l10n.planSummary), findsOneWidget);
         expect(find.text('50Q'), findsOneWidget);
         expect(find.text('1200 min'), findsOneWidget);
       });
@@ -645,8 +694,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Your Study Schedule'), findsNothing);
-        expect(find.text('Plan Summary'), findsNothing);
+        expect(find.text(_l10n.yourStudySchedule), findsNothing);
+        expect(find.text(_l10n.planSummary), findsNothing);
       });
 
       testWidgets('loadExistingPlan silent catch does not crash when repository throws', (tester) async {
@@ -661,8 +710,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Your Study Schedule'), findsNothing);
-        expect(find.text('Create Study Plan'), findsOneWidget);
+        expect(find.text(_l10n.yourStudySchedule), findsNothing);
+        expect(find.text(_l10n.createStudyPlan), findsOneWidget);
       });
 
       testWidgets('planRepo.init failure in initState does not crash the screen', (tester) async {
@@ -677,8 +726,8 @@ void main() {
         ));
         await tester.pumpAndSettle();
 
-        expect(find.text('Study Planner'), findsWidgets);
-        expect(find.text('Create Study Plan'), findsOneWidget);
+        expect(find.text(_l10n.studyPlanner), findsWidgets);
+        expect(find.text(_l10n.createStudyPlan), findsOneWidget);
       });
 
       testWidgets('generate plan validates zero days', (tester) async {
@@ -695,10 +744,10 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('generate plan validates negative hours', (tester) async {
@@ -715,10 +764,10 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '-1');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('generate plan validates empty course name', (tester) async {
@@ -735,10 +784,10 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('generate plan validates non-numeric input', (tester) async {
@@ -755,10 +804,10 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('openTutorMode triggers navigation when topic ID is non-empty', (tester) async {
@@ -874,7 +923,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
         expect(find.byType(SnackBar), findsOneWidget);
@@ -1572,10 +1621,10 @@ void main() {
         await tester.tap(find.text('Course/Subject +'));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pumpAndSettle();
 
-        expect(find.text('Please fill in all fields correctly'), findsOneWidget);
+        expect(find.text(_l10n.fillAllFieldsCorrectly), findsOneWidget);
       });
 
       testWidgets('multi-syllabus with valid inputs triggers generation', (tester) async {
@@ -1602,9 +1651,9 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        expect(find.text('Generate Plan'), findsOneWidget);
+        expect(find.text(_l10n.generatePlan), findsOneWidget);
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         await tester.pump();
 
         expect(find.byType(CircularProgressIndicator), findsOneWidget);
@@ -1965,7 +2014,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }
@@ -2004,7 +2053,7 @@ void main() {
         await tester.enterText(find.byType(TextField).at(2), '2');
         await tester.pump();
 
-        await tester.tap(find.text('Generate Plan'));
+        await tester.tap(find.text(_l10n.generatePlan));
         for (var i = 0; i < 10; i++) {
           await tester.pump(const Duration(milliseconds: 100));
         }

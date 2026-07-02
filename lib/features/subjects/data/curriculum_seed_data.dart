@@ -533,6 +533,90 @@ const curriculumSeedData = <CurriculumSeedEntry>[
       ]),
     ],
   ),
+  CurriculumSeedEntry(
+    curriculumName: 'AP Physics 1',
+    topics: [
+      SeedTopic(title: 'Kinematics', sortOrder: 1, subtopics: [
+        SeedTopic(title: 'Position, velocity, and acceleration', sortOrder: 1),
+        SeedTopic(title: 'Motion in one dimension', sortOrder: 2),
+        SeedTopic(title: 'Motion in two dimensions', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Dynamics', sortOrder: 2, subtopics: [
+        SeedTopic(title: 'Newton\'s laws of motion', sortOrder: 1),
+        SeedTopic(title: 'Forces and free-body diagrams', sortOrder: 2),
+        SeedTopic(title: 'Applications of Newton\'s laws', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Circular Motion & Gravitation', sortOrder: 3, subtopics: [
+        SeedTopic(title: 'Uniform circular motion', sortOrder: 1),
+        SeedTopic(title: 'Centripetal force', sortOrder: 2),
+        SeedTopic(title: 'Gravitational forces', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Energy', sortOrder: 4, subtopics: [
+        SeedTopic(title: 'Work and kinetic energy', sortOrder: 1),
+        SeedTopic(title: 'Potential energy and conservation', sortOrder: 2),
+        SeedTopic(title: 'Power', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Momentum', sortOrder: 5, subtopics: [
+        SeedTopic(title: 'Impulse and momentum', sortOrder: 1),
+        SeedTopic(title: 'Conservation of momentum', sortOrder: 2),
+        SeedTopic(title: 'Elastic and inelastic collisions', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Simple Harmonic Motion', sortOrder: 6, subtopics: [
+        SeedTopic(title: 'Spring-mass systems', sortOrder: 1),
+        SeedTopic(title: 'Pendulums', sortOrder: 2),
+      ]),
+      SeedTopic(title: 'Waves & Sound', sortOrder: 7, subtopics: [
+        SeedTopic(title: 'Wave properties', sortOrder: 1),
+        SeedTopic(title: 'Sound waves', sortOrder: 2),
+        SeedTopic(title: 'Doppler effect', sortOrder: 3),
+      ]),
+    ],
+  ),
+  CurriculumSeedEntry(
+    curriculumName: 'A-Level Mathematics',
+    topics: [
+      SeedTopic(title: 'Algebra & Functions', sortOrder: 1, subtopics: [
+        SeedTopic(title: 'Quadratic functions', sortOrder: 1),
+        SeedTopic(title: 'Inequalities', sortOrder: 2),
+        SeedTopic(title: 'Polynomials', sortOrder: 3),
+        SeedTopic(title: 'Graphs and transformations', sortOrder: 4),
+      ]),
+      SeedTopic(title: 'Coordinate Geometry', sortOrder: 2, subtopics: [
+        SeedTopic(title: 'Straight lines', sortOrder: 1),
+        SeedTopic(title: 'Circles', sortOrder: 2),
+      ]),
+      SeedTopic(title: 'Sequences & Series', sortOrder: 3, subtopics: [
+        SeedTopic(title: 'Arithmetic sequences', sortOrder: 1),
+        SeedTopic(title: 'Geometric sequences', sortOrder: 2),
+        SeedTopic(title: 'Binomial expansion', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Trigonometry', sortOrder: 4, subtopics: [
+        SeedTopic(title: 'Trigonometric ratios', sortOrder: 1),
+        SeedTopic(title: 'Trigonometric identities', sortOrder: 2),
+        SeedTopic(title: 'Trigonometric equations', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Differentiation', sortOrder: 5, subtopics: [
+        SeedTopic(title: 'Rates of change', sortOrder: 1),
+        SeedTopic(title: 'Applications of differentiation', sortOrder: 2),
+      ]),
+      SeedTopic(title: 'Integration', sortOrder: 6, subtopics: [
+        SeedTopic(title: 'Indefinite integration', sortOrder: 1),
+        SeedTopic(title: 'Definite integration', sortOrder: 2),
+        SeedTopic(title: 'Area under curves', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Exponentials & Logarithms', sortOrder: 7, subtopics: [
+        SeedTopic(title: 'Exponential functions', sortOrder: 1),
+        SeedTopic(title: 'Logarithmic functions', sortOrder: 2),
+        SeedTopic(title: 'Exponential models', sortOrder: 3),
+      ]),
+      SeedTopic(title: 'Statistics', sortOrder: 8, subtopics: [
+        SeedTopic(title: 'Data presentation', sortOrder: 1),
+        SeedTopic(title: 'Probability', sortOrder: 2),
+        SeedTopic(title: 'Statistical distributions', sortOrder: 3),
+        SeedTopic(title: 'Hypothesis testing', sortOrder: 4),
+      ]),
+    ],
+  ),
 ];
 
 CurriculumSeedEntry? findSeedEntry(String curriculumName) {

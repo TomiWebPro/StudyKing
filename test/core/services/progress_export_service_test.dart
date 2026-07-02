@@ -85,10 +85,13 @@ class _FakeMasteryGraphService implements MasteryGraphService {
   Future<Result<double>> getReviewUrgency(String studentId, String topicId) async => Result.success(0.0);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeAttemptRepository implements AttemptRepository {
+  @override
+  bool get isOpen => true;
+
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
 
@@ -111,7 +114,7 @@ class _FakeAttemptRepository implements AttemptRepository {
   Future<Result<void>> put(String key, StudentAttempt item) async => Result.success(null);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<void> openBox(String boxName) async {}

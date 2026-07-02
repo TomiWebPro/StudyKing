@@ -3,6 +3,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import '../utils/logger.dart';
+import '../errors/result.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../services/study_progress_tracker.dart';
 import '../services/mastery_graph_service.dart';
@@ -42,10 +43,6 @@ class EngagementSchedulerConfig {
 class EngagementScheduler {
   static final Logger _logger = const Logger('EngagementScheduler');
 
-  // TODO: Unify overwork/revision nudge logic with MentorWellbeingService.
-  // Both this class and MentorWellbeingService independently check overwork and
-  // revision conditions and generate EngagementNudgeModel entries. Consider
-  // consolidating into a single wellbeing orchestrator to avoid duplicate nudges.
   final StudyProgressTracker _tracker;
   final MasteryGraphService _masteryService;
   final NotificationService _notificationService;
@@ -90,25 +87,33 @@ class EngagementScheduler {
         _plannerService = plannerService,
         _mentorService = mentorService;
 
-  void updateSettings(SettingsBox settingsBox) {
+  Future<Result<void>> updateSettings(SettingsBox settingsBox) async {
     _settingsBox = settingsBox;
+    return Result.success(null);
   }
 
-  void updateLocalization(AppLocalizations l10n) {
+  Future<Result<void>> updateLocalization(AppLocalizations l10n) async {
     _l10n = l10n;
     _notificationService.setAppLocalizations(l10n);
+    return Result.success(null);
   }
 
-  Future<void> init() async {
-    if (_isInitialized) return;
-    _isInitialized = true;
-    await _notificationService.init();
-    await _nudgeRepository.init();
-    await _adherenceRepository.init();
-    await _backfillMissedChecks();
-    await _autoFinalizeStaleSessions();
-    _scheduleDailyCheck();
-    _startLessonCheckTimer();
+  Future<Result<void>> init() async {
+    try {
+      if (_isInitialized) return Result.success(null);
+      _isInitialized = true;
+      await _notificationService.init();
+      await _nudgeRepository.init();
+      await _adherenceRepository.init();
+      await _backfillMissedChecks();
+      await _autoFinalizeStaleSessions();
+      _scheduleDailyCheck();
+      _startLessonCheckTimer();
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('EngagementScheduler.init failed: $e');
+      return Result.failure(e.toString());
+    }
   }
 
   Future<void> _backfillMissedChecks() async {
@@ -193,9 +198,15 @@ class EngagementScheduler {
     }
   }
 
-  Future<void> runDailyChecksNow() async {
-    await _sendNudgeNotifications(_config.studentId);
-    await _checkUpcomingLessons();
+  Future<Result<void>> runDailyChecksNow() async {
+    try {
+      await _sendNudgeNotifications(_config.studentId);
+      await _checkUpcomingLessons();
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('runDailyChecksNow failed: $e');
+      return Result.failure(e.toString());
+    }
   }
 
   bool _isNotificationEnabled(String nudgeType) {
@@ -250,7 +261,8 @@ class EngagementScheduler {
       return;
     }
     try {
-      final nudges = await getOverworkNudge(studentId);
+      final nudgesResult = await getOverworkNudge(studentId);
+      final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
         await _nudgeRepository.create(nudge);
         await _notificationService.showOverworkWarning(
@@ -271,7 +283,8 @@ class EngagementScheduler {
       return;
     }
     try {
-      final nudges = await getRevisionNudges(studentId);
+      final nudgesResult = await getRevisionNudges(studentId);
+      final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
         await _nudgeRepository.create(nudge);
         if (nudge.topicId != null) {
@@ -294,7 +307,8 @@ class EngagementScheduler {
       return;
     }
     try {
-      final nudges = await getPlanAdjustmentNudge(studentId);
+      final nudgesResult = await getPlanAdjustmentNudge(studentId);
+      final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
         await _nudgeRepository.create(nudge);
         final days = _extractInt(nudge.message) ?? 3;
@@ -379,18 +393,18 @@ class EngagementScheduler {
     return match != null ? int.parse(match.group(1)!) : null;
   }
 
-  Future<List<EngagementNudgeModel>> getOverworkNudge(String studentId) async {
-    double totalHours = 0;
-    final statsResult = await _tracker.getOverallStats(studentId);
-    if (statsResult.isSuccess) {
-      final stats = statsResult.data!;
-      totalHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0;
-    } else {
-      _logger.w('Failed to get overall stats for overwork nudge: ${statsResult.error}');
-    }
+  Future<Result<List<EngagementNudgeModel>>> getOverworkNudge(String studentId) async {
+    try {
+      double totalHours = 0;
+      final statsResult = await _tracker.getOverallStats(studentId);
+      if (statsResult.isSuccess) {
+        final stats = statsResult.data!;
+        totalHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0;
+      } else {
+        _logger.w('Failed to get overall stats for overwork nudge: ${statsResult.error}');
+      }
 
-    if (_sessionRepository != null) {
-      try {
+      if (_sessionRepository != null) {
         final todayResult = await _sessionRepository.getByDate(DateTime.now());
         final todaySessions = todayResult.data ?? [];
         final totalMs = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
@@ -398,49 +412,55 @@ class EngagementScheduler {
         if (sessionHours > totalHours) {
           totalHours = sessionHours;
         }
-      } catch (e) {
-        _logger.w('Failed to get today sessions for overwork nudge: $e');
       }
-    }
 
-    if (totalHours > Timeouts.overworkThresholdHours) {
-      final localeName = _l10n.localeName;
-      final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
-      return [EngagementNudgeModel(
-        id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-        studentId: studentId,
-        nudgeType: NudgeType.overwork.name,
-        message: _l10n.nudgeOverwork(hoursStr),
-        severity: NudgeSeverity.medium.name,
-      )];
+      if (totalHours > Timeouts.overworkThresholdHours) {
+        final localeName = _l10n.localeName;
+        final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
+        return Result.success([EngagementNudgeModel(
+          id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+          studentId: studentId,
+          nudgeType: NudgeType.overwork.name,
+          message: _l10n.nudgeOverwork(hoursStr),
+          severity: NudgeSeverity.medium.name,
+        )]);
+      }
+      return Result.success([]);
+    } catch (e) {
+      _logger.w('getOverworkNudge failed: $e');
+      return Result.failure(e.toString());
     }
-    return [];
   }
 
-  Future<List<EngagementNudgeModel>> getRevisionNudges(String studentId) async {
-    final nudges = <EngagementNudgeModel>[];
-    final weakResult = await _masteryService.getTopicsNeedingReview(studentId);
-    if (weakResult.isSuccess) {
-      for (final state in weakResult.data!) {
-        final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
-        if (daysSince >= 3) {
-          nudges.add(EngagementNudgeModel(
-            id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
-            studentId: studentId,
-            nudgeType: NudgeType.revision.name,
-            message: _l10n.nudgeRevision(daysSince, state.topicId),
-            severity: daysSince >= 7 ? NudgeSeverity.high.name : NudgeSeverity.low.name,
-            topicId: state.topicId,
-          ));
+  Future<Result<List<EngagementNudgeModel>>> getRevisionNudges(String studentId) async {
+    try {
+      final nudges = <EngagementNudgeModel>[];
+      final weakResult = await _masteryService.getTopicsNeedingReview(studentId);
+      if (weakResult.isSuccess) {
+        for (final state in weakResult.data!) {
+          final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
+          if (daysSince >= 3) {
+            nudges.add(EngagementNudgeModel(
+              id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
+              studentId: studentId,
+              nudgeType: NudgeType.revision.name,
+              message: _l10n.nudgeRevision(daysSince, state.topicId),
+              severity: daysSince >= 7 ? NudgeSeverity.high.name : NudgeSeverity.low.name,
+              topicId: state.topicId,
+            ));
+          }
         }
       }
+      return Result.success(nudges);
+    } catch (e) {
+      _logger.w('getRevisionNudges failed: $e');
+      return Result.failure(e.toString());
     }
-    return nudges;
   }
 
-  Future<List<EngagementNudgeModel>> getPlanAdjustmentNudge(String studentId) async {
-    final nudges = <EngagementNudgeModel>[];
+  Future<Result<List<EngagementNudgeModel>>> getPlanAdjustmentNudge(String studentId) async {
     try {
+      final nudges = <EngagementNudgeModel>[];
       final consecutiveLowResult = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
       final consecutiveLow = consecutiveLowResult.data ?? 0;
       if (consecutiveLow >= 3) {
@@ -452,36 +472,41 @@ class EngagementScheduler {
           severity: NudgeSeverity.medium.name,
         ));
       }
+      return Result.success(nudges);
     } catch (e) {
-      _logger.w('Failed to get plan adjustment nudge: $e');
+      _logger.w('getPlanAdjustmentNudge failed: $e');
+      return Result.failure(e.toString());
     }
-    return nudges;
   }
 
-  Future<String> getWeeklyDigest(String studentId) async {
-    final statsResult = await _tracker.getOverallStats(studentId);
-    final stats = statsResult.data ?? <String, dynamic>{};
-    final accuracy = stats['accuracy'] as int? ?? 0;
-    final rawHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0.0;
-    final localeName = _l10n.localeName;
-    final totalHours = formatDecimal(rawHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
-    final weeklyActivity = stats['weeklyActivity'] as int? ?? 0;
-    final badgesResult = await _tracker.getBadges(studentId);
-    final badges = badgesResult.data ?? [];
-    final weakResult = await _masteryService.getWeakTopics(studentId);
-    final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
-    return _l10n.nudgeWeeklyDigest(
-          weeklyActivity,
-          accuracy,
-          totalHours,
-          weakCount,
-          badges.length,
-        );
+  Future<Result<String>> getWeeklyDigest(String studentId) async {
+    try {
+      final statsResult = await _tracker.getOverallStats(studentId);
+      final stats = statsResult.data ?? <String, dynamic>{};
+      final accuracy = stats['accuracy'] as int? ?? 0;
+      final rawHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0.0;
+      final localeName = _l10n.localeName;
+      final totalHours = formatDecimal(rawHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
+      final weeklyActivity = stats['weeklyActivity'] as int? ?? 0;
+      final badgesResult = await _tracker.getBadges(studentId);
+      final badges = badgesResult.data ?? [];
+      final weakResult = await _masteryService.getWeakTopics(studentId);
+      final weakCount = weakResult.isSuccess ? weakResult.data!.length : 0;
+      return Result.success(_l10n.nudgeWeeklyDigest(
+        weeklyActivity,
+        accuracy,
+        totalHours,
+        weakCount,
+        badges.length,
+      ));
+    } catch (e) {
+      _logger.w('getWeeklyDigest failed: $e');
+      return Result.failure(e.toString());
+    }
   }
 
-  Future<List<EngagementNudgeModel>> getNudgeHistory(String studentId) async {
-    final result = await _nudgeRepository.getByStudent(studentId);
-    return result.data ?? [];
+  Future<Result<List<EngagementNudgeModel>>> getNudgeHistory(String studentId) async {
+    return _nudgeRepository.getByStudent(studentId);
   }
 
   void dispose() {

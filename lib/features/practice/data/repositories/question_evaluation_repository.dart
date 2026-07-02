@@ -5,6 +5,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class QuestionEvaluationRepository extends Repository<QuestionEvaluation> {
+  QuestionEvaluationRepository() : super(boxName: HiveBoxNames.questionEvaluations);
   static final Logger _logger = const Logger('QuestionEvaluationRepository');
 
   Future<void> init() async {

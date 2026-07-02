@@ -36,7 +36,7 @@ class _FakeTutorSessionRepository extends TutorSessionRepository {
   void setThrowOnGetStudentSessions() => _throwOnGetStudentSessions = true;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
@@ -102,23 +102,26 @@ void main() {
 
   group('getLessonsForStudent', () {
     test('returns empty list for student with no lessons', () async {
-      final lessons = await service.getLessonsForStudent('stu1');
-      expect(lessons, isEmpty);
+      final result = await service.getLessonsForStudent('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
 
     test('returns only sessions for the given student', () async {
       sessionRepo.addSession(_session(id: 's1', studentId: 'stu1'));
       sessionRepo.addSession(_session(id: 's2', studentId: 'stu2'));
 
-      final lessons = await service.getLessonsForStudent('stu1');
-      expect(lessons, hasLength(1));
-      expect(lessons.first.id, 's1');
+      final result = await service.getLessonsForStudent('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.id, 's1');
     });
 
     test('returns empty list when repository throws', () async {
       sessionRepo.setThrowOnGetStudentSessions();
-      final lessons = await service.getLessonsForStudent('stu1');
-      expect(lessons, isEmpty);
+      final result = await service.getLessonsForStudent('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
   });
 
@@ -127,9 +130,10 @@ void main() {
       sessionRepo.addSession(_session(id: 's1', topicId: 'topic-a'));
       sessionRepo.addSession(_session(id: 's2', topicId: 'topic-b'));
 
-      final lessons = await service.getLessonsByTopic('stu1', 'topic-a');
-      expect(lessons, hasLength(1));
-      expect(lessons.first.topicId, 'topic-a');
+      final result = await service.getLessonsByTopic('stu1', 'topic-a');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.topicId, 'topic-a');
     });
   });
 
@@ -144,17 +148,19 @@ void main() {
       ));
       sessionRepo.addSession(_session(id: 's1', topicId: 't1'));
 
-      final topics = await service.getTopicsWithLessons('stu1');
-      expect(topics, hasLength(1));
-      expect(topics.first.id, 't1');
-      expect(topics.first.title, 'Algebra');
+      final result = await service.getTopicsWithLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.id, 't1');
+      expect(result.data!.first.title, 'Algebra');
     });
 
     test('skips topics that no longer exist', () async {
       sessionRepo.addSession(_session(id: 's1', topicId: 'nonexistent'));
 
-      final topics = await service.getTopicsWithLessons('stu1');
-      expect(topics, isEmpty);
+      final result = await service.getTopicsWithLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
 
     test('deduplicates topics with multiple lessons', () async {
@@ -168,8 +174,9 @@ void main() {
       sessionRepo.addSession(_session(id: 's1', topicId: 't1'));
       sessionRepo.addSession(_session(id: 's2', topicId: 't1'));
 
-      final topics = await service.getTopicsWithLessons('stu1');
-      expect(topics, hasLength(1));
+      final result = await service.getTopicsWithLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
     });
   });
 
@@ -179,21 +186,25 @@ void main() {
       sessionRepo.addSession(_session(id: 's2', subjectId: 'Math'));
       sessionRepo.addSession(_session(id: 's3', subjectId: 'Physics'));
 
-      final counts = await service.getLessonCountBySubject('stu1');
+      final result = await service.getLessonCountBySubject('stu1');
+      expect(result.isSuccess, true);
+      final counts = result.data!;
       expect(counts['Math'], 2);
       expect(counts['Physics'], 1);
     });
 
     test('returns empty map when no lessons', () async {
-      final counts = await service.getLessonCountBySubject('stu1');
-      expect(counts, isEmpty);
+      final result = await service.getLessonCountBySubject('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
   });
 
   group('getCompletionRate', () {
     test('returns 0.0 when no lessons exist', () async {
-      final rate = await service.getCompletionRate('stu1');
-      expect(rate, 0.0);
+      final result = await service.getCompletionRate('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 0.0);
     });
 
     test('returns 0.0 when no lessons are completed', () async {
@@ -206,16 +217,18 @@ void main() {
         status: SessionStatus.inProgress,
       ));
 
-      final rate = await service.getCompletionRate('stu1');
-      expect(rate, 0.0);
+      final result = await service.getCompletionRate('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 0.0);
     });
 
     test('returns 1.0 when all lessons are completed', () async {
       sessionRepo.addSession(_session(id: 's1', status: SessionStatus.completed));
       sessionRepo.addSession(_session(id: 's2', status: SessionStatus.completed));
 
-      final rate = await service.getCompletionRate('stu1');
-      expect(rate, 1.0);
+      final result = await service.getCompletionRate('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 1.0);
     });
 
     test('returns correct ratio for mixed statuses', () async {
@@ -223,15 +236,17 @@ void main() {
       sessionRepo.addSession(_session(id: 's2', status: SessionStatus.completed));
       sessionRepo.addSession(_session(id: 's3', status: SessionStatus.planned));
 
-      final rate = await service.getCompletionRate('stu1');
-      expect(rate, closeTo(2 / 3, 0.001));
+      final result = await service.getCompletionRate('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, closeTo(2 / 3, 0.001));
     });
   });
 
   group('getTotalStudyMinutes', () {
     test('returns 0 when no lessons', () async {
-      final minutes = await service.getTotalStudyMinutes('stu1');
-      expect(minutes, 0);
+      final result = await service.getTotalStudyMinutes('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 0);
     });
 
     test('sums duration from endTime - startTime when endTime is set', () async {
@@ -248,8 +263,9 @@ void main() {
         endTime: DateTime(2025, 6, 15, 14, 30),
       ));
 
-      final minutes = await service.getTotalStudyMinutes('stu1');
-      expect(minutes, 120);
+      final result = await service.getTotalStudyMinutes('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 120);
     });
 
     test('falls back to plannedDurationMinutes when endTime is null', () async {
@@ -260,15 +276,17 @@ void main() {
         plannedDurationMinutes: 60,
       ));
 
-      final minutes = await service.getTotalStudyMinutes('stu1');
-      expect(minutes, 60);
+      final result = await service.getTotalStudyMinutes('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, 60);
     });
   });
 
   group('getRemainingLessonCount', () {
     test('returns 0 when no lessons for subject', () async {
-      final remaining = await service.getRemainingLessonCount('stu1', 'Math');
-      expect(remaining, 0);
+      final result = await service.getRemainingLessonCount('stu1', 'Math');
+      expect(result.isSuccess, true);
+      expect(result.data, 0);
     });
 
     test('returns total when no lessons are completed', () async {
@@ -283,8 +301,9 @@ void main() {
         status: SessionStatus.planned,
       ));
 
-      final remaining = await service.getRemainingLessonCount('stu1', 'Math');
-      expect(remaining, 2);
+      final result = await service.getRemainingLessonCount('stu1', 'Math');
+      expect(result.isSuccess, true);
+      expect(result.data, 2);
     });
 
     test('returns count of non-completed lessons', () async {
@@ -304,8 +323,9 @@ void main() {
         status: SessionStatus.planned,
       ));
 
-      final remaining = await service.getRemainingLessonCount('stu1', 'Math');
-      expect(remaining, 2);
+      final result = await service.getRemainingLessonCount('stu1', 'Math');
+      expect(result.isSuccess, true);
+      expect(result.data, 2);
     });
 
     test('ignores lessons from other subjects', () async {
@@ -320,8 +340,9 @@ void main() {
         status: SessionStatus.planned,
       ));
 
-      final remaining = await service.getRemainingLessonCount('stu1', 'Math');
-      expect(remaining, 1);
+      final result = await service.getRemainingLessonCount('stu1', 'Math');
+      expect(result.isSuccess, true);
+      expect(result.data, 1);
     });
 
     test('returns 0 when remaining would be negative', () async {
@@ -331,15 +352,17 @@ void main() {
         status: SessionStatus.completed,
       ));
 
-      final remaining = await service.getRemainingLessonCount('stu1', 'Math');
-      expect(remaining, 0);
+      final result = await service.getRemainingLessonCount('stu1', 'Math');
+      expect(result.isSuccess, true);
+      expect(result.data, 0);
     });
   });
 
   group('getProgressBySubject', () {
     test('returns empty map when no lessons', () async {
-      final progress = await service.getProgressBySubject('stu1');
-      expect(progress, isEmpty);
+      final result = await service.getProgressBySubject('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
 
     test('returns 1.0 when all lessons in a subject are completed', () async {
@@ -354,8 +377,9 @@ void main() {
         status: SessionStatus.completed,
       ));
 
-      final progress = await service.getProgressBySubject('stu1');
-      expect(progress['Math'], 1.0);
+      final result = await service.getProgressBySubject('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data!['Math'], 1.0);
     });
 
     test('returns correct ratio per subject', () async {
@@ -380,9 +404,10 @@ void main() {
         status: SessionStatus.completed,
       ));
 
-      final progress = await service.getProgressBySubject('stu1');
-      expect(progress['Math'], closeTo(1 / 3, 0.001));
-      expect(progress['Physics'], 1.0);
+      final result = await service.getProgressBySubject('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data!['Math'], closeTo(1 / 3, 0.001));
+      expect(result.data!['Physics'], 1.0);
     });
 
     test('returns 0.0 when no lessons in a subject are completed', () async {
@@ -392,8 +417,9 @@ void main() {
         status: SessionStatus.planned,
       ));
 
-      final progress = await service.getProgressBySubject('stu1');
-      expect(progress['Math'], 0.0);
+      final result = await service.getProgressBySubject('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data!['Math'], 0.0);
     });
   });
 
@@ -412,9 +438,10 @@ void main() {
         startTime: DateTime(2025, 6, 12),
       ));
 
-      final recent = await service.getRecentLessons('stu1');
-      expect(recent, hasLength(3));
-      expect(recent.first.id, 's2');
+      final result = await service.getRecentLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(3));
+      expect(result.data!.first.id, 's2');
     });
 
     test('respects custom limit', () async {
@@ -422,13 +449,15 @@ void main() {
       sessionRepo.addSession(_session(id: 's2', startTime: DateTime(2025, 6, 12)));
       sessionRepo.addSession(_session(id: 's3', startTime: DateTime(2025, 6, 14)));
 
-      final recent = await service.getRecentLessons('stu1', limit: 2);
-      expect(recent, hasLength(2));
+      final result = await service.getRecentLessons('stu1', limit: 2);
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(2));
     });
 
     test('returns empty when no lessons', () async {
-      final recent = await service.getRecentLessons('stu1');
-      expect(recent, isEmpty);
+      final result = await service.getRecentLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
   });
 
@@ -450,9 +479,10 @@ void main() {
         startTime: DateTime.now().subtract(const Duration(days: 1)),
       ));
 
-      final upcoming = await service.getUpcomingLessons('stu1');
-      expect(upcoming, hasLength(1));
-      expect(upcoming.first.id, 's1');
+      final result = await service.getUpcomingLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.id, 's1');
     });
 
     test('returns empty when no upcoming lessons', () async {
@@ -462,8 +492,9 @@ void main() {
         startTime: DateTime.now().subtract(const Duration(days: 1)),
       ));
 
-      final upcoming = await service.getUpcomingLessons('stu1');
-      expect(upcoming, isEmpty);
+      final result = await service.getUpcomingLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data, isEmpty);
     });
 
     test('sorts upcoming lessons by start time ascending', () async {
@@ -478,8 +509,9 @@ void main() {
         startTime: DateTime.now().add(const Duration(days: 1)),
       ));
 
-      final upcoming = await service.getUpcomingLessons('stu1');
-      expect(upcoming.first.id, 's2');
+      final result = await service.getUpcomingLessons('stu1');
+      expect(result.isSuccess, true);
+      expect(result.data!.first.id, 's2');
     });
   });
 }

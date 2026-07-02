@@ -26,7 +26,7 @@ class FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {
@@ -181,7 +181,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 void main() {

@@ -30,7 +30,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get courseSubject => 'Course/Subject';
 
   @override
-  String get courseHint => 'e.g., IB Physics';
+  String get courseHint => 'e.g., Organic Chemistry';
 
   @override
   String get days => 'Days';
@@ -413,9 +413,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get nameIsRequired => 'Name is required';
 
   @override
-  String get studentIdMustBeNumeric => 'Student ID must be numeric';
-
-  @override
   String get profileSavedSuccessfully => 'Profile saved successfully';
 
   @override
@@ -444,22 +441,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterYourName => 'Enter your name';
 
   @override
-  String get studentIdOptional => 'Student ID (Optional)';
-
-  @override
-  String get yourStudentIdNumber => 'Your student ID number';
-
-  @override
   String get learningGoal => 'Learning Goal';
 
   @override
   String get learningGoalHint => 'e.g., Final Exams, Certifications';
-
-  @override
-  String get preferredStudyTime => 'Preferred Study Time';
-
-  @override
-  String get preferredStudyTimeHint => 'e.g., Evening (6-9 PM)';
 
   @override
   String get accountInformation => 'Account Information';
@@ -708,7 +693,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subjectCodeOptional => 'Subject Code (Optional)';
 
   @override
-  String get subjectCodeHint => 'e.g., IB-PHYS';
+  String get subjectCodeHint => 'e.g., BIO-101';
 
   @override
   String get themeColor => 'Theme Color';
@@ -2429,35 +2414,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mentorRecommendationsSection => 'Recommendations';
 
   @override
-  String get mentorProgressReportTitle => '📊 **Your Study Progress Report**\n';
+  String get mentorProgressReportTitle => '📊 Your Study Progress Report\n';
 
   @override
   String mentorOverallAccuracy(String accuracy, String correct, String total) {
-    return '**Overall Accuracy:** $accuracy% ($correct/$total correct)';
+    return 'Overall Accuracy: $accuracy% ($correct/$total correct)';
   }
 
   @override
   String mentorTotalStudyTime(String hours) {
-    return '**Total Study Time:** $hours hours';
+    return 'Total Study Time: $hours hours';
   }
 
   @override
   String mentorWeeklyActivity(String attempts) {
-    return '**Weekly Activity:** $attempts attempts';
+    return 'Weekly Activity: $attempts attempts';
   }
 
   @override
   String mentorCompletedLessons(String count) {
-    return '**Completed Lessons:** $count';
+    return 'Completed Lessons: $count';
   }
 
   @override
   String mentorTopicsStudied(String count) {
-    return '**Topics Studied:** $count';
+    return 'Topics Studied: $count';
   }
 
   @override
-  String get mentorAreasNeedingAttention => '\n**Areas needing attention:**';
+  String get mentorAreasNeedingAttention => '\nAreas needing attention:';
 
   @override
   String mentorTopicAccuracyEntry(String topic, int accuracy) {
@@ -2465,7 +2450,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mentorBadgesEarned => '\n**Badges earned:**';
+  String get mentorBadgesEarned => '\nBadges earned:';
 
   @override
   String mentorBadgeEntry(String name, String description) {
@@ -2473,7 +2458,7 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
-  String get mentorRecommendations => '\n**Recommendations:**';
+  String get mentorRecommendations => '\nRecommendations:';
 
   @override
   String mentorRecommendationEntry(String message) {
@@ -2505,7 +2490,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get roadmapGoal => 'Learning Goal';
 
   @override
-  String get roadmapGoalHint => 'e.g., I want to learn IB Physics in 180 days';
+  String get roadmapGoalHint => 'e.g., I want to learn Python in 90 days';
 
   @override
   String get generateRoadmap => 'Generate Roadmap';
@@ -5845,7 +5830,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get practiceTheseTopics => 'Practice These Topics';
 
   @override
-  String get tutorInitFailedGeneric => 'Failed to initialize tutor. Please check your API configuration in Settings and try again.';
+  String get practiceLessonBlocks => 'Practice Lesson Blocks';
+
+  @override
+  String get tutorInitFailedGeneric =>
+      'Failed to initialize tutor. Please check your API configuration in Settings and try again.';
 
   @override
   String get tagline => 'AI-Native Learning Companion';
@@ -5854,5 +5843,77 @@ class AppLocalizationsEn extends AppLocalizations {
   String get preparingTutorLesson => 'Preparing your lesson...';
 
   @override
-  String get practiceLessonBlocks => 'Practice Lesson Blocks';
+  String get mentorStartPracticing =>
+      'Start a practice session to see your stats!';
+
+  @override
+  String get mentorNoPracticeData =>
+      'No practice data yet — start practicing to unlock personalized insights!';
+
+  @override
+  String get mentorNoPracticeDataShort => 'No practice data yet.';
+
+  @override
+  String get mentorHelpTitle => 'What I Can Do';
+
+  @override
+  String get mentorCapabilitiesIntro =>
+      'I\'m your AI academic assistant. Here\'s what I can help you with:';
+
+  @override
+  String get mentorCapabilityProgress =>
+      'Review your study progress and accuracy';
+
+  @override
+  String get mentorCapabilitySchedule => 'Schedule and reschedule lessons';
+
+  @override
+  String get mentorCapabilityPlan =>
+      'Create long-term study plans and roadmaps';
+
+  @override
+  String get mentorCapabilityMotivate => 'Keep you motivated and on track';
+
+  @override
+  String get mentorCapabilityTopics => 'Help you decide what to study next';
+
+  @override
+  String get mentorCapabilityNudge => 'Send reminders and wellbeing check-ins';
+
+  @override
+  String get mentorCapabilityProgressShort => 'View Progress';
+
+  @override
+  String get mentorHelpScheduleHint => 'Help me schedule a study session';
+
+  @override
+  String get mentorHelpTopicsHint => 'What should I study next?';
+
+  @override
+  String get srSectionTitle => 'Spaced Repetition';
+
+  @override
+  String get srMinInterval => 'Min interval';
+
+  @override
+  String get srMaxInterval => 'Max interval';
+
+  @override
+  String get srDailyReviewLimit => 'Daily review limit';
+
+  @override
+  String get selectModelWarning => 'Please select a model before saving.';
+
+  @override
+  String get providerChangedTitle => 'Provider Changed';
+
+  @override
+  String get providerChangedBody =>
+      'Changing the provider will clear the selected model. You\'ll need to select a new model.';
+
+  @override
+  String get practiceQuestions => 'Practice Questions';
+
+  @override
+  String get startLesson => 'Start Lesson';
 }

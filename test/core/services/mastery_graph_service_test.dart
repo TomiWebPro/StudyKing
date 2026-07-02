@@ -15,7 +15,7 @@ class FakeMasteryStateRepo extends MasteryStateRepository {
   String? failureMessage;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
@@ -43,7 +43,7 @@ class FakeQuestionMasteryStateRepo extends QuestionMasteryStateRepository {
   bool failOnGet = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(String studentId, String questionId) async {
@@ -68,7 +68,7 @@ class FakeQuestionEvaluationRepo extends QuestionEvaluationRepository {
   final Map<String, QuestionEvaluation> _evaluations = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<QuestionEvaluation>> getEvaluation(String questionId) async {

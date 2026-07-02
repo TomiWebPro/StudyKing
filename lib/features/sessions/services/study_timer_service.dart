@@ -49,14 +49,15 @@ class StudyTimerService {
     _onTick.remove(callback);
   }
 
-  void reconcileElapsedMs(int expectedMs) {
-    if (!hasActiveSession || _isPaused) return;
+  Result<void> reconcileElapsedMs(int expectedMs) {
+    if (!hasActiveSession || _isPaused) return Result.success(null);
     _elapsedMs += expectedMs;
     final plannedSeconds = (_currentSession!.plannedDurationMinutes ?? 25) * 60;
     if (_elapsedMs ~/ msPerSecond >= plannedSeconds) {
       _timer?.cancel();
       completeSession();
     }
+    return Result.success(null);
   }
 
   Future<Result<int>> getDailyCapMinutes() async {
@@ -177,18 +178,20 @@ class StudyTimerService {
     });
   }
 
-  void pauseSession() {
-    if (_currentSession == null) return;
+  Result<void> pauseSession() {
+    if (_currentSession == null) return Result.success(null);
     _isPaused = true;
     _lastTickTime = null;
     _logger.i('Session paused');
+    return Result.success(null);
   }
 
-  void resumeSession() {
-    if (_currentSession == null) return;
+  Result<void> resumeSession() {
+    if (_currentSession == null) return Result.success(null);
     _isPaused = false;
     _lastTickTime = DateTime.now();
     _logger.i('Session resumed');
+    return Result.success(null);
   }
 
   Future<Result<Session>> completeSession() async {

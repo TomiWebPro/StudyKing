@@ -3,18 +3,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/session_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
-import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
@@ -22,6 +20,7 @@ import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/fakes.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeLlmService extends LlmService {
@@ -81,69 +80,98 @@ class _FakeExerciseEvaluator extends ExerciseEvaluator {
   }
 }
 
-class _FailingTutorService extends TutorService {
-  _FailingTutorService()
+class _FakeMasteryGraphService extends MasteryGraphService {
+  _FakeMasteryGraphService()
       : super(
-          database: DatabaseService(
-            topicRepository: TopicRepository(),
-            questionRepository: QuestionRepository(),
-            attemptRepository: AttemptRepository(),
-            lessonRepository: LessonRepository(),
-            sessionRepository: SessionRepository(),
-            subjectRepository: SubjectRepository(),
-            conversationRepository: ConversationRepository(),
-            tutorSessionRepository: TutorSessionRepository(),
-          ),
-          llmService: _FakeLlmService(),
-          masteryService: MasteryGraphService(),
-          spacedRepetitionService: SpacedRepetitionService(
-            questionRepo: QuestionRepository(),
-            attemptRepo: AttemptRepository(),
-          ),
-          modelId: 'test-model',
-          exerciseEvaluator: _FakeExerciseEvaluator(),
-          conversationRepository: ConversationRepository(),
+          masteryStateRepo: null,
+          questionMasteryRepo: null,
+          topicDependencyRepo: null,
+          questionEvaluationRepo: null,
+          calculationService: null,
         );
 
   @override
-  Future<ConversationManager> startLesson({
-    required String studentId,
-    required String subjectId,
-    required String topicId,
-    required String topicTitle,
-    int durationMinutes = 45,
-    String? scheduledSessionId,
-    String localeName = 'en',
-  }) async {
-    throw Exception('LLM connection failed');
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
   }
 
   @override
-  Future<void> endLesson() async {}
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
+    String studentId, {
+    double threshold = 0.5,
+  }) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(
+      String studentId) async {
+    return Result.success({});
+  }
+}
+
+class _FakeSpacedRepetitionService extends SpacedRepetitionService {
+  _FakeSpacedRepetitionService()
+      : super(
+          questionRepo: FakeQuestionRepository(),
+          attemptRepo: FakeAttemptRepository(),
+          srEngine: null,
+        );
+
+  @override
+  Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<List<Question>>> getTopicTimeDue(String topicId) async {
+    return Result.success([]);
+  }
+}
+
+DatabaseService _createFakeDatabase() {
+  return DatabaseService(
+    topicRepository: FakeTopicRepository(),
+    questionRepository: FakeQuestionRepository(),
+    attemptRepository: FakeAttemptRepository(),
+    lessonRepository: _NullLessonRepository(),
+    sessionRepository: FakeSessionRepository(),
+    subjectRepository: _NullSubjectRepository(),
+    conversationRepository: _NullConversationRepository(),
+    tutorSessionRepository: FakeTutorSessionRepository(),
+  );
+}
+
+class _NullConversationRepository extends ConversationRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+}
+
+class _NullLessonRepository extends LessonRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+}
+
+class _NullSubjectRepository extends SubjectRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeTutorService extends TutorService {
-  _FakeTutorService()
+  final bool shouldFail;
+
+  _FakeTutorService({this.shouldFail = false})
       : super(
-          database: DatabaseService(
-            topicRepository: TopicRepository(),
-            questionRepository: QuestionRepository(),
-            attemptRepository: AttemptRepository(),
-            lessonRepository: LessonRepository(),
-            sessionRepository: SessionRepository(),
-            subjectRepository: SubjectRepository(),
-            conversationRepository: ConversationRepository(),
-            tutorSessionRepository: TutorSessionRepository(),
-          ),
+          database: _createFakeDatabase(),
           llmService: _FakeLlmService(),
-          masteryService: MasteryGraphService(),
-          spacedRepetitionService: SpacedRepetitionService(
-            questionRepo: QuestionRepository(),
-            attemptRepo: AttemptRepository(),
-          ),
+          masteryService: _FakeMasteryGraphService(),
+          spacedRepetitionService: _FakeSpacedRepetitionService(),
           modelId: 'test-model',
           exerciseEvaluator: _FakeExerciseEvaluator(),
-          conversationRepository: ConversationRepository(),
+          conversationRepository: _NullConversationRepository(),
         );
 
   @override
@@ -421,7 +449,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Algebra',
           subjectId: 'math',
-          tutorService: _FailingTutorService(),
+          tutorService: _FakeTutorService(shouldFail: true),
         ),
       ));
       await tester.pumpAndSettle();
@@ -436,7 +464,7 @@ void main() {
           topicId: 'topic-1',
           topicTitle: 'Algebra',
           subjectId: 'math',
-          tutorService: _FailingTutorService(),
+          tutorService: _FakeTutorService(shouldFail: true),
         ),
       ));
       await tester.pumpAndSettle();

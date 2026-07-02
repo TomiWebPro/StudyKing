@@ -15,7 +15,9 @@ class WebScraper {
     try {
       final uri = Uri.parse(url);
       if (!uri.hasScheme) {
-        return Result.failure('Invalid_URL_scheme');
+        return Result.failure(
+          'Invalid URL scheme. Please provide a valid URL starting with http:// or https://',
+        );
       }
 
       final response = await _httpClient.get(
@@ -27,14 +29,16 @@ class WebScraper {
 
       if (response.statusCode != 200) {
         return Result.failure(
-          'Fetch_failed_status: ${response.statusCode}',
+          'Failed to fetch page (status code: ${response.statusCode})',
         );
       }
 
       final body = response.body;
       final extracted = DocumentExtractor.stripHtmlToText(body);
       if (extracted.isEmpty) {
-        return Result.failure('No_readable_content');
+        return Result.failure(
+          'No readable content found on the page',
+        );
       }
       return Result.success(extracted);
     } catch (e) {

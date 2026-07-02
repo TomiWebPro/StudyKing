@@ -855,36 +855,78 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
         actions: const [],
       ),
       body: _buildBody(),
-      floatingActionButton: LayoutBuilder(
+      floatingActionButton: _buildFloatingActionButton(),
+    );
+  }
+
+  /// Builds the floating action button based on the current screen state.
+  ///
+  /// Three states:
+  /// - No subjects → no FAB (hidden entirely; empty state guides the user).
+  /// - Subjects exist but no questions → Upload Materials FAB.
+  /// - Subjects exist with questions → Practice FAB (current behavior).
+  Widget? _buildFloatingActionButton() {
+    final l10n = AppLocalizations.of(context)!;
+
+    // No subjects — hide FAB entirely. The PracticeEmptyState handles CTA.
+    if (_subjects.isEmpty) return null;
+
+    // Subjects exist but no questions — guide to upload materials.
+    if (_totalQuestionCount == 0) {
+      return LayoutBuilder(
         builder: (context, constraints) {
           final isXs = constraints.maxWidth < 360;
           if (isXs) {
             return FloatingActionButton.small(
-              onPressed: _subjects.isEmpty ? null : () => _showSubjectSelector(),
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.upload),
               backgroundColor: Theme.of(context).colorScheme.primary,
-              child: const Icon(Icons.play_arrow),
+              child: const Icon(Icons.upload),
             );
           }
           return SizedBox(
             width: constraints.maxWidth - 64,
             child: FloatingActionButton.extended(
-              onPressed: _subjects.isEmpty
-                  ? null
-                  : () {
-                      _showSubjectSelector();
-                    },
+              onPressed: () => Navigator.pushNamed(context, AppRoutes.upload),
               backgroundColor: Theme.of(context).colorScheme.primary,
-              icon: const Icon(Icons.play_arrow),
+              icon: const Icon(Icons.upload),
               label: Flexible(
                 child: Text(
-                  _subjects.isEmpty ? l10n.noSubjects : l10n.practice,
+                  l10n.uploadMaterials,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
           );
         },
-      ),
+      );
+    }
+
+    // Subjects exist and questions exist — practice FAB.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final isXs = constraints.maxWidth < 360;
+        if (isXs) {
+          return FloatingActionButton.small(
+            onPressed: () => _showSubjectSelector(),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            child: const Icon(Icons.play_arrow),
+          );
+        }
+        return SizedBox(
+          width: constraints.maxWidth - 64,
+          child: FloatingActionButton.extended(
+            onPressed: () => _showSubjectSelector(),
+            backgroundColor: Theme.of(context).colorScheme.primary,
+            icon: const Icon(Icons.play_arrow),
+            label: Flexible(
+              child: Text(
+                l10n.practice,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 

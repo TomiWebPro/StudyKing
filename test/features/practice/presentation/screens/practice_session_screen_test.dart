@@ -16,17 +16,11 @@ import 'package:studyking/features/practice/presentation/screens/practice_sessio
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 import '../shared_test_helpers.dart';
 
-const _kCorrectFeedback = 'Correct!';
-const _kIncorrectFeedback = 'Incorrect';
-const _kPracticeComplete = 'Practice Complete!';
-const _kSubmitAnswer = 'Submit Answer';
-const _kNext = 'Next';
-const _kPrevious = 'Previous';
-const _kNoQuestionsAvailable = 'No Questions Available';
-const _kPracticeAgain = 'Practice Again';
+final _l10n = AppLocalizationsEn();
 void main() {
   group('PracticeSessionScreen', () {
     group('question type branches', () {
@@ -231,7 +225,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('What is 2+2?'), findsOneWidget);
-        expect(find.text(_kSubmitAnswer), findsOneWidget);
+        expect(find.text(_l10n.submitAnswer), findsOneWidget);
       });
 
       testWidgets('submit is disabled for singleChoice until selection made', (tester) async {
@@ -293,10 +287,10 @@ void main() {
         await tester.tap(find.text('4'));
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        expect(find.text(_kCorrectFeedback), findsOneWidget);
+        expect(find.text(_l10n.correctFeedback), findsOneWidget);
       });
 
       testWidgets('shows incorrect feedback after submitting wrong singleChoice', (tester) async {
@@ -317,10 +311,10 @@ void main() {
         await tester.tap(find.text('3'));
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        expect(find.text(_kIncorrectFeedback), findsOneWidget);
+        expect(find.text(_l10n.incorrectFeedback), findsOneWidget);
       });
 
       testWidgets('shows next button after submit', (tester) async {
@@ -337,11 +331,11 @@ void main() {
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text(_kNext), findsOneWidget);
+        expect(find.text(_l10n.next), findsOneWidget);
       });
 
       testWidgets('completes session after last question', (tester) async {
@@ -356,13 +350,13 @@ void main() {
         await tester.enterText(find.byType(TextField), 'answer');
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump(const Duration(milliseconds: 600));
 
-        expect(find.text(_kPracticeComplete), findsOneWidget);
+        expect(find.text(_l10n.practiceComplete), findsOneWidget);
       });
 
       testWidgets('score updates on submit with correct answer', (tester) async {
@@ -383,10 +377,10 @@ void main() {
         final enabledSubmit = tester.widget<FilledButton>(find.byType(FilledButton));
         expect(enabledSubmit.onPressed, isNotNull);
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        expect(find.text(_kCorrectFeedback), findsOneWidget);
+        expect(find.text(_l10n.correctFeedback), findsOneWidget);
         expect(find.text('100%'), findsOneWidget);
         expect(find.text('1'), findsOneWidget);
       });
@@ -444,19 +438,19 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'correct');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextField), 'wrong');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump(const Duration(milliseconds: 600));
 
-        expect(find.text(_kPracticeComplete), findsOneWidget);
+        expect(find.text(_l10n.practiceComplete), findsOneWidget);
         expect(find.textContaining('1/2'), findsOneWidget);
         expect(find.textContaining('50%'), findsOneWidget);
       });
@@ -496,7 +490,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+        expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
       });
 
       testWidgets('shows no-questions dialog when filtered by topic yields empty', (tester) async {
@@ -512,7 +506,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+        expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
       });
 
       testWidgets('shows no-questions dialog on load failure', (tester) async {
@@ -521,7 +515,7 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+        expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
       });
     });
 
@@ -540,12 +534,12 @@ void main() {
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        expect(find.text(_kPrevious), findsOneWidget);
-        expect(find.text(_kNext), findsOneWidget);
+        expect(find.text(_l10n.previous), findsOneWidget);
+        expect(find.text(_l10n.next), findsOneWidget);
       });
 
       testWidgets('previous button goes back to first question', (tester) async {
@@ -562,11 +556,11 @@ void main() {
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
@@ -575,11 +569,11 @@ void main() {
         await tester.enterText(find.byType(TextField), 'b');
         await tester.pump();
 
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        await tester.tap(find.text(_kPrevious));
+        await tester.tap(find.text(_l10n.previous));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
@@ -681,10 +675,10 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'ok');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
@@ -705,19 +699,19 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump(const Duration(milliseconds: 600));
 
-        expect(find.text(_kPracticeComplete), findsOneWidget);
+        expect(find.text(_l10n.practiceComplete), findsOneWidget);
 
-        await tester.tap(find.text(_kPracticeAgain));
+        await tester.tap(find.text(_l10n.practiceAgain));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text('Q1'), findsOneWidget);
-        expect(find.text(_kSubmitAnswer), findsOneWidget);
+        expect(find.text(_l10n.submitAnswer), findsOneWidget);
       });
     });
 
@@ -738,7 +732,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'answer');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
         expect(srService.updateCalls.length, 1);
@@ -762,7 +756,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'wrong');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
         expect(srService.updateCalls.length, 1);
@@ -786,7 +780,7 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'answer');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
         expect(srService.updateCalls, isEmpty);
@@ -865,10 +859,10 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'any answer');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        expect(find.text(_kIncorrectFeedback), findsOneWidget);
+        expect(find.text(_l10n.incorrectFeedback), findsOneWidget);
       });
 
       testWidgets('handles empty correctAnswer in markscheme', (tester) async {
@@ -893,10 +887,10 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'some answer');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        expect(find.text(_kIncorrectFeedback), findsOneWidget);
+        expect(find.text(_l10n.incorrectFeedback), findsOneWidget);
       });
     });
 
@@ -966,9 +960,9 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump(const Duration(milliseconds: 600));
 
         expect(sessionRepo.sessions.length, 1);
@@ -993,16 +987,16 @@ void main() {
         // Complete two questions
         await tester.enterText(find.byType(TextField), 'a');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pumpAndSettle();
 
         await tester.enterText(find.byType(TextField), 'b');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump(const Duration(milliseconds: 600));
 
         expect(sessionRepo.sessions.length, 1);
@@ -1043,7 +1037,7 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+          expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
         });
 
         testWidgets('failing ordered repo shows loading then error dialog', (tester) async {
@@ -1115,7 +1109,7 @@ void main() {
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+          expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
         });
 
         testWidgets('handles SR service failure gracefully', (tester) async {
@@ -1145,7 +1139,7 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'a');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pumpAndSettle();
 
           // Change confidence to 5
@@ -1169,13 +1163,13 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'a');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          await tester.ensureVisible(find.text(_kNext));
+          await tester.ensureVisible(find.text(_l10n.next));
           await tester.pump();
-          await tester.tap(find.text(_kNext));
+          await tester.tap(find.text(_l10n.next));
           await tester.pumpAndSettle();
 
           // Now on second question
@@ -1183,14 +1177,14 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'b');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
           // Go back to first
-          await tester.ensureVisible(find.text('Previous'));
+          await tester.ensureVisible(find.text(_l10n.previous));
           await tester.pump();
-          await tester.tap(find.text('Previous'));
+          await tester.tap(find.text(_l10n.previous));
           await tester.pumpAndSettle();
 
           expect(find.text('First'), findsOneWidget);
@@ -1209,13 +1203,13 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'answer');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          await tester.ensureVisible(find.text(_kNext));
+          await tester.ensureVisible(find.text(_l10n.next));
           await tester.pump();
-          await tester.tap(find.text(_kNext));
+          await tester.tap(find.text(_l10n.next));
           await tester.pump(const Duration(milliseconds: 600));
 
           expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
@@ -1252,10 +1246,10 @@ void main() {
           await tester.pumpAndSettle();
 
           // Skip button should be visible when no answer selected
-          expect(find.text('Skip'), findsOneWidget);
+          expect(find.text(_l10n.skip), findsOneWidget);
 
           // Tap skip to go to next question
-          await tester.tap(find.text('Skip'));
+          await tester.tap(find.text(_l10n.skip));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
@@ -1276,7 +1270,7 @@ void main() {
           await tester.tap(find.text('A'));
           await tester.pump();
 
-          expect(find.text('Skip'), findsNothing);
+          expect(find.text(_l10n.skip), findsNothing);
         });
       });
 
@@ -1293,9 +1287,9 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'a');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pumpAndSettle();
-          await tester.tap(find.text(_kNext));
+          await tester.tap(find.text(_l10n.next));
           await tester.pumpAndSettle();
 
           expect(find.byType(AnimatedSwitcher), findsOneWidget);
@@ -1314,20 +1308,20 @@ void main() {
 
           await tester.enterText(find.byType(TextField), 'a');
           await tester.pump();
-          await tester.tap(find.text(_kSubmitAnswer));
+          await tester.tap(find.text(_l10n.submitAnswer));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
-          await tester.ensureVisible(find.text(_kNext));
+          await tester.ensureVisible(find.text(_l10n.next));
           await tester.pump();
-          await tester.tap(find.text(_kNext));
+          await tester.tap(find.text(_l10n.next));
           await tester.pump(const Duration(milliseconds: 600));
 
           expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
 
-          await tester.ensureVisible(find.text('Practice Again'));
+          await tester.ensureVisible(find.text(_l10n.practiceAgain));
           await tester.pump();
-          await tester.tap(find.text('Practice Again'));
+          await tester.tap(find.text(_l10n.practiceAgain));
           await tester.pump();
           await tester.pump(const Duration(milliseconds: 100));
 
@@ -1408,7 +1402,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '4');
       await tester.pump();
 
-      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.tap(find.text(_l10n.submitAnswer));
       await tester.pumpAndSettle();
 
       expect(find.text('How confident are you?'), findsOneWidget);
@@ -1427,7 +1421,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '4');
       await tester.pump();
-      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.tap(find.text(_l10n.submitAnswer));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('5'));
@@ -1447,7 +1441,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), '4');
       await tester.pump();
-      await tester.tap(find.text(_kSubmitAnswer));
+      await tester.tap(find.text(_l10n.submitAnswer));
       await tester.pumpAndSettle();
 
       expect(find.text('Moderately Confident'), findsOneWidget);
@@ -1473,16 +1467,16 @@ void main() {
 
         await tester.enterText(find.byType(TextField), 'answer');
         await tester.pump();
-        await tester.tap(find.text(_kSubmitAnswer));
+        await tester.tap(find.text(_l10n.submitAnswer));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.text(_kNext));
+        await tester.tap(find.text(_l10n.next));
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
       }
 
       await tester.pump(const Duration(milliseconds: 600));
-      expect(find.text(_kPracticeComplete), findsOneWidget);
+      expect(find.text(_l10n.practiceComplete), findsOneWidget);
       expect(find.text('3/3'), findsOneWidget);
       expect(find.text('100%'), findsOneWidget);
     });
@@ -1495,7 +1489,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text(_kNoQuestionsAvailable), findsOneWidget);
+      expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
       expect(find.text('Upload Materials'), findsOneWidget);
     });
 
@@ -1509,7 +1503,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text(_kNoQuestionsAvailable), findsNothing);
+      expect(find.text(_l10n.noQuestionsAvailable), findsNothing);
     });
   });
 

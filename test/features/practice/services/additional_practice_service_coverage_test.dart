@@ -81,7 +81,7 @@ class _FakeQuestionRepo extends QuestionRepository {
   _FakeQuestionRepo(this.fakeBox);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => fakeBox;
@@ -119,7 +119,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<StudentAttempt?>> get(String id) async {
@@ -915,7 +915,7 @@ class _FakeThrowingBoxRepo2 extends QuestionRepository {
   _FakeThrowingBoxRepo2(this._box);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Box<Question> get box => _box;
@@ -939,7 +939,7 @@ class _FakeSessionRepo2 extends SessionRepository {
   _FakeSessionRepo2() : super();
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> save(String key, Session item) async =>
@@ -954,7 +954,7 @@ class _FakeSessionRepo2 extends SessionRepository {
 
 class _FakeStudentIdService2 extends StudentIdService {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   String getStudentId() => 'test-student';
@@ -973,9 +973,10 @@ class _FakeMasteryGraphServiceForScorer extends MasteryGraphService {
   }) : super();
 
   @override
-  Future<void> init() async {
+  Future<Result<void>> init() async {
     initCalled = true;
-    if (failOnInit) throw Exception('Init failed');
+    if (failOnInit) return Result.failure('Init failed');
+    return Result.success(null);
   }
 
   @override
@@ -993,7 +994,7 @@ class _FakeMasteryGraphServiceForScorer extends MasteryGraphService {
 
 class _FakeStudentIdServiceForScorer extends StudentIdService {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   String getStudentId() => 's1';
@@ -1018,7 +1019,7 @@ class _FakeMasteryGraphSvc3 extends MasteryGraphService {
 
 class _FakeAttemptRepo3 extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(StudentAttempt attempt) async {
@@ -1030,7 +1031,7 @@ class _FakeQMasteryRepo3 extends QuestionMasteryStateRepository {
   bool shouldFail = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(
@@ -1057,7 +1058,7 @@ class _FakeQuestionRepo3 extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Question?>> get(String id) async {

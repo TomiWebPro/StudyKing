@@ -54,8 +54,7 @@ class PracticeResultsScreen extends StatelessWidget {
           ),
         ],
       ),
-      body: FocusTraversalGroup(
-        child: SingleChildScrollView(
+      body: SingleChildScrollView(
           padding: ResponsiveUtils.screenPadding(context),
           physics: const AlwaysScrollableScrollPhysics(),
           child: Column(
@@ -125,7 +124,6 @@ class PracticeResultsScreen extends StatelessWidget {
             ],
           ),
         ),
-      ),
     );
   }
 

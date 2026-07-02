@@ -2,6 +2,7 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -60,7 +61,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
 
 class FakeMasteryStateRepository extends MasteryStateRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
@@ -75,7 +76,7 @@ class FakeMasteryStateRepository extends MasteryStateRepository {
 
 class FakeMasteryGraphRepository extends MasteryGraphRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
@@ -285,6 +286,8 @@ class _FakeRoadmapRepository extends RoadmapRepository {
       Result.success(_roadmaps[id]);
 }
 
+final _logger = Logger('PlannerPLSPTest');
+
 void main() {
   late String hivePath;
 
@@ -297,7 +300,9 @@ void main() {
     await Hive.close();
     try {
       await Directory(hivePath).delete(recursive: true);
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('Cleanup failed: $e', e, st);
+    }
   });
 
   group('PlanGenerationConfig', () {
@@ -1078,7 +1083,7 @@ class FakePlannerAdvisorStrategy implements PlannerAdvisorStrategy {
 
 class _EmptyMasteryGraphRepository extends MasteryGraphRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {

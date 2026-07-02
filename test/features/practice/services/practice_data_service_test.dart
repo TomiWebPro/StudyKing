@@ -19,7 +19,7 @@ class _FakeQuestionRepository extends QuestionRepository {
   _FakeQuestionRepository(this._questions);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success(_questions);
@@ -358,7 +358,7 @@ void main() {
 
 class _FakeFailingQuestionRepository extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.failure('Failed to load');
@@ -370,7 +370,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   _FakeMasteryGraphService(this._result);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
@@ -380,7 +380,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
 
 class _FakeMasteryGraphServiceFailure extends MasteryGraphService {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
@@ -394,7 +394,7 @@ class _FakeQuestionRepo4 extends QuestionRepository {
   _FakeQuestionRepo4(this._questions);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success(_questions);
@@ -427,7 +427,7 @@ class _FakeMasteryGraphSvc2 extends MasteryGraphService {
   _FakeMasteryGraphSvc2();
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {

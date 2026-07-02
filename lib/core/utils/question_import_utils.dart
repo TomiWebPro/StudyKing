@@ -7,6 +7,7 @@ import '../data/models/question_model.dart';
 import '../../core/errors/result.dart';
 import 'id_generator.dart';
 import 'logger.dart';
+import 'string_extensions.dart';
 
 enum ConflictStrategy { skipExisting, overwrite }
 
@@ -111,13 +112,15 @@ class QuestionImportUtils {
     DateTime createdAt;
     try {
       createdAt = DateTime.parse(values[16]);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse createdAt from CSV (v18): $e');
       createdAt = DateTime.now();
     }
     DateTime updatedAt;
     try {
       updatedAt = DateTime.parse(values[17]);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse updatedAt from CSV (v18): $e');
       updatedAt = DateTime.now();
     }
 
@@ -125,7 +128,9 @@ class QuestionImportUtils {
     if (values[15].isNotEmpty) {
       try {
         nextReview = DateTime.parse(values[15]);
-      } catch (_) {}
+      } catch (e) {
+        _logger.w('Failed to parse nextReview from CSV (v18): $e');
+      }
     }
 
     return Question(
@@ -162,13 +167,15 @@ class QuestionImportUtils {
     DateTime createdAt;
     try {
       createdAt = DateTime.parse(values[11]);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse createdAt from CSV (v13): $e');
       createdAt = DateTime.now();
     }
     DateTime updatedAt;
     try {
       updatedAt = DateTime.parse(values[12]);
-    } catch (_) {
+    } catch (e) {
+      _logger.w('Failed to parse updatedAt from CSV (v13): $e');
       updatedAt = DateTime.now();
     }
 
@@ -269,7 +276,7 @@ class QuestionImportUtils {
     if (text.isEmpty) return null;
 
     final answer = parts.length > 1 ? parts[1].trim() : '';
-    final typeStr = parts.length > 2 ? parts[2].trim().toLowerCase() : '';
+    final typeStr = parts.length > 2 ? parts[2].normalized : '';
     final subjectId = parts.length > 3 ? parts[3].trim() : '';
     final topicId = parts.length > 4 ? parts[4].trim() : '';
 

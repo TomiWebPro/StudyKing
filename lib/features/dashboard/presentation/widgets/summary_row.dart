@@ -21,21 +21,40 @@ class SummaryRow extends StatelessWidget {
     final topicsStudied = stats.topicsStudied;
     final bp = ResponsiveUtils.breakpointOf(context);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final crossAxisCount = {
-          ScreenBreakpoint.xs: 2,
-          ScreenBreakpoint.sm: 3,
-          ScreenBreakpoint.md: 4,
-          ScreenBreakpoint.lg: 4,
-        }[bp] ?? 4;
-        final gap = 12.0;
-        final totalGap = gap * (crossAxisCount - 1);
-        final itemWidth = (constraints.maxWidth - totalGap) / crossAxisCount;
-        return Wrap(
-          spacing: gap,
-          runSpacing: gap,
-          children: [
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(bottom: 16),
+          child: Row(
+            children: [
+              Icon(Icons.summarize, color: Theme.of(context).colorScheme.primary, size: 20),
+              const SizedBox(width: 8),
+              Semantics(
+                headingLevel: 3,
+                child: Text(
+                  l10n.summary,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+            ],
+          ),
+        ),
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final crossAxisCount = {
+              ScreenBreakpoint.xs: 2,
+              ScreenBreakpoint.sm: 3,
+              ScreenBreakpoint.md: 4,
+              ScreenBreakpoint.lg: 4,
+            }[bp] ?? 4;
+            final gap = 12.0;
+            final totalGap = gap * (crossAxisCount - 1);
+            final itemWidth = (constraints.maxWidth - totalGap) / crossAxisCount;
+            return Wrap(
+              spacing: gap,
+              runSpacing: gap,
+              children: [
             SizedBox(
               width: itemWidth,
               child: MetricCard(
@@ -81,9 +100,11 @@ class SummaryRow extends StatelessWidget {
                 accent: Theme.of(context).colorScheme.tertiary,
               ),
             ),
-          ],
-        );
-      },
+            ],
+          );
+        },
+        ),
+      ],
     );
   }
 }

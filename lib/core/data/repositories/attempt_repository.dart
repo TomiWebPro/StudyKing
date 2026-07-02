@@ -2,10 +2,16 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class AttemptRepository extends Repository<StudentAttempt> {
-  Future<void> init() async {
-    await openBox(HiveBoxNames.attempts);
+  static final Logger _logger = const Logger('AttemptRepository');
+  AttemptRepository() : super(boxName: HiveBoxNames.attempts);
+
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
+      await openBox(HiveBoxNames.attempts);
+    }, context: 'AttemptRepository.init');
   }
 
   Future<Result<void>> create(StudentAttempt attempt) async {
@@ -61,7 +67,8 @@ class AttemptRepository extends Repository<StudentAttempt> {
         'accuracy': total > 0 ? correct / total : 0.0,
       });
     } catch (e) {
+      _logger.w(e.toString(), e);
       return Result.failure(e.toString());
     }
-  }
+}
 }

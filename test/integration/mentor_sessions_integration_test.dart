@@ -67,7 +67,7 @@ class _FakeQuestionMasteryRepo extends QuestionMasteryStateRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeMasteryStateRepo extends MasteryStateRepository {
@@ -114,7 +114,7 @@ class _FakeMasteryStateRepo extends MasteryStateRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> updateMasteryState(MasteryState state) async {
@@ -124,7 +124,7 @@ class _FakeMasteryStateRepo extends MasteryStateRepository {
 
 class _FakeTutorSessionRepo extends TutorSessionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<TutorSession>>> getStudentSessions(
@@ -204,7 +204,7 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   final List<EngagementNudgeModel> nudges = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(EngagementNudgeModel nudge) async {
@@ -239,7 +239,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(

@@ -97,7 +97,7 @@ class MentorWellbeingService {
   }
 
   Future<void> _checkStreak(List<String> messages) async {
-    final consecutiveDays = await _getConsecutiveStudyDays();
+    final consecutiveDays = (await _getConsecutiveStudyDays()).data ?? 0;
     if (consecutiveDays >= 7) {
       messages.add(lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays));
       return;
@@ -151,7 +151,7 @@ class MentorWellbeingService {
     return result.isSuccess ? (result.data! ~/ msPerMinute) : 0;
   }
 
-  Future<int> _getConsecutiveStudyDays() async {
+  Future<Result<int>> _getConsecutiveStudyDays() async {
     return _sessionRepository.getConsecutiveStudyDays();
   }
 }

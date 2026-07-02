@@ -29,6 +29,8 @@ String _localizedSessionType(SessionType type, AppLocalizations l10n) {
 }
 
 class SessionExportService {
+  static final Logger _logger = const Logger('SessionExportService');
+
   static String _csvEscape(String value) {
     if (value.contains(',') || value.contains('"') || value.contains('\n')) {
       return '"${value.replaceAll('"', '""')}"';
@@ -204,7 +206,7 @@ class SessionExportService {
       await file.writeAsString(csv);
       return Result.success(file);
     } catch (e) {
-      Logger('SessionExportService').w('Failed to write CSV file', e);
+      _logger.w('Failed to write CSV file', e);
       return Result.failure(e.toString());
     }
   }
@@ -225,7 +227,7 @@ class SessionExportService {
       await file.writeAsString(json);
       return Result.success(file);
     } catch (e) {
-      Logger('SessionExportService').w('Failed to write JSON file', e);
+      _logger.w('Failed to write JSON file', e);
       return Result.failure(e.toString());
     }
   }
@@ -247,7 +249,7 @@ class SessionExportService {
       await file.writeAsBytes(pdfBytes);
       return Result.success(file);
     } catch (e) {
-      Logger('SessionExportService').w('Failed to write PDF file', e);
+      _logger.w('Failed to write PDF file', e);
       return Result.failure(e.toString());
     }
   }

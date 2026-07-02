@@ -7,6 +7,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
@@ -27,94 +28,98 @@ class ProgressExportService {
         _masteryService = masteryService,
         _attemptRepo = attemptRepo;
 
-  Future<String> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
-    final overallStatsResult = await _tracker.getOverallStats(studentId);
-    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
-    final masteryResult = await _masteryService.getAllTopicMastery(studentId);
-    final masteryStates =
-        masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attemptsResult = await _attemptRepo.getByStudent(studentId);
-    final attempts = attemptsResult.data ?? [];
-    final badges = await _tracker.getBadges(studentId);
+  Future<Result<String>> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
+    return Result.capture(() async {
+      final overallStatsResult = await _tracker.getOverallStats(studentId);
+      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      final masteryStates =
+          masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
+      final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      final attempts = attemptsResult.data ?? [];
+      final badgesResult = await _tracker.getBadges(studentId);
+      final badges = badgesResult.data ?? [];
 
-    final json = jsonEncode({
-      'exportDate': DateTime.now().toIso8601String(),
-      'overallStats': overallStats,
-      'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
-      'attempts': attempts.map((a) => {
-        'questionId': a.questionId,
-        'subjectId': a.subjectId,
-        'isCorrect': a.isCorrect,
-        'timeSpentMs': a.timeSpentMs,
-        'timestamp': a.timestamp.toIso8601String(),
-      }).toList(),
-      'badges': badges,
-    });
-    return json;
+      return jsonEncode({
+        'exportDate': DateTime.now().toIso8601String(),
+        'overallStats': overallStats,
+        'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
+        'attempts': attempts.map((a) => {
+          'questionId': a.questionId,
+          'subjectId': a.subjectId,
+          'isCorrect': a.isCorrect,
+          'timeSpentMs': a.timeSpentMs,
+          'timestamp': a.timestamp.toIso8601String(),
+        }).toList(),
+        'badges': badges,
+      });
+    }, context: 'exportComprehensiveJSON');
   }
 
-  Future<String> exportComprehensiveCSV(
+  Future<Result<String>> exportComprehensiveCSV(
     String studentId, {
     AppLocalizations? l10n,
   }) async {
-    final overallStatsResult = await _tracker.getOverallStats(studentId);
-    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
-    final masteryResult = await _masteryService.getAllTopicMastery(studentId);
-    final masteryStates =
-        masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attemptsResult = await _attemptRepo.getByStudent(studentId);
-    final attempts = attemptsResult.data ?? [];
-    final badgesResult = await _tracker.getBadges(studentId);
-    final badges = badgesResult.data ?? [];
-    final trendResult = await _tracker.getWeeklyTrend(4, studentId: studentId);
-    final trend = trendResult.data ?? [];
+    return Result.capture(() async {
+      final overallStatsResult = await _tracker.getOverallStats(studentId);
+      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      final masteryStates =
+          masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
+      final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      final attempts = attemptsResult.data ?? [];
+      final badgesResult = await _tracker.getBadges(studentId);
+      final badges = badgesResult.data ?? [];
+      final trendResult = await _tracker.getWeeklyTrend(4, studentId: studentId);
+      final trend = trendResult.data ?? [];
 
-    final buffer = StringBuffer();
+      final buffer = StringBuffer();
 
-    buffer.writeln('=== Overall Statistics ===');
-    buffer.writeln(
-        'Total Attempts,Correct,Accuracy (%),Avg Time (s),Total Hours,Weekly Activity,Daily Activity,Topics Studied');
-    buffer.writeln(
-        '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${(overallStats['totalStudyTimeHours'] as num).toStringAsFixed(1)},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
-
-    buffer.writeln();
-    buffer.writeln('=== Topic Mastery ===');
-    buffer.writeln(
-        'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency (%)');
-    for (final ms in masteryStates) {
-      final level = _masteryLevelLabel(ms.masteryLevel, l10n);
+      buffer.writeln('=== Overall Statistics ===');
       buffer.writeln(
-          '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
-    }
-
-    buffer.writeln();
-    buffer.writeln('=== All Attempts ===');
-    buffer.writeln(
-        'Question ID,Subject ID,Correct,Time (s),Timestamp');
-    for (final a in attempts) {
+          'Total Attempts,Correct,Accuracy (%),Avg Time (s),Total Hours,Weekly Activity,Daily Activity,Topics Studied');
       buffer.writeln(
-          '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ msPerSecond},${a.timestamp.toIso8601String()}');
-    }
+          '${overallStats['totalAttempts']},${overallStats['correctAttempts']},${overallStats['accuracy']},${overallStats['avgTimePerQuestion']},${(overallStats['totalStudyTimeHours'] as num).toStringAsFixed(1)},${overallStats['weeklyActivity']},${overallStats['dailyActivity']},${overallStats['topicsStudied']}');
 
-    buffer.writeln();
-    buffer.writeln('=== Weekly Trend ===');
-    buffer.writeln(
-        'Week,Attempts,Accuracy (%),Improvement (%)');
-    for (final t in trend) {
+      buffer.writeln();
+      buffer.writeln('=== Topic Mastery ===');
       buffer.writeln(
-          '${t['week']}-W${t['month']},${t['attempts']},${t['accuracy']},${t['improvement']}');
-    }
+          'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency (%)');
+      for (final ms in masteryStates) {
+        final level = _masteryLevelLabel(ms.masteryLevel, l10n);
+        buffer.writeln(
+            '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
+      }
 
-    buffer.writeln();
-    buffer.writeln('=== Badges ===');
-    buffer.writeln(
-        'Badge Name,Description,Date Unlocked');
-    for (final b in badges) {
+      buffer.writeln();
+      buffer.writeln('=== All Attempts ===');
       buffer.writeln(
-          '"${b['name']}","${b['description']}","${b['unlockedAt']}"');
-    }
+          'Question ID,Subject ID,Correct,Time (s),Timestamp');
+      for (final a in attempts) {
+        buffer.writeln(
+            '${a.questionId},${a.subjectId},${a.isCorrect},${a.timeSpentMs ~/ msPerSecond},${a.timestamp.toIso8601String()}');
+      }
 
-    return buffer.toString();
+      buffer.writeln();
+      buffer.writeln('=== Weekly Trend ===');
+      buffer.writeln(
+          'Week,Attempts,Accuracy (%),Improvement (%)');
+      for (final t in trend) {
+        buffer.writeln(
+            '${t['week']}-W${t['month']},${t['attempts']},${t['accuracy']},${t['improvement']}');
+      }
+
+      buffer.writeln();
+      buffer.writeln('=== Badges ===');
+      buffer.writeln(
+          'Badge Name,Description,Date Unlocked');
+      for (final b in badges) {
+        buffer.writeln(
+            '"${b['name']}","${b['description']}","${b['unlockedAt']}"');
+      }
+
+      return buffer.toString();
+    }, context: 'exportComprehensiveCSV');
   }
 
   String _masteryLevelLabel(MasteryLevel level, AppLocalizations? l10n) {
@@ -127,10 +132,11 @@ class ProgressExportService {
     };
   }
 
-  Future<List<int>> exportComprehensivePDF(
+  Future<Result<List<int>>> exportComprehensivePDF(
     String studentId,
     AppLocalizations l10n,
   ) async {
+    return Result.capture(() async {
     final overallStatsResult = await _tracker.getOverallStats(studentId);
     final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
@@ -319,64 +325,73 @@ class ProgressExportService {
     );
 
     return pdf.save();
+    }, context: 'exportComprehensivePDF');
   }
 
-  Future<void> shareComprehensiveCSV(
+  Future<Result<void>> shareComprehensiveCSV(
     String studentId,
     String filename,
     AppLocalizations l10n,
   ) async {
-    final csv = await exportComprehensiveCSV(studentId, l10n: l10n);
-    await Share.shareXFiles(
-      [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv')],
-      text: l10n.pdfProgressReport,
-    );
+    return Result.capture(() async {
+      final csvResult = await exportComprehensiveCSV(studentId, l10n: l10n);
+      if (csvResult.isFailure) throw Exception(csvResult.error);
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(csvResult.data!)), name: '$filename.csv', mimeType: 'text/csv')],
+        text: l10n.pdfProgressReport,
+      );
+    }, context: 'shareComprehensiveCSV');
   }
 
-  Future<void> shareComprehensiveJSON(
+  Future<Result<void>> shareComprehensiveJSON(
     String studentId,
     String filename,
     AppLocalizations l10n,
   ) async {
-    final overallStatsResult = await _tracker.getOverallStats(studentId);
-    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
-    final masteryResult = await _masteryService.getAllTopicMastery(studentId);
-    final masteryStates =
-        masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
-    final attemptsResult = await _attemptRepo.getByStudent(studentId);
-    final attempts = attemptsResult.data ?? [];
-    final badgesResult = await _tracker.getBadges(studentId);
-    final badges = badgesResult.data ?? [];
+    return Result.capture(() async {
+      final overallStatsResult = await _tracker.getOverallStats(studentId);
+      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      final masteryStates =
+          masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
+      final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      final attempts = attemptsResult.data ?? [];
+      final badgesResult = await _tracker.getBadges(studentId);
+      final badges = badgesResult.data ?? [];
 
-    final json = jsonEncode({
-      'exportDate': DateTime.now().toIso8601String(),
-      'overallStats': overallStats,
-      'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
-      'attempts': attempts.map((a) => {
-        'questionId': a.questionId,
-        'subjectId': a.subjectId,
-        'isCorrect': a.isCorrect,
-        'timeSpentMs': a.timeSpentMs,
-        'timestamp': a.timestamp.toIso8601String(),
-      }).toList(),
-      'badges': badges,
-    });
+      final json = jsonEncode({
+        'exportDate': DateTime.now().toIso8601String(),
+        'overallStats': overallStats,
+        'topicMastery': masteryStates.map((ms) => ms.toJson()).toList(),
+        'attempts': attempts.map((a) => {
+          'questionId': a.questionId,
+          'subjectId': a.subjectId,
+          'isCorrect': a.isCorrect,
+          'timeSpentMs': a.timeSpentMs,
+          'timestamp': a.timestamp.toIso8601String(),
+        }).toList(),
+        'badges': badges,
+      });
 
-    await Share.shareXFiles(
-      [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
-      text: l10n.pdfProgressReport,
-    );
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
+        text: l10n.pdfProgressReport,
+      );
+    }, context: 'shareComprehensiveJSON');
   }
 
-  Future<void> shareComprehensivePDF(
+  Future<Result<void>> shareComprehensivePDF(
     String studentId,
     String filename,
     AppLocalizations l10n,
   ) async {
-    final pdfBytes = await exportComprehensivePDF(studentId, l10n);
-    await Share.shareXFiles(
-      [XFile.fromData(Uint8List.fromList(pdfBytes), name: '$filename.pdf', mimeType: 'application/pdf')],
-      text: l10n.pdfProgressReport,
-    );
+    return Result.capture(() async {
+      final pdfResult = await exportComprehensivePDF(studentId, l10n);
+      if (pdfResult.isFailure) throw Exception(pdfResult.error);
+      await Share.shareXFiles(
+        [XFile.fromData(Uint8List.fromList(pdfResult.data!), name: '$filename.pdf', mimeType: 'application/pdf')],
+        text: l10n.pdfProgressReport,
+      );
+    }, context: 'shareComprehensivePDF');
   }
 }

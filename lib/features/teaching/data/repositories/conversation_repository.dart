@@ -4,6 +4,8 @@ import 'package:studyking/features/teaching/data/models/conversation_message_mod
 import 'package:studyking/core/data/repository.dart';
 
 class ConversationRepository extends Repository<ConversationMessage> {
+  ConversationRepository() : super(boxName: HiveBoxNames.conversations);
+
   Future<void> init() async {
     await openBox(HiveBoxNames.conversations);
   }

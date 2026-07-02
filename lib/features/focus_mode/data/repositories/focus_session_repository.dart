@@ -9,8 +9,10 @@ class FocusSessionRepository {
   static final Logger _logger = const Logger('FocusSessionRepository');
   Box<String>? _box;
 
-  Future<void> init() async {
-    _box = await Hive.openBox<String>(HiveBoxNames.focusSessions);
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
+      _box = await Hive.openBox<String>(HiveBoxNames.focusSessions);
+    }, context: 'FocusSessionRepository.init');
   }
 
   Box<String> get _ensureBox {

@@ -31,7 +31,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   Future<Result<void>> delete(String key) async => Result.success(null);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeQuestionRepo extends QuestionRepository {
@@ -42,7 +42,7 @@ class _FakeQuestionRepo extends QuestionRepository {
       Result.success(_questions);
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 void main() {

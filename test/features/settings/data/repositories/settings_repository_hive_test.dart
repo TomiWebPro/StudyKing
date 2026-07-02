@@ -5,11 +5,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/settings/data/models/accessibility_preferences.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
+
+final _logger = Logger('SettingsRepoHiveTest');
 
 void main() {
   late String hivePath;
@@ -18,13 +21,19 @@ void main() {
   setUpAll(() {
     try {
       Hive.registerAdapter(SettingsBoxAdapter());
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('SettingsBoxAdapter already registered: $e', e, st);
+    }
     try {
       Hive.registerAdapter(UserProfileAdapter());
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('UserProfileAdapter already registered: $e', e, st);
+    }
     try {
       Hive.registerAdapter(AccessibilityPreferencesAdapter());
-    } catch (_) {}
+    } catch (e, st) {
+      _logger.w('AccessibilityPreferencesAdapter already registered: $e', e, st);
+    }
   });
 
   setUp(() async {

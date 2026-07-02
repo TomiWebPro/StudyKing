@@ -1,4 +1,5 @@
 import '../../../core/errors/result.dart';
+import '../../../core/utils/logger.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -27,6 +28,7 @@ class SyllabusTopicNode {
 }
 
 class SyllabusResolver {
+  static final Logger _logger = const Logger('SyllabusResolver');
   final TopicRepository _topicRepository;
   final MasteryGraphRepository _masteryRepository;
   final QuestionRepository _questionRepository;
@@ -108,6 +110,7 @@ class SyllabusResolver {
       final sortedNodes = _topologicalSort(nodes, topicMap);
       return Result.success(sortedNodes);
     } catch (e) {
+      _logger.w('resolveSyllabus failed', e);
       return Result.failure(
         l10n?.failedToResolveSyllabus(e.toString()) ?? 'Failed to resolve syllabus: $e',
       );
@@ -127,6 +130,7 @@ class SyllabusResolver {
           .toList();
       return Result.success(questions);
     } catch (e) {
+      _logger.w('getQuestionsForTopic failed', e);
       return Result.failure(
         l10n?.failedToGetQuestionsForTopic(e.toString()) ?? 'Failed to get questions for topic: $e',
       );
@@ -149,6 +153,7 @@ class SyllabusResolver {
       }
       return Result.success(result);
     } catch (e) {
+      _logger.w('getQuestionsForTopics failed', e);
       return Result.failure(
         l10n?.failedToGetQuestionsForTopics(e.toString()) ?? 'Failed to get questions for topics: $e',
       );

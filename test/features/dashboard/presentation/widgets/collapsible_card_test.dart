@@ -1,23 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart';
-import 'package:studyking/features/dashboard/providers/dashboard_layout_providers.dart';
-import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
-import 'package:studyking/core/providers/shared_providers.dart' show SettingsController;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget child) {
   return ProviderScope(
-    overrides: [
-      dashboardLayoutPreferencesProvider.overrideWith(
-        (ref) => DashboardLayoutNotifier(),
-      ),
-      settingsProvider.overrideWith(
-        (ref) => SettingsController(SettingsRepository()),
-      ),
-    ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -27,26 +15,21 @@ Widget _buildTestApp(Widget child) {
 }
 
 void main() {
-  group('CollapsibleCard', () {
-    testWidgets('renders title and body when no asyncValue', (tester) async {
+  group('DashboardCard', () {
+    testWidgets('renders body when no asyncValue', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Test Title'),
-          body: const Text('Test Body'),
+        const DashboardCard(
+          body: Text('Test Body'),
         ),
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Test Title'), findsOneWidget);
       expect(find.text('Test Body'), findsOneWidget);
     });
 
     testWidgets('shows body when asyncValue is data', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
+        DashboardCard(
           body: const Text('Data Body'),
           asyncValue: const AsyncValue.data('loaded'),
         ),
@@ -59,26 +42,24 @@ void main() {
     testWidgets('shows loading indicator when asyncValue is loading',
         (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
-          body: const Text('Body'),
-          asyncValue: const AsyncValue<dynamic>.loading(),
+        const DashboardCard(
+          body: Text('Body'),
+          asyncValue: AsyncValue<dynamic>.loading(),
         ),
       ));
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // Body should NOT be visible while loading
+      expect(find.text('Body'), findsNothing);
     });
 
     testWidgets('shows custom loading skeleton', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
-          body: const Text('Body'),
-          asyncValue: const AsyncValue<dynamic>.loading(),
-          loadingSkeleton: const SizedBox(
+        const DashboardCard(
+          body: Text('Body'),
+          asyncValue: AsyncValue<dynamic>.loading(),
+          loadingSkeleton: SizedBox(
             height: 50,
             child: Center(child: Text('Loading...')),
           ),
@@ -87,13 +68,12 @@ void main() {
       await tester.pump();
 
       expect(find.text('Loading...'), findsOneWidget);
+      expect(find.text('Body'), findsNothing);
     });
 
     testWidgets('shows error widget when asyncValue has error', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
+        DashboardCard(
           body: const Text('Body'),
           asyncValue: AsyncValue<dynamic>.error('error', StackTrace.empty),
         ),
@@ -102,14 +82,14 @@ void main() {
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Something went wrong'), findsOneWidget);
+      // Body should NOT be visible on error
+      expect(find.text('Body'), findsNothing);
     });
 
     testWidgets('shows retry button when onRetry is provided', (tester) async {
       bool retried = false;
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
+        DashboardCard(
           body: const Text('Body'),
           asyncValue: AsyncValue<dynamic>.error('error', StackTrace.empty),
           onRetry: () => retried = true,
@@ -125,131 +105,30 @@ void main() {
 
     testWidgets('shows custom error widget', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'test',
-          title: const Text('Title'),
-          body: const Text('Body'),
+        const DashboardCard(
+          body: Text('Body'),
           asyncValue: AsyncValue<dynamic>.error('error', StackTrace.empty),
-          errorWidget: const Text('Custom Error'),
+          errorWidget: Text('Custom Error'),
         ),
       ));
       await tester.pumpAndSettle();
 
       expect(find.text('Custom Error'), findsOneWidget);
       expect(find.text('Something went wrong'), findsNothing);
+      // Body should NOT be visible when custom error is shown
+      expect(find.text('Body'), findsNothing);
     });
 
-    testWidgets('toggles collapse state on tap', (tester) async {
+    testWidgets('renders inside a Card widget', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'toggle-test',
-          title: const Text('Toggle Title'),
-          body: const Text('Toggle Body'),
+        const DashboardCard(
+          body: Text('Card Content'),
         ),
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Toggle Body'), findsOneWidget);
-      expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-      await tester.tap(find.text('Toggle Title'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Toggle Body'), findsNothing);
-      expect(find.byIcon(Icons.expand_more), findsOneWidget);
-    });
-
-    testWidgets('expand after collapse shows body again', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'expand-test',
-          title: const Text('Title'),
-          body: const Text('Hidden Body'),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.text('Title'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Hidden Body'), findsNothing);
-
-      await tester.tap(find.text('Title'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Hidden Body'), findsOneWidget);
-    });
-
-    testWidgets('renders with expand icon when collapsed', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'collapsed-card',
-          title: const Text('Title'),
-          body: const Text('Body'),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-      await tester.tap(find.text('Title'));
-      await tester.pumpAndSettle();
-
-      expect(find.byIcon(Icons.expand_more), findsOneWidget);
-    });
-
-    testWidgets('toggle remains tappable after removing headingLevel', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'tap-test',
-          title: const Text('Toggle Header'),
-          body: const Text('Collapsible Body'),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Collapsible Body'), findsOneWidget);
-      expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-      await tester.tap(find.text('Toggle Header'));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Collapsible Body'), findsNothing);
-      expect(find.byIcon(Icons.expand_more), findsOneWidget);
-    });
-
-    testWidgets('toggle via icon button works', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'icon-toggle',
-          title: const Text('Icon Toggle Title'),
-          body: const Text('Icon Toggle Body'),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Icon Toggle Body'), findsOneWidget);
-      expect(find.byIcon(Icons.expand_less), findsOneWidget);
-
-      await tester.tap(find.byIcon(Icons.expand_less));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Icon Toggle Body'), findsNothing);
-      expect(find.byIcon(Icons.expand_more), findsOneWidget);
-    });
-
-    testWidgets('uses AnimatedSize with default reduceMotion false', (tester) async {
-      await tester.pumpWidget(_buildTestApp(
-        CollapsibleCard(
-          cardId: 'anim-test',
-          title: const Text('Anim Title'),
-          body: const Text('Anim Body'),
-        ),
-      ));
-      await tester.pumpAndSettle();
-
-      expect(find.text('Anim Body'), findsOneWidget);
-      expect(find.byType(AnimatedSize), findsOneWidget);
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('Card Content'), findsOneWidget);
     });
   });
 }

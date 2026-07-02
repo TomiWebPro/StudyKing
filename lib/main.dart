@@ -212,6 +212,9 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
     var settingsResult = await initSettingsRepo.getSettings();
     if (settingsResult.isSuccess) {
       final settings = settingsResult.data!;
+      // Pre-load settings into the controller to avoid an async race where the
+      // widget tree renders with default settings before _loadSettings() completes.
+      preloadSettings(settings);
       final secureKey = await _secureApiKeyService!.getApiKey();
       final secureBackupKey = await _secureApiKeyService!.getBackupApiKey();
       if (secureKey.isEmpty && settings.apiKey.isNotEmpty) {
@@ -473,6 +476,7 @@ class _AppScrollBehavior extends MaterialScrollBehavior {
         PointerDeviceKind.touch,
         PointerDeviceKind.mouse,
         PointerDeviceKind.stylus,
+        PointerDeviceKind.trackpad,
         PointerDeviceKind.unknown,
       };
 }

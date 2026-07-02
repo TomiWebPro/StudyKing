@@ -41,7 +41,6 @@ class _FailingNotifier extends SubjectsRepositoryNotifier {
 class _SlowNotifier extends SubjectsRepositoryNotifier {
   @override
   Future<SubjectRepository> build() async {
-    await Future.delayed(const Duration(seconds: 1));
     return _FakeSubjectRepository();
   }
 }

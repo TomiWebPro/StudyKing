@@ -50,7 +50,7 @@ class MentorContextBuilder {
     final adherenceDeviation = (await _loadAdherence()).data;
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = SettingsService.getDailyCapMinutes();
-    final consecutiveDays = await _getConsecutiveStudyDays();
+    final consecutiveDays = (await _getConsecutiveStudyDays()).data ?? 0;
     final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final bullet = l10n.mentorBulletPoint;
@@ -218,7 +218,7 @@ class MentorContextBuilder {
     return result.isSuccess ? (result.data! ~/ msPerMinute) : 0;
   }
 
-  Future<int> _getConsecutiveStudyDays() async {
+  Future<Result<int>> _getConsecutiveStudyDays() async {
     return _sessionRepository.getConsecutiveStudyDays();
   }
 }

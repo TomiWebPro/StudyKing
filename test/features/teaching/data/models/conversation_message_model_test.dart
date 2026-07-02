@@ -194,6 +194,54 @@ void main() {
       });
     });
 
+    group('isEvaluation', () {
+      test('is false for plain text content', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: 'Hello, how are you?', timestamp: now,
+        );
+        expect(msg.isEvaluation, isFalse);
+      });
+
+      test('is true for JSON content with type evaluation', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.tutor, type: MessageType.feedback,
+          content: '{"type": "evaluation", "score": 85}', timestamp: now,
+        );
+        expect(msg.isEvaluation, isTrue);
+      });
+
+      test('is false for JSON content without evaluation type', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.tutor, type: MessageType.feedback,
+          content: '{"type": "summary", "text": "Good work"}', timestamp: now,
+        );
+        expect(msg.isEvaluation, isFalse);
+      });
+
+      test('is false for empty content', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.student, type: MessageType.text,
+          content: '', timestamp: now,
+        );
+        expect(msg.isEvaluation, isFalse);
+      });
+
+      test('can be explicitly set via constructor', () {
+        final msg = ConversationMessage(
+          id: id, sessionId: sessionId,
+          role: MessageRole.tutor, type: MessageType.feedback,
+          content: '{"type": "evaluation"}', timestamp: now,
+          isEvaluation: false,
+        );
+        expect(msg.isEvaluation, isFalse);
+      });
+    });
+
     group('equality', () {
       test('identical instances are equal', () {
         final a = ConversationMessage(

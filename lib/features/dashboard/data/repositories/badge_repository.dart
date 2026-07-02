@@ -3,6 +3,8 @@ import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/core/data/repository.dart';
 
 class BadgeRepository extends Repository<BadgeModel> {
+  BadgeRepository() : super(boxName: HiveBoxNames.badges);
+
   Future<void> init() async {
     await openBox(HiveBoxNames.badges);
   }

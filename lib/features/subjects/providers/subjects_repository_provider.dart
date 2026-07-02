@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
+final _logger = const Logger('SubjectsRepositoryNotifier');
+
 final subjectsRepositoryProvider = AsyncNotifierProvider<SubjectsRepositoryNotifier, SubjectRepository>(
   () => SubjectsRepositoryNotifier(),
 );
@@ -15,8 +17,7 @@ class SubjectsRepositoryNotifier extends AsyncNotifier<SubjectRepository> {
       await repository.init();
       return repository;
     } catch (e, st) {
-      final logger = const Logger('SubjectsRepositoryNotifier');
-      logger.w('Failed to init SubjectRepository', e, st);
+      _logger.w('Failed to init SubjectRepository', e, st);
       rethrow;
     }
   }

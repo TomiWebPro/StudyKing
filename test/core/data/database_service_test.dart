@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -97,6 +98,8 @@ class _FailingQuestionRepo extends QuestionRepository {
   }
 }
 
+final _logger = Logger('DatabaseServiceTest');
+
 void main() {
   group('DatabaseService', () {
     late _FakeTopicRepository topicRepo;
@@ -188,7 +191,9 @@ void main() {
       );
       try {
         await service.init();
-      } catch (_) {}
+      } catch (e, st) {
+        _logger.w('Expected init failure for partial init test: $e', e, st);
+      }
       expect(topicRepo.initCallCount, 1);
       expect(attemptRepo.initCallCount, 0);
       expect(lessonRepo.initCallCount, 0);

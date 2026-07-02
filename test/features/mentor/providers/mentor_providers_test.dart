@@ -21,8 +21,9 @@ class _FakeAttemptRepo extends AttemptRepository {
   bool shouldThrow = false;
   _FakeAttemptRepo(this._attempts);
   @override
-  Future<void> init() async {
-    if (shouldThrow) throw Exception('init error');
+  Future<Result<void>> init() async {
+    if (shouldThrow) return Result.failure('init error');
+    return Result.success(null);
   }
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {

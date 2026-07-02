@@ -92,12 +92,12 @@ class _FakeAttemptRepository extends AttemptRepository {
   }
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 }
 
 class _FakeQuestionMasteryStateRepo extends QuestionMasteryStateRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(
@@ -123,7 +123,7 @@ class _FakeQuestionRepository extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<Question?>> get(String id) async {
@@ -511,7 +511,7 @@ class _FakeAttemptRepo2 extends AttemptRepository {
   final List<StudentAttempt> attempts = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
@@ -538,7 +538,7 @@ class _FakeQMasteryStateRepo extends QuestionMasteryStateRepository {
   QuestionMasteryState? lastUpdatedState;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<QuestionMasteryState>> getQuestionMasteryState(
@@ -566,7 +566,7 @@ class _FakeQuestionRepo2 extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success([]);

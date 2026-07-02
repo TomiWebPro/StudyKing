@@ -37,8 +37,9 @@ class _FakeMasteryGraphService extends MasteryGraphService {
         _failSnapshot = failSnapshot;
 
   @override
-  Future<void> init() async {
-    if (_failInit) throw Exception('init failed');
+  Future<Result<void>> init() async {
+    if (_failInit) return Result.failure('init failed');
+    return Result.success(null);
   }
 
   @override
@@ -64,7 +65,7 @@ class _FakeAttemptRepo extends AttemptRepository {
   _FakeAttemptRepo({List<StudentAttempt> attempts = const []}) : _attempts = attempts;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success(_attempts);
@@ -109,7 +110,7 @@ class _FakeSessionRepo extends SessionRepository {
       : _sessions = sessions, _throwOnGetByDate = throwOnGetByDate, _returnNullData = returnNullData;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Session>>> getByDate(DateTime date) async {

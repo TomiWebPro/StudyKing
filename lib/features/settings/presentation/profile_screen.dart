@@ -26,9 +26,7 @@ class ProfileScreen extends ConsumerStatefulWidget {
 class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   static final Logger _logger = const Logger('ProfileScreen');
   final TextEditingController _nameController = TextEditingController();
-  final TextEditingController _studentIdController = TextEditingController();
   final TextEditingController _learningGoalController = TextEditingController();
-  final TextEditingController _studyTimeController = TextEditingController();
 
   String? _avatarIconKey;
   bool _isLoading = true;
@@ -72,9 +70,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           _profileId = profile.id;
           _avatarIconKey = profile.avatarIcon;
           _nameController.text = profile.name;
-          _studentIdController.text = profile.studentId ?? '';
           _learningGoalController.text = profile.learningGoal ?? '';
-          _studyTimeController.text = profile.preferredStudyTime ?? '';
           _notificationsEnabled = profile.notificationsEnabled;
           _language = profile.language;
         });
@@ -99,16 +95,9 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   Future<void> _saveProfile() async {
     final l10n = AppLocalizations.of(context)!;
     final trimmedName = _nameController.text.trim();
-    final trimmedStudentId = _studentIdController.text.trim();
     if (trimmedName.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.nameIsRequired)),
-      );
-      return;
-    }
-    if (trimmedStudentId.isNotEmpty && int.tryParse(trimmedStudentId) == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.studentIdMustBeNumeric)),
       );
       return;
     }
@@ -120,10 +109,8 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       final profile = UserProfile(
         id: _profileId,
         name: trimmedName,
-        studentId: trimmedStudentId.isEmpty ? null : trimmedStudentId,
         avatarIcon: _avatarIconKey,
         learningGoal: _learningGoalController.text.trim().isEmpty ? null : _learningGoalController.text.trim(),
-        preferredStudyTime: _studyTimeController.text.trim().isEmpty ? null : _studyTimeController.text.trim(),
         notificationsEnabled: _notificationsEnabled,
         language: _language,
       );
@@ -255,9 +242,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   @override
   void dispose() {
     _nameController.dispose();
-    _studentIdController.dispose();
     _learningGoalController.dispose();
-    _studyTimeController.dispose();
     super.dispose();
   }
 
@@ -403,25 +388,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   FocusTraversalOrder(
                     order: const NumericFocusOrder(2),
                     child: Semantics(
-                      label: l10n.studentIdOptional,
-                      child: _buildTextField(
-                        controller: _studentIdController,
-                        label: l10n.studentIdOptional,
-                        hintText: l10n.yourStudentIdNumber,
-                        prefixIcon: Icons.badge,
-                        inputType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                          LengthLimitingTextInputFormatter(20),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(3),
-                    child: Semantics(
                       label: l10n.learningGoal,
                       child: _buildTextField(
                         controller: _learningGoalController,
@@ -429,20 +395,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                         hintText: l10n.learningGoalHint,
                         prefixIcon: Icons.school,
                         inputType: TextInputType.text,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  FocusTraversalOrder(
-                    order: const NumericFocusOrder(4),
-                    child: Semantics(
-                      label: l10n.preferredStudyTime,
-                      child: _buildTextField(
-                        controller: _studyTimeController,
-                        label: l10n.preferredStudyTime,
-                        hintText: l10n.preferredStudyTimeHint,
-                        prefixIcon: Icons.access_time,
                       ),
                     ),
                   ),

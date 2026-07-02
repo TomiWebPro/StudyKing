@@ -18,6 +18,22 @@ void main() {
     test('supports varying fraction digits', () {
       expect(formatDecimal(0.0025, 'es', minFractionDigits: 4, maxFractionDigits: 4), '0,0025');
     });
+
+    test('en locale formats zero with maxFractionDigits=0 (no trailing dot)', () {
+      expect(formatDecimal(0.0, 'en', minFractionDigits: 0, maxFractionDigits: 0), '0');
+    });
+
+    test('en locale formats non-zero with maxFractionDigits=0', () {
+      expect(formatDecimal(42.0, 'en', minFractionDigits: 0, maxFractionDigits: 0), '42');
+    });
+
+    test('es locale formats zero with maxFractionDigits=0 (no trailing dot)', () {
+      expect(formatDecimal(0.0, 'es', minFractionDigits: 0, maxFractionDigits: 0), '0');
+    });
+
+    test('en locale formats large integer with maxFractionDigits=0', () {
+      expect(formatDecimal(12345.0, 'en', minFractionDigits: 0, maxFractionDigits: 0), '12,345');
+    });
   });
 
   group('formatPercent', () {

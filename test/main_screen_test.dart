@@ -38,7 +38,7 @@ class _FakeSubjectsRepositoryNotifier extends SubjectsRepositoryNotifier {
 
 class _FakeQuestionRepository extends QuestionRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
@@ -66,7 +66,7 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
@@ -115,7 +115,7 @@ class _FakeLlmService extends LlmService {
 
 class _FakeAttemptRepository extends AttemptRepository {
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async {

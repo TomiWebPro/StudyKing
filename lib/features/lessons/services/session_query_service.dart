@@ -1,3 +1,4 @@
+import '../../../core/errors/result.dart';
 import '../../../core/data/database_service.dart';
 import '../../../core/data/models/session_model.dart';
 import '../../../core/data/models/topic_model.dart';
@@ -9,19 +10,22 @@ class SessionQueryService {
     required DatabaseService database,
   }) : _database = database;
 
-  Future<List<Session>> getLessonsForStudent(String studentId) async {
-    final result = await _database.sessionRepository.getByStudent(studentId);
-    return result.data ?? [];
+  Future<Result<List<Session>>> getLessonsForStudent(String studentId) async {
+    return _database.sessionRepository.getByStudent(studentId);
   }
 
-  Future<List<Session>> getLessonsByTopic(
+  Future<Result<List<Session>>> getLessonsByTopic(
       String studentId, String topicId) async {
-    final all = await getLessonsForStudent(studentId);
-    return all.where((s) => s.topicId == topicId).toList();
+    final allResult = await getLessonsForStudent(studentId);
+    if (allResult.isFailure) return Result.failure(allResult.error);
+    final all = allResult.data!;
+    return Result.success(all.where((s) => s.topicId == topicId).toList());
   }
 
-  Future<List<Topic>> getTopicsWithLessons(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
+  Future<Result<List<Topic>>> getTopicsWithLessons(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
     final topicIds = lessons.map((l) => l.topicId).whereType<String>().toSet();
     final topics = <Topic>[];
     for (final id in topicIds) {
@@ -31,50 +35,59 @@ class SessionQueryService {
         topics.add(topic);
       }
     }
-    return topics;
+    return Result.success(topics);
   }
 
-  Future<Map<String, int>> getLessonCountBySubject(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
+  Future<Result<Map<String, int>>> getLessonCountBySubject(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
     final counts = <String, int>{};
     for (final lesson in lessons) {
       if (lesson.subjectId != null) {
         counts[lesson.subjectId!] = (counts[lesson.subjectId!] ?? 0) + 1;
       }
     }
-    return counts;
+    return Result.success(counts);
   }
 
-  Future<double> getCompletionRate(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
-    if (lessons.isEmpty) return 0.0;
+  Future<Result<double>> getCompletionRate(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
+    if (lessons.isEmpty) return Result.success(0.0);
     final completed = lessons.where((s) => s.completed).length;
-    return completed / lessons.length;
+    return Result.success(completed / lessons.length);
   }
 
-  Future<int> getTotalStudyMinutes(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
-    return lessons.fold<int>(0, (sum, s) {
+  Future<Result<int>> getTotalStudyMinutes(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
+    return Result.success(lessons.fold<int>(0, (sum, s) {
       final duration = s.endTime != null
           ? s.endTime!.difference(s.startTime).inMinutes
           : (s.plannedDurationMinutes ?? 0);
       return sum + duration;
-    });
+    }));
   }
 
-  Future<int> getRemainingLessonCount(
+  Future<Result<int>> getRemainingLessonCount(
       String studentId, String subjectId) async {
     final result = await _database.sessionRepository.getByStudent(studentId);
-    final lessons = result.data ?? [];
+    if (result.isFailure) return Result.failure(result.error);
+    final lessons = result.data!;
     final subjectLessons = lessons.where((s) => s.subjectId == subjectId);
     final completed = subjectLessons.where((s) => s.completed).length;
     final total = subjectLessons.length;
     final remaining = total - completed;
-    return remaining < 0 ? 0 : remaining;
+    return Result.success(remaining < 0 ? 0 : remaining);
   }
 
-  Future<Map<String, double>> getProgressBySubject(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
+  Future<Result<Map<String, double>>> getProgressBySubject(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
     final progress = <String, double>{};
     final subjectLessons = <String, List<Session>>{};
 
@@ -91,23 +104,27 @@ class SessionQueryService {
       progress[entry.key] = total > 0 ? completed / total : 0.0;
     }
 
-    return progress;
+    return Result.success(progress);
   }
 
-  Future<List<Session>> getRecentLessons(
+  Future<Result<List<Session>>> getRecentLessons(
       String studentId, {int limit = 5}) async {
-    final lessons = await getLessonsForStudent(studentId);
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
     lessons.sort((a, b) => b.startTime.compareTo(a.startTime));
-    return lessons.take(limit).toList();
+    return Result.success(lessons.take(limit).toList());
   }
 
-  Future<List<Session>> getUpcomingLessons(String studentId) async {
-    final lessons = await getLessonsForStudent(studentId);
+  Future<Result<List<Session>>> getUpcomingLessons(String studentId) async {
+    final lessonsResult = await getLessonsForStudent(studentId);
+    if (lessonsResult.isFailure) return Result.failure(lessonsResult.error);
+    final lessons = lessonsResult.data!;
     final now = DateTime.now();
-    return lessons
+    return Result.success(lessons
         .where((s) =>
             s.startTime.isAfter(now) && !s.completed && s.endTime == null)
         .toList()
-      ..sort((a, b) => a.startTime.compareTo(b.startTime));
+      ..sort((a, b) => a.startTime.compareTo(b.startTime)));
   }
 }

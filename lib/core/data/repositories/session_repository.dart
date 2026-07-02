@@ -12,10 +12,12 @@ class SessionRepository extends Repository<Session> {
   static final Logger _logger = const Logger('SessionRepository');
   final Clock _clock;
 
-  SessionRepository({Clock? clock}) : _clock = clock ?? SystemClock();
+  SessionRepository({Clock? clock}) : _clock = clock ?? SystemClock(), super(boxName: HiveBoxNames.sessionsTyped);
 
-  Future<void> init() async {
-    await openBox(HiveBoxNames.sessionsTyped);
+  Future<Result<void>> init() async {
+    return Result.capture(() async {
+      await openBox(HiveBoxNames.sessionsTyped);
+    }, context: 'SessionRepository.init');
   }
 
   @override
@@ -222,8 +224,8 @@ class SessionRepository extends Repository<Session> {
     }, context: 'clearAll');
   }
 
-  Future<int> getConsecutiveStudyDays() async {
-    final result = await Result.capture(() async {
+  Future<Result<int>> getConsecutiveStudyDays() async {
+    return Result.capture(() async {
       final allResult = await getAll();
       if (allResult.isFailure) return 0;
       final all = allResult.data!;
@@ -246,6 +248,5 @@ class SessionRepository extends Repository<Session> {
       }
       return consecutive;
     }, context: 'getConsecutiveStudyDays');
-    return result.data ?? 0;
   }
 }

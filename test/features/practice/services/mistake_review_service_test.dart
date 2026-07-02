@@ -12,7 +12,7 @@ class _FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addAttempt(StudentAttempt attempt) {
     _attempts.add(attempt);
@@ -49,7 +49,7 @@ class _FakeQuestionRepository extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addQuestion(Question q) {
     _questions[q.id] = q;
@@ -539,7 +539,7 @@ class _FakeAttemptRepo3 extends AttemptRepository {
   bool shouldThrow = false;
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addAttempt(StudentAttempt attempt) {
     _attempts.add(attempt);
@@ -575,7 +575,7 @@ class _FakeQuestionRepo3 extends QuestionRepository {
   final Map<String, Question> _questions = {};
 
   @override
-  Future<void> init() async {}
+  Future<Result<void>> init() async => Result.success(null);
 
   void addQuestion(Question q) {
     _questions[q.id] = q;

@@ -52,6 +52,7 @@ class AppTheme {
           borderRadius: BorderRadius.circular(12),
         ),
         color: colorScheme.surfaceContainerHighest,
+        surfaceTintColor: Colors.transparent,
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
@@ -93,6 +94,7 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         elevation: 2,
+        surfaceTintColor: Colors.transparent,
         labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
         backgroundColor: colorScheme.surfaceContainerHigh,
         indicatorColor: colorScheme.secondaryContainer,
