@@ -1,6 +1,7 @@
 import '../conversation_phase.dart';
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/data/models/learning_preference_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 import 'package:studyking/core/constants/llm_defaults.dart' show evaluationPromptTemplate;
@@ -53,6 +54,7 @@ class ConversationPromptSet {
     required double adaptivePace,
     required ConversationPhase phase,
     String? scheduledSessionId,
+    LearningPreference? learningPreferences,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -72,8 +74,31 @@ class ConversationPromptSet {
     if (scheduledSessionId != null) {
       systemPrompt = '$systemPrompt\n\n${l10n.scheduledLessonSystemContext}';
     }
+    if (learningPreferences != null && learningPreferences.methodEffectivenessScores.isNotEmpty) {
+      final styleHint = _buildLearningStyleHint(learningPreferences);
+      if (styleHint.isNotEmpty) {
+        systemPrompt = '$systemPrompt\n\n$styleHint';
+      }
+    }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);
+  }
+
+  String _buildLearningStyleHint(LearningPreference prefs) {
+    final hints = <String>[];
+    if (prefs.prefersVisualExplanations) {
+      hints.add('This student learns best with visual explanations. Use more diagrams, charts, and visual descriptions.');
+    }
+    if (prefs.prefersStepByStep) {
+      hints.add('This student prefers step-by-step explanations. Break down complex concepts into clear steps.');
+    }
+    if (prefs.preferredBlockType.isNotEmpty) {
+      hints.add('Preferred content type: ${prefs.preferredBlockType}.');
+    }
+    if (prefs.spacedRepetitionEffectiveness > 0.6) {
+      hints.add('Spaced repetition is effective for this student. Include review of previously covered material.');
+    }
+    return hints.isEmpty ? '' : 'Learning style preferences:\n${hints.join('\n')}';
   }
 
   PromptEntry summary({

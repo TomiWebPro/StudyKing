@@ -572,6 +572,83 @@ void main() {
       });
     });
 
+    group('getDailyTrend', () {
+      test('returns daily trend entries for given period', () async {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+        final yesterday = today.subtract(const Duration(days: 1));
+
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: yesterday.add(const Duration(hours: 10)), subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: false, timeSpentMs: 3000, timestamp: yesterday.add(const Duration(hours: 14)), subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: true, timeSpentMs: 4000, timestamp: today.add(const Duration(hours: 8)), subjectId: 'math'),
+        ]);
+
+        final result = await tracker.getDailyTrend(7, studentId: 'student1');
+
+        expect(result.isSuccess, isTrue);
+        final trend = result.data!;
+        expect(trend.length, equals(7));
+
+        final yesterdayEntry = trend.firstWhere(
+          (e) => (e['date'] as String).startsWith(yesterday.toIso8601String().substring(0, 10)),
+          orElse: () => {},
+        );
+        expect(yesterdayEntry['attempts'], equals(2));
+        expect(yesterdayEntry['accuracy'], equals(50));
+
+        final todayEntry = trend.firstWhere(
+          (e) => (e['date'] as String).startsWith(today.toIso8601String().substring(0, 10)),
+          orElse: () => {},
+        );
+        expect(todayEntry['attempts'], equals(1));
+        expect(todayEntry['accuracy'], equals(100));
+      });
+
+      test('returns zero attempts for days with no activity', () async {
+        final result = await tracker.getDailyTrend(3, studentId: 'student1');
+
+        expect(result.isSuccess, isTrue);
+        final trend = result.data!;
+        expect(trend.length, equals(3));
+        for (final entry in trend) {
+          expect(entry['attempts'], equals(0));
+          expect(entry['compositeScore'], equals(0.0));
+        }
+      });
+
+      test('computes composite score based on multiple factors', () async {
+        final now = DateTime.now();
+        final today = DateTime(now.year, now.month, now.day);
+
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: today.add(const Duration(hours: 10)), subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: true, timeSpentMs: 3000, timestamp: today.add(const Duration(hours: 11)), subjectId: 'math'),
+        ]);
+
+        final result = await tracker.getDailyTrend(1, studentId: 'student1');
+
+        expect(result.isSuccess, isTrue);
+        final entry = result.data!.first;
+        expect(entry['attempts'], equals(2));
+        expect(entry['accuracy'], equals(100));
+        final composite = entry['compositeScore'] as double;
+        expect(composite, greaterThan(0.0));
+        expect(composite, lessThanOrEqualTo(1.0));
+      });
+
+      test('returns zero-activity trend when repo fails', () async {
+        mockRepo.shouldThrow = true;
+        final result = await tracker.getDailyTrend(7, studentId: 'student1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, equals(7));
+        for (final entry in result.data!) {
+          expect(entry['attempts'], equals(0));
+          expect(entry['compositeScore'], equals(0.0));
+        }
+      });
+    });
+
     group('exportSessionHistoryCSV', () {
       test('returns CSV with session data', () async {
         final now = DateTime.now();

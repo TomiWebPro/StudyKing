@@ -1,8 +1,12 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'adapters/markscheme_adapter.dart';
+import 'adapters/question_adapter.dart';
 import 'adapters/question_evaluation_adapter.dart';
 
 void registerQuestionAdapters() {
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(QuestionAdapter());
+  }
   if (!Hive.isAdapterRegistered(12)) {
     Hive.registerAdapter(MarkschemeAdapter());
     Hive.registerAdapter(MarkSchemeStepAdapter());

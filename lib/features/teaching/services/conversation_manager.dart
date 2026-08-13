@@ -14,6 +14,7 @@ import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/data/models/learning_preference_model.dart';
 import '../data/models/evaluation_result.dart';
 import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
@@ -39,6 +40,7 @@ class ConversationManager {
   final String topicId;
   final String? scheduledSessionId;
   final DateTime sessionStartTime;
+  final LearningPreference? learningPreferences;
 
   ConversationPhase phase = ConversationPhase.greeting;
   int exerciseCount = 0;
@@ -68,6 +70,7 @@ class ConversationManager {
     Clock? clock,
     required this.localeName,
     VoiceService? voiceService,
+    this.learningPreferences,
   })  : _llmService = llmService,
         _modelId = modelId,
         _persistenceRepo = persistenceRepo,
@@ -80,6 +83,7 @@ class ConversationManager {
           maxTurns: 30,
           sessionId: sessionId,
           repository: persistenceRepo,
+          summarizer: (messages) => _summarizeMessages(messages, llmService, modelId),
         );
 
   List<ConversationMessage> get messages => _memory.getHistory();
@@ -160,14 +164,14 @@ class ConversationManager {
   }
 
   Stream<String> sendMessage(String content) async* {
-    _memory.addUserMessage(content);
+    await _memory.addUserMessage(content);
 
     if (phase == ConversationPhase.greeting) {
       _logTransition(phase, ConversationPhase.teaching, 'initial greeting');
       phase = ConversationPhase.teaching;
     } else if (phase == ConversationPhase.exercise) {
       final result = await _evaluateExerciseResponse(content);
-      _memory.addSystemMessage(
+      await _memory.addSystemMessage(
         jsonEncode({
           'type': 'evaluation',
           'score': result.score,
@@ -209,6 +213,7 @@ class ConversationManager {
       adaptivePace: adaptivePace,
       phase: phase,
       scheduledSessionId: scheduledSessionId,
+      learningPreferences: learningPreferences,
     );
 
     try {
@@ -226,14 +231,14 @@ class ConversationManager {
     } catch (e) {
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
-        _memory.addAssistantMessage(partialContent);
+        await _memory.addAssistantMessage(partialContent);
       }
       rethrow;
     }
 
     final assistantContent = buffer.toString();
     totalTokensUsed += assistantContent.length ~/ 4;
-    _memory.addAssistantMessage(assistantContent);
+    await _memory.addAssistantMessage(assistantContent);
 
     if (_pendingExerciseQuestionCapture) {
       _lastExerciseQuestion = assistantContent;
@@ -255,7 +260,7 @@ class ConversationManager {
   }
 
   Stream<String> processImage(String base64Image) async* {
-    _memory.addUserMessage('[Image submitted for analysis]');
+    await _memory.addUserMessage('[Image submitted for analysis]');
 
     if (phase == ConversationPhase.greeting) {
       _logTransition(phase, ConversationPhase.teaching, 'image submitted during greeting');
@@ -282,14 +287,14 @@ class ConversationManager {
     } catch (e) {
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
-        _memory.addAssistantMessage(partialContent);
+        await _memory.addAssistantMessage(partialContent);
       }
       rethrow;
     }
 
     final assistantContent = buffer.toString();
     totalTokensUsed += assistantContent.length ~/ 4;
-    _memory.addAssistantMessage(assistantContent);
+    await _memory.addAssistantMessage(assistantContent);
     _speakResponse(assistantContent);
   }
 
@@ -465,7 +470,33 @@ class ConversationManager {
     _memory.clear();
   }
 
-  void addAssistantMessage(String content) {
-    _memory.addAssistantMessage(content);
+  Future<void> addAssistantMessage(String content) async {
+    await _memory.addAssistantMessage(content);
+  }
+
+  static Future<String?> _summarizeMessages(
+    List<ConversationMessage> messages,
+    LlmService llmService,
+    String modelId,
+  ) async {
+    final convMaps = ConversationMemory.fromConversationMessages(messages);
+    if (convMaps.isEmpty) return null;
+
+    final messagesStr = convMaps
+        .map((m) => '[${m['role']}]: ${m['content']}')
+        .join('\n');
+
+    final result = await llmService.chat(
+      message: 'Summarise the key points from this conversation. '
+          'Be concise: list topics, questions, and decisions made.\n\n'
+          '$messagesStr',
+      modelId: modelId,
+      systemPrompt: 'You compress conversation history into a short summary '
+          'that preserves context for an AI tutor. Output 1-3 sentences.',
+      feature: 'conversation_memory_compression',
+    );
+
+    if (result.isFailure) return null;
+    return result.data;
   }
 }

@@ -38,6 +38,12 @@ const int _typeIdMilestoneModel = 25;
 const int _typeIdSource = 26;
 const int sessionTypeId = 36;
 const int _typeIdPlanAdvisorSuggestion = 37;
+const int _typeIdFlashcard = 38;
+const int _typeIdStudyGuide = 39;
+const int _typeIdConceptMap = 40;
+const int _typeIdConceptNode = 41;
+const int _typeIdConceptEdge = 42;
+const int _typeIdLearningPreference = 43;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -76,6 +82,12 @@ const List<int> _allTypeIds = [
   _typeIdStudentAvailability,
   sessionTypeId,
   _typeIdPlanAdvisorSuggestion,
+  _typeIdFlashcard,
+  _typeIdStudyGuide,
+  _typeIdConceptMap,
+  _typeIdConceptNode,
+  _typeIdConceptEdge,
+  _typeIdLearningPreference,
 ];
 
 bool _checkUniqueIds() {

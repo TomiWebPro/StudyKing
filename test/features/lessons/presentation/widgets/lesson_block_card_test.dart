@@ -62,7 +62,7 @@ void main() {
         LessonBlockCard(block: block(type: LessonBlockType.slide)),
       ));
 
-      expect(find.byIcon(Icons.slideshow), findsOneWidget);
+      expect(find.byIcon(Icons.slideshow), findsWidgets);
       expect(find.text('Slide'), findsOneWidget);
     });
 

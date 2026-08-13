@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/data/enums.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
+import '../../../../core/widgets/rich_content_renderer.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class LessonBlockCard extends StatefulWidget {
@@ -50,6 +51,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
   Widget _buildSlideCard(BuildContext context) {
     final theme = Theme.of(context);
     final cs = theme.colorScheme;
+    final slideIcon = _slideTypeIcon(widget.block.slideType);
+    final slideLabel = _slideTypeLabel(widget.block.slideType);
+    final chapterLabel = widget.block.chapterTitle;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: Semantics(
@@ -70,11 +74,11 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                 ),
                 child: Column(
                   children: [
-                    Icon(Icons.slideshow, size: 48, color: cs.onPrimaryContainer),
+                    Icon(slideIcon, size: 48, color: cs.onPrimaryContainer),
                     const SizedBox(height: 16),
-                    Text(
-                      widget.block.content,
-                      style: theme.textTheme.titleLarge?.copyWith(
+                    RichContentRenderer(
+                      content: widget.block.content,
+                      textStyle: theme.textTheme.titleLarge?.copyWith(
                         color: cs.onPrimaryContainer,
                         fontWeight: FontWeight.bold,
                       ),
@@ -88,12 +92,21 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(Icons.fullscreen, size: 16, color: cs.primary),
+                    Icon(slideIcon, size: 16, color: cs.primary),
                     const SizedBox(width: 4),
                     Text(
-                      AppLocalizations.of(context)!.blockTypeSlide,
+                      slideLabel,
                       style: theme.textTheme.bodySmall?.copyWith(color: cs.primary),
                     ),
+                    if (chapterLabel != null) ...[
+                      const SizedBox(width: 12),
+                      Icon(Icons.bookmark, size: 12, color: cs.onSurfaceVariant),
+                      const SizedBox(width: 2),
+                      Text(
+                        chapterLabel,
+                        style: theme.textTheme.bodySmall?.copyWith(color: cs.onSurfaceVariant),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -102,6 +115,36 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
         ),
       ),
     );
+  }
+
+  IconData _slideTypeIcon(SlideType? slideType) {
+    return switch (slideType) {
+      SlideType.title => Icons.title,
+      SlideType.concept => Icons.lightbulb_outline,
+      SlideType.definition => Icons.menu_book,
+      SlideType.formula => Icons.functions,
+      SlideType.example => Icons.calculate,
+      SlideType.summary => Icons.checklist,
+      SlideType.quiz => Icons.quiz,
+      SlideType.reference => Icons.library_books,
+      SlideType.tableOfContents => Icons.list,
+      null => Icons.slideshow,
+    };
+  }
+
+  String _slideTypeLabel(SlideType? slideType) {
+    return switch (slideType) {
+      SlideType.title => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      SlideType.concept => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      SlideType.definition => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      SlideType.formula => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      SlideType.example => AppLocalizations.of(context)?.blockTypeExample ?? 'Example',
+      SlideType.summary => AppLocalizations.of(context)?.blockTypeSummary ?? 'Summary',
+      SlideType.quiz => AppLocalizations.of(context)?.blockTypeQuiz ?? 'Quiz',
+      SlideType.reference => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      SlideType.tableOfContents => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+      null => AppLocalizations.of(context)?.blockTypeSlide ?? 'Slide',
+    };
   }
 
   void _showSlideFullScreenDialog(BuildContext context) {
@@ -129,26 +172,30 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                   itemCount: blocks.length,
                   itemBuilder: (context, i) {
                     final block = blocks[i];
-                    return SingleChildScrollView(
-                      padding: const EdgeInsets.all(32),
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      child: Column(
-                        children: [
-                          Text(
-                            l10n.pageIndicator(i + 1, blocks.length),
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                              color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    return InteractiveViewer(
+                      minScale: 1.0,
+                      maxScale: 4.0,
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.all(32),
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Column(
+                          children: [
+                            Text(
+                              l10n.pageIndicator(i + 1, blocks.length),
+                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                              ),
                             ),
-                          ),
-                          const SizedBox(height: 24),
-                          Text(
-                            block.content,
-                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
+                            const SizedBox(height: 24),
+                            RichContentRenderer(
+                              content: block.content,
+                              textStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
                             ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -234,9 +281,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.block.content,
-              style: theme.textTheme.bodyLarge,
+            RichContentRenderer(
+              content: widget.block.content,
+              textStyle: theme.textTheme.bodyLarge,
             ),
             const SizedBox(height: 16),
             if (!_quizSubmitted) ...[
@@ -346,9 +393,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.block.content,
-              style: theme.textTheme.bodyLarge,
+            RichContentRenderer(
+              content: widget.block.content,
+              textStyle: theme.textTheme.bodyLarge,
             ),
             const SizedBox(height: 16),
             if (!_exerciseSubmitted) ...[
@@ -428,9 +475,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.block.content,
-              style: theme.textTheme.bodyLarge?.copyWith(
+            RichContentRenderer(
+              content: widget.block.content,
+              textStyle: theme.textTheme.bodyLarge?.copyWith(
                 color: cs.onTertiaryContainer,
               ),
             ),
@@ -464,9 +511,9 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(
-              widget.block.content,
-              style: theme.textTheme.bodyLarge?.copyWith(
+            RichContentRenderer(
+              content: widget.block.content,
+              textStyle: theme.textTheme.bodyLarge?.copyWith(
                 color: cs.onPrimaryContainer,
               ),
             ),
@@ -495,7 +542,10 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
               ],
             ),
             const SizedBox(height: 12),
-            Text(widget.block.content, style: theme.textTheme.bodyLarge),
+            RichContentRenderer(
+              content: widget.block.content,
+              textStyle: theme.textTheme.bodyLarge,
+            ),
           ],
         ),
       ),

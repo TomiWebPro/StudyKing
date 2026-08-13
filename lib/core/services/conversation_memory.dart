@@ -5,17 +5,31 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 
+/// Callback that summarises a batch of older messages into a single
+/// compressed context string. Returns null if summarisation is not available.
+typedef ConversationSummarizer = Future<String?> Function(
+  List<ConversationMessage> messages,
+);
+
 class ConversationMemory {
   static final Logger _logger = const Logger('ConversationMemory');
+  static const double _compressionThreshold = 0.8;
+
   final List<ConversationMessage> messages;
   final int maxTurns;
   final String? sessionId;
   final ConversationRepository? _repository;
+  final ConversationSummarizer? _summarizer;
   bool _truncationNotified = false;
 
-  ConversationMemory({this.maxTurns = 20, this.sessionId, ConversationRepository? repository})
-      : messages = [],
-        _repository = repository;
+  ConversationMemory({
+    this.maxTurns = 20,
+    this.sessionId,
+    ConversationRepository? repository,
+    ConversationSummarizer? summarizer,
+  })  : messages = [],
+        _repository = repository,
+        _summarizer = summarizer;
 
   Future<void> _trimRepository() async {
     final repo = _repository;
@@ -36,7 +50,7 @@ class ConversationMemory {
     }
   }
 
-  void addMessage(String role, String content) {
+  Future<void> addMessage(String role, String content) async {
     final messageRole = switch (role) {
       'assistant' => MessageRole.tutor,
       'system' => MessageRole.system,
@@ -51,12 +65,78 @@ class ConversationMemory {
       timestamp: DateTime.now(),
     );
     messages.add(msg);
+
+    final threshold = (maxTurns * 2 * _compressionThreshold).toInt();
+    if (messages.length >= threshold) {
+      await _compressOldMessages();
+    }
     if (messages.length > maxTurns * 2) {
-      messages.removeRange(0, messages.length - maxTurns * 2);
+      await _dropOldestMessages();
+    }
+
+    _persistMessage(msg);
+    unawaited(_trimRepository());
+  }
+
+  Future<void> _compressOldMessages() async {
+    final summarizer = _summarizer;
+    if (summarizer == null) return;
+
+    final maxKeep = (maxTurns * 2 * 0.5).toInt();
+    if (messages.length <= maxKeep) return;
+
+    final countToSummarise = messages.length - maxKeep;
+    final toSummarise = messages.sublist(0, countToSummarise);
+
+    try {
+      final summary = await summarizer(toSummarise);
+      if (summary == null || summary.isEmpty) return;
+
+      final summaryMsg = ConversationMessage(
+        id: '${sessionId ?? 'mem'}_summary_${DateTime.now().millisecondsSinceEpoch}',
+        sessionId: sessionId ?? '',
+        role: MessageRole.system,
+        type: MessageType.system,
+        content: '[Earlier conversation summary]\n$summary',
+        timestamp: DateTime.now(),
+      );
+
+      messages.removeRange(0, countToSummarise);
+      messages.insert(0, summaryMsg);
+      _persistMessage(summaryMsg);
+
+      _logger.i('Compressed ${toSummarise.length} messages into summary');
+    } catch (e) {
+      _logger.w('Failed to compress messages: $e');
+    }
+  }
+
+  Future<void> _dropOldestMessages() async {
+    final kept = messages.length - maxTurns * 2;
+    if (kept <= 0) return;
+
+    final toDrop = messages.sublist(0, kept);
+
+    final summary = await _summarizeBatch(toDrop);
+    if (summary != null && summary.isNotEmpty) {
+      final summaryMsg = ConversationMessage(
+        id: '${sessionId ?? 'mem'}_drop_summary_${DateTime.now().millisecondsSinceEpoch}',
+        sessionId: sessionId ?? '',
+        role: MessageRole.system,
+        type: MessageType.system,
+        content: '[Earlier conversation summary]\n$summary',
+        timestamp: DateTime.now(),
+      );
+      messages.removeRange(0, kept);
+      messages.insert(0, summaryMsg);
+      _persistMessage(summaryMsg);
+      _logger.i('Summarised ${toDrop.length} dropped messages into summary');
+    } else {
+      messages.removeRange(0, kept);
       if (!_truncationNotified) {
         _truncationNotified = true;
         final truncMsg = ConversationMessage(
-          id: '${sessionId}_trunc_${DateTime.now().millisecondsSinceEpoch}',
+          id: '${sessionId ?? 'mem'}_trunc_${DateTime.now().millisecondsSinceEpoch}',
           sessionId: sessionId ?? '',
           role: MessageRole.system,
           type: MessageType.system,
@@ -67,8 +147,17 @@ class ConversationMemory {
         _persistMessage(truncMsg);
       }
     }
-    _persistMessage(msg);
-    unawaited(_trimRepository());
+  }
+
+  Future<String?> _summarizeBatch(List<ConversationMessage> messages) async {
+    final summarizer = _summarizer;
+    if (summarizer == null) return null;
+    try {
+      return await summarizer(messages);
+    } catch (e) {
+      _logger.w('Failed to summarise batch: $e');
+      return null;
+    }
   }
 
   void _persistMessage(ConversationMessage msg) {
@@ -77,9 +166,9 @@ class ConversationMemory {
     repo.saveMessage(msg);
   }
 
-  void addUserMessage(String content) => addMessage('user', content);
-  void addAssistantMessage(String content) => addMessage('assistant', content);
-  void addSystemMessage(String content) => addMessage('system', content);
+  Future<void> addUserMessage(String content) => addMessage('user', content);
+  Future<void> addAssistantMessage(String content) => addMessage('assistant', content);
+  Future<void> addSystemMessage(String content) => addMessage('system', content);
 
   List<ConversationMessage> getHistory() => List.from(messages);
 

@@ -63,6 +63,15 @@ class Source extends HiveObject {
   @HiveField(19, defaultValue: '')
   final String contentHash;
 
+  @HiveField(20, defaultValue: [])
+  final List<String> generatedFlashcardIds;
+
+  @HiveField(21, defaultValue: '')
+  final String generatedStudyGuideId;
+
+  @HiveField(22, defaultValue: '')
+  final String generatedConceptMapId;
+
   Source({
     required this.id,
     required this.title,
@@ -84,6 +93,9 @@ class Source extends HiveObject {
     this.createdAt,
     this.errorMessage = '',
     this.contentHash = '',
+    this.generatedFlashcardIds = const [],
+    this.generatedStudyGuideId = '',
+    this.generatedConceptMapId = '',
   });
 
   ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
@@ -112,6 +124,9 @@ class Source extends HiveObject {
     'createdAt': createdAt?.toIso8601String(),
     'errorMessage': errorMessage,
     'contentHash': contentHash,
+    'generatedFlashcardIds': generatedFlashcardIds,
+    'generatedStudyGuideId': generatedStudyGuideId,
+    'generatedConceptMapId': generatedConceptMapId,
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -141,6 +156,12 @@ class Source extends HiveObject {
     createdAt: json['createdAt'] != null ? DateTime.tryParse(json['createdAt'] as String) : null,
     errorMessage: json['errorMessage'] as String? ?? '',
     contentHash: json['contentHash'] as String? ?? '',
+    generatedFlashcardIds: (json['generatedFlashcardIds'] as List<dynamic>?)
+            ?.map((e) => e as String)
+            .toList() ??
+        [],
+    generatedStudyGuideId: json['generatedStudyGuideId'] as String? ?? '',
+    generatedConceptMapId: json['generatedConceptMapId'] as String? ?? '',
   );
 
   Source copyWith({
@@ -164,6 +185,9 @@ class Source extends HiveObject {
     DateTime? createdAt,
     String? errorMessage,
     String? contentHash,
+    List<String>? generatedFlashcardIds,
+    String? generatedStudyGuideId,
+    String? generatedConceptMapId,
   }) {
     return Source(
       id: id ?? this.id,
@@ -186,6 +210,9 @@ class Source extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       errorMessage: errorMessage ?? this.errorMessage,
       contentHash: contentHash ?? this.contentHash,
+      generatedFlashcardIds: generatedFlashcardIds ?? this.generatedFlashcardIds,
+      generatedStudyGuideId: generatedStudyGuideId ?? this.generatedStudyGuideId,
+      generatedConceptMapId: generatedConceptMapId ?? this.generatedConceptMapId,
     );
   }
 }

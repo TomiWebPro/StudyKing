@@ -1,0 +1,16 @@
+[Unit]
+Description=StudyKing Issue Fixer Loop
+After=network.target
+
+[Service]
+Type=simple
+Environment=PATH=/home/tomi/.opencode/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/home/tomi/Documents/StudyKing/issues/issue_loop.py
+WorkingDirectory=/home/tomi/Documents/StudyKing
+Restart=on-failure
+RestartSec=30
+StandardOutput=append:/home/tomi/Documents/StudyKing/issues/issue_loop.log
+StandardError=append:/home/tomi/Documents/StudyKing/issues/issue_loop.log
+
+[Install]
+WantedBy=default.target

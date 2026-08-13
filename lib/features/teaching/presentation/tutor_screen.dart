@@ -24,9 +24,10 @@ import 'widgets/chat_bubble.dart';
 import 'widgets/lesson_progress_bar.dart';
 import 'widgets/voice_bar.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
-import 'package:studyking/features/lessons/presentation/widgets/lesson_block_card.dart';
+import 'package:studyking/features/teaching/presentation/widgets/slides_presentation_widget.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
+import 'package:studyking/features/questions/data/models/drawing_models.dart';
 
 class TutorScreen extends ConsumerStatefulWidget {
   final String topicId;
@@ -59,8 +60,6 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   ConversationManager? _manager;
   bool _isInitialized = false;
   bool _showSlides = false;
-  int _currentSlideIndex = 0;
-  late final PageController _pageController;
   bool _isSending = false;
   bool _initError = false;
   String _initErrorMessage = '';
@@ -81,7 +80,6 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _textController = TextEditingController();
     _scrollController = ScrollController();
     _inputFocusNode = FocusNode();
-    _pageController = PageController();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _initializeTutor();
     });
@@ -249,7 +247,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       } else {
         userMessage = l10n.responseInterrupted;
       }
-      _manager!.addAssistantMessage(userMessage);
+      await _manager!.addAssistantMessage(userMessage);
       _retryMessage = text;
       setState(() {});
       _scrollToBottom();
@@ -331,7 +329,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       _logger.w('Image processing failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        _manager!.addAssistantMessage(l10n.errorWithResponse);
+        await _manager!.addAssistantMessage(l10n.errorWithResponse);
         setState(() {});
       }
     }
@@ -344,61 +342,37 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     if (_manager == null || _isSending) return;
 
     final l10n = AppLocalizations.of(context)!;
-    final drawingData = await showDialog<Uint8List>(
+    final result = await showDialog<CanvasSubmitResult>(
       context: context,
       barrierDismissible: false,
-      builder: (ctx) => Dialog(
-        insetPadding: const EdgeInsets.all(16),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(l10n.drawingCanvas, style: Theme.of(ctx).textTheme.titleMedium),
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.pop(ctx),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: CanvasDrawingWidget(
-                    onDrawingComplete: (data) => Navigator.pop(ctx, data),
-                    largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
-                    showTools: true,
-                    showColorPicker: true,
-                    showStrokeWidth: true,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+      builder: (ctx) => _DrawingCanvasDialog(
+        l10n: l10n,
+        largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
       ),
     );
 
-    if (drawingData == null || !mounted) return;
+    if (result == null || !mounted) return;
 
     setState(() => _isSending = true);
 
-    final base64Drawing = base64Encode(drawingData);
-
     try {
-      await for (final _ in _manager!.processImage(base64Drawing)) {
-        setState(() {});
-        _scrollToBottom();
+      if (result.isText && result.text != null) {
+        await for (final _ in _manager!.sendMessage(result.text!)) {
+          setState(() {});
+          _scrollToBottom();
+        }
+      } else if (result.imageData != null) {
+        final base64Drawing = base64Encode(result.imageData!);
+        await for (final _ in _manager!.processImage(base64Drawing)) {
+          setState(() {});
+          _scrollToBottom();
+        }
       }
     } catch (e) {
       _logger.w('Drawing processing failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        _manager!.addAssistantMessage(l10n.errorWithResponse);
+        await _manager!.addAssistantMessage(l10n.errorWithResponse);
         setState(() {});
       }
     }
@@ -701,7 +675,6 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _textController.dispose();
     _scrollController.dispose();
     _inputFocusNode.dispose();
-    _pageController.dispose();
     _timer?.cancel();
     _closingTimer?.cancel();
     super.dispose();
@@ -1113,56 +1086,86 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
   Widget _buildSlidesView() {
     final blocks = _lessonBlocks;
-    return Column(
-      children: [
-        Expanded(
-          child: PageView.builder(
-            controller: _pageController,
-            onPageChanged: (i) => setState(() => _currentSlideIndex = i),
-            itemCount: blocks.length,
-            itemBuilder: (context, index) {
-              return SingleChildScrollView(
-                padding: ResponsiveUtils.screenPadding(context),
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: LessonBlockCard(block: blocks[index]),
-              );
-            },
-          ),
-        ),
-        _buildSlideNavigation(blocks.length),
-      ],
+    return SlidesPresentationWidget(
+      blocks: blocks,
     );
   }
+}
 
-  Widget _buildSlideNavigation(int total) {
-    final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          IconButton(
-            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
-            tooltip: l10n.previous,
-            onPressed: _currentSlideIndex > 0
-                ? () => _pageController.previousPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    )
-                : null,
-          ),
-          Text(l10n.ofLabel(_currentSlideIndex + 1, total)),
-          IconButton(
-            icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
-            tooltip: l10n.next,
-            onPressed: _currentSlideIndex < total - 1
-                ? () => _pageController.nextPage(
-                      duration: const Duration(milliseconds: 300),
-                      curve: Curves.easeInOut,
-                    )
-                : null,
-          ),
-        ],
+class CanvasSubmitResult {
+  final Uint8List? imageData;
+  final String? text;
+  final bool isText;
+
+  const CanvasSubmitResult({
+    this.imageData,
+    this.text,
+    this.isText = false,
+  });
+}
+
+class _DrawingCanvasDialog extends StatefulWidget {
+  final AppLocalizations l10n;
+  final bool largeTouchTargets;
+
+  const _DrawingCanvasDialog({
+    required this.l10n,
+    required this.largeTouchTargets,
+  });
+
+  @override
+  State<_DrawingCanvasDialog> createState() => _DrawingCanvasDialogState();
+}
+
+class _DrawingCanvasDialogState extends State<_DrawingCanvasDialog> {
+  CanvasInputMode _inputMode = CanvasInputMode.draw;
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      insetPadding: const EdgeInsets.all(16),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(widget.l10n.drawingCanvas, style: Theme.of(context).textTheme.titleMedium),
+                IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Flexible(
+              child: SingleChildScrollView(
+                child: CanvasDrawingWidget(
+                  onDrawingComplete: (data) {
+                    Navigator.pop(context, CanvasSubmitResult(imageData: data));
+                  },
+                  onTextRecognized: (text) {
+                    Navigator.pop(context, CanvasSubmitResult(text: text, isText: true));
+                  },
+                  inputMode: _inputMode,
+                  onInputModeChanged: (mode) {
+                    setState(() {
+                      _inputMode = mode;
+                    });
+                  },
+                  largeTouchTargets: widget.largeTouchTargets,
+                  showTools: true,
+                  showColorPicker: true,
+                  showStrokeWidth: true,
+                  showInputModeSelector: true,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -186,6 +186,105 @@ class StudyProgressTracker {
     }
   }
 
+  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async {
+    try {
+      studentId ??= StudentIdService().getStudentId();
+      final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
+      final allAttempts = allAttemptsResult.data ?? [];
+
+      List<Session> allSessions = [];
+      if (_sessionRepo != null) {
+        final sessionsResult = await _sessionRepo.getByStudent(studentId);
+        if (sessionsResult.isSuccess) {
+          allSessions = sessionsResult.data ?? [];
+        }
+      }
+
+      final now = DateTime.now();
+      final today = now.dateOnly;
+      final cutoff = today.subtract(Duration(days: days - 1));
+
+      final dayMap = <DateTime, Map<String, dynamic>>{};
+      for (var i = 0; i < days; i++) {
+        final day = cutoff.add(Duration(days: i));
+        dayMap[day] = {
+          'date': day.toIso8601String(),
+          'attempts': 0,
+          'correct': 0,
+          'focusSeconds': 0,
+          'sessions': 0,
+        };
+      }
+
+      for (final a in allAttempts) {
+        final day = a.timestamp.dateOnly;
+        if (dayMap.containsKey(day)) {
+          final entry = dayMap[day]!;
+          entry['attempts'] = (entry['attempts'] as int) + 1;
+          if (a.isCorrect) {
+            entry['correct'] = (entry['correct'] as int) + 1;
+          }
+        }
+      }
+
+      for (final s in allSessions) {
+        final day = s.startTime.dateOnly;
+        if (dayMap.containsKey(day)) {
+          final entry = dayMap[day]!;
+          entry['sessions'] = (entry['sessions'] as int) + 1;
+          if (s.type == SessionType.focus) {
+            entry['focusSeconds'] =
+                (entry['focusSeconds'] as int) + (s.actualDurationMs ~/ msPerSecond);
+          }
+        }
+      }
+
+      final maxAttempts = dayMap.values
+          .map((e) => e['attempts'] as int)
+          .fold<int>(0, (a, b) => a > b ? a : b);
+      final maxFocus = dayMap.values
+          .map((e) => e['focusSeconds'] as int)
+          .fold<int>(0, (a, b) => a > b ? a : b);
+      final maxSessions = dayMap.values
+          .map((e) => e['sessions'] as int)
+          .fold<int>(0, (a, b) => a > b ? a : b);
+
+      final results = <Map<String, dynamic>>[];
+      for (final entry in dayMap.values) {
+        final attempts = entry['attempts'] as int;
+        final correct = entry['correct'] as int;
+        final focusSeconds = entry['focusSeconds'] as int;
+        final sessionCount = entry['sessions'] as int;
+        final accuracy = attempts > 0 ? correct / attempts : 0.0;
+
+        final attemptScore = maxAttempts > 0 ? attempts / maxAttempts : 0.0;
+        final accuracyScore = accuracy;
+        final focusScore = maxFocus > 0 ? focusSeconds / maxFocus : 0.0;
+        final sessionScore = maxSessions > 0 ? sessionCount / maxSessions : 0.0;
+
+        final composite = (attemptScore * 0.4 +
+                accuracyScore * 0.3 +
+                focusScore * 0.2 +
+                sessionScore * 0.1)
+            .clamp(0.0, 1.0);
+
+        results.add({
+          'date': entry['date'],
+          'attempts': attempts,
+          'accuracy': (accuracy * 100).round(),
+          'focusSeconds': focusSeconds,
+          'sessions': sessionCount,
+          'compositeScore': composite,
+        });
+      }
+
+      return Result.success(results);
+    } catch (e) {
+      _logger.w('getDailyTrend failed: $e');
+      return Result.failure('StudyProgressTracker.getDailyTrend: $e');
+    }
+  }
+
   double _calculateImprovement(
     List<dynamic> currentWeek,
     Map<String, dynamic> previousWeek,

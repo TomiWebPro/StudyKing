@@ -10,6 +10,7 @@ import '../conversation_memory.dart';
 export '../conversation_memory.dart' show ConversationMemory;
 import '../llm_task_manager.dart';
 import '../llm_usage_meter.dart' show LlmUsageMeter;
+import 'llm_response_cache.dart' show LlmResponseCache;
 
 enum LlmProvider { openRouter, ollama, openAI, custom }
 
@@ -104,6 +105,7 @@ class LlmService {
   final http.Client _httpClient;
   final LlmTaskManager? _taskManager;
   final LlmUsageMeter? _usageMeter;
+  final LlmResponseCache? _cache;
 
   /// Client-side throttling: minimum 500ms between calls (B3)
   DateTime _lastCallTime = DateTime.now().subtract(const Duration(seconds: 1));
@@ -133,9 +135,11 @@ class LlmService {
     http.Client? httpClient,
     LlmTaskManager? taskManager,
     LlmUsageMeter? usageMeter,
+    LlmResponseCache? cache,
   }) : _httpClient = httpClient ?? http.Client(),
        _taskManager = taskManager,
-       _usageMeter = usageMeter;
+       _usageMeter = usageMeter,
+       _cache = cache;
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
 
@@ -238,6 +242,7 @@ class LlmService {
       httpClient: _httpClient,
       taskManager: _taskManager,
       usageMeter: _usageMeter,
+      cache: _cache,
     );
     yield* backupService.chatStream(
       message: message,
@@ -293,6 +298,7 @@ class LlmService {
           httpClient: _httpClient,
           taskManager: _taskManager,
           usageMeter: _usageMeter,
+          cache: _cache,
         );
         return await backupService.chat(
           message: message,
@@ -327,7 +333,13 @@ class LlmService {
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
-    return await _callWithFallback(
+    final cached = _cache?.get(modelId, effectiveSystemPrompt, message);
+    if (cached != null) {
+      _logger.w('Cache hit for feature=$feature, model=$modelId');
+      return Result.success(cached);
+    }
+
+    final result = await _callWithFallback(
       message: message,
       modelId: modelId,
       systemPrompt: effectiveSystemPrompt,
@@ -354,6 +366,13 @@ class LlmService {
         }
       },
     );
+
+    if (result.isSuccess) {
+      final ttl = _cache?.ttlForFeature(feature) ?? const Duration(minutes: 10);
+      _cache?.set(modelId, effectiveSystemPrompt, message, result.data!, ttl: ttl);
+    }
+
+    return result;
   }
 
   Stream<String> chatStream({
@@ -376,6 +395,14 @@ class LlmService {
 
     final effectiveSystemPrompt = systemPrompt ?? defaultSystemPromptForLocale(localeName);
 
+    final cached = _cache?.get(modelId, effectiveSystemPrompt, message);
+    if (cached != null) {
+      _logger.w('Cache hit (stream) for feature=$feature, model=$modelId');
+      yield cached;
+      return;
+    }
+
+    String fullContent = '';
     yield* _streamWithFallback(
       message: message,
       modelId: modelId,
@@ -402,6 +429,20 @@ class LlmService {
             return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
         }
       },
+    ).transform(
+      StreamTransformer<String, String>.fromHandlers(
+        handleData: (data, sink) {
+          fullContent += data;
+          sink.add(data);
+        },
+        handleDone: (sink) {
+          if (fullContent.isNotEmpty) {
+            final ttl = _cache?.ttlForFeature(feature) ?? const Duration(minutes: 10);
+            _cache?.set(modelId, effectiveSystemPrompt, message, fullContent, ttl: ttl);
+          }
+          sink.close();
+        },
+      ),
     );
   }
 

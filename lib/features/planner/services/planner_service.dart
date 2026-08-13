@@ -667,4 +667,19 @@ class PlannerService {
       return Result.failure(e.toString());
     }
   }
+
+  Future<Result<void>> extendPlan(int extraDays) async {
+    return planService.extendPlan(studentId, extraDays);
+  }
+
+  Future<Result<void>> redistributeMissedWorkload(
+    int missedMinutes, {
+    String strategy = 'days:3',
+  }) {
+    return planService.redistributeMissedWorkloadForStudent(
+      studentId,
+      missedMinutes,
+      strategy: strategy,
+    );
+  }
 }

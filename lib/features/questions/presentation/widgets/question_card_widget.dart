@@ -4,6 +4,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
 import '../../../../core/utils/responsive.dart';
+import '../../../../core/widgets/rich_content_renderer.dart';
 import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
@@ -132,9 +133,9 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
               ),
               const SizedBox(height: 16),
 
-                Text(
-                  widget.question.text,
-                  style: Theme.of(context).textTheme.titleMedium,
+                RichContentRenderer(
+                  content: widget.question.text,
+                  textStyle: Theme.of(context).textTheme.titleMedium,
                 ),
               const SizedBox(height: 16),
 

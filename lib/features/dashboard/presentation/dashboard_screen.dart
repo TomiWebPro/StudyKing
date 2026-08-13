@@ -20,11 +20,12 @@ import 'package:studyking/features/dashboard/presentation/widgets/summary_row.da
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
 import 'package:studyking/features/dashboard/presentation/screens/topic_detail_screen.dart';
-import 'package:studyking/features/dashboard/presentation/widgets/weekly_chart.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/daily_activity_heatmap.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/due_reviews_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/workload_card.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/learning_insights_card.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/syllabus_progress_card.dart';
@@ -74,8 +75,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final snapshotAsync = ref.watch(dashboardMasterySnapshotProvider(studentId));
     final overallStatsAsync =
         ref.watch(dashboardOverallStatsProvider(studentId));
-    final weeklyTrendAsync =
-        ref.watch(dashboardWeeklyTrendProvider(studentId));
+    final dailyTrendAsync =
+        ref.watch(dashboardDailyTrendProvider(studentId));
     final focusStatsAsync =
         ref.watch(dashboardFocusStatsProvider(studentId));
     final adherenceAsync =
@@ -90,11 +91,13 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
         ref.watch(dashboardChecklistProgressProvider(studentId));
     final lastFocusSessionAsync =
         ref.watch(dashboardLastFocusSessionProvider(studentId));
+    final learningInsightsAsync =
+        ref.watch(dashboardLearningInsightsProvider(studentId));
 
     final allMasteryData = allMasteryAsync.valueOrNull ?? [];
     final snapshotData = snapshotAsync.valueOrNull;
     final overallStatsData = overallStatsAsync.valueOrNull;
-    final weeklyTrendData = weeklyTrendAsync.valueOrNull ?? [];
+    final dailyTrendData = dailyTrendAsync.valueOrNull ?? [];
     final focusStatsData = focusStatsAsync.valueOrNull;
     final adherenceData =
         adherenceAsync.valueOrNull ?? const AdherenceData();
@@ -103,11 +106,12 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     final workloadData = workloadAsync.valueOrNull;
     final dueReviewsData = dueReviewsAsync.valueOrNull;
     final lastFocusSession = lastFocusSessionAsync.valueOrNull;
+    final learningInsightsData = learningInsightsAsync.valueOrNull;
 
     final hasAnyData = allMasteryData.isNotEmpty ||
         snapshotData != null ||
         overallStatsData != null ||
-        weeklyTrendData.isNotEmpty ||
+        dailyTrendData.isNotEmpty ||
         focusStatsData != null ||
         !adherenceData.isEmpty ||
         topicNamesData.isNotEmpty ||
@@ -117,7 +121,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final isLoading = overallStatsAsync.isLoading ||
         snapshotAsync.isLoading ||
-        weeklyTrendAsync.isLoading ||
+        dailyTrendAsync.isLoading ||
         focusStatsAsync.isLoading ||
         adherenceAsync.isLoading ||
         topicNamesAsync.isLoading ||
@@ -265,16 +269,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   ),
                   SizedBox(height: vs),
                   DashboardCard(
-                    asyncValue: weeklyTrendAsync,
+                    asyncValue: dailyTrendAsync,
                     onRetry:
-                        _onRetry(dashboardWeeklyTrendProvider(studentId)),
+                        _onRetry(dashboardDailyTrendProvider(studentId)),
                     errorWidget: ErrorRetryWidget(
                       message: l10n.somethingWentWrong,
                       onRetry:
-                          _onRetry(dashboardWeeklyTrendProvider(studentId)),
+                          _onRetry(dashboardDailyTrendProvider(studentId)),
                     ),
                     loadingSkeleton: _cardSkeleton(context),
-                    body: WeeklyChart(weeklyTrend: weeklyTrendData),
+                    body: DailyActivityHeatmap(dailyTrend: dailyTrendData),
                   ),
                   SizedBox(height: vs),
                   DashboardCard(
@@ -455,6 +459,21 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     loadingSkeleton: _cardSkeleton(context),
                     body: BadgesCard(badges: badgesData),
                   ),
+                  if (learningInsightsData != null) ...[
+                    SizedBox(height: vs),
+                    DashboardCard(
+                      asyncValue: learningInsightsAsync,
+                      onRetry:
+                          _onRetry(dashboardLearningInsightsProvider(studentId)),
+                      errorWidget: ErrorRetryWidget(
+                        message: l10n.somethingWentWrong,
+                        onRetry:
+                            _onRetry(dashboardLearningInsightsProvider(studentId)),
+                      ),
+                      loadingSkeleton: _cardSkeleton(context),
+                      body: LearningInsightsCard(insights: learningInsightsData),
+                    ),
+                  ],
                 ],
               ],
             ],

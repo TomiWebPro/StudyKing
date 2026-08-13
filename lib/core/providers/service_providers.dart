@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/core/services/handwriting_recognition_service.dart';
+import 'package:studyking/core/services/learning_method_analytics_service.dart';
 
 final voiceServiceProvider = Provider<VoiceService>((ref) {
   return VoiceService();
@@ -8,6 +10,11 @@ final voiceServiceProvider = Provider<VoiceService>((ref) {
 
 final studentIdServiceProvider = Provider<StudentIdService>((ref) {
   return StudentIdService();
+});
+
+final handwritingRecognitionServiceProvider =
+    Provider<HandwritingRecognitionService>((ref) {
+  return HandwritingRecognitionService();
 });
 
 final studentIdProvider = FutureProvider<String>((ref) async {
@@ -18,4 +25,11 @@ final studentIdProvider = FutureProvider<String>((ref) async {
 
 final studentIdValueProvider = Provider<String>((ref) {
   return ref.watch(studentIdProvider).valueOrNull ?? '';
+});
+
+final learningMethodAnalyticsServiceProvider =
+    Provider<LearningMethodAnalyticsService>((ref) {
+  final service = LearningMethodAnalyticsService();
+  service.init();
+  return service;
 });

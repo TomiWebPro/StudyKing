@@ -87,16 +87,19 @@ class _FakeAttemptRepo extends AttemptRepository {
 class _FakeProgressTracker extends StudyProgressTracker {
   final Map<String, dynamic>? _overallStats;
   final List<Map<String, dynamic>> _weeklyTrend;
+  final List<Map<String, dynamic>> _dailyTrend;
   final List<Map<String, dynamic>> _badges;
   final bool _failGetBadges;
 
   _FakeProgressTracker({
     Map<String, dynamic>? overallStats,
     List<Map<String, dynamic>> weeklyTrend = const [],
+    List<Map<String, dynamic>> dailyTrend = const [],
     List<Map<String, dynamic>> badges = const [],
     bool failGetBadges = false,
   })  : _overallStats = overallStats,
         _weeklyTrend = weeklyTrend,
+        _dailyTrend = dailyTrend,
         _badges = badges,
         _failGetBadges = failGetBadges,
         super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
@@ -119,6 +122,12 @@ class _FakeProgressTracker extends StudyProgressTracker {
   Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
       {String? studentId}) async {
     return Result.success(_weeklyTrend);
+  }
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days,
+      {String? studentId}) async {
+    return Result.success(_dailyTrend);
   }
 
   @override
@@ -915,6 +924,53 @@ void main() {
       final result = await container.read(dashboardChecklistProgressProvider('s1').future);
       expect(result, isA<ChecklistProgress>());
       expect(result.isEmpty, isTrue);
+    });
+  });
+
+  group('dashboardDailyTrendProvider', () {
+    test('returns list of DailyTrendEntry from tracker', () async {
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final tracker = _FakeProgressTracker(dailyTrend: [
+        {
+          'date': today.toIso8601String(),
+          'attempts': 5,
+          'accuracy': 80,
+          'focusSeconds': 300,
+          'sessions': 2,
+          'compositeScore': 0.75,
+        },
+        {
+          'date': today.subtract(const Duration(days: 1)).toIso8601String(),
+          'attempts': 0,
+          'accuracy': 0,
+          'focusSeconds': 0,
+          'sessions': 0,
+          'compositeScore': 0.0,
+        },
+      ]);
+      final container = _createContainer(tracker: tracker);
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDailyTrendProvider('s1').future);
+      expect(result.length, 2);
+      expect(result[0].attempts, 5);
+      expect(result[0].accuracy, 80.0);
+      expect(result[0].compositeScore, 0.75);
+      expect(result[1].attempts, 0);
+      expect(result[1].compositeScore, 0.0);
+    });
+
+    test('returns empty list when tracker fails', () async {
+      final container = ProviderContainer(
+        overrides: [
+          dashboardInitProvider.overrideWith((ref) => Future.value()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardDailyTrendProvider('s1').future);
+      expect(result, isEmpty);
     });
   });
 }

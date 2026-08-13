@@ -10,11 +10,11 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/providers/service_providers.dart';
+import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
-import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show contentPipelineProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class UploadScreen extends ConsumerStatefulWidget {
@@ -93,7 +93,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles(
+      final result = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: [
           'pdf', 'txt', 'md', 'jpg', 'jpeg', 'png', 'docx', 'epub',
@@ -245,17 +245,18 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           return;
         }
 
-        final isImageOrAudio = sourceType == SourceType.image ||
-            sourceType == SourceType.audio ||
+        final isImage = sourceType == SourceType.image;
+        final isAudioOrVideo = sourceType == SourceType.audio ||
             sourceType == SourceType.video;
-        if (isImageOrAudio && resolvedModelId.isNotEmpty && mounted) {
+        final asrEngine = ref.read(whisperAsrEngineProvider);
+        final hasAsrEngine = asrEngine.isAvailable;
+        final shouldWarn = isImage || (isAudioOrVideo && !hasAsrEngine);
+        if (shouldWarn && resolvedModelId.isNotEmpty && mounted) {
           final proceed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
               title: Text(l10n.modelCapabilityWarningTitle),
-              content: Text(isImageOrAudio
-                  ? l10n.modelCapabilityWarningBody
-                  : l10n.modelCapabilityWarningBody),
+              content: Text(l10n.modelCapabilityWarningBody),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(ctx, false),

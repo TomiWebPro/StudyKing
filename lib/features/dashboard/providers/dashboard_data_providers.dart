@@ -19,6 +19,7 @@ import 'package:studyking/features/questions/providers/question_providers.dart' 
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart' show SyllabusGoal;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/core/providers/service_providers.dart' show learningMethodAnalyticsServiceProvider;
 
 final _dashboardLogger = const Logger('DashboardDataProviders');
 
@@ -77,6 +78,28 @@ final dashboardWeeklyTrendProvider =
     return trend.map((m) => WeeklyTrendEntry.fromMap(m)).toList();
   } catch (e) {
     _dashboardLogger.w('Failed to get weekly trend', e);
+    return [];
+  }
+});
+
+final dashboardDailyTrendProvider =
+    FutureProvider.family<List<DailyTrendEntry>, String>(
+        (ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final tracker = ref.watch(dashboardStudyProgressTrackerProvider);
+    final result = await tracker.getDailyTrend(365, studentId: studentId);
+    final trend = result.data ?? [];
+    return trend.map((m) => DailyTrendEntry(
+      date: DateTime.parse(m['date'] as String),
+      attempts: m['attempts'] as int? ?? 0,
+      accuracy: (m['accuracy'] as num?)?.toDouble() ?? 0.0,
+      focusSeconds: m['focusSeconds'] as int? ?? 0,
+      sessions: m['sessions'] as int? ?? 0,
+      compositeScore: (m['compositeScore'] as num?)?.toDouble() ?? 0.0,
+    )).toList();
+  } catch (e) {
+    _dashboardLogger.w('Failed to get daily trend', e);
     return [];
   }
 });
@@ -305,6 +328,22 @@ final dashboardLastFocusSessionProvider =
     return result.data;
   } catch (e) {
     _dashboardLogger.w('Failed to load last focus session', e);
+    return null;
+  }
+});
+
+final dashboardLearningInsightsProvider =
+    FutureProvider.family<Map<String, dynamic>?, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final analyticsService = ref.watch(learningMethodAnalyticsServiceProvider);
+    final result = await analyticsService.getLearningInsights(studentId);
+    if (result.isSuccess) {
+      return result.data;
+    }
+    return null;
+  } catch (e) {
+    _dashboardLogger.w('Failed to get learning insights', e);
     return null;
   }
 });

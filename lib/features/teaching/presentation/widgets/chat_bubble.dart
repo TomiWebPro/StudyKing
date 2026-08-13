@@ -4,6 +4,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import '../../../../core/widgets/rich_content_renderer.dart';
 import '../../../../l10n/generated/app_localizations.dart';
 
 class ChatBubble extends StatelessWidget {
@@ -127,9 +128,9 @@ class ChatBubble extends StatelessWidget {
       return _buildEvaluationContent(context, content);
     }
 
-    final textWidget = Text(
-      content,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+    final textWidget = RichContentRenderer(
+      content: content,
+      textStyle: Theme.of(context).textTheme.bodyMedium?.copyWith(
             color: message.role == MessageRole.student
                 ? Theme.of(context).colorScheme.onPrimaryContainer
                 : Theme.of(context).colorScheme.onSurface,

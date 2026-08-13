@@ -5,21 +5,40 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class TranscriptionSegment {
+  final String text;
+  final double startSeconds;
+  final double endSeconds;
+  final double confidence;
+
+  const TranscriptionSegment({
+    required this.text,
+    required this.startSeconds,
+    required this.endSeconds,
+    required this.confidence,
+  });
+}
 
 class TranscriptionResult {
   final String text;
   final int? durationSeconds;
   final String extractionMethod;
   final String? errorMessage;
+  final double? confidence;
+  final List<TranscriptionSegment>? segments;
 
   const TranscriptionResult({
     required this.text,
     this.durationSeconds,
     required this.extractionMethod,
     this.errorMessage,
+    this.confidence,
+    this.segments,
   });
 
   bool get isError => errorMessage != null;
@@ -30,6 +49,7 @@ class TranscriptionExtractor {
   final String _modelId;
   final http.Client _httpClient;
   final String _localeName;
+  final AsrEngine? _asrEngine;
   static final Logger _logger = const Logger('TranscriptionExtractor');
 
   TranscriptionExtractor({
@@ -37,10 +57,12 @@ class TranscriptionExtractor {
     required String modelId,
     http.Client? httpClient,
     required String localeName,
+    AsrEngine? asrEngine,
   })  : _llmService = llmService,
         _modelId = modelId,
         _httpClient = httpClient ?? http.Client(),
-        _localeName = localeName {
+        _localeName = localeName,
+        _asrEngine = asrEngine {
     if (modelId.isEmpty) {
       _logger.w('TranscriptionExtractor created with empty modelId - LLM transcription will fail');
     }
@@ -57,13 +79,7 @@ class TranscriptionExtractor {
     }
 
     if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
-      if (_llmService != null) {
-        return _transcribeWithLlm(effectiveUrl);
-      }
-      return TranscriptionResult(
-        text: '',
-        extractionMethod: 'audio_url_no_llm',
-      );
+      return _transcribeUrl(effectiveUrl, isVideo: false);
     }
 
     if (_llmService != null && rawContent.length > 20) {
@@ -83,7 +99,7 @@ class TranscriptionExtractor {
     final effectiveUrl = sourceUrl ?? rawContent;
 
     if (effectiveUrl.contains('youtube.com') || effectiveUrl.contains('youtu.be')) {
-      return _fetchYouTubeTranscript(effectiveUrl);
+      return _transcribeYouTube(effectiveUrl);
     }
 
     if (effectiveUrl.startsWith('file://')) {
@@ -91,13 +107,7 @@ class TranscriptionExtractor {
     }
 
     if (effectiveUrl.startsWith('http://') || effectiveUrl.startsWith('https://')) {
-      if (_llmService != null) {
-        return _transcribeWithLlm(effectiveUrl);
-      }
-      return TranscriptionResult(
-        text: '',
-        extractionMethod: 'video_url_no_llm',
-      );
+      return _transcribeUrl(effectiveUrl, isVideo: true);
     }
 
     if (_llmService != null && rawContent.length > 20) {
@@ -125,6 +135,15 @@ class TranscriptionExtractor {
           extractionMethod: 'file_not_found',
         );
       }
+
+      if (_asrEngine != null && _asrEngine.isAvailable) {
+        final asrResult = await _asrEngine.transcribeFile(filePath: filePath);
+        if (asrResult.text.isNotEmpty) {
+          return asrResult;
+        }
+        _logger.w('ASR returned empty result for $filePath, falling back to LLM');
+      }
+
       final bytes = await file.readAsBytes();
       final base64Str = base64Encode(bytes);
       if (_llmService != null) {
@@ -141,6 +160,33 @@ class TranscriptionExtractor {
         extractionMethod: 'file_read_error',
       );
     }
+  }
+
+  Future<TranscriptionResult> _transcribeUrl(
+    String url, {
+    bool isVideo = false,
+  }) async {
+    final prefix = isVideo ? 'video' : 'audio';
+
+    if (_llmService != null) {
+      return _transcribeWithLlm(url);
+    }
+    return TranscriptionResult(
+      text: '',
+      extractionMethod: '${prefix}_url_no_llm',
+    );
+  }
+
+  Future<TranscriptionResult> _transcribeYouTube(String url) async {
+    final youtubeResult = await _fetchYouTubeTranscript(url);
+    if (youtubeResult.text.isNotEmpty) {
+      return youtubeResult;
+    }
+
+    if (_llmService != null) {
+      return _transcribeWithLlm('YouTube URL: $url');
+    }
+    return youtubeResult;
   }
 
   Future<TranscriptionResult> _fetchYouTubeTranscript(String url) async {
@@ -354,5 +400,9 @@ class TranscriptionExtractor {
 
   void dispose() {
     _httpClient.close();
+    final asrEngine = _asrEngine;
+    if (asrEngine is WhisperApiAsrEngine) {
+      asrEngine.dispose();
+    }
   }
 }

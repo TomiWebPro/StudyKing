@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/llm_response_cache.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/providers/app_providers.dart';
@@ -16,6 +17,12 @@ final llmUsageMeterProvider = Provider<LlmUsageMeter>((ref) {
   return meter;
 });
 
+final llmResponseCacheProvider = Provider<LlmResponseCache>((ref) {
+  final cache = LlmResponseCache();
+  cache.init();
+  return cache;
+});
+
 final backupLlmProviderProvider = StateProvider<LlmProvider>((ref) => LlmProvider.openRouter);
 
 final backupApiKeyProvider = StateProvider<String>((ref) => '');
@@ -30,6 +37,7 @@ final llmServiceProvider = Provider<LlmService>((ref) {
   final llmProvider = ref.watch(llmProviderProvider);
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
+  final cache = ref.watch(llmResponseCacheProvider);
   final backupProvider = ref.watch(backupLlmProviderProvider);
   final backupApiKey = ref.watch(backupApiKeyProvider);
   final backupBaseUrl = ref.watch(backupBaseUrlProvider);
@@ -46,6 +54,7 @@ final llmServiceProvider = Provider<LlmService>((ref) {
     ),
     taskManager: taskManager,
     usageMeter: usageMeter,
+    cache: cache,
   );
 });
 

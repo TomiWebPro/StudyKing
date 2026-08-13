@@ -17,7 +17,7 @@ class SummaryRow extends StatelessWidget {
     final stats = overallStats ?? const OverallStats();
     final accuracy = stats.accuracy;
     final totalHours = stats.totalStudyTimeHours.toDouble();
-    final weeklyActivity = stats.weeklyActivity;
+    final dailyActivity = stats.dailyActivity;
     final topicsStudied = stats.topicsStudied;
     final bp = ResponsiveUtils.breakpointOf(context);
 
@@ -77,8 +77,8 @@ class SummaryRow extends StatelessWidget {
               width: itemWidth,
               child: MetricCard(
                 icon: Icons.trending_up,
-                value: '$weeklyActivity',
-                label: l10n.weeklyActivity,
+                value: '$dailyActivity',
+                label: l10n.dailyActivity,
                 accent: Theme.of(context).colorScheme.tertiary,
               ),
             ),

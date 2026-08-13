@@ -3740,6 +3740,36 @@ abstract class AppLocalizations {
   /// **'Weekly Activity'**
   String get weeklyActivity;
 
+  /// Label for daily activity metric in summary row
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get dailyActivity;
+
+  /// Title for the daily activity heatmap card
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Activity'**
+  String get heatmapTitle;
+
+  /// Tooltip for heatmap cells with no activity
+  ///
+  /// In en, this message translates to:
+  /// **'No activity'**
+  String get heatmapNoActivity;
+
+  /// Tooltip text for a heatmap cell
+  ///
+  /// In en, this message translates to:
+  /// **'{date}: {attempts} questions, {accuracy}% accuracy, {focusTime} focus, {sessions} sessions'**
+  String heatmapTooltip(
+    String date,
+    int attempts,
+    int accuracy,
+    String focusTime,
+    int sessions,
+  );
+
   /// Label for topics count metric
   ///
   /// In en, this message translates to:
@@ -6137,7 +6167,7 @@ abstract class AppLocalizations {
   /// Label for Spanish language option
   ///
   /// In en, this message translates to:
-  /// **'Spanish'**
+  /// **'Español'**
   String get localeEs;
 
   /// Onboarding dialog title
@@ -6566,6 +6596,54 @@ abstract class AppLocalizations {
   /// **'Failed to create plan'**
   String get toolCreatePlanFail;
 
+  /// Error message when an invalid modify_plan action is provided
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid modification action. Supported actions are: adjust_pace, extend, redistribute, change_targets.'**
+  String get toolModifyPlanInvalidAction;
+
+  /// Generic error message when plan modification fails
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to modify the plan. Please try again.'**
+  String get toolModifyPlanError;
+
+  /// Error message when no active plan exists to modify
+  ///
+  /// In en, this message translates to:
+  /// **'No active plan found. Please create a plan first.'**
+  String get toolModifyPlanNoPlan;
+
+  /// Error message when a required parameter is missing
+  ///
+  /// In en, this message translates to:
+  /// **'Missing required parameter: {param}.'**
+  String toolModifyPlanMissingParam(String param);
+
+  /// Success message when plan pace is adjusted
+  ///
+  /// In en, this message translates to:
+  /// **'Plan pace adjusted to {minutes} minutes per day.'**
+  String toolModifyPlanPaceAdjusted(int minutes);
+
+  /// Success message when plan is extended
+  ///
+  /// In en, this message translates to:
+  /// **'Plan extended by {added} days. New total duration: {total} days.'**
+  String toolModifyPlanExtended(int added, int total);
+
+  /// Success message when missed workload is redistributed
+  ///
+  /// In en, this message translates to:
+  /// **'Redistributed {minutes} minutes of missed work using {strategy} strategy.'**
+  String toolModifyPlanRedistributed(int minutes, String strategy);
+
+  /// Success message when daily targets are changed
+  ///
+  /// In en, this message translates to:
+  /// **'Daily targets updated successfully.'**
+  String get toolModifyPlanTargetsChanged;
+
   /// Message when the session to reschedule is not found
   ///
   /// In en, this message translates to:
@@ -6615,7 +6693,7 @@ abstract class AppLocalizations {
   /// Instruction prompt for AI tutor
   ///
   /// In en, this message translates to:
-  /// **'Guidelines:\n- {timeContext}\n- {paceContext}\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning'**
+  /// **'Guidelines:\n- {timeContext}\n- {paceContext}\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning\n- When writing mathematical expressions, use LaTeX notation with \$...\$ for inline math and \$\$...\$\$ for display math'**
   String tutorInstructionPrompt(String timeContext, String paceContext);
 
   /// System prompt for lesson summary generation

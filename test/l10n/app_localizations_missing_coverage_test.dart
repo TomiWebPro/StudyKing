@@ -348,7 +348,7 @@ void main() {
       expect(l10n.boldText, 'Bold Text');
       expect(l10n.boldTextDescription, 'Use bold font weight for text throughout the app');
       expect(l10n.localeEn, 'English');
-      expect(l10n.localeEs, 'Spanish');
+      expect(l10n.localeEs, 'Español');
       expect(l10n.signOutClearList, 'What will be cleared:');
       expect(l10n.signOutClearsAiModel, 'Selected AI model');
       expect(l10n.signOutClearsApiKey, 'API key');

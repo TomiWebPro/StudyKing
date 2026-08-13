@@ -9,25 +9,34 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/questions/data/models/drawing_models.dart';
 import 'package:studyking/features/questions/presentation/painters/drawing_painter.dart';
 import 'package:studyking/features/questions/presentation/painters/grid_painter.dart';
+import 'package:studyking/core/services/handwriting_recognition_service.dart';
 
 class CanvasDrawingWidget extends StatefulWidget {
   final String? instruction;
   final ValueChanged<Uint8List> onDrawingComplete;
+  final ValueChanged<String>? onTextRecognized;
+  final CanvasInputMode? inputMode;
+  final ValueChanged<CanvasInputMode>? onInputModeChanged;
   final String? initialDrawing;
   final bool largeTouchTargets;
   final bool showTools;
   final bool showColorPicker;
   final bool showStrokeWidth;
+  final bool showInputModeSelector;
 
   const CanvasDrawingWidget({
     super.key,
     this.instruction,
     required this.onDrawingComplete,
+    this.onTextRecognized,
+    this.inputMode,
+    this.onInputModeChanged,
     this.initialDrawing,
     this.largeTouchTargets = false,
     this.showTools = false,
     this.showColorPicker = false,
     this.showStrokeWidth = false,
+    this.showInputModeSelector = false,
   });
 
   @override
@@ -43,10 +52,15 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   bool _isDrawing = false;
   bool _isSaving = false;
   String? _saveMessage;
+  String _recognizedText = '';
+  double _recognitionConfidence = 0.0;
 
   DrawingTool _currentTool = DrawingTool.freehand;
   Color _currentColor = Colors.black;
   double _currentStrokeWidth = 3.0;
+  CanvasInputMode _currentInputMode = CanvasInputMode.draw;
+
+  HandwritingRecognitionService? _recognitionService;
 
   static const List<Color> _presetColors = [
     Colors.black,
@@ -63,10 +77,31 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   static const double _mediumWidth = 4.0;
   static const double _thickWidth = 7.0;
 
+  CanvasInputMode get _effectiveInputMode => widget.inputMode ?? _currentInputMode;
+
   @override
   void initState() {
     super.initState();
     _loadInitialDrawing();
+    _initRecognitionService();
+  }
+
+  void _initRecognitionService() {
+    _recognitionService = HandwritingRecognitionService();
+    _recognitionService!.recognizedText.listen((result) {
+      if (mounted) {
+        setState(() {
+          _recognizedText = result.recognizedText;
+          _recognitionConfidence = result.confidence;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _recognitionService?.dispose();
+    super.dispose();
   }
 
   @override
@@ -76,6 +111,8 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        if (widget.showInputModeSelector)
+          _buildInputModeSelector(l10n),
         if (widget.instruction != null)
           Semantics(
             header: true,
@@ -114,13 +151,67 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                         canvasBackgroundColor: Theme.of(context).colorScheme.surface,
                       ),
                     ),
+                    if (_effectiveInputMode != CanvasInputMode.draw && _recognizedText.isNotEmpty)
+                      Positioned(
+                        left: 8,
+                        bottom: 8,
+                        right: 8,
+                        child: Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Theme.of(context).colorScheme.outline),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _effectiveInputMode == CanvasInputMode.handwriteMath
+                                    ? 'LaTeX: $_recognizedText'
+                                    : _recognizedText,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                  fontFamily: _effectiveInputMode == CanvasInputMode.handwriteMath ? 'monospace' : null,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              Row(
+                                children: [
+                                  Icon(
+                                    _recognitionConfidence > 0.6
+                                        ? Icons.check_circle
+                                        : Icons.help_outline,
+                                    size: 12,
+                                    color: _recognitionConfidence > 0.6
+                                        ? Colors.green
+                                        : Colors.orange,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '${(_recognitionConfidence * 100).round()}% confidence',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     if (isEmpty && !_isDrawing)
                       Semantics(
                         label: l10n.canvasIsEmpty,
                         excludeSemantics: true,
                         child: Center(
                           child: Text(
-                            l10n.drawHere,
+                            _effectiveInputMode == CanvasInputMode.draw
+                                ? l10n.drawHere
+                                : 'Write here',
                             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16),
                           ),
                         ),
@@ -164,7 +255,9 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                 onPressed: (isEmpty || _isSaving) ? null : _handleSave,
                 child: _isSaving
                     ? ResponsiveUtils.loaderInTouchTarget(size: 16)
-                    : Text(l10n.saveDrawing),
+                    : Text(_effectiveInputMode == CanvasInputMode.draw
+                        ? l10n.saveDrawing
+                        : 'Submit Text'),
               ),
             ),
             if (_saveMessage != null) ...[
@@ -174,6 +267,43 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
           ],
         ),
       ],
+    );
+  }
+
+  Widget _buildInputModeSelector(AppLocalizations l10n) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: SegmentedButton<CanvasInputMode>(
+        segments: const [
+          ButtonSegment<CanvasInputMode>(
+            value: CanvasInputMode.draw,
+            label: Text('Draw'),
+            icon: Icon(Icons.brush, size: 16),
+          ),
+          ButtonSegment<CanvasInputMode>(
+            value: CanvasInputMode.handwriteText,
+            label: Text('Text'),
+            icon: Icon(Icons.text_fields, size: 16),
+          ),
+          ButtonSegment<CanvasInputMode>(
+            value: CanvasInputMode.handwriteMath,
+            label: Text('Math'),
+            icon: Icon(Icons.functions, size: 16),
+          ),
+        ],
+        selected: {_effectiveInputMode},
+        onSelectionChanged: (selected) {
+          if (selected.isNotEmpty) {
+            final mode = selected.first;
+            setState(() {
+              _currentInputMode = mode;
+              _recognizedText = '';
+              _recognitionConfidence = 0.0;
+            });
+            widget.onInputModeChanged?.call(mode);
+          }
+        },
+      ),
     );
   }
 
@@ -369,6 +499,21 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
         }
       }
     });
+    _triggerRecognition();
+  }
+
+  void _triggerRecognition() {
+    if (_effectiveInputMode == CanvasInputMode.draw) return;
+    if (_strokes.isEmpty) return;
+
+    final mode = _effectiveInputMode == CanvasInputMode.handwriteMath
+        ? RecognitionMode.math
+        : RecognitionMode.text;
+
+    final result = _recognitionService?.recognizeStrokes(_strokes, mode);
+    if (result != null && result.recognizedText.isNotEmpty) {
+      widget.onTextRecognized?.call(result.recognizedText);
+    }
   }
 
   void _saveToUndo() {
@@ -433,8 +578,18 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       _saveMessage = null;
     });
     try {
-      final data = await _generateDrawingData();
-      widget.onDrawingComplete(data);
+      if (_effectiveInputMode == CanvasInputMode.draw) {
+        final data = await _generateDrawingData();
+        widget.onDrawingComplete(data);
+      } else {
+        _triggerRecognition();
+        if (_recognizedText.isNotEmpty) {
+          widget.onTextRecognized?.call(_recognizedText);
+        } else {
+          final data = await _generateDrawingData();
+          widget.onDrawingComplete(data);
+        }
+      }
       if (mounted) {
         setState(() {
           _saveMessage = l10n.drawingSaved;

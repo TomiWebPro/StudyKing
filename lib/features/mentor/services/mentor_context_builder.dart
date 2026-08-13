@@ -16,6 +16,7 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorContextBuilder {
@@ -24,6 +25,7 @@ class MentorContextBuilder {
   final MasteryGraphService _masteryService;
   final PlannerService _plannerService;
   final SessionRepository _sessionRepository;
+  final LearningMethodAnalyticsService? _learningAnalyticsService;
   final String _localeName;
 
   MentorContextBuilder({
@@ -31,11 +33,13 @@ class MentorContextBuilder {
     required MasteryGraphService masteryService,
     required PlannerService plannerService,
     required SessionRepository sessionRepository,
+    LearningMethodAnalyticsService? learningAnalyticsService,
     required String localeName,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
         _sessionRepository = sessionRepository,
+        _learningAnalyticsService = learningAnalyticsService,
         _localeName = localeName;
 
   Future<String> buildContextPrompt() async {
@@ -165,6 +169,27 @@ class MentorContextBuilder {
         final lateNight = todaySessions.where((s) => s.startTime.hour >= lateNightHour).toList();
         if (lateNight.isNotEmpty) {
           buffer.writeln('$bullet${l10n.mentorContextLateNightWarning(lateNight.length)}');
+        }
+      }
+    }
+
+    if (_learningAnalyticsService != null) {
+      final insightsResult = await _learningAnalyticsService.getLearningInsights(_plannerService.studentId);
+      if (insightsResult.isSuccess && insightsResult.data != null) {
+        final insights = insightsResult.data!;
+        final hasData = insights['hasData'] as bool? ?? false;
+        if (hasData) {
+          buffer.writeln('$bullet Learning Method Insights:');
+          final preferred = insights['preferredBlockType'] as String? ?? 'exercise';
+          buffer.writeln('  $bullet Preferred content type: $preferred');
+          final optimalMinutes = insights['optimalSessionMinutes'] as int? ?? 25;
+          buffer.writeln('  $bullet Optimal session length: $optimalMinutes minutes');
+          final prefersVisual = insights['prefersVisual'] as bool? ?? false;
+          buffer.writeln('  $bullet Prefers visual explanations: $prefersVisual');
+          final srEffectiveness = insights['srEffectiveness'] as double? ?? 0.0;
+          if (srEffectiveness > 0.5) {
+            buffer.writeln('  $bullet Spaced repetition is highly effective');
+          }
         }
       }
     }

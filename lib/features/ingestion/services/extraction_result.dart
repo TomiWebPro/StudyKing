@@ -5,6 +5,7 @@ class ExtractionResult {
   final String extractionMethod;
   final int? pageCount;
   final double? ocrConfidence;
+  final double? transcriptionConfidence;
   final int? durationSeconds;
   final String? mimeType;
   final String? errorMessage;
@@ -15,6 +16,7 @@ class ExtractionResult {
     this.extractionMethod = 'direct',
     this.pageCount,
     this.ocrConfidence,
+    this.transcriptionConfidence,
     this.durationSeconds,
     this.mimeType,
     this.errorMessage,
@@ -29,6 +31,7 @@ class ExtractionResult {
     };
     if (pageCount != null) meta['pageCount'] = pageCount;
     if (ocrConfidence != null) meta['ocrConfidence'] = ocrConfidence;
+    if (transcriptionConfidence != null) meta['transcriptionConfidence'] = transcriptionConfidence;
     if (durationSeconds != null) meta['durationSeconds'] = durationSeconds;
     if (mimeType != null) meta['mimeType'] = mimeType;
     if (errorMessage != null) meta['errorMessage'] = errorMessage;

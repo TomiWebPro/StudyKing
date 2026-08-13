@@ -32,6 +32,7 @@ enum ProcessingStatus {
   classifying,
   summarizing,
   generatingQuestions,
+  generatingFlashcards,
   validating,
   completed,
   failed,
@@ -44,6 +45,18 @@ enum LessonBlockType {
   slide,
   quiz,
   summary,
+}
+
+enum SlideType {
+  title,
+  concept,
+  definition,
+  formula,
+  example,
+  summary,
+  quiz,
+  reference,
+  tableOfContents,
 }
 
 enum GeneratedBy {

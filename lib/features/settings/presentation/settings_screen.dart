@@ -1226,7 +1226,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
   Future<void> _importBackup() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final pickResult = await FilePicker.platform.pickFiles(
+      final pickResult = await FilePicker.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['json', 'skbak'],
         dialogTitle: l10n.selectBackupFile,

@@ -87,7 +87,7 @@ class MentorScheduleHandler {
     if (result.isSuccess) return result.data!;
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final msg = l10n.mentorScheduleFail;
-    _memory.addAssistantMessage(msg);
+    await _memory.addAssistantMessage(msg);
     return msg;
   }
 
@@ -119,7 +119,7 @@ class MentorScheduleHandler {
         localizedDateTime(proposal.proposedTime, _localeName),
         localizedDateTime(nextFree, _localeName),
       );
-      _memory.addAssistantMessage(msg);
+      await _memory.addAssistantMessage(msg);
       return msg;
     }
 
@@ -142,7 +142,7 @@ class MentorScheduleHandler {
     } else {
       msg = l10n.mentorScheduleFail;
     }
-    _memory.addAssistantMessage(msg);
+    await _memory.addAssistantMessage(msg);
     return msg;
   }
 
@@ -172,7 +172,7 @@ class MentorScheduleHandler {
     final session = sessionResult.data;
     if (session == null) {
       final msg = lookupAppLocalizations(Locale(_localeName)).mentorRescheduleNotFound;
-      _memory.addSystemMessage(msg);
+      await _memory.addSystemMessage(msg);
       return msg;
     }
 
@@ -193,7 +193,7 @@ class MentorScheduleHandler {
       final msg = lookupAppLocalizations(Locale(_localeName)).mentorRescheduleNoFreeSlot(
         session.topicTitle,
       );
-      _memory.addSystemMessage(msg);
+      await _memory.addSystemMessage(msg);
       return msg;
     }
 
@@ -219,7 +219,7 @@ class MentorScheduleHandler {
       session.topicTitle,
       localizedDateTime(nextFree, _localeName),
     );
-    _memory.addSystemMessage(msg);
+    await _memory.addSystemMessage(msg);
     return msg;
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -359,7 +360,11 @@ void main() {
       late TranscriptionExtractor extractor;
 
       setUp(() {
-        extractor = TranscriptionExtractor(modelId: 'test-model', localeName: 'en');
+        extractor = TranscriptionExtractor(
+          modelId: 'test-model',
+          localeName: 'en',
+          httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+        );
       });
 
       tearDown(() {
@@ -805,5 +810,168 @@ void main() {
         expect(() => extractor.dispose(), returnsNormally);
       });
     });
+
+    group('TranscriptionSegment', () {
+      test('stores all properties', () {
+        const segment = TranscriptionSegment(
+          text: 'hello world',
+          startSeconds: 0.0,
+          endSeconds: 5.0,
+          confidence: 0.95,
+        );
+        expect(segment.text, 'hello world');
+        expect(segment.startSeconds, 0.0);
+        expect(segment.endSeconds, 5.0);
+        expect(segment.confidence, 0.95);
+      });
+    });
+
+    group('TranscriptionResult with confidence and segments', () {
+      test('stores confidence when provided', () {
+        const result = TranscriptionResult(
+          text: 'transcript',
+          extractionMethod: 'whisper_api',
+          confidence: 0.92,
+        );
+        expect(result.text, 'transcript');
+        expect(result.confidence, 0.92);
+        expect(result.segments, isNull);
+      });
+
+      test('stores segments when provided', () {
+        const segments = [
+          TranscriptionSegment(text: 'hello', startSeconds: 0.0, endSeconds: 1.0, confidence: 0.95),
+          TranscriptionSegment(text: 'world', startSeconds: 1.0, endSeconds: 2.0, confidence: 0.90),
+        ];
+        const result = TranscriptionResult(
+          text: 'hello world',
+          extractionMethod: 'whisper_api',
+          confidence: 0.925,
+          segments: segments,
+        );
+        expect(result.segments, hasLength(2));
+        expect(result.segments![0].text, 'hello');
+        expect(result.segments![1].text, 'world');
+      });
+    });
+
+    group('transcribeAudio with ASR engine', () {
+      test('uses ASR engine when available for file transcription', () async {
+        final dir = Directory.systemTemp.createTempSync('asr_audio_test_');
+        try {
+          final file = File('${dir.path}/test.mp3');
+          await file.writeAsBytes([0xFF, 0xFB, 0x90]);
+
+          final asrEngine = _FakeAsrEngine(
+            isAvailable: true,
+            onTranscribeFile: (_) async => TranscriptionResult(
+              text: 'asr transcribed text',
+              extractionMethod: 'whisper_api',
+              confidence: 0.95,
+            ),
+          );
+
+          final extractor = TranscriptionExtractor(
+            modelId: 'test-model',
+            localeName: 'en',
+            asrEngine: asrEngine,
+          );
+
+          final result = await extractor.transcribeAudio(
+            rawContent: 'file://${file.path}',
+            sourceUrl: null,
+          );
+
+          expect(result.text, 'asr transcribed text');
+          expect(result.extractionMethod, 'whisper_api');
+          expect(result.confidence, 0.95);
+          extractor.dispose();
+        } finally {
+          dir.deleteSync(recursive: true);
+        }
+      });
+
+      test('falls back to LLM when ASR returns empty', () async {
+        final dir = Directory.systemTemp.createTempSync('asr_fallback_test_');
+        try {
+          final file = File('${dir.path}/test.mp3');
+          await file.writeAsBytes([0xFF, 0xFB, 0x90]);
+
+          final asrEngine = _FakeAsrEngine(
+            isAvailable: true,
+            onTranscribeFile: (_) async => const TranscriptionResult(
+              text: '',
+              extractionMethod: 'whisper_api',
+            ),
+          );
+
+          final llm = _FakeLlmService(
+            onChat: () async => Result.success('llm fallback text'),
+          );
+
+          final extractor = TranscriptionExtractor(
+            llmService: llm,
+            modelId: 'test-model',
+            localeName: 'en',
+            asrEngine: asrEngine,
+          );
+
+          final result = await extractor.transcribeAudio(
+            rawContent: 'file://${file.path}',
+            sourceUrl: null,
+          );
+
+          expect(result.text, 'llm fallback text');
+          expect(result.extractionMethod, 'transcribed_llm');
+          extractor.dispose();
+        } finally {
+          dir.deleteSync(recursive: true);
+        }
+      });
+
+      test('skips ASR engine when not available', () async {
+        final asrEngine = _FakeAsrEngine(
+          isAvailable: false,
+          onTranscribeFile: (_) async => const TranscriptionResult(
+            text: '',
+            extractionMethod: 'whisper_api',
+          ),
+        );
+
+        final extractor = TranscriptionExtractor(
+          modelId: 'test-model',
+          localeName: 'en',
+          asrEngine: asrEngine,
+        );
+
+        final result = await extractor.transcribeAudio(
+          rawContent: 'file:///nonexistent/file.mp3',
+          sourceUrl: null,
+        );
+
+        expect(result.text, '');
+        expect(result.extractionMethod, 'file_not_found');
+        extractor.dispose();
+      });
+    });
   });
+}
+
+class _FakeAsrEngine extends AsrEngine {
+  @override
+  final bool isAvailable;
+  final Future<TranscriptionResult> Function(String filePath) onTranscribeFile;
+
+  _FakeAsrEngine({
+    required this.isAvailable,
+    required this.onTranscribeFile,
+  });
+
+  @override
+  Future<TranscriptionResult> transcribeFile({
+    required String filePath,
+    String? language,
+  }) {
+    return onTranscribeFile(filePath);
+  }
 }

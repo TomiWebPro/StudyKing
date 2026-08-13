@@ -2151,6 +2151,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get weeklyActivity => 'Weekly Activity';
 
   @override
+  String get dailyActivity => 'Today';
+
+  @override
+  String get heatmapTitle => 'Daily Activity';
+
+  @override
+  String get heatmapNoActivity => 'No activity';
+
+  @override
+  String heatmapTooltip(
+    String date,
+    int attempts,
+    int accuracy,
+    String focusTime,
+    int sessions,
+  ) {
+    return '$date: $attempts questions, $accuracy% accuracy, $focusTime focus, $sessions sessions';
+  }
+
+  @override
   String get topicsLabel => 'Topics';
 
   @override
@@ -3618,7 +3638,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get localeEn => 'English';
 
   @override
-  String get localeEs => 'Spanish';
+  String get localeEs => 'Español';
 
   @override
   String get welcomeToStudyKing => 'Welcome to StudyKing';
@@ -3909,6 +3929,42 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolCreatePlanFail => 'Failed to create plan';
 
   @override
+  String get toolModifyPlanInvalidAction =>
+      'Invalid modification action. Supported actions are: adjust_pace, extend, redistribute, change_targets.';
+
+  @override
+  String get toolModifyPlanError =>
+      'Failed to modify the plan. Please try again.';
+
+  @override
+  String get toolModifyPlanNoPlan =>
+      'No active plan found. Please create a plan first.';
+
+  @override
+  String toolModifyPlanMissingParam(String param) {
+    return 'Missing required parameter: $param.';
+  }
+
+  @override
+  String toolModifyPlanPaceAdjusted(int minutes) {
+    return 'Plan pace adjusted to $minutes minutes per day.';
+  }
+
+  @override
+  String toolModifyPlanExtended(int added, int total) {
+    return 'Plan extended by $added days. New total duration: $total days.';
+  }
+
+  @override
+  String toolModifyPlanRedistributed(int minutes, String strategy) {
+    return 'Redistributed $minutes minutes of missed work using $strategy strategy.';
+  }
+
+  @override
+  String get toolModifyPlanTargetsChanged =>
+      'Daily targets updated successfully.';
+
+  @override
   String get mentorRescheduleNotFound =>
       'Could not find the lesson to reschedule. It may have already been removed or completed.';
 
@@ -3947,7 +4003,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String tutorInstructionPrompt(String timeContext, String paceContext) {
-    return 'Guidelines:\n- $timeContext\n- $paceContext\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning';
+    return 'Guidelines:\n- $timeContext\n- $paceContext\n- Explain concepts step by step\n- Adapt to the student\'s level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning\n- When writing mathematical expressions, use LaTeX notation with \$...\$ for inline math and \$\$...\$\$ for display math';
   }
 
   @override

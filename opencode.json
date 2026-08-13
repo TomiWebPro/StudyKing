@@ -1,5 +1,15 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "model": "tomiwebpro/deepseek-v4-flash",
+  "provider": {
+    "tomiwebpro": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "Tomi Web Pro",
+      "options": {
+        "baseURL": "http://103.56.114.34:4000"
+      }
+    }
+  },
   "references": {
     "docs": {
       "path": "./docs",

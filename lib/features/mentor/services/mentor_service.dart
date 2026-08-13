@@ -91,6 +91,7 @@ class MentorService {
           maxTurns: 50,
           sessionId: 'mentor_$studentId',
           repository: conversationRepo,
+          summarizer: (messages) => _summarizeMessages(messages, llmService, modelId),
         ) {
     _contextBuilder = MentorContextBuilder(
       progressTracker: _progressTracker,
@@ -157,12 +158,12 @@ class MentorService {
     if (!hasData) {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final msg = l10n.mentorNoSubjects;
-      _memory.addAssistantMessage(msg);
+      await _memory.addAssistantMessage(msg);
       yield msg;
       return;
     }
 
-    _memory.addUserMessage(message);
+    await _memory.addUserMessage(message);
 
     final memoryContext = await _buildLongTermMemoryContext();
 
@@ -182,13 +183,13 @@ class MentorService {
       );
 
       final content = response.content;
-      _memory.addAssistantMessage(content);
+      await _memory.addAssistantMessage(content);
       await _storeMentorSessionSummary(content);
       yield content;
       if (response.toolCalls.isNotEmpty) {
         for (final call in response.toolCalls) {
           final toolMsg = '[${call.toolName}] ${call.result ?? 'executed'}';
-          _memory.addSystemMessage(toolMsg);
+          await _memory.addSystemMessage(toolMsg);
         }
       }
       await _checkAndHandlePlanningIntent(message);
@@ -212,12 +213,12 @@ class MentorService {
     } catch (e) {
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
-        _memory.addAssistantMessage(partialContent);
+        await _memory.addAssistantMessage(partialContent);
       }
       rethrow;
     }
 
-    _memory.addAssistantMessage(buffer.toString());
+    await _memory.addAssistantMessage(buffer.toString());
     await _storeMentorSessionSummary(buffer.toString());
 
     await _checkAndHandlePlanningIntent(message);
@@ -367,7 +368,7 @@ class MentorService {
     final result = await _wellbeingService.checkWellbeingAndGenerateNudges();
     if (result.isSuccess && result.data != null) {
       for (final msg in result.data!) {
-        _memory.addAssistantMessage(msg);
+        await _memory.addAssistantMessage(msg);
       }
     }
     return result;
@@ -448,5 +449,31 @@ class MentorService {
   Future<List<Session>> getUpcomingLessons() async {
     final result = await _contextBuilder.loadUpcomingLessons();
     return result.data ?? [];
+  }
+
+  static Future<String?> _summarizeMessages(
+    List<ConversationMessage> messages,
+    LlmService llmService,
+    String modelId,
+  ) async {
+    final convMaps = ConversationMemory.fromConversationMessages(messages);
+    if (convMaps.isEmpty) return null;
+
+    final messagesStr = convMaps
+        .map((m) => '[${m['role']}]: ${m['content']}')
+        .join('\n');
+
+    final result = await llmService.chat(
+      message: 'Summarise the key points from this conversation. '
+          'Be concise: list topics, questions, and decisions made.\n\n'
+          '$messagesStr',
+      modelId: modelId,
+      systemPrompt: 'You compress conversation history into a short summary '
+          'that preserves context for an AI mentor. Output 1-3 sentences.',
+      feature: 'conversation_memory_compression',
+    );
+
+    if (result.isFailure) return null;
+    return result.data;
   }
 }

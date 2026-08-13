@@ -2174,6 +2174,26 @@ class AppLocalizationsEs extends AppLocalizations {
   String get weeklyActivity => 'Actividad Semanal';
 
   @override
+  String get dailyActivity => 'Hoy';
+
+  @override
+  String get heatmapTitle => 'Actividad Diaria';
+
+  @override
+  String get heatmapNoActivity => 'Sin actividad';
+
+  @override
+  String heatmapTooltip(
+    String date,
+    int attempts,
+    int accuracy,
+    String focusTime,
+    int sessions,
+  ) {
+    return '$date: $attempts preguntas, $accuracy% precisión, $focusTime enfoque, $sessions sesiones';
+  }
+
+  @override
   String get topicsLabel => 'Temas';
 
   @override
@@ -3952,6 +3972,42 @@ class AppLocalizationsEs extends AppLocalizations {
   String get toolCreatePlanFail => 'Error al crear el plan';
 
   @override
+  String get toolModifyPlanInvalidAction =>
+      'Acción de modificación no válida. Las acciones compatibles son: adjust_pace, extend, redistribute, change_targets.';
+
+  @override
+  String get toolModifyPlanError =>
+      'Error al modificar el plan. Por favor, intente de nuevo.';
+
+  @override
+  String get toolModifyPlanNoPlan =>
+      'No se encontró un plan activo. Por favor, cree un plan primero.';
+
+  @override
+  String toolModifyPlanMissingParam(String param) {
+    return 'Falta el parámetro requerido: $param.';
+  }
+
+  @override
+  String toolModifyPlanPaceAdjusted(int minutes) {
+    return 'Ritmo del plan ajustado a $minutes minutos por día.';
+  }
+
+  @override
+  String toolModifyPlanExtended(int added, int total) {
+    return 'Plan extendido en $added días. Nueva duración total: $total días.';
+  }
+
+  @override
+  String toolModifyPlanRedistributed(int minutes, String strategy) {
+    return 'Se redistribuyeron $minutes minutos de trabajo perdido usando la estrategia $strategy.';
+  }
+
+  @override
+  String get toolModifyPlanTargetsChanged =>
+      'Objetivos diarios actualizados exitosamente.';
+
+  @override
   String get mentorRescheduleNotFound =>
       'No se pudo encontrar la lección para reprogramar. Es posible que ya haya sido eliminada o completada.';
 
@@ -3990,7 +4046,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String tutorInstructionPrompt(String timeContext, String paceContext) {
-    return 'Directrices:\n- $timeContext\n- $paceContext\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto';
+    return 'Directrices:\n- $timeContext\n- $paceContext\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto\n- Al escribir expresiones matemáticas, use notación LaTeX con \$...\$ para matemáticas en línea y \$\$...\$\$ para matemáticas en bloque';
   }
 
   @override

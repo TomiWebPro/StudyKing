@@ -41,7 +41,17 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   final FocusNode _inputFocusNode = FocusNode();
   final Uuid _uuid = const Uuid();
   static final Logger _logger = const Logger('QuickGuide');
-  final ConversationMemory _memory = ConversationMemory();
+  ConversationMemory? _memory;
+
+  ConversationMemory _getMemory() {
+    if (_memory != null) return _memory!;
+    final llm = _getLlmService();
+    _memory = ConversationMemory(
+      sessionId: 'quickguide',
+      summarizer: (messages) => _summarizeMessages(messages, llm),
+    );
+    return _memory!;
+  }
 
   List<ConversationMessage> _messages = [];
   List<String> _suggestedPrompts = [];
@@ -103,7 +113,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       _isStreaming = true;
     });
 
-    _memory.addUserMessage(text);
+    await _getMemory().addUserMessage(text);
     _scrollToBottom();
 
     final tutorMessageId = _uuid.v4();
@@ -147,7 +157,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       await for (final chunk in llm.chatStream(
         message: text,
         modelId: effectiveModelId,
-        memory: _memory,
+        memory: _getMemory(),
         systemPrompt: effectiveSystem,
       )) {
         buffer.write(chunk);
@@ -178,7 +188,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         _isStreaming = false;
       });
     }
-    _memory.addAssistantMessage(buffer.toString());
+    await _getMemory().addAssistantMessage(buffer.toString());
     _scrollToBottom();
   }
 
@@ -189,6 +199,31 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     if (lower.contains('quiz') || lower.contains('question')) return l10n.fallbackQuizResponse;
     if (lower.contains('math') || lower.contains('calculate')) return l10n.fallbackMathResponse;
     return l10n.fallbackGeneralResponse;
+  }
+
+  static Future<String?> _summarizeMessages(
+    List<ConversationMessage> messages,
+    LlmService llmService,
+  ) async {
+    final convMaps = ConversationMemory.fromConversationMessages(messages);
+    if (convMaps.isEmpty) return null;
+
+    final messagesStr = convMaps
+        .map((m) => '[${m['role']}]: ${m['content']}')
+        .join('\n');
+
+    final result = await llmService.chat(
+      message: 'Summarise the key points from this conversation. '
+          'Be concise: list topics, questions, and decisions made.\n\n'
+          '$messagesStr',
+      modelId: '',
+      systemPrompt: 'You compress conversation history into a short summary '
+          'that preserves context for an AI tutor. Output 1-3 sentences.',
+      feature: 'conversation_memory_compression',
+    );
+
+    if (result.isFailure) return null;
+    return result.data;
   }
 
   Future<void> _showNoApiKeyMessage(AppLocalizations l10n) async {
@@ -253,7 +288,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       _showSuggestions = true;
       _hasInteracted = false;
     });
-    _memory.clear();
+    _memory?.clear();
   }
 
   @override

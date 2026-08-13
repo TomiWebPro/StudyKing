@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart' show sha256;
 
 import 'package:flutter/material.dart';
+import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -11,15 +12,19 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
+import 'package:studyking/features/ingestion/services/chunked_content_processor.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
+import 'package:studyking/features/lessons/services/slide_deck_generator.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/utils/id_generator.dart';
+import 'package:studyking/features/flashcards/services/flashcard_generator.dart';
 
 typedef QuestionValidator = bool Function(Map<String, dynamic> questionData);
 typedef ProcessingProgressCallback = void Function(ProcessingStatus status, String stageDescription);
@@ -32,8 +37,11 @@ class ContentPipeline {
   final TopicRepository _topicRepository;
   final QuestionRepository _questionRepository;
   final LessonAgentService? _lessonAgentService;
+  final SlideDeckGenerator? _slideDeckGenerator;
+  final FlashcardGenerator? _flashcardGenerator;
   final DocumentExtractor _documentExtractor;
   final WebScraper _webScraper;
+  final ChunkedContentProcessor _chunkedProcessor;
   final String _localeName;
   static final Logger _logger = const Logger('ContentPipeline');
 
@@ -43,24 +51,32 @@ class ContentPipeline {
     required TopicRepository topicRepository,
     required QuestionRepository questionRepository,
     LessonAgentService? lessonAgentService,
+    SlideDeckGenerator? slideDeckGenerator,
+    FlashcardGenerator? flashcardGenerator,
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
+    ChunkedContentProcessor? chunkedProcessor,
     required String modelId,
     required String localeName,
+    AsrEngine? asrEngine,
   })  : _llmService = llmService,
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
         _questionRepository = questionRepository,
         _lessonAgentService = lessonAgentService,
+        _slideDeckGenerator = slideDeckGenerator,
+        _flashcardGenerator = flashcardGenerator,
         _documentExtractor =
-            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
+            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId, localeName: localeName, asrEngine: asrEngine),
         _webScraper = webScraper ?? WebScraper(),
+        _chunkedProcessor = chunkedProcessor ?? ChunkedContentProcessor(llmService: llmService, localeName: localeName),
         _localeName = localeName;
 
   bool _cancelled = false;
 
   void cancel() {
     _cancelled = true;
+    _chunkedProcessor.cancel();
   }
 
   Future<Result<Source>> processUpload({
@@ -162,6 +178,8 @@ class ContentPipeline {
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
     bool generateLessons = false,
+    bool generateSlideDecks = false,
+    bool generateFlashcards = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
@@ -231,16 +249,40 @@ class ContentPipeline {
           ? extractionResult.text
           : content;
 
+      final chunks = extractionResult.chunks.isNotEmpty
+          ? extractionResult.chunks
+          : _chunkedProcessor.splitIntoChunks(textToClassify);
+
+      _chunkedProcessor.reset();
+
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (possibleTopics.isNotEmpty) {
         onProgress?.call(ProcessingStatus.classifying, 'Classifying content topic...');
         updated = _updateStatus(updated, ProcessingStatus.classifying);
-        final matchedTopicId = await _classifyTopic(
-          textToClassify,
-          possibleTopics,
-          modelId,
-          subjectId,
-        );
+
+        String matchedTopicId;
+        if (chunks.length > 1) {
+          final classificationResult = await _chunkedProcessor.classifyChunks(
+            chunks: chunks,
+            possibleTopics: possibleTopics,
+            modelId: modelId,
+            subjectId: subjectId,
+          );
+          matchedTopicId = await _resolveClassifiedTopic(
+            classificationResult.topicId,
+            possibleTopics,
+            subjectId,
+          );
+          _logger.d('Chunked classification: topic="${classificationResult.topicId}" confidence=${classificationResult.confidence.toStringAsFixed(2)}');
+        } else {
+          matchedTopicId = await _classifyTopic(
+            textToClassify,
+            possibleTopics,
+            modelId,
+            subjectId,
+          );
+        }
+
         if (matchedTopicId.isNotEmpty) {
           updated = updated.copyWith(topicId: matchedTopicId);
           await _sourceRepository.save(updated.id, updated);
@@ -264,7 +306,14 @@ class ContentPipeline {
       if (_cancelled) return Result.failure('Pipeline cancelled');
       onProgress?.call(ProcessingStatus.summarizing, 'Generating summary...');
       updated = _updateStatus(updated, ProcessingStatus.summarizing);
-      final summary = await _generateSummary(textToClassify, modelId);
+
+      final summary = chunks.length > 1
+          ? await _chunkedProcessor.generateConsolidatedSummary(
+              chunks: chunks,
+              modelId: modelId,
+            )
+          : await _generateSummary(textToClassify, modelId);
+
       if (summary.isNotEmpty) {
         updated = updated.copyWith(summary: summary);
         await _sourceRepository.save(updated.id, updated);
@@ -282,16 +331,31 @@ class ContentPipeline {
           }
         }
 
-        final questionIds = await _generateQuestions(
-          textToClassify,
-          subjectId,
-          updated.topicId,
-          sourceId,
-          studentId,
-          modelId,
-          validator: validator,
-          allowedTypes: allowedQuestionTypes,
-        );
+        List<String> questionIds;
+        if (chunks.length > 1) {
+          questionIds = await _generateQuestionsChunked(
+            chunks: chunks,
+            subjectId: subjectId,
+            topicId: updated.topicId,
+            sourceId: sourceId,
+            studentId: studentId,
+            modelId: modelId,
+            validator: validator,
+            allowedTypes: allowedQuestionTypes,
+          );
+        } else {
+          questionIds = await _generateQuestions(
+            textToClassify,
+            subjectId,
+            updated.topicId,
+            sourceId,
+            studentId,
+            modelId,
+            validator: validator,
+            allowedTypes: allowedQuestionTypes,
+          );
+        }
+
         if (questionIds.isNotEmpty) {
           updated = updated.copyWith(
             generatedQuestionIds: questionIds,
@@ -334,6 +398,41 @@ class ContentPipeline {
       }
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
+      if (generateSlideDecks && _slideDeckGenerator != null && updated.topicId.isNotEmpty) {
+        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating slide deck from content...');
+        final textForSlideDeck = updated.extractedText.isNotEmpty ? updated.extractedText : content;
+        await _slideDeckGenerator.generateSlideDeck(
+          subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
+          topicId: updated.topicId,
+          topicTitle: title,
+          sourceContent: textForSlideDeck,
+          localeName: _localeName,
+        );
+        _logger.d('Stage 6 complete: slide deck generated from source');
+      }
+
+      if (_cancelled) return Result.failure('Pipeline cancelled');
+      if (generateFlashcards && _flashcardGenerator != null && updated.topicId.isNotEmpty) {
+        onProgress?.call(ProcessingStatus.generatingFlashcards, 'Generating flashcards from content...');
+        updated = _updateStatus(updated, ProcessingStatus.generatingFlashcards);
+        final textForFlashcards = updated.extractedText.isNotEmpty ? updated.extractedText : content;
+        final flashcardResult = await _flashcardGenerator.generateFlashcards(
+          content: textForFlashcards,
+          sourceId: sourceId,
+          topicId: updated.topicId,
+          subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
+          modelId: modelId,
+          localeName: _localeName,
+        );
+        if (flashcardResult.isSuccess) {
+          final flashcardIds = flashcardResult.data!.map((f) => f.id).toList();
+          updated = updated.copyWith(generatedFlashcardIds: flashcardIds);
+          await _sourceRepository.save(updated.id, updated);
+        }
+        _logger.d('Stage 7 complete: ${flashcardResult.data?.length ?? 0} flashcards generated from source');
+      }
+
+      if (_cancelled) return Result.failure('Pipeline cancelled');
       onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
       updated = _updateStatus(updated, ProcessingStatus.completed);
       await _sourceRepository.save(updated.id, updated);
@@ -363,6 +462,8 @@ class ContentPipeline {
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
     bool generateLessons = false,
+    bool generateSlideDecks = false,
+    bool generateFlashcards = false,
     QuestionValidator? validator,
     List<String> allowedQuestionTypes = _defaultAllowedTypes,
     ProcessingProgressCallback? onProgress,
@@ -385,6 +486,8 @@ class ContentPipeline {
       possibleTopics: possibleTopics,
       generateQuestions: generateQuestions,
       generateLessons: generateLessons,
+      generateSlideDecks: generateSlideDecks,
+      generateFlashcards: generateFlashcards,
       validator: validator,
       allowedQuestionTypes: allowedQuestionTypes,
       onProgress: onProgress,
@@ -410,6 +513,133 @@ class ContentPipeline {
 
   Source _updateStatus(Source source, ProcessingStatus status) {
     return source.copyWith(processingStatus: status.name);
+  }
+
+  Future<String> _resolveClassifiedTopic(
+    String classifiedTopicName,
+    List<String> possibleTopics,
+    String subjectId,
+  ) async {
+    if (classifiedTopicName.isEmpty) return '';
+
+    final matchedTopic = possibleTopics.where(
+      (t) => classifiedTopicName.normalized.contains(t.normalized) ||
+          t.normalized.contains(classifiedTopicName.normalized),
+    );
+    if (matchedTopic.isEmpty) return '';
+
+    try {
+      final topicsResult = await _topicRepository.getAll();
+      final topics = topicsResult.data ?? [];
+      final topicTitle = matchedTopic.first;
+      final topicMatch = topics.where(
+        (t) => t.title.normalized.contains(topicTitle.normalized),
+      ).firstOrNull;
+      if (topicMatch != null) return topicMatch.id;
+
+      if (subjectId.isNotEmpty) {
+        final newTopic = Topic(
+          id: IdGenerator.generate('topic'),
+          subjectId: subjectId,
+          title: topicTitle,
+          description: 'Auto-created from content classification',
+          syllabusText: '',
+        );
+        await _topicRepository.create(newTopic);
+        final subjRepo = SubjectRepository();
+        await subjRepo.init();
+        await subjRepo.addTopicToSubject(subjectId, newTopic.id);
+        _logger.i('Auto-created topic "$topicTitle" under subject $subjectId');
+        return newTopic.id;
+      }
+    } catch (e) {
+      _logger.w('Failed to resolve classified topic', e);
+    }
+
+    return '';
+  }
+
+  Future<List<String>> _generateQuestionsChunked({
+    required List<SourceChunk> chunks,
+    required String subjectId,
+    required String topicId,
+    required String sourceId,
+    required String studentId,
+    required String modelId,
+    QuestionValidator? validator,
+    List<String> allowedTypes = _defaultAllowedTypes,
+  }) async {
+    final questionIds = <String>[];
+    try {
+        final chunkResults = await _chunkedProcessor.generateQuestionsFromChunks(
+          chunks: chunks,
+          modelId: modelId,
+          questionParser: QuestionParser(),
+        );
+
+      final seenTexts = <String>{};
+      for (final chunkResult in chunkResults) {
+        final qData = chunkResult.questionData;
+        final text = qData['text'] as String? ?? '';
+
+        final normalizedText = text.normalized;
+        if (seenTexts.contains(normalizedText)) {
+          _logger.d('Skipping duplicate question: $text');
+          continue;
+        }
+        seenTexts.add(normalizedText);
+
+        if (!_isValidGeneratedQuestion(qData, validator: validator, allowedTypes: allowedTypes)) {
+          _logger.w('Skipping invalid question: $text');
+          continue;
+        }
+
+        final qId = IdGenerator.generate('q');
+        final typeStr = qData['type'] as String? ?? 'singleChoice';
+        final questionType = _parseQuestionType(typeStr) ?? QuestionType.singleChoice;
+        final options = (qData['options'] as List<dynamic>?)?.cast<String>() ?? [];
+        final correctAnswer = qData['correctAnswer'] as String? ?? '';
+        final acceptableAnswers = qData['acceptableAnswers'] != null
+            ? List<String>.from(qData['acceptableAnswers'] as List)
+            : (correctAnswer.isNotEmpty ? [correctAnswer] : <String>[]);
+
+        final question = Question(
+          id: qId,
+          text: text,
+          type: questionType,
+          subjectId: subjectId,
+          topicId: topicId,
+          sourceIds: [sourceId],
+          options: options,
+          tags: ['chunk_${chunkResult.chunkIndex}'],
+          markscheme: Markscheme(
+            questionId: qId,
+            correctAnswer: correctAnswer,
+            explanation: qData['explanation'] as String?,
+            acceptableAnswers: acceptableAnswers,
+          ),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        final result = await _questionRepository.create(question);
+        if (result.isSuccess) {
+          questionIds.add(qId);
+        }
+      }
+    } catch (e) {
+      _logger.w('Chunked question generation failed, falling back to single-call', e);
+      return _generateQuestions(
+        chunks.map((c) => c.text).join('\n\n'),
+        subjectId,
+        topicId,
+        sourceId,
+        studentId,
+        modelId,
+        validator: validator,
+        allowedTypes: allowedTypes,
+      );
+    }
+    return questionIds;
   }
 
   Future<String> _classifyTopic(

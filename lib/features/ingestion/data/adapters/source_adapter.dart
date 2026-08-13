@@ -35,12 +35,17 @@ class SourceAdapter extends TypeAdapter<Source> {
       createdAt: fields[17] as DateTime?,
       errorMessage: fields[18] as String? ?? '',
       contentHash: fields[19] as String? ?? '',
+      generatedFlashcardIds: fields[20] != null
+          ? List<String>.from(fields[20] as List)
+          : const [],
+      generatedStudyGuideId: fields[21] as String? ?? '',
+      generatedConceptMapId: fields[22] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, Source obj) {
-    writer.writeByte(20);
+    writer.writeByte(23);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -81,5 +86,11 @@ class SourceAdapter extends TypeAdapter<Source> {
     writer.write(obj.errorMessage);
     writer.writeByte(19);
     writer.write(obj.contentHash);
+    writer.writeByte(20);
+    writer.write(obj.generatedFlashcardIds);
+    writer.writeByte(21);
+    writer.write(obj.generatedStudyGuideId);
+    writer.writeByte(22);
+    writer.write(obj.generatedConceptMapId);
   }
 }

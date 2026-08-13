@@ -2832,6 +2832,29 @@
   "@weeklyActivity": {
     "description": "Label for weekly activity metric"
   },
+  "dailyActivity": "Today",
+  "@dailyActivity": {
+    "description": "Label for daily activity metric in summary row"
+  },
+  "heatmapTitle": "Daily Activity",
+  "@heatmapTitle": {
+    "description": "Title for the daily activity heatmap card"
+  },
+  "heatmapNoActivity": "No activity",
+  "@heatmapNoActivity": {
+    "description": "Tooltip for heatmap cells with no activity"
+  },
+  "heatmapTooltip": "{date}: {attempts} questions, {accuracy}% accuracy, {focusTime} focus, {sessions} sessions",
+  "@heatmapTooltip": {
+    "description": "Tooltip text for a heatmap cell",
+    "placeholders": {
+      "date": {"type": "String"},
+      "attempts": {"type": "int"},
+      "accuracy": {"type": "int"},
+      "focusTime": {"type": "String"},
+      "sessions": {"type": "int"}
+    }
+  },
   "topicsLabel": "Topics",
   "@topicsLabel": {
     "description": "Label for topics count metric"
@@ -4872,7 +4895,7 @@
   "@localeEn": {
     "description": "Label for English language option"
   },
-  "localeEs": "Spanish",
+  "localeEs": "Español",
   "@localeEs": {
     "description": "Label for Spanish language option"
   },
@@ -5235,6 +5258,52 @@
   "@toolCreatePlanFail": {
     "description": "Result message when plan creation fails via tool"
   },
+  "toolModifyPlanInvalidAction": "Invalid modification action. Supported actions are: adjust_pace, extend, redistribute, change_targets.",
+  "@toolModifyPlanInvalidAction": {
+    "description": "Error message when an invalid modify_plan action is provided"
+  },
+  "toolModifyPlanError": "Failed to modify the plan. Please try again.",
+  "@toolModifyPlanError": {
+    "description": "Generic error message when plan modification fails"
+  },
+  "toolModifyPlanNoPlan": "No active plan found. Please create a plan first.",
+  "@toolModifyPlanNoPlan": {
+    "description": "Error message when no active plan exists to modify"
+  },
+  "toolModifyPlanMissingParam": "Missing required parameter: {param}.",
+  "@toolModifyPlanMissingParam": {
+    "description": "Error message when a required parameter is missing",
+    "placeholders": {
+      "param": { "type": "String" }
+    }
+  },
+  "toolModifyPlanPaceAdjusted": "Plan pace adjusted to {minutes} minutes per day.",
+  "@toolModifyPlanPaceAdjusted": {
+    "description": "Success message when plan pace is adjusted",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "toolModifyPlanExtended": "Plan extended by {added} days. New total duration: {total} days.",
+  "@toolModifyPlanExtended": {
+    "description": "Success message when plan is extended",
+    "placeholders": {
+      "added": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "toolModifyPlanRedistributed": "Redistributed {minutes} minutes of missed work using {strategy} strategy.",
+  "@toolModifyPlanRedistributed": {
+    "description": "Success message when missed workload is redistributed",
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "strategy": { "type": "String" }
+    }
+  },
+  "toolModifyPlanTargetsChanged": "Daily targets updated successfully.",
+  "@toolModifyPlanTargetsChanged": {
+    "description": "Success message when daily targets are changed"
+  },
   "@mentorScheduleFail": {
     "description": "Failure message when lesson cannot be scheduled"
   },
@@ -5285,7 +5354,7 @@
       "topicTitle": { "type": "String" }
     }
   },
-  "tutorInstructionPrompt": "Guidelines:\n- {timeContext}\n- {paceContext}\n- Explain concepts step by step\n- Adapt to the student's level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning",
+  "tutorInstructionPrompt": "Guidelines:\n- {timeContext}\n- {paceContext}\n- Explain concepts step by step\n- Adapt to the student's level\n- Encourage the student always\n- If they answer correctly, accelerate; if struggling, simplify\n- Keep track of the lesson hour - be mindful of time\n- Ask questions to check understanding\n- Never give away answers directly - guide the student\n- Insert inline exercises naturally into the conversation\n- Celebrate correct answers with specific praise\n- For wrong answers, explain why and guide toward the correct reasoning\n- When writing mathematical expressions, use LaTeX notation with $...$ for inline math and $$...$$ for display math",
   "@tutorInstructionPrompt": {
     "description": "Instruction prompt for AI tutor",
     "placeholders": {

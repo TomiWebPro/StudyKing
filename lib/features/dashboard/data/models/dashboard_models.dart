@@ -186,6 +186,24 @@ class DueReviewsData {
   });
 }
 
+class DailyTrendEntry {
+  final DateTime date;
+  final int attempts;
+  final double accuracy;
+  final int focusSeconds;
+  final int sessions;
+  final double compositeScore;
+
+  const DailyTrendEntry({
+    required this.date,
+    this.attempts = 0,
+    this.accuracy = 0.0,
+    this.focusSeconds = 0,
+    this.sessions = 0,
+    this.compositeScore = 0.0,
+  });
+}
+
 class ChecklistProgress {
   final bool hasSubjects;
   final bool hasSources;

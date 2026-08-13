@@ -39,7 +39,7 @@ class _FileUploadWidgetState extends State<FileUploadWidget> {
 
   Future<void> _pickFile() async {
     try {
-      final result = await FilePicker.platform.pickFiles();
+      final result = await FilePicker.pickFiles();
       if (result != null && result.files.isNotEmpty) {
         final file = result.files.first;
         final fileName = file.name;

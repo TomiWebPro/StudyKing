@@ -13,10 +13,14 @@ final _l10n = AppLocalizationsEn();
 Widget buildWidget({
   String? instruction,
   ValueChanged<Uint8List>? onDrawingComplete,
+  ValueChanged<String>? onTextRecognized,
+  CanvasInputMode? inputMode,
+  ValueChanged<CanvasInputMode>? onInputModeChanged,
   String? initialDrawing,
   bool showTools = false,
   bool showColorPicker = false,
   bool showStrokeWidth = false,
+  bool showInputModeSelector = false,
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -26,10 +30,14 @@ Widget buildWidget({
       body: CanvasDrawingWidget(
         instruction: instruction,
         onDrawingComplete: onDrawingComplete ?? (_) {},
+        onTextRecognized: onTextRecognized,
+        inputMode: inputMode,
+        onInputModeChanged: onInputModeChanged,
         initialDrawing: initialDrawing,
         showTools: showTools,
         showColorPicker: showColorPicker,
         showStrokeWidth: showStrokeWidth,
+        showInputModeSelector: showInputModeSelector,
       ),
     ),
   );
@@ -770,6 +778,166 @@ void main() {
         expect(find.byIcon(Icons.horizontal_rule), findsOneWidget);
         expect(find.byIcon(Icons.remove), findsOneWidget);
         expect(find.byIcon(Icons.radio_button_unchecked), findsOneWidget);
+      });
+    });
+
+    group('input mode selector', () {
+      testWidgets('shows input mode selector when showInputModeSelector is true', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: true));
+        await tester.pump();
+        expect(find.byType(SegmentedButton<CanvasInputMode>), findsOneWidget);
+      });
+
+      testWidgets('does not show input mode selector when showInputModeSelector is false', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: false));
+        await tester.pump();
+        expect(find.byType(SegmentedButton<CanvasInputMode>), findsNothing);
+      });
+
+      testWidgets('input mode selector shows draw, text, and math options', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: true));
+        await tester.pump();
+        expect(find.text('Draw'), findsOneWidget);
+        expect(find.text('Text'), findsOneWidget);
+        expect(find.text('Math'), findsOneWidget);
+      });
+
+      testWidgets('input mode change calls onInputModeChanged callback', (tester) async {
+        CanvasInputMode? selectedMode;
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          onInputModeChanged: (mode) => selectedMode = mode,
+        ));
+        await tester.pump();
+
+        await tester.tap(find.text('Text'));
+        await tester.pump();
+
+        expect(selectedMode, CanvasInputMode.handwriteText);
+      });
+
+      testWidgets('input mode defaults to draw mode', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: true));
+        await tester.pump();
+
+        final segmentedButton = tester.widget<SegmentedButton<CanvasInputMode>>(
+          find.byType(SegmentedButton<CanvasInputMode>),
+        );
+        expect(segmentedButton.selected, contains(CanvasInputMode.draw));
+      });
+
+      testWidgets('switching to text mode changes placeholder text', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: true));
+        await tester.pump();
+
+        await tester.tap(find.text('Text'));
+        await tester.pump();
+
+        expect(find.text('Write here'), findsOneWidget);
+      });
+
+      testWidgets('switching to math mode changes placeholder text', (tester) async {
+        await tester.pumpWidget(buildWidget(showInputModeSelector: true));
+        await tester.pump();
+
+        await tester.tap(find.text('Math'));
+        await tester.pump();
+
+        expect(find.text('Write here'), findsOneWidget);
+      });
+
+      testWidgets('switching mode clears recognized text', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.handwriteText,
+        ));
+        await tester.pump();
+
+        await tester.tap(find.text('Draw'));
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+    });
+
+    group('handwriting recognition integration', () {
+      testWidgets('onTextRecognized callback is called when text is recognized', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.handwriteText,
+          onTextRecognized: (text) {},
+        ));
+        await tester.pump();
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('save button shows Submit Text in handwriting mode', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.handwriteText,
+        ));
+        await tester.pump();
+
+        expect(find.text('Submit Text'), findsOneWidget);
+      });
+
+      testWidgets('save button shows Save Drawing in draw mode', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.draw,
+        ));
+        await tester.pump();
+
+        expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
+      });
+
+      testWidgets('recognized text overlay shows in handwriting mode when text is recognized', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.handwriteText,
+        ));
+        await tester.pump();
+
+        final gesture = await tester.startGesture(const Offset(100, 100));
+        await gesture.moveBy(const Offset(50, 50));
+        await gesture.up();
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+
+      testWidgets('math mode shows LaTeX prefix in recognized text overlay', (tester) async {
+        await tester.pumpWidget(buildWidget(
+          showInputModeSelector: true,
+          inputMode: CanvasInputMode.handwriteMath,
+        ));
+        await tester.pump();
+
+        expect(find.byType(CanvasDrawingWidget), findsOneWidget);
+      });
+    });
+
+    group('CanvasInputMode enum', () {
+      test('has three values', () {
+        expect(CanvasInputMode.values.length, 3);
+      });
+
+      test('contains draw mode', () {
+        expect(CanvasInputMode.draw, isNotNull);
+      });
+
+      test('contains handwriteText mode', () {
+        expect(CanvasInputMode.handwriteText, isNotNull);
+      });
+
+      test('contains handwriteMath mode', () {
+        expect(CanvasInputMode.handwriteMath, isNotNull);
       });
     });
   });

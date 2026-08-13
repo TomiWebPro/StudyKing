@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 
 enum DrawingTool { freehand, line, rectangle, circle, plotPoint, eraser }
 
+enum CanvasInputMode { draw, handwriteText, handwriteMath }
+
 class Stroke {
   final List<DrawingPoint> points;
   final Color color;

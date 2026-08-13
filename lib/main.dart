@@ -170,6 +170,18 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
         final profile = initProfileResult.data;
         if (profile != null && profile.language.isNotEmpty) {
           setInitialLanguageCode(profile.language);
+        } else if (profile != null && profile.language.isEmpty) {
+          // First launch with existing profile but no saved language.
+          // Detect the device locale and persist it so it is never re-detected.
+          final deviceLocale = WidgetsBinding.instance.platformDispatcher.locale;
+          final detectedLang = AppLocale.fromLocale(deviceLocale)
+              .locale
+              .languageCode;
+          setInitialLanguageCode(detectedLang);
+          await initSettingsRepo.saveProfileData(
+            profile.copyWith(language: detectedLang),
+          );
+          _mainLogger.w('Auto-saved detected language: $detectedLang');
         }
       } else {
         _mainLogger.w('Error loading profile: ${initProfileResult.error}');

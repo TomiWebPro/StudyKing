@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../core/widgets/rich_content_renderer.dart';
 
 class SingleAnswerWidget extends StatelessWidget {
   final List<String> options;
@@ -65,11 +66,9 @@ class SingleAnswerWidget extends StatelessWidget {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          option,
-                          softWrap: true,
-                          overflow: TextOverflow.ellipsis,
-                          maxLines: 3,
+                        child: RichContentRenderer(
+                          content: option,
+                          textStyle: Theme.of(context).textTheme.bodyMedium,
                         ),
                       ),
                     ],

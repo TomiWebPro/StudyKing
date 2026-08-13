@@ -2832,6 +2832,29 @@
   "@weeklyActivity": {
     "description": "Label for weekly activity metric"
   },
+  "dailyActivity": "Hoy",
+  "@dailyActivity": {
+    "description": "Label for daily activity metric in summary row"
+  },
+  "heatmapTitle": "Actividad Diaria",
+  "@heatmapTitle": {
+    "description": "Title for the daily activity heatmap card"
+  },
+  "heatmapNoActivity": "Sin actividad",
+  "@heatmapNoActivity": {
+    "description": "Tooltip for heatmap cells with no activity"
+  },
+  "heatmapTooltip": "{date}: {attempts} preguntas, {accuracy}% precisión, {focusTime} enfoque, {sessions} sesiones",
+  "@heatmapTooltip": {
+    "description": "Tooltip text for a heatmap cell",
+    "placeholders": {
+      "date": {"type": "String"},
+      "attempts": {"type": "int"},
+      "accuracy": {"type": "int"},
+      "focusTime": {"type": "String"},
+      "sessions": {"type": "int"}
+    }
+  },
   "topicsLabel": "Temas",
   "@topicsLabel": {
     "description": "Label for topics count metric"
@@ -5227,6 +5250,52 @@
   "@toolCreatePlanFail": {
     "description": "Result message when plan creation fails via tool"
   },
+  "toolModifyPlanInvalidAction": "Acción de modificación no válida. Las acciones compatibles son: adjust_pace, extend, redistribute, change_targets.",
+  "@toolModifyPlanInvalidAction": {
+    "description": "Error message when an invalid modify_plan action is provided"
+  },
+  "toolModifyPlanError": "Error al modificar el plan. Por favor, intente de nuevo.",
+  "@toolModifyPlanError": {
+    "description": "Generic error message when plan modification fails"
+  },
+  "toolModifyPlanNoPlan": "No se encontró un plan activo. Por favor, cree un plan primero.",
+  "@toolModifyPlanNoPlan": {
+    "description": "Error message when no active plan exists to modify"
+  },
+  "toolModifyPlanMissingParam": "Falta el parámetro requerido: {param}.",
+  "@toolModifyPlanMissingParam": {
+    "description": "Error message when a required parameter is missing",
+    "placeholders": {
+      "param": { "type": "String" }
+    }
+  },
+  "toolModifyPlanPaceAdjusted": "Ritmo del plan ajustado a {minutes} minutos por día.",
+  "@toolModifyPlanPaceAdjusted": {
+    "description": "Success message when plan pace is adjusted",
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "toolModifyPlanExtended": "Plan extendido en {added} días. Nueva duración total: {total} días.",
+  "@toolModifyPlanExtended": {
+    "description": "Success message when plan is extended",
+    "placeholders": {
+      "added": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "toolModifyPlanRedistributed": "Se redistribuyeron {minutes} minutos de trabajo perdido usando la estrategia {strategy}.",
+  "@toolModifyPlanRedistributed": {
+    "description": "Success message when missed workload is redistributed",
+    "placeholders": {
+      "minutes": { "type": "int" },
+      "strategy": { "type": "String" }
+    }
+  },
+  "toolModifyPlanTargetsChanged": "Objetivos diarios actualizados exitosamente.",
+  "@toolModifyPlanTargetsChanged": {
+    "description": "Success message when daily targets are changed"
+  },
   "@mentorScheduleFail": {
     "description": "Failure message when lesson cannot be scheduled"
   },
@@ -5277,7 +5346,7 @@
       "topicTitle": { "type": "String" }
     }
   },
-  "tutorInstructionPrompt": "Directrices:\n- {timeContext}\n- {paceContext}\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto",
+  "tutorInstructionPrompt": "Directrices:\n- {timeContext}\n- {paceContext}\n- Explique conceptos paso a paso\n- Adáptese al nivel del estudiante\n- Motive siempre al estudiante\n- Si responde correctamente, acelere; si tiene dificultades, simplifique\n- Lleve la cuenta del tiempo de la lección - sea consciente del tiempo\n- Haga preguntas para verificar la comprensión\n- Nunca dé respuestas directamente - guíe al estudiante\n- Inserte ejercicios inline de forma natural en la conversación\n- Celebre las respuestas correctas con elogios específicos\n- Para respuestas incorrectas, explique por qué y guíe hacia el razonamiento correcto\n- Al escribir expresiones matemáticas, use notación LaTeX con $...$ para matemáticas en línea y $$...$$ para matemáticas en bloque",
   "@tutorInstructionPrompt": {
     "description": "Instruction prompt for AI tutor",
     "placeholders": {

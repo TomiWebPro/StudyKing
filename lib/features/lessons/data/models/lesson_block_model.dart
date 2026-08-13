@@ -24,6 +24,21 @@ class LessonBlock extends HiveObject {
   @HiveField(6, defaultValue: '')
   final String answerKey;
 
+  @HiveField(7)
+  final String? chapterTitle;
+
+  @HiveField(8)
+  final String? sectionTitle;
+
+  @HiveField(9)
+  final int? chapterOrder;
+
+  @HiveField(10)
+  final int? sectionOrder;
+
+  @HiveField(11)
+  final SlideType? slideType;
+
   LessonBlock({
     required this.id,
     required this.subjectId,
@@ -32,6 +47,11 @@ class LessonBlock extends HiveObject {
     required this.content,
     this.order = 0,
     this.answerKey = '',
+    this.chapterTitle,
+    this.sectionTitle,
+    this.chapterOrder,
+    this.sectionOrder,
+    this.slideType,
   });
 
   Map<String, dynamic> toJson() => {
@@ -42,6 +62,11 @@ class LessonBlock extends HiveObject {
     'content': content,
     'order': order,
     'answerKey': answerKey,
+    'chapterTitle': chapterTitle,
+    'sectionTitle': sectionTitle,
+    'chapterOrder': chapterOrder,
+    'sectionOrder': sectionOrder,
+    'slideType': slideType?.index,
   };
 
   factory LessonBlock.fromJson(Map<String, dynamic> json) => LessonBlock(
@@ -52,6 +77,13 @@ class LessonBlock extends HiveObject {
     content: json['content'],
     order: json['order'] ?? 0,
     answerKey: json['answerKey'] ?? '',
+    chapterTitle: json['chapterTitle'],
+    sectionTitle: json['sectionTitle'],
+    chapterOrder: json['chapterOrder'],
+    sectionOrder: json['sectionOrder'],
+    slideType: json['slideType'] != null
+        ? SlideType.values[json['slideType'] as int]
+        : null,
   );
 
   LessonBlock copyWith({
@@ -62,6 +94,11 @@ class LessonBlock extends HiveObject {
     String? content,
     int? order,
     String? answerKey,
+    String? chapterTitle,
+    String? sectionTitle,
+    int? chapterOrder,
+    int? sectionOrder,
+    SlideType? slideType,
   }) {
     return LessonBlock(
       id: id ?? this.id,
@@ -71,6 +108,11 @@ class LessonBlock extends HiveObject {
       content: content ?? this.content,
       order: order ?? this.order,
       answerKey: answerKey ?? this.answerKey,
+      chapterTitle: chapterTitle ?? this.chapterTitle,
+      sectionTitle: sectionTitle ?? this.sectionTitle,
+      chapterOrder: chapterOrder ?? this.chapterOrder,
+      sectionOrder: sectionOrder ?? this.sectionOrder,
+      slideType: slideType ?? this.slideType,
     );
   }
 }
