@@ -108,10 +108,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
             content: Text(l10n.backupCompleted),
             action: SnackBarAction(
               label: l10n.share,
-              onPressed: () => Share.shareXFiles(
-                [XFile(filePath)],
-                text: l10n.backupShareText(DateTime.now().toIso8601String().substring(0, 10)),
-              ),
+              onPressed: () async {
+                await SharePlus.instance.share(
+                  ShareParams(
+                    files: [XFile(filePath)],
+                    text: l10n.backupShareText(DateTime.now().toIso8601String().substring(0, 10)),
+                  ),
+                );
+              },
             ),
           ),
         );
@@ -714,10 +718,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
               Padding(
                 padding: const EdgeInsetsDirectional.only(start: 16, top: 0, end: 16, bottom: 8),
                 child: TextButton.icon(
-                  onPressed: () {
+                  onPressed: () async {
                     Navigator.pop(ctx);
-                    Share.shareXFiles([XFile(lastBackupPath)],
-                      text: l10n.backupShareText(lastBackupStr.substring(0, 10)),
+                    await SharePlus.instance.share(
+                      ShareParams(
+                        files: [XFile(lastBackupPath)],
+                        text: l10n.backupShareText(lastBackupStr.substring(0, 10)),
+                      ),
                     );
                   },
                   icon: const Icon(Icons.share, size: 16),
@@ -1151,10 +1158,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   : '$fileSize B';
         }
         final shareText = l10n.exportBackup;
-        await Share.shareXFiles(
-          [XFile(filePath)],
-          text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)}'
-              ' — ${l10n.recordCount(totalRecords)}, $sizeStr',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(filePath)],
+            text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)}'
+                ' — ${l10n.recordCount(totalRecords)}, $sizeStr',
+          ),
         );
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

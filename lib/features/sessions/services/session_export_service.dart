@@ -261,14 +261,20 @@ class SessionExportService {
   }) async {
     if (kIsWeb) {
       final csv = sessionsToCSV(sessions);
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv')],
-        text: l10n.shareSessionsText,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv'),
+          ],
+          text: l10n.shareSessionsText,
+        ),
       );
     } else {
       final result = await writeCSVFile(sessions, filename);
       if (result.isSuccess) {
-        await Share.shareXFiles([XFile(result.data!.path)], text: l10n.shareSessionsText);
+        await SharePlus.instance.share(
+          ShareParams(files: [XFile(result.data!.path)], text: l10n.shareSessionsText),
+        );
       }
     }
   }
@@ -280,14 +286,24 @@ class SessionExportService {
   }) async {
     if (kIsWeb) {
       final json = jsonEncode(sessionsToJSON(sessions));
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
-        text: l10n.shareSessionsText,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              Uint8List.fromList(utf8.encode(json)),
+              name: '$filename.json',
+              mimeType: 'application/json',
+            ),
+          ],
+          text: l10n.shareSessionsText,
+        ),
       );
     } else {
       final result = await writeJSONFile(sessions, filename);
       if (result.isSuccess) {
-        await Share.shareXFiles([XFile(result.data!.path)], text: l10n.shareSessionsText);
+        await SharePlus.instance.share(
+          ShareParams(files: [XFile(result.data!.path)], text: l10n.shareSessionsText),
+        );
       }
     }
   }
@@ -300,14 +316,27 @@ class SessionExportService {
   }) async {
     if (kIsWeb) {
       final pdfBytes = await sessionsToPDF(sessions, l10n);
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(pdfBytes), name: '$filename.pdf', mimeType: 'application/pdf')],
-        text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(
+              Uint8List.fromList(pdfBytes),
+              name: '$filename.pdf',
+              mimeType: 'application/pdf',
+            ),
+          ],
+          text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
+        ),
       );
     } else {
       final result = await writePDFFile(sessions, filename, l10n);
       if (result.isSuccess) {
-        await Share.shareXFiles([XFile(result.data!.path)], text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText);
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(result.data!.path)],
+            text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
+          ),
+        );
       }
     }
   }

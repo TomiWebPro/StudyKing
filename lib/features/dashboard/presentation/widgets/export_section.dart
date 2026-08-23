@@ -194,9 +194,13 @@ class ExportSection extends ConsumerWidget {
       final csvResult = await exportService.exportComprehensiveCSV(studentId, l10n: l10n);
       if (csvResult.isFailure || !context.mounted) return;
       final csv = csvResult.data!;
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
-        text: l10n.comprehensiveReportExported,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv'),
+          ],
+          text: l10n.comprehensiveReportExported,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -220,9 +224,13 @@ class ExportSection extends ConsumerWidget {
       final pdfResult = await exportService.exportComprehensivePDF(studentId, l10n);
       if (pdfResult.isFailure || !context.mounted) return;
       final pdfBytes = pdfResult.data!;
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(pdfBytes), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf', mimeType: 'application/pdf')],
-        text: l10n.comprehensiveReportExported,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(pdfBytes), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.pdf', mimeType: 'application/pdf'),
+          ],
+          text: l10n.comprehensiveReportExported,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -246,9 +254,13 @@ class ExportSection extends ConsumerWidget {
       final jsonResult = await exportService.exportComprehensiveJSON(studentId, l10n);
       if (jsonResult.isFailure || !context.mounted) return;
       final jsonStr = jsonResult.data!;
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(jsonStr)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
-        text: l10n.comprehensiveReportExported,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(jsonStr)), name: 'studyking_full_report_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json'),
+          ],
+          text: l10n.comprehensiveReportExported,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -273,9 +285,13 @@ class ExportSection extends ConsumerWidget {
       final csvResult = await tracker.exportProgressCSV(studentId);
       if (!context.mounted) return;
       final csv = csvResult.data ?? '';
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv')],
-        text: l10n.shareProgressReport,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: 'studyking_progress_${DateTime.now().millisecondsSinceEpoch}.csv', mimeType: 'text/csv'),
+          ],
+          text: l10n.shareProgressReport,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;
@@ -382,9 +398,11 @@ class ExportSection extends ConsumerWidget {
                 ? '${formatDecimal(fileSize / 1024, localeName, maxFractionDigits: 0)} KB'
                 : '$fileSize B';
         final shareText = l10n.exportBackup;
-        await Share.shareXFiles(
-          [XFile(filePath)],
-          text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)} — $sizeStr',
+        await SharePlus.instance.share(
+          ShareParams(
+            files: [XFile(filePath)],
+            text: '$shareText — ${DateTime.now().toIso8601String().substring(0, 10)} — $sizeStr',
+          ),
         );
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -425,9 +443,13 @@ class ExportSection extends ConsumerWidget {
       final data = result.data!;
       final jsonString = formatInstrumentation(data, l10n);
       if (!context.mounted) return;
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(jsonString)), name: 'studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json')],
-        text: l10n.shareInstrumentationData,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(jsonString)), name: 'studyking_instrumentation_${DateTime.now().millisecondsSinceEpoch}.json', mimeType: 'application/json'),
+          ],
+          text: l10n.shareInstrumentationData,
+        ),
       );
     } catch (e) {
       if (!context.mounted) return;

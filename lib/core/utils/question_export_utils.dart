@@ -84,6 +84,6 @@ class QuestionExportUtils {
   }
 
   static Future<void> shareFile(String filePath) async {
-    await Share.shareXFiles([XFile(filePath)]);
+    await SharePlus.instance.share(ShareParams(files: [XFile(filePath)]));
   }
 }

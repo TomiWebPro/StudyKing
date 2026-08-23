@@ -336,9 +336,13 @@ class ProgressExportService {
     return Result.capture(() async {
       final csvResult = await exportComprehensiveCSV(studentId, l10n: l10n);
       if (csvResult.isFailure) throw Exception(csvResult.error);
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(csvResult.data!)), name: '$filename.csv', mimeType: 'text/csv')],
-        text: l10n.pdfProgressReport,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(csvResult.data!)), name: '$filename.csv', mimeType: 'text/csv'),
+          ],
+          text: l10n.pdfProgressReport,
+        ),
       );
     }, context: 'shareComprehensiveCSV');
   }
@@ -373,9 +377,13 @@ class ProgressExportService {
         'badges': badges,
       });
 
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json')],
-        text: l10n.pdfProgressReport,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(utf8.encode(json)), name: '$filename.json', mimeType: 'application/json'),
+          ],
+          text: l10n.pdfProgressReport,
+        ),
       );
     }, context: 'shareComprehensiveJSON');
   }
@@ -388,9 +396,13 @@ class ProgressExportService {
     return Result.capture(() async {
       final pdfResult = await exportComprehensivePDF(studentId, l10n);
       if (pdfResult.isFailure) throw Exception(pdfResult.error);
-      await Share.shareXFiles(
-        [XFile.fromData(Uint8List.fromList(pdfResult.data!), name: '$filename.pdf', mimeType: 'application/pdf')],
-        text: l10n.pdfProgressReport,
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [
+            XFile.fromData(Uint8List.fromList(pdfResult.data!), name: '$filename.pdf', mimeType: 'application/pdf'),
+          ],
+          text: l10n.pdfProgressReport,
+        ),
       );
     }, context: 'shareComprehensivePDF');
   }
