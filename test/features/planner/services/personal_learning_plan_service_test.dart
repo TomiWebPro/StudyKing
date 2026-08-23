@@ -213,6 +213,7 @@ class FakeTopicRepository extends TopicRepository {
 
 class _FakePlanRepository extends PlanRepository {
   PersonalLearningPlan? _plan;
+  bool throwOnLoad = false;
 
   @override
   Future<Result<void>> init() async {
@@ -220,8 +221,10 @@ class _FakePlanRepository extends PlanRepository {
   }
 
   @override
-  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async =>
-      Result.success(_plan);
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    if (throwOnLoad) throw Exception('load failed');
+    return Result.success(_plan);
+  }
 
   @override
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
@@ -1039,6 +1042,12 @@ void main() {
           await planRepo.savePlan(plan);
           final result = await svc.redistributeMissedWorkload('student1', 30, plan, strategy: 'invalid');
           expect(result.isSuccess, isTrue);
+        });
+
+        test('redistributeMissedWorkloadForStudent returns failure when plan load throws', () async {
+          planRepo.throwOnLoad = true;
+          final result = await svc.redistributeMissedWorkloadForStudent('student1', 30);
+          expect(result.isFailure, isTrue);
         });
       });
     });

@@ -378,6 +378,33 @@ void main() {
           dir.deleteSync(recursive: true);
         }
       });
+
+      test('returns error when file path LLM throws', () async {
+        final dir = Directory.systemTemp.createTempSync('ocr_llm_throw_test_');
+        try {
+          final file = File('${dir.path}/test_image.png');
+          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
+
+          final llm = _FakeLlmService(
+            onChat: () async => throw Exception('Network error'),
+          );
+          final extractor = OcrExtractor(
+            llmService: llm,
+            modelId: 'test-model',
+            localeName: 'en',
+          );
+
+          final result = await extractor.extractText(
+            rawContent: 'file://${file.path}',
+            sourceUrl: null,
+          );
+
+          expect(result.extractionMethod, 'ocr_llm_failed');
+          expect(result.errorMessage, contains('Network error'));
+        } finally {
+          dir.deleteSync(recursive: true);
+        }
+      });
     });
   });
 }
