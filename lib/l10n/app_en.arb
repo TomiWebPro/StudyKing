@@ -6258,6 +6258,10 @@
   "@generatingQuestions": {
     "description": "Status label for generating questions"
   },
+  "generatingFlashcards": "Generating Flashcards",
+  "@generatingFlashcards": {
+    "description": "Status label for generating flashcards"
+  },
   "contentLibrary": "Content Library",
   "@contentLibrary": {
     "description": "App bar title for content library screen"

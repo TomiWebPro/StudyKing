@@ -96,7 +96,6 @@ class FakeMasteryForSyllabus extends MasteryGraphService {
   @override
   Future<Result<MasteryState>> getTopicMastery(
       String studentId, String topicId) async {
-    final key = '${studentId}_$topicId';
     final state = _masteryStates[topicId];
     if (state != null) return Result.success(state);
     return Result.success(MasteryState.initial(
@@ -401,6 +400,50 @@ void main() {
         });
 
         expect(result['suggestedNextTopic'], 't2');
+        expect(result.containsKey('explanation'), true);
+        expect(result['explanation'], isA<String>());
+        expect((result['explanation'] as String).isNotEmpty, true);
+      });
+
+      test('includes explanation when prerequisites are absent', () async {
+        subjectRepo.addSubject(_subject(
+          id: 'subj-1',
+          name: 'Physics',
+          topicIds: ['t1', 't2'],
+        ));
+        topicRepo.addTopic(_topic(id: 't1', subjectId: 'subj-1'));
+        topicRepo.addTopic(_topic(id: 't2', subjectId: 'subj-1'));
+
+        final result = await tool.execute({
+          'subjectId': 'subj-1',
+          'includeProgress': true,
+          'includePrerequisites': true,
+        });
+
+        expect(result['suggestedNextTopic'], 't1');
+        expect(result.containsKey('explanation'), true);
+        expect((result['explanation'] as String).isNotEmpty, true);
+      });
+
+      test('omits suggestedNextTopic when all topics are mastered', () async {
+        subjectRepo.addSubject(_subject(
+          id: 'subj-1',
+          name: 'Physics',
+          topicIds: ['t1'],
+        ));
+        topicRepo.addTopic(_topic(id: 't1', subjectId: 'subj-1'));
+        masteryService.setMastery('t1', _mastery(
+          topicId: 't1', readinessScore: 0.9, level: MasteryLevel.expert,
+        ));
+
+        final result = await tool.execute({
+          'subjectId': 'subj-1',
+          'includeProgress': true,
+          'includePrerequisites': true,
+        });
+
+        expect(result.containsKey('suggestedNextTopic'), false);
+        expect(result.containsKey('explanation'), false);
       });
 
       test('returns empty topics list when subject has no topics', () async {

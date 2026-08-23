@@ -4725,6 +4725,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get generatingQuestions => 'Generating Questions';
 
   @override
+  String get generatingFlashcards => 'Generating Flashcards';
+
+  @override
   String get contentLibrary => 'Content Library';
 
   @override

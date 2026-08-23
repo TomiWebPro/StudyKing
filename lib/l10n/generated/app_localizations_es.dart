@@ -4776,6 +4776,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get generatingQuestions => 'Generando Preguntas';
 
   @override
+  String get generatingFlashcards => 'Generando Tarjetas';
+
+  @override
   String get contentLibrary => 'Biblioteca de Contenido';
 
   @override
