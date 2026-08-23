@@ -63,6 +63,8 @@ String processingStatusLabel(ProcessingStatus status, AppLocalizations l10n) {
       return l10n.processing;
     case ProcessingStatus.generatingQuestions:
       return l10n.generatingQuestions;
+    case ProcessingStatus.generatingFlashcards:
+      return l10n.generatingFlashcards;
     case ProcessingStatus.validating:
       return l10n.validating;
     case ProcessingStatus.completed:

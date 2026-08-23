@@ -111,6 +111,10 @@ void main() {
       expect(processingStatusLabel(ProcessingStatus.generatingQuestions, l10n), 'Generating Questions');
     });
 
+    test('returns Generating Flashcards for generatingFlashcards', () {
+      expect(processingStatusLabel(ProcessingStatus.generatingFlashcards, l10n), 'Generating Flashcards');
+    });
+
     test('returns Validating... for validating', () {
       expect(processingStatusLabel(ProcessingStatus.validating, l10n), 'Validating...');
     });

@@ -157,6 +157,9 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
   Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async => Result.success(trend);
 
   @override
+  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async => Result.success(trend);
+
+  @override
   Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async => Result.success(overallStats);
 
   @override

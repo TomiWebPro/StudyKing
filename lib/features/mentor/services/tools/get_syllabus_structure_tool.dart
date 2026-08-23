@@ -300,12 +300,13 @@ class GetSyllabusStructureTool extends AgentTool {
     return entry;
   }
 
-  String? _suggestNextTopic({
+  Map<String, String>? _suggestNextTopic({
     required List<Map<String, dynamic>> topicEntries,
     required Map<String, TopicDependency> dependencyMap,
     required Map<String, MasteryState> masteryMap,
   }) {
-    final hasAnyPrerequisites = dependencyMap.values.any((d) => d.prerequisites.isNotEmpty);
+    final hasAnyPrerequisites =
+        dependencyMap.values.any((d) => d.prerequisites.isNotEmpty);
 
     for (final entry in topicEntries) {
       final topicId = entry['id'] as String;
@@ -318,10 +319,13 @@ class GetSyllabusStructureTool extends AgentTool {
 
       if (hasAnyPrerequisites) {
         if (entry['isReady'] == true) {
-          return topicId;
+          final explanation =
+              'Ready to study — all prerequisites for $topicId are complete.';
+          return {'topicId': topicId, 'explanation': explanation};
         }
       } else {
-        return topicId;
+        final explanation = 'Suggested next topic in the syllabus.';
+        return {'topicId': topicId, 'explanation': explanation};
       }
     }
     return null;
