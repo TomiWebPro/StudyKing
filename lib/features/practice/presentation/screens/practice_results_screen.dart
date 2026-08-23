@@ -254,7 +254,9 @@ class PracticeResultsScreen extends StatelessWidget {
         buffer.writeln('${l10n.aiGenerated}: ${aiQs.where((r) => r.isCorrect).length}/${aiQs.length}');
       }
     }
-    await Share.share(buffer.toString(), subject: l10n.sessionResults);
+    await SharePlus.instance.share(
+      ShareParams(text: buffer.toString(), subject: l10n.sessionResults),
+    );
   }
 
   Widget _buildStatRow(BuildContext context, String label, String value) {
