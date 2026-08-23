@@ -118,7 +118,7 @@ void main() {
     });
 
     test('preserves headings when present', () {
-      final text = '# Chapter 1\n' + 'A' * 2000 + '\n\n# Chapter 2\n' + 'B' * 2000;
+      final text = '# Chapter 1\n${'A' * 2000}\n\n# Chapter 2\n${'B' * 2000}';
       final chunks = processor.splitIntoChunks(text);
       final headings = chunks.map((c) => c.heading).whereType<String>().toList();
       expect(headings, isNotEmpty);
