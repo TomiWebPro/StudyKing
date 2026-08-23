@@ -285,10 +285,10 @@ void main() {
     group('summarization', () {
       test('compresses old messages when summarizer is provided', () async {
         final summaries = <List<ConversationMessage>>[];
-        final summarizer = (List<ConversationMessage> msgs) async {
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
           summaries.add(msgs);
           return 'Summary of ${msgs.length} messages';
-        };
+        }
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -323,9 +323,9 @@ void main() {
       });
 
       test('compression fails gracefully on summarizer error', () async {
-        final summarizer = (List<ConversationMessage> msgs) async {
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
           throw Exception('LLM unavailable');
-        };
+        }
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -343,7 +343,7 @@ void main() {
       });
 
       test('compression fails gracefully when summarizer returns null', () async {
-        final summarizer = (List<ConversationMessage> msgs) async => null;
+        Future<String?> summarizer(List<ConversationMessage> msgs) async => null;
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -361,9 +361,9 @@ void main() {
       });
 
       test('preserves recent messages after compression', () async {
-        final summarizer = (List<ConversationMessage> msgs) async {
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
           return 'Compressed summary';
-        };
+        }
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -385,13 +385,13 @@ void main() {
 
       test('drop summarization preserves semantic content when compression fails', () async {
         var callCount = 0;
-        final summarizer = (List<ConversationMessage> msgs) async {
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
           callCount++;
           if (callCount == 1) {
             return null;
           }
           return 'Summary of ${msgs.length} dropped messages';
-        };
+        }
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -413,7 +413,7 @@ void main() {
       });
 
       test('drop summarization falls back to truncation when summarizer returns null on drop', () async {
-        final summarizer = (List<ConversationMessage> msgs) async => null;
+        Future<String?> summarizer(List<ConversationMessage> msgs) async => null;
 
         final memory = ConversationMemory(
           maxTurns: 10,
@@ -433,10 +433,10 @@ void main() {
       test('compression runs before hard-limit drop', () async {
         final summaries = <List<ConversationMessage>>[];
 
-        final summarizer = (List<ConversationMessage> msgs) async {
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
           summaries.add(msgs);
           return 'Summary of ${msgs.length} messages';
-        };
+        }
 
         final memory = ConversationMemory(
           maxTurns: 10,

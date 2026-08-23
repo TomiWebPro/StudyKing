@@ -4,10 +4,6 @@ import 'package:studyking/features/flashcards/data/models/flashcard_model.dart';
 import 'package:studyking/features/flashcards/data/repositories/flashcard_repository.dart';
 import 'package:studyking/features/flashcards/services/flashcard_review_service.dart';
 
-class _FakeFlashcardBox {
-  final Map<String, Flashcard> _storage = {};
-}
-
 class _FakeFlashcardRepository extends FlashcardRepository {
   final Map<String, Flashcard> _storage = {};
 
