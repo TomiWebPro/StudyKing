@@ -671,7 +671,7 @@ class PersonalLearningPlanService {
       final planResult = await _planRepository.loadPlan(studentId);
       final plan = planResult.data;
       if (plan == null) return Result.success(null);
-      return redistributeMissedWorkload(studentId, missedMinutes, plan, strategy: strategy);
+      return await redistributeMissedWorkload(studentId, missedMinutes, plan, strategy: strategy);
     } catch (e) {
       _logger.w('Failed to redistribute missed workload for student: $e');
       return Result.failure('PersonalLearningPlanService.redistributeMissedWorkloadForStudent: $e');

@@ -75,7 +75,7 @@ class OcrExtractor {
         );
       }
       final bytes = await file.readAsBytes();
-      return _processImageBytes(bytes, 'image_file');
+      return await _processImageBytes(bytes, 'image_file');
     } catch (e) {
       _logger.w('Failed to read image file', e);
       return const OcrExtractionResult(

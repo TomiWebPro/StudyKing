@@ -147,7 +147,7 @@ class TranscriptionExtractor {
       final bytes = await file.readAsBytes();
       final base64Str = base64Encode(bytes);
       if (_llmService != null) {
-        return _transcribeWithLlm(base64Str);
+        return await _transcribeWithLlm(base64Str);
       }
       return const TranscriptionResult(
         text: '',
@@ -209,13 +209,13 @@ class TranscriptionExtractor {
 
       final pageContent = await _fetchYoutubePageContent(videoId);
       if (pageContent != null && _llmService != null) {
-        return _transcribeWithLlm(
+        return await _transcribeWithLlm(
           'YouTube video ID: $videoId\nPage content: $pageContent',
         );
       }
 
       if (_llmService != null) {
-        return _transcribeWithLlm('YouTube video ID: $videoId\nURL: $url');
+        return await _transcribeWithLlm('YouTube video ID: $videoId\nURL: $url');
       }
 
       return const TranscriptionResult(

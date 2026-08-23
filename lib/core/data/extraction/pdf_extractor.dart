@@ -29,7 +29,7 @@ class PdfExtractor {
         );
       }
       final bytes = await file.readAsBytes();
-      return extractFromBytes(bytes);
+      return await extractFromBytes(bytes);
     } catch (e) {
       _logger.w('Failed to read PDF file', e);
       return const PdfExtractionResult(
