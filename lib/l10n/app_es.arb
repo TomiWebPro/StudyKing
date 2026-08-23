@@ -6232,6 +6232,10 @@
   "@generatingQuestions": {
     "description": "Status label for generating questions"
   },
+  "generatingFlashcards": "Generando Tarjetas",
+  "@generatingFlashcards": {
+    "description": "Status label for generating flashcards"
+  },
   "contentLibrary": "Biblioteca de Contenido",
   "@contentLibrary": {
     "description": "App bar title for content library screen"

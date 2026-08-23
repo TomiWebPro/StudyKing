@@ -7847,6 +7847,12 @@ abstract class AppLocalizations {
   /// **'Generating Questions'**
   String get generatingQuestions;
 
+  /// Status label for generating flashcards
+  ///
+  /// In en, this message translates to:
+  /// **'Generating Flashcards'**
+  String get generatingFlashcards;
+
   /// App bar title for content library screen
   ///
   /// In en, this message translates to:

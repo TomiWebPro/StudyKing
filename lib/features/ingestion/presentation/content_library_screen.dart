@@ -130,6 +130,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       case ProcessingStatus.classifying:
       case ProcessingStatus.summarizing:
       case ProcessingStatus.generatingQuestions:
+      case ProcessingStatus.generatingFlashcards:
       case ProcessingStatus.validating:
         return cs.tertiary;
     }

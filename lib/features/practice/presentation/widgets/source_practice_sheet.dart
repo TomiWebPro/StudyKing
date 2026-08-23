@@ -177,6 +177,8 @@ String _statusLabel(ProcessingStatus status, AppLocalizations l10n) {
       return l10n.processing;
     case ProcessingStatus.generatingQuestions:
       return l10n.generatingQuestions;
+    case ProcessingStatus.generatingFlashcards:
+      return l10n.generatingFlashcards;
     case ProcessingStatus.summarizing:
       return l10n.summarizing;
     case ProcessingStatus.validating:
