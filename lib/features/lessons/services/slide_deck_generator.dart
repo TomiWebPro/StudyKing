@@ -55,7 +55,7 @@ class SlideDeckGenerator {
           startIndex: 0,
           endIndex: sourceContent.length,
         );
-        return _generateChapters(
+        return await _generateChapters(
           chapters: [singleChapter],
           sourceContent: sourceContent,
           subjectId: subjectId,
