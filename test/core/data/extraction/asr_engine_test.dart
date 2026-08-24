@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/data/extraction/asr_engine.dart';
@@ -157,6 +158,49 @@ void main() {
         expect(result.text, '');
         expect(result.extractionMethod, 'whisper_api_error');
         expect(result.errorMessage, contains('Whisper API error: 400'));
+        engine.dispose();
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
+    test('logs warning when response is not valid JSON at all', () async {
+      final dir = Directory.systemTemp.createTempSync('whisper_parsefail_test_');
+      try {
+        final file = File('${dir.path}/test.mp3');
+        await file.writeAsBytes([0xFF, 0xFB, 0x90]);
+
+        final mockClient = _MockHttpClient(
+          (_) async => http.Response('', 404),
+          onSend: (request) async {
+            final response = http.StreamedResponse(
+              Stream.value(utf8.encode('totally not json :::')),
+              200,
+            );
+            return response;
+          },
+        );
+
+        final records = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+        final engine = WhisperApiAsrEngine(
+          apiKey: 'sk-test-key',
+          httpClient: mockClient,
+        );
+
+        final result = await engine.transcribeFile(filePath: file.path);
+
+        debugPrint = originalPrint;
+
+        expect(result.text, '');
+        expect(result.extractionMethod, 'whisper_parse_failed');
+        expect(
+          records.any((r) => r.contains('Failed to extract fallback text')),
+          isTrue,
+          reason: 'expected a warning to be logged for the parse failure',
+        );
         engine.dispose();
       } finally {
         dir.deleteSync(recursive: true);

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -527,6 +528,56 @@ void main() {
         final chapter = lessons.firstWhere((l) => l.title == 'Ch1');
         expect(chapter.blocks.length, 1);
         expect(chapter.blocks[0].content, 'Wrapped');
+      });
+
+      test('skips malformed slide items and logs a warning', () async {
+        fakeLlm.setHandler(({
+          required String message,
+          required String modelId,
+          String? systemPrompt,
+          String localeName = 'en',
+          ConversationMemory? memory,
+          List<Map<String, String>>? history,
+          String feature = 'general',
+        }) async {
+          if (feature == 'slide_deck_structure') {
+            return Result.success(jsonEncode({
+              'chapters': [
+                {'title': 'Ch1', 'sections': [], 'startIndex': 0, 'endIndex': 50},
+              ],
+            }));
+          }
+          if (feature == 'slide_deck_chapter') {
+            return Result.success(jsonEncode([
+              {'slideType': 'concept', 'content': 'Concept 1', 'sectionTitle': 'Sec1', 'sectionOrder': 0},
+              'this is not a slide object',
+              {'slideType': 'concept', 'content': 'Concept 2', 'sectionTitle': 'Sec1', 'sectionOrder': 1},
+            ]));
+          }
+          return Result.success('');
+        });
+
+        final records = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+        final lessons = await generator.generateSlideDeck(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Test',
+          sourceContent: 'Content',
+          localeName: 'en',
+        );
+
+        debugPrint = originalPrint;
+
+        final chapter = lessons.firstWhere((l) => l.title == 'Ch1');
+        expect(chapter.blocks.length, 2);
+        expect(
+          records.any((r) => r.contains('malformed slide item')),
+          isTrue,
+          reason: 'expected a warning to be logged for the skipped item',
+        );
       });
 
       test('strips markdown code fences from response', () async {

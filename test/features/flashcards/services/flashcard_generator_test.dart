@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -133,6 +134,42 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data?.length, 2);
+    });
+
+    test('skips malformed flashcard items and logs a warning', () async {
+      final records = <String>[];
+      final originalPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+      final flashcardsJson = '''[
+        {"front": "Valid?", "back": "Yes"},
+        "this is not a flashcard object",
+        {"front": "Also valid", "back": "Yes too"}
+      ]''';
+
+      final llm = _FakeLlmService(responseJson: flashcardsJson);
+      final generator = FlashcardGenerator(
+        llmService: llm,
+        flashcardRepository: repo,
+      );
+
+      final result = await generator.generateFlashcards(
+        content: 'Some content.',
+        sourceId: 'src_1',
+        topicId: 'topic_1',
+        subjectId: 'sub_1',
+        modelId: 'test-model',
+      );
+
+      debugPrint = originalPrint;
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data?.length, 2);
+      expect(
+        records.any((r) => r.contains('malformed flashcard item')),
+        isTrue,
+        reason: 'expected a warning to be logged for the skipped item',
+      );
     });
 
     test('returns failure on invalid JSON', () async {
