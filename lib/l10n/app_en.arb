@@ -7880,5 +7880,45 @@
   "startLesson": "Start Lesson",
   "@startLesson": {
     "description": "ActionChip label to start a lesson"
+  },
+  "feedbackSectionTitle": "Was this helpful?",
+  "@feedbackSectionTitle": {
+    "description": "Title shown above the lesson/explanation feedback controls"
+  },
+  "feedbackThumbsUp": "Yes, helpful",
+  "@feedbackThumbsUp": {
+    "description": "Label for the thumbs up / positive feedback button"
+  },
+  "feedbackThumbsDown": "No, not helpful",
+  "@feedbackThumbsDown": {
+    "description": "Label for the thumbs down / negative feedback button"
+  },
+  "feedbackStarRatingLabel": "Rate the quality",
+  "@feedbackStarRatingLabel": {
+    "description": "Label for the star rating row"
+  },
+  "feedbackCommentHint": "Add a comment (optional)",
+  "@feedbackCommentHint": {
+    "description": "Hint text for the optional feedback comment field"
+  },
+  "feedbackReportIncorrect": "Report incorrect content",
+  "@feedbackReportIncorrect": {
+    "description": "Label for the report-incorrect-content toggle"
+  },
+  "feedbackReportIncorrectHint": "Flag this explanation or content as incorrect so we can review it.",
+  "@feedbackReportIncorrectHint": {
+    "description": "Helper text explaining the report-incorrect action"
+  },
+  "feedbackSubmit": "Submit feedback",
+  "@feedbackSubmit": {
+    "description": "Label for the submit feedback button"
+  },
+  "feedbackThanks": "Thanks for your feedback!",
+  "@feedbackThanks": {
+    "description": "Confirmation message shown after feedback is submitted"
+  },
+  "feedbackReportedBadge": "Reported",
+  "@feedbackReportedBadge": {
+    "description": "Badge label marking feedback that reported incorrect content"
   }
   }

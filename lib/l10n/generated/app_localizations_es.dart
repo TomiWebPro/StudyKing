@@ -6042,4 +6042,35 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get startLesson => 'Comenzar Lección';
+
+  @override
+  String get feedbackSectionTitle => '¿Te fue útil?';
+
+  @override
+  String get feedbackThumbsUp => 'Sí, útil';
+
+  @override
+  String get feedbackThumbsDown => 'No, no útil';
+
+  @override
+  String get feedbackStarRatingLabel => 'Califica la calidad';
+
+  @override
+  String get feedbackCommentHint => 'Añade un comentario (opcional)';
+
+  @override
+  String get feedbackReportIncorrect => 'Reportar contenido incorrecto';
+
+  @override
+  String get feedbackReportIncorrectHint =>
+      'Marca esta explicación o contenido como incorrecto para que lo revisemos.';
+
+  @override
+  String get feedbackSubmit => 'Enviar comentarios';
+
+  @override
+  String get feedbackThanks => '¡Gracias por tus comentarios!';
+
+  @override
+  String get feedbackReportedBadge => 'Reportado';
 }

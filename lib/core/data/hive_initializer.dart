@@ -26,6 +26,7 @@ import 'package:studyking/features/planner/data/models/plan_adherence_model.dart
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
+import 'package:studyking/features/teaching/data/models/lesson_feedback_model.dart';
 import 'package:studyking/core/data/hive_type_ids.dart';
 
 class HiveInitializer {
@@ -65,6 +66,8 @@ class HiveInitializer {
     await Hive.openBox(HiveBoxNames.conceptMaps);
 
     await Hive.openBox(HiveBoxNames.learningPreferences);
+
+    await Hive.openBox<LessonFeedbackModel>(HiveBoxNames.lessonFeedback);
 
     await SessionMigrationService.migrateIfNeeded().then((r) {
       if (r.isFailure) {

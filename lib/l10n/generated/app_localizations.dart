@@ -9812,6 +9812,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Start Lesson'**
   String get startLesson;
+
+  /// Title shown above the lesson/explanation feedback controls
+  ///
+  /// In en, this message translates to:
+  /// **'Was this helpful?'**
+  String get feedbackSectionTitle;
+
+  /// Label for the thumbs up / positive feedback button
+  ///
+  /// In en, this message translates to:
+  /// **'Yes, helpful'**
+  String get feedbackThumbsUp;
+
+  /// Label for the thumbs down / negative feedback button
+  ///
+  /// In en, this message translates to:
+  /// **'No, not helpful'**
+  String get feedbackThumbsDown;
+
+  /// Label for the star rating row
+  ///
+  /// In en, this message translates to:
+  /// **'Rate the quality'**
+  String get feedbackStarRatingLabel;
+
+  /// Hint text for the optional feedback comment field
+  ///
+  /// In en, this message translates to:
+  /// **'Add a comment (optional)'**
+  String get feedbackCommentHint;
+
+  /// Label for the report-incorrect-content toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Report incorrect content'**
+  String get feedbackReportIncorrect;
+
+  /// Helper text explaining the report-incorrect action
+  ///
+  /// In en, this message translates to:
+  /// **'Flag this explanation or content as incorrect so we can review it.'**
+  String get feedbackReportIncorrectHint;
+
+  /// Label for the submit feedback button
+  ///
+  /// In en, this message translates to:
+  /// **'Submit feedback'**
+  String get feedbackSubmit;
+
+  /// Confirmation message shown after feedback is submitted
+  ///
+  /// In en, this message translates to:
+  /// **'Thanks for your feedback!'**
+  String get feedbackThanks;
+
+  /// Badge label marking feedback that reported incorrect content
+  ///
+  /// In en, this message translates to:
+  /// **'Reported'**
+  String get feedbackReportedBadge;
 }
 
 class _AppLocalizationsDelegate
