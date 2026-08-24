@@ -149,13 +149,36 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
+  static const List<String> _avatarIconKeys = [
+    'Icons.face',
+    'Icons.person',
+    'Icons.school',
+    'Icons.local_hospital',
+    'Icons.leaderboard',
+    'Icons.emoji_events',
+    'Icons.sports_tennis',
+    'Icons.coffee',
+  ];
+
+  static IconData _iconForKey(String iconKey) => switch (iconKey) {
+        'Icons.face' => Icons.face,
+        'Icons.school' => Icons.school,
+        'Icons.local_hospital' => Icons.local_hospital,
+        'Icons.leaderboard' => Icons.leaderboard,
+        'Icons.emoji_events' => Icons.emoji_events,
+        'Icons.sports_tennis' => Icons.sports_tennis,
+        'Icons.coffee' => Icons.coffee,
+        _ => Icons.person,
+      };
+
   void _pickAvatar() {
     final l10n = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
+      isScrollControlled: true,
       builder: (context) => SafeArea(
         child: Padding(
-          padding: ResponsiveUtils.screenPadding(context),
+          padding: ResponsiveUtils.screenPadding(context).copyWith(top: 24, bottom: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -165,19 +188,16 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 16),
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
+              const SizedBox(height: 24),
+              GridView.count(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisCount: ResponsiveUtils.breakpointOf(context).isMobile ? 4 : 6,
+                crossAxisSpacing: 16,
+                mainAxisSpacing: 16,
+                childAspectRatio: 1,
                 children: [
-                  _buildAvatarChoice('Icons.face'),
-                  _buildAvatarChoice('Icons.person'),
-                  _buildAvatarChoice('Icons.school'),
-                  _buildAvatarChoice('Icons.local_hospital'),
-                  _buildAvatarChoice('Icons.leaderboard'),
-                  _buildAvatarChoice('Icons.emoji_events'),
-                  _buildAvatarChoice('Icons.sports_tennis'),
-                  _buildAvatarChoice('Icons.coffee'),
+                  for (final iconKey in _avatarIconKeys) _buildAvatarChoice(iconKey),
                 ],
               ),
               const SizedBox(height: 16),
@@ -193,48 +213,41 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   }
 
   Widget _buildAvatarChoice(String iconKey) {
-    final l10n = AppLocalizations.of(context)!;
-    IconData icon;
-    switch (iconKey) {
-      case 'Icons.face':
-        icon = Icons.face;
-        break;
-      case 'Icons.school':
-        icon = Icons.school;
-        break;
-      case 'Icons.local_hospital':
-        icon = Icons.local_hospital;
-        break;
-      case 'Icons.leaderboard':
-        icon = Icons.leaderboard;
-        break;
-      case 'Icons.emoji_events':
-        icon = Icons.emoji_events;
-        break;
-      case 'Icons.sports_tennis':
-        icon = Icons.sports_tennis;
-        break;
-      case 'Icons.coffee':
-        icon = Icons.coffee;
-        break;
-      default:
-        icon = Icons.person;
-    }
+    final l10n = AppLocalizations.of(context);
+    final IconData icon = _iconForKey(iconKey);
+    final bool isSelected = _avatarIconKey == iconKey;
+    final colorScheme = Theme.of(context).colorScheme;
+    final primary = colorScheme.primary;
 
-    final isSelected = _avatarIconKey == iconKey;
     return Semantics(
-      label: l10n.selectAvatar(iconKey),
+      label: l10n?.selectAvatar(iconKey) ?? 'Select avatar $iconKey',
       selected: isSelected,
-      child: ChoiceChip(
-        avatar: CircleAvatar(child: Icon(icon)),
-        label: const SizedBox.shrink(),
-        selected: isSelected,
-        onSelected: (_) {
+      button: true,
+      child: InkWell(
+        onTap: () {
           setState(() => _avatarIconKey = iconKey);
           Navigator.pop(context);
         },
-        visualDensity: VisualDensity.compact,
-        showCheckmark: false,
+        borderRadius: BorderRadius.circular(48),
+        child: Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: isSelected
+                ? primary.withValues(alpha: 0.15)
+                : colorScheme.surfaceContainerHighest,
+            border: Border.all(
+              color: isSelected ? primary : colorScheme.outlineVariant,
+              width: isSelected ? 3 : 1.5,
+            ),
+          ),
+          child: Center(
+            child: Icon(
+              icon,
+              size: 32,
+              color: isSelected ? primary : colorScheme.onSurfaceVariant,
+            ),
+          ),
+        ),
       ),
     );
   }
@@ -246,28 +259,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     super.dispose();
   }
 
-  IconData _getIconFromAvatar() {
-    switch (_avatarIconKey) {
-      case 'Icons.face':
-        return Icons.face;
-      case 'Icons.person':
-        return Icons.person;
-      case 'Icons.school':
-        return Icons.school;
-      case 'Icons.local_hospital':
-        return Icons.local_hospital;
-      case 'Icons.leaderboard':
-        return Icons.leaderboard;
-      case 'Icons.emoji_events':
-        return Icons.emoji_events;
-      case 'Icons.sports_tennis':
-        return Icons.sports_tennis;
-      case 'Icons.coffee':
-        return Icons.coffee;
-      default:
-        return Icons.person;
-    }
-  }
+  IconData _getIconFromAvatar() => _iconForKey(_avatarIconKey ?? 'Icons.person');
 
   @override
   Widget build(BuildContext context) {
@@ -338,6 +330,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 label: l10n.chooseAvatar,
                 button: true,
                 child: InkWell(
+                  key: const Key('avatarPickerTrigger'),
                   onTap: _pickAvatar,
                   borderRadius: BorderRadius.circular(50),
                   child: Container(
