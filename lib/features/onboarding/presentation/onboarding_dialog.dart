@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/app_providers.dart'
+    show settingsProvider;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -29,8 +30,7 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
     super.dispose();
   }
 
-  OnboardingService get _service =>
-      widget.service ?? OnboardingService();
+  OnboardingService get _service => widget.service ?? OnboardingService();
 
   Future<void> _completeOnboarding() async {
     if (_isSaving) return;
@@ -46,7 +46,12 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
       _logger.w('Failed to complete onboarding', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppLocalizations.of(context)?.somethingWentWrong ?? 'Something went wrong')),
+          SnackBar(
+            content: Text(
+              AppLocalizations.of(context)?.somethingWentWrong ??
+                  'Something went wrong',
+            ),
+          ),
         );
       }
     } finally {
@@ -94,22 +99,24 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                             decoration: BoxDecoration(
                               color: _currentPage == i
                                   ? theme.colorScheme.primary
-                                  : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+                                  : theme.colorScheme.onSurfaceVariant
+                                        .withValues(alpha: 0.3),
                               borderRadius: BorderRadius.circular(4),
                             ),
                           )
                         : AnimatedContainer(
-                      duration: const Duration(milliseconds: 200),
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      width: _currentPage == i ? 24 : 8,
-                      height: 8,
-                      decoration: BoxDecoration(
-                        color: _currentPage == i
-                            ? theme.colorScheme.primary
-                            : theme.colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                    ),
+                            duration: const Duration(milliseconds: 200),
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: _currentPage == i ? 24 : 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              color: _currentPage == i
+                                  ? theme.colorScheme.primary
+                                  : theme.colorScheme.onSurfaceVariant
+                                        .withValues(alpha: 0.3),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                          ),
                   );
                 }),
               ),
@@ -150,16 +157,26 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                               : () async {
                                   await _completeOnboarding();
                                   if (!context.mounted) return;
-                                  Navigator.pushNamed(context, AppRoutes.dashboard);
+                                  Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.dashboard,
+                                  );
                                 },
                           icon: _isSaving
                               ? SizedBox(
                                   width: 16,
                                   height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: Theme.of(context).colorScheme.onPrimary),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.onPrimary,
+                                  ),
                                 )
                               : const Icon(Icons.rocket_launch),
-                          label: Text(_isSaving ? l10n.pleaseWait : l10n.getStarted),
+                          label: Text(
+                            _isSaving ? l10n.pleaseWait : l10n.getStarted,
+                          ),
                         ),
                     ],
                   ),
@@ -173,7 +190,10 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                 child: CheckboxListTile(
                   value: _dontShowAgain,
                   onChanged: (v) => setState(() => _dontShowAgain = v ?? false),
-                  title: Text(l10n.dontShowAgain, style: theme.textTheme.bodySmall),
+                  title: Text(
+                    l10n.dontShowAgain,
+                    style: theme.textTheme.bodySmall,
+                  ),
                   controlAffinity: ListTileControlAffinity.leading,
                   dense: true,
                   contentPadding: EdgeInsets.zero,
@@ -224,65 +244,77 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
 
   Widget _buildApiKeyPage(AppLocalizations l10n, ThemeData theme) {
     final expanded = _apiKeyExpanded;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(Icons.key, size: 80, color: theme.colorScheme.primary),
-          const SizedBox(height: 24),
-          Text(
-            l10n.aiConfiguration,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 12),
-          Text(
-            l10n.needApiKeyNotice,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: theme.colorScheme.onSurfaceVariant,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          const SizedBox(height: 16),
-          InkWell(
-            onTap: () => setState(() => _apiKeyExpanded = !_apiKeyExpanded),
-            borderRadius: BorderRadius.circular(8),
-            child: Padding(
-              padding: const EdgeInsets.all(8),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    expanded ? Icons.expand_less : Icons.expand_more,
-                    size: 18,
-                    color: theme.colorScheme.primary,
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final availableHeight = constraints.maxHeight - 48;
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          physics: const ClampingScrollPhysics(),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: availableHeight),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.key, size: 80, color: theme.colorScheme.primary),
+                const SizedBox(height: 24),
+                Text(
+                  l10n.aiConfiguration,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    l10n.whatIsApiKey,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: theme.colorScheme.primary,
-                      fontWeight: FontWeight.w600,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  l10n.needApiKeyNotice,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                InkWell(
+                  onTap: () =>
+                      setState(() => _apiKeyExpanded = !_apiKeyExpanded),
+                  borderRadius: BorderRadius.circular(8),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          expanded ? Icons.expand_less : Icons.expand_more,
+                          size: 18,
+                          color: theme.colorScheme.primary,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          l10n.whatIsApiKey,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                ],
-              ),
+                ),
+                if (expanded)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      l10n.whatIsApiKeyDescription,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+              ],
             ),
           ),
-          if (expanded)
-            Padding(
-              padding: const EdgeInsets.only(top: 8),
-              child: Text(
-                l10n.whatIsApiKeyDescription,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -301,7 +333,9 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
           const SizedBox(height: 24),
           Text(
             title,
-            style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+            ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 12),
@@ -322,7 +356,11 @@ class ApiKeyBanner extends StatelessWidget {
   final VoidCallback onDismiss;
   final VoidCallback? onDontShowAgain;
 
-  const ApiKeyBanner({super.key, required this.onDismiss, this.onDontShowAgain});
+  const ApiKeyBanner({
+    super.key,
+    required this.onDismiss,
+    this.onDontShowAgain,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -363,10 +401,7 @@ class ApiKeyBanner extends StatelessWidget {
                   onPressed: onDontShowAgain,
                   child: Text(l10n.dontShowAgain),
                 ),
-              TextButton(
-                onPressed: onDismiss,
-                child: Text(l10n.dismiss),
-              ),
+              TextButton(onPressed: onDismiss, child: Text(l10n.dismiss)),
             ],
           ),
         ],
@@ -385,9 +420,7 @@ class LocalDataNotice extends StatelessWidget {
       title: Text(l10n.dataStorageNotice),
       content: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        child: SafeArea(
-          child: Text(l10n.dataStorageDescription),
-        ),
+        child: SafeArea(child: Text(l10n.dataStorageDescription)),
       ),
       actions: [
         FilledButton(
