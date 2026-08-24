@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/voice_service.dart';
@@ -98,6 +99,25 @@ void main() {
       final service = VoiceService();
       final granted = await service.requestPermission();
       expect(granted, isFalse);
+    });
+
+    test('initialization is skipped and isAvailable is false on Linux', () async {
+      final service = VoiceService(platform: TargetPlatform.linux);
+      expect(service.isAvailable, isFalse);
+      expect(service.isListening, isFalse);
+      expect(service.isSpeaking, isFalse);
+      expect(service.startListening(), completes);
+      expect(service.requestPermission(), completion(isFalse));
+    });
+
+    test('initialization is skipped and isAvailable is false on Windows', () async {
+      final service = VoiceService(platform: TargetPlatform.windows);
+      expect(service.isAvailable, isFalse);
+    });
+
+    test('initialization is attempted on supported platforms', () {
+      final service = VoiceService(platform: TargetPlatform.android);
+      expect(service, isA<VoiceService>());
     });
   });
 }

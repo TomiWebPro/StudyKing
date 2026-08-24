@@ -21,6 +21,7 @@ class VoiceService {
   bool _isSpeaking = false;
   bool _isAvailable = false;
   bool _initialized = false;
+  final TargetPlatform _platform;
 
   Stream<String> get transcribedText => _transcriptionController.stream;
   Stream<bool> get listeningState => _listeningStateController.stream;
@@ -29,15 +30,37 @@ class VoiceService {
   bool get isSpeaking => _isSpeaking;
   bool get isAvailable => _isAvailable;
 
-  VoiceService() {
+  VoiceService({TargetPlatform? platform})
+      : _platform = platform ?? defaultTargetPlatform {
     if (!kIsWeb) {
       _initialize();
+    }
+  }
+
+  bool get _isPlatformSupported {
+    switch (_platform) {
+      case TargetPlatform.android:
+      case TargetPlatform.iOS:
+      case TargetPlatform.macOS:
+      case TargetPlatform.fuchsia:
+        return true;
+      case TargetPlatform.linux:
+      case TargetPlatform.windows:
+        return false;
     }
   }
 
   Future<void> _initialize() async {
     if (_initialized) return;
     _initialized = true;
+
+    if (!_isPlatformSupported) {
+      _logger.d(
+        'VoiceService not supported on ${_platform.name}; skipping init',
+      );
+      _isAvailable = false;
+      return;
+    }
 
     try {
       _speech = stt.SpeechToText();
