@@ -282,8 +282,8 @@ class SlideDeckGenerator {
             slideType: slideType,
           );
           blocks.add(block);
-        } catch (_) {
-          // Skip malformed slide items
+        } catch (e) {
+          _logger.w('Skipping malformed slide item: $item', e);
         }
       }
 

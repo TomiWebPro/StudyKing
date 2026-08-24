@@ -141,7 +141,8 @@ class WhisperApiAsrEngine implements AsrEngine {
           text: text.trim(),
           extractionMethod: 'whisper_api',
         );
-      } catch (_) {
+      } catch (e) {
+        _logger.w('Failed to extract fallback text from Whisper response', e);
         return const TranscriptionResult(
           text: '',
           extractionMethod: 'whisper_parse_failed',

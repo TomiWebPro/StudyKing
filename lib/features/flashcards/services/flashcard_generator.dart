@@ -120,8 +120,8 @@ class FlashcardGenerator {
             createdAt: now,
             updatedAt: now,
           ));
-        } catch (_) {
-          // Skip malformed flashcard items
+        } catch (e) {
+          _logger.w('Skipping malformed flashcard item: $item', e);
         }
       }
 
