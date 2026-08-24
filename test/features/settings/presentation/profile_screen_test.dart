@@ -205,13 +205,20 @@ void main() {
 
       expect(find.text('Choose Avatar'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
-      expect(find.byIcon(Icons.face), findsOneWidget);
-      expect(find.byIcon(Icons.school), findsOneWidget);
-      expect(find.byIcon(Icons.local_hospital), findsOneWidget);
-      expect(find.byIcon(Icons.leaderboard), findsOneWidget);
-      expect(find.byIcon(Icons.emoji_events), findsOneWidget);
-      expect(find.byIcon(Icons.sports_tennis), findsOneWidget);
-      expect(find.byIcon(Icons.coffee), findsOneWidget);
+      // Use semantics labels to disambiguate from the Learning Goal field's
+      // Icons.school prefix icon.
+      for (final iconKey in const [
+        'Icons.face',
+        'Icons.person',
+        'Icons.school',
+        'Icons.local_hospital',
+        'Icons.leaderboard',
+        'Icons.emoji_events',
+        'Icons.sports_tennis',
+        'Icons.coffee',
+      ]) {
+        expect(find.bySemanticsLabel('Select avatar $iconKey'), findsOneWidget);
+      }
     });
 
     testWidgets('tapping cancel on avatar picker closes sheet', (tester) async {
@@ -247,7 +254,7 @@ void main() {
       await tester.tap(find.byIcon(Icons.person).first);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.byIcon(Icons.school));
+      await tester.tap(find.bySemanticsLabel('Select avatar Icons.school'));
       await tester.pumpAndSettle();
 
       expect(find.text('Choose Avatar'), findsNothing);
@@ -712,7 +719,7 @@ void main() {
         await tester.tap(find.byIcon(Icons.person).first);
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.school));
+        await tester.tap(find.bySemanticsLabel('Select avatar Icons.school'));
         await tester.pumpAndSettle();
 
         expect(find.text('Choose Avatar'), findsNothing);
@@ -722,23 +729,22 @@ void main() {
         await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
         await tester.pumpAndSettle();
 
-        await tester.tap(find.byIcon(Icons.person).first);
-        await tester.pumpAndSettle();
-
-        final avatarIcons = [
-          Icons.face,
-          Icons.school,
-          Icons.local_hospital,
-          Icons.leaderboard,
-          Icons.emoji_events,
-          Icons.sports_tennis,
-          Icons.coffee,
+        final avatarIconKeys = [
+          'Icons.face',
+          'Icons.school',
+          'Icons.local_hospital',
+          'Icons.leaderboard',
+          'Icons.emoji_events',
+          'Icons.sports_tennis',
+          'Icons.coffee',
         ];
 
-        for (final icon in avatarIcons) {
-          await tester.tap(find.byIcon(Icons.person).first);
+        for (final iconKey in avatarIconKeys) {
+          // Open via the dedicated trigger key (the body avatar changes after
+          // each selection, so it is not a stable finder).
+          await tester.tap(find.byKey(const Key('avatarPickerTrigger')));
           await tester.pumpAndSettle();
-          await tester.tap(find.byIcon(icon));
+          await tester.tap(find.bySemanticsLabel('Select avatar $iconKey'));
           await tester.pumpAndSettle();
         }
       });
