@@ -44,6 +44,7 @@ const int _typeIdConceptMap = 40;
 const int _typeIdConceptNode = 41;
 const int _typeIdConceptEdge = 42;
 const int _typeIdLearningPreference = 43;
+const int _typeIdLessonFeedback = 44;
 
 const List<int> _allTypeIds = [
   _typeIdTopicModel,
@@ -88,6 +89,7 @@ const List<int> _allTypeIds = [
   _typeIdConceptNode,
   _typeIdConceptEdge,
   _typeIdLearningPreference,
+  _typeIdLessonFeedback,
 ];
 
 bool _checkUniqueIds() {

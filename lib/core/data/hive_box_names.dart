@@ -44,6 +44,7 @@ class HiveBoxNames {
   static const String conceptMaps = 'concept_maps';
   static const String learningPreferences = 'learning_preferences';
   static const String llmResponseCache = 'llm_response_cache';
+  static const String lessonFeedback = 'lesson_feedback';
 
   /// All boxes included in a full backup (all boxes except those excluded).
   static List<String> get allBackupBoxes => [
@@ -125,5 +126,6 @@ class HiveBoxNames {
         llmUsageRecords,
         dashboardLayoutPrefs,
         learningPreferences,
+        lessonFeedback,
       ];
 }

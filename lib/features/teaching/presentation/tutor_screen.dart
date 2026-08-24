@@ -26,6 +26,7 @@ import 'widgets/voice_bar.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/teaching/presentation/widgets/slides_presentation_widget.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/presentation/widgets/lesson_feedback_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/data/models/drawing_models.dart';
 
@@ -587,6 +588,13 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
                   icon: const Icon(Icons.replay, size: 18),
                   label: Text(l10n.practiceLessonBlocks),
                 ),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 8),
+              LessonFeedbackWidget(
+                studentId: manager.studentId,
+                targetType: 'lesson',
               ),
             ],
           ),
