@@ -235,6 +235,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         _scrollToBottom();
       }
     } catch (e) {
+      // ignore: use_build_context_synchronously
       final l10n = AppLocalizations.of(context)!;
       final errorStr = e.toString();
       _logger.w('Stream failed', e);

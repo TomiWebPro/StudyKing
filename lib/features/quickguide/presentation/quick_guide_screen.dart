@@ -145,6 +145,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         return;
       }
 
+      // ignore: use_build_context_synchronously
       final l10n = AppLocalizations.of(context)!;
       final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
       final savedModel = ref.read(selectedModelProvider);
