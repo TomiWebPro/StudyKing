@@ -2,7 +2,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/features/planner/data/adapters/milestone_adapter.dart';
+import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/data/adapters/roadmap_adapter.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 
@@ -14,8 +14,7 @@ void main() {
     final dir = await Directory.systemTemp.createTemp('roadmap_adapter_test_');
     _hivePath = dir.path;
     Hive.init(_hivePath);
-    Hive.registerAdapter(RoadmapModelAdapter());
-    Hive.registerAdapter(MilestoneModelAdapter());
+    registerPlannerAdapters();
   });
 
   tearDownAll(() async {
