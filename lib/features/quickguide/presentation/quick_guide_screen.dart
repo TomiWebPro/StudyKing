@@ -132,6 +132,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     try {
       final llm = _getLlmService();
       if (llm.config.apiKey.isEmpty) {
+        // ignore: use_build_context_synchronously
         final l10n = AppLocalizations.of(context)!;
         await _showNoApiKeyMessage(l10n);
         if (mounted) {
