@@ -38,6 +38,7 @@ class _FakeSettingsController extends SettingsController {
 Widget _buildTestApp(
   Widget widget, {
   bool reduceMotion = false,
+  Locale locale = const Locale('en'),
 }) {
   return ProviderScope(
     overrides: [
@@ -48,7 +49,7 @@ Widget _buildTestApp(
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       home: Scaffold(body: widget),
       routes: {
         AppRoutes.dashboard: (_) => const Scaffold(
@@ -107,10 +108,12 @@ Future<void> pumpShowDialog(WidgetTester tester, Widget child) async {
   await tester.pump();
 }
 
-/// Navigates to a specific page index by tapping Next [targetPage] times.
+/// Navigates to a specific page index by tapping the Next button
+/// [targetPage] times. Uses the FilledButton (locale-agnostic) rather than
+/// the localized "Next" label.
 Future<void> navigateToPage(WidgetTester tester, int targetPage) async {
   for (int i = 0; i < targetPage; i++) {
-    await tester.tap(find.text('Next'));
+    await tester.tap(find.byType(FilledButton).first);
     await pumpThroughAnimation(tester);
   }
 }
@@ -579,6 +582,113 @@ void main() {
       final getStartedButton = tester.widget<FilledButton>(filledButtons.first);
       expect(getStartedButton.onPressed, isNull);
       await tester.pump(const Duration(milliseconds: 100));
+    });
+
+    group('API key page overflow', () {
+      /// Captures any RenderFlex overflow debug messages while pumping.
+      Future<bool> hasOverflow(WidgetTester tester) async {
+        var overflow = false;
+        final original = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null && message.contains('overflowed')) {
+            overflow = true;
+          }
+          original(message, wrapWidth: wrapWidth);
+        };
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+        await tester.pumpAndSettle();
+        debugPrint = original;
+        return overflow;
+      }
+
+      Future<void> verifyNoOverflow({
+        required WidgetTester tester,
+        required Locale locale,
+        required bool expanded,
+      }) async {
+        await tester.pumpWidget(
+          _buildTestApp(const OnboardingDialog(), locale: locale),
+        );
+        await tester.pump();
+        await navigateToApiKeyPage(tester);
+        await tester.pump();
+
+        // The API key page must be scrollable so content never overflows.
+        expect(
+          find.byType(SingleChildScrollView),
+          findsOneWidget,
+          reason: 'API key page should use SingleChildScrollView',
+        );
+
+        if (expanded) {
+          final l10n = await AppLocalizations.delegate.load(locale);
+          final expander =
+              find.widgetWithText(InkWell, l10n.whatIsApiKey);
+          expect(expander, findsOneWidget,
+              reason: 'API key expander should be present');
+          // The expander may be clipped by the scroll view; bring it into
+          // view before tapping.
+          await tester.ensureVisible(expander);
+          await tester.pumpAndSettle();
+          await tester.tap(expander, warnIfMissed: false);
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 50));
+          // Expanded state flips the icon to expand_less.
+          expect(find.byIcon(Icons.expand_less), findsOneWidget,
+              reason: 'Description should be expanded');
+        }
+
+        final overflow = await hasOverflow(tester);
+        expect(
+          overflow,
+          isFalse,
+          reason: 'No overflow for locale ${locale.languageCode} '
+              'expanded=$expanded',
+        );
+
+        // Content must never overflow; it is contained within a scrollable
+        // view that can grow when the description is expanded.
+        final scrollable = tester.state<ScrollableState>(
+          find.descendant(
+            of: find.byType(SingleChildScrollView),
+            matching: find.byType(Scrollable),
+          ),
+        );
+        expect(scrollable.position.maxScrollExtent, greaterThanOrEqualTo(0));
+      }
+
+      testWidgets('no overflow EN collapsed', (tester) async {
+        await verifyNoOverflow(
+          tester: tester,
+          locale: const Locale('en'),
+          expanded: false,
+        );
+      });
+
+      testWidgets('no overflow EN expanded', (tester) async {
+        await verifyNoOverflow(
+          tester: tester,
+          locale: const Locale('en'),
+          expanded: true,
+        );
+      });
+
+      testWidgets('no overflow ES collapsed', (tester) async {
+        await verifyNoOverflow(
+          tester: tester,
+          locale: const Locale('es'),
+          expanded: false,
+        );
+      });
+
+      testWidgets('no overflow ES expanded', (tester) async {
+        await verifyNoOverflow(
+          tester: tester,
+          locale: const Locale('es'),
+          expanded: true,
+        );
+      });
     });
   });
 
