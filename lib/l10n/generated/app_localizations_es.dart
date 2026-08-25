@@ -6092,4 +6092,44 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get mentorReportedFeedbackNone => 'Aún no hay contenido reportado.';
+
+  @override
+  String get lessonsToMasteryTitle => 'Lecciones para dominar';
+
+  @override
+  String remainingLessonsToMastery(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Quedan $count lecciones para alcanzar el dominio',
+      one: 'Queda 1 lección para alcanzar el dominio',
+      zero: 'No quedan lecciones para alcanzar el dominio',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get masteryProgress => 'Progreso de dominio';
+
+  @override
+  String get activeStudyPlan => 'Plan de estudio activo';
+
+  @override
+  String get switchStudyPlan => 'Cambiar plan de estudio';
+
+  @override
+  String get planName => 'Nombre del plan';
+
+  @override
+  String get newStudyPlan => 'Nuevo plan de estudio';
+
+  @override
+  String get deleteStudyPlan => 'Eliminar plan de estudio';
+
+  @override
+  String get confirmDeleteStudyPlan =>
+      '¿Eliminar este plan de estudio? No se puede deshacer.';
+
+  @override
+  String get noStudyPlanSelected => 'Ningún plan de estudio seleccionado';
 }

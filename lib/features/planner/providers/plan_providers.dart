@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'planner_providers.dart' show plannerServiceProvider;
+import 'planner_providers.dart' show plannerServiceProvider, activePlanIdProvider;
 
 class PlanProgressData {
   final int plannedMinutesToday;
@@ -39,6 +39,7 @@ class DailyProgress {
 }
 
 final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
+  ref.watch(activePlanIdProvider);
   final service = ref.watch(plannerServiceProvider);
   final planResult = await service.loadExistingPlan();
   final plan = planResult.data;

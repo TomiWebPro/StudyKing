@@ -29,8 +29,16 @@ class PersonalLearningPlan extends HiveObject {
   @HiveField(8)
   final Map<String, dynamic>? metadata;
 
+  @HiveField(9)
+  final String planId;
+
+  @HiveField(10)
+  final String name;
+
   PersonalLearningPlan({
     required this.studentId,
+    String? planId,
+    this.name = '',
     required this.generatedAt,
     required this.dailyPlans,
     required this.summary,
@@ -39,7 +47,9 @@ class PersonalLearningPlan extends HiveObject {
     this.targetMinutesPerDay = 30.0,
     this.targetQuestionsPerDay = 15,
     this.metadata,
-  });
+  }) : planId = planId ?? studentId;
+
+  String get id => planId;
 
   PersonalLearningPlan copyWith({
     String? studentId,
@@ -51,9 +61,13 @@ class PersonalLearningPlan extends HiveObject {
     double? targetMinutesPerDay,
     int? targetQuestionsPerDay,
     Map<String, dynamic>? metadata,
+    String? planId,
+    String? name,
   }) {
     return PersonalLearningPlan(
       studentId: studentId ?? this.studentId,
+      planId: planId ?? this.planId,
+      name: name ?? this.name,
       generatedAt: generatedAt ?? this.generatedAt,
       dailyPlans: dailyPlans ?? this.dailyPlans,
       summary: summary ?? this.summary,
@@ -83,6 +97,8 @@ class PersonalLearningPlan extends HiveObject {
 
   Map<String, dynamic> toJson() => {
     'studentId': studentId,
+    'planId': planId,
+    'name': name,
     'generatedAt': generatedAt.toIso8601String(),
     'dailyPlans': dailyPlans.map((d) => d.toJson()).toList(),
     'summary': summary.toJson(),
@@ -95,6 +111,8 @@ class PersonalLearningPlan extends HiveObject {
 
   factory PersonalLearningPlan.fromJson(Map<String, dynamic> json) => PersonalLearningPlan(
     studentId: json['studentId'],
+    planId: json['planId'] as String? ?? json['studentId'] as String,
+    name: json['name'] as String? ?? '',
     generatedAt: DateTime.parse(json['generatedAt']),
     dailyPlans: (json['dailyPlans'] as List).map((d) => DailyPlan.fromJson(d)).toList(),
     summary: PlanSummary.fromJson(json['summary']),

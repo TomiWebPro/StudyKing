@@ -18,7 +18,9 @@ import 'package:studyking/features/subjects/providers/subject_repository_provide
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart' show SyllabusGoal;
-import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
+import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider, activePlanIdProvider;
+import 'package:studyking/features/planner/services/mastery_remaining_lessons_estimator.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/providers/service_providers.dart' show learningMethodAnalyticsServiceProvider;
 
 final _dashboardLogger = const Logger('DashboardDataProviders');
@@ -272,6 +274,7 @@ final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, st
 final dashboardSyllabusProgressProvider =
     FutureProvider.family<List<SyllabusGoal>, String>((ref, studentId) async {
   try {
+    ref.watch(activePlanIdProvider);
     final plannerService = ref.watch(plannerServiceProvider);
     final planResult = await plannerService.loadExistingPlan();
     final plan = planResult.data;
@@ -345,6 +348,60 @@ final dashboardLearningInsightsProvider =
   } catch (e) {
     _dashboardLogger.w('Failed to get learning insights', e);
     return null;
+  }
+});
+
+final dashboardMasteryRemainingLessonsProvider =
+    FutureProvider.family<RemainingLessonsEstimate, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    final masteryService = ref.watch(masteryGraphServiceProvider);
+    final srService = ref.watch(spacedRepetitionServiceProvider);
+    final topicRepo = ref.watch(topicRepositoryProvider);
+
+    final masteryResult = await masteryService.getAllTopicMastery(studentId);
+    final states =
+        masteryResult.isSuccess ? (masteryResult.data ?? []) : <MasteryState>[];
+
+    final dueResult = await srService.getQuestionsDueForReview();
+    final dueQuestions =
+        dueResult.isSuccess ? (dueResult.data ?? []) : <Question>[];
+    final duePerTopic = <String, int>{};
+    for (final question in dueQuestions) {
+      duePerTopic[question.topicId] =
+          (duePerTopic[question.topicId] ?? 0) + 1;
+    }
+
+    final inputs = states
+        .map((s) => RemainingLessonsTopicInput.fromMasteryState(
+              s,
+              dueQuestionCount: duePerTopic[s.topicId] ?? 0,
+            ))
+        .toList();
+
+    int totalTopics = 0;
+    try {
+      await topicRepo.init();
+      final allTopics = await topicRepo.getAll();
+      totalTopics = allTopics.data?.length ?? 0;
+    } catch (e) {
+      _dashboardLogger.w('Failed to load topic count for coverage', e);
+    }
+
+    final estimateResult = MasteryRemainingLessonsEstimator.estimateForSubject(
+      inputs,
+      syllabusTopicCount: totalTopics,
+    );
+    if (estimateResult.isFailure) {
+      _dashboardLogger.w(
+        'Failed to estimate remaining lessons to mastery: ${estimateResult.error}',
+      );
+      return RemainingLessonsEstimate(0, 0);
+    }
+    return estimateResult.data!;
+  } catch (e) {
+    _dashboardLogger.w('Failed to compute remaining lessons to mastery', e);
+    return RemainingLessonsEstimate(0, 0);
   }
 });
 

@@ -21,13 +21,15 @@ class PersonalLearningPlanAdapter extends TypeAdapter<PersonalLearningPlan> {
       targetMinutesPerDay: fields[6] as double? ?? 30.0,
       targetQuestionsPerDay: fields[7] as int? ?? 15,
       metadata: fields[8] != null ? Map<String, dynamic>.from(fields[8] as Map) : null,
+      planId: fields[9] as String? ?? fields[0] as String,
+      name: fields[10] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, PersonalLearningPlan obj) {
     writer
-      ..writeByte(9)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.studentId)
       ..writeByte(1)
@@ -45,7 +47,11 @@ class PersonalLearningPlanAdapter extends TypeAdapter<PersonalLearningPlan> {
       ..writeByte(7)
       ..write(obj.targetQuestionsPerDay)
       ..writeByte(8)
-      ..write(obj.metadata);
+      ..write(obj.metadata)
+      ..writeByte(9)
+      ..write(obj.planId)
+      ..writeByte(10)
+      ..write(obj.name);
   }
 
   @override

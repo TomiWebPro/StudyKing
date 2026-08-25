@@ -6,6 +6,7 @@ import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'widgets/study_plan_tab.dart';
@@ -241,6 +242,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       appBar: AppBar(
         title: Text(l10n.studyPlanner),
         actions: [
+          _PlanSwitcher(),
           if (state.plan != null)
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
@@ -348,8 +350,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     );
   }
 
-  void _showCatchUpForMenu(AppLocalizations l10n, PlannerState state) {
-    final notifier = ref.read(plannerProvider.notifier);
+  void _showCatchUpForMenu(AppLocalizations l10n, PlannerState state) {    final notifier = ref.read(plannerProvider.notifier);
     final daysAway = 3;
     showModalBottomSheet(
       context: context,
@@ -405,5 +406,57 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
         ),
       ),
     );
+  }
+}
+
+class _PlanSwitcher extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final plansAsync = ref.watch(plansProvider);
+    final activeId = ref.watch(activePlanIdProvider);
+
+    return plansAsync.when(
+      data: (plans) {
+        if (plans.isEmpty) return const SizedBox.shrink();
+        final currentId = activeId ?? plans.first.planId;
+        return ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 200),
+          child: Tooltip(
+            message: l10n.switchStudyPlan,
+            child: DropdownButtonHideUnderline(
+              child: DropdownButton<String>(
+                value: currentId,
+                icon: const Icon(Icons.swap_horiz),
+              onChanged: (planId) async {
+                if (planId == null) return;
+                await ref.read(plannerProvider.notifier).switchActivePlan(planId);
+              },
+              items: plans.map((p) {
+                return DropdownMenuItem<String>(
+                  value: p.planId,
+                  child: Text(
+                    _planLabel(p, l10n),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        ),
+      );
+      },
+      loading: () => const SizedBox.shrink(),
+      error: (_, __) => const SizedBox.shrink(),
+    );
+  }
+
+  String _planLabel(PersonalLearningPlan plan, AppLocalizations l10n) {
+    if (plan.name.isNotEmpty) return plan.name;
+    final goals = plan.syllabusGoals;
+    if (goals.isNotEmpty) {
+      return goals.map((g) => g.subjectTitle).join(', ');
+    }
+    return l10n.activeStudyPlan;
   }
 }

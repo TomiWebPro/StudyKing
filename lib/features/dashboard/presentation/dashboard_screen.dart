@@ -15,6 +15,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/dashboard_nav_
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/mastery_remaining_lessons_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
@@ -28,6 +29,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.d
 import 'package:studyking/features/dashboard/presentation/widgets/learning_insights_card.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/services/mastery_remaining_lessons_estimator.dart';
 import 'package:studyking/features/planner/presentation/widgets/syllabus_progress_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -310,6 +312,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     loadingSkeleton: _cardSkeleton(context),
                     body: MasteryProgressCard(snapshot: snapshotData),
                   ),
+                  SizedBox(height: vs),
+                  _buildRemainingLessonsCard(context, studentId),
                   if (syllabusGoals.isNotEmpty) ...[
                     SizedBox(height: vs),
                     _buildSyllabusProgress(context, syllabusGoals, studentId),
@@ -601,6 +605,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
       title: l10n.studyPlanner,
       subtitle: l10n.studyPlanOverview,
       onTap: () => Navigator.pushNamed(context, AppRoutes.planner),
+    );
+  }
+
+  Widget _buildRemainingLessonsCard(BuildContext context, String studentId) {
+    final l10n = AppLocalizations.of(context)!;
+    final estimateAsync =
+        ref.watch(dashboardMasteryRemainingLessonsProvider(studentId));
+    return DashboardCard(
+      asyncValue: estimateAsync,
+      onRetry: _onRetry(dashboardMasteryRemainingLessonsProvider(studentId)),
+      errorWidget: ErrorRetryWidget(
+        message: l10n.somethingWentWrong,
+        onRetry: _onRetry(dashboardMasteryRemainingLessonsProvider(studentId)),
+      ),
+      loadingSkeleton: _cardSkeleton(context),
+      body: MasteryRemainingLessonsCard(
+        estimate: estimateAsync.valueOrNull ?? RemainingLessonsEstimate(0, 0),
+      ),
     );
   }
 

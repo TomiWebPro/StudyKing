@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_context_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
@@ -38,7 +39,8 @@ class PlannerService {
   final PendingActionRepository pendingActionRepo;
   final PlanAdherenceOrchestrator planOrchestrator;
   final SyllabusResolver syllabusResolver;
-  final   PlanAdherenceRepository adherenceRepo;
+  final PlanAdherenceRepository adherenceRepo;
+  final PlanContextRepository planContextRepo;
   final LessonAgentService? lessonAgentService;
   final PlannerAdvisorStrategy? advisor;
   final String? fixedStudentId;
@@ -62,6 +64,7 @@ class PlannerService {
     PlanAdherenceOrchestrator? planOrchestrator,
     SyllabusResolver? syllabusResolver,
     PlanAdherenceRepository? adherenceRepo,
+    PlanContextRepository? planContextRepo,
     ActionExecutor? actionExecutor,
     this.lessonAgentService,
     this.advisor,
@@ -82,6 +85,7 @@ class PlannerService {
         planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
         syllabusResolver = syllabusResolver ?? SyllabusResolver(),
         adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
+        planContextRepo = planContextRepo ?? PlanContextRepository(),
         _actionExecutor = actionExecutor;
 
   String get studentId =>
@@ -90,10 +94,117 @@ class PlannerService {
   Future<Result<PersonalLearningPlan?>> loadExistingPlan() async {
     try {
       await planRepo.init();
+      await planContextRepo.init();
+      final activeIdResult = await planContextRepo.getActivePlanId(studentId);
+      final activeId = activeIdResult.isSuccess ? activeIdResult.data : null;
+      if (activeId != null && activeId.isNotEmpty) {
+        final byIdResult = await planRepo.loadPlanById(activeId);
+        if (byIdResult.isSuccess && byIdResult.data != null) {
+          return Result.success(byIdResult.data);
+        }
+      }
       final result = await planRepo.loadPlan(studentId);
       return Result.success(result.data);
     } catch (e) {
       _logger.w('loadExistingPlan failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<PersonalLearningPlan?>> loadPlanById(String planId) async {
+    try {
+      await planRepo.init();
+      final result = await planRepo.loadPlanById(planId);
+      return Result.success(result.data);
+    } catch (e) {
+      _logger.w('loadPlanById failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<List<PersonalLearningPlan>>> getPlans() async {
+    try {
+      await planRepo.init();
+      final result = await planRepo.getAllPlansForStudent(studentId);
+      return Result.success(result.data ?? []);
+    } catch (e) {
+      _logger.w('getPlans failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<String?>> getActivePlanId() async {
+    try {
+      await planContextRepo.init();
+      final result = await planContextRepo.getActivePlanId(studentId);
+      return Result.success(result.isSuccess ? result.data : null);
+    } catch (e) {
+      _logger.w('getActivePlanId failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<void>> setActivePlanId(String planId) async {
+    try {
+      await planRepo.init();
+      await planContextRepo.init();
+      final plansResult = await planRepo.getAllPlansForStudent(studentId);
+      final plans = plansResult.data ?? [];
+      if (!plans.any((p) => p.planId == planId)) {
+        return Result.failure('Plan $planId does not belong to student');
+      }
+      final result = await planContextRepo.setActivePlanId(studentId, planId);
+      if (result.isFailure) return Result.failure(result.error);
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('setActivePlanId failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<void>> deletePlan(String planId) async {
+    try {
+      await planRepo.init();
+      await planContextRepo.init();
+      final plansResult = await planRepo.getAllPlansForStudent(studentId);
+      final plans = plansResult.data ?? [];
+      final target = plans.where((p) => p.planId == planId).firstOrNull;
+      if (target == null) {
+        return Result.failure('Plan $planId does not belong to student');
+      }
+      await planRepo.deletePlanById(planId);
+      final activeIdResult = await planContextRepo.getActivePlanId(studentId);
+      final activeId = activeIdResult.isSuccess ? activeIdResult.data : null;
+      if (activeId == planId) {
+        await planContextRepo.clearActivePlanId(studentId);
+      }
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('deletePlan failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<PersonalLearningPlan?>> _persistGeneratedPlan(
+    PersonalLearningPlan plan, {
+    required String? name,
+  }) async {
+    try {
+      await planRepo.init();
+      await planContextRepo.init();
+      final planId = const Uuid().v4();
+      final namedPlan = plan.copyWith(
+        planId: planId,
+        name: name?.isNotEmpty == true ? name! : plan.name,
+      );
+      await planRepo.savePlan(namedPlan);
+      final activeResult = await planContextRepo.setActivePlanId(studentId, planId);
+      if (activeResult.isFailure) {
+        _logger.w('Failed to persist active plan id: ${activeResult.error}');
+      }
+      return Result.success(namedPlan);
+    } catch (e) {
+      _logger.w('Failed to persist generated plan', e);
       return Result.failure(e.toString());
     }
   }
@@ -124,6 +235,7 @@ class PlannerService {
     required String course,
     required int daysValue,
     required int hoursValue,
+    String? name,
   }) async {
     try {
       await planRepo.init();
@@ -139,7 +251,11 @@ class PlannerService {
         studentId,
         courseName: course,
       );
-      return Result.success(result.isSuccess ? result.data : null);
+      if (!result.isSuccess || result.data == null) {
+        return Result.success(null);
+      }
+      final persisted = await _persistGeneratedPlan(result.data!, name: name ?? course);
+      return persisted;
     } catch (e) {
       _logger.w('generatePlan failed', e);
       return Result.failure(e.toString());
@@ -150,6 +266,8 @@ class PlannerService {
     required List<SyllabusGoal> syllabusGoals,
     required int daysValue,
     required int hoursValue,
+    String? name,
+    String? existingPlanId,
   }) async {
     try {
       await planRepo.init();
@@ -165,7 +283,27 @@ class PlannerService {
         studentId: studentId,
         syllabusGoals: syllabusGoals,
       );
-      return Result.success(result.isSuccess ? result.data : null);
+      if (!result.isSuccess || result.data == null) {
+        return Result.success(null);
+      }
+      if (existingPlanId != null && existingPlanId.isNotEmpty) {
+        await planRepo.init();
+        final existingResult = await planRepo.loadPlanById(existingPlanId);
+        final existing = existingResult.data;
+        final preserved = result.data!.copyWith(
+          planId: existingPlanId,
+          name: existing?.name.isNotEmpty == true ? existing!.name : (name ?? ''),
+        );
+        await planRepo.savePlan(preserved);
+        await planContextRepo.init();
+        final activeResult = await planContextRepo.setActivePlanId(studentId, existingPlanId);
+        if (activeResult.isFailure) {
+          _logger.w('Failed to persist active plan id: ${activeResult.error}');
+        }
+        return Result.success(preserved);
+      }
+      final persisted = await _persistGeneratedPlan(result.data!, name: name);
+      return persisted;
     } catch (e) {
       _logger.w('generatePlanFromSyllabus failed', e);
       return Result.failure(e.toString());
@@ -204,8 +342,17 @@ class PlannerService {
             .toList();
         final updatedMetadata = Map<String, dynamic>.from(newPlan.metadata ?? {});
         updatedMetadata['previous_plan_dates'] = oldDateRanges;
-        final preservedNewPlan = newPlan.copyWith(metadata: updatedMetadata);
+        final preservedNewPlan = newPlan.copyWith(
+          planId: existingPlan.planId,
+          name: existingPlan.name,
+          metadata: updatedMetadata,
+        );
         await planRepo.savePlan(preservedNewPlan);
+        await planContextRepo.init();
+        final activeResult = await planContextRepo.setActivePlanId(studentId, existingPlan.planId);
+        if (activeResult.isFailure) {
+          _logger.w('Failed to persist active plan id: ${activeResult.error}');
+        }
         return Result.success(preservedNewPlan);
       }
 

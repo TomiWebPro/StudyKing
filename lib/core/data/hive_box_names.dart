@@ -9,6 +9,7 @@ class HiveBoxNames {
   static const String engagementNudges = 'engagement_nudges';
   static const String focusSessions = 'focus_sessions';
   static const String learningPlans = 'learning_plans';
+  static const String planContext = 'plan_context';
   static const String lessonBlocks = 'lessonBlocks';
   static const String lessons = 'lessons';
   static const String masteryStates = 'mastery_states';

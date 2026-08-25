@@ -7923,5 +7923,45 @@
   "mentorReportedFeedbackNone": "Aún no hay contenido reportado.",
   "@mentorReportedFeedbackNone": {
     "description": "Empty-state message for the mentor reported-content panel"
+  },
+  "lessonsToMasteryTitle": "Lecciones para dominar",
+  "@lessonsToMasteryTitle": {
+    "description": "Card title for the relative lessons-remaining-to-mastery indicator"
+  },
+  "remainingLessonsToMastery": "{count, plural, =0{No quedan lecciones para alcanzar el dominio} =1{Queda 1 lección para alcanzar el dominio} other{Quedan {count} lecciones para alcanzar el dominio}}",
+  "@remainingLessonsToMastery": {
+    "description": "Relative indicator of how many lessons remain until a topic or subject is mastered"
+  },
+  "masteryProgress": "Progreso de dominio",
+  "@masteryProgress": {
+    "description": "Label for the mastery progress percentage"
+  },
+  "activeStudyPlan": "Plan de estudio activo",
+  "@activeStudyPlan": {
+    "description": "Label for the active study plan switcher"
+  },
+  "switchStudyPlan": "Cambiar plan de estudio",
+  "@switchStudyPlan": {
+    "description": "Tooltip for the study plan switcher control"
+  },
+  "planName": "Nombre del plan",
+  "@planName": {
+    "description": "Label for the study plan name input"
+  },
+  "newStudyPlan": "Nuevo plan de estudio",
+  "@newStudyPlan": {
+    "description": "Label for creating a new study plan"
+  },
+  "deleteStudyPlan": "Eliminar plan de estudio",
+  "@deleteStudyPlan": {
+    "description": "Action to delete a study plan"
+  },
+  "confirmDeleteStudyPlan": "¿Eliminar este plan de estudio? No se puede deshacer.",
+  "@confirmDeleteStudyPlan": {
+    "description": "Confirmation message before deleting a study plan"
+  },
+  "noStudyPlanSelected": "Ningún plan de estudio seleccionado",
+  "@noStudyPlanSelected": {
+    "description": "Shown when no active study plan is selected"
   }
   }

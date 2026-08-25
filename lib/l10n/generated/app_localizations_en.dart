@@ -6025,4 +6025,44 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get mentorReportedFeedbackNone => 'No reported content yet.';
+
+  @override
+  String get lessonsToMasteryTitle => 'Lessons to Mastery';
+
+  @override
+  String remainingLessonsToMastery(num count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count lessons left to reach mastery',
+      one: '1 lesson left to reach mastery',
+      zero: 'No lessons left to reach mastery',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get masteryProgress => 'Mastery progress';
+
+  @override
+  String get activeStudyPlan => 'Active study plan';
+
+  @override
+  String get switchStudyPlan => 'Switch study plan';
+
+  @override
+  String get planName => 'Plan name';
+
+  @override
+  String get newStudyPlan => 'New study plan';
+
+  @override
+  String get deleteStudyPlan => 'Delete study plan';
+
+  @override
+  String get confirmDeleteStudyPlan =>
+      'Delete this study plan? This cannot be undone.';
+
+  @override
+  String get noStudyPlanSelected => 'No study plan selected';
 }
