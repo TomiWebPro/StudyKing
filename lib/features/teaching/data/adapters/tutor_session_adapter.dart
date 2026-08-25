@@ -22,8 +22,16 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
       topicId: fields[3] as String,
       topicTitle: fields[4] as String,
       status: SessionStatus.values[fields[5] as int],
-      startTime: DateTime.fromMillisecondsSinceEpoch(fields[6] as int),
-      endTime: fields[7] != null ? DateTime.fromMillisecondsSinceEpoch(fields[7] as int) : null,
+      startTime: DateTime.fromMillisecondsSinceEpoch(
+        fields[6] as int,
+        isUtc: fields[18] as bool? ?? false,
+      ),
+      endTime: fields[7] != null
+          ? DateTime.fromMillisecondsSinceEpoch(
+              fields[7] as int,
+              isUtc: fields[19] as bool? ?? false,
+            )
+          : null,
       plannedDurationMinutes: fields[8] as int? ?? 45,
       lessonPlanJson: fields[9] as String? ?? '{}',
       questionsAsked: fields[10] as int? ?? 0,
@@ -39,7 +47,7 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
 
   @override
   void write(BinaryWriter writer, TutorSession obj) {
-    writer.writeByte(18);
+    writer.writeByte(20);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -53,9 +61,9 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
     writer.writeByte(5);
     writer.write(obj.status.index);
     writer.writeByte(6);
-    writer.write(obj.startTime.millisecondsSinceEpoch);
+    writer.write(obj.startTime.toUtc().millisecondsSinceEpoch);
     writer.writeByte(7);
-    writer.write(obj.endTime?.millisecondsSinceEpoch);
+    writer.write(obj.endTime?.toUtc().millisecondsSinceEpoch);
     writer.writeByte(8);
     writer.write(obj.plannedDurationMinutes);
     writer.writeByte(9);
@@ -76,5 +84,9 @@ class TutorSessionAdapter extends TypeAdapter<TutorSession> {
     writer.write(obj.totalTokensUsed);
     writer.writeByte(17);
     writer.write(obj.lessonId);
+    writer.writeByte(18);
+    writer.write(obj.startTime.isUtc);
+    writer.writeByte(19);
+    writer.write(obj.endTime?.isUtc ?? false);
   }
 }
