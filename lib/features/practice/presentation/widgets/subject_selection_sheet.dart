@@ -9,12 +9,14 @@ class SubjectSelectionSheet extends StatelessWidget {
   final List<Subject> subjects;
   final void Function(Subject) onSubjectSelected;
   final String? Function(Subject)? subtitleBuilder;
+  final Widget? Function(Subject)? trailingBuilder;
 
   const SubjectSelectionSheet({
     super.key,
     required this.subjects,
     required this.onSubjectSelected,
     this.subtitleBuilder,
+    this.trailingBuilder,
   });
 
   @override
@@ -48,6 +50,7 @@ class SubjectSelectionSheet extends StatelessWidget {
                   ),
                   title: Text(subject.name),
                   subtitle: subtitle != null ? Text(subtitle) : null,
+                  trailing: trailingBuilder?.call(subject),
                   onTap: () {
                     Navigator.pop(context);
                     onSubjectSelected(subject);
@@ -66,6 +69,7 @@ class SubjectSelectionSheet extends StatelessWidget {
     required List<Subject> subjects,
     required void Function(Subject) onSubjectSelected,
     String? Function(Subject)? subtitleBuilder,
+    Widget? Function(Subject)? trailingBuilder,
   }) {
     return showModalBottomSheet(
       context: context,
@@ -74,6 +78,7 @@ class SubjectSelectionSheet extends StatelessWidget {
         subjects: subjects,
         onSubjectSelected: onSubjectSelected,
         subtitleBuilder: subtitleBuilder,
+        trailingBuilder: trailingBuilder,
       ),
     );
   }
