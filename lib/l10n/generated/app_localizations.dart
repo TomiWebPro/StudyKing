@@ -9872,6 +9872,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Reported'**
   String get feedbackReportedBadge;
+
+  /// Label for feedback whose target is a tutor explanation
+  ///
+  /// In en, this message translates to:
+  /// **'Explanation'**
+  String get feedbackTargetExplanation;
+
+  /// Label for feedback whose target is a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson'**
+  String get feedbackTargetLesson;
+
+  /// Label for feedback whose target is general AI content
+  ///
+  /// In en, this message translates to:
+  /// **'Content'**
+  String get feedbackTargetContent;
+
+  /// Heading for the mentor panel that surfaces student-reported incorrect content
+  ///
+  /// In en, this message translates to:
+  /// **'Reported AI content'**
+  String get mentorReportedFeedbackHeading;
+
+  /// Subtitle explaining the mentor reported-content panel
+  ///
+  /// In en, this message translates to:
+  /// **'Students flagged these explanations or lessons as incorrect. Review and follow up.'**
+  String get mentorReportedFeedbackSubtitle;
+
+  /// Empty-state message for the mentor reported-content panel
+  ///
+  /// In en, this message translates to:
+  /// **'No reported content yet.'**
+  String get mentorReportedFeedbackNone;
 }
 
 class _AppLocalizationsDelegate

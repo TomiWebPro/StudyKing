@@ -6006,4 +6006,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get feedbackReportedBadge => 'Reported';
+
+  @override
+  String get feedbackTargetExplanation => 'Explanation';
+
+  @override
+  String get feedbackTargetLesson => 'Lesson';
+
+  @override
+  String get feedbackTargetContent => 'Content';
+
+  @override
+  String get mentorReportedFeedbackHeading => 'Reported AI content';
+
+  @override
+  String get mentorReportedFeedbackSubtitle =>
+      'Students flagged these explanations or lessons as incorrect. Review and follow up.';
+
+  @override
+  String get mentorReportedFeedbackNone => 'No reported content yet.';
 }
