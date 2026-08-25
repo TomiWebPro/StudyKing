@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/services/badge_service.dart';
@@ -62,6 +63,18 @@ class _FakeBadgeRepository implements BadgeRepository {
   @override
   Box<BadgeModel> get box => _box!;
   Box<BadgeModel>? _box;
+}
+
+List<String> _capturedLogs = [];
+void _installLogCapture() {
+  _capturedLogs.clear();
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) _capturedLogs.add(message);
+  };
+}
+
+void _uninstallLogCapture() {
+  debugPrint = debugPrintThrottled;
 }
 
 void main() {
@@ -193,6 +206,28 @@ void main() {
         final stats = await service.getBadgeStats('s1');
         expect(stats.data!['unlocked'], equals(1));
         expect(stats.data!['locked'], equals(stats.data!['total'] - 1));
+      });
+    });
+
+    group('checkAndUnlockBadges with failing stats', () {
+      test('logs warning, degrades gracefully and unlocks nothing when getStats fails', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final failingService = BadgeService(
+          repository: mockRepo,
+          getStats: (studentId) async => Result.failure('stats unavailable'),
+          notificationService: null,
+        );
+
+        final result = await failingService.checkAndUnlockBadges('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data!, isEmpty);
+        expect(
+          _capturedLogs.any((l) => l.contains('[W]') && l.contains('getStats')),
+          isTrue,
+        );
       });
     });
   });

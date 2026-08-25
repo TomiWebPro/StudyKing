@@ -11,14 +11,33 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ProgressExportService {
+  static final Logger _logger = const Logger('ProgressExportService');
+
+  static const Map<String, dynamic> _defaultOverallStats = {
+    'totalAttempts': 0,
+    'correctAttempts': 0,
+    'accuracy': 0.0,
+    'avgTimePerQuestion': 0.0,
+    'totalStudyTimeHours': 0.0,
+    'weeklyActivity': 0,
+    'dailyActivity': 0,
+    'topicsStudied': 0,
+  };
+
   final StudyProgressTracker _tracker;
   final MasteryGraphService _masteryService;
   final AttemptRepository _attemptRepo;
+
+  static double _toDouble(dynamic value) {
+    if (value is num) return value.toDouble();
+    return double.tryParse(value?.toString() ?? '0') ?? 0.0;
+  }
 
   ProgressExportService({
     required StudyProgressTracker tracker,
@@ -31,13 +50,25 @@ class ProgressExportService {
   Future<Result<String>> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async {
     return Result.capture(() async {
       final overallStatsResult = await _tracker.getOverallStats(studentId);
-      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      if (overallStatsResult.isFailure) {
+        _logger.w('getOverallStats failed for $studentId: ${overallStatsResult.error}');
+      }
+      final overallStats = overallStatsResult.data ?? _defaultOverallStats;
       final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      if (masteryResult.isFailure) {
+        _logger.w('getAllTopicMastery failed for $studentId: ${masteryResult.error}');
+      }
       final masteryStates =
           masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('getByStudent attempts failed for $studentId: ${attemptsResult.error}');
+      }
       final attempts = attemptsResult.data ?? [];
       final badgesResult = await _tracker.getBadges(studentId);
+      if (badgesResult.isFailure) {
+        _logger.w('getBadges failed for $studentId: ${badgesResult.error}');
+      }
       final badges = badgesResult.data ?? [];
 
       return jsonEncode({
@@ -62,15 +93,30 @@ class ProgressExportService {
   }) async {
     return Result.capture(() async {
       final overallStatsResult = await _tracker.getOverallStats(studentId);
-      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      if (overallStatsResult.isFailure) {
+        _logger.w('getOverallStats failed for $studentId: ${overallStatsResult.error}');
+      }
+      final overallStats = overallStatsResult.data ?? _defaultOverallStats;
       final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      if (masteryResult.isFailure) {
+        _logger.w('getAllTopicMastery failed for $studentId: ${masteryResult.error}');
+      }
       final masteryStates =
           masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('getByStudent attempts failed for $studentId: ${attemptsResult.error}');
+      }
       final attempts = attemptsResult.data ?? [];
       final badgesResult = await _tracker.getBadges(studentId);
+      if (badgesResult.isFailure) {
+        _logger.w('getBadges failed for $studentId: ${badgesResult.error}');
+      }
       final badges = badgesResult.data ?? [];
       final trendResult = await _tracker.getWeeklyTrend(4, studentId: studentId);
+      if (trendResult.isFailure) {
+        _logger.w('getWeeklyTrend failed for $studentId: ${trendResult.error}');
+      }
       final trend = trendResult.data ?? [];
 
       final buffer = StringBuffer();
@@ -122,8 +168,7 @@ class ProgressExportService {
     }, context: 'exportComprehensiveCSV');
   }
 
-  String _masteryLevelLabel(MasteryLevel level, AppLocalizations? l10n) {
-    return switch (level) {
+  String _masteryLevelLabel(MasteryLevel level, AppLocalizations? l10n) {    return switch (level) {
       MasteryLevel.novice => l10n?.masteryLevelNovice ?? 'Novice',
       MasteryLevel.browsing => l10n?.masteryLevelBrowsing ?? 'Browsing',
       MasteryLevel.developing => l10n?.masteryLevelDeveloping ?? 'Developing',
@@ -138,13 +183,25 @@ class ProgressExportService {
   ) async {
     return Result.capture(() async {
     final overallStatsResult = await _tracker.getOverallStats(studentId);
+    if (overallStatsResult.isFailure) {
+      _logger.w('getOverallStats failed for $studentId: ${overallStatsResult.error}');
+    }
     final overallStats = overallStatsResult.data ?? <String, dynamic>{};
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+    if (masteryResult.isFailure) {
+      _logger.w('getAllTopicMastery failed for $studentId: ${masteryResult.error}');
+    }
     final masteryStates =
         masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
     final attemptsResult = await _attemptRepo.getByStudent(studentId);
+    if (attemptsResult.isFailure) {
+      _logger.w('getByStudent attempts failed for $studentId: ${attemptsResult.error}');
+    }
     final attempts = attemptsResult.data ?? [];
     final badgesResult = await _tracker.getBadges(studentId);
+    if (badgesResult.isFailure) {
+      _logger.w('getBadges failed for $studentId: ${badgesResult.error}');
+    }
     final badges = badgesResult.data ?? [];
 
     final pdf = pw.Document();
@@ -188,7 +245,7 @@ class ProgressExportService {
               [l10n.correctAnswers, '${overallStats['correctAttempts']}'],
               [l10n.accuracy, formatPercent(double.tryParse('${overallStats['accuracy']}') ?? 0, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)],
               [l10n.avgTime, '${overallStats['avgTimePerQuestion']}s'],
-              [l10n.totalStudyTime, '${formatDecimal(double.tryParse(overallStats['totalStudyTimeHours'] as String? ?? '0') ?? 0, l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h'],
+              [l10n.totalStudyTime, '${formatDecimal(_toDouble(overallStats['totalStudyTimeHours']), l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h'],
               [l10n.csvColWeeklyActivity, '${overallStats['weeklyActivity']}'],
               [l10n.csvColDailyActivity, '${overallStats['dailyActivity']}'],
               [l10n.csvColTopicsStudied, '${overallStats['topicsStudied']}'],
@@ -354,13 +411,25 @@ class ProgressExportService {
   ) async {
     return Result.capture(() async {
       final overallStatsResult = await _tracker.getOverallStats(studentId);
-      final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+      if (overallStatsResult.isFailure) {
+        _logger.w('getOverallStats failed for $studentId: ${overallStatsResult.error}');
+      }
+      final overallStats = overallStatsResult.data ?? _defaultOverallStats;
       final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      if (masteryResult.isFailure) {
+        _logger.w('getAllTopicMastery failed for $studentId: ${masteryResult.error}');
+      }
       final masteryStates =
           masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('getByStudent attempts failed for $studentId: ${attemptsResult.error}');
+      }
       final attempts = attemptsResult.data ?? [];
       final badgesResult = await _tracker.getBadges(studentId);
+      if (badgesResult.isFailure) {
+        _logger.w('getBadges failed for $studentId: ${badgesResult.error}');
+      }
       final badges = badgesResult.data ?? [];
 
       final json = jsonEncode({

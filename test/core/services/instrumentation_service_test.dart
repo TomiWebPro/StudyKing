@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -9,6 +10,7 @@ import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_metric_model.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_adapter.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
@@ -78,6 +80,39 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
+}
+
+class FakeFailingPlanAdherenceRepository extends PlanAdherenceRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async =>
+      Result.failure('adherence store unavailable');
+
+  @override
+  Future<Result<List<PlanAdherenceModel>>> getWeekly(String studentId) async =>
+      Result.failure('adherence store unavailable');
+
+  @override
+  Future<Result<double>> getAverageAdherence(String studentId) async =>
+      Result.failure('adherence store unavailable');
+
+  @override
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async =>
+      Result.failure('adherence store unavailable');
+}
+
+List<String> _capturedLogs = [];
+void _installLogCapture() {
+  _capturedLogs.clear();
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) _capturedLogs.add(message);
+  };
+}
+
+void _uninstallLogCapture() {
+  debugPrint = debugPrintThrottled;
 }
 
 void main() {
@@ -528,6 +563,66 @@ void main() {
       expect(json['studentId'], equals('student1'));
       expect(json['topicId'], equals('topic1'));
       expect(json['leveledUp'], isTrue);
+    });
+  });
+
+  group('InstrumentationService - swallowed Result failures', () {
+    late FakeFailingPlanAdherenceRepository failingRepo;
+    late InstrumentationService service;
+
+    setUp(() async {
+      failingRepo = FakeFailingPlanAdherenceRepository();
+      await failingRepo.init();
+      service = InstrumentationService(
+        repository: FakeMasteryGraphRepository(),
+        adherenceRepository: failingRepo,
+      );
+      await service.init();
+    });
+
+    test('dashboard logs warnings and degrades gracefully when adherence repo fails', () async {
+      _installLogCapture();
+      addTearDown(_uninstallLogCapture);
+
+      final result = await service.getInstrumentationDashboard('student1');
+
+      expect(result.isSuccess, isTrue);
+      final adherence = result.data!['planAdherence'] as Map;
+      expect(adherence['averageAdherence'], equals(0.0));
+      expect(adherence['consecutiveLowDays'], equals(0));
+      expect(adherence['weeklyMetricsCount'], equals(0));
+
+      final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+      expect(warnings, isNotEmpty);
+      expect(warnings.any((l) => l.contains('getAverageAdherence')), isTrue);
+      expect(warnings.any((l) => l.contains('getWeekly')), isTrue);
+      expect(warnings.any((l) => l.contains('getConsecutiveLowAdherenceDays')), isTrue);
+    });
+
+    test('getAdherenceHistory returns empty and logs when repo fails', () async {
+      _installLogCapture();
+      addTearDown(_uninstallLogCapture);
+
+      final history = await service.getAdherenceHistory('student1');
+
+      expect(history, isEmpty);
+      expect(
+        _capturedLogs.any((l) => l.contains('[W]') && l.contains('getAdherenceHistory')),
+        isTrue,
+      );
+    });
+
+    test('exportInstrumentationData logs when adherence load fails but still succeeds', () async {
+      _installLogCapture();
+      addTearDown(_uninstallLogCapture);
+
+      final result = await service.exportInstrumentationData('student1');
+
+      expect(result.isSuccess, isTrue);
+      expect(
+        _capturedLogs.any((l) => l.contains('[W]') && l.contains('exportInstrumentationData')),
+        isTrue,
+      );
     });
   });
 }

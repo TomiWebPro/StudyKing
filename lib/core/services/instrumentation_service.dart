@@ -148,14 +148,23 @@ class InstrumentationService {
 
       if (_adherenceRepository != null) {
         final avgResult = await _adherenceRepository.getAverageAdherence(studentId);
+        if (avgResult.isFailure) {
+          _logger.w('getAverageAdherence failed for $studentId: ${avgResult.error}');
+        }
         avgAdherence = avgResult.data ?? 0.0;
         final weeklyResult = await _adherenceRepository.getWeekly(studentId);
+        if (weeklyResult.isFailure) {
+          _logger.w('getWeekly failed for $studentId: ${weeklyResult.error}');
+        }
         final weeklyMetrics = weeklyResult.data ?? [];
         weeklyMetricsCount = weeklyMetrics.length;
         weeklyAdherenceAvg = weeklyMetrics.isEmpty
             ? 0.0
             : weeklyMetrics.fold<double>(0.0, (sum, m) => sum + m.adherenceScore) / weeklyMetrics.length;
         final lowDaysResult = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
+        if (lowDaysResult.isFailure) {
+          _logger.w('getConsecutiveLowAdherenceDays failed for $studentId: ${lowDaysResult.error}');
+        }
         consecutiveLowDays = lowDaysResult.data ?? 0;
       }
 
@@ -193,6 +202,10 @@ class InstrumentationService {
   Future<List<PlanAdherenceModel>> getAdherenceHistory(String studentId) async {
     if (_adherenceRepository == null) return [];
     final result = await _adherenceRepository.getByStudent(studentId);
+    if (result.isFailure) {
+      _logger.w('getAdherenceHistory failed for $studentId: ${result.error}');
+      return [];
+    }
     return result.data ?? [];
   }
 
@@ -207,6 +220,9 @@ class InstrumentationService {
       List<Map<String, dynamic>> adherenceData = [];
       if (_adherenceRepository != null) {
         final modelsResult = await _adherenceRepository.getByStudent(studentId);
+        if (modelsResult.isFailure) {
+          _logger.w('exportInstrumentationData failed to load adherence for $studentId: ${modelsResult.error}');
+        }
         final adherenceModels = modelsResult.data ?? [];
         adherenceData = adherenceModels.map((m) => m.toJson()).toList();
       }

@@ -32,8 +32,12 @@ class BadgeService {
   Future<Result<List<BadgeModel>>> checkAndUnlockBadges(String studentId) async {
     try {
       await _repository.init();
-      final stats = _getStats != null
-          ? (await _getStats(studentId)).data ?? <String, dynamic>{}
+      final statsResult = _getStats != null ? await _getStats(studentId) : null;
+      if (statsResult != null && statsResult.isFailure) {
+        _logger.w('getStats failed for $studentId: ${statsResult.error}');
+      }
+      final stats = statsResult != null && statsResult.isSuccess
+          ? statsResult.data ?? <String, dynamic>{}
           : <String, dynamic>{};
       final existing = await _repository.getBadgeMap(studentId);
       final newlyUnlocked = <BadgeModel>[];
