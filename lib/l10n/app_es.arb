@@ -7899,5 +7899,29 @@
   "feedbackReportedBadge": "Reportado",
   "@feedbackReportedBadge": {
     "description": "Badge label marking feedback that reported incorrect content"
+  },
+  "feedbackTargetExplanation": "Explicación",
+  "@feedbackTargetExplanation": {
+    "description": "Label for feedback whose target is a tutor explanation"
+  },
+  "feedbackTargetLesson": "Lección",
+  "@feedbackTargetLesson": {
+    "description": "Label for feedback whose target is a lesson"
+  },
+  "feedbackTargetContent": "Contenido",
+  "@feedbackTargetContent": {
+    "description": "Label for feedback whose target is general AI content"
+  },
+  "mentorReportedFeedbackHeading": "Contenido de IA reportado",
+  "@mentorReportedFeedbackHeading": {
+    "description": "Heading for the mentor panel that surfaces student-reported incorrect content"
+  },
+  "mentorReportedFeedbackSubtitle": "Los estudiantes marcaron estas explicaciones o lecciones como incorrectas. Revíselas y haga seguimiento.",
+  "@mentorReportedFeedbackSubtitle": {
+    "description": "Subtitle explaining the mentor reported-content panel"
+  },
+  "mentorReportedFeedbackNone": "Aún no hay contenido reportado.",
+  "@mentorReportedFeedbackNone": {
+    "description": "Empty-state message for the mentor reported-content panel"
   }
   }

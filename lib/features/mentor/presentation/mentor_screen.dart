@@ -17,6 +17,8 @@ import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 import 'package:studyking/features/mentor/services/mentor_schedule_handler.dart';
 import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/mentor/presentation/widgets/reported_feedback_panel.dart';
+import 'package:studyking/features/teaching/providers/lesson_feedback_providers.dart' show reportedLessonFeedbackProvider;
 import 'package:studyking/core/widgets/conversation_input.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/features/mentor/data/models/chat_message_data.dart';
@@ -712,6 +714,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 _buildRetryBanner(l10n),
               if (!_isLoadingUpcoming && _upcomingLessons.isNotEmpty)
                 _buildRescheduleSection(l10n),
+              _buildReportedFeedbackSection(),
               Expanded(
                 child: _messages.isEmpty
                     ? _buildEmptyState(l10n)
@@ -1139,6 +1142,17 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildReportedFeedbackSection() {
+    final reported = ref.watch(reportedLessonFeedbackProvider);
+    if (!reported.hasValue || reported.value!.isEmpty) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: ResponsiveUtils.screenPadding(context),
+      child: const ReportedFeedbackPanel(),
     );
   }
 
