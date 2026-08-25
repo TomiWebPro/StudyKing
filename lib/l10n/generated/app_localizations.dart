@@ -9908,6 +9908,66 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No reported content yet.'**
   String get mentorReportedFeedbackNone;
+
+  /// Card title for the relative lessons-remaining-to-mastery indicator
+  ///
+  /// In en, this message translates to:
+  /// **'Lessons to Mastery'**
+  String get lessonsToMasteryTitle;
+
+  /// Relative indicator of how many lessons remain until a topic or subject is mastered
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No lessons left to reach mastery} =1{1 lesson left to reach mastery} other{{count} lessons left to reach mastery}}'**
+  String remainingLessonsToMastery(num count);
+
+  /// Label for the mastery progress percentage
+  ///
+  /// In en, this message translates to:
+  /// **'Mastery progress'**
+  String get masteryProgress;
+
+  /// Label for the active study plan switcher
+  ///
+  /// In en, this message translates to:
+  /// **'Active study plan'**
+  String get activeStudyPlan;
+
+  /// Tooltip for the study plan switcher control
+  ///
+  /// In en, this message translates to:
+  /// **'Switch study plan'**
+  String get switchStudyPlan;
+
+  /// Label for the study plan name input
+  ///
+  /// In en, this message translates to:
+  /// **'Plan name'**
+  String get planName;
+
+  /// Label for creating a new study plan
+  ///
+  /// In en, this message translates to:
+  /// **'New study plan'**
+  String get newStudyPlan;
+
+  /// Action to delete a study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Delete study plan'**
+  String get deleteStudyPlan;
+
+  /// Confirmation message before deleting a study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Delete this study plan? This cannot be undone.'**
+  String get confirmDeleteStudyPlan;
+
+  /// Shown when no active study plan is selected
+  ///
+  /// In en, this message translates to:
+  /// **'No study plan selected'**
+  String get noStudyPlanSelected;
 }
 
 class _AppLocalizationsDelegate

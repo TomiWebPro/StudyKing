@@ -19,6 +19,7 @@ class FakePlannerService extends PlannerService {
     required String course,
     required int daysValue,
     required int hoursValue,
+    String? name,
   }) async {
     capturedCourse = course;
     capturedDaysValue = daysValue;

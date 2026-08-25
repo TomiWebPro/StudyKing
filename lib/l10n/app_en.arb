@@ -7944,5 +7944,45 @@
   "mentorReportedFeedbackNone": "No reported content yet.",
   "@mentorReportedFeedbackNone": {
     "description": "Empty-state message for the mentor reported-content panel"
+  },
+  "lessonsToMasteryTitle": "Lessons to Mastery",
+  "@lessonsToMasteryTitle": {
+    "description": "Card title for the relative lessons-remaining-to-mastery indicator"
+  },
+  "remainingLessonsToMastery": "{count, plural, =0{No lessons left to reach mastery} =1{1 lesson left to reach mastery} other{{count} lessons left to reach mastery}}",
+  "@remainingLessonsToMastery": {
+    "description": "Relative indicator of how many lessons remain until a topic or subject is mastered"
+  },
+  "masteryProgress": "Mastery progress",
+  "@masteryProgress": {
+    "description": "Label for the mastery progress percentage"
+  },
+  "activeStudyPlan": "Active study plan",
+  "@activeStudyPlan": {
+    "description": "Label for the active study plan switcher"
+  },
+  "switchStudyPlan": "Switch study plan",
+  "@switchStudyPlan": {
+    "description": "Tooltip for the study plan switcher control"
+  },
+  "planName": "Plan name",
+  "@planName": {
+    "description": "Label for the study plan name input"
+  },
+  "newStudyPlan": "New study plan",
+  "@newStudyPlan": {
+    "description": "Label for creating a new study plan"
+  },
+  "deleteStudyPlan": "Delete study plan",
+  "@deleteStudyPlan": {
+    "description": "Action to delete a study plan"
+  },
+  "confirmDeleteStudyPlan": "Delete this study plan? This cannot be undone.",
+  "@confirmDeleteStudyPlan": {
+    "description": "Confirmation message before deleting a study plan"
+  },
+  "noStudyPlanSelected": "No study plan selected",
+  "@noStudyPlanSelected": {
+    "description": "Shown when no active study plan is selected"
   }
   }

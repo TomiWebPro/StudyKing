@@ -12,6 +12,7 @@ import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/utils/study_utils.dart';
 import '../../../core/utils/time_utils.dart';
 import '../services/planner_service.dart';
+import 'plan_providers.dart' show planProgressProvider;
 export 'plan_providers.dart' show PlanProgressData, DailyProgress, planProgressProvider;
 export 'syllabus_providers.dart' show SyllabusProgressData, RoadmapListData, syllabusProgressProvider, roadmapListProvider;
 export 'adherence_providers.dart' show AdherenceSummaryData, TodayAdherenceData, adherenceSummaryProvider, todayAdherenceProvider;
@@ -22,6 +23,20 @@ final plannerServiceProvider = Provider<PlannerService>((ref) {
     lessonAgentService: ref.watch(lessonAgentServiceProvider),
     localeName: locale.languageCode,
   );
+});
+
+/// Holds the id of the currently active study plan context. Switching this
+/// value drives downstream plan-scoped providers to re-bind to the new plan
+/// without requiring an app restart.
+final activePlanIdProvider = StateProvider<String?>((ref) => null);
+
+/// All persisted plans for the current student. Recomputes whenever the active
+/// plan id changes (plan created, switched, or deleted).
+final plansProvider = FutureProvider<List<PersonalLearningPlan>>((ref) async {
+  ref.watch(activePlanIdProvider);
+  final service = ref.watch(plannerServiceProvider);
+  final result = await service.getPlans();
+  return result.data ?? [];
 });
 
 class PlannerState {
@@ -87,8 +102,9 @@ class PlannerState {
 class PlannerNotifier extends StateNotifier<PlannerState> {
   static final Logger _logger = const Logger('PlannerNotifier');
   final PlannerService _service;
+  final Ref? _ref;
 
-  PlannerNotifier(this._service) : super(const PlannerState());
+  PlannerNotifier(this._service, [this._ref]) : super(const PlannerState());
 
   PlannerState get currentState => state;
   set currentState(PlannerState newState) => state = newState;
@@ -104,6 +120,41 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
   Future<void> loadInitialData() async {
     await loadExistingPlan();
     await loadRoadmaps();
+    await _syncActivePlanId();
+  }
+
+  Future<void> _syncActivePlanId() async {
+    try {
+      final activeResult = await _service.getActivePlanId();
+      final activeId = activeResult.data;
+      if (activeId != null && activeId.isNotEmpty) {
+        if (_ref?.read(activePlanIdProvider) != activeId) {
+          final notifier = _ref?.read(activePlanIdProvider.notifier);
+          notifier?.state = activeId;
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to sync active plan id', e);
+    }
+  }
+
+  /// Switches the active study plan context, persists the selection, reloads
+  /// the active plan, and re-binds downstream plan-scoped providers.
+  Future<void> switchActivePlan(String planId) async {
+    try {
+      final result = await _service.setActivePlanId(planId);
+      if (result.isFailure) {
+        _logger.w('Failed to set active plan id: ${result.error}');
+        return;
+      }
+      final notifier = _ref?.read(activePlanIdProvider.notifier);
+      notifier?.state = planId;
+      await loadExistingPlan();
+      _ref?.invalidate(planProgressProvider);
+      _ref?.invalidate(plansProvider);
+    } catch (e) {
+      _logger.w('Failed to switch active plan', e);
+    }
   }
 
   Future<void> loadAdditionalData() async {
@@ -210,6 +261,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required int daysValue,
     required int hoursValue,
     required AppLocalizations l10n,
+    String? name,
   }) async {
     state = state.copyWith(isGenerating: true, error: null, successMessage: null);
 
@@ -218,6 +270,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         course: course,
         daysValue: daysValue,
         hoursValue: hoursValue,
+        name: name ?? course,
       );
       final plan = planResult.data;
       if (plan != null) {
@@ -226,6 +279,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
           isGenerating: false,
           successMessage: l10n.planGeneratedSuccessfully,
         );
+        await _afterPlanCreated(plan);
       } else {
         state = state.copyWith(
           isGenerating: false,
@@ -246,6 +300,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     required int daysValue,
     required int hoursValue,
     required AppLocalizations l10n,
+    String? name,
+    String? existingPlanId,
   }) async {
     state = state.copyWith(isGenerating: true, error: null, successMessage: null);
 
@@ -260,6 +316,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         syllabusGoals: syllabusGoals,
         daysValue: daysValue,
         hoursValue: hoursValue,
+        name: name,
+        existingPlanId: existingPlanId,
       );
       final plan = planResult.data;
       if (plan != null) {
@@ -273,6 +331,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
           isGenerating: false,
           successMessage: l10n.syllabusPlanGenerated,
         );
+        await _afterPlanCreated(preservedPlan);
       } else {
         state = state.copyWith(
           isGenerating: false,
@@ -286,6 +345,13 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         error: l10n.somethingWentWrong,
       );
     }
+  }
+
+  Future<void> _afterPlanCreated(PersonalLearningPlan plan) async {
+    final notifier = _ref?.read(activePlanIdProvider.notifier);
+    notifier?.state = plan.planId;
+    _ref?.invalidate(plansProvider);
+    _ref?.invalidate(planProgressProvider);
   }
 
   Future<void> createRoadmap({
@@ -600,11 +666,16 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         existingPlan: existingPlan,
       );
       if (result.isSuccess && result.data != null) {
+        final updatedPlan = result.data!;
+        final notifier = _ref?.read(activePlanIdProvider.notifier);
+        notifier?.state = updatedPlan.planId;
         state = state.copyWith(
-          plan: result.data,
+          plan: updatedPlan,
           isGenerating: false,
           successMessage: 'Subject added to plan',
         );
+        _ref?.invalidate(plansProvider);
+        _ref?.invalidate(planProgressProvider);
       } else {
         state = state.copyWith(
           isGenerating: false,
@@ -622,5 +693,5 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
 final plannerProvider =
     StateNotifierProvider<PlannerNotifier, PlannerState>((ref) {
   final service = ref.watch(plannerServiceProvider);
-  return PlannerNotifier(service);
+  return PlannerNotifier(service, ref);
 });

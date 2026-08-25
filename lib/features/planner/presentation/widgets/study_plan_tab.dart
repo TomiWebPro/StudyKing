@@ -37,6 +37,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
   String? _selectedSubjectId;
   final TextEditingController _daysController = TextEditingController();
   final TextEditingController _hoursController = TextEditingController();
+  final TextEditingController _planNameController = TextEditingController();
   final List<SyllableEntry> _syllabusEntries = [];
   bool _useMultiSyllabus = false;
   List<Subject> _allSubjects = [];
@@ -52,6 +53,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
   void dispose() {
     _daysController.dispose();
     _hoursController.dispose();
+    _planNameController.dispose();
     for (final entry in _syllabusEntries) {
       entry.dispose();
     }
@@ -127,6 +129,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
         syllabusGoals: syllabusGoals,
         daysValue: overallDays.clamp(1, 365),
         hoursValue: overallHours.clamp(1, 24),
+        name: _planNameController.text.trim(),
         l10n: l10nGen,
       );
       return;
@@ -179,6 +182,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
           course: selectedSubject.name,
           daysValue: daysValue,
           hoursValue: hoursValue,
+          name: _planNameController.text.trim(),
           l10n: l10nGen,
         );
   }
@@ -386,6 +390,15 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
                 ),
               ],
             ],
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
+            TextField(
+              controller: _planNameController,
+              decoration: InputDecoration(
+                labelText: l10n.planName,
+                hintText: l10n.newStudyPlan,
+                border: const OutlineInputBorder(),
+              ),
+            ),
             SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             Semantics(
               button: true,

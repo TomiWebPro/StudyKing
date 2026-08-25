@@ -15,6 +15,7 @@ import 'package:studyking/features/planner/data/models/plan_adherence_model.dart
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_context_repository.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -75,7 +76,7 @@ class FakeTopicRepository extends TopicRepository {
 }
 
 class FakePlanRepository extends PlanRepository {
-  PersonalLearningPlan? _plan;
+  final Map<String, PersonalLearningPlan> _plans = {};
   bool throwOnLoad = false;
   bool throwOnSave = false;
 
@@ -87,21 +88,40 @@ class FakePlanRepository extends PlanRepository {
   @override
   Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
     if (throwOnLoad) throw Exception('load plan error');
-    return Result.success(_plan);
+    final match = _plans.values.where((p) => p.studentId == studentId).firstOrNull;
+    return Result.success(match);
+  }
+
+  @override
+  Future<Result<PersonalLearningPlan?>> loadPlanById(String planId) async {
+    if (throwOnLoad) throw Exception('load plan error');
+    return Result.success(_plans[planId]);
   }
 
   @override
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
     if (throwOnSave) throw Exception('save plan error');
-    _plan = plan;
+    _plans[plan.planId] = plan;
     return Result.success(null);
   }
 
   @override
-  Future<Result<bool>> hasPlan(String studentId) async => Result.success(_plan != null);
+  Future<Result<List<PersonalLearningPlan>>> getAllPlansForStudent(String studentId) async =>
+      Result.success(_plans.values.where((p) => p.studentId == studentId).toList());
 
   @override
-  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async => Result.success(_plan != null ? [_plan!] : []);
+  Future<Result<void>> deletePlanById(String planId) async {
+    _plans.remove(planId);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<bool>> hasPlan(String studentId) async =>
+      Result.success(_plans.values.any((p) => p.studentId == studentId));
+
+  @override
+  Future<Result<List<PersonalLearningPlan>>> getAllPlans() async =>
+      Result.success(_plans.values.toList());
 }
 
 class FakeRoadmapRepository extends RoadmapRepository {
@@ -309,6 +329,29 @@ class StubLessonAgentService implements LessonAgentService {
   }) async => null;
 }
 
+class FakePlanContextRepository extends PlanContextRepository {
+  final Map<String, String> _active = {};
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<String?>> getActivePlanId(String studentId) async =>
+      Result.success(_active[studentId]);
+
+  @override
+  Future<Result<void>> setActivePlanId(String studentId, String planId) async {
+    _active[studentId] = planId;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> clearActivePlanId(String studentId) async {
+    _active.remove(studentId);
+    return Result.success(null);
+  }
+}
+
 PlannerService createPlannerService({
   PlanRepository? planRepo,
   MasteryGraphService? masteryService,
@@ -321,6 +364,7 @@ PlannerService createPlannerService({
   PlanAdherenceOrchestrator? planOrchestrator,
   SyllabusResolver? syllabusResolver,
   PlanAdherenceRepository? adherenceRepo,
+  PlanContextRepository? planContextRepo,
   LessonAgentService? lessonAgentService,
   String? fixedStudentId,
 }) {
@@ -336,6 +380,7 @@ PlannerService createPlannerService({
     planOrchestrator: planOrchestrator,
     syllabusResolver: syllabusResolver,
     adherenceRepo: adherenceRepo,
+    planContextRepo: planContextRepo,
     lessonAgentService: lessonAgentService,
     fixedStudentId: fixedStudentId ?? 'test-student',
   );

@@ -14,7 +14,7 @@ class PlanRepository extends Repository<PersonalLearningPlan> {
   }
 
   Future<Result<void>> create(PersonalLearningPlan plan) async {
-    return super.put(plan.studentId, plan);
+    return super.put(plan.planId, plan);
   }
 
   Future<Result<void>> savePlan(PersonalLearningPlan plan) async {
@@ -25,8 +25,25 @@ class PlanRepository extends Repository<PersonalLearningPlan> {
     return super.get(studentId);
   }
 
+  Future<Result<PersonalLearningPlan?>> loadPlanById(String planId) async {
+    return super.get(planId);
+  }
+
+  Future<Result<List<PersonalLearningPlan>>> getAllPlansForStudent(String studentId) async {
+    return Result.capture(
+      () async => box.values
+          .where((p) => p.studentId == studentId)
+          .toList(),
+      context: 'getAllPlansForStudent',
+    );
+  }
+
   Future<Result<void>> deletePlan(String studentId) async {
     return super.delete(studentId);
+  }
+
+  Future<Result<void>> deletePlanById(String planId) async {
+    return super.delete(planId);
   }
 
   Future<Result<bool>> hasPlan(String studentId) async {
