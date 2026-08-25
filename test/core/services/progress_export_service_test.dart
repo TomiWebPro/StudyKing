@@ -1,5 +1,8 @@
+import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
@@ -184,60 +187,178 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
   void updateLocalization(AppLocalizations l10n) {}
 }
 
-class _FakeL10n {
-  String get csvOverallStats => 'Overall Statistics';
-  String get csvColTotalAttempts => 'Total Attempts';
-  String get csvColCorrect => 'Correct';
-  String get csvColAccuracy => 'Accuracy';
-  String get csvColAvgTime => 'Avg Time';
-  String get csvColTotalHours => 'Total Hours';
-  String get csvColWeeklyActivity => 'Weekly Activity';
-  String get csvColDailyActivity => 'Daily Activity';
-  String get csvColTopicsStudied => 'Topics Studied';
-  String get csvTopicMastery => 'Topic Mastery';
-  String get csvColTopicId => 'Topic ID';
-  String get csvColMasteryLevel => 'Mastery Level';
-  String get csvColLastPracticed => 'Last Practiced';
-  String get csvColReviewUrgency => 'Review Urgency';
-  String get csvAllAttempts => 'All Attempts';
-  String get csvColQuestionId => 'Question ID';
-  String get csvColSubjectId => 'Subject ID';
-  String get csvColTime => 'Time';
-  String get csvColTimestamp => 'Timestamp';
-  String get csvWeeklyTrend => 'Weekly Trend';
-  String get csvColWeek => 'Week';
-  String get csvColAttempts => 'Attempts';
-  String get csvColImprovement => 'Improvement';
-  String get csvBadges => 'Badges';
-  String get csvColBadgeName => 'Badge Name';
-  String get csvColBadgeDescription => 'Description';
-  String get csvColDateUnlocked => 'Date';
-  String get masteryLevelNovice => 'Novice';
-  String get masteryLevelBrowsing => 'Browsing';
-  String get masteryLevelDeveloping => 'Developing';
-  String get masteryLevelProficient => 'Proficient';
-  String get masteryLevelExpert => 'Expert';
-  String get pdfProgressReport => 'Progress Report';
-  String pdfGenerated(String date) => 'Generated: $date';
-  String pdfStudentId(String id) => 'Student: $id';
-  String get pdfOverallStatistics => 'Overall Statistics';
-  String get pdfMetric => 'Metric';
-  String get pdfValue => 'Value';
-  String get correctAnswers => 'Correct';
-  String get accuracy => 'Accuracy';
-  String get avgTime => 'Avg Time';
-  String get totalStudyTime => 'Total Study Time';
-  String get pdfTopicMasteryBreakdown => 'Topic Mastery';
-  String get pdfTableTopic => 'Topic';
-  String get pdfTableAttempts => 'Attempts';
-  String get pdfTableLevel => 'Level';
-  String get pdfNoMasteryData => 'No mastery data';
-  String get pdfBadgesEarned => 'Badges';
-  String get pdfNoBadges => 'No badges';
-  String get pdfRecentActivitySummary => 'Recent Activity';
-  String pdfTotalAttemptsRecorded(int count) => '$count attempts';
-  String pdfDateRange(String from, String to) => '$from to $to';
-  String pdfCorrectFraction(int correct, int total) => '$correct/$total correct';
+class _FailingStudyProgressTracker implements StudyProgressTracker {
+  @override
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async =>
+      Result.failure('stats unavailable');
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async =>
+      Result.failure('badges unavailable');
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async =>
+      Result.failure('trend unavailable');
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async => Result.success([]);
+
+  @override
+  Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async => Result.success({});
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<String>> getTopicMasteryLevel(String topicId, {String? studentId}) async => Result.success('');
+
+  @override
+  Future<Result<MasteryLevel>> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async => Result.success(MasteryLevel.novice);
+
+  @override
+  Future<Result<String>> exportProgressCSV(String studentId) async => Result.success('');
+
+  @override
+  Future<Result<String>> exportQuestionsAndAttemptsCSV(String studentId) async => Result.success('');
+
+  @override
+  Future<Result<String>> exportSessionHistoryCSV(String studentId) async => Result.success('');
+
+  @override
+  void updateLocalization(AppLocalizations l10n) {}
+}
+
+class _FailingMasteryGraphService implements MasteryGraphService {
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async =>
+      Result.failure('mastery unavailable');
+
+  @override
+  Future<Result<MasteryState>> getTopicMastery(String studentId, String topicId) async => Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
+
+  @override
+  Future<Result<QuestionMasteryState>> getQuestionMastery(String studentId, String questionId) async => Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
+
+  @override
+  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async => Result.success(null);
+
+  @override
+  Future<Result<void>> recordQuestionAttempt({required String studentId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs}) async => Result.success(null);
+
+  @override
+  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async => Result.success(null);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getQuestionsDueForReview(String studentId, {DateTime? asOf}) async => Result.success([]);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(String studentId, {double threshold = 0.5}) async => Result.success([]);
+
+  @override
+  Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});
+
+  @override
+  Future<Result<void>> migrateLegacyQuestion({required String questionId, String? markscheme, String? correctAnswer, List<String>? options, String? explanation}) async => Result.success(null);
+
+  @override
+  Future<Result<void>> saveEvaluation(QuestionEvaluation evaluation) async => Result.success(null);
+
+  @override
+  Future<Result<double>> getReadinessScore(String studentId, String topicId) async => Result.success(0.0);
+
+  @override
+  Future<Result<double>> getReviewUrgency(String studentId, String topicId) async => Result.success(0.0);
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  MasteryStateRepository get masteryStateRepo => MasteryStateRepository();
+
+  @override
+  QuestionEvaluationRepository get questionEvaluationRepo => QuestionEvaluationRepository();
+
+  @override
+  QuestionMasteryStateRepository get questionMasteryRepo => QuestionMasteryStateRepository();
+
+  @override
+  TopicDependencyRepository get topicDependencyRepo => TopicDependencyRepository();
+}
+
+class _FailingAttemptRepository implements AttemptRepository {
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async =>
+      Result.failure('attempts unavailable');
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async => Result.success([]);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getByQuestion(String questionId) async => Result.success([]);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getBySubject(String subjectId) async => Result.success([]);
+
+  @override
+  Future<Result<Map<String, dynamic>>> getSubjectStats(String subjectId) async => Result.success({});
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async => Result.success(null);
+
+  @override
+  Future<Result<void>> put(String key, StudentAttempt item) async => Result.success(null);
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<void> openBox(String boxName) async {}
+
+  @override
+  void attachBox(Box<StudentAttempt> box) {}
+
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async => Result.success(null);
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
+  List<StudentAttempt> filterBy<K>(K Function(StudentAttempt) getter, K value) => [];
+
+  @override
+  Box<StudentAttempt> get box => _box!;
+  Box<StudentAttempt>? _box;
+}
+
+List<String> _capturedLogs = [];
+void _installLogCapture() {
+  _capturedLogs.clear();
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) _capturedLogs.add(message);
+  };
+}
+
+void _uninstallLogCapture() {
+  debugPrint = debugPrintThrottled;
 }
 
 void main() {
@@ -246,13 +367,17 @@ void main() {
     late _FakeMasteryGraphService mockMastery;
     late _FakeAttemptRepository mockAttemptRepo;
     late ProgressExportService service;
-    late _FakeL10n l10n;
+    late AppLocalizations l10n;
+
+    setUpAll(() async {
+      await initializeDateFormatting();
+      l10n = await AppLocalizations.delegate.load(const Locale('en'));
+    });
 
     setUp(() {
       mockTracker = _FakeStudyProgressTracker();
       mockMastery = _FakeMasteryGraphService();
       mockAttemptRepo = _FakeAttemptRepository();
-      l10n = _FakeL10n();
       service = ProgressExportService(
         tracker: mockTracker,
         masteryService: mockMastery,
@@ -268,8 +393,9 @@ void main() {
           'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
         };
         final csv = await service.exportComprehensiveCSV('student1');
-        expect(csv, contains('Overall Statistics'));
-        expect(csv, contains('10'));
+        expect(csv.isSuccess, isTrue);
+        expect(csv.data, contains('Overall Statistics'));
+        expect(csv.data, contains('10'));
       });
     });
 
@@ -280,8 +406,67 @@ void main() {
           'avgTimePerQuestion': 30.0, 'totalStudyTimeHours': 5.0,
           'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
         };
-        final bytes = await service.exportComprehensivePDF('student1', l10n as dynamic);
-        expect(bytes, isNotEmpty);
+        final bytes = await service.exportComprehensivePDF("student1", l10n);
+        expect(bytes.isSuccess, isTrue);
+        expect(bytes.data, isNotEmpty);
+      });
+    });
+
+    group('swallowed Result failures', () {
+      ProgressExportService failingService() => ProgressExportService(
+            tracker: _FailingStudyProgressTracker(),
+            masteryService: _FailingMasteryGraphService(),
+            attemptRepo: _FailingAttemptRepository(),
+          );
+
+      test('exportComprehensiveJSON logs warnings and degrades gracefully', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final result = await failingService().exportComprehensiveJSON("student1", l10n);
+
+        expect(result.isSuccess, isTrue);
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.any((l) => l.contains('getOverallStats')), isTrue);
+        expect(warnings.any((l) => l.contains('getBadges')), isTrue);
+        expect(warnings.any((l) => l.contains('getAllTopicMastery')), isTrue);
+      });
+
+      test('exportComprehensiveCSV logs warnings and degrades gracefully', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final result = await failingService().exportComprehensiveCSV("student1", l10n: l10n);
+
+        expect(result.isSuccess, isTrue);
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.any((l) => l.contains('getWeeklyTrend')), isTrue);
+      });
+
+      test('exportComprehensivePDF logs warnings and degrades gracefully', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final result = await failingService().exportComprehensivePDF("student1", l10n);
+
+        expect(result.isSuccess, isTrue);
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.any((l) => l.contains('getOverallStats')), isTrue);
+      });
+
+      test('shareComprehensiveJSON logs warnings and degrades gracefully', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final result = await failingService().shareComprehensiveJSON("student1", "file", l10n);
+
+        expect(result.isSuccess || result.isFailure, isTrue);
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(warnings, isNotEmpty);
+        expect(warnings.any((l) => l.contains('getBadges')), isTrue);
       });
     });
   });
