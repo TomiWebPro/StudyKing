@@ -72,6 +72,33 @@ class AnswerValidationService {
     return validator.validate(answer, question.type);
   }
 
+  /// Validates an answer that was produced by handwriting recognition or
+  /// vision interpretation of a student's drawn/uploaded work. The recognized
+  /// text is checked against the markscheme as a typed answer.
+  ValidationResult validateRecognizedAnswer(Question question, String answer) {
+    final markscheme = question.markscheme;
+    if (markscheme == null) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: _messages.markschemeUnavailable,
+      );
+    }
+    return QuestionAnswerValidator.validateTypedAnswer(answer, markscheme, messages: _messages);
+  }
+
+  bool isImageData(String answer) {
+    if (answer.isEmpty) return false;
+    try {
+      final decoded = base64Decode(answer);
+      if (decoded.length < 4) return false;
+      final isPng = decoded[0] == 0x89 && decoded[1] == 0x50 && decoded[2] == 0x4E && decoded[3] == 0x47;
+      final isJpeg = decoded[0] == 0xFF && decoded[1] == 0xD8 && decoded[2] == 0xFF;
+      return isPng || isJpeg;
+    } catch (_) {
+      return false;
+    }
+  }
+
   ValidationResult validateWithEvaluation(QuestionEvaluation evaluation, String userAnswer, {
     String? correctLabel,
     String? incorrectPrefix,

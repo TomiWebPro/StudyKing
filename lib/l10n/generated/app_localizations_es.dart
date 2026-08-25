@@ -4065,6 +4065,49 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String get recapSystemPrompt =>
+      'Usted es un tutor escribiendo un resumen estructurado de fin de lección que registra cómo fue la clase.';
+
+  @override
+  String recapUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String conversation,
+  ) {
+    return 'Escriba un resumen estructurado de esta lección de tutoría sobre \"$topicTitle\".\nEl estudiante respondió $exerciseCount ejercicios con $correctCount correctas (confianza $confidencePercent%).\n\nTranscripción de la conversación:\n$conversation\n\nResponda con SOLO un objeto JSON (sin bloques markdown) usando estas claves exactas:\n- \"topicsCovered\": arreglo de cadenas cortas (conceptos cubiertos)\n- \"struggles\": arreglo de cadenas cortas (conceptos erróneos o dificultades observadas)\n- \"homework\": arreglo de cadenas cortas (ejercicios o práctica asignada)\n- \"summary\": una narrativa de 2 a 4 oraciones de cómo fue la clase';
+  }
+
+  @override
+  String get lessonRecapTitle => 'Cómo fue la clase';
+
+  @override
+  String get recapTopicsCovered => 'Temas cubiertos';
+
+  @override
+  String get recapStruggles => 'Dificultades y conceptos erróneos';
+
+  @override
+  String get recapHomework => 'Tarea y práctica';
+
+  @override
+  String get recapSummary => 'Resumen';
+
+  @override
+  String get recapAccuracy => 'Precisión';
+
+  @override
+  String get recapParticipation => 'Participación';
+
+  @override
+  String get recapConfidence => 'Confianza';
+
+  @override
+  String get recapNotAvailable =>
+      'Aún no hay un resumen disponible para esta lección.';
+
+  @override
   String languageInstruction(String localeName) {
     return 'IMPORTANTE: Responda en el mismo idioma que el estudiante (locale: $localeName). No use inglés a menos que el estudiante lo haga.';
   }
@@ -6132,4 +6175,23 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get noStudyPlanSelected => 'Ningún plan de estudio seleccionado';
+
+  @override
+  String get uploadPhotoOfWork => 'Sube una foto de tu trabajo';
+
+  @override
+  String get interpretingImage => 'Interpretando imagen…';
+
+  @override
+  String get visionInterpretationFailed =>
+      'No se pudo leer la imagen. Inténtalo de nuevo o escribe tu respuesta.';
+
+  @override
+  String get visionUnavailable =>
+      'La interpretación de imágenes no está disponible. Configura un modelo de IA para activarla.';
+
+  @override
+  String recognizedFromImage(String text) {
+    return 'Reconocido en la imagen: $text';
+  }
 }

@@ -121,6 +121,26 @@ class ConversationPromptSet {
     );
   }
 
+  PromptEntry recap({
+    required String topicTitle,
+    required int exerciseCount,
+    required int correctCount,
+    required int confidencePercent,
+    required String conversation,
+  }) {
+    final l10n = lookupAppLocalizations(Locale(localeName));
+    return PromptEntry(
+      systemPrompt: '${l10n.recapSystemPrompt}${_languageInstruction(l10n)}',
+      userPrompt: l10n.recapUserPrompt(
+        topicTitle,
+        exerciseCount,
+        correctCount,
+        confidencePercent,
+        conversation,
+      ),
+    );
+  }
+
   PromptEntry evaluateExercise({
     required String question,
     required String studentAnswer,

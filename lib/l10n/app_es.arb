@@ -5369,6 +5369,57 @@
       "adaptivePace": { "type": "String" }
     }
   },
+  "recapSystemPrompt": "Usted es un tutor escribiendo un resumen estructurado de fin de lección que registra cómo fue la clase.",
+  "@recapSystemPrompt": {
+    "description": "System prompt for structured lesson recap generation"
+  },
+  "recapUserPrompt": "Escriba un resumen estructurado de esta lección de tutoría sobre \"{topicTitle}\".\nEl estudiante respondió {exerciseCount} ejercicios con {correctCount} correctas (confianza {confidencePercent}%).\n\nTranscripción de la conversación:\n{conversation}\n\nResponda con SOLO un objeto JSON (sin bloques markdown) usando estas claves exactas:\n- \"topicsCovered\": arreglo de cadenas cortas (conceptos cubiertos)\n- \"struggles\": arreglo de cadenas cortas (conceptos erróneos o dificultades observadas)\n- \"homework\": arreglo de cadenas cortas (ejercicios o práctica asignada)\n- \"summary\": una narrativa de 2 a 4 oraciones de cómo fue la clase",
+  "@recapUserPrompt": {
+    "description": "User prompt for structured lesson recap generation",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "exerciseCount": { "type": "int" },
+      "correctCount": { "type": "int" },
+      "confidencePercent": { "type": "int" },
+      "conversation": { "type": "String" }
+    }
+  },
+  "lessonRecapTitle": "Cómo fue la clase",
+  "@lessonRecapTitle": {
+    "description": "Heading for the lesson recap section"
+  },
+  "recapTopicsCovered": "Temas cubiertos",
+  "@recapTopicsCovered": {
+    "description": "Label for topics covered in the recap"
+  },
+  "recapStruggles": "Dificultades y conceptos erróneos",
+  "@recapStruggles": {
+    "description": "Label for struggles and misconceptions in the recap"
+  },
+  "recapHomework": "Tarea y práctica",
+  "@recapHomework": {
+    "description": "Label for homework and practice in the recap"
+  },
+  "recapSummary": "Resumen",
+  "@recapSummary": {
+    "description": "Label for the narrative summary in the recap"
+  },
+  "recapAccuracy": "Precisión",
+  "@recapAccuracy": {
+    "description": "Label for accuracy metric in the recap"
+  },
+  "recapParticipation": "Participación",
+  "@recapParticipation": {
+    "description": "Label for participation metric in the recap"
+  },
+  "recapConfidence": "Confianza",
+  "@recapConfidence": {
+    "description": "Label for confidence rating in the recap"
+  },
+  "recapNotAvailable": "Aún no hay un resumen disponible para esta lección.",
+  "@recapNotAvailable": {
+    "description": "Message shown when no recap exists for a lesson"
+  },
   "languageInstruction": "IMPORTANTE: Responda en el mismo idioma que el estudiante (locale: {localeName}). No use inglés a menos que el estudiante lo haga.",
   "@languageInstruction": {
     "description": "Instruction for LLM to respond in the student's language",
@@ -7963,5 +8014,31 @@
   "noStudyPlanSelected": "Ningún plan de estudio seleccionado",
   "@noStudyPlanSelected": {
     "description": "Shown when no active study plan is selected"
+  },
+  "uploadPhotoOfWork": "Sube una foto de tu trabajo",
+  "@uploadPhotoOfWork": {
+    "description": "Button label to upload a photo of handwritten or drawn student work for vision interpretation"
+  },
+  "interpretingImage": "Interpretando imagen…",
+  "@interpretingImage": {
+    "description": "Status label shown while a student-uploaded image is being interpreted by vision"
+  },
+  "visionInterpretationFailed": "No se pudo leer la imagen. Inténtalo de nuevo o escribe tu respuesta.",
+  "@visionInterpretationFailed": {
+    "description": "Error shown when vision interpretation of an uploaded image fails"
+  },
+  "visionUnavailable": "La interpretación de imágenes no está disponible. Configura un modelo de IA para activarla.",
+  "@visionUnavailable": {
+    "description": "Message shown when vision interpretation is requested but no model is configured"
+  },
+  "recognizedFromImage": "Reconocido en la imagen: {text}",
+  "@recognizedFromImage": {
+    "description": "Preview label for text recognized from an uploaded image",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "3x + 2 = 8"
+      }
+    }
   }
   }

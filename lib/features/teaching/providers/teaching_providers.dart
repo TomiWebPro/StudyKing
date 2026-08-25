@@ -8,6 +8,8 @@ import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
   final savedModel = ref.watch(selectedModelProvider);
@@ -40,5 +42,19 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     voiceService: ref.watch(voiceServiceProvider),
     longTermMemory: ref.watch(longTermMemoryProvider),
     clock: ref.watch(clockProvider),
+  );
+});
+
+final lessonRecapRepositoryProvider = Provider<LessonRecapRepository>((ref) {
+  return LessonRecapRepository();
+});
+
+final lessonRecapServiceProvider = Provider<LessonRecapService>((ref) {
+  final repo = ref.watch(lessonRecapRepositoryProvider);
+  return LessonRecapService(
+    llmService: ref.watch(llmServiceProvider),
+    modelId: ref.watch(teachingModelIdProvider),
+    repository: repo,
+    localeName: ref.watch(localeProvider).languageCode,
   );
 });

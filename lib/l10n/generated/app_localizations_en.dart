@@ -4021,6 +4021,48 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get recapSystemPrompt =>
+      'You are a tutor writing a structured end-of-lesson recap that records how the class went.';
+
+  @override
+  String recapUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String conversation,
+  ) {
+    return 'Write a structured recap of this tutoring lesson about \"$topicTitle\".\nThe student answered $exerciseCount exercises with $correctCount correct (confidence $confidencePercent%).\n\nConversation transcript:\n$conversation\n\nRespond with ONLY a JSON object (no markdown fences) using these exact keys:\n- \"topicsCovered\": array of short strings (concepts covered)\n- \"struggles\": array of short strings (misconceptions or difficulties observed)\n- \"homework\": array of short strings (exercises or practice assigned)\n- \"summary\": a 2-4 sentence narrative of how the class went';
+  }
+
+  @override
+  String get lessonRecapTitle => 'How the class went';
+
+  @override
+  String get recapTopicsCovered => 'Topics covered';
+
+  @override
+  String get recapStruggles => 'Struggles & misconceptions';
+
+  @override
+  String get recapHomework => 'Homework & practice';
+
+  @override
+  String get recapSummary => 'Summary';
+
+  @override
+  String get recapAccuracy => 'Accuracy';
+
+  @override
+  String get recapParticipation => 'Participation';
+
+  @override
+  String get recapConfidence => 'Confidence';
+
+  @override
+  String get recapNotAvailable => 'No recap is available for this lesson yet.';
+
+  @override
   String languageInstruction(String localeName) {
     return 'IMPORTANT: Respond in the same language as the student (locale: $localeName). Do not use English unless the student does.';
   }
@@ -6065,4 +6107,23 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noStudyPlanSelected => 'No study plan selected';
+
+  @override
+  String get uploadPhotoOfWork => 'Upload a photo of your work';
+
+  @override
+  String get interpretingImage => 'Interpreting image…';
+
+  @override
+  String get visionInterpretationFailed =>
+      'Could not read the image. Please try again or type your answer.';
+
+  @override
+  String get visionUnavailable =>
+      'Image interpretation is unavailable. Configure an AI model to enable it.';
+
+  @override
+  String recognizedFromImage(String text) {
+    return 'Recognized from image: $text';
+  }
 }

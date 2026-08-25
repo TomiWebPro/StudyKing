@@ -316,6 +316,40 @@ void main() {
       expect(captured, equals(''));
     });
 
+    testWidgets('canvas onTextRecognized routes recognized handwriting to onAnswerSelected', (tester) async {
+      String? captured;
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (v) => captured = v,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      final canvas = tester.widget<CanvasDrawingWidget>(find.byType(CanvasDrawingWidget));
+      canvas.onTextRecognized?.call('3x + 2');
+
+      expect(captured, equals('3x + 2'));
+    });
+
+    testWidgets('shows image vision upload affordance for canvas questions', (tester) async {
+      await tester.pumpWidget(buildApp(
+        PracticeSessionQuestionCard(
+          question: question(type: QuestionType.canvas),
+          currentAnswer: null,
+          isSubmitted: false,
+          isFeedbackVisible: false,
+          onAnswerSelected: (_) {},
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upload a photo of your work'), findsOneWidget);
+    });
+
     testWidgets('renders graph drawing question type', (tester) async {
       await tester.pumpWidget(buildApp(
         PracticeSessionQuestionCard(

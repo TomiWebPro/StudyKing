@@ -6714,6 +6714,78 @@ abstract class AppLocalizations {
     String adaptivePace,
   );
 
+  /// System prompt for structured lesson recap generation
+  ///
+  /// In en, this message translates to:
+  /// **'You are a tutor writing a structured end-of-lesson recap that records how the class went.'**
+  String get recapSystemPrompt;
+
+  /// User prompt for structured lesson recap generation
+  ///
+  /// In en, this message translates to:
+  /// **'Write a structured recap of this tutoring lesson about \"{topicTitle}\".\nThe student answered {exerciseCount} exercises with {correctCount} correct (confidence {confidencePercent}%).\n\nConversation transcript:\n{conversation}\n\nRespond with ONLY a JSON object (no markdown fences) using these exact keys:\n- \"topicsCovered\": array of short strings (concepts covered)\n- \"struggles\": array of short strings (misconceptions or difficulties observed)\n- \"homework\": array of short strings (exercises or practice assigned)\n- \"summary\": a 2-4 sentence narrative of how the class went'**
+  String recapUserPrompt(
+    String topicTitle,
+    int exerciseCount,
+    int correctCount,
+    int confidencePercent,
+    String conversation,
+  );
+
+  /// Heading for the lesson recap section
+  ///
+  /// In en, this message translates to:
+  /// **'How the class went'**
+  String get lessonRecapTitle;
+
+  /// Label for topics covered in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Topics covered'**
+  String get recapTopicsCovered;
+
+  /// Label for struggles and misconceptions in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Struggles & misconceptions'**
+  String get recapStruggles;
+
+  /// Label for homework and practice in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Homework & practice'**
+  String get recapHomework;
+
+  /// Label for the narrative summary in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Summary'**
+  String get recapSummary;
+
+  /// Label for accuracy metric in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Accuracy'**
+  String get recapAccuracy;
+
+  /// Label for participation metric in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Participation'**
+  String get recapParticipation;
+
+  /// Label for confidence rating in the recap
+  ///
+  /// In en, this message translates to:
+  /// **'Confidence'**
+  String get recapConfidence;
+
+  /// Message shown when no recap exists for a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'No recap is available for this lesson yet.'**
+  String get recapNotAvailable;
+
   /// Instruction for LLM to respond in the student's language
   ///
   /// In en, this message translates to:
@@ -9968,6 +10040,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No study plan selected'**
   String get noStudyPlanSelected;
+
+  /// Button label to upload a photo of handwritten or drawn student work for vision interpretation
+  ///
+  /// In en, this message translates to:
+  /// **'Upload a photo of your work'**
+  String get uploadPhotoOfWork;
+
+  /// Status label shown while a student-uploaded image is being interpreted by vision
+  ///
+  /// In en, this message translates to:
+  /// **'Interpreting image…'**
+  String get interpretingImage;
+
+  /// Error shown when vision interpretation of an uploaded image fails
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read the image. Please try again or type your answer.'**
+  String get visionInterpretationFailed;
+
+  /// Message shown when vision interpretation is requested but no model is configured
+  ///
+  /// In en, this message translates to:
+  /// **'Image interpretation is unavailable. Configure an AI model to enable it.'**
+  String get visionUnavailable;
+
+  /// Preview label for text recognized from an uploaded image
+  ///
+  /// In en, this message translates to:
+  /// **'Recognized from image: {text}'**
+  String recognizedFromImage(String text);
 }
 
 class _AppLocalizationsDelegate

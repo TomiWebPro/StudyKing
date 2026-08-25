@@ -1,5 +1,7 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -12,6 +14,7 @@ import 'package:studyking/features/questions/presentation/widgets/audio_recordin
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
+import 'package:studyking/core/providers/service_providers.dart' show visionInterpretationServiceProvider;
 import 'package:studyking/features/practice/services/question_type_localizer.dart';
 
 class PracticeSessionQuestionCard extends ConsumerWidget {
@@ -184,12 +187,7 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         return MathExpressionWidget(expression: question.text, isSolution: false);
 
       case QuestionType.canvas:
-        return CanvasDrawingWidget(
-          instruction: question.text,
-          onDrawingComplete: (data) => onAnswerSelected(base64Encode(data)),
-          initialDrawing: null,
-          largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
-        );
+        return _buildCanvasAnswer(context, ref);
       case QuestionType.graphDrawing:
         return GraphDrawingWidget(
           instruction: question.text,
@@ -217,5 +215,131 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
           onAnswerChanged: onAnswerSelected,
         );
     }
+  }
+
+  Widget _buildCanvasAnswer(BuildContext context, WidgetRef ref) {
+    return _CanvasAnswerWithVision(
+      instruction: question.text,
+      currentAnswer: currentAnswer,
+      isSubmitted: isSubmitted,
+      largeTouchTargets: ref.watch(settingsProvider).largeTouchTargets,
+      onAnswerSelected: onAnswerSelected,
+    );
+  }
+}
+
+class _CanvasAnswerWithVision extends ConsumerStatefulWidget {
+  final String? instruction;
+  final String? currentAnswer;
+  final bool isSubmitted;
+  final bool largeTouchTargets;
+  final ValueChanged<String?> onAnswerSelected;
+
+  const _CanvasAnswerWithVision({
+    this.instruction,
+    this.currentAnswer,
+    this.isSubmitted = false,
+    this.largeTouchTargets = false,
+    required this.onAnswerSelected,
+  });
+
+  @override
+  ConsumerState<_CanvasAnswerWithVision> createState() => _CanvasAnswerWithVisionState();
+}
+
+class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision> {
+  static final Logger _logger = const Logger('CanvasAnswerWithVision');
+  bool _isInterpreting = false;
+  String? _recognizedPreview;
+  String? _visionError;
+
+  Future<void> _pickAndInterpretImage() async {
+    if (widget.isSubmitted || _isInterpreting) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _isInterpreting = true;
+      _visionError = null;
+    });
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final bytes = picked?.files.first.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        setState(() => _isInterpreting = false);
+        return;
+      }
+      final result = await ref.read(visionInterpretationServiceProvider).interpretImage(bytes);
+      if (result.isSuccess) {
+        final text = result.data!;
+        setState(() {
+          _recognizedPreview = text;
+          _isInterpreting = false;
+        });
+        widget.onAnswerSelected(text);
+      } else {
+        setState(() {
+          _visionError = l10n.visionInterpretationFailed;
+          _isInterpreting = false;
+        });
+      }
+    } catch (e) {
+      _logger.w('Image vision interpretation failed', e);
+      if (mounted) {
+        setState(() {
+          _visionError = AppLocalizations.of(context)!.visionInterpretationFailed;
+          _isInterpreting = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        CanvasDrawingWidget(
+          instruction: widget.instruction,
+          onDrawingComplete: (data) => widget.onAnswerSelected(base64Encode(data)),
+          onTextRecognized: (text) => widget.onAnswerSelected(text),
+          showInputModeSelector: true,
+          initialDrawing: null,
+          largeTouchTargets: widget.largeTouchTargets,
+        ),
+        const SizedBox(height: 12),
+        OutlinedButton.icon(
+          onPressed: (widget.isSubmitted || _isInterpreting) ? null : _pickAndInterpretImage,
+          icon: _isInterpreting
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.photo_camera),
+          label: Text(_isInterpreting ? l10n.interpretingImage : l10n.uploadPhotoOfWork),
+        ),
+        if (_recognizedPreview != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              l10n.recognizedFromImage(_recognizedPreview!),
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+          ),
+        if (_visionError != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 8),
+            child: Text(
+              _visionError!,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+            ),
+          ),
+      ],
+    );
   }
 }

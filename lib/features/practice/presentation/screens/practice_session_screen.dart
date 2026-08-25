@@ -296,9 +296,15 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       setState(() => _isCorrect = false);
       return false;
     }
-    final result = _validationService.validateAnswerForQuestion(question, answer);
+    final result = _isRecognizedTextAnswer(question, answer)
+        ? _validationService.validateRecognizedAnswer(question, answer)
+        : _validationService.validateAnswerForQuestion(question, answer);
     setState(() => _isCorrect = result.isCorrect);
     return result.isCorrect;
+  }
+
+  bool _isRecognizedTextAnswer(Question question, String answer) {
+    return question.type == QuestionType.canvas && !_validationService.isImageData(answer);
   }
 
   Future<void> _submitAnswer() async {

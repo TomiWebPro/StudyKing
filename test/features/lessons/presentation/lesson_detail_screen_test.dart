@@ -10,7 +10,61 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/lessons/presentation/lesson_detail_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/features/teaching/data/models/lesson_recap_model.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
+import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
+import 'package:studyking/features/teaching/providers/teaching_providers.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import '../../../helpers/navigator_observer_helper.dart';
+
+class _StubLlmService extends LlmService {
+  _StubLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: '',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async =>
+      Result.success('{}');
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {}
+}
+
+class _FakeLessonRecapService extends LessonRecapService {
+  final LessonRecapModel? _recap;
+
+  _FakeLessonRecapService(this._recap)
+      : super(
+          llmService: _StubLlmService(),
+          modelId: 'model-1',
+          repository: LessonRecapRepository(),
+          localeName: 'en',
+        );
+
+  @override
+  Future<Result<LessonRecapModel?>> getRecapForLesson(String lessonId) async =>
+      Result.success(_recap);
+}
 
 class _FakeLessonRepository extends LessonRepository {
   final List<Lesson> _lessons;
@@ -38,6 +92,7 @@ Widget _buildTestApp({
   required LessonDetailArgs args,
   List<Lesson>? lessons,
   bool shouldThrow = false,
+  LessonRecapModel? recap,
   TestNavigatorObserver? navigatorObserver,
 }) {
   final repo = _FakeLessonRepository(lessons: lessons);
@@ -45,6 +100,7 @@ Widget _buildTestApp({
   return ProviderScope(
     overrides: [
       lessonRepositoryProvider.overrideWithValue(repo),
+      lessonRecapServiceProvider.overrideWithValue(_FakeLessonRecapService(recap)),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -299,6 +355,63 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Initial'), findsOneWidget);
+    });
+
+    testWidgets('renders lesson recap card when a recap exists', (tester) async {
+      final recap = LessonRecapModel(
+        id: 'r1',
+        sessionId: 's1',
+        lessonId: 'l1',
+        studentId: 'st',
+        subjectId: 's1',
+        topicId: 't1',
+        topicTitle: 'Algebra',
+        topicsCovered: ['linear equations'],
+        struggles: ['fractions'],
+        homework: ['practice set 3'],
+        summary: 'We covered the basics of algebra step by step.',
+        accuracy: 0.8,
+        questionCount: 5,
+        correctCount: 4,
+        confidenceRating: 4,
+        participationMessages: 12,
+        generatedAt: DateTime(2026, 1, 1),
+      );
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        lessons: [_createLesson()],
+        recap: recap,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How the class went'), findsOneWidget);
+      expect(find.text('Topics covered'), findsOneWidget);
+      expect(find.text('linear equations'), findsOneWidget);
+      expect(find.text('Struggles & misconceptions'), findsOneWidget);
+      expect(find.text('fractions'), findsOneWidget);
+      expect(find.text('Homework & practice'), findsOneWidget);
+      expect(find.text('practice set 3'), findsOneWidget);
+      expect(find.text('Accuracy'), findsOneWidget);
+      expect(find.text('80.0%'), findsOneWidget);
+    });
+
+    testWidgets('does not render recap card when none exists', (tester) async {
+      await tester.pumpWidget(_buildTestApp(
+        args: const LessonDetailArgs(
+          lessonId: 'l1',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+        ),
+        lessons: [_createLesson()],
+        recap: null,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('How the class went'), findsNothing);
     });
 
     testWidgets('shows teaching mode icon button in app bar', (tester) async {

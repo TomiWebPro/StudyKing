@@ -18,6 +18,8 @@ import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/teaching/data/models/lesson_plan_model.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
+import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/utils/study_utils.dart';
@@ -41,6 +43,7 @@ class TutorService {
   final Clock _clock;
   final ConversationRepository _conversationRepository;
   final LessonRepository _lessonRepository;
+  final LessonRecapService _lessonRecapService;
   final VoiceService? _voiceService;
   final LongTermMemory? _longTermMemory;
   LlmAgent? _llmAgent;
@@ -59,6 +62,7 @@ class TutorService {
     required ExerciseEvaluator exerciseEvaluator,
     required ConversationRepository conversationRepository,
     LessonRepository? lessonRepository,
+    LessonRecapService? lessonRecapService,
     PlanAdherenceOrchestrator? planOrchestrator,
     VoiceService? voiceService,
     LlmAgent? llmAgent,
@@ -72,6 +76,13 @@ class TutorService {
         _exerciseEvaluator = exerciseEvaluator,
         _conversationRepository = conversationRepository,
         _lessonRepository = lessonRepository ?? LessonRepository(),
+        _lessonRecapService = lessonRecapService ??
+            LessonRecapService(
+              llmService: llmService,
+              modelId: modelId,
+              repository: LessonRecapRepository(),
+              localeName: 'en',
+            ),
         _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
         _voiceService = voiceService,
         _llmAgent = llmAgent,
@@ -203,7 +214,9 @@ class TutorService {
   Future<void> endLesson() async {
     if (_currentManager == null) return;
 
-    final session = _currentManager!.toSession();
+    final session = _currentManager!.toSession().copyWith(
+      lessonId: _currentLessonId,
+    );
 
     await _saveCurrentSession(session);
     await _recordMasteryAttempt(session);
@@ -215,7 +228,22 @@ class TutorService {
     await _updateLessonRecord(session);
     _enqueueBackgroundTasks(session);
     await _generateAndStoreSessionSummary(session);
+    await _generateAndStoreLessonRecap(session);
     _resetState();
+  }
+
+  Future<void> _generateAndStoreLessonRecap(TutorSession session) async {
+    final manager = _currentManager;
+    if (manager == null) return;
+    try {
+      await _lessonRecapService.generateAndStoreRecap(
+        session: session,
+        messages: manager.messages,
+        localeName: _localeName,
+      );
+    } catch (e) {
+      _logger.w('Failed to generate lesson recap', e);
+    }
   }
 
   Future<void> _saveCurrentSession(TutorSession session) async {

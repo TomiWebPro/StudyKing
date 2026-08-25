@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
@@ -190,9 +191,15 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       setState(() => _isCorrect = false);
       return false;
     }
-    final result = _validationService.validateAnswerForQuestion(question, answer);
+    final result = _isRecognizedTextAnswer(question, answer)
+        ? _validationService.validateRecognizedAnswer(question, answer)
+        : _validationService.validateAnswerForQuestion(question, answer);
     setState(() => _isCorrect = result.isCorrect);
     return result.isCorrect;
+  }
+
+  bool _isRecognizedTextAnswer(Question question, String answer) {
+    return question.type == QuestionType.canvas && !_validationService.isImageData(answer);
   }
 
   Future<void> _submitAnswer() async {
