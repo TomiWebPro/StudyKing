@@ -5377,6 +5377,57 @@
       "adaptivePace": { "type": "String" }
     }
   },
+  "recapSystemPrompt": "You are a tutor writing a structured end-of-lesson recap that records how the class went.",
+  "@recapSystemPrompt": {
+    "description": "System prompt for structured lesson recap generation"
+  },
+  "recapUserPrompt": "Write a structured recap of this tutoring lesson about \"{topicTitle}\".\nThe student answered {exerciseCount} exercises with {correctCount} correct (confidence {confidencePercent}%).\n\nConversation transcript:\n{conversation}\n\nRespond with ONLY a JSON object (no markdown fences) using these exact keys:\n- \"topicsCovered\": array of short strings (concepts covered)\n- \"struggles\": array of short strings (misconceptions or difficulties observed)\n- \"homework\": array of short strings (exercises or practice assigned)\n- \"summary\": a 2-4 sentence narrative of how the class went",
+  "@recapUserPrompt": {
+    "description": "User prompt for structured lesson recap generation",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "exerciseCount": { "type": "int" },
+      "correctCount": { "type": "int" },
+      "confidencePercent": { "type": "int" },
+      "conversation": { "type": "String" }
+    }
+  },
+  "lessonRecapTitle": "How the class went",
+  "@lessonRecapTitle": {
+    "description": "Heading for the lesson recap section"
+  },
+  "recapTopicsCovered": "Topics covered",
+  "@recapTopicsCovered": {
+    "description": "Label for topics covered in the recap"
+  },
+  "recapStruggles": "Struggles & misconceptions",
+  "@recapStruggles": {
+    "description": "Label for struggles and misconceptions in the recap"
+  },
+  "recapHomework": "Homework & practice",
+  "@recapHomework": {
+    "description": "Label for homework and practice in the recap"
+  },
+  "recapSummary": "Summary",
+  "@recapSummary": {
+    "description": "Label for the narrative summary in the recap"
+  },
+  "recapAccuracy": "Accuracy",
+  "@recapAccuracy": {
+    "description": "Label for accuracy metric in the recap"
+  },
+  "recapParticipation": "Participation",
+  "@recapParticipation": {
+    "description": "Label for participation metric in the recap"
+  },
+  "recapConfidence": "Confidence",
+  "@recapConfidence": {
+    "description": "Label for confidence rating in the recap"
+  },
+  "recapNotAvailable": "No recap is available for this lesson yet.",
+  "@recapNotAvailable": {
+    "description": "Message shown when no recap exists for a lesson"
+  },
   "languageInstruction": "IMPORTANT: Respond in the same language as the student (locale: {localeName}). Do not use English unless the student does.",
   "@languageInstruction": {
     "description": "Instruction for LLM to respond in the student's language",
@@ -7984,5 +8035,31 @@
   "noStudyPlanSelected": "No study plan selected",
   "@noStudyPlanSelected": {
     "description": "Shown when no active study plan is selected"
+  },
+  "uploadPhotoOfWork": "Upload a photo of your work",
+  "@uploadPhotoOfWork": {
+    "description": "Button label to upload a photo of handwritten or drawn student work for vision interpretation"
+  },
+  "interpretingImage": "Interpreting image…",
+  "@interpretingImage": {
+    "description": "Status label shown while a student-uploaded image is being interpreted by vision"
+  },
+  "visionInterpretationFailed": "Could not read the image. Please try again or type your answer.",
+  "@visionInterpretationFailed": {
+    "description": "Error shown when vision interpretation of an uploaded image fails"
+  },
+  "visionUnavailable": "Image interpretation is unavailable. Configure an AI model to enable it.",
+  "@visionUnavailable": {
+    "description": "Message shown when vision interpretation is requested but no model is configured"
+  },
+  "recognizedFromImage": "Recognized from image: {text}",
+  "@recognizedFromImage": {
+    "description": "Preview label for text recognized from an uploaded image",
+    "placeholders": {
+      "text": {
+        "type": "String",
+        "example": "3x + 2 = 8"
+      }
+    }
   }
   }

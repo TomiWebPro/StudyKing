@@ -8,6 +8,8 @@ void main() {
       registerTeachingAdapters();
       expect(Hive.isAdapterRegistered(27), isTrue);
       expect(Hive.isAdapterRegistered(28), isTrue);
+      expect(Hive.isAdapterRegistered(44), isTrue);
+      expect(Hive.isAdapterRegistered(30), isTrue);
     });
 
     test('is idempotent when called multiple times', () {
@@ -15,6 +17,7 @@ void main() {
       expect(() => registerTeachingAdapters(), returnsNormally);
       expect(Hive.isAdapterRegistered(27), isTrue);
       expect(Hive.isAdapterRegistered(28), isTrue);
+      expect(Hive.isAdapterRegistered(30), isTrue);
     });
   });
 }

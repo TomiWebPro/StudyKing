@@ -1,9 +1,13 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/features/questions/data/models/drawing_models.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
+import 'package:studyking/core/services/handwriting_recognition_service.dart';
 
 Question _question({
   required String id,
@@ -658,6 +662,79 @@ void main() {
       expect(msgs.correct, '');
       expect(msgs.incorrect, '');
       expect(msgs.markschemeUnavailable, '');
+    });
+  });
+
+  group('canvas recognition to validation wiring', () {
+    late AnswerValidationService service;
+
+    setUp(() {
+      service = AnswerValidationService(messages: ValidationMessages.english);
+    });
+
+    test('validateRecognizedAnswer routes recognized text through typed validation', () {
+      final question = _question(
+        id: 'canvas-typed',
+        type: QuestionType.canvas,
+        correctAnswer: 'Paris',
+      );
+
+      final result = service.validateRecognizedAnswer(question, 'paris');
+
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateRecognizedAnswer flags text that does not match the markscheme', () {
+      final question = _question(
+        id: 'canvas-hw-wrong',
+        type: QuestionType.canvas,
+        correctAnswer: 'mitosis',
+      );
+
+      final result = service.validateRecognizedAnswer(question, 'meiosis');
+
+      expect(result.isCorrect, isFalse);
+    });
+
+    test('recognizes handwriting strokes then validates the recognized text', () {
+      final recognition = HandwritingRecognitionService();
+      final verticalStroke = Stroke(
+        points: [
+          DrawingPoint(point: const Offset(100, 100)),
+          DrawingPoint(point: const Offset(100, 200)),
+          DrawingPoint(point: const Offset(100, 300)),
+        ],
+        tool: DrawingTool.freehand,
+      );
+      final recognized = recognition.recognizeStrokes(
+        [verticalStroke],
+        RecognitionMode.text,
+      );
+      recognition.dispose();
+
+      final question = _question(
+        id: 'canvas-hw',
+        type: QuestionType.canvas,
+        correctAnswer: recognized.recognizedText,
+      );
+
+      final result = service.validateRecognizedAnswer(question, recognized.recognizedText);
+
+      expect(recognized.recognizedText, isNotEmpty);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('isImageData detects PNG and JPEG signatures', () {
+      final png = base64Encode(
+        [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 1, 2, 3],
+      );
+      final jpeg = base64Encode([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3]);
+      final text = base64Encode(utf8.encode('3x + 2'));
+
+      expect(service.isImageData(png), isTrue);
+      expect(service.isImageData(jpeg), isTrue);
+      expect(service.isImageData(text), isFalse);
+      expect(service.isImageData(''), isFalse);
     });
   });
 }

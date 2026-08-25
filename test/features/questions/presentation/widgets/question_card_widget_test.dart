@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -16,20 +17,22 @@ Widget buildWidget({
   ValueChanged<String?>? onAnswerChanged,
   VoidCallback? onNext,
 }) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: Scaffold(
-      body: SingleChildScrollView(
-        child: QuestionCardWidget(
-          question: question ?? _defaultQuestion(),
-          currentAnswer: currentAnswer,
-          isSubmitted: isSubmitted,
-          isFeedbackVisible: isFeedbackVisible,
-          onAnswerSubmitted: onAnswerSubmitted ?? (answer) {},
-          onAnswerChanged: onAnswerChanged ?? (answer) {},
-          onNext: onNext,
+  return ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(
+        body: SingleChildScrollView(
+          child: QuestionCardWidget(
+            question: question ?? _defaultQuestion(),
+            currentAnswer: currentAnswer,
+            isSubmitted: isSubmitted,
+            isFeedbackVisible: isFeedbackVisible,
+            onAnswerSubmitted: onAnswerSubmitted ?? (answer) {},
+            onAnswerChanged: onAnswerChanged ?? (answer) {},
+            onNext: onNext,
+          ),
         ),
       ),
     ),
@@ -812,15 +815,17 @@ void main() {
     group('largeTouchTargets', () {
       testWidgets('renders with largeTouchTargets true', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.canvas, options: []);
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: Scaffold(
-            body: QuestionCardWidget(
-              question: question,
-              onAnswerSubmitted: (_) {},
-              largeTouchTargets: true,
+        await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Scaffold(
+              body: QuestionCardWidget(
+                question: question,
+                onAnswerSubmitted: (_) {},
+                largeTouchTargets: true,
+              ),
             ),
           ),
         ));
@@ -977,15 +982,17 @@ void main() {
     group('reduceMotion for canvas', () {
       testWidgets('renders canvas with reduceMotion true', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: Scaffold(
-            body: QuestionCardWidget(
-              question: question,
-              onAnswerSubmitted: (_) {},
-              reduceMotion: true,
+        await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Scaffold(
+              body: QuestionCardWidget(
+                question: question,
+                onAnswerSubmitted: (_) {},
+                reduceMotion: true,
+              ),
             ),
           ),
         ));
@@ -1220,6 +1227,29 @@ void main() {
         expect(changedAnswer, isNotNull);
         expect(changedAnswer!.isNotEmpty, isTrue);
       });
+    });
+
+    testWidgets('canvas onTextRecognized routes recognized handwriting to onAnswerChanged', (tester) async {
+      String? captured;
+      final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+      await tester.pumpWidget(buildWidget(
+        question: question,
+        onAnswerChanged: (value) => captured = value,
+      ));
+      await tester.pumpAndSettle();
+
+      final canvas = tester.widget<CanvasDrawingWidget>(find.byType(CanvasDrawingWidget));
+      canvas.onTextRecognized?.call('3x + 2');
+
+      expect(captured, equals('3x + 2'));
+    });
+
+    testWidgets('canvas shows image vision upload affordance', (tester) async {
+      final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
+      await tester.pumpWidget(buildWidget(question: question));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Upload a photo of your work'), findsOneWidget);
     });
 
     group('onNext button visibility', () {
@@ -1523,15 +1553,17 @@ void main() {
     group('canvas drawing with largeTouchTargets', () {
       testWidgets('canvas type with largeTouchTargets renders buttons', (tester) async {
         final question = _defaultQuestion().copyWith(type: QuestionType.canvas);
-        await tester.pumpWidget(MaterialApp(
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          locale: const Locale('en'),
-          home: Scaffold(
-            body: QuestionCardWidget(
-              question: question,
-              onAnswerSubmitted: (_) {},
-              largeTouchTargets: true,
+        await tester.pumpWidget(ProviderScope(
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: Scaffold(
+              body: QuestionCardWidget(
+                question: question,
+                onAnswerSubmitted: (_) {},
+                largeTouchTargets: true,
+              ),
             ),
           ),
         ));

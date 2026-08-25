@@ -10,6 +10,10 @@ import '../../../core/utils/responsive.dart';
 import '../../../core/utils/time_utils.dart';
 import '../../../core/errors/handlers.dart';
 import '../../lessons/providers/lesson_providers.dart';
+import '../../teaching/providers/teaching_providers.dart';
+import '../../teaching/data/models/lesson_recap_model.dart';
+import '../../../core/utils/number_format_utils.dart';
+import '../../../core/utils/logger.dart';
 import 'widgets/lesson_block_card.dart';
 
 class LessonDetailScreen extends ConsumerStatefulWidget {
@@ -26,7 +30,9 @@ class LessonDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
+  static final Logger _logger = const Logger('LessonDetailScreen');
   Lesson? _lesson;
+  LessonRecapModel? _recap;
   Duration _elapsed = Duration.zero;
   Timer? _timer;
   bool _loadError = false;
@@ -47,6 +53,19 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
 
   Future<void> _retryLoadLesson() => _loadLesson();
 
+  Future<void> _loadRecap(String? lessonId) async {
+    if (lessonId == null) return;
+    try {
+      final service = ref.read(lessonRecapServiceProvider);
+      final result = await service.getRecapForLesson(lessonId);
+      if (mounted && result.isSuccess && result.data != null) {
+        setState(() => _recap = result.data);
+      }
+    } catch (e) {
+      _logger.w('Failed to load lesson recap', e);
+    }
+  }
+
   Future<void> _loadLesson() async {
     try {
       final repo = ref.read(lessonRepositoryProvider);
@@ -54,8 +73,10 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       if (mounted) {
         setState(() {
           _lesson = lessonResult.data;
+          _recap = null;
           _loadError = false;
         });
+        _loadRecap(lessonResult.data?.id);
         _startTimer();
       }
     } catch (e) {
@@ -226,12 +247,15 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
       body: FocusTraversalGroup(
         child: ListView.builder(
           padding: ResponsiveUtils.listPadding(context),
-          itemCount: lesson.blocks.length,
+          itemCount: lesson.blocks.length + (_recap != null ? 1 : 0),
           itemBuilder: (context, i) {
-            return Semantics(
-              label: lesson.blocks[i].content,
-              child: LessonBlockCard(block: lesson.blocks[i]),
-            );
+            if (i < lesson.blocks.length) {
+              return Semantics(
+                label: lesson.blocks[i].content,
+                child: LessonBlockCard(block: lesson.blocks[i]),
+              );
+            }
+            return _LessonRecapCard(recap: _recap!);
           },
         ),
       ),
@@ -260,6 +284,150 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
         ),
       ),
     ),
+    );
+  }
+}
+
+class _LessonRecapCard extends StatelessWidget {
+  final LessonRecapModel recap;
+
+  const _LessonRecapCard({required this.recap});
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    final localeName = l10n.localeName;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.summarize_outlined,
+                    color: theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    l10n.lessonRecapTitle,
+                    style: theme.textTheme.titleMedium,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _RecapMetric(
+                  label: l10n.recapAccuracy,
+                  value: formatPercent(recap.accuracyPercent, localeName),
+                ),
+                _RecapMetric(
+                  label: l10n.recapParticipation,
+                  value: recap.participationMessages.toString(),
+                ),
+                _RecapMetric(
+                  label: l10n.recapConfidence,
+                  value: formatDecimal(
+                    recap.confidenceRating / 5.0,
+                    localeName,
+                    minFractionDigits: 1,
+                    maxFractionDigits: 1,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            if (recap.summary.isNotEmpty) ...[
+              Text(l10n.recapSummary,
+                  style: theme.textTheme.labelLarge),
+              const SizedBox(height: 4),
+              Text(recap.summary, style: theme.textTheme.bodyMedium),
+              const SizedBox(height: 12),
+            ],
+            if (recap.topicsCovered.isNotEmpty) ...[
+              _RecapList(label: l10n.recapTopicsCovered, items: recap.topicsCovered),
+              const SizedBox(height: 12),
+            ],
+            if (recap.struggles.isNotEmpty) ...[
+              _RecapList(label: l10n.recapStruggles, items: recap.struggles),
+              const SizedBox(height: 12),
+            ],
+            if (recap.homework.isNotEmpty) ...[
+              _RecapList(label: l10n.recapHomework, items: recap.homework),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _RecapMetric extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _RecapMetric({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: theme.textTheme.labelSmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              )),
+          const SizedBox(height: 2),
+          Text(value, style: theme.textTheme.titleSmall),
+        ],
+      ),
+    );
+  }
+}
+
+class _RecapList extends StatelessWidget {
+  final String label;
+  final List<String> items;
+
+  const _RecapList({required this.label, required this.items});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.textTheme.labelLarge),
+        const SizedBox(height: 4),
+        ...items.map((item) => Padding(
+              padding: const EdgeInsets.only(bottom: 2),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('• ',
+                      style: theme.textTheme.bodyMedium
+                          ?.copyWith(color: theme.colorScheme.primary)),
+                  Expanded(
+                    child: Text(item, style: theme.textTheme.bodyMedium),
+                  ),
+                ],
+              ),
+            )),
+      ],
     );
   }
 }

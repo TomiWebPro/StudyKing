@@ -1,10 +1,14 @@
 import 'dart:convert';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../core/data/enums.dart';
 import '../../../../core/data/models/question_model.dart';
+import '../../../../core/utils/logger.dart';
 import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/rich_content_renderer.dart';
+import '../../../../core/providers/service_providers.dart' show visionInterpretationServiceProvider;
 import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
@@ -42,6 +46,7 @@ class QuestionCardWidget extends StatefulWidget {
 }
 
 class _QuestionCardWidgetState extends State<QuestionCardWidget> {
+  static final Logger _logger = const Logger('QuestionCardWidget');
   late final TextEditingController _textController;
   late final TextEditingController _essayController;
   String? _localAnswer;
@@ -96,9 +101,10 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
         margin: ResponsiveUtils.screenPadding(context),
         child: Padding(
           padding: ResponsiveUtils.cardPadding(context),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
               Row(
                 children: [
                   Chip(
@@ -183,6 +189,7 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
                   ),
                 ),
             ],
+          ),
           ),
         ),
       ),
@@ -326,12 +333,101 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
   }
 
   Widget _buildCanvasContent(BuildContext context) {
-    return CanvasDrawingWidget(
-      onDrawingComplete: (data) {
-        _updateAnswer(base64Encode(data));
+    final l10n = AppLocalizations.of(context)!;
+    return Consumer(
+      builder: (context, ref, _) {
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            CanvasDrawingWidget(
+              onDrawingComplete: (data) {
+                _updateAnswer(base64Encode(data));
+              },
+              onTextRecognized: (text) {
+                _updateAnswer(text);
+              },
+              showInputModeSelector: true,
+              largeTouchTargets: widget.largeTouchTargets,
+            ),
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: widget.isSubmitted ? null : () => _pickAndInterpretImage(ref),
+              icon: _isInterpreting
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.photo_camera),
+              label: Text(_isInterpreting ? l10n.interpretingImage : l10n.uploadPhotoOfWork),
+            ),
+            if (_recognizedPreview != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  l10n.recognizedFromImage(_recognizedPreview!),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
+            if (_visionError != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(
+                  _visionError!,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      ),
+                ),
+              ),
+          ],
+        );
       },
-      largeTouchTargets: widget.largeTouchTargets,
     );
+  }
+
+  bool _isInterpreting = false;
+  String? _recognizedPreview;
+  String? _visionError;
+
+  Future<void> _pickAndInterpretImage(WidgetRef ref) async {
+    if (_isInterpreting) return;
+    final l10n = AppLocalizations.of(context)!;
+    setState(() {
+      _isInterpreting = true;
+      _visionError = null;
+    });
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.image,
+        withData: true,
+      );
+      final bytes = picked?.files.first.bytes;
+      if (bytes == null || bytes.isEmpty) {
+        setState(() => _isInterpreting = false);
+        return;
+      }
+      final result = await ref.read(visionInterpretationServiceProvider).interpretImage(bytes);
+      if (result.isSuccess) {
+        setState(() {
+          _recognizedPreview = result.data!;
+          _isInterpreting = false;
+        });
+        _updateAnswer(result.data!);
+      } else {
+        setState(() {
+          _visionError = l10n.visionInterpretationFailed;
+          _isInterpreting = false;
+        });
+      }
+    } catch (e) {
+      _logger.w('Image vision interpretation failed', e);
+      if (mounted) {
+        setState(() {
+          _visionError = AppLocalizations.of(context)!.visionInterpretationFailed;
+          _isInterpreting = false;
+        });
+      }
+    }
   }
 
   Widget _buildGraphContent(BuildContext context) {

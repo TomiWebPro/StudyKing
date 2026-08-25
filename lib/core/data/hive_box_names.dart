@@ -46,6 +46,7 @@ class HiveBoxNames {
   static const String learningPreferences = 'learning_preferences';
   static const String llmResponseCache = 'llm_response_cache';
   static const String lessonFeedback = 'lesson_feedback';
+  static const String lessonRecaps = 'lesson_recaps';
 
   /// All boxes included in a full backup (all boxes except those excluded).
   static List<String> get allBackupBoxes => [
@@ -88,6 +89,7 @@ class HiveBoxNames {
         llmTasks,
         llmUsageRecords,
         learningPreferences,
+        lessonRecaps,
       ];
 
   /// All boxes containing study data (excluding settings, profile, and internal metadata).
@@ -128,5 +130,6 @@ class HiveBoxNames {
         dashboardLayoutPrefs,
         learningPreferences,
         lessonFeedback,
+        lessonRecaps,
       ];
 }

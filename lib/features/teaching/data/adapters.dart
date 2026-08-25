@@ -2,6 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'adapters/conversation_message_adapter.dart';
 import 'adapters/tutor_session_adapter.dart';
 import 'adapters/lesson_feedback_adapter.dart';
+import 'adapters/lesson_recap_adapter.dart';
 
 void registerTeachingAdapters() {
   if (!Hive.isAdapterRegistered(27)) {
@@ -12,5 +13,8 @@ void registerTeachingAdapters() {
   }
   if (!Hive.isAdapterRegistered(44)) {
     Hive.registerAdapter(LessonFeedbackAdapter());
+  }
+  if (!Hive.isAdapterRegistered(30)) {
+    Hive.registerAdapter(LessonRecapAdapter());
   }
 }
