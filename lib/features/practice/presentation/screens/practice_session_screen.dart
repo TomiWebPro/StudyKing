@@ -12,7 +12,8 @@ import 'package:studyking/core/services/answer_validation_service.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
+import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/models/source_model.dart';
@@ -62,6 +63,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   late SpacedRepetitionService _srService;
   late PracticeSessionService _sessionService;
   late AnswerValidationService _validationService;
+  late final QuestionVariantService _variantService;
   late final StudentIdService _studentIdService;
   late final MasteryRecorder _masteryRecorder;
   late final MistakeReviewService _mistakeReviewService;
@@ -82,6 +84,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   String? _elapsedTimeFormatted;
   final List<PracticeAnswerRecord> _answerRecords = [];
   final List<String> _mistakeQuestionIds = [];
+  final Set<String> _queuedVariantIds = {};
   bool _isCorrect = false;
   int _currentConfidence = 3;
   DateTime? _questionStartTime;
@@ -94,6 +97,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     super.initState();
     _questionRepo = ref.read(questionRepositoryProvider);
     _srService = ref.read(spacedRepetitionServiceProvider);
+    _variantService = ref.read(questionVariantServiceProvider);
     _studentIdService = ref.read(studentIdServiceProvider);
     _masteryRecorder = ref.read(masteryRecorderProvider);
     _mistakeReviewService = ref.read(mistakeReviewServiceProvider);
@@ -314,6 +318,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     ));
     if (!isCorrect) {
       _mistakeQuestionIds.add(question.id);
+      _maybeQueueRetryVariant(question);
     }
 
     await _masteryRecorder.recordAttempt(
@@ -350,6 +355,27 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _questions
       ..removeRange(_currentIndex + 1, _questions.length)
       ..addAll(remaining);
+  }
+
+  /// Optionally inserts a generated variant of [question] immediately after the
+  /// current question so the student re-tests the same concept with different
+  /// values instead of simply re-reading the question they got wrong. This only
+  /// uses variants that have already been generated (linked via [Question.variantIds]);
+  /// it never triggers LLM generation inline.
+  Future<void> _maybeQueueRetryVariant(Question question) async {
+    if (question.variantIds.isEmpty) return;
+    if (_currentIndex >= _questions.length - 1) {
+      // Nothing follows; queue after the last question.
+    }
+    final result = await _variantService.selectVariantForRetry(question);
+    if (result.isFailure || !mounted) return;
+    final variant = result.data!;
+    if (variant.id == question.id) return;
+    if (_queuedVariantIds.contains(variant.id)) return;
+    setState(() {
+      _queuedVariantIds.add(variant.id);
+      _questions.insert(_currentIndex + 1, variant);
+    });
   }
 
   void _nextQuestion() {
