@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
-import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/shared_providers.dart' show llmProviderProvider, settingsProvider, l10nProvider, databaseProvider;
-import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show l10nProvider, databaseProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider, modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
@@ -53,10 +53,7 @@ final mentorSessionRepositoryProvider = Provider<SessionRepository>((ref) {
 });
 
 final mentorModelIdProvider = Provider<String>((ref) {
-  final savedModel = ref.watch(settingsProvider).selectedModel;
-  if (savedModel.isNotEmpty) return savedModel;
-  final provider = ref.watch(llmProviderProvider);
-  return defaultModelForProvider(provider);
+  return ref.watch(modelRouterProvider).resolve(LlmTaskType.mentor);
 });
 
 final mentorServiceProvider = Provider.family<MentorService, String>((ref, studentId) {

@@ -12,6 +12,11 @@ class LlmUsageRecord {
   final DateTime timestamp;
   final bool success;
 
+  /// Coarse task category this usage belongs to (tutor, mentor, evaluation,
+  /// generation, summarization, classification, transcription, background),
+  /// or `null` when it could not be classified. Enables cost-per-task tracking.
+  final String? taskType;
+
   LlmUsageRecord({
     required this.id,
     required this.feature,
@@ -21,6 +26,7 @@ class LlmUsageRecord {
     required this.cost,
     required this.timestamp,
     this.success = true,
+    this.taskType,
   });
 
   int get totalTokens => inputTokens + outputTokens;
@@ -34,6 +40,7 @@ class LlmUsageRecord {
     'cost': cost,
     'timestamp': timestamp.toIso8601String(),
     'success': success,
+    'taskType': taskType,
   };
 
   factory LlmUsageRecord.fromJson(Map<String, dynamic> json) => LlmUsageRecord(
@@ -45,6 +52,7 @@ class LlmUsageRecord {
     cost: (json['cost'] as num).toDouble(),
     timestamp: DateTime.parse(json['timestamp'] as String),
     success: json['success'] as bool? ?? true,
+    taskType: json['taskType'] as String?,
   );
 }
 
@@ -80,6 +88,7 @@ class LlmUsageMeter {
     required int inputTokens,
     required int outputTokens,
     bool success = true,
+    String? taskType,
   }) {
     final pricing = UsageRecord.pricingConfig;
     final cost = pricing.calculateTotalCost(inputTokens, outputTokens, 0);
@@ -92,6 +101,7 @@ class LlmUsageMeter {
       cost: cost,
       timestamp: DateTime.now(),
       success: success,
+      taskType: taskType,
     );
     _records.add(record);
     if (_records.length > 1000) {
@@ -134,6 +144,26 @@ class LlmUsageMeter {
 
   int getTotalTokens() {
     return _records.fold(0, (sum, r) => sum + r.totalTokens);
+  }
+
+  /// Total estimated cost grouped by task type (see [LlmUsageRecord.taskType]).
+  Map<String, double> getTotalCostPerTaskType() {
+    final totals = <String, double>{};
+    for (final record in _records) {
+      final key = record.taskType ?? 'unknown';
+      totals[key] = (totals[key] ?? 0.0) + record.cost;
+    }
+    return totals;
+  }
+
+  /// Total tokens grouped by task type.
+  Map<String, int> getTotalTokensPerTaskType() {
+    final totals = <String, int>{};
+    for (final record in _records) {
+      final key = record.taskType ?? 'unknown';
+      totals[key] = (totals[key] ?? 0) + record.totalTokens;
+    }
+    return totals;
   }
 
   void clear() => _records.clear();

@@ -4,6 +4,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart';
 
 void main() {
   group('llm providers - default values', () {
@@ -192,6 +193,60 @@ void main() {
 
       expect(container1.read(apiKeyProvider), equals('container1-key'));
       expect(container2.read(apiKeyProvider), isEmpty);
+    });
+  });
+
+  group('modelRouterProvider', () {
+    test('falls back to selected model for tutor/mentor when no per-task config', () {
+      final container = ProviderContainer(
+        overrides: [
+          selectedModelProvider.overrideWith((ref) => 'my-main-model'),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      final router = container.read(modelRouterProvider);
+      expect(router.resolve(LlmTaskType.tutor), equals('my-main-model'));
+      expect(router.resolve(LlmTaskType.mentor), equals('my-main-model'));
+    });
+
+    test('honors explicit per-task configuration over the selected model', () {
+      final container = ProviderContainer(
+        overrides: [
+          selectedModelProvider.overrideWith((ref) => 'my-main-model'),
+          taskModelConfigProvider.overrideWith(
+            (ref) => const TaskModelConfig(mentorModelId: 'mentor-special'),
+          ),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      final router = container.read(modelRouterProvider);
+      expect(router.resolve(LlmTaskType.mentor), equals('mentor-special'));
+      // Tutor still uses the selected model.
+      expect(router.resolve(LlmTaskType.tutor), equals('my-main-model'));
+    });
+
+    test('falls back to default model when no selected model is set', () {
+      final container = ProviderContainer(
+        overrides: [
+          selectedModelProvider.overrideWith((ref) => ''),
+          llmProviderProvider.overrideWith((ref) => LlmProvider.openAI),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      final router = container.read(modelRouterProvider);
+      expect(router.resolve(LlmTaskType.tutor), equals('gpt-4o-mini'));
+    });
+
+    test('routes classification to a cheap default regardless of main model', () {
+      final container = ProviderContainer(
+        overrides: [
+          selectedModelProvider.overrideWith((ref) => 'my-main-model'),
+          llmProviderProvider.overrideWith((ref) => LlmProvider.openRouter),
+        ],
+      );
+      addTearDown(() => container.dispose());
+      final router = container.read(modelRouterProvider);
+      expect(router.resolve(LlmTaskType.classification), equals('google/gemma-2-2b-it'));
     });
   });
 }

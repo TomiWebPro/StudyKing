@@ -12,6 +12,7 @@ import '../llm_task_manager.dart';
 import '../llm_usage_meter.dart' show LlmUsageMeter;
 import '../../../features/settings/data/models/settings_model.dart' show UsageRecord;
 import 'llm_response_cache.dart' show LlmResponseCache;
+import 'model_router.dart' show LlmTaskType;
 
 enum LlmProvider { openRouter, ollama, openAI, custom }
 
@@ -519,6 +520,7 @@ class LlmService {
       modelId: modelId,
       inputTokens: inputTokens,
       outputTokens: outputTokens,
+      taskType: LlmTaskType.fromFeature(feature)?.name,
     );
   }
 

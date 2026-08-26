@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider, llmProviderProvider, selectedModelProvider;
+import 'package:studyking/core/providers/app_providers.dart' show databaseProvider, localeProvider;
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show longTermMemoryProvider;
-import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider, modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
@@ -12,10 +12,17 @@ import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
 
 final teachingModelIdProvider = Provider<String>((ref) {
-  final savedModel = ref.watch(selectedModelProvider);
-  if (savedModel.isNotEmpty) return savedModel;
-  final provider = ref.watch(llmProviderProvider);
-  return defaultModelForProvider(provider);
+  return ref.watch(modelRouterProvider).resolve(LlmTaskType.tutor);
+});
+
+/// Model selected for exercise/answer evaluation (balanced capability).
+final evaluationModelIdProvider = Provider<String>((ref) {
+  return ref.watch(modelRouterProvider).resolve(LlmTaskType.evaluation);
+});
+
+/// Model selected for long-context summarization work.
+final summarizationModelIdProvider = Provider<String>((ref) {
+  return ref.watch(modelRouterProvider).resolve(LlmTaskType.summarization);
 });
 
 final clockProvider = Provider<Clock>((ref) => SystemClock());
@@ -24,7 +31,7 @@ final exerciseEvaluatorProvider = Provider<ExerciseEvaluator>((ref) {
   final locale = ref.watch(localeProvider);
   return ExerciseEvaluator(
     llmService: ref.watch(llmServiceProvider),
-    modelId: ref.watch(teachingModelIdProvider),
+    modelId: ref.watch(evaluationModelIdProvider),
     localeName: locale.languageCode,
   );
 });
@@ -53,7 +60,7 @@ final lessonRecapServiceProvider = Provider<LessonRecapService>((ref) {
   final repo = ref.watch(lessonRecapRepositoryProvider);
   return LessonRecapService(
     llmService: ref.watch(llmServiceProvider),
-    modelId: ref.watch(teachingModelIdProvider),
+    modelId: ref.watch(summarizationModelIdProvider),
     repository: repo,
     localeName: ref.watch(localeProvider).languageCode,
   );

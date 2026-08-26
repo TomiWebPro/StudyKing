@@ -82,16 +82,18 @@ class MentorScheduleHandler {
     }
   }
 
-  Future<String> confirmSchedule(ScheduleProposal proposal) async {
-    final result = await Result.capture(() => _confirmScheduleInner(proposal), context: 'confirmSchedule');
+  Future<Result<String>> confirmSchedule(ScheduleProposal proposal) async {
+    final result = await Result.capture(() => _confirmScheduleInner(proposal),
+        context: 'confirmSchedule');
     if (result.isSuccess) return result.data!;
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final msg = l10n.mentorScheduleFail;
     await _memory.addAssistantMessage(msg);
-    return msg;
+    _logger.w('confirmSchedule failed: ${result.error}');
+    return Result.failure(msg);
   }
 
-  Future<String> _confirmScheduleInner(ScheduleProposal proposal) async {
+  Future<Result<String>> _confirmScheduleInner(ScheduleProposal proposal) async {
     String? topicId;
     String? subjectId;
     if (proposal.topicTitle.isNotEmpty && proposal.topicTitle != 'general') {
@@ -110,17 +112,18 @@ class MentorScheduleHandler {
       durationMinutes: proposal.durationMinutes,
     );
 
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+
     if (hasConflictResult.data ?? false) {
       final existingLessonsResult = await _plannerService.getScheduledLessons();
       final existingLessons = existingLessonsResult.data ?? [];
       final nextFree = _findNextFreeSlot(existingLessons, proposal.durationMinutes);
-      final l10n = lookupAppLocalizations(Locale(_localeName));
       final msg = l10n.mentorScheduleConflict(
         localizedDateTime(proposal.proposedTime, _localeName),
         localizedDateTime(nextFree, _localeName),
       );
       await _memory.addAssistantMessage(msg);
-      return msg;
+      return Result.failure(msg);
     }
 
     final successResult = await _plannerService.scheduleLesson(
@@ -132,18 +135,14 @@ class MentorScheduleHandler {
     );
     final success = successResult.data ?? false;
 
-    String msg;
-    final l10n = lookupAppLocalizations(Locale(_localeName));
-    if (success) {
-      msg = l10n.mentorScheduleSuccess(
-        proposal.topicTitle,
-        localizedDateTime(proposal.proposedTime, _localeName),
-      );
-    } else {
-      msg = l10n.mentorScheduleFail;
-    }
+    final msg = success
+        ? l10n.mentorScheduleSuccess(
+            proposal.topicTitle,
+            localizedDateTime(proposal.proposedTime, _localeName),
+          )
+        : l10n.mentorScheduleFail;
     await _memory.addAssistantMessage(msg);
-    return msg;
+    return success ? Result.success(msg) : Result.failure(msg);
   }
 
   DateTime _findNextFreeSlot(List<Session> existingLessons, int durationMinutes) {
@@ -167,13 +166,25 @@ class MentorScheduleHandler {
     return candidate;
   }
 
-  Future<String> suggestReschedule(String sessionId) async {
+  Future<Result<String>> suggestReschedule(String sessionId) async {
+    final result = await Result.capture(
+        () => _suggestRescheduleInner(sessionId),
+        context: 'suggestReschedule');
+    if (result.isSuccess) return result.data!;
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    final msg = l10n.mentorRescheduleNoFreeSlot(sessionId);
+    await _memory.addSystemMessage(msg);
+    _logger.w('suggestReschedule failed: ${result.error}');
+    return Result.failure(msg);
+  }
+
+  Future<Result<String>> _suggestRescheduleInner(String sessionId) async {
     final sessionResult = await _database.tutorSessionRepository.getSession(sessionId);
     final session = sessionResult.data;
     if (session == null) {
       final msg = lookupAppLocalizations(Locale(_localeName)).mentorRescheduleNotFound;
       await _memory.addSystemMessage(msg);
-      return msg;
+      return Result.failure(msg);
     }
 
     final existingLessonsResult = await _plannerService.getScheduledLessons();
@@ -194,7 +205,7 @@ class MentorScheduleHandler {
         session.topicTitle,
       );
       await _memory.addSystemMessage(msg);
-      return msg;
+      return Result.failure(msg);
     }
 
     final studentId = _plannerService.studentId;
@@ -220,6 +231,6 @@ class MentorScheduleHandler {
       localizedDateTime(nextFree, _localeName),
     );
     await _memory.addSystemMessage(msg);
-    return msg;
+    return Result.success(msg);
   }
 }
