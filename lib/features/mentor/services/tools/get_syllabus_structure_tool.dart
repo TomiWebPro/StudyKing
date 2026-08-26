@@ -199,6 +199,8 @@ class GetSyllabusStructureTool extends AgentTool {
       masteryMap: masteryMap,
     );
 
+    final learningOrder = _buildLearningOrder(topicEntries, dependencyMap);
+
     return {
       'subjectId': subject.id,
       'subjectName': subject.name,
@@ -207,9 +209,39 @@ class GetSyllabusStructureTool extends AgentTool {
       'overallProgress':
           topics.isNotEmpty ? completedCount / topics.length : 0.0,
       'topics': topicEntries,
+      'learningOrder': learningOrder,
       if (suggestedNext != null) 'suggestedNextTopic': suggestedNext['topicId'],
       if (suggestedNext != null) 'explanation': suggestedNext['explanation'],
     };
+  }
+
+  List<String> _buildLearningOrder(
+    List<Map<String, dynamic>> topicEntries,
+    Map<String, TopicDependency> dependencyMap,
+  ) {
+    final entryMap = {
+      for (final entry in topicEntries) entry['id'] as String: entry,
+    };
+    final visited = <String>{};
+    final sorted = <String>[];
+
+    void visit(String topicId) {
+      if (visited.contains(topicId)) return;
+      visited.add(topicId);
+      final dep = dependencyMap[topicId];
+      if (dep != null) {
+        for (final prereq in dep.prerequisites) {
+          if (entryMap.containsKey(prereq)) visit(prereq);
+        }
+      }
+      sorted.add(topicId);
+    }
+
+    for (final entry in topicEntries) {
+      visit(entry['id'] as String);
+    }
+
+    return sorted;
   }
 
   Future<Map<String, dynamic>> _getTopicDetails({

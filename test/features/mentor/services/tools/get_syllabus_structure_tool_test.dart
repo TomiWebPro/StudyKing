@@ -446,6 +446,35 @@ void main() {
         expect(result.containsKey('explanation'), false);
       });
 
+      test('returns a topological learningOrder honoring prerequisites', () async {
+        subjectRepo.addSubject(_subject(
+          id: 'subj-1',
+          name: 'Physics',
+          topicIds: ['t1', 't2', 't3'],
+        ));
+        topicRepo.addTopic(_topic(id: 't1', subjectId: 'subj-1'));
+        topicRepo.addTopic(_topic(id: 't2', subjectId: 'subj-1'));
+        topicRepo.addTopic(_topic(id: 't3', subjectId: 'subj-1'));
+        dependencyRepo.addDependency(TopicDependency(
+          topicId: 't2',
+          prerequisites: ['t1'],
+        ));
+        dependencyRepo.addDependency(TopicDependency(
+          topicId: 't3',
+          prerequisites: ['t2'],
+        ));
+
+        final result = await tool.execute({
+          'subjectId': 'subj-1',
+          'includePrerequisites': true,
+        });
+
+        final learningOrder = result['learningOrder'] as List;
+        expect(learningOrder, containsAll(['t1', 't2', 't3']));
+        expect(learningOrder.indexOf('t1'), lessThan(learningOrder.indexOf('t2')));
+        expect(learningOrder.indexOf('t2'), lessThan(learningOrder.indexOf('t3')));
+      });
+
       test('returns empty topics list when subject has no topics', () async {
         subjectRepo.addSubject(_subject(
           id: 'subj-1',

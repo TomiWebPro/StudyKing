@@ -9,6 +9,7 @@ import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/features/mentor/services/tools/get_syllabus_structure_tool.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
@@ -159,6 +160,25 @@ void main() {
       final tools = container.read(llmAgentToolsProvider);
       final names = tools.map((t) => t.name).toSet();
       expect(names.length, equals(tools.length));
+    });
+
+    test('registers get_syllabus_structure tool with required dependencies', () {
+      final container = _createContainer();
+      addTearDown(() => container.dispose());
+
+      final tools = container.read(llmAgentToolsProvider);
+      final syllabusTool = tools
+          .where((t) => t.name == 'get_syllabus_structure')
+          .cast<AgentTool>()
+          .single;
+      expect(syllabusTool, isA<GetSyllabusStructureTool>());
+
+      final params = (syllabusTool as GetSyllabusStructureTool).parameters;
+      final props = params['properties'] as Map;
+      expect(props.containsKey('subjectId'), isTrue);
+      expect(props.containsKey('topicId'), isTrue);
+      expect(props.containsKey('includePrerequisites'), isTrue);
+      expect(props.containsKey('includeProgress'), isTrue);
     });
   });
 
