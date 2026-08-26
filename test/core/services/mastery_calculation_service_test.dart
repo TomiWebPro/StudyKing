@@ -257,6 +257,87 @@ void main() {
       });
     });
 
+    group('decay / time-based metrics', () {
+      test('forgettingRisk and reviewUrgency rise when days pass since lastAttempt', () {
+        final past = DateTime.now().subtract(const Duration(days: 10));
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: past,
+          lastUpdated: past,
+          correctAttempts: 9,
+          totalAttempts: 10,
+        );
+
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        final freshState = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime.now(),
+          lastUpdated: DateTime.now(),
+          correctAttempts: 9,
+          totalAttempts: 10,
+        );
+        final freshUpdated = service.recordAttempt(
+          current: freshState,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        expect(updated.forgettingRisk, greaterThan(freshUpdated.forgettingRisk));
+        expect(updated.reviewUrgency, greaterThan(freshUpdated.reviewUrgency));
+      });
+
+      test('readiness recencyScore is < 1.0 when gap > 0 days', () {
+        final past = DateTime.now().subtract(const Duration(days: 5));
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: past,
+          lastUpdated: past,
+          correctAttempts: 10,
+          totalAttempts: 10,
+        );
+
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 5,
+          timeSpentMs: 20000,
+        );
+
+        expect(updated.readinessScore, lessThan(1.0));
+      });
+
+      test('no regression in accuracy and masteryLevel', () {
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime.now().subtract(const Duration(days: 20)),
+          lastUpdated: DateTime.now().subtract(const Duration(days: 20)),
+          correctAttempts: 9,
+          totalAttempts: 10,
+        );
+
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 5,
+          timeSpentMs: 20000,
+        );
+
+        expect(updated.accuracy, 10 / 11);
+        expect(updated.masteryLevel, MasteryLevel.proficient);
+      });
+    });
+
     group('initial state transitions', () {
       test('novice with no attempts', () {
         final state = initialState('t1');

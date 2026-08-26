@@ -41,16 +41,16 @@ class MasteryCalculationService {
     final accuracy = _updateAccuracy(correctAttempts, totalAttempts);
     final confidenceTrend = _updateConfidenceTrend(recentConfidence);
     final speedTrend = _updateSpeedTrend(averageTimeMs);
-    final forgettingRisk = _updateForgettingRisk(accuracy, now, now);
+    final forgettingRisk = _updateForgettingRisk(accuracy, current.lastAttempt, now);
     final masteryLevel = _updateMasteryLevel(accuracy, currentStreak, totalAttempts);
     final readinessScore = _updateReadinessScore(
       accuracy,
       currentStreak,
       confidenceTrend,
-      now,
+      current.lastAttempt,
       now,
     );
-    final reviewUrgency = _updateReviewUrgency(forgettingRisk, now, now);
+    final reviewUrgency = _updateReviewUrgency(forgettingRisk, current.lastAttempt, now);
 
     return MasteryState(
       studentId: current.studentId,
