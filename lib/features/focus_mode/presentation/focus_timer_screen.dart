@@ -125,8 +125,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       await _loadStats();
 
       try {
-        final focusSessionRepo = ref.read(focusSessionRepositoryProvider);
-        await focusSessionRepo.init();
+        final focusSessionRepo = await ref.read(focusSessionRepositoryProvider.future);
         final lastSessionResult = await focusSessionRepo.getLatest();
         if (lastSessionResult.isSuccess && lastSessionResult.data != null) {
           _lastFocusSession = lastSessionResult.data;
@@ -1079,7 +1078,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
       );
 
       try {
-        final repo = ref.read(focusSessionRepositoryProvider);
+        final repo = await ref.read(focusSessionRepositoryProvider.future);
         await repo.save(focusSession);
       } catch (e) {
         _logger.w('Failed to persist focus session', e);

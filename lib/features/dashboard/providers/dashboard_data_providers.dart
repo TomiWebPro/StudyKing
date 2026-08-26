@@ -8,15 +8,15 @@ import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
-import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
-import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart'
+    show focusSessionRepositoryProvider;
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show questionRepositoryProvider, sourceRepositoryProvider;
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart' show SyllabusGoal;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider, activePlanIdProvider;
 import 'package:studyking/features/planner/services/mastery_remaining_lessons_estimator.dart';
@@ -241,9 +241,10 @@ final dashboardDueReviewsProvider =
 
     int totalDue = 0;
     final breakdown = <SubjectDueCount>[];
+    final dueCountsResult = await srService.getDueCountsBySubject();
+    final dueCounts = dueCountsResult.data ?? {};
     for (final subject in subjects) {
-      final result = await srService.getSubjectDueCount(subject.id);
-      final count = result.isSuccess ? (result.data ?? 0) : 0;
+      final count = dueCounts[subject.id] ?? 0;
       totalDue += count;
       breakdown.add(SubjectDueCount(
         subjectId: subject.id,
@@ -261,8 +262,7 @@ final dashboardDueReviewsProvider =
 
 final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, studentId) async {
   try {
-    final repo = SourceRepository();
-    await repo.init();
+    final repo = ref.watch(sourceRepositoryProvider);
     final sources = await repo.getByStudent(studentId);
     return sources.length;
   } catch (e) {
@@ -288,18 +288,15 @@ final dashboardSyllabusProgressProvider =
 
 final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgress, String>((ref, studentId) async {
   try {
-    final subjectRepo = SubjectRepository();
-    await subjectRepo.init();
+    final subjectRepo = ref.watch(subjectRepositoryProvider);
     final subjectsResult = await subjectRepo.getAll();
     final hasSubjects = (subjectsResult.data ?? []).isNotEmpty;
 
-    final sourceRepo = SourceRepository();
-    await sourceRepo.init();
+    final sourceRepo = ref.watch(sourceRepositoryProvider);
     final sourcesResult = await sourceRepo.getByStudent(studentId);
     final hasSources = sourcesResult.isNotEmpty;
 
     final sessionRepo = ref.watch(sessionRepositoryProvider);
-    await sessionRepo.init();
     final allSessionsResult = await sessionRepo.getAll();
     final sessions = allSessionsResult.data ?? [];
     final hasPracticeSessions = sessions.any((s) => s.type == SessionType.practice);
@@ -325,8 +322,7 @@ final dashboardLastFocusSessionProvider =
     FutureProvider.family<FocusSession?, String>((ref, studentId) async {
   await ref.watch(dashboardInitProvider.future);
   try {
-    final repo = FocusSessionRepository();
-    await repo.init();
+    final repo = await ref.watch(focusSessionRepositoryProvider.future);
     final result = await repo.getLatest();
     return result.data;
   } catch (e) {

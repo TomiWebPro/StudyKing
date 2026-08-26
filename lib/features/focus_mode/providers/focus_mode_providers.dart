@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart' show notificationServiceProvider;
@@ -6,6 +7,8 @@ import 'package:studyking/features/focus_mode/services/focus_practice_service.da
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart' show spacedRepetitionServiceProvider, masteryGraphServiceProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+
+final _focusModeLogger = const Logger('FocusModeProviders');
 
 final studyTimerServiceProvider = Provider<StudyTimerService>((ref) {
   final repository = ref.watch(sessionRepositoryProvider);
@@ -22,6 +25,13 @@ final focusPracticeServiceProvider = Provider<FocusPracticeService>((ref) {
   );
 });
 
-final focusSessionRepositoryProvider = Provider<FocusSessionRepository>((ref) {
-  return FocusSessionRepository();
+final focusSessionRepositoryProvider = FutureProvider<FocusSessionRepository>((ref) async {
+  final repository = FocusSessionRepository();
+  final initResult = await repository.init();
+  if (initResult.isFailure) {
+    _focusModeLogger.w(
+      'Failed to initialize FocusSessionRepository: ${initResult.error}',
+    );
+  }
+  return repository;
 });
