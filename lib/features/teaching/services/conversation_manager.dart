@@ -183,16 +183,27 @@ class ConversationManager {
 
     final switchResult = SyllabusSwitchParser.parse(
       content,
-      availableTitles: _availableSyllabusTitles,
+      availableTitles: _availableSyllabi.map((g) => g.subjectTitle).toList(),
     );
     if (switchResult.matched) {
       await _memory.addUserMessage(content);
       final l10n = lookupAppLocalizations(Locale(localeName));
-      final ack = switchResult.syllabusTitle == null
-          ? l10n.tutorSyllabusSwitchedAll
-          : l10n.tutorSyllabusSwitched(switchResult.syllabusTitle!);
-      await _memory.addAssistantMessage(ack);
-      yield ack;
+      if (switchResult.syllabusTitle == null) {
+        _currentSyllabusId = null;
+        _currentSyllabusTitle = null;
+        await _memory.addAssistantMessage(l10n.tutorSyllabusSwitchedAll);
+        yield l10n.tutorSyllabusSwitchedAll;
+      } else {
+        final goal = _availableSyllabi.firstWhere(
+          (g) => g.subjectTitle.normalized == switchResult.syllabusTitle!.normalized,
+          orElse: () => SyllabusGoal(subjectId: '', subjectTitle: switchResult.syllabusTitle!),
+        );
+        _currentSyllabusId = goal.subjectId;
+        _currentSyllabusTitle = goal.subjectTitle;
+        final ack = l10n.tutorSyllabusSwitched(goal.subjectTitle);
+        await _memory.addAssistantMessage(ack);
+        yield ack;
+      }
       return;
     }
 

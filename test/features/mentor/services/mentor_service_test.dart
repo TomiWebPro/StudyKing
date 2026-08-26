@@ -1208,7 +1208,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await service.confirmSchedule(proposal);
-        expect(result, contains('unable to schedule'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('unable to schedule'));
         expect(fakePlanner.scheduleCallCount, equals(1));
       });
 
@@ -1222,7 +1223,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await service.confirmSchedule(proposal);
-        expect(result, contains('conflict'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('conflict'));
         expect(fakePlanner.scheduleCallCount, equals(0));
       });
     });
