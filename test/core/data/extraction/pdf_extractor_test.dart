@@ -4,240 +4,255 @@ import 'dart:typed_data';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
 
+/// Builds a minimal, valid (uncompressed) PDF document with the given page
+/// texts. The structure is straightforward enough that the real parser can
+/// resolve the page tree and extract text from the content streams.
+Uint8List _buildPdf(List<String> pageTexts) {
+  final fontNum = 3 + pageTexts.length * 2;
+  final buffer = StringBuffer();
+  buffer.writeln('%PDF-1.4');
+
+  // 1: Catalog
+  buffer.writeln('1 0 obj');
+  buffer.writeln('<< /Type /Catalog /Pages 2 0 R >>');
+  buffer.writeln('endobj');
+
+  // 2: Pages
+  final kids = <String>[];
+  for (var i = 0; i < pageTexts.length; i++) {
+    kids.add('${3 + i * 2} 0 R');
+  }
+  buffer.writeln('2 0 obj');
+  buffer.writeln('<< /Type /Pages /Kids [${kids.join(' ')}] /Count ${pageTexts.length} >>');
+  buffer.writeln('endobj');
+
+  // Per-page: page object + content stream object.
+  for (var i = 0; i < pageTexts.length; i++) {
+    final pageNum = 3 + i * 2;
+    final contentNum = 4 + i * 2;
+    final content = 'BT /F1 12 Tf 72 720 Td (${pageTexts[i]}) Tj ET';
+    buffer.writeln('$pageNum 0 obj');
+    buffer.writeln('<< /Type /Page /Parent 2 0 R /Contents $contentNum 0 R '
+        '/Resources << /Font << /F1 $fontNum 0 R >> >> >>');
+    buffer.writeln('endobj');
+    buffer.writeln('$contentNum 0 obj');
+    buffer.writeln('<< /Length ${content.length} >>');
+    buffer.writeln('stream');
+    buffer.write(content);
+    buffer.writeln();
+    buffer.writeln('endstream');
+    buffer.writeln('endobj');
+  }
+
+  // Shared font object.
+  buffer.writeln('$fontNum 0 obj');
+  buffer.writeln('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  buffer.writeln('endobj');
+
+  buffer.writeln('trailer');
+  buffer.writeln('<< /Root 1 0 R >>');
+  buffer.writeln('startxref');
+  buffer.writeln('0');
+  buffer.writeln('%%EOF');
+
+  return Uint8List.fromList(buffer.toString().codeUnits);
+}
+
 void main() {
   group('PdfExtractionResult', () {
     test('stores all properties', () {
       const result = PdfExtractionResult(
         text: 'hello',
         pageCount: 3,
-        extractionMethod: 'pdf_test',
+        extractionMethod: 'pdf_text_extracted',
       );
       expect(result.text, 'hello');
       expect(result.pageCount, 3);
-      expect(result.extractionMethod, 'pdf_test');
+      expect(result.extractionMethod, 'pdf_text_extracted');
     });
 
     test('pageCount can be null', () {
       const result = PdfExtractionResult(
         text: 'hello',
-        extractionMethod: 'pdf_test',
+        extractionMethod: 'pdf_text_extracted',
       );
       expect(result.pageCount, isNull);
-    });
-
-    test('text can be empty', () {
-      const result = PdfExtractionResult(
-        text: '',
-        extractionMethod: 'no_text',
-      );
-      expect(result.text, '');
     });
   });
 
   group('PdfExtractor', () {
     late PdfExtractor extractor;
 
-    setUp(() {
-      extractor = PdfExtractor();
-    });
+    setUp(() => extractor = PdfExtractor());
 
     group('extractFromBytes', () {
-      test('returns empty result for empty bytes', () async {
+      test('returns empty_content for empty bytes', () async {
         final result = await extractor.extractFromBytes(Uint8List(0));
-        expect(result.text, '');
-        expect(result.extractionMethod, 'empty_content');
+        expect(result.isSuccess, isTrue);
+        expect(result.fold((d) => d.extractionMethod, (_) => ''), 'empty_content');
       });
 
-      test('extracts text from simple PDF-like content', () async {
-        final bytes = Uint8List.fromList(
-          'Some PDF content with (text in parentheses) and more content.'
-              .codeUnits,
-        );
+      test('extracts text from a generated single-page PDF', () async {
+        final bytes = _buildPdf(['Hello World from a proper parser']);
         final result = await extractor.extractFromBytes(bytes);
-        expect(result.text, isNotEmpty);
-        expect(result.extractionMethod, contains('pdf'));
+
+        expect(result.isSuccess, isTrue);
+        final data = result.fold((d) => d, (_) => null);
+        expect(data, isNotNull);
+        expect(data!.text, contains('Hello World from a proper parser'));
+        expect(data.extractionMethod, 'pdf_text_extracted');
+        expect(data.pageCount, 1);
       });
 
-      test('extracts text from parentheses in raw bytes', () async {
-        final content = '1 0 obj\n'
-            '<</Type /Catalog /Pages 2 0 R>>\n'
-            'endobj\n'
-            '2 0 obj\n'
-            '<</Type /Pages /Kids [3 0 R] /Count 1>>\n'
-            'endobj\n'
-            '3 0 obj\n'
-            '<</Type /Page /Parent 2 0 R>>\n'
-            'endobj\n'
-            'stream\n'
-            'BT\n'
-            '/F1 12 Tf\n'
-            '72 720 Td\n'
-            '(Hello World) Tj\n'
-            'ET\n'
-            'endstream\n'
-            'endobj';
-        final bytes = Uint8List.fromList(content.codeUnits);
+      test('extracts text and tracks page metadata for multi-page PDF', () async {
+        final bytes = _buildPdf([
+          'Page one content here',
+          'Page two content here',
+          'Page three content here',
+        ]);
         final result = await extractor.extractFromBytes(bytes);
 
-        expect(result.text, contains('Hello World'));
-        expect(result.extractionMethod, 'pdf_raw_decode');
+        expect(result.isSuccess, isTrue);
+        final data = result.fold((d) => d, (_) => null);
+        expect(data, isNotNull);
+        expect(data!.pageCount, 3);
+        expect(data.pages, isNotNull);
+        expect(data.pages!.length, 3);
+        expect(data.pages![0].pageNumber, 1);
+        expect(data.pages![0].text, contains('Page one'));
+        expect(data.pages![1].pageNumber, 2);
+        expect(data.pages![1].text, contains('Page two'));
+        expect(data.pages![2].pageNumber, 3);
+        expect(data.pages![2].text, contains('Page three'));
+        expect(data.text, contains('Page one content here'));
+        expect(data.text, contains('Page three content here'));
       });
 
-      test('falls back to raw decode for non-standard content', () async {
-        final content = 'Just some plain text content here\nwith multiple lines\nand more text';
-        final bytes = Uint8List.fromList(content.codeUnits);
+      test('decodes escaped characters in text strings', () async {
+        final bytes = _buildPdf([r'Hello \(escaped\) and \n newline']);
         final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text, isNotEmpty);
-        expect(result.extractionMethod, contains('pdf'));
+        expect(result.isSuccess, isTrue);
+        final data = result.fold((d) => d, (_) => null);
+        expect(data!.text, contains('Hello (escaped) and'));
       });
 
-      test('returns simple extraction when text > 50 chars', () async {
-        final content = '(This is a very long text that definitely exceeds fifty characters in total length for sure)';
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text.length, greaterThan(50));
-        expect(result.extractionMethod, 'pdf_text_extracted');
+      test('extracts text from TJ arrays', () async {
+        final pdf = _buildPdfWithTjArray('Hello', 'World');
+        final result = await extractor.extractFromBytes(pdf);
+        expect(result.isSuccess, isTrue);
+        final data = result.fold((d) => d, (_) => null);
+        expect(data!.text, contains('Hello'));
+        expect(data.text, contains('World'));
       });
 
-      test('returns extraction_failed when no text found and clean fails', () async {
-        final content = '%PDF-1.4\nendobj\nstream\nendstream\nxref\ntrailer\nstartxref';
-        final bytes = Uint8List.fromList(content.codeUnits);
+      test('reports no_text_found as failure for image-only PDF', () async {
+        // Content stream with no text-showing operators -> scanned-like PDF.
+        final bytes = _buildPdfWithoutText();
         final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text, '');
-        expect(result.extractionMethod, 'extraction_failed');
+        expect(result.isFailure, isTrue);
+        expect(result.fold((_) => '', (e) => e), contains('no_text_found'));
       });
 
-      test('handles escaped characters in parentheses', () async {
-        final content = r'(hello \(world\) and \n newline)';
-        final bytes = Uint8List.fromList(content.codeUnits);
+      test('reports extraction_failed for non-PDF bytes', () async {
+        final bytes = Uint8List.fromList('just some plain text'.codeUnits);
         final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text, contains('hello'));
-      });
-
-      test('extracts text when parentheses are effectively empty via raw decode', () async {
-        final content = 'PDF content with () and ( ) empty parens';
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text, isNotEmpty);
-        expect(result.extractionMethod, 'pdf_raw_decode');
+        expect(result.isFailure, isTrue);
+        expect(result.fold((_) => '', (e) => e), contains('extraction_failed'));
       });
     });
 
     group('extractFromFile', () {
-      test('returns empty for non-existent file', () async {
+      test('returns file_not_found for missing file', () async {
         final result = await extractor.extractFromFile('/nonexistent/file.pdf');
-        expect(result.text, '');
-        expect(result.extractionMethod, 'file_not_found');
+        expect(result.isSuccess, isTrue);
+        final data = result.fold((d) => d, (_) => null);
+        expect(data!.extractionMethod, 'file_not_found');
+        expect(data.text, '');
       });
 
-      test('returns file_read_error for restricted file', () async {
-        final dir = Directory.systemTemp.createTempSync('pdf_perm_test_');
+      test('extracts text from a written PDF file', () async {
+        final dir = Directory.systemTemp.createTempSync('pdf_extract_test_');
         try {
-          final file = File('${dir.path}/restricted.pdf');
-          await file.writeAsBytes([0x25, 0x50, 0x44, 0x46]);
-          await Process.run('chmod', ['000', file.path]);
+          final file = File('${dir.path}/doc.pdf');
+          await file.writeAsBytes(_buildPdf(['File-based extraction works']));
 
           final result = await extractor.extractFromFile(file.path);
-          expect(result.text, '');
-          expect(result.extractionMethod, 'file_read_error');
-        } finally {
-          await Process.run('chmod', ['-R', '777', dir.path]);
-          dir.deleteSync(recursive: true);
-        }
-      });
-
-      test('extracts from existing file', () async {
-        final dir = Directory.systemTemp.createTempSync('pdf_test_');
-        try {
-          final file = File('${dir.path}/test.pdf');
-          final content = 'Some PDF with (Hello from file) and (more text here) and (lots of content to exceed fifty chars in this test)';
-          await file.writeAsBytes(content.codeUnits);
-
-          final result = await extractor.extractFromFile(file.path);
-          expect(result.text, contains('Hello from file'));
-          expect(result.extractionMethod, contains('pdf'));
+          expect(result.isSuccess, isTrue);
+          final data = result.fold((d) => d, (_) => null);
+          expect(data!.text, contains('File-based extraction works'));
+          expect(data.pageCount, 1);
         } finally {
           dir.deleteSync(recursive: true);
         }
-      });
-
-      test('extracts from existing file with page count', () async {
-        final dir = Directory.systemTemp.createTempSync('pdf_test_');
-        try {
-          final file = File('${dir.path}/test.pdf');
-          final content = '/Type /Page\n/Type /Page\n(Hello World)';
-          await file.writeAsBytes(content.codeUnits);
-
-          final result = await extractor.extractFromFile(file.path);
-          expect(result.pageCount, 2);
-          expect(result.text, contains('Hello World'));
-        } finally {
-          dir.deleteSync(recursive: true);
-        }
-      });
-    });
-
-    group('extractionMethod values', () {
-      test('returns proper method for empty content', () async {
-        final result = await extractor.extractFromBytes(Uint8List(0));
-        expect(result.extractionMethod, 'empty_content');
-      });
-
-      test('extractionMethod is non-empty for valid content', () async {
-        final bytes = Uint8List.fromList('sample text'.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-        expect(result.extractionMethod, isNotEmpty);
-      });
-
-      test('pageCount is null when pages cannot be determined', () async {
-        final bytes = Uint8List.fromList('simple'.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-        expect(result.pageCount, isNull);
-      });
-
-      test('pageCount is not null when /Type /Page is found', () async {
-        final content = '/Type /Page\n/Type /Page\n/Type /Page';
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-        expect(result.pageCount, 3);
-      });
-
-      test('pageCount from /Pages count', () async {
-        final content = '/Pages 42';
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-        expect(result.pageCount, 42);
-      });
-
-      test('pageCount prefers /Type /Page over /Pages count', () async {
-        final content = '/Type /Page\n/Type /Page\n/Pages 99';
-        final bytes = Uint8List.fromList(content.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-        expect(result.pageCount, 2);
-      });
-    });
-
-    group('internal methods', () {
-      test('_cleanRawPdfContent removes structural PDF tags', () async {
-        final raw = '%PDF-1.4\n'
-            '1 0 obj\n'
-            'endobj\n'
-            'stream\n'
-            'endstream\n'
-            'xref\n'
-            'trailer\n'
-            'startxref\n'
-            '(actual content)';
-        final bytes = Uint8List.fromList(raw.codeUnits);
-        final result = await extractor.extractFromBytes(bytes);
-
-        expect(result.text, contains('actual content'));
       });
     });
   });
+}
+
+/// Builds a PDF whose single page shows two strings via a `TJ` array.
+Uint8List _buildPdfWithTjArray(String a, String b) {
+  final content = 'BT /F1 12 Tf 72 720 Td [($a) 12 ($b)] TJ ET';
+  final fontNum = 5;
+  final buffer = StringBuffer();
+  buffer.writeln('%PDF-1.4');
+  buffer.writeln('1 0 obj');
+  buffer.writeln('<< /Type /Catalog /Pages 2 0 R >>');
+  buffer.writeln('endobj');
+  buffer.writeln('2 0 obj');
+  buffer.writeln('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  buffer.writeln('endobj');
+  buffer.writeln('3 0 obj');
+  buffer.writeln('<< /Type /Page /Parent 2 0 R /Contents 4 0 R '
+      '/Resources << /Font << /F1 $fontNum 0 R >> >> >>');
+  buffer.writeln('endobj');
+  buffer.writeln('4 0 obj');
+  buffer.writeln('<< /Length ${content.length} >>');
+  buffer.writeln('stream');
+  buffer.write(content);
+  buffer.writeln();
+  buffer.writeln('endstream');
+  buffer.writeln('endobj');
+  buffer.writeln('$fontNum 0 obj');
+  buffer.writeln('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  buffer.writeln('endobj');
+  buffer.writeln('trailer');
+  buffer.writeln('<< /Root 1 0 R >>');
+  buffer.writeln('startxref');
+  buffer.writeln('0');
+  buffer.writeln('%%EOF');
+  return Uint8List.fromList(buffer.toString().codeUnits);
+}
+
+/// Builds a PDF whose content stream has no text-showing operators, simulating
+/// a scanned / image-only document.
+Uint8List _buildPdfWithoutText() {
+  final content = 'BT /F1 12 Tf 72 720 Td ET'; // no Tj / TJ
+  final fontNum = 5;
+  final buffer = StringBuffer();
+  buffer.writeln('%PDF-1.4');
+  buffer.writeln('1 0 obj');
+  buffer.writeln('<< /Type /Catalog /Pages 2 0 R >>');
+  buffer.writeln('endobj');
+  buffer.writeln('2 0 obj');
+  buffer.writeln('<< /Type /Pages /Kids [3 0 R] /Count 1 >>');
+  buffer.writeln('endobj');
+  buffer.writeln('3 0 obj');
+  buffer.writeln('<< /Type /Page /Parent 2 0 R /Contents 4 0 R >>');
+  buffer.writeln('endobj');
+  buffer.writeln('4 0 obj');
+  buffer.writeln('<< /Length ${content.length} >>');
+  buffer.writeln('stream');
+  buffer.write(content);
+  buffer.writeln();
+  buffer.writeln('endstream');
+  buffer.writeln('endobj');
+  buffer.writeln('$fontNum 0 obj');
+  buffer.writeln('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  buffer.writeln('endobj');
+  buffer.writeln('trailer');
+  buffer.writeln('<< /Root 1 0 R >>');
+  buffer.writeln('startxref');
+  buffer.writeln('0');
+  buffer.writeln('%%EOF');
+  return Uint8List.fromList(buffer.toString().codeUnits);
 }

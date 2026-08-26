@@ -136,20 +136,23 @@ class DocumentExtractor {
           }
 
           if (!isZip) {
-            try {
-              final pdfResult = await _pdfExtractor.extractFromFile(filePath);
-              if (pdfResult.text.isNotEmpty) {
-                final chunks = _chunkContent(pdfResult.text);
-                return ExtractionResult(
-                  text: pdfResult.text,
-                  extractionMethod: pdfResult.extractionMethod,
-                  pageCount: pdfResult.pageCount,
-                  chunks: chunks,
-                );
-              }
-            } catch (e) {
-              // Fall through to raw read
-            }
+            final pdfResult = await _pdfExtractor.extractFromFile(filePath);
+            final extracted = pdfResult.fold(
+              (data) {
+                if (data.text.isNotEmpty) {
+                  final chunks = _chunkContent(data.text);
+                  return ExtractionResult(
+                    text: data.text,
+                    extractionMethod: data.extractionMethod,
+                    pageCount: data.pageCount,
+                    chunks: chunks,
+                  );
+                }
+                return null;
+              },
+              (_) => null,
+            );
+            if (extracted != null) return extracted;
           }
 
           final content = utf8.decode(bytes, allowMalformed: true);
