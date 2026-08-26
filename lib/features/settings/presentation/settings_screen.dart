@@ -54,6 +54,8 @@ import 'package:studyking/features/onboarding/presentation/onboarding_dialog.dar
 import 'package:studyking/features/onboarding/providers/onboarding_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show apiBaseUrlProvider, apiKeyProvider, llmProviderProvider, selectedModelProvider, settingsProvider, engagementSchedulerProvider;
+import 'package:studyking/core/providers/ocr_provider.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/providers/shared_providers.dart' show databaseProvider;
 import 'package:studyking/core/providers/study_progress_provider.dart' show studyProgressTrackerProvider;
 import 'package:studyking/features/subjects/providers/subjects_list_provider.dart' show subjectListProvider;
@@ -212,6 +214,40 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                   Icons.bolt, () => _showTimeoutDialog(settings.requestTimeoutSeconds)),
               _buildHealthTile(l10n, settings),
               _AiTaskMonitorTile(),
+            ]),
+            _section(l10n.ocrEngineMode, [
+              ListTile(
+                title: Text(l10n.ocrEngineMode),
+                subtitle: Text(l10n.ocrEngineModeDescription),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SegmentedButton<OcrMode>(
+                  selected: {ref.watch(ocrModeProvider)},
+                  onSelectionChanged: (selected) {
+                    if (selected.isNotEmpty) {
+                      ref.read(ocrModeProvider.notifier).state = selected.first;
+                    }
+                  },
+                  segments: [
+                    ButtonSegment<OcrMode>(
+                      value: OcrMode.fast,
+                      label: Text(l10n.ocrModeFast),
+                      icon: const Icon(Icons.flash_on),
+                    ),
+                    ButtonSegment<OcrMode>(
+                      value: OcrMode.accurate,
+                      label: Text(l10n.ocrModeAccurate),
+                      icon: const Icon(Icons.auto_awesome),
+                    ),
+                    ButtonSegment<OcrMode>(
+                      value: OcrMode.hybrid,
+                      label: Text(l10n.ocrModeHybrid),
+                      icon: const Icon(Icons.hub),
+                    ),
+                  ],
+                ),
+              ),
             ]),
             _section(l10n.notificationPreferences, [
               SwitchListTile(

@@ -1,10 +1,12 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
+import 'package:studyking/core/data/extraction/llm_ocr_engine.dart';
+import 'package:studyking/core/data/extraction/ml_kit_ocr_engine.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class OcrExtractionResult {
   final String text;
@@ -22,18 +24,50 @@ class OcrExtractionResult {
   bool get isError => errorMessage != null;
 }
 
+/// Orchestrates OCR extraction across one or more [OcrEngine] backends.
+///
+/// The on-device [MlKitOcrEngine] is the primary, offline engine. The
+/// [LlmOcrEngine] is used as a fallback for complex/low-confidence cases or
+/// when on-device OCR is unavailable. The active engines and the fallback
+/// behavior are driven by [mode].
 class OcrExtractor {
-  final LlmService? _llmService;
-  final String _modelId;
-  final String _localeName;
   static final Logger _logger = const Logger('OcrExtractor');
 
-  OcrExtractor({LlmService? llmService, required String modelId, required String localeName})
-      : _llmService = llmService,
-        _modelId = modelId,
-        _localeName = localeName {
-    if (modelId.isEmpty) {
-      _logger.w('OcrExtractor created with empty modelId - LLM OCR will fail');
+  final OcrMode mode;
+  final OcrEngine _mlKitEngine;
+  final OcrEngine _llmEngine;
+  final double _lowConfidenceThreshold;
+
+  OcrExtractor({
+    this.mode = OcrMode.hybrid,
+    LlmService? llmService,
+    required String modelId,
+    required String localeName,
+    OcrEngine? mlKitEngine,
+    OcrEngine? llmEngine,
+    double lowConfidenceThreshold = 0.6,
+  })  : _mlKitEngine = mlKitEngine ?? MlKitOcrEngine(),
+        _llmEngine = llmEngine ??
+            LlmOcrEngine(
+              llmService: llmService,
+              modelId: modelId,
+              localeName: localeName,
+            ),
+        _lowConfidenceThreshold = lowConfidenceThreshold {
+    if (modelId.isEmpty && mode != OcrMode.fast) {
+      _logger.w('OcrExtractor created with empty modelId - '
+          'LLM OCR fallback will fail');
+    }
+  }
+
+  List<OcrEngine> get _orderedEngines {
+    switch (mode) {
+      case OcrMode.fast:
+        return [_mlKitEngine];
+      case OcrMode.accurate:
+        return [_llmEngine];
+      case OcrMode.hybrid:
+        return [_mlKitEngine, _llmEngine];
     }
   }
 
@@ -41,145 +75,121 @@ class OcrExtractor {
     required String rawContent,
     required String? sourceUrl,
   }) async {
-    if (rawContent.startsWith('file://')) {
-      return _extractFromFile(rawContent.substring(7));
-    }
-
-    if (rawContent.startsWith('http://') || rawContent.startsWith('https://')) {
-      return _extractFromUrl(rawContent);
-    }
-
-    final isBase64 = rawContent.length > 100 &&
-        RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(rawContent.substring(0, 100));
-    if (isBase64) {
-      return _extractFromBase64(rawContent);
-    }
-
-    if (_llmService != null) {
-      return _extractWithLlm(rawContent);
-    }
-
-    return const OcrExtractionResult(
-      text: '',
-      extractionMethod: 'ocr_no_llm_available',
-    );
-  }
-
-  Future<OcrExtractionResult> _extractFromFile(String filePath) async {
-    try {
-      final file = File(filePath);
-      if (!file.existsSync()) {
-        return const OcrExtractionResult(
-          text: '',
-          extractionMethod: 'image_file_not_found',
-        );
-      }
-      final bytes = await file.readAsBytes();
-      return await _processImageBytes(bytes, 'image_file');
-    } catch (e) {
-      _logger.w('Failed to read image file', e);
+    final input = await _resolveInput(rawContent, sourceUrl);
+    if (input == null) {
+      // Treat unreadable input as "no text" so callers can fall back to
+      // embedding the raw reference (e.g. the file path) instead of failing.
       return const OcrExtractionResult(
         text: '',
-        extractionMethod: 'image_file_read_error',
-      );
-    }
-  }
-
-  Future<OcrExtractionResult> _extractFromUrl(String url) async {
-    if (_llmService != null) {
-      return _extractWithLlm(url);
-    }
-    return const OcrExtractionResult(
-      text: '',
-      extractionMethod: 'image_url_no_llm',
-    );
-  }
-
-  Future<OcrExtractionResult> _extractFromBase64(String base64Str) async {
-    if (_llmService != null) {
-      return _extractWithLlm(base64Str);
-    }
-    return const OcrExtractionResult(
-      text: '',
-      extractionMethod: 'image_base64_no_llm',
-    );
-  }
-
-  Future<OcrExtractionResult> _processImageBytes(
-    List<int> bytes,
-    String method,
-  ) async {
-    final base64Str = base64Encode(bytes);
-    if (_llmService != null) {
-      return _extractWithLlm(base64Str);
-    }
-    return OcrExtractionResult(
-      text: '',
-      extractionMethod: '${method}_no_llm',
-    );
-  }
-
-  Future<OcrExtractionResult> _extractWithLlm(String content) async {
-    if (_llmService == null) {
-      return const OcrExtractionResult(
-        text: '',
-        extractionMethod: 'llm_not_available',
-        errorMessage: 'No LLM service configured',
+        extractionMethod: 'ocr_input_unreadable',
       );
     }
 
-    if (_modelId.isEmpty) {
-      const errorMsg = 'No vision-capable model configured. '
-          'Please select a model in Settings > AI Configuration.';
-      _logger.w(errorMsg);
-      return const OcrExtractionResult(
-        text: '',
-        extractionMethod: 'model_id_empty',
-        errorMessage: errorMsg,
-      );
-    }
+    final engines = _orderedEngines;
+    OcrExtractionResult? lowConfidenceBest;
 
-    try {
-      final l10n = lookupAppLocalizations(Locale(_localeName));
-      final prompt = l10n.ocrUserPrompt(content);
+    for (var i = 0; i < engines.length; i++) {
+      final engine = engines[i];
+      final result = await engine.recognize(input);
 
-      final result = await _llmService.chat(
-        message: prompt,
-        modelId: _modelId,
-        systemPrompt: l10n.ocrSystemPrompt,
-        feature: 'ocr_extraction',
-      );
       if (result.isFailure) {
-        return const OcrExtractionResult(
-          text: '',
-          extractionMethod: 'ocr_llm_failed',
-          errorMessage: 'OCR extraction failed',
-        );
+        _logger.w('OCR engine ${engine.name} failed: ${result.error}');
+        continue;
       }
-      final response = result.data!;
 
-      if (response.trim().isEmpty) {
-        _logger.w('LLM OCR returned empty text');
-        return const OcrExtractionResult(
-          text: '',
-          extractionMethod: 'ocr_empty_result',
-          errorMessage: 'OCR extraction returned empty result. '
-              'The model may not support vision tasks.',
+      final data = result.data!;
+      if (!data.hasText) continue;
+
+      final extractionMethod = engines.length == 1
+          ? engine.name
+          : (i == 0 ? '${engine.name}_primary' : '${engine.name}_fallback');
+
+      // Hybrid mode: when the on-device engine produced low-confidence text,
+      // attempt the next (LLM) engine and keep whichever result is produced.
+      if (mode == OcrMode.hybrid &&
+          i == 0 &&
+          engine.name == _mlKitEngine.name &&
+          engines.length > 1 &&
+          (data.confidence == null ||
+              data.confidence! < _lowConfidenceThreshold)) {
+        lowConfidenceBest = OcrExtractionResult(
+          text: data.text,
+          confidence: data.confidence,
+          extractionMethod: extractionMethod,
         );
+        continue;
       }
 
       return OcrExtractionResult(
-        text: response.trim(),
-        confidence: 0.7,
-        extractionMethod: 'ocr_llm',
+        text: data.text,
+        confidence: data.confidence,
+        extractionMethod: extractionMethod,
+      );
+    }
+
+    if (lowConfidenceBest != null) return lowConfidenceBest;
+
+    return const OcrExtractionResult(
+      text: '',
+      extractionMethod: 'ocr_no_text',
+    );
+  }
+
+  Future<OcrImageInput?> _resolveInput(String rawContent, String? sourceUrl) async {
+    try {
+      if (rawContent.startsWith('file://')) {
+        final filePath = rawContent.substring(7);
+        final file = File(filePath);
+        if (!file.existsSync()) {
+          return null;
+        }
+        final bytes = await file.readAsBytes();
+        return OcrImageInput(
+          rawContent: rawContent,
+          bytes: bytes,
+          filePath: filePath,
+          sourceUrl: sourceUrl,
+        );
+      }
+
+      if (rawContent.startsWith('http://') ||
+          rawContent.startsWith('https://')) {
+        try {
+          final response = await http.get(Uri.parse(rawContent));
+          if (response.statusCode == 200) {
+            return OcrImageInput(
+              rawContent: rawContent,
+              bytes: response.bodyBytes,
+              sourceUrl: sourceUrl,
+            );
+          }
+        } catch (e) {
+          _logger.w('Failed to download image for OCR: $e');
+        }
+        // Fall back to letting the LLM resolve the URL directly.
+        return OcrImageInput(
+          rawContent: rawContent,
+          sourceUrl: sourceUrl,
+        );
+      }
+
+      final isBase64 = rawContent.length > 100 &&
+          RegExp(r'^[A-Za-z0-9+/=]+$').hasMatch(rawContent.substring(0, 100));
+      if (isBase64) {
+        return OcrImageInput(
+          rawContent: rawContent,
+          bytes: base64Decode(rawContent),
+          sourceUrl: sourceUrl,
+        );
+      }
+
+      return OcrImageInput(
+        rawContent: rawContent,
+        sourceUrl: sourceUrl,
       );
     } catch (e) {
-      _logger.w('LLM OCR failed', e);
-      return OcrExtractionResult(
-        text: '',
-        extractionMethod: 'ocr_llm_failed',
-        errorMessage: 'OCR extraction failed: $e',
-      );
+      _logger.w('Failed to resolve OCR input: $e');
+      return null;
     }
   }
 }

@@ -9381,6 +9381,36 @@ abstract class AppLocalizations {
   /// **'Your selected model may not support image or audio analysis. Proceed anyway?'**
   String get modelCapabilityWarningBody;
 
+  /// Settings title for choosing the OCR engine strategy
+  ///
+  /// In en, this message translates to:
+  /// **'OCR Engine Mode'**
+  String get ocrEngineMode;
+
+  /// Settings description explaining the OCR mode options
+  ///
+  /// In en, this message translates to:
+  /// **'How scanned images and PDFs are processed. Fast uses on-device OCR (offline, instant). Accurate uses the AI model. Hybrid uses on-device OCR first and only falls back to AI when confidence is low.'**
+  String get ocrEngineModeDescription;
+
+  /// Label for Fast OCR mode
+  ///
+  /// In en, this message translates to:
+  /// **'Fast (on-device)'**
+  String get ocrModeFast;
+
+  /// Label for Accurate OCR mode
+  ///
+  /// In en, this message translates to:
+  /// **'Accurate (AI)'**
+  String get ocrModeAccurate;
+
+  /// Label for Hybrid OCR mode
+  ///
+  /// In en, this message translates to:
+  /// **'Hybrid (recommended)'**
+  String get ocrModeHybrid;
+
   /// Elapsed time during processing
   ///
   /// In en, this message translates to:

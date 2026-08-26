@@ -29,6 +29,9 @@ dependencies:
   # HTTP
   http: ^1.6.0
 
+  # On-device OCR (imported by core extraction engine; must be declared)
+  google_mlkit_text_recognition: ^0.17.1
+
   # Date formatting
   intl: ^0.20.2
 

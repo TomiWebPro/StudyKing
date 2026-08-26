@@ -1,410 +1,255 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/llm/llm_chat_service.dart';
 
-class _FakeLlmService extends LlmService {
-  final Future<Result<String>> Function()? _onChat;
+// ---------------------------------------------------------------------------
+// Fakes
+// ---------------------------------------------------------------------------
 
-  _FakeLlmService({Future<Result<String>> Function()? onChat})
-      : _onChat = onChat,
-        super(
-          config: const LlmConfiguration(
-            provider: LlmProvider.openRouter,
-            apiKey: 'fake-key',
-          ),
-        );
+class FakeOcrEngine implements OcrEngine {
+  final String engineName;
+  final Result<OcrEngineResult> Function(OcrImageInput input)? handler;
+  final List<OcrImageInput> calls = [];
+
+  FakeOcrEngine(this.engineName, [this.handler]);
 
   @override
-  Future<Result<String>> chat({
-    required String message,
-    required String modelId,
-    String? systemPrompt,
-    String localeName = 'en',
-    ConversationMemory? memory,
-    List<Map<String, String>>? history,
-    String feature = 'general',
-  }) async {
-    if (_onChat != null) return _onChat();
-    return Result.success('extracted text');
-  }
+  String get name => engineName;
 
   @override
-  Stream<String> chatStream({
-    required String message,
-    required String modelId,
-    String? systemPrompt,
-    String localeName = 'en',
-    ConversationMemory? memory,
-    List<Map<String, String>>? history,
-    String feature = 'general',
-  }) async* {
-    yield 'stream response';
+  bool get supportsConfidence => true;
+
+  @override
+  Future<Result<OcrEngineResult>> recognize(OcrImageInput input) async {
+    calls.add(input);
+    if (handler != null) return handler!(input);
+    return Result.failure('not configured');
   }
 }
 
+String base64Image(String content) => base64Encode(utf8.encode(content));
+
+// ---------------------------------------------------------------------------
+// OcrMode
+// ---------------------------------------------------------------------------
+
 void main() {
-  group('OcrExtractionResult', () {
-    test('isError returns true when errorMessage is set', () {
-      const result = OcrExtractionResult(
-        text: '',
-        extractionMethod: 'test',
-        errorMessage: 'error',
-      );
-      expect(result.isError, isTrue);
+  group('OcrMode', () {
+    test('fromString maps known values case-insensitively', () {
+      expect(OcrMode.fromString('FAST'), OcrMode.fast);
+      expect(OcrMode.fromString('accurate'), OcrMode.accurate);
+      expect(OcrMode.fromString(' hybrid '), OcrMode.hybrid);
     });
 
-    test('isError returns false when errorMessage is null', () {
-      const result = OcrExtractionResult(
-        text: 'hello',
-        extractionMethod: 'test',
-      );
-      expect(result.isError, isFalse);
+    test('fromString defaults to hybrid for unknown/null', () {
+      expect(OcrMode.fromString(null), OcrMode.hybrid);
+      expect(OcrMode.fromString('bogus'), OcrMode.hybrid);
     });
 
-    test('stores confidence value', () {
-      const result = OcrExtractionResult(
-        text: 'hello',
-        confidence: 0.95,
-        extractionMethod: 'test',
-      );
-      expect(result.confidence, 0.95);
-    });
-
-    test('confidence is null when not provided', () {
-      const result = OcrExtractionResult(
-        text: 'hello',
-        extractionMethod: 'test',
-      );
-      expect(result.confidence, isNull);
+    test('prefersOnDeviceFirst is false only for accurate', () {
+      expect(OcrMode.fast.prefersOnDeviceFirst, isTrue);
+      expect(OcrMode.hybrid.prefersOnDeviceFirst, isTrue);
+      expect(OcrMode.accurate.prefersOnDeviceFirst, isFalse);
     });
   });
 
+  // -------------------------------------------------------------------------
+  // OcrExtractionResult
+  // -------------------------------------------------------------------------
+
+  group('OcrExtractionResult', () {
+    test('isError reflects errorMessage', () {
+      expect(
+        const OcrExtractionResult(
+          text: '',
+          extractionMethod: 't',
+          errorMessage: 'e',
+        ).isError,
+        isTrue,
+      );
+      expect(
+        const OcrExtractionResult(text: 'x', extractionMethod: 't').isError,
+        isFalse,
+      );
+    });
+
+    test('stores and omits confidence', () {
+      expect(
+        const OcrExtractionResult(
+          text: 'x',
+          confidence: 0.9,
+          extractionMethod: 't',
+        ).confidence,
+        0.9,
+      );
+      expect(
+        const OcrExtractionResult(text: 'x', extractionMethod: 't').confidence,
+        isNull,
+      );
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // OcrExtractor orchestration
+  // -------------------------------------------------------------------------
+
   group('OcrExtractor', () {
-    group('constructor', () {
-      test('accepts empty modelId without throwing', () {
-        expect(
-          () => OcrExtractor(modelId: '', localeName: 'en'),
-          returnsNormally,
-        );
-      });
+    late FakeOcrEngine mlKit;
+    late FakeOcrEngine llm;
 
-      test('accepts valid modelId', () {
-        expect(
-          () => OcrExtractor(modelId: 'test-model', localeName: 'en'),
-          returnsNormally,
-        );
-      });
+    OcrExtractor runWith({
+      required OcrMode mode,
+      Result<OcrEngineResult>? mlKitResult,
+      Result<OcrEngineResult>? llmResult,
+    }) {
+      mlKit = FakeOcrEngine(
+        'ml_kit',
+        (_) => mlKitResult ?? Result.failure('ml_kit_unavailable'),
+      );
+      llm = FakeOcrEngine(
+        'llm',
+        (_) => llmResult ?? Result.failure('no_llm'),
+      );
+      return OcrExtractor(
+        mode: mode,
+        mlKitEngine: mlKit,
+        llmEngine: llm,
+        modelId: 'm',
+        localeName: 'en',
+      );
+    }
+
+    final highConf = OcrEngineResult(
+      text: 'on-device text',
+      confidence: 0.95,
+      segments: const [OcrSegment('on-device text', 0.95)],
+      engineName: 'ml_kit',
+    );
+    final lowConf = OcrEngineResult(
+      text: 'fuzzy text',
+      confidence: 0.3,
+      segments: const [OcrSegment('fuzzy text', 0.3)],
+      engineName: 'ml_kit',
+    );
+    final llmResult = OcrEngineResult(
+      text: 'ai text',
+      confidence: 0.7,
+      segments: const [OcrSegment('ai text', 0.7)],
+      engineName: 'llm',
+    );
+
+    test('fast mode uses only the on-device engine', () async {
+      final extractor = runWith(mode: OcrMode.fast, mlKitResult: Result.success(highConf));
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, 'on-device text');
+      expect(result.confidence, 0.95);
+      expect(result.extractionMethod, 'ml_kit');
+      expect(llm.calls, isEmpty);
     });
 
-    group('extractText without LLM', () {
-      late OcrExtractor extractor;
-
-      setUp(() {
-        extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
-      });
-
-      test('returns empty result for file:// path without LLM', () async {
-        final result = await extractor.extractText(
-          rawContent: 'file:///path/to/image.png',
-          sourceUrl: null,
-        );
-        expect(result.text, '');
-        expect(result.extractionMethod, 'image_file_not_found');
-      });
-
-      test('returns empty result for http URL without LLM', () async {
-        final result = await extractor.extractText(
-          rawContent: 'https://example.com/photo.jpg',
-          sourceUrl: null,
-        );
-        expect(result.text, '');
-        expect(result.extractionMethod, 'image_url_no_llm');
-      });
-
-      test('returns empty for base64 content without LLM', () async {
-        final result = await extractor.extractText(
-          rawContent: 'SGVsbG8gV29ybGQ=' * 10,
-          sourceUrl: null,
-        );
-        expect(result.text, '');
-        expect(result.extractionMethod, 'image_base64_no_llm');
-      });
-
-      test('returns empty for short content that appears as raw', () async {
-        final result = await extractor.extractText(
-          rawContent: 'short text',
-          sourceUrl: null,
-        );
-        expect(result.text, '');
-        expect(result.extractionMethod, 'ocr_no_llm_available');
-      });
-
-      test('returns empty for base64 shorter than 100 chars', () async {
-        final result = await extractor.extractText(
-          rawContent: 'abc123',
-          sourceUrl: null,
-        );
-        expect(result.text, '');
-        expect(result.extractionMethod, 'ocr_no_llm_available');
-      });
+    test('accurate mode uses only the LLM engine', () async {
+      final extractor = runWith(mode: OcrMode.accurate, llmResult: Result.success(llmResult));
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, 'ai text');
+      expect(result.extractionMethod, 'llm');
+      expect(mlKit.calls, isEmpty);
     });
 
-    group('extractText with file:// edge cases', () {
-      test('returns image_file_read_error for restricted file', () async {
-        final dir = Directory.systemTemp.createTempSync('ocr_perm_test_');
-        try {
-          final file = File('${dir.path}/restricted.png');
-          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
-          await Process.run('chmod', ['000', file.path]);
-
-          final extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
-          final result = await extractor.extractText(
-            rawContent: 'file://${file.path}',
-            sourceUrl: null,
-          );
-          expect(result.text, '');
-          expect(result.extractionMethod, 'image_file_read_error');
-        } finally {
-          await Process.run('chmod', ['-R', '777', dir.path]);
-          dir.deleteSync(recursive: true);
-        }
-      });
-
-      test('returns image_file_no_llm for existing file without LLM', () async {
-        final dir = Directory.systemTemp.createTempSync('ocr_test_');
-        try {
-          final file = File('${dir.path}/test_image.png');
-          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
-
-          final extractor = OcrExtractor(modelId: 'test-model', localeName: 'en');
-          final result = await extractor.extractText(
-            rawContent: 'file://${file.path}',
-            sourceUrl: null,
-          );
-          expect(result.text, '');
-          expect(result.extractionMethod, 'image_file_no_llm');
-        } finally {
-          dir.deleteSync(recursive: true);
-        }
-      });
-
-      test('returns image_file_no_llm for existing file with empty modelId', () async {
-        final dir = Directory.systemTemp.createTempSync('ocr_test_');
-        try {
-          final file = File('${dir.path}/test_image.png');
-          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
-
-          final extractor = OcrExtractor(modelId: '', llmService: _FakeLlmService(), localeName: 'en');
-          final result = await extractor.extractText(
-            rawContent: 'file://${file.path}',
-            sourceUrl: null,
-          );
-          expect(result.text, '');
-          expect(result.extractionMethod, 'model_id_empty');
-        } finally {
-          dir.deleteSync(recursive: true);
-        }
-      });
+    test('hybrid uses on-device result when confidence is high', () async {
+      final extractor = runWith(mode: OcrMode.hybrid, mlKitResult: Result.success(highConf));
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, 'on-device text');
+      expect(result.extractionMethod, 'ml_kit_primary');
+      expect(llm.calls, isEmpty);
     });
 
-    group('extractText with LLM service', () {
-      test('returns extracted text on successful LLM response', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.success('Hello World'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'not a url or base64',
-          sourceUrl: null,
-        );
-
-        expect(result.text, 'Hello World');
-        expect(result.confidence, 0.7);
-        expect(result.extractionMethod, 'ocr_llm');
-      });
-
-      test('returns empty result when LLM returns empty text', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.success('   '),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'not a url or base64',
-          sourceUrl: null,
-        );
-
-        expect(result.text, '');
-        expect(result.extractionMethod, 'ocr_empty_result');
-      });
-
-      test('returns error when LLM chat fails', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.failure('API error'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'not a url or base64',
-          sourceUrl: null,
-        );
-
-        expect(result.text, '');
-        expect(result.extractionMethod, 'ocr_llm_failed');
-      });
-
-      test('returns error when LLM throws exception', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => throw Exception('Network error'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'not a url or base64',
-          sourceUrl: null,
-        );
-
-        expect(result.text, '');
-        expect(result.extractionMethod, 'ocr_llm_failed');
-        expect(result.errorMessage, contains('Network error'));
-      });
-
-      test('returns model_id_empty when modelId is empty with LLM', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.success('text'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: '',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'not a url or base64',
-          sourceUrl: null,
-        );
-
-        expect(result.text, '');
-        expect(result.extractionMethod, 'model_id_empty');
-      });
+    test('hybrid falls back to LLM when on-device confidence is low', () async {
+      final extractor = runWith(
+        mode: OcrMode.hybrid,
+        mlKitResult: Result.success(lowConf),
+        llmResult: Result.success(llmResult),
+      );
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, 'ai text');
+      expect(result.extractionMethod, 'llm_fallback');
+      expect(mlKit.calls, isNotEmpty);
+      expect(llm.calls, isNotEmpty);
     });
 
-    group('extractText with http URL and LLM', () {
-      test('extracts via LLM from http URL', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.success('URL text'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'https://example.com/image.jpg',
-          sourceUrl: null,
-        );
-
-        expect(result.text, 'URL text');
-        expect(result.extractionMethod, 'ocr_llm');
-      });
+    test('hybrid falls back to LLM when on-device engine fails', () async {
+      final extractor = runWith(
+        mode: OcrMode.hybrid,
+        mlKitResult: Result.failure('ml_kit_unavailable'),
+        llmResult: Result.success(llmResult),
+      );
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, 'ai text');
+      expect(result.extractionMethod, 'llm_fallback');
     });
 
-    group('extractText with base64 and LLM', () {
-      test('extracts via LLM from base64 content', () async {
-        final llm = _FakeLlmService(
-          onChat: () async => Result.success('base64 text'),
-        );
-        final extractor = OcrExtractor(
-          llmService: llm,
-          modelId: 'test-model',
-          localeName: 'en',
-        );
-
-        final result = await extractor.extractText(
-          rawContent: 'SGVsbG8gV29ybGQ=' * 10,
-          sourceUrl: null,
-        );
-
-        expect(result.text, 'base64 text');
-        expect(result.extractionMethod, 'ocr_llm');
-      });
+    test('returns empty result when both engines fail', () async {
+      final extractor = runWith(
+        mode: OcrMode.hybrid,
+        mlKitResult: Result.failure('unavailable'),
+        llmResult: Result.failure('no_llm'),
+      );
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'ocr_no_text');
     });
 
-    group('extractText with file:// existing file and LLM', () {
-      test('extracts via LLM from existing file', () async {
-        final dir = Directory.systemTemp.createTempSync('ocr_llm_test_');
-        try {
-          final file = File('${dir.path}/test_image.png');
-          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
+    test('reports actual (non-hardcoded) confidence from the engine', () async {
+      final custom = OcrEngineResult(
+        text: 'x',
+        confidence: 0.42,
+        segments: const [OcrSegment('x', 0.42)],
+        engineName: 'ml_kit',
+      );
+      final extractor = runWith(mode: OcrMode.fast, mlKitResult: Result.success(custom));
+      final result = await extractor.extractText(
+        rawContent: base64Image('scan'),
+        sourceUrl: null,
+      );
+      expect(result.confidence, 0.42);
+    });
 
-          final llm = _FakeLlmService(
-            onChat: () async => Result.success('file text'),
-          );
-          final extractor = OcrExtractor(
-            llmService: llm,
-            modelId: 'test-model',
-            localeName: 'en',
-          );
-
-          final result = await extractor.extractText(
-            rawContent: 'file://${file.path}',
-            sourceUrl: null,
-          );
-
-          expect(result.text, 'file text');
-          expect(result.extractionMethod, 'ocr_llm');
-        } finally {
-          dir.deleteSync(recursive: true);
-        }
-      });
-
-      test('returns error when file path LLM throws', () async {
-        final dir = Directory.systemTemp.createTempSync('ocr_llm_throw_test_');
-        try {
-          final file = File('${dir.path}/test_image.png');
-          await file.writeAsBytes([0x89, 0x50, 0x4E, 0x47]);
-
-          final llm = _FakeLlmService(
-            onChat: () async => throw Exception('Network error'),
-          );
-          final extractor = OcrExtractor(
-            llmService: llm,
-            modelId: 'test-model',
-            localeName: 'en',
-          );
-
-          final result = await extractor.extractText(
-            rawContent: 'file://${file.path}',
-            sourceUrl: null,
-          );
-
-          expect(result.extractionMethod, 'ocr_llm_failed');
-          expect(result.errorMessage, contains('Network error'));
-        } finally {
-          dir.deleteSync(recursive: true);
-        }
-      });
+    test('resolves file input to bytes before calling engines', () async {
+      final dir = Directory.systemTemp.createTempSync('ocr_in_test_');
+      try {
+        final file = File('${dir.path}/img.png');
+        await file.writeAsBytes([1, 2, 3, 4]);
+        final extractor = runWith(mode: OcrMode.fast, mlKitResult: Result.success(highConf));
+        await extractor.extractText(
+          rawContent: 'file://${file.path}',
+          sourceUrl: null,
+        );
+        expect(mlKit.calls.single.bytes, isNotEmpty);
+        expect(mlKit.calls.single.filePath, file.path);
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
     });
   });
 }

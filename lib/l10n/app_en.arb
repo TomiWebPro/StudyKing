@@ -7557,6 +7557,26 @@
     "@modelCapabilityWarningBody": {
       "description": "Dialog body warning about model capability for image/audio"
     },
+    "ocrEngineMode": "OCR Engine Mode",
+    "@ocrEngineMode": {
+      "description": "Settings title for choosing the OCR engine strategy"
+    },
+    "ocrEngineModeDescription": "How scanned images and PDFs are processed. Fast uses on-device OCR (offline, instant). Accurate uses the AI model. Hybrid uses on-device OCR first and only falls back to AI when confidence is low.",
+    "@ocrEngineModeDescription": {
+      "description": "Settings description explaining the OCR mode options"
+    },
+    "ocrModeFast": "Fast (on-device)",
+    "@ocrModeFast": {
+      "description": "Label for Fast OCR mode"
+    },
+    "ocrModeAccurate": "Accurate (AI)",
+    "@ocrModeAccurate": {
+      "description": "Label for Accurate OCR mode"
+    },
+    "ocrModeHybrid": "Hybrid (recommended)",
+    "@ocrModeHybrid": {
+      "description": "Label for Hybrid OCR mode"
+    },
     "processingElapsed": "Processing... {seconds}s elapsed",
     "@processingElapsed": {
       "description": "Elapsed time during processing",

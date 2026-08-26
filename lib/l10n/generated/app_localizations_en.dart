@@ -5728,6 +5728,22 @@ class AppLocalizationsEn extends AppLocalizations {
       'Your selected model may not support image or audio analysis. Proceed anyway?';
 
   @override
+  String get ocrEngineMode => 'OCR Engine Mode';
+
+  @override
+  String get ocrEngineModeDescription =>
+      'How scanned images and PDFs are processed. Fast uses on-device OCR (offline, instant). Accurate uses the AI model. Hybrid uses on-device OCR first and only falls back to AI when confidence is low.';
+
+  @override
+  String get ocrModeFast => 'Fast (on-device)';
+
+  @override
+  String get ocrModeAccurate => 'Accurate (AI)';
+
+  @override
+  String get ocrModeHybrid => 'Hybrid (recommended)';
+
+  @override
   String processingElapsed(int seconds) {
     return 'Processing... ${seconds}s elapsed';
   }

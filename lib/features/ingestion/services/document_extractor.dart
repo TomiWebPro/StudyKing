@@ -8,6 +8,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/asr_engine.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/extraction/pdf_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
@@ -38,9 +39,16 @@ class DocumentExtractor {
     LlmService? llmService,
     required this.modelId,
     required String localeName,
+    OcrMode ocrMode = OcrMode.hybrid,
     AsrEngine? asrEngine,
   })  : _pdfExtractor = pdfExtractor ?? PdfExtractor(),
-        _ocrExtractor = ocrExtractor ?? OcrExtractor(llmService: llmService, modelId: modelId, localeName: localeName),
+        _ocrExtractor = ocrExtractor ??
+            OcrExtractor(
+              mode: ocrMode,
+              llmService: llmService,
+              modelId: modelId,
+              localeName: localeName,
+            ),
         _transcriptionExtractor = transcriptionExtractor ??
             TranscriptionExtractor(llmService: llmService, modelId: modelId, localeName: localeName, asrEngine: asrEngine),
         _transcriptionPipeline = transcriptionPipeline;
