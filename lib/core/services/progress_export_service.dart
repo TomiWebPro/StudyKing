@@ -390,9 +390,12 @@ class ProgressExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    return Result.capture(() async {
-      final csvResult = await exportComprehensiveCSV(studentId, l10n: l10n);
-      if (csvResult.isFailure) throw Exception(csvResult.error);
+    final csvResult = await exportComprehensiveCSV(studentId, l10n: l10n);
+    if (csvResult.isFailure) {
+      _logger.w('exportComprehensiveCSV failed for $studentId: ${csvResult.error}');
+      return csvResult;
+    }
+    try {
       await SharePlus.instance.share(
         ShareParams(
           files: [
@@ -401,7 +404,11 @@ class ProgressExportService {
           text: l10n.pdfProgressReport,
         ),
       );
-    }, context: 'shareComprehensiveCSV');
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to share CSV for $studentId: $e', e);
+      return Result.failure('Failed to share CSV: $e');
+    }
   }
 
   Future<Result<void>> shareComprehensiveJSON(
@@ -462,9 +469,12 @@ class ProgressExportService {
     String filename,
     AppLocalizations l10n,
   ) async {
-    return Result.capture(() async {
-      final pdfResult = await exportComprehensivePDF(studentId, l10n);
-      if (pdfResult.isFailure) throw Exception(pdfResult.error);
+    final pdfResult = await exportComprehensivePDF(studentId, l10n);
+    if (pdfResult.isFailure) {
+      _logger.w('exportComprehensivePDF failed for $studentId: ${pdfResult.error}');
+      return pdfResult;
+    }
+    try {
       await SharePlus.instance.share(
         ShareParams(
           files: [
@@ -473,6 +483,10 @@ class ProgressExportService {
           text: l10n.pdfProgressReport,
         ),
       );
-    }, context: 'shareComprehensivePDF');
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to share PDF for $studentId: $e', e);
+      return Result.failure('Failed to share PDF: $e');
+    }
   }
 }

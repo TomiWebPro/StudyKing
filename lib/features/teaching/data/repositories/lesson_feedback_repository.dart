@@ -43,7 +43,7 @@ class LessonFeedbackRepository extends Repository<LessonFeedbackModel> {
     int starRating = 0,
     String? comment,
     bool reportedIncorrect = false,
-  }) {
+  }) async {
     final id = _uuid.v4();
     final feedback = LessonFeedbackModel(
       id: id,
@@ -56,13 +56,12 @@ class LessonFeedbackRepository extends Repository<LessonFeedbackModel> {
       comment: comment,
       reportedIncorrect: reportedIncorrect,
     );
-    return Result.capture(() async {
-      final result = await saveFeedback(feedback);
-      if (result.isFailure) {
-        throw Exception(result.error);
-      }
-      return id;
-    }, context: 'submitFeedback');
+    final result = await saveFeedback(feedback);
+    if (result.isFailure) {
+      _logger.w('saveFeedback failed for $studentId: ${result.error}');
+      return Result.failure(result.error);
+    }
+    return Result.success(id);
   }
 
   Future<Result<List<LessonFeedbackModel>>> getByStudent(
