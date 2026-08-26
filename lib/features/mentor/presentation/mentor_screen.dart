@@ -386,8 +386,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       } else if (rescheduleSessionId != null) {
         _mentorService.clearPendingReschedule();
         if (!mounted) return;
-        final result = await _mentorService.suggestReschedule(rescheduleSessionId);
         final l10n = AppLocalizations.of(context)!;
+        final result = await _mentorService.suggestReschedule(rescheduleSessionId);
         final content = result.isSuccess
             ? result.data!
             : (result.error ?? l10n.errorOccurred);
@@ -537,6 +537,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     );
 
     if (resultDuration != null && mounted) {
+      final l10n = AppLocalizations.of(context)!;
       final updatedProposal = ScheduleProposal(
         topicTitle: proposal.topicTitle,
         topicId: proposal.topicId,
@@ -545,7 +546,6 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         durationMinutes: resultDuration,
       );
       final result = await _mentorService.confirmSchedule(updatedProposal);
-      final l10n = AppLocalizations.of(context)!;
       final content = result.isSuccess
           ? result.data!
           : (result.error ?? l10n.errorOccurred);
@@ -1075,8 +1075,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Future<void> _onRescheduleLesson(Session lesson) async {
     try {
-      final result = await _mentorService.suggestReschedule(lesson.id);
       final l10n = AppLocalizations.of(context)!;
+      final result = await _mentorService.suggestReschedule(lesson.id);
       final content = result.isSuccess
           ? result.data!
           : (result.error ?? l10n.errorOccurred);
