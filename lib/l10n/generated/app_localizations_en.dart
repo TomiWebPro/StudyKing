@@ -235,6 +235,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noWeakAreasFound => 'No weak areas found. Keep up the great work!';
 
   @override
+  String get noMasteryDataForSyllabus =>
+      'No mastery data for this syllabus yet.';
+
+  @override
   String get atRiskQuestions => 'At-Risk Questions';
 
   @override

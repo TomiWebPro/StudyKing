@@ -106,3 +106,12 @@ When the user changes their language in the Profile screen (`ref.read(localeProv
 
 - Always read `l10n` inside the `build` method or use `Consumer`/`ConsumerWidget` that re-reads on every build.
 - If stale text is observed after a locale switch, refactor to ensure `context` is fresh (e.g., via `Navigator.pushAndRemoveUntil` or by using `ref.watch(localeProvider)` at the widget root).
+
+## Closing Local Issues (Builders MUST do this)
+
+Issues are tracked ONLY locally under `issues/open/` and `issues/closed/`. Git is never used for issue tracking — only for code storage/commits. When you (a builder) finish fixing an issue AND have verified the reported bug no longer happens:
+
+1. Confirm the fix is real: the new/changed tests pass and the issue is actually resolved (do NOT treat "code changed" as "done").
+2. Move the file with a plain local move — never `git mv`, never commit the issue file:
+   `mv issues/open/<slug>.md issues/closed/<slug>.md`
+3. An issue left in `issues/open/` is considered NOT DONE. Never leave a verified fix sitting in open/. If no real change was made, leave it in open/ and report that.

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
@@ -7,17 +8,47 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class MasteryProgressCard extends StatelessWidget {
   final MasterySnapshot? snapshot;
 
-  const MasteryProgressCard({super.key, this.snapshot});
+  /// When provided, the card scopes its stats to this per-syllabus mastery
+  /// (multi-syllabus support) instead of the overall snapshot. The
+  /// [subjectTitle] is shown as a subtitle to make the active scope clear.
+  final List<MasteryState>? syllabusMastery;
+  final String? subjectTitle;
+
+  const MasteryProgressCard({
+    super.key,
+    this.snapshot,
+    this.syllabusMastery,
+    this.subjectTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final data = snapshot ?? const MasterySnapshot();
-    final totalTopics = data.totalTopics;
-    final masteredTopics = data.masteredTopics;
-    final weakTopics = data.weakTopics;
-    final avgAccuracy = data.averageAccuracy;
-    final avgReadiness = data.avgReadiness;
+    final filtered = syllabusMastery != null;
+    final masteryStates = syllabusMastery ?? const <MasteryState>[];
+
+    final totalTopics = filtered ? masteryStates.length : data.totalTopics;
+    final masteredTopics = filtered
+        ? masteryStates
+            .where((m) => m.masteryLevel.index >= MasteryLevel.proficient.index)
+            .length
+        : data.masteredTopics;
+    final weakTopics = filtered
+        ? masteryStates.where((m) => m.accuracy < 0.6).length
+        : data.weakTopics;
+    final avgAccuracy = filtered
+        ? (masteryStates.isNotEmpty
+            ? masteryStates.fold<double>(0, (s, m) => s + m.accuracy) /
+                masteryStates.length
+            : 0.0)
+        : data.averageAccuracy;
+    final avgReadiness = filtered
+        ? (masteryStates.isNotEmpty
+            ? masteryStates.fold<double>(0, (s, m) => s + m.readinessScore) /
+                masteryStates.length
+            : 0.0)
+        : data.avgReadiness;
     final masteryPercent = totalTopics > 0 ? masteredTopics / totalTopics : 0.0;
 
     final lastUpdated = data.lastUpdated;
@@ -25,22 +56,41 @@ class MasteryProgressCard extends StatelessWidget {
         ? DateTime.now().difference(lastUpdated).inDays
         : -1;
 
+    if (filtered && masteryStates.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _header(context, l10n),
+          const SizedBox(height: 12),
+          Center(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                l10n.noMasteryDataForSyllabus,
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Icon(Icons.analytics, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 8),
-            Semantics(
-              headingLevel: 3,
-              child: Text(
-                l10n.masteryOverview,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-            ),
-          ],
-        ),
+        _header(context, l10n),
+        if (filtered && subjectTitle != null) ...[
+          const SizedBox(height: 4),
+          Text(
+            subjectTitle!,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                ),
+          ),
+        ],
         if (daysSinceUpdate >= 3)
           Padding(
             padding: const EdgeInsets.only(top: 8),
@@ -135,5 +185,21 @@ class MasteryProgressCard extends StatelessWidget {
 
   Color _getProgressColor(BuildContext context, double value) {
     return AppTheme.progressColor(value, context);
+  }
+
+  Widget _header(BuildContext context, AppLocalizations l10n) {
+    return Row(
+      children: [
+        Icon(Icons.analytics, color: Theme.of(context).colorScheme.primary),
+        const SizedBox(width: 8),
+        Semantics(
+          headingLevel: 3,
+          child: Text(
+            l10n.masteryOverview,
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+        ),
+      ],
+    );
   }
 }

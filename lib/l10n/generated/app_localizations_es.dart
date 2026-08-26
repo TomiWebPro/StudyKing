@@ -238,6 +238,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'No se encontraron áreas por mejorar. ¡Siga así!';
 
   @override
+  String get noMasteryDataForSyllabus =>
+      'Aún no hay datos de dominio para este sílabo.';
+
+  @override
   String get atRiskQuestions => 'Preguntas en Riesgo';
 
   @override

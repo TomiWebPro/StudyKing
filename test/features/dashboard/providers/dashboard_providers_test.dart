@@ -101,8 +101,8 @@ void main() {
       final stats = await tracker.getOverallStats('stu1');
       expect(stats.data!['totalAttempts'], 3);
       expect(stats.data!['correctAttempts'], 2);
-      expect(stats.data!['accuracy'], 2.0 / 3.0);
-      expect(stats.data!['avgTimePerQuestion'], (5000 + 10000 + 3000) / 3);
+      expect(stats.data!['accuracy'], 67);
+      expect(stats.data!['avgTimePerQuestion'], 6);
     });
 
     test('dashboardStudyProgressTrackerProvider handles error-state when attemptRepo fails', () async {

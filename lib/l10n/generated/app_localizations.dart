@@ -422,6 +422,12 @@ abstract class AppLocalizations {
   /// **'No weak areas found. Keep up the great work!'**
   String get noWeakAreasFound;
 
+  /// Message shown on the mastery card when the selected syllabus has no recorded mastery
+  ///
+  /// In en, this message translates to:
+  /// **'No mastery data for this syllabus yet.'**
+  String get noMasteryDataForSyllabus;
+
   /// Title for at-risk practice mode
   ///
   /// In en, this message translates to:

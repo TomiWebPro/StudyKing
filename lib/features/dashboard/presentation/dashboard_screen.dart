@@ -323,7 +323,22 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                           dashboardMasterySnapshotProvider(studentId)),
                     ),
                     loadingSkeleton: _cardSkeleton(context),
-                    body: MasteryProgressCard(snapshot: snapshotData),
+                    body: MasteryProgressCard(
+                      snapshot: snapshotData,
+                      syllabusMastery: selectedSyllabus == null
+                          ? null
+                          : allMasteryData
+                              .where((m) =>
+                                  selectedSyllabusTopicIds?.contains(m.topicId) ??
+                                  false)
+                              .toList(),
+                      subjectTitle: selectedSyllabus == null
+                          ? null
+                          : syllabusBreakdown
+                              .where((b) => b.subjectId == selectedSyllabus)
+                              .firstOrNull
+                              ?.subjectTitle,
+                    ),
                   ),
                   SizedBox(height: vs),
                   _buildRemainingLessonsCard(context, studentId),

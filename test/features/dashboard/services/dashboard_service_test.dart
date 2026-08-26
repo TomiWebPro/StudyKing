@@ -549,7 +549,7 @@ void main() {
           sessionRepo: _FakeSessionRepo(returnNullData: true),
         );
         final stats = await service.getFocusStats();
-        expect(stats, isNull);
+        expect(stats.data, isNull);
       });
     });
 
@@ -612,7 +612,7 @@ void main() {
           topicRepo: _FakeTopicRepo(returnNullData: true),
         );
         final map = await service.getTopicNamesMap('s1');
-        expect(map, isEmpty);
+        expect(map.data, isEmpty);
       });
 
       test('handles null topic data with existing mastery states', () async {

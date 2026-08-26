@@ -36,6 +36,7 @@ import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider, spacedRepetitionServiceProvider;
@@ -51,6 +52,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   final bool _failAllMastery;
   final bool _failSnapshot;
   final bool _failInit;
+  final bool _throwOnGetAllMastery;
 
   _FakeMasteryGraphService({
     List<MasteryState>? allMastery,
@@ -58,11 +60,13 @@ class _FakeMasteryGraphService extends MasteryGraphService {
     bool failAllMastery = false,
     bool failSnapshot = false,
     bool failInit = false,
+    bool throwOnGetAllMastery = false,
   })  : _allMastery = allMastery,
         _snapshot = snapshot,
         _failAllMastery = failAllMastery,
         _failSnapshot = failSnapshot,
-        _failInit = failInit;
+        _failInit = failInit,
+        _throwOnGetAllMastery = throwOnGetAllMastery;
 
   @override
   Future<Result<void>> init() async {
@@ -72,6 +76,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
 
   @override
   Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    if (_throwOnGetAllMastery) throw Exception('getAllTopicMastery error');
     if (_failAllMastery) return Result.failure('fail');
     return Result.success(_allMastery ?? []);
   }
@@ -97,6 +102,7 @@ class _FakeProgressTracker extends StudyProgressTracker {
   final List<Map<String, dynamic>> _dailyTrend;
   final List<Map<String, dynamic>> _badges;
   final bool _failGetBadges;
+  final bool _throwOnGetDailyTrend;
 
   _FakeProgressTracker({
     Map<String, dynamic>? overallStats,
@@ -104,11 +110,13 @@ class _FakeProgressTracker extends StudyProgressTracker {
     List<Map<String, dynamic>> dailyTrend = const [],
     List<Map<String, dynamic>> badges = const [],
     bool failGetBadges = false,
+    bool throwOnGetDailyTrend = false,
   })  : _overallStats = overallStats,
         _weeklyTrend = weeklyTrend,
         _dailyTrend = dailyTrend,
         _badges = badges,
         _failGetBadges = failGetBadges,
+        _throwOnGetDailyTrend = throwOnGetDailyTrend,
         super(attemptRepo: _FakeAttemptRepo(), l10n: lookupAppLocalizations(const Locale('en')));
 
   @override
@@ -134,6 +142,7 @@ class _FakeProgressTracker extends StudyProgressTracker {
   @override
   Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days,
       {String? studentId}) async {
+    if (_throwOnGetDailyTrend) throw Exception('getDailyTrend error');
     return Result.success(_dailyTrend);
   }
 
@@ -224,6 +233,8 @@ ProviderContainer _createContainer({
   QuestionRepository? questionRepo,
   PlannerService? plannerServiceParam,
   SourceRepository? sourceRepo,
+  EngagementNudgeRepository? nudgeRepo,
+  bool stubDashboardInit = true,
 }) {
   return ProviderContainer(
     overrides: [
@@ -242,6 +253,8 @@ ProviderContainer _createContainer({
       engagementAdherenceRepoProvider.overrideWithValue(
         adherenceRepo ?? _FakePlanAdherenceRepo(),
       ),
+      if (stubDashboardInit)
+        dashboardInitProvider.overrideWith((ref) => Future.value()),
       if (sessionRepo != null)
         sessionRepositoryProvider.overrideWithValue(sessionRepo),
       if (srService != null)
@@ -252,6 +265,8 @@ ProviderContainer _createContainer({
         questionRepositoryProvider.overrideWithValue(questionRepo),
       if (sourceRepo != null)
         sourceRepositoryProvider.overrideWithValue(sourceRepo),
+      if (nudgeRepo != null)
+        engagementNudgeRepoProvider.overrideWithValue(nudgeRepo),
       if (plannerServiceParam != null)
         plannerServiceProvider.overrideWithValue(plannerServiceParam),
     ],
@@ -280,9 +295,12 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeSubjectRepo extends SubjectRepository {
   final List<Subject> _subjects;
+  final bool _throwOnGetAll;
   bool used = false;
 
-  _FakeSubjectRepo({List<Subject> subjects = const []}) : _subjects = subjects;
+  _FakeSubjectRepo({List<Subject> subjects = const [], bool throwOnGetAll = false})
+      : _subjects = subjects,
+        _throwOnGetAll = throwOnGetAll;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -290,6 +308,7 @@ class _FakeSubjectRepo extends SubjectRepository {
   @override
   Future<Result<List<Subject>>> getAll() async {
     used = true;
+    if (_throwOnGetAll) throw Exception('getAll error');
     return Result.success(_subjects);
   }
 }
@@ -310,13 +329,23 @@ class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
 }
 
 class _FakeSourceRepo extends SourceRepository {
+  final bool _throwOnGetByStudent;
   bool used = false;
+
+  _FakeSourceRepo({bool throwOnGetByStudent = false})
+      : _throwOnGetByStudent = throwOnGetByStudent;
 
   @override
   Future<List<Source>> getByStudent(String studentId) async {
     used = true;
+    if (_throwOnGetByStudent) throw Exception('getByStudent error');
     return [];
   }
+}
+
+class _FakeNudgeRepo extends EngagementNudgeRepository {
+  @override
+  Future<void> init() async => Future.value();
 }
 
 class _FakeFocusSessionRepo extends FocusSessionRepository {
@@ -561,16 +590,35 @@ void main() {
   });
 
   group('dashboardInitProvider', () {
-    test('enters error state when a service init fails', () async {
-      final masteryService = _FakeMasteryGraphService(failInit: true);
-      final container = _createContainer(masteryService: masteryService);
+    test('degrades gracefully when a service init fails', () async {
+      final masteryService = _FakeMasteryGraphService(
+        failInit: true,
+        allMastery: [
+          MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            accuracy: 0.8,
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+          ),
+        ],
+      );
+      final container = _createContainer(
+        masteryService: masteryService,
+        nudgeRepo: _FakeNudgeRepo(),
+        stubDashboardInit: false,
+      );
       addTearDown(container.dispose);
 
-      await expectLater(
-        container.read(dashboardInitProvider.future),
-        throwsA(isA<Exception>()),
-      );
-      expect(container.read(dashboardInitProvider).hasError, isTrue);
+      // The dashboard must not crash if one init step fails; the future
+      // should complete and remain usable.
+      await container.read(dashboardInitProvider.future);
+      expect(container.read(dashboardInitProvider).hasError, isFalse);
+
+      // Downstream providers still function using their injected services.
+      final mastery =
+          await container.read(dashboardAllMasteryProvider('s1').future);
+      expect(mastery, isNotEmpty);
     });
   });
 
@@ -902,7 +950,8 @@ void main() {
     });
 
     test('returns null on error', () async {
-      final container = ProviderContainer();
+      final masteryService = _FakeMasteryGraphService(throwOnGetAllMastery: true);
+      final container = _createContainer(masteryService: masteryService);
       addTearDown(container.dispose);
 
       final result = await container.read(dashboardWorkloadProvider('s1').future);
@@ -911,8 +960,9 @@ void main() {
   });
 
   group('dashboardSourceCountProvider', () {
-    test('returns 0 when Hive is not initialized (error path)', () async {
-      final container = ProviderContainer();
+    test('returns 0 when source repository fails', () async {
+      final sourceRepo = _FakeSourceRepo(throwOnGetByStudent: true);
+      final container = _createContainer(sourceRepo: sourceRepo);
       addTearDown(container.dispose);
 
       final result = await container.read(dashboardSourceCountProvider('s1').future);
@@ -1080,8 +1130,15 @@ void main() {
   });
 
   group('dashboardChecklistProgressProvider', () {
-    test('returns default ChecklistProgress when Hive is not initialized', () async {
-      final container = ProviderContainer();
+    test('returns default ChecklistProgress when repositories fail', () async {
+      final subjectRepo = _FakeSubjectRepo(throwOnGetAll: true);
+      final sourceRepo = _FakeSourceRepo(throwOnGetByStudent: true);
+      final sessionRepo = _FakeSessionRepo(throwOnGetByDate: true);
+      final container = _createContainer(
+        subjectRepo: subjectRepo,
+        sourceRepo: sourceRepo,
+        sessionRepo: sessionRepo,
+      );
       addTearDown(container.dispose);
 
       final result = await container.read(dashboardChecklistProgressProvider('s1').future);
@@ -1195,11 +1252,8 @@ void main() {
     });
 
     test('returns empty list when tracker fails', () async {
-      final container = ProviderContainer(
-        overrides: [
-          dashboardInitProvider.overrideWith((ref) => Future.value()),
-        ],
-      );
+      final tracker = _FakeProgressTracker(throwOnGetDailyTrend: true);
+      final container = _createContainer(tracker: tracker);
       addTearDown(container.dispose);
 
       final result = await container.read(dashboardDailyTrendProvider('s1').future);

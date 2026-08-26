@@ -272,6 +272,10 @@
   "@noWeakAreasFound": {
     "description": "Message shown when the user has no weak topics"
   },
+  "noMasteryDataForSyllabus": "Aún no hay datos de dominio para este sílabo.",
+  "@noMasteryDataForSyllabus": {
+    "description": "Message shown on the mastery card when the selected syllabus has no recorded mastery"
+  },
   "atRiskQuestions": "Preguntas en Riesgo",
   "@atRiskQuestions": {
     "description": "Title for at-risk practice mode"

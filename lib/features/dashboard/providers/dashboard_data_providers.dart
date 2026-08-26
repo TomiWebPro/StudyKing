@@ -27,13 +27,22 @@ import 'package:studyking/core/providers/service_providers.dart' show learningMe
 final _dashboardLogger = const Logger('DashboardDataProviders');
 
 final dashboardInitProvider = FutureProvider<void>((ref) async {
-  await Future.wait([
-    ref.watch(masteryGraphServiceProvider).init(),
-    ref.watch(dashboardInstrumentationServiceProvider).init(),
-    ref.watch(topicRepositoryProvider).init(),
-    ref.watch(engagementAdherenceRepoProvider).init(),
-    ref.watch(engagementNudgeRepoProvider).init(),
-  ]);
+  final initSteps = [
+    () => ref.watch(masteryGraphServiceProvider).init(),
+    () => ref.watch(dashboardInstrumentationServiceProvider).init(),
+    () => ref.watch(topicRepositoryProvider).init(),
+    () => ref.watch(engagementAdherenceRepoProvider).init(),
+    () => ref.watch(engagementNudgeRepoProvider).init(),
+  ];
+  for (final step in initSteps) {
+    try {
+      await step().then<void>((_) {}, onError: (e, st) {
+        _dashboardLogger.w('Dashboard init step failed; continuing', e, st);
+      });
+    } catch (e, st) {
+      _dashboardLogger.w('Dashboard init step failed; continuing', e, st);
+    }
+  }
 });
 
 final dashboardAllMasteryProvider =
