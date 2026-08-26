@@ -29,6 +29,7 @@ import 'package:studyking/features/dashboard/presentation/widgets/workload_card.
 import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/learning_insights_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/lessons_needing_review_card.dart';
 import 'package:studyking/features/focus_mode/presentation/widgets/session_summary_card.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/services/mastery_remaining_lessons_estimator.dart';
@@ -185,6 +186,8 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               _buildPlannerCard(context),
               SizedBox(height: vs),
               _buildSourcesCard(context, asyncSnapshot),
+              SizedBox(height: vs),
+              LessonsNeedingReviewCard(studentId: studentId),
               SizedBox(height: vs),
               if (isFirstRun) ...[
                 SizedBox(height: vs),

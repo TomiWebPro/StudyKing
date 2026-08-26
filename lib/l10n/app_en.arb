@@ -8027,6 +8027,14 @@
   "@feedbackTargetContent": {
     "description": "Label for feedback whose target is general AI content"
   },
+  "lessonsNeedingReviewTitle": "Lessons needing review",
+  "@lessonsNeedingReviewTitle": {
+    "description": "Heading for the dashboard card listing lessons flagged for review"
+  },
+  "lessonsNeedingReviewEmpty": "No lessons flagged for review",
+  "@lessonsNeedingReviewEmpty": {
+    "description": "Empty-state message for the dashboard card listing lessons flagged for review"
+  },
   "mentorReportedFeedbackHeading": "Reported AI content",
   "@mentorReportedFeedbackHeading": {
     "description": "Heading for the mentor panel that surfaces student-reported incorrect content"

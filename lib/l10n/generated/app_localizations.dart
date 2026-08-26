@@ -10017,6 +10017,18 @@ abstract class AppLocalizations {
   /// **'Content'**
   String get feedbackTargetContent;
 
+  /// Heading for the dashboard card listing lessons flagged for review
+  ///
+  /// In en, this message translates to:
+  /// **'Lessons needing review'**
+  String get lessonsNeedingReviewTitle;
+
+  /// Empty-state message for the dashboard card listing lessons flagged for review
+  ///
+  /// In en, this message translates to:
+  /// **'No lessons flagged for review'**
+  String get lessonsNeedingReviewEmpty;
+
   /// Heading for the mentor panel that surfaces student-reported incorrect content
   ///
   /// In en, this message translates to:

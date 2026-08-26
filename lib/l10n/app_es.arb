@@ -8006,6 +8006,14 @@
   "@feedbackTargetContent": {
     "description": "Label for feedback whose target is general AI content"
   },
+  "lessonsNeedingReviewTitle": "Lecciones que necesitan revisión",
+  "@lessonsNeedingReviewTitle": {
+    "description": "Heading for the dashboard card listing lessons flagged for review"
+  },
+  "lessonsNeedingReviewEmpty": "No hay lecciones marcadas para revisión",
+  "@lessonsNeedingReviewEmpty": {
+    "description": "Empty-state message for the dashboard card listing lessons flagged for review"
+  },
   "mentorReportedFeedbackHeading": "Contenido de IA reportado",
   "@mentorReportedFeedbackHeading": {
     "description": "Heading for the mentor panel that surfaces student-reported incorrect content"

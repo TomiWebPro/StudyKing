@@ -14,6 +14,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_feedback_repository.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -30,6 +31,7 @@ import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
+import 'feedback_analyzer.dart';
 
 class TutorService {
   static final Logger _logger = const Logger('TutorService');
@@ -46,6 +48,8 @@ class TutorService {
   final LessonRecapService _lessonRecapService;
   final VoiceService? _voiceService;
   final LongTermMemory? _longTermMemory;
+  final LessonFeedbackRepository _feedbackRepository;
+  late final FeedbackAnalyzer _feedbackAnalyzer;
   LlmAgent? _llmAgent;
   ConversationManager? _currentManager;
   String? _scheduledSessionId;
@@ -67,6 +71,7 @@ class TutorService {
     VoiceService? voiceService,
     LlmAgent? llmAgent,
     LongTermMemory? longTermMemory,
+    LessonFeedbackRepository? feedbackRepository,
     Clock? clock,
   })  : _database = database,
         _llmService = llmService,
@@ -87,7 +92,10 @@ class TutorService {
         _voiceService = voiceService,
         _llmAgent = llmAgent,
         _longTermMemory = longTermMemory,
-        _clock = clock ?? SystemClock();
+        _feedbackRepository = feedbackRepository ?? LessonFeedbackRepository(),
+        _clock = clock ?? SystemClock() {
+    _feedbackAnalyzer = FeedbackAnalyzer(_feedbackRepository);
+  }
 
   ConversationManager? get currentManager => _currentManager;
 
@@ -162,6 +170,14 @@ class TutorService {
 
     try {
       await manager.initialize();
+
+      final noteResult = await _feedbackAnalyzer.buildTutorContextNote(studentId);
+      noteResult.fold(
+        (note) {
+          if (note.isNotEmpty) manager.feedbackContext = note;
+        },
+        (error) => _logger.w('Failed to build tutor feedback context', error),
+      );
 
       final lessonPlan = await manager.generateLessonPlan(
         durationMinutes: actualDuration,

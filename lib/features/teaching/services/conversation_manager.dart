@@ -52,6 +52,10 @@ class ConversationManager {
   final DateTime sessionStartTime;
   final LearningPreference? learningPreferences;
 
+  /// Optional note built from the student's past lesson-quality feedback,
+  /// injected into the tutor system prompt so the tutor can adapt its style.
+  String? feedbackContext;
+
   ConversationPhase phase = ConversationPhase.greeting;
   int exerciseCount = 0;
   int correctCount = 0;
@@ -254,6 +258,7 @@ class ConversationManager {
       phase: phase,
       scheduledSessionId: scheduledSessionId,
       learningPreferences: learningPreferences,
+      feedbackContext: feedbackContext,
     );
 
     try {
