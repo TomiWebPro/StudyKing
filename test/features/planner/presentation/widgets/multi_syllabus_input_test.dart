@@ -1,15 +1,59 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/presentation/widgets/multi_syllabus_input.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-Widget buildApp(Widget widget) {
-  return MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
-    home: Scaffold(body: widget),
+class FakeTopicRepository extends TopicRepository {
+  FakeTopicRepository({this.topicCount = 0, this.initFails = false});
+
+  final int topicCount;
+  final bool initFails;
+
+  bool initCalled = false;
+
+  @override
+  Future<Result<void>> init() async {
+    initCalled = true;
+    if (initFails) return Result.failure('boom');
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
+    return Result.success(List.generate(
+      topicCount,
+      (i) => Topic(
+        id: '$subjectId-$i',
+        subjectId: subjectId,
+        title: 'Topic $i',
+        description: '',
+        syllabusText: '',
+      ),
+    ));
+  }
+}
+
+Widget buildApp(
+  Widget widget, {
+  TopicRepository? topicRepository,
+}) {
+  return ProviderScope(
+    overrides: [
+      if (topicRepository != null)
+        topicRepositoryProvider.overrideWithValue(topicRepository),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(body: widget),
+    ),
   );
 }
 
@@ -111,6 +155,61 @@ void main() {
       // Tap the first remove button
       await tester.tap(find.byIcon(Icons.remove_circle_outline).first);
       expect(removeIndex, 0);
+    });
+
+    testWidgets('shows topic count for selected subject and reuses the repository',
+        (tester) async {
+      final fake = FakeTopicRepository(topicCount: 3);
+      final entry = SyllableEntry()..selectedSubjectId = 's1';
+      await tester.pumpWidget(buildApp(
+        MultiSyllabusInput(
+          entries: [entry],
+          allSubjects: _createSubjects(),
+          onAddEntry: () {},
+          onRemoveEntry: (_) {},
+          onSubjectChanged: (_, __) {},
+        ),
+        topicRepository: fake,
+      ));
+
+      await tester.pumpAndSettle();
+      expect(find.text('3 topics'), findsOneWidget);
+
+      // Rebuild the widget; the shared repository init must not be re-invoked.
+      await tester.pumpWidget(buildApp(
+        MultiSyllabusInput(
+          entries: [entry],
+          allSubjects: _createSubjects(),
+          onAddEntry: () {},
+          onRemoveEntry: (_) {},
+          onSubjectChanged: (_, __) {},
+        ),
+        topicRepository: fake,
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('3 topics'), findsOneWidget);
+      // init is called once (cached future), not on every rebuild.
+      expect(fake.initCalled, isTrue);
+    });
+
+    testWidgets('falls back to 0 topics when repository init fails',
+        (tester) async {
+      final fake = FakeTopicRepository(initFails: true);
+      final entry = SyllableEntry()..selectedSubjectId = 's1';
+      await tester.pumpWidget(buildApp(
+        MultiSyllabusInput(
+          entries: [entry],
+          allSubjects: _createSubjects(),
+          onAddEntry: () {},
+          onRemoveEntry: (_) {},
+          onSubjectChanged: (_, __) {},
+        ),
+        topicRepository: fake,
+      ));
+
+      await tester.pumpAndSettle();
+      expect(find.text('0 topics'), findsOneWidget);
     });
   });
 }

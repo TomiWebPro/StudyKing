@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
 
 class SyllableEntry {
@@ -22,7 +24,7 @@ class SyllableEntry {
   }
 }
 
-class MultiSyllabusInput extends StatelessWidget {
+class MultiSyllabusInput extends ConsumerStatefulWidget {
   final List<SyllableEntry> entries;
   final List<Subject> allSubjects;
   final VoidCallback onAddEntry;
@@ -39,13 +41,52 @@ class MultiSyllabusInput extends StatelessWidget {
   });
 
   @override
+  ConsumerState<MultiSyllabusInput> createState() => _MultiSyllabusInputState();
+}
+
+class _MultiSyllabusInputState extends ConsumerState<MultiSyllabusInput> {
+  static final _logger = Logger('MultiSyllabusInput');
+
+  // Cache futures per subject so the repository (and its box open) is only
+  // initialized once per subject, not on every rebuild of the row.
+  final Map<String, Future<int>> _topicCountCache = {};
+
+  Future<int> _getTopicCount(String subjectId) {
+    return _topicCountCache.putIfAbsent(subjectId, () async {
+      try {
+        final topicRepo = ref.read(topicRepositoryProvider);
+        final initResult = await topicRepo.init();
+        if (initResult.isFailure) {
+          _logger.w(
+            'Failed to get topic count: could not open topic repository',
+            initResult.error,
+          );
+          return 0;
+        }
+        final result = await topicRepo.getBySubject(subjectId);
+        if (result.isFailure) {
+          _logger.w(
+            'Failed to get topic count for subject $subjectId',
+            result.error,
+          );
+          return 0;
+        }
+        return result.data?.length ?? 0;
+      } catch (e) {
+        _logger.w('Failed to get topic count', e);
+        return 0;
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        ...entries.asMap().entries.map((entry) {
+        ...widget.entries.asMap().entries.map((entry) {
           final index = entry.key;
           final e = entry.value;
           return Card(
@@ -67,20 +108,20 @@ class MultiSyllabusInput extends StatelessWidget {
                           hint: Text(l10n.courseHint),
                           isExpanded: true,
                           items: [
-                            ...allSubjects.map((s) => DropdownMenuItem(
+                            ...widget.allSubjects.map((s) => DropdownMenuItem(
                               value: s.id,
                               child: Text(s.name, overflow: TextOverflow.ellipsis),
                             )),
                           ],
-                          onChanged: (v) => onSubjectChanged(index, v),
+                          onChanged: (v) => widget.onSubjectChanged(index, v),
                         ),
                       ),
                       const SizedBox(width: 8),
                       IconButton(
                         icon: Icon(Icons.remove_circle_outline, color: Theme.of(context).colorScheme.error),
                         tooltip: l10n.delete,
-                        onPressed: entries.length > 1
-                            ? () => onRemoveEntry(index)
+                        onPressed: widget.entries.length > 1
+                            ? () => widget.onRemoveEntry(index)
                             : null,
                       ),
                     ],
@@ -139,20 +180,9 @@ class MultiSyllabusInput extends StatelessWidget {
         TextButton.icon(
           icon: const Icon(Icons.add),
           label: Text(l10n.addCourseSubject),
-          onPressed: onAddEntry,
+          onPressed: widget.onAddEntry,
         ),
       ],
     );
-  }
-
-  Future<int> _getTopicCount(String subjectId) async {
-    try {
-      final topicRepo = TopicRepository();
-      await topicRepo.init();
-      final result = await topicRepo.getBySubject(subjectId);
-      return result.data?.length ?? 0;
-    } catch (e) {
-      return 0;
-    }
   }
 }
