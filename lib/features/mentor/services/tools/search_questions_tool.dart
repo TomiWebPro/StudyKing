@@ -1,5 +1,6 @@
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class SearchQuestionsTool extends AgentTool {
@@ -38,7 +39,7 @@ class SearchQuestionsTool extends AgentTool {
     final keyword = args['keyword'] as String?;
     final limit = (args['limit'] as num?)?.toInt() ?? 10;
 
-    List<dynamic> questions = [];
+    List<Question> questions = [];
     if (subjectId != null && subjectId.isNotEmpty) {
       final result = await _questionRepo.getBySubject(subjectId);
       questions = result.data ?? [];

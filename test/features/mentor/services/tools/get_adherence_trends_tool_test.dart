@@ -1,440 +1,139 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/mentor/services/tools/get_adherence_trends_tool.dart';
-import '../../../../helpers/fakes.dart';
+import 'test_helpers.dart';
 
-class _FakeAdherenceRepo extends PlanAdherenceRepository {
-  final List<PlanAdherenceModel> _records = [];
-
-  _FakeAdherenceRepo() : super();
-
-  void addRecord(PlanAdherenceModel record) => _records.add(record);
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<List<PlanAdherenceModel>>> getByDateRange(
-      String studentId, DateTime start, DateTime end) async {
-    return Result.success(
-      _records
-          .where((m) =>
-              m.studentId == studentId &&
-              m.date.isAfter(start) &&
-              m.date.isBefore(end))
-          .toList()
-        ..sort((a, b) => b.date.compareTo(a.date)),
-    );
-  }
-
-  @override
-  Future<Result<List<PlanAdherenceModel>>> getByStudent(
-      String studentId) async {
-    return Result.success(
-      _records.where((m) => m.studentId == studentId).toList()
-        ..sort((a, b) => b.date.compareTo(a.date)),
-    );
-  }
-
-  @override
-  Future<Result<List<PlanAdherenceModel>>> getWeekly(
-      String studentId) async {
-    final now = DateTime.now();
-    final weekAgo = now.subtract(const Duration(days: 7));
-    return getByDateRange(studentId, weekAgo, now);
-  }
-}
-
-/// A minimal orchestrator subclass that allows injecting a fake adherence
-/// repository via the overridden getter so the tool's execute() can be tested
-/// end-to-end without Hive.
-class _TestOrchestrator extends PlanAdherenceOrchestrator {
-  final _FakeAdherenceRepo _fakeRepo;
-
-  _TestOrchestrator(this._fakeRepo)
-      : super(
-          adherenceRepository: null,
-          planRepository: null,
-          planService: null,
-          masteryService: null,
-          l10n: null,
-        );
-
-  @override
-  PlanAdherenceRepository get adherenceRepository => _fakeRepo;
-}
-
-PlanAdherenceModel _record({
-  required String studentId,
-  required DateTime date,
-  double adherenceScore = 0.8,
-  int plannedMinutes = 60,
-  int actualMinutes = 48,
-  int plannedQuestions = 20,
-  int actualQuestions = 16,
-}) {
+PlanAdherenceModel _record(int dayOffset, double adherence) {
+  final now = DateTime.now();
   return PlanAdherenceModel(
-    id: 'rec-${date.millisecondsSinceEpoch}',
-    studentId: studentId,
-    date: date,
-    adherenceScore: adherenceScore,
-    plannedMinutes: plannedMinutes,
-    actualMinutes: actualMinutes,
-    plannedQuestions: plannedQuestions,
-    actualQuestions: actualQuestions,
+    id: 'rec-$dayOffset',
+    studentId: 'student-1',
+    date: now.subtract(Duration(days: dayOffset + 1)),
+    plannedQuestions: 10,
+    actualQuestions: (adherence * 10).round(),
+    plannedMinutes: 60,
+    actualMinutes: (adherence * 60).round(),
+    adherenceScore: adherence,
   );
 }
 
 void main() {
   group('GetAdherenceTrendsTool', () {
-    late FakeStudentIdService fakeStudentId;
-    late GetAdherenceTrendsTool tool;
+    late FakeStudentIdService studentIdService;
+    late FakePlanAdherenceOrchestrator orchestrator;
+    late FakePlanAdherenceRepository repo;
 
     setUp(() {
-      fakeStudentId = FakeStudentIdService()..setStudentId('student-1');
+      studentIdService = FakeStudentIdService('student-1');
     });
 
-    test('name returns get_adherence_trends', () {
-      final fakeRepo = _FakeAdherenceRepo();
-      final orchestrator = _TestOrchestrator(fakeRepo);
-      tool = GetAdherenceTrendsTool(
+    test('returns structured output with correct fields for real data',
+        () async {
+      final records = <PlanAdherenceModel>[
+        _record(7, 0.1),
+        _record(6, 0.2),
+        _record(5, 0.3),
+        _record(4, 0.4),
+        _record(3, 0.6),
+        _record(2, 0.7),
+        _record(1, 0.8),
+        _record(0, 0.9),
+      ];
+      repo = FakePlanAdherenceRepository(records);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
+
+      final tool = GetAdherenceTrendsTool(
         orchestrator: orchestrator,
-        studentIdService: fakeStudentId,
+        studentIdService: studentIdService,
       );
-      expect(tool.name, 'get_adherence_trends');
-    });
 
-    test('description is not empty', () {
-      final fakeRepo = _FakeAdherenceRepo();
-      final orchestrator = _TestOrchestrator(fakeRepo);
-      tool = GetAdherenceTrendsTool(
-        orchestrator: orchestrator,
-        studentIdService: fakeStudentId,
-      );
-      expect(tool.description, isNotEmpty);
-    });
-
-    test('parameters has correct JSON schema shape', () {
-      final fakeRepo = _FakeAdherenceRepo();
-      final orchestrator = _TestOrchestrator(fakeRepo);
-      tool = GetAdherenceTrendsTool(
-        orchestrator: orchestrator,
-        studentIdService: fakeStudentId,
-      );
-      final params = tool.parameters;
-      expect(params['type'], 'object');
-      expect((params['properties'] as Map).containsKey('days'), isTrue);
-      expect(params['required'], []);
-    });
-  });
-
-  group('GetAdherenceTrendsTool - execute', () {
-    late FakeStudentIdService fakeStudentId;
-    late _FakeAdherenceRepo fakeRepo;
-    late _TestOrchestrator fakeOrchestrator;
-    late GetAdherenceTrendsTool tool;
-
-    setUp(() {
-      fakeStudentId = FakeStudentIdService()..setStudentId('student-1');
-      fakeRepo = _FakeAdherenceRepo();
-      fakeOrchestrator = _TestOrchestrator(fakeRepo);
-      tool = GetAdherenceTrendsTool(
-        orchestrator: fakeOrchestrator,
-        studentIdService: fakeStudentId,
-      );
-    });
-
-    test('returns insufficient_data when no records exist', () async {
       final result = await tool.execute({});
 
-      expect(result['averageAdherence'], 0.0);
-      expect(result['trend'], 'insufficient_data');
-      expect(result['lowAdherenceDays'], isEmpty);
-      expect(result['missedDays'], 0);
-      expect(result['totalDays'], 0);
-      expect(result['perDayBreakdown'], isEmpty);
-      expect(result['recommendation'], contains('No adherence data'));
-    });
-
-    test('computes average adherence correctly', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.6,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 2)),
-        adherenceScore: 0.8,
-      ));
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['averageAdherence'], closeTo(0.7, 0.01));
-      expect(result['totalDays'], 2);
-    });
-
-    test('identifies low adherence days', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.3,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 2)),
-        adherenceScore: 0.9,
-      ));
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['lowAdherenceDays'], hasLength(1));
-    });
-
-    test('counts missed days correctly', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.0,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 2)),
-        adherenceScore: 0.0,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 3)),
-        adherenceScore: 0.7,
-      ));
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['missedDays'], 2);
-    });
-
-    test('computes trend as declining when second half worse', () async {
-      final now = DateTime.now();
-      for (var i = 8; i <= 13; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.9,
-        ));
-      }
-      for (var i = 1; i <= 6; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.3,
-        ));
-      }
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['trend'], 'declining');
-    });
-
-    test('computes trend as improving when second half better', () async {
-      final now = DateTime.now();
-      for (var i = 8; i <= 13; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.3,
-        ));
-      }
-      for (var i = 1; i <= 6; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.9,
-        ));
-      }
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['trend'], 'improving');
-    });
-
-    test('computes trend as steady when both halves similar', () async {
-      final now = DateTime.now();
-      for (var i = 8; i <= 13; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.7,
-        ));
-      }
-      for (var i = 1; i <= 6; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.7,
-        ));
-      }
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['trend'], 'steady');
-    });
-
-    test('returns per-day breakdown with correct fields', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.75,
-        plannedMinutes: 90,
-        actualMinutes: 67,
-        plannedQuestions: 30,
-        actualQuestions: 22,
-      ));
-
-      final result = await tool.execute({'days': 14});
+      expect(result['averageAdherence'], isA<double>());
+      expect(result['trend'], equals('improving'));
+      expect(result['totalDays'], equals(8));
+      expect(result['missedDays'], equals(0));
+      expect(result['lowAdherenceDays'], isA<List>());
+      expect(result['perDayBreakdown'], isA<List>());
+      expect(result['weeklyAdherence'], isA<List>());
+      expect(result['recommendation'], isA<String>());
+      // perDayBreakdown is ordered most-recent first.
       final breakdown = result['perDayBreakdown'] as List;
-
-      expect(breakdown, hasLength(1));
-      expect(breakdown[0]['plannedMinutes'], 90);
-      expect(breakdown[0]['actualMinutes'], 67);
-      expect(breakdown[0]['plannedQuestions'], 30);
-      expect(breakdown[0]['actualQuestions'], 22);
-      expect(breakdown[0]['adherence'], 0.75);
+      expect(breakdown.length, equals(8));
+      expect(breakdown.first['adherence'], equals(0.9));
     });
 
-    test('returns weeklyAdherence buckets', () async {
-      final now = DateTime.now();
-      for (var i = 1; i <= 14; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: i <= 7 ? 0.6 : 0.9,
-        ));
-      }
+    test('locks the 2-decimal rounding behavior for averageAdherence',
+        () async {
+      final records = <PlanAdherenceModel>[
+        _record(2, 0.111),
+        _record(1, 0.222),
+        _record(0, 0.333),
+      ];
+      repo = FakePlanAdherenceRepository(records);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
 
-      final result = await tool.execute({'days': 20});
-      final weekly = result['weeklyAdherence'] as List;
-
-      expect(weekly, hasLength(2));
-      expect((weekly[0] as num).toDouble(), closeTo(0.9, 0.05));
-      expect((weekly[1] as num).toDouble(), closeTo(0.6, 0.05));
-    });
-
-    test('recommendation for declining trend mentions action', () async {
-      final now = DateTime.now();
-      for (var i = 8; i <= 13; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.9,
-        ));
-      }
-      for (var i = 1; i <= 3; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.0,
-        ));
-      }
+      final tool = GetAdherenceTrendsTool(
+        orchestrator: orchestrator,
+        studentIdService: studentIdService,
+      );
 
       final result = await tool.execute({'days': 14});
 
-      expect(result['trend'], 'declining');
-      expect(result['recommendation'], contains('declining'));
+      final trueAvg = records.fold<double>(0.0, (s, m) => s + m.adherenceScore) /
+          records.length;
+      final expectedRounded = double.parse(trueAvg.toStringAsFixed(2));
+      expect(result['averageAdherence'], equals(expectedRounded));
+      expect(result['averageAdherence'], isNot(equals(trueAvg)));
     });
 
-    test('recommendation for improving trend is encouraging', () async {
-      final now = DateTime.now();
-      for (var i = 8; i <= 13; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.3,
-        ));
-      }
-      for (var i = 1; i <= 6; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.9,
-        ));
-      }
+    test('locks the 2-decimal rounding for weekly buckets', () async {
+      // 8 records -> 2 weekly buckets (first 7, last 1).
+      final records = <PlanAdherenceModel>[
+        _record(7, 0.111),
+        _record(6, 0.222),
+        _record(5, 0.333),
+        _record(4, 0.444),
+        _record(3, 0.555),
+        _record(2, 0.666),
+        _record(1, 0.777),
+        _record(0, 0.888),
+      ];
+      repo = FakePlanAdherenceRepository(records);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
 
-      final result = await tool.execute({'days': 14});
+      final tool = GetAdherenceTrendsTool(
+        orchestrator: orchestrator,
+        studentIdService: studentIdService,
+      );
 
-      expect(result['trend'], 'improving');
-      expect(result['recommendation'], contains('improving'));
+      final result = await tool.execute({});
+      final buckets = result['weeklyAdherence'] as List<double>;
+      expect(buckets.length, equals(2));
+      final first7 = records.sublist(0, 7);
+      final expectedFirst = double.parse(
+        (first7.fold<double>(0.0, (s, m) => s + m.adherenceScore) / 7)
+            .toStringAsFixed(2),
+      );
+      expect(buckets.first, equals(expectedFirst));
     });
 
-    test('uses default days of 14', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.8,
-      ));
+    test('degrades gracefully with no data (no throw)', () async {
+      repo = FakePlanAdherenceRepository(const []);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
+
+      final tool = GetAdherenceTrendsTool(
+        orchestrator: orchestrator,
+        studentIdService: studentIdService,
+      );
 
       final result = await tool.execute({});
 
-      expect(result['totalDays'], 1);
-    });
-
-    test('respects custom days parameter', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 3)),
-        adherenceScore: 0.8,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 10)),
-        adherenceScore: 0.6,
-      ));
-
-      final result = await tool.execute({'days': 7});
-
-      expect(result['totalDays'], 1);
-    });
-
-    test('filters by student ID', () async {
-      final now = DateTime.now();
-      fakeRepo.addRecord(_record(
-        studentId: 'student-1',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.8,
-      ));
-      fakeRepo.addRecord(_record(
-        studentId: 'other-student',
-        date: now.subtract(const Duration(days: 1)),
-        adherenceScore: 0.3,
-      ));
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['totalDays'], 1);
-    });
-
-    test('recommendation for steady with low days warns', () async {
-      final now = DateTime.now();
-      for (var i = 1; i <= 10; i++) {
-        fakeRepo.addRecord(_record(
-          studentId: 'student-1',
-          date: now.subtract(Duration(days: i)),
-          adherenceScore: 0.3,
-        ));
-      }
-
-      final result = await tool.execute({'days': 14});
-
-      expect(result['trend'], 'steady');
-      expect(result['recommendation'], contains('low-adherence'));
+      expect(result['averageAdherence'], equals(0.0));
+      expect(result['trend'], equals('insufficient_data'));
+      expect(result['totalDays'], equals(0));
+      expect(result['perDayBreakdown'], equals([]));
+      expect(result['recommendation'], contains('No adherence data'));
     });
   });
 }

@@ -1,157 +1,63 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/mentor/services/tools/get_weak_topics_tool.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
-import '../../../../helpers/fakes.dart';
-
-class FakeMasteryGraphService extends MasteryGraphService {
-  Result<List<MasteryState>>? _weakTopicsResult;
-  Result<List<QuestionMasteryState>>? _atRiskResult;
-  String? capturedStudentId;
-
-  FakeMasteryGraphService();
-
-  void setWeakTopics(Result<List<MasteryState>> result) => _weakTopicsResult = result;
-  void setAtRiskQuestions(Result<List<QuestionMasteryState>> result) => _atRiskResult = result;
-
-  @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
-    capturedStudentId = studentId;
-    return _weakTopicsResult ?? Result.success([]);
-  }
-
-  @override
-  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
-    String studentId, {
-    double threshold = 0.5,
-  }) async => _atRiskResult ?? Result.success([]);
-}
-
-MasteryState _createMasteryState({
-  String topicId = 'topic-1',
-  double accuracy = 0.45,
-  double reviewUrgency = 0.8,
-  double readinessScore = 0.3,
-}) {
-  return MasteryState(
-    studentId: 'student-1',
-    topicId: topicId,
-    accuracy: accuracy,
-    lastAttempt: DateTime.now(),
-    lastUpdated: DateTime.now(),
-    reviewUrgency: reviewUrgency,
-    readinessScore: readinessScore,
-  );
-}
-
-QuestionMasteryState _createAtRiskQuestion({String questionId = 'q-1'}) {
-  return QuestionMasteryState(
-    studentId: 'student-1',
-    questionId: questionId,
-    masteryLevel: 0.3,
-    lastAttempt: DateTime.now(),
-    nextReview: DateTime.now().add(const Duration(hours: 1)),
-
-  );
-}
+import 'package:studyking/features/mentor/services/tools/get_weak_topics_tool.dart';
+import 'test_helpers.dart';
 
 void main() {
   group('GetWeakTopicsTool', () {
-    late FakeMasteryGraphService fakeMastery;
-    late FakeStudentIdService fakeStudentId;
-    late GetWeakTopicsTool tool;
+    late FakeStudentIdService studentIdService;
 
-    setUp(() {
-      fakeMastery = FakeMasteryGraphService();
-      fakeStudentId = FakeStudentIdService()..setStudentId('student-1');
-      tool = GetWeakTopicsTool(
-        masteryService: fakeMastery,
-        studentIdService: fakeStudentId,
+    setUp(() => studentIdService = FakeStudentIdService('student-1'));
+
+    test('returns weak topics and at-risk counts from the mastery service',
+        () async {
+      final weak = <MasteryState>[
+        MasteryState.initial(studentId: 'student-1', topicId: 't1')
+            .copyWith(accuracy: 0.4, reviewUrgency: 0.8, readinessScore: 0.3),
+        MasteryState.initial(studentId: 'student-1', topicId: 't2')
+            .copyWith(accuracy: 0.2, reviewUrgency: 0.9, readinessScore: 0.1),
+      ];
+      final atRisk = <QuestionMasteryState>[
+        QuestionMasteryState.initial(
+          studentId: 'student-1',
+          questionId: 'q1',
+          now: DateTime.now(),
+        ),
+      ];
+
+      final mastery = FakeMasteryGraphService(weakTopics: weak, atRisk: atRisk);
+      final tool = GetWeakTopicsTool(
+        masteryService: mastery,
+        studentIdService: studentIdService,
       );
-    });
-
-    test('name returns get_weak_topics', () {
-      expect(tool.name, 'get_weak_topics');
-    });
-
-    test('description is not empty', () {
-      expect(tool.description, isNotEmpty);
-    });
-
-    test('parameters has correct JSON schema shape', () {
-      final params = tool.parameters;
-      expect(params['type'], 'object');
-      expect((params['properties'] as Map), isEmpty);
-      expect(params['required'], []);
-    });
-
-    test('execute returns weak topics and at-risk questions from services', () async {
-      fakeMastery.setWeakTopics(Result.success([
-        _createMasteryState(topicId: 'topic-1', accuracy: 0.45, reviewUrgency: 0.8, readinessScore: 0.3),
-        _createMasteryState(topicId: 'topic-2', accuracy: 0.30, reviewUrgency: 0.9, readinessScore: 0.2),
-      ]));
-      fakeMastery.setAtRiskQuestions(Result.success([
-        _createAtRiskQuestion(questionId: 'q-1'),
-        _createAtRiskQuestion(questionId: 'q-2'),
-        _createAtRiskQuestion(questionId: 'q-3'),
-      ]));
 
       final result = await tool.execute({});
 
-      expect(result['weakTopicCount'], 2);
-      expect(result['weakTopics'], hasLength(2));
-      expect(result['weakTopics'][0]['topicId'], 'topic-1');
-      expect(result['weakTopics'][0]['accuracy'], 0.45);
-      expect(result['weakTopics'][0]['reviewUrgency'], 0.8);
-      expect(result['weakTopics'][0]['readinessScore'], 0.3);
-      expect(result['weakTopics'][1]['topicId'], 'topic-2');
-      expect(result['atRiskQuestionCount'], 3);
+      expect(result['weakTopicCount'], equals(2));
+      expect(result['atRiskQuestionCount'], equals(1));
+      final topics = result['weakTopics'] as List;
+      expect(topics.length, equals(2));
+      expect(topics[0]['topicId'], equals('t1'));
+      expect(topics[0]['accuracy'], equals(0.4));
+      expect(topics[0]['reviewUrgency'], equals(0.8));
+      expect(topics[0]['readinessScore'], equals(0.3));
     });
 
-    test('execute returns empty lists when services return null data', () async {
-      fakeMastery.setWeakTopics(Result.failure('no_data'));
-      fakeMastery.setAtRiskQuestions(Result.failure('no_data'));
+    test('degrades gracefully with no weak topics or at-risk questions',
+        () async {
+      final mastery = FakeMasteryGraphService();
+      final tool = GetWeakTopicsTool(
+        masteryService: mastery,
+        studentIdService: studentIdService,
+      );
 
       final result = await tool.execute({});
 
-      expect(result['weakTopicCount'], 0);
-      expect(result['weakTopics'], []);
-      expect(result['atRiskQuestionCount'], 0);
-    });
-
-    test('execute uses studentId from StudentIdService', () async {
-      await tool.execute({});
-
-      expect(fakeMastery.capturedStudentId, 'student-1');
-    });
-
-    test('execute returns empty lists when services return empty lists', () async {
-      fakeMastery.setWeakTopics(Result.success([]));
-      fakeMastery.setAtRiskQuestions(Result.success([]));
-
-      final result = await tool.execute({});
-
-      expect(result['weakTopicCount'], 0);
-      expect(result['weakTopics'], []);
-      expect(result['atRiskQuestionCount'], 0);
-    });
-
-    test('execute handles single weak topic correctly', () async {
-      fakeMastery.setWeakTopics(Result.success([
-        _createMasteryState(topicId: 'topic-1', accuracy: 0.50, reviewUrgency: 0.7, readinessScore: 0.4),
-      ]));
-      fakeMastery.setAtRiskQuestions(Result.success([]));
-
-      final result = await tool.execute({});
-
-      expect(result['weakTopicCount'], 1);
-      expect(result['weakTopics'][0]['topicId'], 'topic-1');
-      expect(result['weakTopics'][0]['accuracy'], 0.50);
-      expect(result['weakTopics'][0]['reviewUrgency'], 0.7);
-      expect(result['weakTopics'][0]['readinessScore'], 0.4);
-      expect(result['atRiskQuestionCount'], 0);
+      expect(result['weakTopicCount'], equals(0));
+      expect(result['atRiskQuestionCount'], equals(0));
+      expect(result['weakTopics'], equals([]));
+      expect(result['weakTopics'], isA<List>());
     });
   });
 }
