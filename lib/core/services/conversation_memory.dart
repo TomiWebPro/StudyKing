@@ -50,32 +50,34 @@ class ConversationMemory {
     }
   }
 
-  Future<void> addMessage(String role, String content) async {
-    final messageRole = switch (role) {
-      'assistant' => MessageRole.tutor,
-      'system' => MessageRole.system,
-      _ => MessageRole.student,
-    };
-    final msg = ConversationMessage(
-      id: '${sessionId ?? 'mem'}_${DateTime.now().millisecondsSinceEpoch}',
-      sessionId: sessionId ?? '',
-      role: messageRole,
-      type: MessageType.text,
-      content: content,
-      timestamp: DateTime.now(),
-    );
-    messages.add(msg);
+  Future<Result<void>> addMessage(String role, String content) async {
+    return Result.capture(() async {
+      final messageRole = switch (role) {
+        'assistant' => MessageRole.tutor,
+        'system' => MessageRole.system,
+        _ => MessageRole.student,
+      };
+      final msg = ConversationMessage(
+        id: '${sessionId ?? 'mem'}_${DateTime.now().millisecondsSinceEpoch}',
+        sessionId: sessionId ?? '',
+        role: messageRole,
+        type: MessageType.text,
+        content: content,
+        timestamp: DateTime.now(),
+      );
+      messages.add(msg);
 
-    final threshold = (maxTurns * 2 * _compressionThreshold).toInt();
-    if (messages.length >= threshold) {
-      await _compressOldMessages();
-    }
-    if (messages.length > maxTurns * 2) {
-      await _dropOldestMessages();
-    }
+      final threshold = (maxTurns * 2 * _compressionThreshold).toInt();
+      if (messages.length >= threshold) {
+        await _compressOldMessages();
+      }
+      if (messages.length > maxTurns * 2) {
+        await _dropOldestMessages();
+      }
 
-    _persistMessage(msg);
-    unawaited(_trimRepository());
+      _persistMessage(msg);
+      unawaited(_trimRepository());
+    }, context: 'addMessage');
   }
 
   Future<void> _compressOldMessages() async {
@@ -166,9 +168,9 @@ class ConversationMemory {
     repo.saveMessage(msg);
   }
 
-  Future<void> addUserMessage(String content) => addMessage('user', content);
-  Future<void> addAssistantMessage(String content) => addMessage('assistant', content);
-  Future<void> addSystemMessage(String content) => addMessage('system', content);
+  Future<Result<void>> addUserMessage(String content) => addMessage('user', content);
+  Future<Result<void>> addAssistantMessage(String content) => addMessage('assistant', content);
+  Future<Result<void>> addSystemMessage(String content) => addMessage('system', content);
 
   List<ConversationMessage> getHistory() => List.from(messages);
 

@@ -56,7 +56,7 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
 
       final studentIdService = StudentIdService();
       await studentIdService.init();
-      final studentId = studentIdService.getStudentId();
+      final studentId = studentIdService.getStudentId().data ?? '';
       if (studentId.isEmpty) return _SyllabusProgressData(totalTopics: allTopics.length, masteredCount: 0);
 
       final masteryRepo = MasteryStateRepository();

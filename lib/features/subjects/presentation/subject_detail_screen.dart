@@ -298,7 +298,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     context,
                     AppRoutes.dashboard,
                     arguments: DashboardArgs(
-                      studentId: ref.read(studentIdServiceProvider).getStudentId(),
+                      studentId: ref.read(studentIdServiceProvider).getStudentId().data ?? '',
                     ),
                   );
                 },

@@ -113,7 +113,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       _isStreaming = true;
     });
 
-    await _getMemory().addUserMessage(text);
+    { final memResult = await _getMemory().addUserMessage(text); if (memResult.isFailure) _logger.w('Failed to persist quick guide message: ${memResult.error}'); }
     _scrollToBottom();
 
     final tutorMessageId = _uuid.v4();

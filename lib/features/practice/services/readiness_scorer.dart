@@ -71,7 +71,7 @@ class ReadinessScorer {
 
     try {
       await _masteryService.init();
-      final studentId = _studentIdService.getStudentId();
+      final studentId = _studentIdService.getStudentId().data ?? '';
 
       final topicResult = await _masteryService.getAllTopicMastery(studentId);
       if (topicResult.isSuccess && topicResult.data != null) {

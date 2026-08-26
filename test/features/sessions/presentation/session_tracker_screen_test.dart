@@ -79,7 +79,7 @@ class _FakeSubjectRepository extends SubjectRepository {
 
 class _FakeStudentIdService extends StudentIdService {
   @override
-  String getStudentId() => 'test-student';
+  Result<String> getStudentId() => Result.success('test-student');
 
   @override
   Future<void> init() async {}

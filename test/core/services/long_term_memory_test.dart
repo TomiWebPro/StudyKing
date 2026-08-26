@@ -106,18 +106,18 @@ void main() {
   group('LongTermMemory - Facts', () {
     test('rememberFact stores and recallFact retrieves', () async {
       await ltm.rememberFact('student1', 'preferredDifficulty', 'hard');
-      expect(ltm.recallFact('student1', 'preferredDifficulty'), equals('hard'));
+      expect(ltm.recallFact('student1', 'preferredDifficulty').data, equals('hard'));
     });
 
     test('recallFact returns null for missing key', () {
-      expect(ltm.recallFact('student1', 'nonexistent'), isNull);
+      expect(ltm.recallFact('student1', 'nonexistent').data, isNull);
     });
 
     test('facts are scoped by studentId', () async {
       await ltm.rememberFact('student1', 'preferredStyle', 'visual');
       await ltm.rememberFact('student2', 'preferredStyle', 'auditory');
-      expect(ltm.recallFact('student1', 'preferredStyle'), equals('visual'));
-      expect(ltm.recallFact('student2', 'preferredStyle'), equals('auditory'));
+      expect(ltm.recallFact('student1', 'preferredStyle').data, equals('visual'));
+      expect(ltm.recallFact('student2', 'preferredStyle').data, equals('auditory'));
     });
   });
 
@@ -251,7 +251,7 @@ void main() {
 
       await ltm.clearStudentMemory('student1');
 
-      expect(ltm.recallFact('student1', 'key'), isNull);
+      expect(ltm.recallFact('student1', 'key').data, isNull);
       expect(ltm.getSessionSummary('student1', 's1'), isNull);
       expect(ltm.getStudentProfile('student1'), isNull);
       final items = await ltm.getPendingActionItems('student1');

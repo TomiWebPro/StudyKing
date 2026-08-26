@@ -227,8 +227,8 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
       // Pre-load settings into the controller to avoid an async race where the
       // widget tree renders with default settings before _loadSettings() completes.
       preloadSettings(settings);
-      final secureKey = await _secureApiKeyService!.getApiKey();
-      final secureBackupKey = await _secureApiKeyService!.getBackupApiKey();
+      final secureKey = (await _secureApiKeyService!.getApiKey()).data ?? '';
+      final secureBackupKey = (await _secureApiKeyService!.getBackupApiKey()).data ?? '';
       if (secureKey.isEmpty && settings.apiKey.isNotEmpty) {
         await _secureApiKeyService!.saveApiKey(settings.apiKey);
         _mainLogger.i('Migrated API key from Hive to secure storage');
@@ -565,7 +565,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
       final l10n = AppLocalizations.of(context);
       if (l10n == null) return;
 
-      final studentId = StudentIdService().getStudentId();
+      final studentId = StudentIdService().getStudentId().data ?? '';
       final plannerService = PlannerService();
       final planResult = await plannerService.loadExistingPlan();
       final plan = planResult.data;
@@ -643,7 +643,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
     return [
       TabNavigator(
         key: const ValueKey('tab_dashboard'),
-        rootScreen: DashboardScreen(studentId: StudentIdService().getStudentId()),
+        rootScreen: DashboardScreen(studentId: StudentIdService().getStudentId().data ?? ''),
         navigatorKey: _navigatorKeys[0],
       ),
       TabNavigator(

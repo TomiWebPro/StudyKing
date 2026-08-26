@@ -98,7 +98,12 @@ class _VoiceBarState extends State<VoiceBar> with SingleTickerProviderStateMixin
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
       final localeName = l10n?.localeName ?? 'en';
-      widget.controller.startListening(localeName: localeName);
+      final listenResult = await widget.controller.startListening(localeName: localeName);
+      if (listenResult.isFailure && mounted) {
+        ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+          SnackBar(content: Text(listenResult.error ?? 'Failed to start listening')),
+        );
+      }
       if (!widget.reduceMotion) {
         _waveController.repeat();
       }

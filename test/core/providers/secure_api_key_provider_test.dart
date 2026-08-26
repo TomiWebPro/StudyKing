@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/secure_api_key_provider.dart';
 import 'package:studyking/core/services/secure_api_key_service.dart';
 
@@ -46,31 +47,33 @@ class _FakeSecureApiKeyService extends SecureApiKeyService {
   void setShouldThrow(bool value) => _shouldThrow = value;
 
   @override
-  Future<String> getApiKey() async {
-    if (_shouldThrow) throw Exception('storage error');
-    return _store['sk_api_key'] ?? '';
+  Future<Result<String>> getApiKey() async {
+    if (_shouldThrow) return Result.failure('storage error');
+    return Result.success(_store['sk_api_key'] ?? '');
   }
 
   @override
-  Future<void> saveApiKey(String key) async {
-    if (_shouldThrow) throw Exception('storage error');
+  Future<Result<void>> saveApiKey(String key) async {
+    if (_shouldThrow) return Result.failure('storage error');
     if (key.isEmpty) {
       _store.remove('sk_api_key');
     } else {
       _store['sk_api_key'] = key;
     }
+    return Result.success(null);
   }
 
   @override
-  Future<String> getBackupApiKey() async {
-    if (_shouldThrow) throw Exception('storage error');
-    return _store['sk_backup_api_key'] ?? '';
+  Future<Result<String>> getBackupApiKey() async {
+    if (_shouldThrow) return Result.failure('storage error');
+    return Result.success(_store['sk_backup_api_key'] ?? '');
   }
 
   @override
-  Future<void> clearAll() async {
-    if (_shouldThrow) throw Exception('storage error');
+  Future<Result<void>> clearAll() async {
+    if (_shouldThrow) return Result.failure('storage error');
     _store.clear();
+    return Result.success(null);
   }
 }
 
@@ -103,8 +106,8 @@ void main() {
       final service = container.read(secureApiKeyServiceProvider);
       expect(service, same(fake));
       await service.saveApiKey('test-key');
-      final key = await service.getApiKey();
-      expect(key, 'test-key');
+      final keyResult = await service.getApiKey();
+      expect(keyResult.data, 'test-key');
     });
 
     test('propagates errors when service throws', () async {
@@ -117,7 +120,8 @@ void main() {
       addTearDown(container.dispose);
 
       final service = container.read(secureApiKeyServiceProvider);
-      expect(() async => await service.getApiKey(), throwsA(isA<Exception>()));
+      final result = await service.getApiKey();
+      expect(result.isFailure, isTrue);
     });
 
     test('can clear keys through provider', () async {
@@ -130,7 +134,7 @@ void main() {
       final service = container.read(secureApiKeyServiceProvider);
       await service.saveApiKey('key1');
       await service.clearAll();
-      expect(await service.getApiKey(), '');
+      expect((await service.getApiKey()).data, '');
     });
   });
 }

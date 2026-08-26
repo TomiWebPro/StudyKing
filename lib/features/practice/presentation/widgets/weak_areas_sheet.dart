@@ -40,7 +40,7 @@ class WeakAreasSheet extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final studentId = ref.read(studentIdServiceProvider).getStudentId();
+    final studentId = ref.read(studentIdServiceProvider).getStudentId().data ?? '';
     final weakTopicsAsync = ref.watch(_weakTopicsProvider(studentId));
 
     return weakTopicsAsync.when(

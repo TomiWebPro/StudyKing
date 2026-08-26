@@ -123,7 +123,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Future<void> _initializeMentor() async {
     try {
-      final studentId = ref.read(studentIdServiceProvider).getStudentId();
+      final studentId = ref.read(studentIdServiceProvider).getStudentId().data ?? '';
       _mentorService = ref.read(mentorServiceProvider(studentId));
 
       final initResult = await _mentorService.initialize();
@@ -645,11 +645,16 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       ),
       tooltip: isAvailable ? l10n.voiceInput : l10n.micPermissionDenied,
       onPressed: isAvailable
-          ? () {
+          ? () async {
               if (voiceService.isListening) {
                 voiceService.stopListening();
               } else {
-                voiceService.startListening(localeName: l10n.localeName);
+                final voiceResult = await voiceService.startListening(localeName: l10n.localeName);
+                if (voiceResult.isFailure && mounted) {
+                  ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+                    SnackBar(content: Text(voiceResult.error ?? 'Failed to start listening')),
+                  );
+                }
                 _voiceSubscription?.cancel();
                 _voiceSubscription = voiceService.transcribedText.listen((text) {
                   _textController.text = text;

@@ -193,7 +193,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
 
     final questionsAnswered = stats?.questionsAnswered ?? 0;
     final correctAnswers = stats?.correctAnswers ?? 0;
-    final studentId = widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId();
+    final studentId = widget.fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? '');
 
     final id = IdGenerator.generate('session');
 

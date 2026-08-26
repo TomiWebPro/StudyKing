@@ -102,7 +102,10 @@ class EngagementScheduler {
     try {
       if (_isInitialized) return Result.success(null);
       _isInitialized = true;
-      await _notificationService.init();
+      final notifResult = await _notificationService.init();
+      if (notifResult.isFailure) {
+        _logger.w('NotificationService init failed: ${notifResult.error}');
+      }
       await _nudgeRepository.init();
       await _adherenceRepository.init();
       await _backfillMissedChecks();

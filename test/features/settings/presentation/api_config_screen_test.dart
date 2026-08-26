@@ -95,15 +95,15 @@ final fakeApiRepo = FakeSettingsRepository();
 class FakeSecureApiKeyService extends SecureApiKeyService {
   FakeSecureApiKeyService() : super();
   @override
-  Future<void> saveApiKey(String key) async {}
+  Future<Result<void>> saveApiKey(String key) async => Result.success(null);
   @override
-  Future<String> getApiKey() async => '';
+  Future<Result<String>> getApiKey() async => Result.success('');
   @override
-  Future<void> saveBackupApiKey(String key) async {}
+  Future<Result<void>> saveBackupApiKey(String key) async => Result.success(null);
   @override
-  Future<String> getBackupApiKey() async => '';
+  Future<Result<String>> getBackupApiKey() async => Result.success('');
   @override
-  Future<void> clearAll() async {}
+  Future<Result<void>> clearAll() async => Result.success(null);
 }
 
 class _TestSettingsNotifier extends SettingsController {

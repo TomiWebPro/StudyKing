@@ -28,7 +28,7 @@ class GetWeakTopicsTool extends AgentTool {
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     final weakResult = await _masteryService.getWeakTopics(studentId);
     final atRiskResult = await _masteryService.getAtRiskQuestions(studentId);
 

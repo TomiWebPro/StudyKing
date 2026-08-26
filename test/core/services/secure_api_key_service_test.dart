@@ -63,13 +63,13 @@ void main() {
     group('getApiKey', () {
       test('returns saved API key', () async {
         await service.saveApiKey('test-api-key');
-        final key = await service.getApiKey();
-        expect(key, 'test-api-key');
+        final result = await service.getApiKey();
+        expect(result.data, 'test-api-key');
       });
 
       test('returns empty string when no key saved', () async {
-        final key = await service.getApiKey();
-        expect(key, '');
+        final result = await service.getApiKey();
+        expect(result.data, '');
       });
     });
 
@@ -91,13 +91,13 @@ void main() {
     group('getBackupApiKey', () {
       test('returns saved backup API key', () async {
         await service.saveBackupApiKey('backup-key');
-        final key = await service.getBackupApiKey();
-        expect(key, 'backup-key');
+        final result = await service.getBackupApiKey();
+        expect(result.data, 'backup-key');
       });
 
       test('returns empty string when no backup key saved', () async {
-        final key = await service.getBackupApiKey();
-        expect(key, '');
+        final result = await service.getBackupApiKey();
+        expect(result.data, '');
       });
     });
 
@@ -106,34 +106,34 @@ void main() {
         await service.saveApiKey('key1');
         await service.saveBackupApiKey('key2');
         await service.clearAll();
-        expect(await service.getApiKey(), '');
-        expect(await service.getBackupApiKey(), '');
+        expect((await service.getApiKey()).data, '');
+        expect((await service.getBackupApiKey()).data, '');
       });
     });
 
     group('migrateFromHive', () {
       test('migrates API key from Hive when secure storage is empty', () async {
         await service.migrateFromHive('hive-key', 'hive-backup');
-        expect(await service.getApiKey(), 'hive-key');
-        expect(await service.getBackupApiKey(), 'hive-backup');
+        expect((await service.getApiKey()).data, 'hive-key');
+        expect((await service.getBackupApiKey()).data, 'hive-backup');
       });
 
       test('does not overwrite existing API key', () async {
         await service.saveApiKey('existing-key');
         await service.migrateFromHive('hive-key', 'hive-backup');
-        expect(await service.getApiKey(), 'existing-key');
+        expect((await service.getApiKey()).data, 'existing-key');
       });
 
       test('does not overwrite existing backup API key', () async {
         await service.saveBackupApiKey('existing-backup');
         await service.migrateFromHive('hive-key', 'hive-backup');
-        expect(await service.getBackupApiKey(), 'existing-backup');
+        expect((await service.getBackupApiKey()).data, 'existing-backup');
       });
 
       test('handles empty Hive keys gracefully', () async {
         await service.migrateFromHive('', '');
-        expect(await service.getApiKey(), '');
-        expect(await service.getBackupApiKey(), '');
+        expect((await service.getApiKey()).data, '');
+        expect((await service.getBackupApiKey()).data, '');
       });
     });
   });

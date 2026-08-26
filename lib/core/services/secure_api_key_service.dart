@@ -1,6 +1,6 @@
-import 'package:flutter/services.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureApiKeyService {
   static final Logger _logger = const Logger('SecureApiKeyService');
@@ -12,91 +12,69 @@ class SecureApiKeyService {
   SecureApiKeyService({FlutterSecureStorage? storage})
       : _storage = storage ?? const FlutterSecureStorage();
 
-  Future<void> saveApiKey(String key) async {
-    try {
+  Future<Result<void>> saveApiKey(String key) async {
+    return Result.capture(() async {
       if (key.isEmpty) {
         await _storage.delete(key: _apiKeyKey);
       } else {
         await _storage.write(key: _apiKeyKey, value: key);
       }
-    } on PlatformException catch (e) {
-      if (e.code != 'KeyringLocked') {
-        _logger.w('Failed to save API key to secure storage', e);
-      }
-    } catch (e) {
-      _logger.w('Failed to save API key to secure storage', e);
-    }
+    }, context: 'saveApiKey');
   }
 
-  Future<String> getApiKey() async {
-    try {
+  Future<Result<String>> getApiKey() async {
+    return Result.capture(() async {
       final key = await _storage.read(key: _apiKeyKey);
       return key ?? '';
-    } on PlatformException catch (e) {
-      if (e.code != 'KeyringLocked') {
-        _logger.w('Failed to read API key from secure storage', e);
-      }
-      return '';
-    } catch (e) {
-      _logger.w('Failed to read API key from secure storage', e);
-      return '';
-    }
+    }, context: 'getApiKey');
   }
 
-  Future<void> saveBackupApiKey(String key) async {
-    try {
+  Future<Result<void>> saveBackupApiKey(String key) async {
+    return Result.capture(() async {
       if (key.isEmpty) {
         await _storage.delete(key: _backupApiKeyKey);
       } else {
         await _storage.write(key: _backupApiKeyKey, value: key);
       }
-    } on PlatformException catch (e) {
-      if (e.code != 'KeyringLocked') {
-        _logger.w('Failed to save backup API key to secure storage', e);
-      }
-    } catch (e) {
-      _logger.w('Failed to save backup API key to secure storage', e);
-    }
+    }, context: 'saveBackupApiKey');
   }
 
-  Future<String> getBackupApiKey() async {
-    try {
+  Future<Result<String>> getBackupApiKey() async {
+    return Result.capture(() async {
       final key = await _storage.read(key: _backupApiKeyKey);
       return key ?? '';
-    } on PlatformException catch (e) {
-      if (e.code != 'KeyringLocked') {
-        _logger.w('Failed to read backup API key from secure storage', e);
-      }
-      return '';
-    } catch (e) {
-      _logger.w('Failed to read backup API key from secure storage', e);
-      return '';
-    }
+    }, context: 'getBackupApiKey');
   }
 
-  Future<void> clearAll() async {
-    try {
+  Future<Result<void>> clearAll() async {
+    return Result.capture(() async {
       await _storage.delete(key: _apiKeyKey);
       await _storage.delete(key: _backupApiKeyKey);
-    } on PlatformException catch (e) {
-      if (e.code != 'KeyringLocked') {
-        _logger.w('Failed to clear secure storage', e);
-      }
-    } catch (e) {
-      _logger.w('Failed to clear secure storage', e);
-    }
+    }, context: 'clearAll');
   }
 
-  Future<void> migrateFromHive(String hiveKey, String hiveBackupKey) async {
-    final existing = await getApiKey();
-    if (existing.isEmpty && hiveKey.isNotEmpty) {
-      await saveApiKey(hiveKey);
-      _logger.i('Migrated API key from Hive to secure storage');
-    }
-    final existingBackup = await getBackupApiKey();
-    if (existingBackup.isEmpty && hiveBackupKey.isNotEmpty) {
-      await saveBackupApiKey(hiveBackupKey);
-      _logger.i('Migrated backup API key from Hive to secure storage');
-    }
+  Future<Result<void>> migrateFromHive(String hiveKey, String hiveBackupKey) async {
+    return Result.capture(() async {
+      final existingResult = await getApiKey();
+      final existing = existingResult.data ?? '';
+      if (existing.isEmpty && hiveKey.isNotEmpty) {
+        final saveResult = await saveApiKey(hiveKey);
+        if (saveResult.isFailure) {
+          _logger.w('Failed to migrate API key from Hive: ${saveResult.error}');
+        } else {
+          _logger.i('Migrated API key from Hive to secure storage');
+        }
+      }
+      final existingBackupResult = await getBackupApiKey();
+      final existingBackup = existingBackupResult.data ?? '';
+      if (existingBackup.isEmpty && hiveBackupKey.isNotEmpty) {
+        final saveResult = await saveBackupApiKey(hiveBackupKey);
+        if (saveResult.isFailure) {
+          _logger.w('Failed to migrate backup API key from Hive: ${saveResult.error}');
+        } else {
+          _logger.i('Migrated backup API key from Hive to secure storage');
+        }
+      }
+    }, context: 'migrateFromHive');
   }
 }

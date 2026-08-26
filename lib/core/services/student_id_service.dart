@@ -1,6 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/errors/result.dart';
 
 class StudentIdService {
   StudentIdService();
@@ -17,21 +18,23 @@ class StudentIdService {
     _cachedId = null;
   }
 
-  String getStudentId() {
-    if (_cachedId != null && _cachedId!.isNotEmpty) return _cachedId!;
-    if (_box != null && _box!.isOpen) {
-      final existing = _box!.get(_idKey) as String?;
-      if (existing != null && existing.isNotEmpty) {
-        _cachedId = existing;
-        return existing;
+  Result<String> getStudentId() {
+    return Result.captureSync(() {
+      if (_cachedId != null && _cachedId!.isNotEmpty) return _cachedId!;
+      if (_box != null && _box!.isOpen) {
+        final existing = _box!.get(_idKey) as String?;
+        if (existing != null && existing.isNotEmpty) {
+          _cachedId = existing;
+          return existing;
+        }
       }
-    }
-    final newId = const Uuid().v4();
-    _cachedId = newId;
-    if (_box != null && _box!.isOpen) {
-      _box!.put(_idKey, newId);
-    }
-    return newId;
+      final newId = const Uuid().v4();
+      _cachedId = newId;
+      if (_box != null && _box!.isOpen) {
+        _box!.put(_idKey, newId);
+      }
+      return newId;
+    }, context: 'getStudentId');
   }
 
   void setStudentId(String id) {

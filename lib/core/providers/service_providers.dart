@@ -38,7 +38,7 @@ final visionInterpretationServiceProvider =
 final studentIdProvider = FutureProvider<String>((ref) async {
   final service = ref.read(studentIdServiceProvider);
   await service.init();
-  return service.getStudentId();
+  return service.getStudentId().data ?? '';
 });
 
 final studentIdValueProvider = Provider<String>((ref) {

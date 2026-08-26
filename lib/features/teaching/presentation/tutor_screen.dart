@@ -95,7 +95,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       _tutorService = ref.read(tutorServiceProvider);
     }
 
-    final studentId = ref.read(studentIdServiceProvider).getStudentId();
+    final studentId = ref.read(studentIdServiceProvider).getStudentId().data ?? '';
     final agent = ref.read(llmAgentProvider(studentId));
     _tutorService.llmAgent = agent;
 

@@ -328,7 +328,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     }
 
     await _masteryRecorder.recordAttempt(
-      studentId: _studentIdService.getStudentId(),
+      studentId: _studentIdService.getStudentId().data ?? '',
       questionId: question.id,
       subjectId: question.subjectId,
       topicId: question.topicId,
@@ -440,7 +440,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
   Future<bool> _showMistakeReview() async {
     final mistakesResult = await _mistakeReviewService.getMistakesFromSession(
-      studentId: _studentIdService.getStudentId(),
+      studentId: _studentIdService.getStudentId().data ?? '',
       subjectId: widget.args.subjectId,
       after: _sessionService.sessionStartTime,
     );
@@ -530,7 +530,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         .inMinutes;
     final planOrchestrator = PlanAdherenceOrchestrator();
     await planOrchestrator.recordActivity(
-      studentId: _studentIdService.getStudentId(),
+      studentId: _studentIdService.getStudentId().data ?? '',
       actualQuestions: _questions.length,
       actualMinutes: elapsedMinutes.clamp(1, 480),
     );
@@ -595,7 +595,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _sessionService.startTimer();
   }
 
-  void _useVoiceInput() {
+  Future<void> _useVoiceInput() async {
     final voiceService = ref.read(voiceServiceProvider);
 
     if (!voiceService.isAvailable) {
@@ -620,7 +620,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     }
 
     final l10n = AppLocalizations.of(context)!;
-    voiceService.startListening(localeName: l10n.localeName);
+    final listenResult = await voiceService.startListening(localeName: l10n.localeName);
+    if (listenResult.isFailure && mounted) {
+      ScaffoldMessenger.maybeOf(context)?.showSnackBar(
+        SnackBar(content: Text(listenResult.error ?? 'Failed to start listening')),
+      );
+      return;
+    }
 
     _voiceSubscription?.cancel();
     _voiceSubscription = voiceService.transcribedText.listen((text) {

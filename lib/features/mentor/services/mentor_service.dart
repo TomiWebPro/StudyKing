@@ -170,7 +170,7 @@ class MentorService {
       return;
     }
 
-    await _memory.addUserMessage(message);
+    { final memResult = await _memory.addUserMessage(message); if (memResult.isFailure) _logger.w('Failed to persist mentor message: ${memResult.error}'); }
 
     final memoryContext = await _buildLongTermMemoryContext();
 

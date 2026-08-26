@@ -77,7 +77,7 @@ class PracticeSessionService {
         actualDurationMs: duration,
         questionsAnswered: questionsAnswered,
         correctAnswers: correctAnswers,
-        studentId: _studentIdService.getStudentId(),
+        studentId: _studentIdService.getStudentId().data ?? '',
         subjectId: subjectId,
         type: SessionType.practice,
       );

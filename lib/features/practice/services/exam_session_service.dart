@@ -304,7 +304,7 @@ class ExamSessionService {
       wasAutoSubmitted: autoSubmitted,
     );
 
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     final session = Session(
       id: 'exam_${_examStartTime.millisecondsSinceEpoch}',
       studentId: studentId,

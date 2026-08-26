@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -24,8 +25,11 @@ class LongTermMemory {
     await _pendingActionRepo.init();
   }
 
-  String? recallFact(String studentId, String key) {
-    return _store.recallFact(studentId, key);
+  Result<String?> recallFact(String studentId, String key) {
+    return Result.captureSync(
+      () => _store.recallFact(studentId, key),
+      context: 'recallFact',
+    );
   }
 
   Future<void> rememberFact(String studentId, String key, String value) async {
