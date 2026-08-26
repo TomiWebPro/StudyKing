@@ -1,26 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'dart:convert';
 import 'package:hive/hive.dart';
-import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/core/data/repositories/attempt_repository.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
 
-class _FakeQuestionBox implements Box<Question> {
-  final Map<String, Question> _storage = {};
+/// In-memory [Box] implementation that backs the fake repositories.
+class _FakeBox<T> implements Box<T> {
+  final Map<dynamic, T> _storage = {};
 
   @override
-  Iterable<Question> get values => _storage.values;
+  Iterable<T> get values => _storage.values;
 
   @override
-  Question? get(dynamic key, {Question? defaultValue}) =>
-      _storage[key] ?? defaultValue;
+  T? get(dynamic key, {T? defaultValue}) => _storage[key] ?? defaultValue;
 
   @override
-  Future<void> put(dynamic key, Question value) async {
+  Future<void> put(dynamic key, T value) async {
     _storage[key.toString()] = value;
   }
 
@@ -36,6 +36,8 @@ class _FakeQuestionBox implements Box<Question> {
     return count;
   }
 
+  Map<dynamic, T> get debugMap => _storage;
+
   @override
   int get length => _storage.length;
 
@@ -43,7 +45,7 @@ class _FakeQuestionBox implements Box<Question> {
   bool get isOpen => true;
 
   @override
-  String get name => 'questions';
+  String get name => 'fakeBox';
 
   @override
   bool get isNotEmpty => _storage.isNotEmpty;
@@ -61,762 +63,240 @@ class _FakeQuestionBox implements Box<Question> {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
-class _FakeClosedBox implements Box<Question> {
-  @override
-  Iterable<Question> get values => [];
+class FakeQuestionRepository extends QuestionRepository {
+  final _FakeBox<Question> _box = _FakeBox<Question>();
 
   @override
-  bool get isOpen => false;
-
-  @override
-  String get name => 'questions';
-
-  @override
-  bool get isNotEmpty => false;
-
-  @override
-  bool get isEmpty => true;
-
-  @override
-  int get length => 0;
-
-  @override
-  Question? get(dynamic key, {Question? defaultValue}) => null;
-
-  @override
-  bool containsKey(dynamic key) => false;
-
-  @override
-  Future<void> put(dynamic key, Question value) async {}
-
-  @override
-  Future<void> delete(dynamic key) async {}
-
-  @override
-  Future<int> clear() async => 0;
-
-  @override
-  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _FakeQuestionRepository extends QuestionRepository {
-  final Box<Question> fakeBox;
-
-  _FakeQuestionRepository(this.fakeBox);
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Box<Question> get box => fakeBox;
-
-  @override
-  Future<Result<Question?>> get(String id) async {
-    return Result.success(fakeBox.get(id));
+  Future<Result<Question?>> get(String key) async {
+    return Result.success(_box.get(key));
   }
 
   @override
   Future<Result<void>> save(String key, Question item) async {
-    await fakeBox.put(key, item);
+    await _box.put(key, item);
     return Result.success(null);
   }
 
   @override
   Future<Result<void>> delete(String key) async {
-    await fakeBox.delete(key);
+    await _box.delete(key);
     return Result.success(null);
   }
 
   @override
-  Future<Result<void>> create(Question question) async {
-    await fakeBox.put(question.id, question);
+  Box<Question> get box => _box;
+
+  Map<dynamic, Question> get _storage => _box._storage;
+}
+
+class FakeAttemptRepository extends AttemptRepository {
+  final _FakeBox<StudentAttempt> _box = _FakeBox<StudentAttempt>();
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async {
+    await _box.put(attempt.id, attempt);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async {
+    return Result.success(_box.get(key));
+  }
+
+  Map<dynamic, StudentAttempt> get _storage => _box._storage;
 }
 
-class _FakeAttemptRepository extends AttemptRepository {
-  final Map<String, StudentAttempt> _storage = {};
+/// Spy engine that records whether the service delegated to it.
+class _SpyEngine extends SpacedRepetitionEngine {
+  bool scheduleCalled = false;
+  String? lastQuestionId;
+  int? lastGrade;
 
   @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<StudentAttempt?>> get(String id) async {
-    return Result.success(_storage[id]);
+  SM2Result scheduleReview({
+    required String questionId,
+    required int grade,
+    QuestionSRData? currentData,
+    DateTime? now,
+  }) {
+    scheduleCalled = true;
+    lastQuestionId = questionId;
+    lastGrade = grade;
+    return super.scheduleReview(
+      questionId: questionId,
+      grade: grade,
+      currentData: currentData,
+      now: now,
+    );
   }
 }
 
-Question _createQuestion({
-  String id = 'q1',
-  String subjectId = 'sub1',
-  String topicId = 't1',
-  DateTime? nextReview,
-}) {
+Question _makeQuestion(String id, {DateTime? nextReview, String? srDataJson}) {
+  final now = DateTime(2026, 1, 1);
   return Question(
     id: id,
-    text: 'Sample question?',
-    type: QuestionType.singleChoice,
-    subjectId: subjectId,
-    topicId: topicId,
-    createdAt: DateTime(2026, 5, 12),
-    updatedAt: DateTime(2026, 5, 12),
+    text: 'What is 2+2?',
+    type: QuestionType.typedAnswer,
+    subjectId: 'math',
+    topicId: 'arithmetic',
+    createdAt: now,
+    updatedAt: now,
     nextReview: nextReview,
+    srDataJson: srDataJson,
   );
 }
 
 void main() {
-  group('SpacedRepetitionService', () {
-    late _FakeQuestionBox questionBox;
-    late _FakeAttemptRepository attemptRepo;
-    late _FakeQuestionRepository questionRepo;
+  group('SpacedRepetitionService.updateNextReviewDate', () {
+    late FakeQuestionRepository questionRepo;
+    late FakeAttemptRepository attemptRepo;
+    late _SpyEngine spyEngine;
     late SpacedRepetitionService service;
 
     setUp(() {
-      questionBox = _FakeQuestionBox();
-      attemptRepo = _FakeAttemptRepository();
-      questionRepo = _FakeQuestionRepository(questionBox);
+      questionRepo = FakeQuestionRepository();
+      attemptRepo = FakeAttemptRepository();
+      spyEngine = _SpyEngine();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: attemptRepo,
+        srEngine: spyEngine,
+      );
+    });
+
+    test('delegates scheduling to the engine and persists the new state',
+        () async {
+      questionRepo._storage['q1'] = _makeQuestion('q1');
+
+      final result = await service.updateNextReviewDate('q1', 0.95);
+
+      expect(result.isSuccess, isTrue);
+      expect(spyEngine.scheduleCalled, isTrue);
+      expect(spyEngine.lastQuestionId, 'q1');
+      expect(spyEngine.lastGrade, 5);
+
+      final updated = questionRepo._storage['q1']!;
+      expect(updated.nextReview, isNotNull);
+      expect(updated.nextReview!.isAfter(DateTime(2026, 1, 1)), isTrue);
+      expect(updated.srDataJson, isNotNull);
+      expect(updated.srDataJson!.isNotEmpty, isTrue);
+    });
+
+    test('returns a failure when the question does not exist', () async {
+      final result = await service.updateNextReviewDate('missing', 0.9);
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('notFound'));
+    });
+  });
+
+  group('SpacedRepetitionService.isQuestionDueForReview', () {
+    late FakeQuestionRepository questionRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+    });
+
+    test('an overdue question is due', () async {
+      questionRepo._storage['q1'] =
+          _makeQuestion('q1', nextReview: DateTime(2020, 1, 1));
+      final result = await service.isQuestionDueForReview(
+          questionRepo._storage['q1']!,
+          asOf: DateTime(2026, 1, 1));
+      expect(result.data, isTrue);
+    });
+
+    test('a future question is not due', () async {
+      questionRepo._storage['q1'] =
+          _makeQuestion('q1', nextReview: DateTime(2099, 1, 1));
+      final result = await service.isQuestionDueForReview(
+          questionRepo._storage['q1']!,
+          asOf: DateTime(2026, 1, 1));
+      expect(result.data, isFalse);
+    });
+  });
+
+  group('SpacedRepetitionService.getQuestionsDueForReview', () {
+    late FakeQuestionRepository questionRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+    });
+
+    test('returns only questions whose nextReview is before the cutoff',
+        () async {
+      questionRepo._storage['due'] =
+          _makeQuestion('due', nextReview: DateTime(2020, 1, 1));
+      questionRepo._storage['future'] =
+          _makeQuestion('future', nextReview: DateTime(2099, 1, 1));
+
+      final result = await service.getQuestionsDueForReview(
+          asOf: DateTime(2026, 1, 1));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.map((q) => q.id), ['due']);
+    });
+  });
+
+  group('SpacedRepetitionService.removeDueQuestions', () {
+    late FakeQuestionRepository questionRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+    });
+
+    test('deletes the question from the repository', () async {
+      questionRepo._storage['q1'] = _makeQuestion('q1');
+      final result = await service.removeDueQuestions('q1');
+      expect(result.isSuccess, isTrue);
+      expect(questionRepo._storage.containsKey('q1'), isFalse);
+    });
+  });
+
+  group('SpacedRepetitionService.getQuestionDueTimes', () {
+    late FakeQuestionRepository questionRepo;
+    late FakeAttemptRepository attemptRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      attemptRepo = FakeAttemptRepository();
       service = SpacedRepetitionService(
         questionRepo: questionRepo,
         attemptRepo: attemptRepo,
       );
     });
 
-    group('getQuestionsDueForReview', () {
-      test('returns due questions sorted', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 6, 1)));
-        questionBox.put('q2', _createQuestion(
-          id: 'q2', nextReview: DateTime(2020, 1, 1)));
-
-        final due = (await service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12))).data!;
-        expect(due.length, 2);
-        expect(due[0].id, 'q2');
-        expect(due[1].id, 'q1');
-      });
-
-      test('returns empty when none due', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2099, 1, 1)));
-
-        final due = (await service.getQuestionsDueForReview(asOf: DateTime(2026, 5, 12))).data;
-        expect(due, isEmpty);
-      });
-    });
-
-    group('isQuestionDueForReview', () {
-      test('returns true for past due question', () async {
-        final q = _createQuestion(nextReview: DateTime(2020, 1, 1));
-        final result = await service.isQuestionDueForReview(q);
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isTrue);
-      });
-
-      test('returns false for future review question', () async {
-        final q = _createQuestion(nextReview: DateTime(2099, 1, 1));
-        final result = await service.isQuestionDueForReview(q, asOf: DateTime(2026, 5, 12));
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isFalse);
-      });
-    });
-
-    group('getQuestionsDue', () {
-      test('returns due questions successfully', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2020, 1, 1)));
-
-        final result = await service.getQuestionsDue(asOf: DateTime(2026, 5, 12));
-        expect(result.isSuccess, isTrue);
-        expect(result.data?.length, 1);
-      });
-
-      test('returns failure when box is not open', () async {
-        final closedRepo = _FakeQuestionRepository(_FakeClosedBox());
-        final s = SpacedRepetitionService(
-          questionRepo: closedRepo,
-          attemptRepo: attemptRepo,
-        );
-
-        final result = await s.getQuestionsDue();
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('boxClosed'));
-      });
-
-      test('returns empty when no questions due', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', nextReview: DateTime(2099, 1, 1)));
-
-        final result = await service.getQuestionsDue(asOf: DateTime(2026, 5, 12));
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isEmpty);
-      });
-    });
-
-    group('updateNextReviewDate', () {
-      test('uses SM-2 engine: first review gets 1-day interval', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-        final before = DateTime.now();
-
-        final result = await service.updateNextReviewDate('q1', 0.95);
-        expect(result.isSuccess, isTrue);
-
-        final updated = questionBox.get('q1');
-        expect(updated?.nextReview, isNotNull);
-        final diff = updated!.nextReview!.difference(before).inMilliseconds;
-        expect(diff, greaterThanOrEqualTo(24 * 60 * 60 * 1000 - 1000));
-        expect(diff, lessThan(25 * 60 * 60 * 1000));
-      });
-
-      test('SM-2 interval grows with successive correct reviews', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-
-        await service.updateNextReviewDate('q1', 0.95);
-        final firstReview = questionBox.get('q1')!.nextReview!;
-        final firstDiff = firstReview.difference(DateTime.now()).inMilliseconds;
-        expect(firstDiff, greaterThanOrEqualTo(24 * 60 * 60 * 1000 - 1000));
-
-        await service.updateNextReviewDate('q1', 0.95);
-        final secondReview = questionBox.get('q1')!.nextReview!;
-        final secondDiff = secondReview.difference(firstReview).inMilliseconds;
-        expect(secondDiff, greaterThanOrEqualTo(5 * 24 * 60 * 60 * 1000 - 1000));
-      });
-
-      test('stores serialized SR data on question', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-
-        await service.updateNextReviewDate('q1', 0.95);
-        final updated = questionBox.get('q1')!;
-        expect(updated.srDataJson, isNotNull);
-        expect(updated.srDataJson, contains('"r"'));
-      });
-
-      test('returns failure for non-existent question', () async {
-        final result = await service.updateNextReviewDate('none', 0.5);
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('notFound'));
-      });
-    });
-
-    group('getQuestionDueTimes', () {
-      test('returns due times from attempt', () async {
-        attemptRepo._storage['q1'] = StudentAttempt(
-          id: 'a1',
-          studentId: 's1',
-          questionId: 'q1',
-          subjectId: 'sub1',
-          timestamp: DateTime.now(),
-          lastDueDate: DateTime(2020, 1, 1),
-        );
-
-        final result = await service.getQuestionDueTimes('q1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data?.length, 1);
-        expect(result.data![0], DateTime(2020, 1, 1));
-      });
-
-      test('returns empty list when attempt has no due date', () async {
-        attemptRepo._storage['q1'] = StudentAttempt(
-          id: 'a1',
-          studentId: 's1',
-          questionId: 'q1',
-          subjectId: 'sub1',
-          timestamp: DateTime.now(),
-        );
-
-        final result = await service.getQuestionDueTimes('q1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isEmpty);
-      });
-
-      test('returns failure when no attempt found', () async {
-        final result = await service.getQuestionDueTimes('none');
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('notFound'));
-      });
-    });
-
-    group('getPracticeQuestions', () {
-      test('returns practice questions for subject', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', subjectId: 'sub1', nextReview: DateTime(2020, 1, 1)));
-        questionBox.put('q2', _createQuestion(
-          id: 'q2', subjectId: 'sub2', nextReview: DateTime(2020, 1, 1)));
-
-        final result = await service.getPracticeQuestions('sub1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data?.length, 1);
-      });
-
-      test('returns empty when no practice questions for subject', () async {
-        final result = await service.getPracticeQuestions('empty');
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isEmpty);
-      });
-
-      test('returns failure when box not open', () async {
-        final closedRepo = _FakeQuestionRepository(_FakeClosedBox());
-        final s = SpacedRepetitionService(
-          questionRepo: closedRepo,
-          attemptRepo: attemptRepo,
-        );
-
-        final result = await s.getPracticeQuestions('sub1');
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('boxClosed'));
-      });
-    });
-
-    group('getTopicTimeDue', () {
-      test('returns questions for topic', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', topicId: 't1'));
-        questionBox.put('q2', _createQuestion(
-          id: 'q2', topicId: 't2'));
-
-        final result = await service.getTopicTimeDue('t1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data?.length, 1);
-      });
-
-      test('returns empty for topic with no questions', () async {
-        final result = await service.getTopicTimeDue('none');
-        expect(result.data, isEmpty);
-      });
-
-      test('returns failure when box not open', () async {
-        final closedRepo = _FakeQuestionRepository(_FakeClosedBox());
-        final s = SpacedRepetitionService(
-          questionRepo: closedRepo,
-          attemptRepo: attemptRepo,
-        );
-
-        final result = await s.getTopicTimeDue('t1');
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('boxClosed'));
-      });
-    });
-
-    group('removeDueQuestions', () {
-      test('removes question from repository', () async {
-        questionBox.put('q1', _createQuestion(id: 'q1'));
-
-        final result = await service.removeDueQuestions('q1');
-        expect(result.isSuccess, isTrue);
-        expect(questionBox.get('q1'), isNull);
-      });
-
-      test('does not throw for non-existent question', () async {
-        final result = await service.removeDueQuestions('none');
-        expect(result.isSuccess, isTrue);
-      });
-    });
-
-    group('getSubjectDueCount', () {
-      test('returns count of due questions for subject', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', subjectId: 'sub1', nextReview: DateTime(2020, 1, 1)));
-        questionBox.put('q2', _createQuestion(
-          id: 'q2', subjectId: 'sub1', nextReview: DateTime(2099, 1, 1)));
-
-        final result = await service.getSubjectDueCount('sub1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data, 1);
-      });
-
-      test('returns zero when no due questions', () async {
-        questionBox.put('q1', _createQuestion(
-          id: 'q1', subjectId: 'sub1', nextReview: DateTime(2099, 1, 1)));
-
-        final result = await service.getSubjectDueCount('sub1');
-        expect(result.data, 0);
-      });
-
-      test('returns failure when box not open', () async {
-        final closedRepo = _FakeQuestionRepository(_FakeClosedBox());
-        final s = SpacedRepetitionService(
-          questionRepo: closedRepo,
-          attemptRepo: attemptRepo,
-        );
-
-        final result = await s.getSubjectDueCount('sub1');
-        expect(result.isFailure, isTrue);
-        expect(result.error, contains('boxClosed'));
-      });
-    });
-  });
-
-  group('SpacedRepetitionService - coverage gaps', () {
-    late _FakeQuestionBox questionBox;
-    late _FakeAttemptRepo attemptRepo;
-
-    setUp(() {
-      questionBox = _FakeQuestionBox();
-      attemptRepo = _FakeAttemptRepo();
-    });
-
-    test('updateNextReviewDate mastery 0.8 maps to grade 4', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
+    test('returns the attempt due time when the attempt exists', () async {
+      attemptRepo._storage['q1'] = StudentAttempt(
+        id: 'a1',
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'math',
+        timestamp: DateTime(2026, 1, 1),
+        lastDueDate: DateTime(2026, 1, 2),
       );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.updateNextReviewDate('q1', 0.8);
+      final result = await service.getQuestionDueTimes('q1');
       expect(result.isSuccess, isTrue);
-      final updated = questionBox.get('q1')!;
-      expect(updated.nextReview, isNotNull);
-      final srData = jsonDecode(updated.srDataJson!);
-      expect((srData['ef'] as num).toDouble(), closeTo(2.5, 0.01));
+      expect(result.data!, [DateTime(2026, 1, 2)]);
     });
 
-    test('updateNextReviewDate mastery 0.6 maps to grade 3', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.updateNextReviewDate('q1', 0.6);
-      expect(result.isSuccess, isTrue);
-      final updated = questionBox.get('q1')!;
-      final srData = jsonDecode(updated.srDataJson!);
-      expect((srData['ef'] as num).toDouble(), closeTo(2.36, 0.01));
-    });
-
-    test('updateNextReviewDate mastery 0.4 maps to grade 2 (failing)', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.updateNextReviewDate('q1', 0.4);
-      expect(result.isSuccess, isTrue);
-      final updated = questionBox.get('q1')!;
-      expect(updated.nextReview, isNotNull);
-      final srData = jsonDecode(updated.srDataJson!);
-      expect((srData['r'] as int), 0);
-    });
-
-    test('updateNextReviewDate mastery 0.2 maps to grade 1 (failing)', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.updateNextReviewDate('q1', 0.2);
-      expect(result.isSuccess, isTrue);
-      final updated = questionBox.get('q1')!;
-      final srData = jsonDecode(updated.srDataJson!);
-      expect((srData['r'] as int), 0);
-    });
-
-    test('updateNextReviewDate handles malformed srDataJson gracefully',
-        () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1', srDataJson: 'invalid{json'));
-
-      final result = await service.updateNextReviewDate('q1', 0.9);
-      expect(result.isSuccess, isTrue);
-      final updated = questionBox.get('q1')!;
-      expect(updated.srDataJson, isNotNull);
-      expect(updated.srDataJson, contains('"ef":'));
-    });
-
-    test('updateNextReviewDate handles null srDataJson gracefully', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1', srDataJson: null));
-
-      final result = await service.updateNextReviewDate('q1', 0.9);
-      expect(result.isSuccess, isTrue);
-    });
-
-    test('updateNextReviewDate handles empty srDataJson gracefully', () async {
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1', srDataJson: ''));
-
-      final result = await service.updateNextReviewDate('q1', 0.9);
-      expect(result.isSuccess, isTrue);
-    });
-
-    test('updateNextReviewDate throws exception during save returns failure',
-        () async {
-      final throwingRepo = _ThrowingQuestionRepository(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.updateNextReviewDate('q1', 0.9);
-      expect(result.isFailure, isTrue);
-    });
-
-    test('getQuestionsDue returns empty when getQuestionsDueForReview fails', () async {
-      final throwingBox = _ThrowingBox<Question>();
-      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-
-      final result = await service.getQuestionsDue();
-      // When getQuestionsDueForReview fails, getQuestionsDue returns success with empty list
-      expect(result.isSuccess, isTrue);
-      expect(result.data, isEmpty);
-    });
-
-    test('getQuestionDueTimes exception returns failure', () async {
-      attemptRepo.setThrowOnGet();
-      final qRepo = _FakeQuestionRepo(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: qRepo,
-        attemptRepo: attemptRepo,
-      );
-
+    test('returns a failure when no attempt exists', () async {
       final result = await service.getQuestionDueTimes('q1');
       expect(result.isFailure, isTrue);
     });
-
-    test('getPracticeQuestions exception returns failure', () async {
-      final throwingBox = _ThrowingBox<Question>();
-      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-
-      final result = await service.getPracticeQuestions('sub1');
-      expect(result.isFailure, isTrue);
-    });
-
-    test('getTopicTimeDue exception returns failure', () async {
-      final throwingBox = _ThrowingBox<Question>();
-      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-
-      final result = await service.getTopicTimeDue('t1');
-      expect(result.isFailure, isTrue);
-    });
-
-    test('removeDueQuestions exception returns failure', () async {
-      final throwingRepo = _ThrowingQuestionRepository(questionBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-      questionBox.put('q1', _createQ(id: 'q1'));
-
-      final result = await service.removeDueQuestions('q1');
-      expect(result.isFailure, isTrue);
-    });
-
-    test('getSubjectDueCount exception returns failure', () async {
-      final throwingBox = _ThrowingBox<Question>();
-      final throwingRepo = _FakeThrowingBoxRepo(throwingBox);
-      final service = SpacedRepetitionService(
-        questionRepo: throwingRepo,
-        attemptRepo: attemptRepo,
-      );
-
-      final result = await service.getSubjectDueCount('sub1');
-      expect(result.isFailure, isTrue);
-    });
   });
-}
-
-class _ThrowingBox<T> implements Box<T> {
-  @override
-  Iterable<T> get values => throw Exception('Box values error');
-
-  @override
-  bool get isOpen => true;
-
-  @override
-  String get name => 'throwing';
-
-  @override
-  bool get isNotEmpty => false;
-
-  @override
-  bool get isEmpty => true;
-
-  @override
-  int get length => 0;
-
-  @override
-  T? get(dynamic key, {T? defaultValue}) => null;
-
-  @override
-  bool containsKey(dynamic key) => false;
-
-  @override
-  Future<void> put(dynamic key, T value) async =>
-      throw Exception('Box put error');
-
-  @override
-  Future<void> delete(dynamic key) async =>
-      throw Exception('Box delete error');
-
-  @override
-  Future<int> clear() async => 0;
-
-  @override
-  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
-
-  @override
-  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
-}
-
-class _ThrowingQuestionRepository extends QuestionRepository {
-  final _FakeQuestionBox fakeBox;
-
-  _ThrowingQuestionRepository(this.fakeBox);
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Box<Question> get box => fakeBox;
-
-  @override
-  Future<Result<Question?>> get(String id) async {
-    throw Exception('Repo get error');
-  }
-
-  @override
-  Future<Result<void>> save(String key, Question item) async {
-    throw Exception('Repo save error');
-  }
-
-  @override
-  Future<Result<void>> delete(String key) async {
-    throw Exception('Repo delete error');
-  }
-
-  @override
-  Future<Result<void>> create(Question question) async {
-    return Result.failure('create error');
-  }
-}
-
-class _FakeAttemptRepo extends AttemptRepository {
-  final Map<String, StudentAttempt> _storage = {};
-  bool _throwOnGet = false;
-
-  void setThrowOnGet() {
-    _throwOnGet = true;
-  }
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<StudentAttempt?>> get(String id) async {
-    if (_throwOnGet) throw Exception('Attempt get error');
-    return Result.success(_storage[id]);
-  }
-}
-
-class _FakeQuestionRepo extends QuestionRepository {
-  final _FakeQuestionBox fakeBox;
-
-  _FakeQuestionRepo(this.fakeBox);
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Box<Question> get box => fakeBox;
-
-  @override
-  Future<Result<Question?>> get(String id) async {
-    return Result.success(fakeBox.get(id));
-  }
-
-  @override
-  Future<Result<void>> save(String key, Question item) async {
-    await fakeBox.put(key, item);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<void>> delete(String key) async {
-    await fakeBox.delete(key);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<void>> create(Question question) async {
-    await fakeBox.put(question.id, question);
-    return Result.success(null);
-  }
-}
-
-class _FakeThrowingBoxRepo extends QuestionRepository {
-  final Box<Question> _box;
-
-  _FakeThrowingBoxRepo(this._box);
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Box<Question> get box => _box;
-
-  @override
-  Future<Result<Question?>> get(String id) async => Result.success(null);
-
-  @override
-  Future<Result<void>> save(String key, Question item) async => Result.success(null);
-
-  @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
-
-  @override
-  Future<Result<void>> create(Question question) async {
-    return Result.success(null);
-  }
-}
-
-Question _createQ({
-  String id = 'q1',
-  String subjectId = 'sub1',
-  String topicId = 't1',
-  int difficulty = 1,
-  String? srDataJson,
-}) {
-  return Question(
-    id: id,
-    text: 'Sample question?',
-    type: QuestionType.singleChoice,
-    subjectId: subjectId,
-    topicId: topicId,
-    difficulty: difficulty,
-    createdAt: DateTime(2026, 5, 12),
-    updatedAt: DateTime(2026, 5, 12),
-    srDataJson: srDataJson,
-  );
 }

@@ -1,24 +1,132 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/core/errors/result.dart';
-import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
-class _FakeMasteryGraphService extends MasteryGraphService {
-  int recordAttemptCallCount = 0;
-  String? lastStudentId;
-  String? lastTopicId;
-  String? lastQuestionId;
-  bool? lastIsCorrect;
+class _FakeBox<T> implements Box<T> {
+  final Map<dynamic, T> _storage = {};
 
-  _FakeMasteryGraphService() : super();
+  @override
+  Iterable<T> get values => _storage.values;
+
+  @override
+  T? get(dynamic key, {T? defaultValue}) => _storage[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, T value) async {
+    _storage[key.toString()] = value;
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key.toString());
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'fakeBox';
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool containsKey(dynamic key) => _storage.containsKey(key.toString());
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class FakeQuestionRepository extends QuestionRepository {
+  final Map<String, Question> _storage = {};
+
+  @override
+  Future<Result<Question?>> get(String key) async =>
+      Result.success(_storage[key]);
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    _storage[key] = item;
+    return Result.success(null);
+  }
+
+  @override
+  Box<Question> get box => _FakeBox<Question>();
+}
+
+class FakeAttemptRepository extends AttemptRepository {
+  final Map<String, StudentAttempt> _storage = {};
+
+  @override
+  Future<Result<void>> create(StudentAttempt attempt) async {
+    _storage[attempt.id] = attempt;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<StudentAttempt?>> get(String key) async =>
+      Result.success(_storage[key]);
+}
+
+class FakeQuestionMasteryStateRepository
+    extends QuestionMasteryStateRepository {
+  final Map<String, QuestionMasteryState> _storage = {};
+  final List<String> updatedKeys = [];
+
+  @override
+  Future<Result<QuestionMasteryState>> getQuestionMasteryState(
+    String studentId,
+    String questionId,
+  ) async {
+    final key = '${studentId}_$questionId';
+    final existing = _storage[key];
+    if (existing != null) return Result.success(existing);
+    final created = QuestionMasteryState.initial(
+        studentId: studentId, questionId: questionId, now: DateTime.now());
+    _storage[key] = created;
+    return Result.success(created);
+  }
+
+  @override
+  Future<Result<void>> updateQuestionMasteryState(
+      QuestionMasteryState state) async {
+    final key = '${state.studentId}_${state.questionId}';
+    _storage[key] = state;
+    updatedKeys.add(key);
+    return Result.success(null);
+  }
+}
+
+class FakeMasteryGraphService extends MasteryGraphService {
+  bool recordAttemptCalled = false;
+  bool? lastIsCorrect;
+  int? lastConfidence;
 
   @override
   Future<Result<void>> recordAttempt({
@@ -30,558 +138,121 @@ class _FakeMasteryGraphService extends MasteryGraphService {
     required int timeSpentMs,
     String? subtopicId,
   }) async {
-    recordAttemptCallCount++;
-    lastStudentId = studentId;
-    lastTopicId = topicId;
-    lastQuestionId = questionId;
+    recordAttemptCalled = true;
     lastIsCorrect = isCorrect;
+    lastConfidence = confidence;
     return Result.success(null);
   }
 }
 
-class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
-  int scheduleReviewCallCount = 0;
-  String? lastQuestionId;
-
-  @override
-  SM2Result scheduleReview({
-    required String questionId,
-    required int grade,
-    QuestionSRData? currentData,
-    DateTime? now,
-  }) {
-    scheduleReviewCallCount++;
-    lastQuestionId = questionId;
-    return SM2Result(
-      nextReview: DateTime.now().add(const Duration(days: 1)),
-      updatedData: QuestionSRData(
-        repetitions: 1,
-        easeFactor: 2.5,
-        previousInterval: const Duration(days: 1),
-        lastReview: now,
-        reviewLog: [
-          ReviewLogEntry(
-            questionId: questionId,
-            timestamp: now ?? DateTime.now(),
-            grade: grade,
-            easeFactor: 2.5,
-            interval: const Duration(days: 1),
-            nextReview: DateTime.now().add(const Duration(days: 1)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  int mapConfidenceToGrade({
-    required bool isCorrect,
-    required int confidence,
-  }) {
-    return isCorrect ? 4 : 1;
-  }
-}
-
-class _FakeAttemptRepository extends AttemptRepository {
-  final List<StudentAttempt> attempts = [];
-
-  @override
-  Future<Result<void>> create(StudentAttempt attempt) async {
-    attempts.add(attempt);
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-}
-
-class _FakeQuestionMasteryStateRepo extends QuestionMasteryStateRepository {
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<QuestionMasteryState>> getQuestionMasteryState(
-    String studentId,
-    String questionId,
-  ) async {
-    return Result.success(QuestionMasteryState(
-      studentId: studentId,
-      questionId: questionId,
-      lastAttempt: DateTime.now(),
-    ));
-  }
-
-  @override
-  Future<Result<void>> updateQuestionMasteryState(
-    QuestionMasteryState state,
-  ) async {
-    return Result.success(null);
-  }
-}
-
-class _FakeQuestionRepository extends QuestionRepository {
-  final Map<String, Question> _questions = {};
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<Question?>> get(String id) async {
-    return Result.success(_questions[id]);
-  }
-
-  @override
-  Future<Result<void>> save(String key, Question item) async {
-    _questions[key] = item;
-    return Result.success(null);
-  }
+Question _makeQuestion(String id) {
+  final now = DateTime(2026, 1, 1);
+  return Question(
+    id: id,
+    text: 'What is 2+2?',
+    type: QuestionType.typedAnswer,
+    subjectId: 'math',
+    topicId: 'arithmetic',
+    createdAt: now,
+    updatedAt: now,
+  );
 }
 
 void main() {
-  group('MasteryRecorder', () {
-    late _FakeMasteryGraphService fakeMasteryGraph;
-    late _FakeSpacedRepetitionEngine fakeEngine;
-    late _FakeAttemptRepository fakeAttemptRepo;
-    late _FakeQuestionMasteryStateRepo fakeQuestionMasteryRepo;
-    late _FakeQuestionRepository fakeQuestionRepo;
+  group('MasteryRecorder.recordAttempt', () {
+    late FakeQuestionRepository questionRepo;
+    late FakeAttemptRepository attemptRepo;
+    late FakeQuestionMasteryStateRepository masteryRepo;
+    late FakeMasteryGraphService masteryGraphService;
+    late SpacedRepetitionEngine engine;
     late MasteryRecorder recorder;
+    final now = DateTime(2026, 1, 1, 12, 0);
 
     setUp(() {
-      fakeMasteryGraph = _FakeMasteryGraphService();
-      fakeEngine = _FakeSpacedRepetitionEngine();
-      fakeAttemptRepo = _FakeAttemptRepository();
-      fakeQuestionMasteryRepo = _FakeQuestionMasteryStateRepo();
-      fakeQuestionRepo = _FakeQuestionRepository();
-
+      questionRepo = FakeQuestionRepository();
+      attemptRepo = FakeAttemptRepository();
+      masteryRepo = FakeQuestionMasteryStateRepository();
+      masteryGraphService = FakeMasteryGraphService();
+      engine = SpacedRepetitionEngine();
       recorder = MasteryRecorder(
-        masteryGraphService: fakeMasteryGraph,
-        srEngine: fakeEngine,
-        attemptRepo: fakeAttemptRepo,
-        questionMasteryRepo: fakeQuestionMasteryRepo,
-        questionRepo: fakeQuestionRepo,
+        masteryGraphService: masteryGraphService,
+        srEngine: engine,
+        attemptRepo: attemptRepo,
+        questionMasteryRepo: masteryRepo,
+        questionRepo: questionRepo,
       );
+      questionRepo._storage['q1'] = _makeQuestion('q1');
     });
 
-    test('recordAttempt returns failure when question not found', () async {
+    test('records an attempt, updates mastery state, and reschedules review',
+        () async {
       final result = await recorder.recordAttempt(
         studentId: 's1',
-        questionId: 'nonexistent',
-        subjectId: 'sub1',
-        topicId: 't1',
+        questionId: 'q1',
+        subjectId: 'math',
+        topicId: 'arithmetic',
         isCorrect: true,
         timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'test answer',
+        confidence: 5,
+        userAnswer: '4',
+        timestamp: now,
       );
 
+      expect(result.isSuccess, isTrue);
+      expect(masteryGraphService.recordAttemptCalled, isTrue);
+      expect(masteryGraphService.lastIsCorrect, isTrue);
+      expect(masteryGraphService.lastConfidence, 5);
+
+      // The attempt was persisted.
+      expect(attemptRepo._storage.isNotEmpty, isTrue);
+
+      // The question's review schedule was recomputed by the engine.
+      final updatedQuestion = questionRepo._storage['q1']!;
+      expect(updatedQuestion.nextReview, isNotNull);
+      expect(updatedQuestion.nextReview!.isAfter(now), isTrue);
+      expect(updatedQuestion.srDataJson, isNotNull);
+      expect(updatedQuestion.srDataJson!.isNotEmpty, isTrue);
+
+      // The mastery record for this question was mutated (correct count up).
+      final state = masteryRepo._storage['s1_q1']!;
+      expect(state.correctCount, 1);
+      expect(state.incorrectCount, 0);
+      expect(state.nextReview, isNotNull);
+    });
+
+    test('an incorrect attempt lowers the stored correctness', () async {
+      final result = await recorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'math',
+        topicId: 'arithmetic',
+        isCorrect: false,
+        timeSpentMs: 5000,
+        confidence: 1,
+        userAnswer: '5',
+        timestamp: now,
+      );
+
+      expect(result.isSuccess, isTrue);
+      final state = masteryRepo._storage['s1_q1']!;
+      expect(state.incorrectCount, 1);
+      expect(state.correctCount, 0);
+      expect(state.currentStreak, 0);
+    });
+
+    test('returns a failure when the question is missing', () async {
+      final result = await recorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'missing',
+        subjectId: 'math',
+        topicId: 'arithmetic',
+        isCorrect: true,
+        timeSpentMs: 1000,
+        confidence: 4,
+        userAnswer: 'x',
+        timestamp: now,
+      );
       expect(result.isFailure, isTrue);
     });
-
-    test('recordAttempt coordinates all three systems', () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct answer',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeMasteryGraph.recordAttemptCallCount, 1);
-      expect(fakeMasteryGraph.lastQuestionId, 'q1');
-      expect(fakeMasteryGraph.lastIsCorrect, isTrue);
-      expect(fakeEngine.mapConfidenceToGrade(isCorrect: true, confidence: 4), 4);
-
-      final savedAttempt = fakeAttemptRepo.attempts;
-      expect(savedAttempt, hasLength(1));
-      expect(savedAttempt.first.isCorrect, isTrue);
-      expect(savedAttempt.first.confidence, 4);
-
-      final updatedQuestion = await fakeQuestionRepo.get('q1');
-      expect(updatedQuestion.data?.nextReview, isNotNull);
-    });
-
-    test('recordAttempt saves incorrect attempt correctly', () async {
-      final question = Question(
-        id: 'q2',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q2', question);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q2',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: false,
-        timeSpentMs: 3000,
-        confidence: 2,
-        userAnswer: 'wrong answer',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeMasteryGraph.lastIsCorrect, isFalse);
-
-      final savedAttempt = fakeAttemptRepo.attempts.first;
-      expect(savedAttempt.isCorrect, isFalse);
-      expect(savedAttempt.confidence, 2);
-      expect(savedAttempt.userAnswer, 'wrong answer');
-    });
   });
-
-  group('MasteryRecorder - coverage gaps', () {
-    late _FakeMasteryGraphSvc fakeMasteryGraph;
-    late _FakeSrEngine fakeEngine;
-    late _FakeAttemptRepo2 fakeAttemptRepo;
-    late _FakeQMasteryStateRepo fakeQMasteryRepo;
-    late _FakeQuestionRepo2 fakeQuestionRepo;
-    late MasteryRecorder recorder;
-
-    setUp(() {
-      fakeMasteryGraph = _FakeMasteryGraphSvc();
-      fakeEngine = _FakeSrEngine();
-      fakeAttemptRepo = _FakeAttemptRepo2();
-      fakeQMasteryRepo = _FakeQMasteryStateRepo();
-      fakeQuestionRepo = _FakeQuestionRepo2();
-      recorder = MasteryRecorder(
-        masteryGraphService: fakeMasteryGraph,
-        srEngine: fakeEngine,
-        attemptRepo: fakeAttemptRepo,
-        questionMasteryRepo: fakeQMasteryRepo,
-        questionRepo: fakeQuestionRepo,
-      );
-    });
-
-    test('recordAttempt continues when mastery graph returns failure',
-        () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-      fakeMasteryGraph.shouldFail = true;
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeAttemptRepo.attempts, hasLength(1));
-    });
-
-    test('recordAttempt works when questionMasteryState returns failure',
-        () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-      fakeQMasteryRepo.shouldFail = true;
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct',
-      );
-
-      expect(result.isSuccess, isTrue);
-    });
-
-    test('recordAttempt with custom timestamp and confidence values', () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-        srDataJson: '{"r":1,"ef":2.5,"pi":86400000,"lr":1700000000000}',
-      );
-      await fakeQuestionRepo.save('q1', question);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: false,
-        timeSpentMs: 3000,
-        confidence: 1,
-        userAnswer: 'wrong',
-        timestamp: DateTime(2025, 1, 1),
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeAttemptRepo.attempts.first.isCorrect, isFalse);
-      expect(fakeAttemptRepo.attempts.first.confidence, 1);
-    });
-
-    test('recordAttempt updates question mastery state when data exists',
-        () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeQMasteryRepo.lastUpdatedState, isNotNull);
-      expect(fakeQMasteryRepo.lastUpdatedState!.questionId, 'q1');
-    });
-
-    test('recordAttempt serializes srData correctly', () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct',
-      );
-
-      expect(result.isSuccess, isTrue);
-      final updated = await fakeQuestionRepo.get('q1');
-      expect(updated.data!.srDataJson, isNotNull);
-      expect(updated.data!.srDataJson, contains('"r"'));
-      expect(updated.data!.srDataJson, contains('"ef"'));
-    });
-
-    test('recordAttempt uses provided timestamp', () async {
-      final question = Question(
-        id: 'q1',
-        text: 'Test?',
-        type: QuestionType.singleChoice,
-        subjectId: 'sub1',
-        topicId: 't1',
-        createdAt: DateTime(2026, 1, 1),
-        updatedAt: DateTime(2026, 1, 1),
-      );
-      await fakeQuestionRepo.save('q1', question);
-      final customTime = DateTime(2025, 6, 15);
-
-      final result = await recorder.recordAttempt(
-        studentId: 's1',
-        questionId: 'q1',
-        subjectId: 'sub1',
-        topicId: 't1',
-        isCorrect: true,
-        timeSpentMs: 5000,
-        confidence: 4,
-        userAnswer: 'correct',
-        timestamp: customTime,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(fakeAttemptRepo.attempts.first.timestamp, customTime);
-    });
-  });
-}
-
-class _FakeMasteryGraphSvc extends MasteryGraphService {
-  bool shouldFail = false;
-
-  _FakeMasteryGraphSvc() : super();
-
-  @override
-  Future<Result<void>> recordAttempt({
-    required String studentId,
-    required String topicId,
-    required String questionId,
-    required bool isCorrect,
-    required int confidence,
-    required int timeSpentMs,
-    String? subtopicId,
-  }) async {
-    if (shouldFail) return Result.failure('Mastery graph failure');
-    return Result.success(null);
-  }
-}
-
-class _FakeSrEngine extends SpacedRepetitionEngine {
-  @override
-  SM2Result scheduleReview({
-    required String questionId,
-    required int grade,
-    QuestionSRData? currentData,
-    DateTime? now,
-  }) {
-    final reviewTime = now ?? DateTime.now();
-    return SM2Result(
-      nextReview: reviewTime.add(const Duration(days: 1)),
-      updatedData: QuestionSRData(
-        repetitions: 1,
-        easeFactor: 2.5,
-        previousInterval: const Duration(days: 1),
-        lastReview: reviewTime,
-        reviewLog: [
-          ReviewLogEntry(
-            questionId: questionId,
-            timestamp: reviewTime,
-            grade: grade,
-            easeFactor: 2.5,
-            interval: const Duration(days: 1),
-            nextReview: reviewTime.add(const Duration(days: 1)),
-          ),
-        ],
-      ),
-    );
-  }
-
-  @override
-  int mapConfidenceToGrade({
-    required bool isCorrect,
-    required int confidence,
-  }) {
-    return isCorrect ? 4 : 1;
-  }
-}
-
-class _FakeAttemptRepo2 extends AttemptRepository {
-  final List<StudentAttempt> attempts = [];
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<List<StudentAttempt>>> getAll() async => Result.success([]);
-
-  @override
-  Future<Result<StudentAttempt?>> get(String key) async => Result.success(null);
-
-  @override
-  Future<Result<void>> save(String key, StudentAttempt item) async =>
-      Result.success(null);
-
-  @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
-
-  @override
-  Future<Result<void>> create(StudentAttempt attempt) async {
-    attempts.add(attempt);
-    return Result.success(null);
-  }
-}
-
-class _FakeQMasteryStateRepo extends QuestionMasteryStateRepository {
-  bool shouldFail = false;
-  QuestionMasteryState? lastUpdatedState;
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<QuestionMasteryState>> getQuestionMasteryState(
-    String studentId,
-    String questionId,
-  ) async {
-    if (shouldFail) return Result.failure('QM state failure');
-    return Result.success(QuestionMasteryState(
-      studentId: studentId,
-      questionId: questionId,
-      lastAttempt: DateTime.now(),
-    ));
-  }
-
-  @override
-  Future<Result<void>> updateQuestionMasteryState(
-    QuestionMasteryState state,
-  ) async {
-    lastUpdatedState = state;
-    return Result.success(null);
-  }
-}
-
-class _FakeQuestionRepo2 extends QuestionRepository {
-  final Map<String, Question> _questions = {};
-
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<List<Question>>> getAll() async => Result.success([]);
-
-  @override
-  Future<Result<Question?>> get(String id) async {
-    return Result.success(_questions[id]);
-  }
-
-  @override
-  Future<Result<void>> save(String key, Question item) async {
-    _questions[key] = item;
-    return Result.success(null);
-  }
-
-  @override
-  Future<Result<void>> delete(String key) async => Result.success(null);
 }

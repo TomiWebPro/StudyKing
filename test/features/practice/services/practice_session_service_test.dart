@@ -145,11 +145,20 @@ void main() {
     });
 
     test('elapsedNotifier updates after timer ticks', () {
+      final clock = _FakeClock(DateTime(2026, 1, 1, 10, 0, 0));
+      final svc = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'subj-1',
+      );
       fakeAsync((async) {
-        service.startTimer();
+        svc.startTimer();
+        clock.advance(const Duration(milliseconds: 1100));
         async.elapse(const Duration(milliseconds: 1100));
-        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
-        service.cancelTimer();
+        expect(svc.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+        svc.cancelTimer();
       });
     });
 
@@ -217,32 +226,52 @@ void main() {
     });
 
     test('startTimer cancels previous timer and resets elapsed', () {
+      final clock = _FakeClock(DateTime(2026, 1, 1, 10, 0, 0));
+      final svc = PracticeSessionService(
+        sessionRepo: sessionRepo,
+        srService: srService,
+        studentIdService: FakeStudentIdService(),
+        clock: clock,
+        subjectId: 'subj-1',
+      );
       fakeAsync((async) {
-        service.startTimer();
+        svc.startTimer();
+        clock.advance(const Duration(milliseconds: 1100));
         async.elapse(const Duration(milliseconds: 1100));
-        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+        expect(svc.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
 
-        service.startTimer();
-        expect(service.elapsedNotifier.value, Duration.zero);
+        svc.startTimer();
+        expect(svc.elapsedNotifier.value, Duration.zero);
 
+        clock.advance(const Duration(milliseconds: 500));
         async.elapse(const Duration(milliseconds: 500));
-        expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(0));
-        service.dispose();
+        expect(svc.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(0));
+        svc.dispose();
       });
     });
 
     group('dispose', () {
       test('stops the timer from updating elapsed', () {
+        final clock = _FakeClock(DateTime(2026, 1, 1, 10, 0, 0));
+        final svc = PracticeSessionService(
+          sessionRepo: sessionRepo,
+          srService: srService,
+          studentIdService: FakeStudentIdService(),
+          clock: clock,
+          subjectId: 'subj-1',
+        );
         fakeAsync((async) {
-          service.startTimer();
+          svc.startTimer();
+          clock.advance(const Duration(milliseconds: 1100));
           async.elapse(const Duration(milliseconds: 1100));
-          expect(service.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
+          expect(svc.elapsedNotifier.value.inSeconds, greaterThanOrEqualTo(1));
 
-          service.dispose();
-          final valueAfterDispose = service.elapsedNotifier.value;
+          svc.dispose();
+          final valueAfterDispose = svc.elapsedNotifier.value;
 
+          clock.advance(const Duration(milliseconds: 500));
           async.elapse(const Duration(milliseconds: 500));
-          expect(service.elapsedNotifier.value, equals(valueAfterDispose));
+          expect(svc.elapsedNotifier.value, equals(valueAfterDispose));
         });
       });
 
