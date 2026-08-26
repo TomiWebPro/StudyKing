@@ -10,6 +10,7 @@ import '../conversation_memory.dart';
 export '../conversation_memory.dart' show ConversationMemory;
 import '../llm_task_manager.dart';
 import '../llm_usage_meter.dart' show LlmUsageMeter;
+import '../../../features/settings/data/models/settings_model.dart' show UsageRecord;
 import 'llm_response_cache.dart' show LlmResponseCache;
 
 enum LlmProvider { openRouter, ollama, openAI, custom }
@@ -193,14 +194,20 @@ class LlmService {
     }) primaryStream,
   }) async* {
     try {
-      yield* primaryStream(
+      // NOTE: `yield*` forwards inner-stream errors to the listener rather than
+      // re-throwing them in this generator's body, so the surrounding try/catch
+      // would never see them. Consuming via `await for` routes errors through
+      // the body where failover can handle them.
+      await for (final chunk in primaryStream(
         message: message,
         modelId: modelId,
         systemPrompt: systemPrompt,
         memory: memory,
         history: history,
         feature: feature,
-      );
+      )) {
+        yield chunk;
+      }
     } catch (e) {
       final errorStr = e.toString();
       final isServerError = errorStr.contains('500') || errorStr.contains('502') ||
@@ -471,10 +478,48 @@ class LlmService {
     }
   }
 
-  void _completeTask(String taskId, {int tokensUsed = 0, double estimatedCost = 0.0}) {
-    if (taskId.isNotEmpty) {
-      _taskManager?.completeTask(taskId, tokensUsed: tokensUsed, estimatedCost: estimatedCost);
-    }
+  void _completeTask(
+    String taskId, {
+    int tokensUsed = 0,
+    int inputTokens = 0,
+    int outputTokens = 0,
+    double estimatedCost = 0.0,
+  }) {
+    if (taskId.isEmpty) return;
+    final totalTokens = tokensUsed > 0 ? tokensUsed : (inputTokens + outputTokens);
+    final cost = estimatedCost > 0
+        ? estimatedCost
+        : UsageRecord.calculateTotalCost(inputTokens, outputTokens, 0);
+    _taskManager?.completeTask(
+      taskId,
+      tokensUsed: totalTokens,
+      estimatedCost: cost,
+    );
+  }
+
+  /// Finalizes a task and records usage, computing the estimated cost from the
+  /// model's pricing so the LLM task-manager portal shows accurate totals.
+  void _recordCompletion({
+    required String taskId,
+    required String feature,
+    required String modelId,
+    required int inputTokens,
+    required int outputTokens,
+    int? tokensUsed,
+  }) {
+    _completeTask(
+      taskId,
+      tokensUsed: tokensUsed ?? (inputTokens + outputTokens),
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+    );
+    _usageMeter?.recordUsage(
+      id: taskId.isNotEmpty ? taskId : 'usage_${DateTime.now().millisecondsSinceEpoch}',
+      feature: feature,
+      modelId: modelId,
+      inputTokens: inputTokens,
+      outputTokens: outputTokens,
+    );
   }
 
   void _failTask(String taskId, String error) {
@@ -554,6 +599,7 @@ class LlmService {
       'model': modelId,
       'messages': messages,
       'stream': true,
+      'stream_options': {'include_usage': true},
     });
 
     try {
@@ -569,12 +615,17 @@ class LlmService {
           .transform(const LineSplitter());
 
       String fullContent = '';
+      Map<String, dynamic>? lastUsage;
       await for (final line in lines) {
         if (line.startsWith('data: ')) {
           final dataStr = line.substring(6);
           if (dataStr == '[DONE]') break;
           try {
             final data = jsonDecode(dataStr) as Map<String, dynamic>;
+            final usage = data['usage'] as Map<String, dynamic>?;
+            if (usage != null) {
+              lastUsage = usage;
+            }
             final choice = data['choices']?[0];
             if (choice != null) {
               final delta = choice['delta'] as Map<String, dynamic>?;
@@ -589,13 +640,21 @@ class LlmService {
           }
         }
       }
-      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
-      _usageMeter?.recordUsage(
-        id: taskId,
+      int inputTokens;
+      int outputTokens;
+      if (lastUsage != null) {
+        inputTokens = lastUsage['prompt_tokens'] as int? ?? 0;
+        outputTokens = lastUsage['completion_tokens'] as int? ?? 0;
+      } else {
+        inputTokens = _estimateInputTokens(message, systemPrompt);
+        outputTokens = fullContent.length ~/ 4;
+      }
+      _recordCompletion(
+        taskId: taskId,
         feature: feature,
         modelId: modelId,
-        inputTokens: _estimateInputTokens(message, systemPrompt),
-        outputTokens: fullContent.length ~/ 4,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -634,13 +693,14 @@ class LlmService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['message']['content'] as String;
-      _completeTask(taskId, tokensUsed: content.length ~/ 4);
-      _usageMeter?.recordUsage(
-        id: taskId,
+      final inputTokens = data['prompt_eval_count'] as int? ?? _estimateInputTokens(message, '');
+      final outputTokens = data['eval_count'] as int? ?? content.length ~/ 4;
+      _recordCompletion(
+        taskId: taskId,
         feature: feature,
         modelId: modelId,
-        inputTokens: _estimateInputTokens(message, ''),
-        outputTokens: content.length ~/ 4,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
       return Result.success(content);
     }
@@ -689,11 +749,22 @@ class LlmService {
           .transform(const LineSplitter());
 
       String fullContent = '';
+      Map<String, dynamic>? lastUsage;
+      int? promptEvalCount;
+      int? evalCount;
       await for (final line in lines) {
         if (line.trim().isEmpty) continue;
         try {
           final data = jsonDecode(line) as Map<String, dynamic>;
+          final usage = data['usage'] as Map<String, dynamic>?;
+          if (usage != null) {
+            lastUsage = usage;
+          }
           final done = data['done'] as bool? ?? false;
+          if (done) {
+            promptEvalCount = data['prompt_eval_count'] as int?;
+            evalCount = data['eval_count'] as int?;
+          }
           final content = data['message']?['content'] as String?;
           if (content != null && content.isNotEmpty) {
             fullContent += content;
@@ -704,13 +775,21 @@ class LlmService {
           _logger.w('Failed to parse Ollama response: $e');
         }
       }
-      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
-      _usageMeter?.recordUsage(
-        id: taskId,
+      int inputTokens;
+      int outputTokens;
+      if (lastUsage != null) {
+        inputTokens = lastUsage['prompt_tokens'] as int? ?? 0;
+        outputTokens = lastUsage['completion_tokens'] as int? ?? 0;
+      } else {
+        inputTokens = promptEvalCount ?? _estimateInputTokens(message, '');
+        outputTokens = evalCount ?? fullContent.length ~/ 4;
+      }
+      _recordCompletion(
+        taskId: taskId,
         feature: feature,
         modelId: modelId,
-        inputTokens: _estimateInputTokens(message, ''),
-        outputTokens: fullContent.length ~/ 4,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -787,6 +866,7 @@ class LlmService {
       'model': modelId,
       'messages': messages,
       'stream': true,
+      'stream_options': {'include_usage': true},
     });
 
     try {
@@ -802,12 +882,17 @@ class LlmService {
           .transform(const LineSplitter());
 
       String fullContent = '';
+      Map<String, dynamic>? lastUsage;
       await for (final line in lines) {
         if (line.startsWith('data: ')) {
           final dataStr = line.substring(6);
           if (dataStr == '[DONE]') break;
           try {
             final data = jsonDecode(dataStr) as Map<String, dynamic>;
+            final usage = data['usage'] as Map<String, dynamic>?;
+            if (usage != null) {
+              lastUsage = usage;
+            }
             final choice = data['choices']?[0];
             if (choice != null) {
               final delta = choice['delta'] as Map<String, dynamic>?;
@@ -822,13 +907,21 @@ class LlmService {
           }
         }
       }
-      _completeTask(taskId, tokensUsed: fullContent.length ~/ 4);
-      _usageMeter?.recordUsage(
-        id: taskId,
+      int inputTokens;
+      int outputTokens;
+      if (lastUsage != null) {
+        inputTokens = lastUsage['prompt_tokens'] as int? ?? 0;
+        outputTokens = lastUsage['completion_tokens'] as int? ?? 0;
+      } else {
+        inputTokens = _estimateInputTokens(message, systemPrompt);
+        outputTokens = fullContent.length ~/ 4;
+      }
+      _recordCompletion(
+        taskId: taskId,
         feature: feature,
         modelId: modelId,
-        inputTokens: _estimateInputTokens(message, systemPrompt),
-        outputTokens: fullContent.length ~/ 4,
+        inputTokens: inputTokens,
+        outputTokens: outputTokens,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -850,9 +943,8 @@ class LlmService {
     if (usage != null) {
       final inputTokens = usage['prompt_tokens'] as int? ?? 0;
       final outputTokens = usage['completion_tokens'] as int? ?? 0;
-      _completeTask(taskId, tokensUsed: inputTokens + outputTokens);
-      _usageMeter?.recordUsage(
-        id: taskId.isNotEmpty ? taskId : 'usage_${DateTime.now().millisecondsSinceEpoch}',
+      _recordCompletion(
+        taskId: taskId,
         feature: feature,
         modelId: modelId,
         inputTokens: inputTokens,

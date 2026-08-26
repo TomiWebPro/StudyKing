@@ -114,6 +114,7 @@ void main() {
         LlmProvider.openRouter,
         LlmProvider.ollama,
         LlmProvider.openAI,
+        LlmProvider.custom,
       ]);
     });
   });
@@ -873,6 +874,109 @@ void main() {
         await expectLater(stream, emitsError(isA<Exception>()));
         expect(taskManager.tasks.length, 1);
         expect(taskManager.tasks.first.status, LlmTaskStatus.failed);
+      });
+    });
+
+    group('streaming usage payload parsing', () {
+      test('OpenRouter stream parses usage and records nonzero tokens and cost', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async {
+          return http.Response(
+            'data: ${jsonEncode({"choices": [{"delta": {"content": "Hi"}}]})}\n'
+            'data: ${jsonEncode({"choices": [{"delta": {}}], "usage": {"prompt_tokens": 12, "completion_tokens": 8}})}\n'
+            'data: [DONE]\n'
+            '\n',
+            200,
+          );
+        };
+
+        final taskManager = LlmTaskManager();
+        await taskManager.init();
+        final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+        );
+        final service = LlmService(
+          config: config,
+          httpClient: client,
+          taskManager: taskManager,
+          usageMeter: usageMeter,
+        );
+
+        final stream = service.chatStream(message: 'Hi', modelId: 'm', feature: 'usage-parse');
+        await expectLater(stream, emitsInOrder(['Hi', emitsDone]));
+
+        final task = taskManager.tasks.first;
+        expect(task.status, LlmTaskStatus.done);
+        expect(task.tokensUsed, 20);
+        expect(task.estimatedCost, greaterThan(0.0));
+
+        final record = usageMeter.getRecords().first;
+        expect(record.inputTokens, 12);
+        expect(record.outputTokens, 8);
+        expect(record.cost, greaterThan(0.0));
+      });
+
+      test('Ollama stream parses done token counts and records cost', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async {
+          return http.Response(
+            '${jsonEncode({"message": {"content": "Hi"}, "done": false})}\n'
+            '${jsonEncode({"message": {"content": ""}, "done": true, "prompt_eval_count": 9, "eval_count": 4})}\n',
+            200,
+          );
+        };
+
+        final taskManager = LlmTaskManager();
+        await taskManager.init();
+        const config = LlmConfiguration(
+          provider: LlmProvider.ollama,
+          apiKey: 'key',
+        );
+        final service = LlmService(
+          config: config,
+          httpClient: client,
+          taskManager: taskManager,
+        );
+
+        final stream = service.chatStream(message: 'Hi', modelId: 'm', feature: 'ollama-parse');
+        await expectLater(stream, emitsInOrder(['Hi', emitsDone]));
+
+        final task = taskManager.tasks.first;
+        expect(task.tokensUsed, 13);
+        expect(task.estimatedCost, greaterThan(0.0));
+      });
+
+      test('falls back to chars/4 estimate when no usage payload is present', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async {
+          return http.Response(
+            'data: ${jsonEncode({"choices": [{"delta": {"content": "abcdefgh"}}]})}\n'
+            'data: [DONE]\n'
+            '\n',
+            200,
+          );
+        };
+
+        final taskManager = LlmTaskManager();
+        await taskManager.init();
+        const config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'key',
+        );
+        final service = LlmService(
+          config: config,
+          httpClient: client,
+          taskManager: taskManager,
+        );
+
+        final stream = service.chatStream(message: 'Hi', modelId: 'm', feature: 'fallback');
+        await expectLater(stream, emitsInOrder(['abcdefgh', emitsDone]));
+
+        final task = taskManager.tasks.first;
+        expect(task.tokensUsed, greaterThan(2));
       });
     });
 
