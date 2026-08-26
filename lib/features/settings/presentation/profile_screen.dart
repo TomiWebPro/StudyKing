@@ -149,27 +149,29 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     }
   }
 
-  static const List<String> _avatarIconKeys = [
-    'Icons.face',
-    'Icons.person',
-    'Icons.school',
-    'Icons.local_hospital',
-    'Icons.leaderboard',
-    'Icons.emoji_events',
-    'Icons.sports_tennis',
-    'Icons.coffee',
-  ];
+  static const double _avatarOptionSize = 64;
+  static const double _avatarOptionSpacing = 12;
 
-  static IconData _iconForKey(String iconKey) => switch (iconKey) {
-        'Icons.face' => Icons.face,
-        'Icons.school' => Icons.school,
-        'Icons.local_hospital' => Icons.local_hospital,
-        'Icons.leaderboard' => Icons.leaderboard,
-        'Icons.emoji_events' => Icons.emoji_events,
-        'Icons.sports_tennis' => Icons.sports_tennis,
-        'Icons.coffee' => Icons.coffee,
-        _ => Icons.person,
-      };
+  static const Map<String, IconData> _avatarOptions = {
+    'Icons.person': Icons.person,
+    'Icons.face': Icons.face,
+    'Icons.school': Icons.school,
+    'Icons.local_hospital': Icons.local_hospital,
+    'Icons.leaderboard': Icons.leaderboard,
+    'Icons.emoji_events': Icons.emoji_events,
+    'Icons.sports_tennis': Icons.sports_tennis,
+    'Icons.coffee': Icons.coffee,
+    'Icons.pets': Icons.pets,
+    'Icons.science': Icons.science,
+    'Icons.music_note': Icons.music_note,
+    'Icons.book': Icons.book,
+    'Icons.computer': Icons.computer,
+    'Icons.favorite': Icons.favorite,
+    'Icons.star': Icons.star,
+    'Icons.work': Icons.work,
+  };
+
+  static IconData _iconForKey(String iconKey) => _avatarOptions[iconKey] ?? Icons.person;
 
   void _pickAvatar() {
     final l10n = AppLocalizations.of(context)!;
@@ -177,7 +179,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       context: context,
       isScrollControlled: true,
       builder: (context) => SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: ResponsiveUtils.screenPadding(context).copyWith(top: 24, bottom: 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
@@ -189,15 +191,12 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                 ),
               ),
               const SizedBox(height: 24),
-              GridView.count(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisCount: ResponsiveUtils.breakpointOf(context).isMobile ? 4 : 6,
-                crossAxisSpacing: 16,
-                mainAxisSpacing: 16,
-                childAspectRatio: 1,
+              Wrap(
+                alignment: WrapAlignment.center,
+                spacing: _avatarOptionSpacing,
+                runSpacing: _avatarOptionSpacing,
                 children: [
-                  for (final iconKey in _avatarIconKeys) _buildAvatarChoice(iconKey),
+                  for (final iconKey in _avatarOptions.keys) _buildAvatarChoice(iconKey),
                 ],
               ),
               const SizedBox(height: 16),
@@ -228,24 +227,44 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           setState(() => _avatarIconKey = iconKey);
           Navigator.pop(context);
         },
-        borderRadius: BorderRadius.circular(48),
+        borderRadius: BorderRadius.circular(_avatarOptionSize / 2),
         child: Container(
+          width: _avatarOptionSize,
+          height: _avatarOptionSize,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: isSelected
-                ? primary.withValues(alpha: 0.15)
-                : colorScheme.surfaceContainerHighest,
+            color: isSelected ? primary : colorScheme.surfaceContainerHighest,
             border: Border.all(
               color: isSelected ? primary : colorScheme.outlineVariant,
               width: isSelected ? 3 : 1.5,
             ),
           ),
-          child: Center(
-            child: Icon(
-              icon,
-              size: 32,
-              color: isSelected ? primary : colorScheme.onSurfaceVariant,
-            ),
+          child: Stack(
+            alignment: Alignment.center,
+            children: [
+              Icon(
+                icon,
+                size: 32,
+                color: isSelected ? colorScheme.onPrimary : colorScheme.onSurfaceVariant,
+              ),
+              if (isSelected)
+                Positioned(
+                  right: 0,
+                  bottom: 0,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: colorScheme.onPrimary,
+                      border: Border.all(color: primary, width: 2),
+                    ),
+                    child: Icon(
+                      Icons.check,
+                      size: 16,
+                      color: primary,
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       ),
@@ -338,13 +357,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Theme.of(context).primaryColor.withValues(alpha: 0.1),
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
                     ),
                     child: _avatarIconKey != null
                         ? Icon(
                             _getIconFromAvatar(),
                             size: 50,
-                            color: Theme.of(context).primaryColor,
+                            color: Theme.of(context).colorScheme.primary,
                           )
                         : Icon(
                             Icons.person,

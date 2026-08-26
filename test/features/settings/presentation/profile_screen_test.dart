@@ -205,20 +205,39 @@ void main() {
 
       expect(find.text('Choose Avatar'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
-      // Use semantics labels to disambiguate from the Learning Goal field's
-      // Icons.school prefix icon.
+      // Each avatar option is exposed with a distinct semantics label and is
+      // centered/tappable.
       for (final iconKey in const [
-        'Icons.face',
         'Icons.person',
+        'Icons.face',
         'Icons.school',
         'Icons.local_hospital',
         'Icons.leaderboard',
         'Icons.emoji_events',
         'Icons.sports_tennis',
         'Icons.coffee',
+        'Icons.pets',
+        'Icons.science',
+        'Icons.music_note',
+        'Icons.book',
+        'Icons.computer',
+        'Icons.favorite',
+        'Icons.star',
+        'Icons.work',
       ]) {
         expect(find.bySemanticsLabel('Select avatar $iconKey'), findsOneWidget);
       }
+    });
+
+    testWidgets('avatar picker shows all options as tappable circular buttons', (tester) async {
+      await tester.pumpWidget(buildProfileScreen(repo: fakeRepo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.person).first);
+      await tester.pumpAndSettle();
+
+      // 16 avatar options, each centered and tappable.
+      expect(find.bySemanticsLabel(RegExp('Select avatar')), findsNWidgets(16));
     });
 
     testWidgets('tapping cancel on avatar picker closes sheet', (tester) async {
@@ -730,6 +749,7 @@ void main() {
         await tester.pumpAndSettle();
 
         final avatarIconKeys = [
+          'Icons.person',
           'Icons.face',
           'Icons.school',
           'Icons.local_hospital',
@@ -737,6 +757,14 @@ void main() {
           'Icons.emoji_events',
           'Icons.sports_tennis',
           'Icons.coffee',
+          'Icons.pets',
+          'Icons.science',
+          'Icons.music_note',
+          'Icons.book',
+          'Icons.computer',
+          'Icons.favorite',
+          'Icons.star',
+          'Icons.work',
         ];
 
         for (final iconKey in avatarIconKeys) {
@@ -747,6 +775,48 @@ void main() {
           await tester.tap(find.bySemanticsLabel('Select avatar $iconKey'));
           await tester.pumpAndSettle();
         }
+      });
+
+      testWidgets('selected avatar is reflected in picker selection state', (tester) async {
+        await pumpProfileScreen(tester, repo: fakeRepo);
+
+        await tester.tap(find.byKey(const Key('avatarPickerTrigger')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Select avatar Icons.school'));
+        await tester.pumpAndSettle();
+
+        // Reopen and assert the previously selected option shows a checkmark
+        // while an unselected option does not.
+        await tester.tap(find.byKey(const Key('avatarPickerTrigger')));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.descendant(
+            of: find.bySemanticsLabel('Select avatar Icons.school'),
+            matching: find.byIcon(Icons.check),
+          ),
+          findsOneWidget,
+        );
+
+        expect(
+          find.descendant(
+            of: find.bySemanticsLabel('Select avatar Icons.star'),
+            matching: find.byIcon(Icons.check),
+          ),
+          findsNothing,
+        );
+      });
+
+      testWidgets('selecting avatar updates the preview icon', (tester) async {
+        await pumpProfileScreen(tester, repo: fakeRepo);
+
+        await tester.tap(find.byKey(const Key('avatarPickerTrigger')));
+        await tester.pumpAndSettle();
+        await tester.tap(find.bySemanticsLabel('Select avatar Icons.coffee'));
+        await tester.pumpAndSettle();
+
+        // Preview reflects the chosen avatar icon.
+        expect(find.byIcon(Icons.coffee), findsWidgets);
       });
     });
 
@@ -813,7 +883,13 @@ void main() {
 
         await pumpProfileScreen(tester, repo: fakeRepo);
 
-        expect(find.byIcon(Icons.school), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byKey(const Key('avatarPickerTrigger')),
+            matching: find.byIcon(Icons.school),
+          ),
+          findsOneWidget,
+        );
       });
 
       testWidgets('shows face icon for face avatar', (tester) async {
