@@ -1,3 +1,5 @@
+import 'dart:convert' show latin1;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/features/ingestion/services/page_metadata.dart';
@@ -14,6 +16,8 @@ class _FakeClient extends http.BaseClient {
     return http.StreamedResponse(
       Stream.value(spec.bodyBytes),
       spec.statusCode,
+      request: request,
+      headers: spec.headers,
     );
   }
 }
@@ -21,10 +25,17 @@ class _FakeClient extends http.BaseClient {
 class _ResponseSpec {
   final int statusCode;
   final List<int> bodyBytes;
-  _ResponseSpec(this.statusCode, this.bodyBytes);
+  final Map<String, String> headers;
+  _ResponseSpec(this.statusCode, this.bodyBytes, {this.headers = const {}});
 
   factory _ResponseSpec.ok(String body) =>
       _ResponseSpec(200, body.codeUnits);
+
+  factory _ResponseSpec.okWithHeader(
+    List<int> body,
+    Map<String, String> headers,
+  ) =>
+      _ResponseSpec(200, body, headers: headers);
 
   factory _ResponseSpec.status(int code) =>
       _ResponseSpec(code, ''.codeUnits);
@@ -89,6 +100,26 @@ void main() {
         final result = await scraper.fetchPageContent('https://example.com');
         expect(result.isFailure, isTrue);
         expect(result.error, contains('No readable content'));
+      });
+
+      test('decodes non-UTF8 (ISO-8859-1) responses without mojibake',
+          () async {
+        final html = '<html><head><title>Accents</title></head><body>'
+            '<p>This paragraph contains accented characters such as café, naïve and résumé for testing decoding.</p>'
+            '</body></html>';
+        final bytes = latin1.encode(html);
+        final client = _FakeClient(
+          (request) => _ResponseSpec.okWithHeader(
+            bytes,
+            {'content-type': 'text/html; charset=iso-8859-1'},
+          ),
+        );
+        final scraper = WebScraper(httpClient: client);
+        final result = await scraper.fetchPageContent('https://example.com');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.content, contains('café'));
+        expect(result.data!.content, contains('naïve'));
+        expect(result.data!.content, isNot(contains('Ã©')));
       });
 
       test('strips script and style tags', () async {

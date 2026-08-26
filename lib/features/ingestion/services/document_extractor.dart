@@ -3,6 +3,8 @@ import 'dart:io' show File;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:archive/archive.dart';
 import 'package:xml/xml.dart';
+import 'package:html/dom.dart' show Document, Element;
+import 'package:html/parser.dart' show parse;
 
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
@@ -16,6 +18,7 @@ import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/services/extraction_result.dart';
+import 'package:studyking/features/ingestion/services/page_metadata.dart';
 
 class DocumentExtractor {
   static final Logger _logger = const Logger('DocumentExtractor');
@@ -367,40 +370,196 @@ class DocumentExtractor {
     return null;
   }
 
+  /// Converts an HTML document into cleaned main-content text using a proper
+  /// DOM parser. This is a Readability-style two-pass extraction: non-content
+  /// subtrees (script/style/nav/aside/footer/...) are removed, the most text-
+  /// dense block is selected as the main content, and its text is rendered with
+  /// short/empty lines dropped. Falls back to naive tag-stripping if parsing
+  /// fails.
   static String stripHtmlToText(String html) {
-    final buffer = StringBuffer();
-    var text = html;
-    final scriptOrStyle = RegExp(r'<(script|style)[^>]*>', caseSensitive: false);
-    final endScriptOrStyle = RegExp(r'<\/(script|style)>', caseSensitive: false);
+    try {
+      final doc = parse(html);
+      final main = _extractMainContentNode(doc);
+      return _renderMainText(main).trim();
+    } catch (e) {
+      _logger.w('HTML DOM parse failed; falling back to tag strip', e);
+      return _fallbackStripTags(html);
+    }
+  }
 
-    while (text.isNotEmpty) {
-      final scriptStart = scriptOrStyle.firstMatch(text);
-      if (scriptStart != null) {
-        buffer.write(_stripTags(text.substring(0, scriptStart.start)));
-        text = text.substring(scriptStart.start);
-        final scriptEnd = endScriptOrStyle.firstMatch(text);
-        if (scriptEnd != null) {
-          text = text.substring(scriptEnd.end);
+  static final _removeTags = [
+    'script',
+    'style',
+    'noscript',
+    'header',
+    'nav',
+    'footer',
+    'aside',
+    'iframe',
+    'svg',
+    'template',
+    'form',
+    'button',
+    'figure',
+  ];
+
+  static const _boilerplateKeywords = [
+    'sidebar',
+    'side-bar',
+    'aside',
+    'advert',
+    'ad-',
+    'adv-',
+    'banner',
+    'menu',
+    'navbar',
+    'breadcrumb',
+    'comment',
+    'promo',
+    'social',
+    'share',
+    'related',
+    'popup',
+    'cookie',
+    'modal',
+    'newsletter',
+    'footer',
+    'header',
+    'nav',
+  ];
+
+  static const _terminalBlockTags = {
+    'p',
+    'li',
+    'h1',
+    'h2',
+    'h3',
+    'h4',
+    'h5',
+    'h6',
+    'blockquote',
+    'pre',
+    'td',
+    'th',
+    'dd',
+    'dt',
+    'address',
+    'caption',
+  };
+
+  /// Returns the DOM node that most likely holds the article's main content.
+  static Element _extractMainContentNode(Document doc) {
+    for (final tag in _removeTags) {
+      doc.querySelectorAll(tag).forEach((e) => e.remove());
+    }
+
+    doc.querySelectorAll('[class],[id],[role]').forEach((e) {
+      final signature =
+          '${e.className} ${e.id} ${e.attributes['role'] ?? ''}'.toLowerCase();
+      if (_boilerplateKeywords.any((k) => signature.contains(k))) {
+        e.remove();
+      }
+    });
+
+    final root = doc.body ?? doc.documentElement;
+    if (root == null) return doc.documentElement!;
+
+    final candidates = <Element, double>{};
+    final scoreNodes = root.querySelectorAll(
+      'p, div, article, section, li, td, th, h1, h2, h3, h4, h5, h6, blockquote, pre, main',
+    );
+    for (final el in scoreNodes) {
+      final text = el.text.trim();
+      if (text.length < 25) continue;
+      var score = text.length / 25.0;
+      final linkTextLen = el
+          .querySelectorAll('a')
+          .fold(0, (int s, n) => s + n.text.trim().length);
+      if (text.isNotEmpty) {
+        score *= (1 - (linkTextLen / text.length).clamp(0.0, 1.0));
+      }
+      if (el.localName == 'article' ||
+          el.localName == 'main' ||
+          el.localName == 'section') {
+        score *= 1.5;
+      }
+      candidates[el] = score;
+    }
+
+    if (candidates.isEmpty) return root;
+    return candidates.entries
+        .reduce((a, b) => a.value >= b.value ? a : b)
+        .key;
+  }
+
+  static String _renderMainText(Element root) {
+    final blocks = <String>[];
+
+    void collect(Element e) {
+      for (final node in e.nodes) {
+        if (node is! Element) continue;
+        final tag = node.localName?.toLowerCase();
+        if (tag == null) continue;
+        if (_terminalBlockTags.contains(tag)) {
+          final t = node.text.trim();
+          if (t.isNotEmpty) blocks.add(t);
         } else {
-          break;
+          collect(node);
         }
-      } else {
-        buffer.write(_stripTags(text));
-        break;
       }
     }
 
-    final result = buffer.toString();
-    final lines = result
-        .split('\n')
-        .map((l) => l.trim())
-        .where((l) => l.isNotEmpty && l.length > 20)
-        .toList();
+    collect(root);
+    if (blocks.isEmpty) {
+      final t = root.text.trim();
+      if (t.isNotEmpty) blocks.add(t);
+    }
 
+    final lines = blocks
+        .expand((b) => b.split(RegExp(r'\s*\n\s*')))
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && l.length >= 20)
+        .toList();
     return lines.join('\n\n');
   }
 
-  static String _stripTags(String html) {
+  /// Extracts page metadata (title, description, author, publish date, site
+  /// name, canonical URL) from an HTML document.
+  static PageMetadata extractPageMetadata(String html) {
+    try {
+      final doc = parse(html);
+      final title = doc.querySelector('title')?.text.trim();
+      final descriptionMeta = doc.querySelector('meta[name="description"]') ??
+          doc.querySelector('meta[property="og:description"]');
+      final authorMeta = doc.querySelector('meta[name="author"]') ??
+          doc.querySelector('meta[property="article:author"]');
+      final dateMeta = doc.querySelector('meta[property="article:published_time"]') ??
+          doc.querySelector('meta[itemprop="datePublished"]') ??
+          doc.querySelector('meta[name="publish-date"]');
+      final siteMeta = doc.querySelector('meta[property="og:site_name"]');
+      final canonical = doc.querySelector('link[rel="canonical"]');
+
+      String? oneLine(String? value) {
+        if (value == null) return null;
+        final trimmed = value.trim();
+        return trimmed.isEmpty ? null : trimmed;
+      }
+
+      return PageMetadata(
+        title: oneLine(title),
+        description: oneLine(descriptionMeta?.attributes['content']),
+        author: oneLine(authorMeta?.attributes['content']),
+        publicationDate: oneLine(dateMeta?.attributes['content']),
+        siteName: oneLine(siteMeta?.attributes['content']),
+        canonicalUrl: oneLine(canonical?.attributes['href']),
+      );
+    } catch (e) {
+      _logger.w('HTML metadata extraction failed', e);
+      return const PageMetadata();
+    }
+  }
+
+  static String _fallbackStripTags(String html) {
     final buffer = StringBuffer();
     var inTag = false;
     for (var i = 0; i < html.length; i++) {
@@ -413,7 +572,13 @@ class DocumentExtractor {
         buffer.write(char);
       }
     }
-    return buffer.toString().trim();
+    final result = buffer.toString().trim();
+    final lines = result
+        .split('\n')
+        .map((l) => l.trim())
+        .where((l) => l.isNotEmpty && l.length > 20)
+        .toList();
+    return lines.join('\n\n');
   }
 
   String _extractFromZip(List<int> bytes, String extension) {
