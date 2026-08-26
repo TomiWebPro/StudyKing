@@ -5,6 +5,7 @@ import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
 import 'package:studyking/core/providers/app_providers.dart' show localeProvider, selectedModelProvider;
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/ocr_provider.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
@@ -53,10 +54,12 @@ final documentExtractorProvider = Provider<DocumentExtractor>((ref) {
   final modelId = ref.watch(selectedModelProvider);
   final asrEngine = ref.watch(whisperAsrEngineProvider);
   final transcriptionPipeline = ref.watch(transcriptionPipelineProvider);
+  final ocrMode = ref.watch(ocrModeProvider);
   return DocumentExtractor(
     llmService: llmService,
     modelId: modelId,
     localeName: locale.languageCode,
+    ocrMode: ocrMode,
     asrEngine: asrEngine,
     transcriptionPipeline: transcriptionPipeline,
   );

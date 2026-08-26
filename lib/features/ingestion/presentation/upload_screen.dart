@@ -8,6 +8,8 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/providers/ocr_provider.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
@@ -250,7 +252,12 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             sourceType == SourceType.video;
         final asrEngine = ref.read(whisperAsrEngineProvider);
         final hasAsrEngine = asrEngine.isAvailable;
-        final shouldWarn = isImage || (isAudioOrVideo && !hasAsrEngine);
+        // Images are processed by the on-device OCR engine unless the user
+        // explicitly chose the AI-only (accurate) mode, so only warn about
+        // image OCR when it actually depends on a vision-capable model.
+        final ocrDependsOnAi = ref.read(ocrModeProvider) == OcrMode.accurate;
+        final shouldWarn =
+            (isImage && ocrDependsOnAi) || (isAudioOrVideo && !hasAsrEngine);
         if (shouldWarn && resolvedModelId.isNotEmpty && mounted) {
           final proceed = await showDialog<bool>(
             context: context,

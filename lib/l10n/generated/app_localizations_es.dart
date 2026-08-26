@@ -5790,6 +5790,22 @@ class AppLocalizationsEs extends AppLocalizations {
       'Es posible que su modelo seleccionado no admita el análisis de imágenes o audio. ¿Continuar de todos modos?';
 
   @override
+  String get ocrEngineMode => 'Modo del Motor OCR';
+
+  @override
+  String get ocrEngineModeDescription =>
+      'Cómo se procesan las imágenes y PDF escaneados. Rápido usa OCR en el dispositivo (sin conexión, instantáneo). Preciso usa el modelo de IA. Híbrido usa primero el OCR en el dispositivo y recurre a la IA solo cuando la confianza es baja.';
+
+  @override
+  String get ocrModeFast => 'Rápido (en dispositivo)';
+
+  @override
+  String get ocrModeAccurate => 'Preciso (IA)';
+
+  @override
+  String get ocrModeHybrid => 'Híbrido (recomendado)';
+
+  @override
   String processingElapsed(int seconds) {
     return 'Procesando... ${seconds}s transcurridos';
   }
