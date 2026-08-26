@@ -7,6 +7,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/practice/services/exam_session_service.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import '../../../helpers/fakes.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -39,6 +40,48 @@ Question _q({
     updatedAt: now,
     explanation: explanation,
   );
+}
+
+class _FakeLlmAnswerEvaluator extends LlmAnswerEvaluator {
+  EvaluationResult? nextResult;
+  bool shouldFail = false;
+
+  _FakeLlmAnswerEvaluator()
+      : super(
+          llmClient: UnavailableMultimodalLlmClient(),
+          transcriptionService: UnavailableTranscriptionService(),
+          messages: ValidationMessagesForEvaluator.english,
+        );
+
+  @override
+  Future<Result<EvaluationResult>> evaluateGraphDrawing(
+    String drawingBase64,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateFileUpload(
+    String fileData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateAudioRecording(
+    String audioData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
 }
 
 void main() {
@@ -469,7 +512,85 @@ void main() {
       localService.dispose();
     });
   });
-});
+  });
+
+  group('ExamSessionService - rich answer evaluation', () {
+    test('evaluateRichAnswer flags manual review when no evaluator configured', () async {
+      final service = ExamSessionService(
+        sessionRepo: _FakeSessionRepo(),
+        studentIdService: FakeStudentIdService(),
+      );
+
+      final result = await service.evaluateRichAnswer(
+        QuestionType.graphDrawing,
+        'data',
+        Markscheme(questionId: 'q1', correctAnswer: 'y=x'),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+    });
+
+    test('evaluateRichAnswer delegates to evaluator when available', () async {
+      final evaluator = _FakeLlmAnswerEvaluator();
+      evaluator.nextResult = const EvaluationResult(
+        isCorrect: true,
+        score: 0.9,
+        feedback: 'Correct',
+      );
+      final service = ExamSessionService(
+        sessionRepo: _FakeSessionRepo(),
+        studentIdService: FakeStudentIdService(),
+        evaluator: evaluator,
+      );
+
+      final result = await service.evaluateRichAnswer(
+        QuestionType.fileUpload,
+        'file',
+        Markscheme(questionId: 'q1', correctAnswer: 'answer'),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+      expect(result.data!.needsManualReview, isFalse);
+    });
+
+    test('evaluateRichAnswer flags manual review when evaluator fails', () async {
+      final evaluator = _FakeLlmAnswerEvaluator();
+      evaluator.shouldFail = true;
+      final service = ExamSessionService(
+        sessionRepo: _FakeSessionRepo(),
+        studentIdService: FakeStudentIdService(),
+        evaluator: evaluator,
+      );
+
+      final result = await service.evaluateRichAnswer(
+        QuestionType.audioRecording,
+        'audio',
+        Markscheme(questionId: 'q1', correctAnswer: 'spoken'),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+    });
+
+    test('evaluateRichAnswer returns failure for non-rich type', () async {
+      final service = ExamSessionService(
+        sessionRepo: _FakeSessionRepo(),
+        studentIdService: FakeStudentIdService(),
+      );
+
+      final result = await service.evaluateRichAnswer(
+        QuestionType.typedAnswer,
+        'answer',
+        Markscheme(questionId: 'q1', correctAnswer: 'answer'),
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+  });
 }
 
 class _FailingSessionRepository extends SessionRepository {

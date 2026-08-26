@@ -10,6 +10,8 @@ import 'package:studyking/core/data/repositories/question_mastery_state_reposito
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   int recordAttemptCallCount = 0;
@@ -446,10 +448,197 @@ void main() {
       expect(fakeAttemptRepo.attempts.first.timestamp, customTime);
     });
   });
+
+  group('MasteryRecorder - rich question types via LlmAnswerEvaluator', () {
+    late _FakeMasteryGraphSvc fakeMasteryGraph;
+    late _FakeSrEngine fakeEngine;
+    late _FakeAttemptRepo2 fakeAttemptRepo;
+    late _FakeQMasteryStateRepo fakeQMasteryRepo;
+    late _FakeQuestionRepo2 fakeQuestionRepo;
+    late _FakeLlmAnswerEvaluator fakeEvaluator;
+    late MasteryRecorder recorder;
+
+    Question buildRichQuestion(QuestionType type) => Question(
+          id: 'q-rich',
+          text: 'Rich question',
+          type: type,
+          subjectId: 'sub1',
+          topicId: 't1',
+          markscheme: Markscheme(
+            questionId: 'q-rich',
+            correctAnswer: 'expected',
+          ),
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        );
+
+    setUp(() {
+      fakeMasteryGraph = _FakeMasteryGraphSvc();
+      fakeEngine = _FakeSrEngine();
+      fakeAttemptRepo = _FakeAttemptRepo2();
+      fakeQMasteryRepo = _FakeQMasteryStateRepo();
+      fakeQuestionRepo = _FakeQuestionRepo2();
+      fakeEvaluator = _FakeLlmAnswerEvaluator();
+      recorder = MasteryRecorder(
+        masteryGraphService: fakeMasteryGraph,
+        srEngine: fakeEngine,
+        attemptRepo: fakeAttemptRepo,
+        questionMasteryRepo: fakeQMasteryRepo,
+        questionRepo: fakeQuestionRepo,
+        evaluator: fakeEvaluator,
+      );
+    });
+
+    test('recordRichAttempt records manual review when no evaluator configured', () async {
+      final noEvalRecorder = MasteryRecorder(
+        masteryGraphService: fakeMasteryGraph,
+        srEngine: fakeEngine,
+        attemptRepo: fakeAttemptRepo,
+        questionMasteryRepo: fakeQMasteryRepo,
+        questionRepo: fakeQuestionRepo,
+      );
+      await fakeQuestionRepo.save('q-rich', buildRichQuestion(QuestionType.graphDrawing));
+
+      final result = await noEvalRecorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.graphDrawing),
+        userAnswer: 'data',
+        timeSpentMs: 1000,
+        confidence: 3,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+      expect(fakeAttemptRepo.attempts, hasLength(1));
+      expect(fakeAttemptRepo.attempts.first.isCorrect, isFalse);
+      expect(fakeMasteryGraph.lastIsCorrect, isFalse);
+    });
+
+    test('recordRichAttempt uses evaluator result when available', () async {
+      await fakeQuestionRepo.save('q-rich', buildRichQuestion(QuestionType.graphDrawing));
+      fakeEvaluator.nextResult = const EvaluationResult(
+        isCorrect: true,
+        score: 0.9,
+        feedback: 'Looks good',
+      );
+
+      final result = await recorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.graphDrawing),
+        userAnswer: 'data',
+        timeSpentMs: 1000,
+        confidence: 4,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+      expect(result.data!.needsManualReview, isFalse);
+      expect(fakeAttemptRepo.attempts.first.isCorrect, isTrue);
+      expect(fakeMasteryGraph.lastIsCorrect, isTrue);
+      expect(fakeEvaluator.graphCallCount, 1);
+    });
+
+    test('recordRichAttempt flags manual review when evaluator has low confidence', () async {
+      await fakeQuestionRepo.save('q-rich', buildRichQuestion(QuestionType.fileUpload));
+      fakeEvaluator.nextResult = const EvaluationResult(
+        isCorrect: true,
+        score: 0.5,
+        feedback: 'Uncertain',
+        needsManualReview: true,
+      );
+
+      final result = await recorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.fileUpload),
+        userAnswer: 'file',
+        timeSpentMs: 1000,
+        confidence: 3,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+    });
+
+    test('recordRichAttempt falls back to manual review on evaluator failure', () async {
+      await fakeQuestionRepo.save('q-rich', buildRichQuestion(QuestionType.audioRecording));
+      fakeEvaluator.shouldFail = true;
+
+      final result = await recorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.audioRecording),
+        userAnswer: 'audio',
+        timeSpentMs: 1000,
+        confidence: 3,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+    });
+
+    test('recordRichAttempt rejects non-rich question types', () async {
+      final result = await recorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.typedAnswer),
+        userAnswer: 'text',
+        timeSpentMs: 1000,
+        confidence: 3,
+      );
+
+      expect(result.isFailure, isTrue);
+    });
+  });
+}
+
+class _FakeLlmAnswerEvaluator extends LlmAnswerEvaluator {
+  EvaluationResult? nextResult;
+  bool shouldFail = false;
+  int graphCallCount = 0;
+
+  _FakeLlmAnswerEvaluator()
+      : super(
+          llmClient: UnavailableMultimodalLlmClient(),
+          transcriptionService: UnavailableTranscriptionService(),
+          messages: ValidationMessagesForEvaluator.english,
+        );
+
+  @override
+  Future<Result<EvaluationResult>> evaluateGraphDrawing(
+    String drawingBase64,
+    Markscheme? markscheme,
+  ) async {
+    graphCallCount++;
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateFileUpload(
+    String fileData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateAudioRecording(
+    String audioData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
 }
 
 class _FakeMasteryGraphSvc extends MasteryGraphService {
   bool shouldFail = false;
+  bool? lastIsCorrect;
 
   _FakeMasteryGraphSvc() : super();
 
@@ -463,6 +652,7 @@ class _FakeMasteryGraphSvc extends MasteryGraphService {
     required int timeSpentMs,
     String? subtopicId,
   }) async {
+    lastIsCorrect = isCorrect;
     if (shouldFail) return Result.failure('Mastery graph failure');
     return Result.success(null);
   }
