@@ -127,14 +127,14 @@ void main() {
 
     test('background uses local model only with ollama provider', () {
       const localRouter = ModelRouter(
-        config: const TaskModelConfig(useLocalForBackground: true),
+        config: TaskModelConfig(useLocalForBackground: true),
         fallbackModelId: 'main-model',
         provider: LlmProvider.ollama,
       );
       expect(localRouter.resolve(LlmTaskType.background), equals('llama3'));
 
       const cloudRouter = ModelRouter(
-        config: const TaskModelConfig(useLocalForBackground: true),
+        config: TaskModelConfig(useLocalForBackground: true),
         fallbackModelId: 'main-model',
         provider: LlmProvider.openRouter,
       );
