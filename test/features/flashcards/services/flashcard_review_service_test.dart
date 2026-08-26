@@ -4,6 +4,20 @@ import 'package:studyking/features/flashcards/data/models/flashcard_model.dart';
 import 'package:studyking/features/flashcards/data/repositories/flashcard_repository.dart';
 import 'package:studyking/features/flashcards/services/flashcard_review_service.dart';
 
+class _ThrowingFlashcardRepository extends FlashcardRepository {
+  @override
+  Future<Result<List<Flashcard>>> getAll() async =>
+      Result.failure('Forced repository failure');
+
+  @override
+  Future<Result<Flashcard?>> get(String id) async =>
+      Result.failure('Forced repository failure');
+
+  @override
+  Future<Result<void>> save(String key, Flashcard item) async =>
+      Result.failure('Forced repository failure');
+}
+
 class _FakeFlashcardRepository extends FlashcardRepository {
   final Map<String, Flashcard> _storage = {};
 
@@ -207,6 +221,24 @@ void main() {
 
         final updated = (await repo.get('fc_1')).data!;
         expect(updated.mastery, 0.0);
+      });
+    });
+
+    group('repository failure handling', () {
+      test('getDueFlashcards yields Result.failure when repository fails', () async {
+        final throwingRepo = _ThrowingFlashcardRepository();
+        final service = FlashcardReviewService(flashcardRepository: throwingRepo);
+
+        final result = await service.getDueFlashcards();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('recordReview yields Result.failure when repository get fails', () async {
+        final throwingRepo = _ThrowingFlashcardRepository();
+        final service = FlashcardReviewService(flashcardRepository: throwingRepo);
+
+        final result = await service.recordReview(flashcardId: 'fc_1', grade: 4);
+        expect(result.isFailure, isTrue);
       });
     });
 

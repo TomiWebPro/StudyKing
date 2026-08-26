@@ -24,6 +24,9 @@ class FlashcardReviewService {
     try {
       final reviewDate = asOf ?? DateTime.now();
       final allResult = await _flashcardRepository.getAll();
+      if (allResult.isFailure) {
+        return Result.failure(allResult.error);
+      }
       final all = allResult.data ?? [];
 
       final due = all.where((f) {
