@@ -52,7 +52,7 @@ class QuestionVariantService {
     Question source, {
     int count = 3,
   }) async {
-    if (count <= 0) {
+      if (count <= 0) {
       return Result.failure('Variant count must be positive');
     }
     try {
@@ -61,6 +61,12 @@ class QuestionVariantService {
           'No model selected. Please choose an AI model in Settings to generate variants.',
         );
       }
+
+      // All members of a generated family share one group id so the readiness
+      // scorer and mastery tracker can reason about the concept as a unit.
+      final groupId = source.variantGroupId.isNotEmpty
+          ? source.variantGroupId
+          : IdGenerator.generate('vq');
 
       final prompt = buildVariantGenerationPrompt(source: source, count: count);
 
@@ -86,7 +92,12 @@ class QuestionVariantService {
       final siblingIds = [...source.variantIds];
 
       for (final raw in parsed) {
-        final variant = _buildVariant(source, raw, siblingIds: siblingIds);
+        final variant = _buildVariant(
+          source,
+          raw,
+          groupId: groupId,
+          siblingIds: siblingIds,
+        );
         final saveResult = await _questionRepo.create(variant);
         if (saveResult.isFailure) {
           _logger.w('Failed to persist variant ${variant.id}', saveResult.error);
@@ -100,11 +111,18 @@ class QuestionVariantService {
         return Result.failure('Failed to persist any generated variants');
       }
 
-      final updatedSource = source.copyWith(variantIds: siblingIds);
-      final sourceSave = await _questionRepo.save(source.id, updatedSource);
-      if (sourceSave.isFailure) {
-        _logger.w('Failed to update source variantIds for ${source.id}',
-            sourceSave.error);
+      // Ensure the base question is also tagged with the family group id and
+      // links back to every generated variant.
+      if (source.variantGroupId != groupId || source.variantIds != siblingIds) {
+        final updatedSource = source.copyWith(
+          variantGroupId: groupId,
+          variantIds: siblingIds,
+        );
+        final sourceSave = await _questionRepo.save(source.id, updatedSource);
+        if (sourceSave.isFailure) {
+          _logger.w('Failed to update source variantIds for ${source.id}',
+              sourceSave.error);
+        }
       }
 
       return Result.success(generated);
@@ -149,6 +167,22 @@ class QuestionVariantService {
     }
   }
 
+  /// Returns the full variant family (base + generated variants) for [question].
+  ///
+  /// Useful for the question-bank UI to display variant relationships and for
+  /// the mastery/analytics layer to aggregate concept-level statistics.
+  Future<Result<List<Question>>> getVariantFamily(Question question) async {
+    try {
+      if (question.variantGroupId.isNotEmpty) {
+        return await _questionRepo.getByVariantGroupId(question.variantGroupId);
+      }
+      return await _questionRepo.getVariantFamily(question.id);
+    } catch (e) {
+      _logger.e('Unexpected error loading variant family for ${question.id}', e);
+      return Result.failure('QuestionVariantService.getVariantFamily: $e');
+    }
+  }
+
   List<Map<String, dynamic>> _parseVariantList(String response) {
     try {
       final arrayMatch = RegExp(r'\[.*\]', dotAll: true).firstMatch(response);
@@ -168,6 +202,7 @@ class QuestionVariantService {
   Question _buildVariant(
     Question source,
     Map<String, dynamic> raw, {
+    required String groupId,
     required List<String> siblingIds,
   }) {
     final now = DateTime.now();
@@ -188,6 +223,7 @@ class QuestionVariantService {
       subjectId: source.subjectId,
       topicId: source.topicId,
       variantIds: variantIds,
+      variantGroupId: groupId,
       sourceIds: source.sourceIds,
       options: options,
       allowedAnswerTypes: source.allowedAnswerTypes,

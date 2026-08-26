@@ -63,6 +63,12 @@ class Question extends HiveObject {
   @HiveField(18)
   final DateTime? nextReview;
 
+  /// Shared identifier for a family of related questions (a base question and
+  /// its generated variants). Empty for standalone questions that do not belong
+  /// to any variant family. All members of a family share the same value.
+  @HiveField(19, defaultValue: '')
+  final String variantGroupId;
+
   /// JSON-serialized SM-2 data (repetitions, easeFactor, previousInterval, lastReview).
   /// Managed by [SpacedRepetitionEngine] — not a Hive field.
   final String? srDataJson;
@@ -87,6 +93,7 @@ class Question extends HiveObject {
     required this.createdAt,
     required this.updatedAt,
     this.nextReview,
+    this.variantGroupId = '',
     this.srDataJson,
   });
 
@@ -107,7 +114,8 @@ class Question extends HiveObject {
     'tags': tags,
     'explanation': explanation,
     'difficultyText': difficultyText,
-    'nextReview': nextReview?.toIso8601String(),
+      'nextReview': nextReview?.toIso8601String(),
+      'variantGroupId': variantGroupId,
     'srDataJson': srDataJson,
     'createdAt': createdAt.toIso8601String(),
     'updatedAt': updatedAt.toIso8601String(),
@@ -155,6 +163,7 @@ class Question extends HiveObject {
       explanation: json['explanation'],
       difficultyText: json['difficultyText'],
       nextReview: json['nextReview'] != null ? DateTime.parse(json['nextReview']) : null,
+      variantGroupId: json['variantGroupId'] as String? ?? '',
       srDataJson: json['srDataJson'] as String?,
       createdAt: createdAt,
       updatedAt: updatedAt,
@@ -182,6 +191,7 @@ class Question extends HiveObject {
     DateTime? updatedAt,
     DateTime? nextReview,
     String? srDataJson,
+    String? variantGroupId,
     bool clearSrData = false,
   }) {
     return Question(
@@ -202,6 +212,7 @@ class Question extends HiveObject {
       explanation: explanation ?? this.explanation,
       difficultyText: difficultyText ?? this.difficultyText,
       nextReview: nextReview ?? this.nextReview,
+      variantGroupId: variantGroupId ?? this.variantGroupId,
       srDataJson: clearSrData ? null : (srDataJson ?? this.srDataJson),
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,

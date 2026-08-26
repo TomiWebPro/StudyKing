@@ -32,13 +32,14 @@ class QuestionAdapter extends TypeAdapter<Question> {
       createdAt: fields[16] as DateTime,
       updatedAt: fields[17] as DateTime,
       nextReview: fields[18] as DateTime?,
+      variantGroupId: fields[19] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, Question obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -76,7 +77,9 @@ class QuestionAdapter extends TypeAdapter<Question> {
       ..writeByte(17)
       ..write(obj.updatedAt)
       ..writeByte(18)
-      ..write(obj.nextReview);
+      ..write(obj.nextReview)
+      ..writeByte(19)
+      ..write(obj.variantGroupId);
   }
 
   @override

@@ -1568,6 +1568,24 @@ abstract class AppLocalizations {
   /// **'Questions: {count}'**
   String questionsCount(int count);
 
+  /// Label showing number of variants of a question
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =0{No variants} =1{1 variant} other{{count} variants}}'**
+  String variantCount(int count);
+
+  /// No description provided for @generateVariants.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate variants'**
+  String get generateVariants;
+
+  /// Confirmation that variants were generated
+  ///
+  /// In en, this message translates to:
+  /// **'Generated {count} variants'**
+  String variantsGenerated(int count);
+
   /// Subtitle for practice tab showing subject name
   ///
   /// In en, this message translates to:

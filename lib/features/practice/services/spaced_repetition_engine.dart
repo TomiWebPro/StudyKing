@@ -265,4 +265,57 @@ class SpacedRepetitionEngine {
         return isCorrect ? 4 : 1;
     }
   }
+
+  /// Recall probability for a whole variant family.
+  ///
+  /// A concept should be re-tested when *any* of its surface forms is at risk of
+  /// being forgotten, so this returns the **lowest** recall probability across
+  /// the supplied per-variant [QuestionSRData] (i.e. the most vulnerable
+  /// variant drives review priority). Returns 1.0 when [datas] is empty (no
+  /// scheduling data yet).
+  double variantGroupRecallProbability(
+    List<QuestionSRData> datas, {
+    DateTime? now,
+  }) {
+    if (datas.isEmpty) return 1.0;
+    var lowest = 1.0;
+    for (final data in datas) {
+      final recall = computeRecallProbability(data: data, now: now);
+      if (recall < lowest) lowest = recall;
+    }
+    return lowest;
+  }
+
+  /// The earliest next-review time across a variant family.
+  ///
+  /// Use this to schedule the next practice of the underlying concept: the
+  /// family becomes due as soon as its most urgent variant is due.
+  DateTime variantGroupNextReview(List<QuestionSRData> datas) {
+    if (datas.isEmpty) return DateTime.now();
+    var earliest = datas.first.lastReview?.add(const Duration(days: 1)) ??
+        DateTime.now();
+    for (final data in datas) {
+      final review = data.reviewLog.isNotEmpty
+          ? data.reviewLog.last.nextReview
+          : (data.lastReview?.add(const Duration(days: 1)) ?? DateTime.now());
+      if (review.isBefore(earliest)) earliest = review;
+    }
+    return earliest;
+  }
+
+  /// Whether a variant family needs review now.
+  ///
+  /// Returns true when any variant is past its [QuestionSRData] last review
+  /// interval (due for review) or has no scheduling data yet (never practiced).
+  bool isConceptDue(List<QuestionSRData> datas, {DateTime? now}) {
+    final currentTime = now ?? DateTime.now();
+    if (datas.isEmpty) return true;
+    for (final data in datas) {
+      final next = data.reviewLog.isNotEmpty
+          ? data.reviewLog.last.nextReview
+          : currentTime;
+      if (!next.isAfter(currentTime)) return true;
+    }
+    return false;
+  }
 }

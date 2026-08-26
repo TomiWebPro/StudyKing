@@ -488,5 +488,71 @@ void main() {
         expect(result.updatedData.repetitions, 0);
       });
     });
+
+    group('variant-group awareness', () {
+      ReviewLogEntry logFor(DateTime nextReview) => ReviewLogEntry(
+            questionId: 'q',
+            timestamp: nextReview.subtract(const Duration(days: 1)),
+            grade: 5,
+            easeFactor: 2.5,
+            interval: const Duration(days: 1),
+            nextReview: nextReview,
+          );
+
+      test('variantGroupRecallProbability returns min recall across variants',
+          () {
+        final now = DateTime(2026, 5, 16);
+        final fresh = QuestionSRData(
+          repetitions: 2,
+          previousInterval: const Duration(days: 10),
+          lastReview: now.subtract(const Duration(days: 1)),
+          reviewLog: [logFor(now.add(const Duration(days: 9)))],
+        );
+        final stale = QuestionSRData(
+          repetitions: 2,
+          previousInterval: const Duration(days: 10),
+          lastReview: now.subtract(const Duration(days: 9)),
+          reviewLog: [logFor(now.add(const Duration(days: 1)))],
+        );
+
+        final recall =
+            engine.variantGroupRecallProbability([fresh, stale], now: now);
+        expect(recall, lessThan(engine.computeRecallProbability(
+          data: fresh,
+          now: now,
+        )));
+      });
+
+      test('variantGroupRecallProbability returns 1.0 for empty input', () {
+        expect(engine.variantGroupRecallProbability([]), 1.0);
+      });
+
+      test('variantGroupNextReview returns earliest next review', () {
+        final now = DateTime(2026, 5, 16);
+        final soon = QuestionSRData(
+          reviewLog: [logFor(now.add(const Duration(days: 1)))],
+        );
+        final later = QuestionSRData(
+          reviewLog: [logFor(now.add(const Duration(days: 5)))],
+        );
+        final next = engine.variantGroupNextReview([soon, later]);
+        expect(next.difference(now).inDays, 1);
+      });
+
+      test('isConceptDue true when any variant is past due', () {
+        final now = DateTime(2026, 5, 16);
+        final due = QuestionSRData(
+          reviewLog: [logFor(now.subtract(const Duration(days: 1)))],
+        );
+        final notDue = QuestionSRData(
+          reviewLog: [logFor(now.add(const Duration(days: 5)))],
+        );
+        expect(engine.isConceptDue([due, notDue], now: now), isTrue);
+      });
+
+      test('isConceptDue true when family never practised', () {
+        expect(engine.isConceptDue([]), isTrue);
+      });
+    });
   });
 }

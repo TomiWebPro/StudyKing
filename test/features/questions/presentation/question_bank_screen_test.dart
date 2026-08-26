@@ -987,5 +987,32 @@ void main() {
 
       expect(find.text('Questions: 3'), findsOneWidget);
     });
+
+    testWidgets('shows a variant count chip for questions with variants',
+        (tester) async {
+      final questionWithVariants = Question(
+        id: 'qv1',
+        text: 'What is 2 + 3?',
+        type: QuestionType.singleChoice,
+        difficulty: 1,
+        subjectId: 'sub1',
+        topicId: 't1',
+        variantIds: ['qv2', 'qv3'],
+        createdAt: DateTime(2024, 1, 15),
+        updatedAt: DateTime(2024, 1, 15),
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo([questionWithVariants]),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is 2 + 3?'), findsOneWidget);
+      // 2 variants -> "2 variants" chip is rendered.
+      expect(find.text('2 variants'), findsOneWidget);
+    });
   });
 }

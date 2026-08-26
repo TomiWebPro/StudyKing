@@ -85,5 +85,84 @@ void main() {
       final all = await repo.getAll();
       expect(all.data!.length, 2);
     });
+
+    group('variant family methods', () {
+      test('getByVariantGroupId returns family members only', () async {
+        final repo = QuestionRepository();
+        await repo.init();
+        final base = _createTestQuestion(id: 'base')
+            .copyWith(variantGroupId: 'g1', variantIds: ['v1']);
+        final variant = _createTestQuestion(id: 'v1')
+            .copyWith(variantGroupId: 'g1', variantIds: ['base']);
+        final other = _createTestQuestion(id: 'other')
+            .copyWith(variantGroupId: 'g2');
+
+        await repo.create(base);
+        await repo.create(variant);
+        await repo.create(other);
+
+        final result = await repo.getByVariantGroupId('g1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.map((q) => q.id).toList(), containsAll(['base', 'v1']));
+        expect(result.data!.map((q) => q.id).toList(), isNot(contains('other')));
+      });
+
+      test('getByVariantGroupId returns empty for blank id', () async {
+        final repo = QuestionRepository();
+        await repo.init();
+        final result = await repo.getByVariantGroupId('');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('linkVariant cross-links base and variant', () async {
+        final repo = QuestionRepository();
+        await repo.init();
+        final base = _createTestQuestion(id: 'base');
+        final variant = _createTestQuestion(id: 'v1');
+        await repo.create(base);
+        await repo.create(variant);
+
+        final linkResult = await repo.linkVariant(
+          baseId: 'base',
+          variantId: 'v1',
+          groupId: 'g-new',
+        );
+        expect(linkResult.isSuccess, isTrue);
+
+        final updatedBase = (await repo.get('base')).data!;
+        final updatedVariant = (await repo.get('v1')).data!;
+        expect(updatedBase.variantIds, contains('v1'));
+        expect(updatedVariant.variantGroupId, 'g-new');
+        expect(updatedVariant.variantIds, contains('base'));
+      });
+
+      test('linkVariant rejects self-link', () async {
+        final repo = QuestionRepository();
+        await repo.init();
+        await repo.create(_createTestQuestion(id: 'x'));
+        final result = await repo.linkVariant(
+          baseId: 'x',
+          variantId: 'x',
+          groupId: 'g',
+        );
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getVariantFamily returns base + linked variant', () async {
+        final repo = QuestionRepository();
+        await repo.init();
+        final base = _createTestQuestion(id: 'base')
+            .copyWith(variantGroupId: 'g1', variantIds: ['v1']);
+        final variant = _createTestQuestion(id: 'v1')
+            .copyWith(variantGroupId: 'g1', variantIds: ['base']);
+        await repo.create(base);
+        await repo.create(variant);
+
+        final result = await repo.getVariantFamily('base');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 2);
+      });
+    });
   });
 }

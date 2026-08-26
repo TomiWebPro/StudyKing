@@ -356,6 +356,59 @@ void main() {
         expect(result.first.question.id, 'q2');
       });
     });
+
+    group('variant awareness', () {
+      test('deduplicates a variant family to a single member', () async {
+        final base = _createQ(id: 'base', topicId: 't1')
+            .copyWith(variantGroupId: 'group-1');
+        final variant = _createQ(id: 'variant', topicId: 't1')
+            .copyWith(variantGroupId: 'group-1', variantIds: ['base']);
+
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions([base, variant]);
+
+        // The two belong to the same family, so only one is surfaced.
+        expect(result, hasLength(1));
+      });
+
+      test('keeps distinct families separate', () async {
+        final a = _createQ(id: 'a', topicId: 't1')
+            .copyWith(variantGroupId: 'g1');
+        final b = _createQ(id: 'b', topicId: 't1')
+            .copyWith(variantGroupId: 'g2');
+
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions([a, b]);
+
+        expect(result, hasLength(2));
+      });
+
+      test('prefers a variant of a recently-wrong concept', () async {
+        final wrongBase = _createQ(id: 'wrong', topicId: 't1')
+            .copyWith(variantGroupId: 'g1');
+        final variantOfWrong = _createQ(id: 'variant', topicId: 't1')
+            .copyWith(variantGroupId: 'g1', variantIds: ['wrong']);
+        final unrelated = _createQ(id: 'unrelated', topicId: 't2')
+            .copyWith(variantGroupId: 'g2');
+
+        final scorer = ReadinessScorer(
+          wrongQuestionIds: {'wrong'},
+        );
+        final result =
+            await scorer.scoreQuestions([wrongBase, variantOfWrong, unrelated]);
+
+        // variantOfWrong is the highest-priority (boosted) member of its family;
+        // the deduplicated family representative should be it or the base, and
+        // its score must exceed the unrelated question's score.
+        final unrelatedScore = result
+            .firstWhere((s) => s.question.id == 'unrelated')
+            .score;
+        final familyScore = result
+            .firstWhere((s) => s.question.variantGroupId == 'g1')
+            .score;
+        expect(familyScore, greaterThan(unrelatedScore));
+      });
+    });
   });
 }
 
@@ -364,6 +417,7 @@ Question _createQ({
   String subjectId = 'sub1',
   String topicId = 't1',
   int difficulty = 1,
+  String variantGroupId = '',
   String? srDataJson,
 }) {
   return Question(
@@ -373,6 +427,7 @@ Question _createQ({
     subjectId: subjectId,
     topicId: topicId,
     difficulty: difficulty,
+    variantGroupId: variantGroupId,
     createdAt: DateTime(2026, 5, 12),
     updatedAt: DateTime(2026, 5, 12),
     srDataJson: srDataJson,

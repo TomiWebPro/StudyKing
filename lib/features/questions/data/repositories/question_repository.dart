@@ -123,6 +123,106 @@ class QuestionRepository extends Repository<Question> {
     }
   }
 
+  /// Returns every question that shares the given [variantGroupId], including
+  /// the base question and all of its variants. Returns an empty list when the
+  /// group id is empty or no questions belong to it.
+  Future<Result<List<Question>>> getByVariantGroupId(String groupId) async {
+    try {
+      if (!box.isOpen) {
+        return Result.failure('Question_bank_not_open');
+      }
+      if (groupId.isEmpty) {
+        return Result.success(const []);
+      }
+      final all = box.values.toList();
+      return Result.success(
+        all.where((q) => q.variantGroupId == groupId).toList(),
+      );
+    } catch (e) {
+      _logger.w('Error getting questions by variant group', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  /// Returns the variant family of [questionId]: the question itself plus every
+  /// other question that links to it via [Question.variantIds] or shares its
+  /// [Question.variantGroupId].
+  Future<Result<List<Question>>> getVariantFamily(String questionId) async {
+    try {
+      if (!box.isOpen) {
+        return Result.failure('Question_bank_not_open');
+      }
+      final baseResult = await get(questionId);
+      final base = baseResult.data;
+      if (base == null) {
+        return Result.failure('Question_not_found: $questionId');
+      }
+
+      final all = box.values.toList();
+      final family = all.where((q) {
+        if (q.id == questionId) return true;
+        if (base.variantGroupId.isNotEmpty &&
+            q.variantGroupId == base.variantGroupId) {
+          return true;
+        }
+        return q.variantIds.contains(questionId) ||
+            base.variantIds.contains(q.id);
+      }).toList();
+
+      return Result.success(family);
+    } catch (e) {
+      _logger.w('Error getting variant family', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  /// Cross-links a generated [variantId] to its [baseId] so they form a variant
+  /// family. Updates the base question's [Question.variantIds], sets the
+  /// variant's [Question.variantGroupId] to [groupId], and adds the base id to
+  /// the variant's [Question.variantIds]. Both records are persisted.
+  Future<Result<void>> linkVariant({
+    required String baseId,
+    required String variantId,
+    required String groupId,
+  }) async {
+    try {
+      if (!box.isOpen) {
+        return Result.failure('Question_bank_not_open');
+      }
+      if (baseId == variantId) {
+        return Result.failure('Cannot link a question to itself');
+      }
+      final base = box.get(baseId);
+      if (base == null) {
+        return Result.failure('Question_not_found: $baseId');
+      }
+      final variant = box.get(variantId);
+      if (variant == null) {
+        return Result.failure('Question_not_found: $variantId');
+      }
+
+      final updatedBase = base.copyWith(
+        variantIds: [...base.variantIds, variantId],
+        variantGroupId: groupId,
+      );
+      final updatedVariant = variant.copyWith(
+        variantGroupId: groupId,
+        variantIds: [...variant.variantIds, baseId]
+          ..removeWhere((id) => id == variantId),
+      );
+
+      final baseSave = await save(updatedBase.id, updatedBase);
+      if (baseSave.isFailure) return Result.failure(baseSave.error);
+      final variantSave = await save(updatedVariant.id, updatedVariant);
+      if (variantSave.isFailure) return Result.failure(variantSave.error);
+
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Error linking variant', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<void>> updateMarkscheme(
       String questionId, Markscheme markscheme) async {
     try {

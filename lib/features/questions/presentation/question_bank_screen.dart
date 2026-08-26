@@ -20,7 +20,7 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/loading_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/core/theme/app_theme.dart';
@@ -198,6 +198,33 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
               if (mounted) setState(() => _allQuestions.add(question));
             },
           ),
+        ),
+      );
+    }
+  }
+
+  Future<void> _generateVariants(Question question) async {
+    final l10n = AppLocalizations.of(context)!;
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.generateVariants)),
+    );
+
+    final service = ref.read(questionVariantServiceProvider);
+    final result = await service.generateVariants(question, count: 3);
+
+    if (!mounted) return;
+    if (result.isSuccess) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.variantsGenerated(result.data!.length))),
+      );
+      await _load();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(result.error ?? l10n.generateVariants),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
@@ -1234,6 +1261,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                                         if (topicName != null) _smallChip(topicName, theme),
                                                         if (q.sourceIds.isNotEmpty)
                                                           _smallChip(l10n.sourcesCount(q.sourceIds.length), theme),
+                                                        if (q.variantIds.isNotEmpty)
+                                                          _smallChip(l10n.variantCount(q.variantIds.length), theme),
                                                         _smallChip(
                                                           q.model != null ? l10n.aiGenerated : l10n.manual,
                                                           theme,
@@ -1247,10 +1276,15 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                               PopupMenuButton<String>(
                                                 onSelected: (v) {
                                                   if (v == 'edit') _editQuestion(q);
+                                                  if (v == 'variants') _generateVariants(q);
                                                   if (v == 'delete') _deleteQuestion(q);
                                                 },
                                                 itemBuilder: (_) => [
                                                   PopupMenuItem(value: 'edit', child: Text(l10n.edit)),
+                                                  PopupMenuItem(
+                                                    value: 'variants',
+                                                    child: Text(l10n.generateVariants),
+                                                  ),
                                                   PopupMenuItem(
                                                     value: 'delete',
                                                     child: Text(l10n.delete, style: TextStyle(color: theme.colorScheme.error)),

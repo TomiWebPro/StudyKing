@@ -883,6 +883,26 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String variantCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count variants',
+      one: '1 variant',
+      zero: 'No variants',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get generateVariants => 'Generate variants';
+
+  @override
+  String variantsGenerated(int count) {
+    return 'Generated $count variants';
+  }
+
+  @override
   String practiceQuestionsFrom(String subjectName) {
     return 'Practice questions from $subjectName';
   }

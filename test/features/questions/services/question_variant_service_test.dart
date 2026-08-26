@@ -33,6 +33,30 @@ class FakeQuestionRepository extends QuestionRepository {
     savedSourceIds.add(key);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<List<Question>>> getByVariantGroupId(String groupId) async {
+    if (groupId.isEmpty) return Result.success(const []);
+    return Result.success(
+      store.values.where((q) => q.variantGroupId == groupId).toList(),
+    );
+  }
+
+  @override
+  Future<Result<List<Question>>> getVariantFamily(String questionId) async {
+    final base = store[questionId];
+    if (base == null) return Result.failure('Question_not_found: $questionId');
+    final family = store.values.where((q) {
+      if (q.id == questionId) return true;
+      if (base.variantGroupId.isNotEmpty &&
+          q.variantGroupId == base.variantGroupId) {
+        return true;
+      }
+      return q.variantIds.contains(questionId) ||
+          base.variantIds.contains(q.id);
+    }).toList();
+    return Result.success(family);
+  }
 }
 
 /// Hand-written fake of [LlmService] that returns queued responses.
@@ -282,6 +306,77 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data!.id, 'q1');
+    });
+  });
+
+  group('QuestionVariantService variantGroupId + family', () {
+    test('assigns a shared variantGroupId to source and variants', () async {
+      final repo = FakeQuestionRepository();
+      final llm = FakeLlmService(
+        queuedResponses: [Result.success(validVariantJson)],
+      );
+      final source = buildSourceQuestion();
+      final service = QuestionVariantService(
+        questionRepo: repo,
+        llmService: llm,
+        modelId: 'model-x',
+      );
+
+      final result = await service.generateVariants(source, count: 2);
+
+      expect(result.isSuccess, isTrue);
+      final variants = result.data!;
+      final groupId = repo.store[source.id]!.variantGroupId;
+      expect(groupId, isNotEmpty);
+      for (final v in variants) {
+        expect(v.variantGroupId, groupId);
+      }
+      expect(repo.store[source.id]!.variantGroupId, groupId);
+    });
+
+    test('reuses an existing variantGroupId instead of generating a new one',
+        () async {
+      final repo = FakeQuestionRepository();
+      final llm = FakeLlmService(
+        queuedResponses: [Result.success(validVariantJson)],
+      );
+      final source = buildSourceQuestion().copyWith(variantGroupId: 'vq-existing');
+      final service = QuestionVariantService(
+        questionRepo: repo,
+        llmService: llm,
+        modelId: 'model-x',
+      );
+
+      final result = await service.generateVariants(source, count: 2);
+
+      expect(result.isSuccess, isTrue);
+      for (final v in result.data!) {
+        expect(v.variantGroupId, 'vq-existing');
+      }
+    });
+
+    test('getVariantFamily returns base plus generated variants', () async {
+      final repo = FakeQuestionRepository();
+      final llm = FakeLlmService(
+        queuedResponses: [Result.success(validVariantJson)],
+      );
+      final source = buildSourceQuestion();
+      final service = QuestionVariantService(
+        questionRepo: repo,
+        llmService: llm,
+        modelId: 'model-x',
+      );
+
+      await service.generateVariants(source, count: 2);
+      final familyResult = await service.getVariantFamily(source);
+
+      expect(familyResult.isSuccess, isTrue);
+      // base + 2 variants
+      expect(familyResult.data!.length, 3);
+      expect(
+        familyResult.data!.map((q) => q.id),
+        contains(source.id),
+      );
     });
   });
 }

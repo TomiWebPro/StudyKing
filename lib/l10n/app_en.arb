@@ -1109,6 +1109,25 @@
       }
     }
   },
+  "variantCount": "{count, plural, =0{No variants} =1{1 variant} other{{count} variants}}",
+  "@variantCount": {
+    "description": "Label showing number of variants of a question",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "generateVariants": "Generate variants",
+  "variantsGenerated": "Generated {count} variants",
+  "@variantsGenerated": {
+    "description": "Confirmation that variants were generated",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "practiceQuestionsFrom": "Practice questions from {subjectName}",
   "@practiceQuestionsFrom": {
     "description": "Subtitle for practice tab showing subject name",
