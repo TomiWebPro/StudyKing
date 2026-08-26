@@ -977,7 +977,7 @@ class PersonalLearningPlanService {
     }
   }
 
-  String _getStudentId() => StudentIdService().getStudentId();
+  String _getStudentId() => StudentIdService().getStudentId().data ?? '';
 
   String _generateFocus(List<PlannedTopic> topics, {String courseName = ''}) {
     final l10n = _l10n;

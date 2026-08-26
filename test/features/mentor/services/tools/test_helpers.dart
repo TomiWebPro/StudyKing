@@ -39,7 +39,7 @@ class FakeStudentIdService extends StudentIdService {
   FakeStudentIdService([this._id = 'student-1']);
 
   @override
-  String getStudentId() => _id;
+  Result<String> getStudentId() => Result.success(_id);
 }
 
 class FakePlanAdherenceRepository extends PlanAdherenceRepository {

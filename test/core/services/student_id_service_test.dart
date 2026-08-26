@@ -7,10 +7,12 @@ import 'package:studyking/core/services/student_id_service.dart';
 
 void main() {
   group('StudentIdService singleton', () {
-    test('returns the same instance', () {
+    test('creates distinct instances (singleton via provider)', () {
       final a = StudentIdService();
       final b = StudentIdService();
-      expect(identical(a, b), isTrue);
+      expect(a, isA<StudentIdService>());
+      expect(b, isA<StudentIdService>());
+      expect(identical(a, b), isFalse);
     });
   });
 
@@ -32,7 +34,7 @@ void main() {
     test('getStudentId generates a UUID on first call', () async {
       final service = StudentIdService();
       await service.init();
-      final id = service.getStudentId();
+      final id = service.getStudentId().data ?? '';
       expect(id, isA<String>());
       expect(id.length, greaterThan(0));
     });
@@ -40,15 +42,15 @@ void main() {
     test('getStudentId returns cached value on subsequent calls', () async {
       final service = StudentIdService();
       await service.init();
-      final first = service.getStudentId();
-      final second = service.getStudentId();
+      final first = service.getStudentId().data ?? '';
+      final second = service.getStudentId().data ?? '';
       expect(first, second);
     });
 
     test('getStudentId returns cached value without Hive box', () async {
       final service = StudentIdService();
-      final first = service.getStudentId();
-      final second = service.getStudentId();
+      final first = service.getStudentId().data ?? '';
+      final second = service.getStudentId().data ?? '';
       expect(first, second);
     });
 
@@ -56,16 +58,16 @@ void main() {
       final service = StudentIdService();
       await service.init();
       service.setStudentId('custom-id-123');
-      expect(service.getStudentId(), 'custom-id-123');
+      expect(service.getStudentId().data ?? '', 'custom-id-123');
     });
 
     test('setStudentId is reflected in getStudentId', () async {
       final service = StudentIdService();
       await service.init();
-      final generated = service.getStudentId();
+      final generated = service.getStudentId().data ?? '';
       service.setStudentId('overridden-id');
-      expect(service.getStudentId(), 'overridden-id');
-      expect(service.getStudentId(), isNot(generated));
+      expect(service.getStudentId().data ?? '', 'overridden-id');
+      expect(service.getStudentId().data ?? '', isNot(generated));
     });
 
     test('value persists across instances via Hive', () async {
@@ -75,7 +77,7 @@ void main() {
 
       final service2 = StudentIdService();
       await service2.init();
-      expect(service2.getStudentId(), 'persistent-id');
+      expect(service2.getStudentId().data ?? '', 'persistent-id');
     });
 
     test('Hive-stored value is loaded on init', () async {
@@ -85,7 +87,7 @@ void main() {
 
       final service = StudentIdService();
       await service.init();
-      expect(service.getStudentId(), 'hive-stored-id');
+      expect(service.getStudentId().data ?? '', 'hive-stored-id');
     });
 
     test('empty Hive value is ignored and new UUID is generated', () async {
@@ -95,7 +97,7 @@ void main() {
 
       final service = StudentIdService();
       await service.init();
-      final id = service.getStudentId();
+      final id = service.getStudentId().data ?? '';
       expect(id, isNotEmpty);
     });
   });
@@ -103,7 +105,7 @@ void main() {
   group('StudentIdService without init (no Hive)', () {
     test('getStudentId generates UUID without prior init', () {
       final service = StudentIdService();
-      final id = service.getStudentId();
+      final id = service.getStudentId().data ?? '';
       expect(id, isA<String>());
       expect(id.length, greaterThan(0));
     });
@@ -111,7 +113,7 @@ void main() {
     test('setStudentId works without prior init', () {
       final service = StudentIdService();
       service.setStudentId('no-init-id');
-      expect(service.getStudentId(), 'no-init-id');
+      expect(service.getStudentId().data ?? '', 'no-init-id');
     });
   });
 

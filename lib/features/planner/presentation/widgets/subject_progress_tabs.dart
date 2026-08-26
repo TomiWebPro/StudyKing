@@ -22,7 +22,7 @@ class SubjectProgressTabs extends ConsumerWidget {
     final goals = state.plan!.syllabusGoals;
     if (goals.isEmpty) return const SizedBox.shrink();
 
-    final studentId = fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId();
+    final studentId = fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? '');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

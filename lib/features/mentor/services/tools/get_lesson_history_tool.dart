@@ -59,7 +59,7 @@ class GetLessonHistoryTool extends AgentTool {
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     final subjectId = args['subjectId'] as String?;
     final topicId = args['topicId'] as String?;
     final daysBack = (args['daysBack'] as num?)?.toInt() ?? 30;

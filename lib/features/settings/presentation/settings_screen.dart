@@ -1344,7 +1344,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         }
         if (backupStudentId != null) break;
       }
-      final currentStudentId = ref.read(studentIdServiceProvider).getStudentId();
+      final currentStudentId = ref.read(studentIdServiceProvider).getStudentId().data ?? '';
       final idMismatch = backupStudentId != null && backupStudentId != currentStudentId;
 
       if (idMismatch) {
@@ -1393,7 +1393,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
         ref.invalidate(subjectListProvider);
         ref.invalidate(masteryGraphServiceProvider);
         ref.invalidate(studyProgressTrackerProvider);
-        ref.invalidate(mentorServiceProvider(StudentIdService().getStudentId()));
+        ref.invalidate(mentorServiceProvider(StudentIdService().getStudentId().data ?? ''));
         ref.invalidate(engagementSchedulerProvider);
         showDialog(
           context: context,

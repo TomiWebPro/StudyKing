@@ -30,7 +30,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
 
 class FakeStudentIdService extends StudentIdService {
   @override
-  String getStudentId() => 'test-student';
+  Result<String> getStudentId() => Result.success('test-student');
 }
 
 Widget _buildTestApp(Widget child, FakeMasteryGraphService masteryService) {

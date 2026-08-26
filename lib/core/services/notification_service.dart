@@ -4,6 +4,7 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:intl/intl.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
+import '../errors/result.dart';
 
 class NotificationService {
   NotificationService();
@@ -18,33 +19,35 @@ class NotificationService {
     _l10n = l10n;
   }
 
-  Future<void> init({Function(String?)? onNotificationTap}) async {
-    if (_initialized) return;
-    _onNotificationTap = onNotificationTap;
+  Future<Result<void>> init({Function(String?)? onNotificationTap}) async {
+    if (_initialized) return Result.success(null);
+    return Result.capture(() async {
+      _onNotificationTap = onNotificationTap;
 
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
-    const linuxSettings = LinuxInitializationSettings(
-      defaultActionName: 'Open',
-    );
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-      linux: linuxSettings,
-    );
+      const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+      const iosSettings = DarwinInitializationSettings(
+        requestAlertPermission: true,
+        requestBadgePermission: true,
+        requestSoundPermission: true,
+      );
+      const linuxSettings = LinuxInitializationSettings(
+        defaultActionName: 'Open',
+      );
+      const initSettings = InitializationSettings(
+        android: androidSettings,
+        iOS: iosSettings,
+        linux: linuxSettings,
+      );
 
-    await plugin.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationResponse,
-    );
+      await plugin.initialize(
+        initSettings,
+        onDidReceiveNotificationResponse: _onNotificationResponse,
+      );
 
-    await _createNotificationChannels();
+      await _createNotificationChannels();
 
-    _initialized = true;
+      _initialized = true;
+    }, context: 'NotificationService.init');
   }
 
   Future<void> _createNotificationChannels() async {

@@ -200,7 +200,7 @@ class CreatePracticeSessionTool extends AgentTool {
       return {'success': false, 'error': 'subjectId is required for weak_areas mode'};
     }
 
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     await _masteryService.init();
 
     final weakResult = await _masteryService.getWeakTopics(studentId);
@@ -298,7 +298,7 @@ class CreatePracticeSessionTool extends AgentTool {
   Future<Map<String, dynamic>> _createAtRiskSession({
     required int questionCount,
   }) async {
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     await _masteryService.init();
 
     final atRiskResult = await _masteryService.getAtRiskQuestions(studentId);

@@ -217,7 +217,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
     ));
 
     await _masteryRecorder.recordAttempt(
-      studentId: _studentIdService.getStudentId(),
+      studentId: _studentIdService.getStudentId().data ?? '',
       questionId: question.id,
       subjectId: question.subjectId,
       topicId: question.topicId,

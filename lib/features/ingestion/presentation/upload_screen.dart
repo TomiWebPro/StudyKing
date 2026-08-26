@@ -312,7 +312,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           title: title,
           content: actualContent,
           type: sourceType,
-          studentId: widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId(),
+          studentId: widget.fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? ''),
           modelId: resolvedModelId,
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
@@ -350,7 +350,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           title: title,
           content: actualContent,
           type: sourceType,
-          studentId: widget.fixedStudentId ?? ref.read(studentIdServiceProvider).getStudentId(),
+          studentId: widget.fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? ''),
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
         );

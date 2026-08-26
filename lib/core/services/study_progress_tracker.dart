@@ -140,7 +140,7 @@ class StudyProgressTracker {
 
   Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async {
     try {
-      studentId ??= StudentIdService().getStudentId();
+      studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
       final allAttempts = allAttemptsResult.data ?? [];
 
@@ -188,7 +188,7 @@ class StudyProgressTracker {
 
   Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async {
     try {
-      studentId ??= StudentIdService().getStudentId();
+      studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
       final allAttempts = allAttemptsResult.data ?? [];
 
@@ -400,7 +400,7 @@ class StudyProgressTracker {
 
   Future<Result<MasteryLevel>> getTopicMasteryLevelEnum(String topicId, {String? studentId}) async {
     try {
-      studentId ??= StudentIdService().getStudentId();
+      studentId ??= StudentIdService().getStudentId().data ?? '';
       final result = await _masteryService.getTopicMastery(studentId, topicId);
       if (result.isSuccess && result.data != null) {
         return Result.success(result.data!.masteryLevel);

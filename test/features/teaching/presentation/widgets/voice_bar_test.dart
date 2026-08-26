@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/teaching/presentation/widgets/voice_bar.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -24,9 +25,10 @@ class FakeVoiceService extends VoiceService {
   Stream<String> get transcribedText => _transcriptionCtrl.stream;
 
   @override
-  Future<void> startListening({String? localeName}) async {
+  Future<Result<void>> startListening({String? localeName}) async {
     _fakeIsListening = true;
     lastLocaleName = localeName;
+    return Result.success(null);
   }
 
   @override

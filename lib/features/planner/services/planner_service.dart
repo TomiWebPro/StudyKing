@@ -89,7 +89,7 @@ class PlannerService {
         _actionExecutor = actionExecutor;
 
   String get studentId =>
-      fixedStudentId ?? StudentIdService().getStudentId();
+      fixedStudentId ?? (StudentIdService().getStudentId().data ?? '');
 
   Future<Result<PersonalLearningPlan?>> loadExistingPlan() async {
     try {

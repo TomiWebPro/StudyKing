@@ -164,7 +164,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings, [StudentIdService? 
       return _materialPageRoute(
         UploadScreen(
           preselectedSubjectId: preselectedSubjectId,
-          fixedStudentId: service.getStudentId(),
+          fixedStudentId: service.getStudentId().data ?? '',
         ),
         routeSettings,
       );
@@ -192,7 +192,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings, [StudentIdService? 
       }
       return _materialPageRoute(
         DashboardScreen(
-          studentId: service.getStudentId(),
+          studentId: service.getStudentId().data ?? '',
         ),
         routeSettings,
       );

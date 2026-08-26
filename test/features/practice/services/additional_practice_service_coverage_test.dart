@@ -957,7 +957,7 @@ class _FakeStudentIdService2 extends StudentIdService {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  String getStudentId() => 'test-student';
+  Result<String> getStudentId() => Result.success('test-student');
 }
 
 class _FakeMasteryGraphServiceForScorer extends MasteryGraphService {
@@ -997,7 +997,7 @@ class _FakeStudentIdServiceForScorer extends StudentIdService {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  String getStudentId() => 's1';
+  Result<String> getStudentId() => Result.success('s1');
 }
 
 class _FakeMasteryGraphSvc3 extends MasteryGraphService {

@@ -66,7 +66,7 @@ class PracticeDataService {
 
   Future<List<Question>> loadWeakAreaQuestions(
       MasteryGraphService masteryService) async {
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
     final weakTopicsResult = await masteryService.getWeakTopics(studentId);
     if (weakTopicsResult.isFailure ||
         weakTopicsResult.data == null ||

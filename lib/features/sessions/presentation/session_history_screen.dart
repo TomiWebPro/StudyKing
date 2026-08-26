@@ -161,7 +161,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
               tracker: tracker,
             );
             final sidService = StudentIdService();
-            final studentId = sidService.getStudentId();
+            final studentId = sidService.getStudentId().data ?? '';
             final compFilename = 'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}';
             switch (format) {
               case 'comprehensive':

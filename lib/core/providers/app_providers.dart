@@ -56,7 +56,7 @@ final engagementSchedulerProvider = Provider<EngagementScheduler>((ref) {
     _appProvidersLogger.w('l10nProvider returned null for engagementSchedulerProvider, using English fallback');
     return lookupAppLocalizations(const Locale('en'));
   })();
-  final studentId = ref.read(studentIdServiceProvider).getStudentId();
+  final studentId = ref.read(studentIdServiceProvider).getStudentId().data ?? '';
   final scheduler = EngagementScheduler(
     tracker: ref.watch(studyProgressTrackerProvider),
     masteryService: ref.watch(masteryGraphServiceProvider),

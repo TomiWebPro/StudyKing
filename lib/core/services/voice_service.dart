@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
 class VoiceService {
@@ -120,16 +121,16 @@ class VoiceService {
     }
   }
 
-  Future<void> startListening({String? localeName}) async {
+  Future<Result<void>> startListening({String? localeName}) async {
     if (_speech == null) {
       _errorController.add('Speech engine not available');
-      return;
+      return Result.failure('Speech engine not available');
     }
     if (!_isAvailable) {
       _errorController.add('Microphone permission is required. Please grant access.');
-      return;
+      return Result.failure('Microphone permission is required');
     }
-    if (_isListening) return;
+    if (_isListening) return Result.success(null);
 
     if (_isSpeaking) {
       await stopSpeaking();
@@ -151,11 +152,13 @@ class VoiceService {
       );
       _isListening = true;
       _listeningStateController.add(true);
+      return Result.success(null);
     } catch (e) {
       _logger.w('Failed to start listening', e);
       _errorController.add('Failed to start listening');
       _isListening = false;
       _listeningStateController.add(false);
+      return Result.failure(e.toString());
     }
   }
 

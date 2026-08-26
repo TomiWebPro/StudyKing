@@ -359,8 +359,9 @@ class FakeControllableVoiceService extends VoiceService {
   bool get isListening => _listening;
 
   @override
-  Future<void> startListening({String? localeName}) async {
+  Future<Result<void>> startListening({String? localeName}) async {
     _listening = true;
+    return Result.success(null);
   }
 
   @override

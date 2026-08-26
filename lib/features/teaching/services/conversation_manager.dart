@@ -190,12 +190,12 @@ class ConversationManager {
       availableTitles: _availableSyllabi.map((g) => g.subjectTitle).toList(),
     );
     if (switchResult.matched) {
-      await _memory.addUserMessage(content);
+      { final memResult = await _memory.addUserMessage(content); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
       final l10n = lookupAppLocalizations(Locale(localeName));
       if (switchResult.syllabusTitle == null) {
         _currentSyllabusId = null;
         _currentSyllabusTitle = null;
-        await _memory.addAssistantMessage(l10n.tutorSyllabusSwitchedAll);
+        { final memResult = await _memory.addAssistantMessage(l10n.tutorSyllabusSwitchedAll); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
         yield l10n.tutorSyllabusSwitchedAll;
       } else {
         final goal = _availableSyllabi.firstWhere(
@@ -205,13 +205,13 @@ class ConversationManager {
         _currentSyllabusId = goal.subjectId;
         _currentSyllabusTitle = goal.subjectTitle;
         final ack = l10n.tutorSyllabusSwitched(goal.subjectTitle);
-        await _memory.addAssistantMessage(ack);
+        { final memResult = await _memory.addAssistantMessage(ack); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
         yield ack;
       }
       return;
     }
 
-    await _memory.addUserMessage(content);
+    { final memResult = await _memory.addUserMessage(content); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
 
     if (phase == ConversationPhase.exercise) {
       final result = await _evaluateExerciseResponse(content);
@@ -276,14 +276,14 @@ class ConversationManager {
     } catch (e) {
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
-        await _memory.addAssistantMessage(partialContent);
+        { final memResult = await _memory.addAssistantMessage(partialContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
       }
       rethrow;
     }
 
     final assistantContent = buffer.toString();
     totalTokensUsed += assistantContent.length ~/ 4;
-    await _memory.addAssistantMessage(assistantContent);
+    { final memResult = await _memory.addAssistantMessage(assistantContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
 
     if (_pendingExerciseQuestionCapture) {
       _lastExerciseQuestion = assistantContent;
@@ -305,7 +305,7 @@ class ConversationManager {
   }
 
   Stream<String> processImage(String base64Image) async* {
-    await _memory.addUserMessage('[Image submitted for analysis]');
+    { final memResult = await _memory.addUserMessage('[Image submitted for analysis]'); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
 
     if (phase == ConversationPhase.greeting) {
       _logTransition(phase, ConversationPhase.teaching, 'image submitted during greeting');
@@ -332,14 +332,14 @@ class ConversationManager {
     } catch (e) {
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
-        await _memory.addAssistantMessage(partialContent);
+        { final memResult = await _memory.addAssistantMessage(partialContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
       }
       rethrow;
     }
 
     final assistantContent = buffer.toString();
     totalTokensUsed += assistantContent.length ~/ 4;
-    await _memory.addAssistantMessage(assistantContent);
+    { final memResult = await _memory.addAssistantMessage(assistantContent); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
     _speakResponse(assistantContent);
   }
 
@@ -516,7 +516,7 @@ class ConversationManager {
   }
 
   Future<void> addAssistantMessage(String content) async {
-    await _memory.addAssistantMessage(content);
+    { final memResult = await _memory.addAssistantMessage(content); if (memResult.isFailure) _logger.w('Failed to persist message: ${memResult.error}'); }
   }
 
   static Future<String?> _summarizeMessages(

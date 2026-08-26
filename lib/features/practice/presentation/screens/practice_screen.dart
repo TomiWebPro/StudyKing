@@ -154,7 +154,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     try {
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
-      final studentId = _studentIdService.getStudentId();
+      final studentId = _studentIdService.getStudentId().data ?? '';
       final now = DateTime.now();
       final today = now.dateOnly;
 
@@ -183,7 +183,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
 
   Future<void> _loadActivity() async {
     try {
-      final studentId = _studentIdService.getStudentId();
+      final studentId = _studentIdService.getStudentId().data ?? '';
       final statsResult = await _progressTracker.getOverallStats(studentId);
       final stats = statsResult.data ?? <String, dynamic>{};
       final weeklyAcc = stats['accuracy'] as int? ?? 0;
@@ -277,7 +277,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     for (final topicId in topicIds) {
       final result = await prereqCheck.checkPrerequisites(
         topicId: topicId,
-        studentId: _studentIdService.getStudentId(),
+        studentId: _studentIdService.getStudentId().data ?? '',
       );
       if (result.isSuccess &&
           !result.data!.isReady &&
@@ -301,7 +301,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       final prereqCheck = PrerequisiteCheckService();
       final prereqResult = await prereqCheck.checkPrerequisites(
         topicId: topicId,
-        studentId: _studentIdService.getStudentId(),
+        studentId: _studentIdService.getStudentId().data ?? '',
       );
       if (prereqResult.isSuccess &&
           !prereqResult.data!.isReady &&
@@ -354,7 +354,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       MasteryGraphService masteryService, Subject subject) async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final studentId = _studentIdService.getStudentId();
+      final studentId = _studentIdService.getStudentId().data ?? '';
       final allQuestionsResult = await _questionRepo.getAll();
       final allQuestions = allQuestionsResult.data ?? [];
       final subjectQuestions =
@@ -491,7 +491,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     try {
       final masteryService = ref.read(masteryGraphServiceProvider);
       await masteryService.init();
-      final studentId = _studentIdService.getStudentId();
+      final studentId = _studentIdService.getStudentId().data ?? '';
       if (_subjects.isNotEmpty) {
         final allTopicIds = <String>[];
         for (final subject in _subjects) {

@@ -69,7 +69,7 @@ class GetSyllabusStructureTool extends AgentTool {
     final topicId = args['topicId'] as String?;
     final includePrerequisites = args['includePrerequisites'] as bool? ?? true;
     final includeProgress = args['includeProgress'] as bool? ?? true;
-    final studentId = _studentIdService.getStudentId();
+    final studentId = _studentIdService.getStudentId().data ?? '';
 
     if (subjectId == null) {
       return _listAllSubjects(

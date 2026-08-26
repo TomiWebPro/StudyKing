@@ -538,7 +538,7 @@ class FakeStudentIdService extends StudentIdService {
   }
 
   @override
-  String getStudentId() => _studentId;
+  Result<String> getStudentId() => Result.success(_studentId);
 
   @override
   void setStudentId(String id) {

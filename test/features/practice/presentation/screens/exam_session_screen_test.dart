@@ -33,7 +33,7 @@ class _FakeClock implements Clock {
 
 class _FakeStudentIdService extends StudentIdService {
   @override
-  String getStudentId() => 'test-student-id';
+  Result<String> getStudentId() => Result.success('test-student-id');
 }
 
 class _FakeSessionRepository extends SessionRepository {
