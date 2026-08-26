@@ -14,7 +14,14 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show questionRepositoryProvider, sourceRepositoryProvider;
+import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart'
+    show focusSessionRepositoryProvider;
+import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -178,6 +185,7 @@ class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
 class _FakeSessionRepo extends SessionRepository {
   final List<Session> _sessions;
   final bool _throwOnGetByDate;
+  bool used = false;
 
   _FakeSessionRepo({List<Session> sessions = const [], bool throwOnGetByDate = false})
       : _sessions = sessions,
@@ -192,6 +200,12 @@ class _FakeSessionRepo extends SessionRepository {
         s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
         s.startTime.isBefore(end)).toList());
   }
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    used = true;
+    return Result.success(_sessions);
+  }
 }
 
 ProviderContainer _createContainer({
@@ -205,6 +219,7 @@ ProviderContainer _createContainer({
   SubjectRepository? subjectRepo,
   QuestionRepository? questionRepo,
   PlannerService? plannerServiceParam,
+  SourceRepository? sourceRepo,
 }) {
   return ProviderContainer(
     overrides: [
@@ -231,6 +246,8 @@ ProviderContainer _createContainer({
         subjectRepositoryProvider.overrideWithValue(subjectRepo),
       if (questionRepo != null)
         questionRepositoryProvider.overrideWithValue(questionRepo),
+      if (sourceRepo != null)
+        sourceRepositoryProvider.overrideWithValue(sourceRepo),
       if (plannerServiceParam != null)
         plannerServiceProvider.overrideWithValue(plannerServiceParam),
     ],
@@ -251,10 +268,16 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
   Future<Result<int>> getSubjectDueCount(String subjectId) async {
     return Result.success(_dueCounts[subjectId] ?? 0);
   }
+
+  @override
+  Future<Result<Map<String, int>>> getDueCountsBySubject() async {
+    return Result.success(Map<String, int>.from(_dueCounts));
+  }
 }
 
 class _FakeSubjectRepo extends SubjectRepository {
   final List<Subject> _subjects;
+  bool used = false;
 
   _FakeSubjectRepo({List<Subject> subjects = const []}) : _subjects = subjects;
 
@@ -262,7 +285,10 @@ class _FakeSubjectRepo extends SubjectRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+  Future<Result<List<Subject>>> getAll() async {
+    used = true;
+    return Result.success(_subjects);
+  }
 }
 
 class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
@@ -277,6 +303,26 @@ class _FakeSpacedRepetitionEngine extends SpacedRepetitionEngine {
       nextReview: DateTime.now(),
       updatedData: currentData ?? const QuestionSRData(),
     );
+  }
+}
+
+class _FakeSourceRepo extends SourceRepository {
+  bool used = false;
+
+  @override
+  Future<List<Source>> getByStudent(String studentId) async {
+    used = true;
+    return [];
+  }
+}
+
+class _FakeFocusSessionRepo extends FocusSessionRepository {
+  bool used = false;
+
+  @override
+  Future<Result<FocusSession?>> getLatest() async {
+    used = true;
+    return Result.success(null);
   }
 }
 
@@ -924,6 +970,76 @@ void main() {
       final result = await container.read(dashboardChecklistProgressProvider('s1').future);
       expect(result, isA<ChecklistProgress>());
       expect(result.isEmpty, isTrue);
+    });
+  });
+
+  group('dashboard provider singleton wiring', () {
+    test(
+        'dashboardSourceCountProvider uses the injected sourceRepositoryProvider singleton',
+        () async {
+      final fakeSourceRepo = _FakeSourceRepo();
+      final container = ProviderContainer(
+        overrides: [
+          sourceRepositoryProvider.overrideWithValue(fakeSourceRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardSourceCountProvider('s1').future);
+      expect(result, 0);
+      expect(fakeSourceRepo.used, isTrue);
+      expect(container.read(sourceRepositoryProvider), same(fakeSourceRepo));
+    });
+
+    test(
+        'dashboardChecklistProgressProvider uses the injected subject/source/session singletons',
+        () async {
+      final fakeSourceRepo = _FakeSourceRepo();
+      final fakeSubjectRepo = _FakeSubjectRepo(subjects: [
+        Subject(id: 'subj-1', name: 'Math', code: 'MATH'),
+      ]);
+      final fakeSessionRepo = _FakeSessionRepo(sessions: [
+        Session(
+          id: 's1',
+          studentId: 's1',
+          type: SessionType.practice,
+          startTime: DateTime.now(),
+          actualDurationMs: 1000,
+          completed: true,
+        ),
+      ]);
+      final container = _createContainer(
+        subjectRepo: fakeSubjectRepo,
+        sourceRepo: fakeSourceRepo,
+        sessionRepo: fakeSessionRepo,
+        plannerServiceParam: _FakePlannerService(),
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardChecklistProgressProvider('s1').future);
+      expect(result.hasSubjects, isTrue);
+      expect(result.hasPracticeSessions, isTrue);
+      expect(fakeSourceRepo.used, isTrue);
+      expect(fakeSubjectRepo.used, isTrue);
+      expect(fakeSessionRepo.used, isTrue);
+    });
+
+    test(
+        'dashboardLastFocusSessionProvider uses the injected focusSessionRepositoryProvider',
+        () async {
+      final fakeFocusRepo = _FakeFocusSessionRepo();
+      final container = ProviderContainer(
+        overrides: [
+          dashboardInitProvider.overrideWith((ref) => Future.value()),
+          focusSessionRepositoryProvider.overrideWith((ref) async => fakeFocusRepo),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(dashboardLastFocusSessionProvider('s1').future);
+      expect(result, isNull);
+      expect(fakeFocusRepo.used, isTrue);
+      expect(container.read(focusSessionRepositoryProvider.future), isA<Future<FocusSessionRepository>>());
     });
   });
 
