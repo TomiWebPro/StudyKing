@@ -481,7 +481,9 @@ void main() {
         });
         final service = createMentorService(progressTracker: tracker);
 
-        final report = await service.getProgressReport();
+        final reportResult = await service.getProgressReport();
+        expect(reportResult.isSuccess, isTrue);
+        final report = reportResult.data!;
         expect(report.accuracy, equals(75.0));
         expect(report.totalAttempts, equals(20));
         expect(report.correctAttempts, equals(15));
@@ -518,17 +520,20 @@ void main() {
         final service =
             createMentorService(masteryService: mastery, progressTracker: tracker);
 
-        final report = await service.getProgressReport();
+        final reportResult = await service.getProgressReport();
+        expect(reportResult.isSuccess, isTrue);
+        final report = reportResult.data!;
         expect(report.weakTopics.length, equals(1));
         expect(report.weakTopics.first.topicId, equals('topic_weak'));
       });
 
-      test('throws on failure', () async {
+      test('returns failure Result on tracker exception', () async {
         final errorTracker = FakeProgressTracker(attemptRepo: AttemptRepository());
         errorTracker.setStats({'throw': true});
         final service = createMentorService(progressTracker: errorTracker);
 
-        expect(() => service.getProgressReport(), throwsA(isA<Exception>()));
+        final result = await service.getProgressReport();
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -994,7 +999,9 @@ void main() {
         });
         final service = createMentorService(progressTracker: tracker);
 
-        final report = await service.getProgressReport();
+        final reportResult = await service.getProgressReport();
+        expect(reportResult.isSuccess, isTrue);
+        final report = reportResult.data!;
         expect(report.badges.length, equals(1));
         expect(report.badges.first['id'], equals('first_attempt'));
         expect(report.badges.first['name'], equals('First Attempt'));
@@ -1022,7 +1029,9 @@ void main() {
         });
         final service = createMentorService(progressTracker: tracker);
 
-        final report = await service.getProgressReport();
+        final reportResult = await service.getProgressReport();
+        expect(reportResult.isSuccess, isTrue);
+        final report = reportResult.data!;
         expect(report.recommendations.length, equals(1));
         expect(
           report.recommendations.first['type'],

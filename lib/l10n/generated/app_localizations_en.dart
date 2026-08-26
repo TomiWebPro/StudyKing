@@ -6126,4 +6126,35 @@ class AppLocalizationsEn extends AppLocalizations {
   String recognizedFromImage(String text) {
     return 'Recognized from image: $text';
   }
+
+  @override
+  String get syllabusAll => 'All syllabi';
+
+  @override
+  String get syllabusBreakdownTitle => 'Progress by syllabus';
+
+  @override
+  String get syllabusCompletion => 'Completion';
+
+  @override
+  String get syllabusWeakCount => 'Weak topics';
+
+  @override
+  String syllabusStudyTimeHours(String hours) {
+    return 'Study time: $hours h';
+  }
+
+  @override
+  String get mentorContextSyllabusGoals => 'Syllabus goals';
+
+  @override
+  String get mentorContextActiveSyllabus => 'Active syllabus';
+
+  @override
+  String tutorSyllabusSwitched(String title) {
+    return 'Switched active syllabus to $title.';
+  }
+
+  @override
+  String get tutorSyllabusSwitchedAll => 'Showing all syllabi.';
 }

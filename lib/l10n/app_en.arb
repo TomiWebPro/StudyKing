@@ -8061,5 +8061,53 @@
         "example": "3x + 2 = 8"
       }
     }
+  },
+  "syllabusAll": "All syllabi",
+  "@syllabusAll": {
+    "description": "Switcher option to show all syllabi combined"
+  },
+  "syllabusBreakdownTitle": "Progress by syllabus",
+  "@syllabusBreakdownTitle": {
+    "description": "Title for the per-syllabus progress section"
+  },
+  "syllabusCompletion": "Completion",
+  "@syllabusCompletion": {
+    "description": "Per-syllabus completion label"
+  },
+  "syllabusWeakCount": "Weak topics",
+  "@syllabusWeakCount": {
+    "description": "Per-syllabus weak topics label"
+  },
+  "syllabusStudyTimeHours": "Study time: {hours} h",
+  "@syllabusStudyTimeHours": {
+    "description": "Per-syllabus study time label",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "12.5"
+      }
+    }
+  },
+  "mentorContextSyllabusGoals": "Syllabus goals",
+  "@mentorContextSyllabusGoals": {
+    "description": "Mentor context syllabus goals header"
+  },
+  "mentorContextActiveSyllabus": "Active syllabus",
+  "@mentorContextActiveSyllabus": {
+    "description": "Mentor context active syllabus label"
+  },
+  "tutorSyllabusSwitched": "Switched active syllabus to {title}.",
+  "@tutorSyllabusSwitched": {
+    "description": "Tutor acknowledgement when the student switches the active syllabus",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Math"
+      }
+    }
+  },
+  "tutorSyllabusSwitchedAll": "Showing all syllabi.",
+  "@tutorSyllabusSwitchedAll": {
+    "description": "Tutor acknowledgement when the student clears the active syllabus filter"
   }
-  }
+}

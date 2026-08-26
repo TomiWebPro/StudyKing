@@ -126,7 +126,18 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       final studentId = ref.read(studentIdServiceProvider).getStudentId();
       _mentorService = ref.read(mentorServiceProvider(studentId));
 
-      await _mentorService.initialize();
+      final initResult = await _mentorService.initialize();
+      if (initResult.isFailure) {
+        if (mounted) {
+          final l10n = AppLocalizations.of(context)!;
+          setState(() {
+            _initError = true;
+            _isRetrying = false;
+            _initErrorMessage = l10n.mentorInitFailed(initResult.error ?? '');
+          });
+        }
+        return;
+      }
 
       final history = _mentorService.memory.getHistory();
       final loadedMessages = history
@@ -376,6 +387,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _mentorService.clearPendingReschedule();
         if (!mounted) return;
         final result = await _mentorService.suggestReschedule(rescheduleSessionId);
+        final l10n = AppLocalizations.of(context)!;
+        final content = result.isSuccess
+            ? result.data!
+            : (result.error ?? l10n.errorOccurred);
         if (mounted) {
           setState(() {
             _messages.add(ChatMessageData(
@@ -384,7 +399,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                 sessionId: 'mentor',
                 role: MessageRole.mentor,
                 type: MessageType.text,
-                content: result,
+                content: content,
                 timestamp: DateTime.now(),
               ),
               isComplete: true,
@@ -530,6 +545,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         durationMinutes: resultDuration,
       );
       final result = await _mentorService.confirmSchedule(updatedProposal);
+      final l10n = AppLocalizations.of(context)!;
+      final content = result.isSuccess
+          ? result.data!
+          : (result.error ?? l10n.errorOccurred);
       if (mounted) {
         setState(() {
           _messages.add(ChatMessageData(
@@ -538,7 +557,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               sessionId: 'mentor',
               role: MessageRole.mentor,
               type: MessageType.text,
-              content: result,
+              content: content,
               timestamp: DateTime.now(),
             ),
             isComplete: true,
@@ -1057,6 +1076,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   Future<void> _onRescheduleLesson(Session lesson) async {
     try {
       final result = await _mentorService.suggestReschedule(lesson.id);
+      final l10n = AppLocalizations.of(context)!;
+      final content = result.isSuccess
+          ? result.data!
+          : (result.error ?? l10n.errorOccurred);
       if (mounted) {
         setState(() {
           _messages.add(ChatMessageData(
@@ -1065,7 +1088,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
               sessionId: 'mentor',
               role: MessageRole.mentor,
               type: MessageType.text,
-              content: result,
+              content: content,
               timestamp: DateTime.now(),
             ),
             isComplete: true,
@@ -1210,7 +1233,15 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     try {
       final localeName = AppLocalizations.of(context)!.localeName;
       final topicRepo = ref.read(topicRepositoryProvider);
-      final report = await _mentorService.getProgressReport();
+      final reportResult = await _mentorService.getProgressReport();
+      if (reportResult.isFailure || reportResult.data == null) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.errorOccurred)),
+        );
+        return;
+      }
+      final report = reportResult.data!;
 
       final topicTitles = <String, String>{};
       for (final wt in report.weakTopics) {

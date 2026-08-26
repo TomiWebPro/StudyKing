@@ -8040,5 +8040,53 @@
         "example": "3x + 2 = 8"
       }
     }
+  },
+  "syllabusAll": "Todos los planes de estudio",
+  "@syllabusAll": {
+    "description": "Switcher option to show all syllabi combined"
+  },
+  "syllabusBreakdownTitle": "Progreso por plan de estudio",
+  "@syllabusBreakdownTitle": {
+    "description": "Title for the per-syllabus progress section"
+  },
+  "syllabusCompletion": "Completado",
+  "@syllabusCompletion": {
+    "description": "Per-syllabus completion label"
+  },
+  "syllabusWeakCount": "Temas débiles",
+  "@syllabusWeakCount": {
+    "description": "Per-syllabus weak topics label"
+  },
+  "syllabusStudyTimeHours": "Tiempo de estudio: {hours} h",
+  "@syllabusStudyTimeHours": {
+    "description": "Per-syllabus study time label",
+    "placeholders": {
+      "hours": {
+        "type": "String",
+        "example": "12.5"
+      }
+    }
+  },
+  "mentorContextSyllabusGoals": "Objetivos del plan de estudio",
+  "@mentorContextSyllabusGoals": {
+    "description": "Mentor context syllabus goals header"
+  },
+  "mentorContextActiveSyllabus": "Plan de estudio activo",
+  "@mentorContextActiveSyllabus": {
+    "description": "Mentor context active syllabus label"
+  },
+  "tutorSyllabusSwitched": "Syllabus activo cambiado a {title}.",
+  "@tutorSyllabusSwitched": {
+    "description": "Tutor acknowledgement when the student switches the active syllabus",
+    "placeholders": {
+      "title": {
+        "type": "String",
+        "example": "Matemáticas"
+      }
+    }
+  },
+  "tutorSyllabusSwitchedAll": "Mostrando todos los syllabi.",
+  "@tutorSyllabusSwitchedAll": {
+    "description": "Tutor acknowledgement when the student clears the active syllabus filter"
   }
-  }
+}

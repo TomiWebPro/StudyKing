@@ -10070,6 +10070,60 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recognized from image: {text}'**
   String recognizedFromImage(String text);
+
+  /// Switcher option to show all syllabi combined
+  ///
+  /// In en, this message translates to:
+  /// **'All syllabi'**
+  String get syllabusAll;
+
+  /// Title for the per-syllabus progress section
+  ///
+  /// In en, this message translates to:
+  /// **'Progress by syllabus'**
+  String get syllabusBreakdownTitle;
+
+  /// Per-syllabus completion label
+  ///
+  /// In en, this message translates to:
+  /// **'Completion'**
+  String get syllabusCompletion;
+
+  /// Per-syllabus weak topics label
+  ///
+  /// In en, this message translates to:
+  /// **'Weak topics'**
+  String get syllabusWeakCount;
+
+  /// Per-syllabus study time label
+  ///
+  /// In en, this message translates to:
+  /// **'Study time: {hours} h'**
+  String syllabusStudyTimeHours(String hours);
+
+  /// Mentor context syllabus goals header
+  ///
+  /// In en, this message translates to:
+  /// **'Syllabus goals'**
+  String get mentorContextSyllabusGoals;
+
+  /// Mentor context active syllabus label
+  ///
+  /// In en, this message translates to:
+  /// **'Active syllabus'**
+  String get mentorContextActiveSyllabus;
+
+  /// Tutor acknowledgement when the student switches the active syllabus
+  ///
+  /// In en, this message translates to:
+  /// **'Switched active syllabus to {title}.'**
+  String tutorSyllabusSwitched(String title);
+
+  /// Tutor acknowledgement when the student clears the active syllabus filter
+  ///
+  /// In en, this message translates to:
+  /// **'Showing all syllabi.'**
+  String get tutorSyllabusSwitchedAll;
 }
 
 class _AppLocalizationsDelegate

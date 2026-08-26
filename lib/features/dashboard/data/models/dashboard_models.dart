@@ -204,6 +204,38 @@ class DailyTrendEntry {
   });
 }
 
+class SyllabusBreakdown {
+  final String subjectId;
+  final String subjectTitle;
+  final double completionPercent;
+  final double accuracy;
+  final int totalTopics;
+  final int masteredTopics;
+  final int weakTopics;
+  final double studyHours;
+  final List<String> topicIds;
+  final List<String> weakTopicIds;
+
+  const SyllabusBreakdown({
+    required this.subjectId,
+    required this.subjectTitle,
+    this.completionPercent = 0.0,
+    this.accuracy = 0.0,
+    this.totalTopics = 0,
+    this.masteredTopics = 0,
+    this.weakTopics = 0,
+    this.studyHours = 0.0,
+    this.topicIds = const [],
+    this.weakTopicIds = const [],
+  });
+
+  bool get isEmpty =>
+      totalTopics == 0 &&
+      masteredTopics == 0 &&
+      weakTopics == 0 &&
+      studyHours == 0.0;
+}
+
 class ChecklistProgress {
   final bool hasSubjects;
   final bool hasSources;

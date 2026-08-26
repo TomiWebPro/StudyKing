@@ -127,17 +127,23 @@ class MentorService {
   void clearPendingPlan() => _pendingPlan = null;
   void clearPendingReschedule() => _pendingRescheduleSessionId = null;
 
-  Future<void> initialize() async {
-    await _memory.loadFromRepository();
-    await _nudgeRepo.init();
-    try {
-      await _longTermMemory?.init();
-    } catch (e) {
-      _logger.w('LongTermMemory.init failed during MentorService.initialize', e);
+  Future<Result<void>> initialize() async {
+    final result = await Result.capture(() async {
+      await _memory.loadFromRepository();
+      await _nudgeRepo.init();
+      try {
+        await _longTermMemory?.init();
+      } catch (e) {
+        _logger.w('LongTermMemory.init failed during MentorService.initialize', e);
+      }
+    }, context: 'MentorService.initialize');
+    if (result.isFailure) {
+      _logger.w('MentorService.initialize failed: ${result.error}');
     }
+    return result;
   }
 
-  Future<bool> hasMeaningfulData() async {
+  Future<Result<bool>> hasMeaningfulData() async {
     final result = await Result.capture(() async {
       final subjectsResult = await _database.subjectRepository.getAll();
       final hasSubjects = subjectsResult.data != null && subjectsResult.data!.isNotEmpty;
@@ -146,7 +152,7 @@ class MentorService {
       final attempts = stats['totalAttempts'] as int? ?? 0;
       return attempts > 0 || hasSubjects;
     }, context: 'hasMeaningfulData');
-    return result.data ?? true;
+    return result;
   }
 
   Stream<String> chat(String message) async* {
@@ -154,7 +160,8 @@ class MentorService {
     _pendingPlan = null;
     _pendingRescheduleSessionId = null;
 
-    final hasData = await hasMeaningfulData();
+    final hasDataResult = await hasMeaningfulData();
+    final hasData = hasDataResult.data ?? true;
     if (!hasData) {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final msg = l10n.mentorNoSubjects;
@@ -374,11 +381,11 @@ class MentorService {
     return result;
   }
 
-  Future<String> confirmSchedule(ScheduleProposal proposal) async {
+  Future<Result<String>> confirmSchedule(ScheduleProposal proposal) async {
     return _scheduleHandler.confirmSchedule(proposal);
   }
 
-  Future<String> suggestReschedule(String sessionId) async {
+  Future<Result<String>> suggestReschedule(String sessionId) async {
     return _scheduleHandler.suggestReschedule(sessionId);
   }
 
@@ -388,31 +395,36 @@ class MentorService {
     return msg;
   }
 
-  Future<ProgressReport> getProgressReport() async {
-    final statsResult = await _progressTracker.getOverallStats(_studentId);
-    final stats = statsResult.data ?? <String, dynamic>{};
-    final weakResult = await _masteryService.getWeakTopics(_studentId);
-    final recommendationsResult = await _progressTracker.getRecommendations(_studentId);
-    final recommendations = recommendationsResult.data ?? [];
-    final badgesResult = await _progressTracker.getBadges(_studentId);
-    final badges = badgesResult.data ?? [];
+  // Returns a Result to keep the public API consistent with the project's
+  // Result<T> convention. It is exception-safe: underlying repo/service
+  // failures degrade to an empty/zeroed report instead of throwing.
+  Future<Result<ProgressReport>> getProgressReport() async {
+    return Result.capture(() async {
+      final statsResult = await _progressTracker.getOverallStats(_studentId);
+      final stats = statsResult.data ?? <String, dynamic>{};
+      final weakResult = await _masteryService.getWeakTopics(_studentId);
+      final recommendationsResult = await _progressTracker.getRecommendations(_studentId);
+      final recommendations = recommendationsResult.data ?? [];
+      final badgesResult = await _progressTracker.getBadges(_studentId);
+      final badges = badgesResult.data ?? [];
 
-    final completedResult =
-        await _database.tutorSessionRepository.getCompletedSessions(_studentId);
-    final completedLessons = completedResult.data?.length ?? 0;
+      final completedResult =
+          await _database.tutorSessionRepository.getCompletedSessions(_studentId);
+      final completedLessons = completedResult.data?.length ?? 0;
 
-    return ProgressReport(
-      totalAttempts: stats['totalAttempts'] as int,
-      correctAttempts: stats['correctAttempts'] as int,
-      accuracy: (stats['accuracy'] as num).toDouble(),
-      topicsStudied: stats['topicsStudied'] as int,
-      completedLessons: completedLessons,
-      weeklyActivity: stats['weeklyActivity'] as int,
-      totalStudyTimeHours: (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0,
-      weakTopics: weakResult.isSuccess ? weakResult.data! : [],
-      badges: badges,
-      recommendations: recommendations,
-    );
+      return ProgressReport(
+        totalAttempts: stats['totalAttempts'] as int? ?? 0,
+        correctAttempts: stats['correctAttempts'] as int? ?? 0,
+        accuracy: (stats['accuracy'] as num?)?.toDouble() ?? 0.0,
+        topicsStudied: stats['topicsStudied'] as int? ?? 0,
+        completedLessons: completedLessons,
+        weeklyActivity: stats['weeklyActivity'] as int? ?? 0,
+        totalStudyTimeHours: (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0,
+        weakTopics: weakResult.isSuccess ? weakResult.data! : [],
+        badges: badges,
+        recommendations: recommendations,
+      );
+    }, context: 'getProgressReport');
   }
 
   Future<MentorAction> suggestNextAction() async {

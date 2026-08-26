@@ -20,6 +20,8 @@ import '../data/models/lesson_plan_model.dart';
 import 'conversation_phase.dart';
 import 'exercise_evaluator.dart';
 import 'prompts/prompts.dart';
+import 'syllabus_switch_parser.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 
 class ConversationManager {
   final LlmService _llmService;
@@ -39,6 +41,14 @@ class ConversationManager {
   final String subjectId;
   final String topicId;
   final String? scheduledSessionId;
+
+  /// The syllabus (subject) the student is currently scoped to in the tutor.
+  /// `null` means all syllabi are in scope.
+  String? get currentSyllabusId => _currentSyllabusId;
+  String? get currentSyllabusTitle => _currentSyllabusTitle;
+  String? _currentSyllabusId;
+  String? _currentSyllabusTitle;
+  final List<SyllabusGoal> _availableSyllabi;
   final DateTime sessionStartTime;
   final LearningPreference? learningPreferences;
 
@@ -64,6 +74,7 @@ class ConversationManager {
     required this.subjectId,
     required this.topicId,
     this.scheduledSessionId,
+    List<SyllabusGoal> availableSyllabi = const [],
     required ExerciseEvaluator exerciseEvaluator,
     ConversationRepository? persistenceRepo,
     ConversationPromptSet? prompts,
@@ -79,6 +90,7 @@ class ConversationManager {
         _clock = clock ?? SystemClock(),
         _voiceService = voiceService,
         sessionStartTime = (clock ?? SystemClock()).now(),
+        _availableSyllabusTitles = availableSyllabi.map((g) => g.subjectTitle).toList(),
         _memory = ConversationMemory(
           maxTurns: 30,
           sessionId: sessionId,
@@ -164,12 +176,29 @@ class ConversationManager {
   }
 
   Stream<String> sendMessage(String content) async* {
-    await _memory.addUserMessage(content);
-
     if (phase == ConversationPhase.greeting) {
       _logTransition(phase, ConversationPhase.teaching, 'initial greeting');
       phase = ConversationPhase.teaching;
-    } else if (phase == ConversationPhase.exercise) {
+    }
+
+    final switchResult = SyllabusSwitchParser.parse(
+      content,
+      availableTitles: _availableSyllabusTitles,
+    );
+    if (switchResult.matched) {
+      await _memory.addUserMessage(content);
+      final l10n = lookupAppLocalizations(Locale(localeName));
+      final ack = switchResult.syllabusTitle == null
+          ? l10n.tutorSyllabusSwitchedAll
+          : l10n.tutorSyllabusSwitched(switchResult.syllabusTitle!);
+      await _memory.addAssistantMessage(ack);
+      yield ack;
+      return;
+    }
+
+    await _memory.addUserMessage(content);
+
+    if (phase == ConversationPhase.exercise) {
       final result = await _evaluateExerciseResponse(content);
       await _memory.addSystemMessage(
         jsonEncode({

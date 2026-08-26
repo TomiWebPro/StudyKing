@@ -6194,4 +6194,35 @@ class AppLocalizationsEs extends AppLocalizations {
   String recognizedFromImage(String text) {
     return 'Reconocido en la imagen: $text';
   }
+
+  @override
+  String get syllabusAll => 'Todos los planes de estudio';
+
+  @override
+  String get syllabusBreakdownTitle => 'Progreso por plan de estudio';
+
+  @override
+  String get syllabusCompletion => 'Completado';
+
+  @override
+  String get syllabusWeakCount => 'Temas débiles';
+
+  @override
+  String syllabusStudyTimeHours(String hours) {
+    return 'Tiempo de estudio: $hours h';
+  }
+
+  @override
+  String get mentorContextSyllabusGoals => 'Objetivos del plan de estudio';
+
+  @override
+  String get mentorContextActiveSyllabus => 'Plan de estudio activo';
+
+  @override
+  String tutorSyllabusSwitched(String title) {
+    return 'Syllabus activo cambiado a $title.';
+  }
+
+  @override
+  String get tutorSyllabusSwitchedAll => 'Mostrando todos los syllabi.';
 }

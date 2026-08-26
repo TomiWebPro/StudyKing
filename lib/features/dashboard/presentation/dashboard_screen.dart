@@ -17,6 +17,8 @@ import 'package:studyking/features/dashboard/presentation/widgets/export_section
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_progress_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/mastery_remaining_lessons_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/plan_adherence_card.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/syllabus_switcher.dart';
+import 'package:studyking/features/dashboard/presentation/widgets/syllabus_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/summary_row.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/topic_breakdown_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/weak_areas_card.dart';
@@ -144,6 +146,17 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
 
     final syllabusGoalsAsync = ref.watch(dashboardSyllabusProgressProvider(studentId));
     final syllabusGoals = syllabusGoalsAsync.valueOrNull ?? [];
+
+    final syllabusBreakdownAsync = ref.watch(dashboardSyllabusBreakdownProvider(studentId));
+    final syllabusBreakdown = syllabusBreakdownAsync.valueOrNull ?? [];
+    final selectedSyllabus = ref.watch(dashboardSelectedSyllabusProvider);
+    final selectedSyllabusTopicIds = selectedSyllabus == null
+        ? null
+        : syllabusBreakdown
+            .where((b) => b.subjectId == selectedSyllabus)
+            .firstOrNull
+            ?.topicIds
+            .toSet();
 
     final vs = ResponsiveUtils.verticalSpacing(context);
 
@@ -318,6 +331,24 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                     SizedBox(height: vs),
                     _buildSyllabusProgress(context, syllabusGoals, studentId),
                   ],
+                  if (syllabusBreakdown.isNotEmpty) ...[
+                    SizedBox(height: vs),
+                    DashboardCard(
+                      asyncValue: syllabusBreakdownAsync,
+                      loadingSkeleton: _cardSkeleton(context),
+                      body: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SyllabusSwitcher(breakdowns: syllabusBreakdown),
+                          const SizedBox(height: 12),
+                          SyllabusBreakdownCard(
+                            breakdowns: syllabusBreakdown,
+                            selectedSubjectId: selectedSyllabus,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                   SizedBox(height: vs),
                   DashboardCard(
                     asyncValue: workloadAsync,
@@ -399,6 +430,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                             allMastery: allMasteryData,
                             resolveTopicName: (id) =>
                                 topicNamesData[id] ?? l10n.unknown,
+                            syllabusTopicIds: selectedSyllabusTopicIds,
                             onTopicTap: (topicId) => Navigator.pushNamed(
                               context,
                               AppRoutes.topicDetail,

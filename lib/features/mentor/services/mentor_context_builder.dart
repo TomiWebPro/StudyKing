@@ -28,6 +28,11 @@ class MentorContextBuilder {
   final LearningMethodAnalyticsService? _learningAnalyticsService;
   final String _localeName;
 
+  /// Human-readable summary of the student's active syllabi, so the mentor can
+  /// understand which syllabus the student is referring to when they chat.
+  String get currentSyllabusContext => _currentSyllabusContext;
+  String _currentSyllabusContext = '';
+
   MentorContextBuilder({
     required StudyProgressTracker progressTracker,
     required MasteryGraphService masteryService,
@@ -59,6 +64,9 @@ class MentorContextBuilder {
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final bullet = l10n.mentorBulletPoint;
 
+    final syllabusGoals = (await loadSyllabusGoals()).data ?? [];
+    _buildSyllabusContext(syllabusGoals, l10n);
+
     final buffer = StringBuffer();
     buffer.writeln(l10n.mentorContextHeader);
     buffer.writeln('$bullet${l10n.mentorContextTotalAttempts(stats['totalAttempts'] as int? ?? 0)}');
@@ -75,6 +83,13 @@ class MentorContextBuilder {
         if (adherenceDeviation.consecutiveLowDays > 0) {
           buffer.writeln('$bullet${l10n.mentorContextLowAdherence(adherenceDeviation.consecutiveLowDays)}');
         }
+      }
+    }
+
+    if (syllabusGoals.isNotEmpty) {
+      buffer.writeln('$bullet${l10n.mentorContextSyllabusGoals}: ${syllabusGoals.length}');
+      for (final goal in syllabusGoals) {
+        buffer.writeln('  $bullet${l10n.mentorContextActiveSyllabus}: ${goal.subjectTitle}');
       }
     }
 
@@ -214,6 +229,22 @@ class MentorContextBuilder {
 
   Future<Result<List<RoadmapModel>>> _loadRoadmaps() async {
     return _plannerService.loadRoadmaps();
+  }
+
+  /// Loads the active learning plan's syllabus goals (multi-syllabus support).
+  Future<Result<List<SyllabusGoal>>> loadSyllabusGoals() async {
+    final plan = (await _loadPlan()).data;
+    return Result.success(plan?.syllabusGoals ?? []);
+  }
+
+  void _buildSyllabusContext(List<SyllabusGoal> goals, AppLocalizations l10n) {
+    if (goals.isEmpty) {
+      _currentSyllabusContext = '';
+      return;
+    }
+    final titles = goals.map((g) => g.subjectTitle).join(', ');
+    _currentSyllabusContext =
+        '${l10n.mentorContextSyllabusGoals}: $titles';
   }
 
   Future<Result<List<PendingActionModel>>> _loadPendingActions() async {

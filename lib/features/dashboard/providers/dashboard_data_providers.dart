@@ -5,6 +5,7 @@ import 'package:studyking/core/services/remaining_workload_estimator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
@@ -241,8 +242,11 @@ final dashboardDueReviewsProvider =
 
     int totalDue = 0;
     final breakdown = <SubjectDueCount>[];
-    final dueCountsResult = await srService.getDueCountsBySubject();
-    final dueCounts = dueCountsResult.data ?? {};
+    final dueCounts = <String, int>{};
+    for (final subject in subjects) {
+      final result = await srService.getSubjectDueCount(subject.id);
+      dueCounts[subject.id] = result.data ?? 0;
+    }
     for (final subject in subjects) {
       final count = dueCounts[subject.id] ?? 0;
       totalDue += count;
@@ -398,6 +402,86 @@ final dashboardMasteryRemainingLessonsProvider =
   } catch (e) {
     _dashboardLogger.w('Failed to compute remaining lessons to mastery', e);
     return RemainingLessonsEstimate(0, 0);
+  }
+});
+
+/// Holds the currently selected syllabus (subject id) used to scope the
+/// dashboard. `null` means "all syllabi" (aggregate view).
+final dashboardSelectedSyllabusProvider = StateProvider<String?>((ref) => null);
+
+/// Returns per-syllabus progress/stats derived from the active learning plan's
+/// `SyllabusGoal[]`. For each goal it computes completion %, accuracy, weak
+/// topics, and study time scoped to that syllabus' subject.
+final dashboardSyllabusBreakdownProvider =
+    FutureProvider.family<List<SyllabusBreakdown>, String>((ref, studentId) async {
+  await ref.watch(dashboardInitProvider.future);
+  try {
+    ref.watch(activePlanIdProvider);
+    final plannerService = ref.watch(plannerServiceProvider);
+    final planResult = await plannerService.loadExistingPlan();
+    final plan = planResult.data;
+    if (plan == null) return [];
+    final goals = plan.syllabusGoals;
+    if (goals.isEmpty) return [];
+
+    final masteryService = ref.watch(masteryGraphServiceProvider);
+    final topicRepo = ref.watch(topicRepositoryProvider);
+    final sessionRepo = ref.watch(sessionRepositoryProvider);
+
+    final masteryResult = await masteryService.getAllTopicMastery(studentId);
+    final allMastery =
+        masteryResult.isSuccess ? (masteryResult.data ?? []) : <MasteryState>[];
+
+    final sessionsResult = await sessionRepo.getAll();
+    final allSessions =
+        sessionsResult.isSuccess ? (sessionsResult.data ?? []) : <Session>[];
+
+    final breakdowns = <SyllabusBreakdown>[];
+    for (final goal in goals) {
+      List<Topic> topics = [];
+      try {
+        final topicsResult = await topicRepo.getBySubject(goal.subjectId);
+        topics = topicsResult.isSuccess ? (topicsResult.data ?? []) : [];
+      } catch (e) {
+        _dashboardLogger.w('Failed to load topics for syllabus ${goal.subjectId}', e);
+      }
+      final topicIds = topics.map((t) => t.id).toSet();
+      final syllabusMastery =
+          allMastery.where((m) => topicIds.contains(m.topicId)).toList();
+
+      final totalTopics = topicIds.length;
+      final masteredTopics = syllabusMastery
+          .where((m) => m.masteryLevel.index >= MasteryLevel.proficient.index)
+          .length;
+      final weakMastery = syllabusMastery.where((m) => m.accuracy < 0.6).toList();
+      final weakTopics = weakMastery.length;
+      final weakTopicIds = weakMastery.map((m) => m.topicId).toList();
+      final accuracy = syllabusMastery.isNotEmpty
+          ? syllabusMastery.fold<double>(0.0, (sum, m) => sum + m.accuracy) /
+              syllabusMastery.length
+          : 0.0;
+      final completionPercent = totalTopics > 0 ? masteredTopics / totalTopics : 0.0;
+      final studyMs = allSessions
+          .where((s) => s.subjectId == goal.subjectId)
+          .fold<int>(0, (sum, s) => sum + (s.actualDurationMs ?? 0));
+
+      breakdowns.add(SyllabusBreakdown(
+        subjectId: goal.subjectId,
+        subjectTitle: goal.subjectTitle,
+        completionPercent: completionPercent,
+        accuracy: accuracy,
+        totalTopics: totalTopics,
+        masteredTopics: masteredTopics,
+        weakTopics: weakTopics,
+        studyHours: studyMs / 3600000,
+        topicIds: topicIds.toList(),
+        weakTopicIds: weakTopicIds,
+      ));
+    }
+    return breakdowns;
+  } catch (e) {
+    _dashboardLogger.w('Failed to load syllabus breakdown', e);
+    return [];
   }
 });
 

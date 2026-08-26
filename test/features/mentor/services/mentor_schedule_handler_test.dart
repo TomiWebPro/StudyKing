@@ -182,7 +182,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await handler.confirmSchedule(proposal);
-        expect(result, contains('scheduled'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('scheduled'));
         expect(planner.scheduleCallCount, equals(1));
       });
 
@@ -196,7 +197,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await handler.confirmSchedule(proposal);
-        expect(result, contains('conflict'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('conflict'));
         expect(planner.scheduleCallCount, equals(0));
       });
 
@@ -211,7 +213,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await handler.confirmSchedule(proposal);
-        expect(result, contains('unable to schedule'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('unable to schedule'));
         expect(planner.scheduleCallCount, equals(1));
       });
 
@@ -225,7 +228,7 @@ void main() {
         planner.setHasConflict(false);
         planner.setScheduleResult(true);
         final result = await handler.confirmSchedule(proposal);
-        expect(result, isA<String>());
+        expect(result, isA<Result<String>>());
       });
     });
 
@@ -265,7 +268,8 @@ void main() {
         expect(action.actionType, equals(PendingActionType.reschedule.name));
         expect(action.topicTitle, equals('Algebra'));
         expect(action.sessionId, equals('session-1'));
-        expect(result, contains('Algebra'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Algebra'));
       });
 
       test('returns not found for missing session', () async {
@@ -287,7 +291,8 @@ void main() {
         );
 
         final result = await handler.suggestReschedule('nonexistent');
-        expect(result, contains('Could not find'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Could not find'));
         expect(fakePending.createdActions, isEmpty);
       });
 
@@ -321,7 +326,8 @@ void main() {
         );
 
         final result = await handler.suggestReschedule('session-1');
-        expect(result, contains('Unable to find'));
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Unable to find'));
         expect(fakePending.createdActions, isEmpty);
       });
 
@@ -355,7 +361,8 @@ void main() {
         );
 
         final result = await handler.suggestReschedule('session-1');
-        expect(result, contains('rescheduling'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('rescheduling'));
         expect(fakePending.createdActions.length, equals(1));
       });
     });
@@ -468,7 +475,7 @@ void main() {
 
         // Unknown topic should not cause crash, just proceed with empty IDs
         final result = await handler.confirmSchedule(proposal);
-        expect(result, isA<String>());
+        expect(result, isA<Result<String>>());
       });
     });
 
@@ -507,7 +514,8 @@ void main() {
         );
 
         final result = await handler.suggestReschedule('existing');
-        expect(result, contains('rescheduling'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('rescheduling'));
       });
 
       test('skips completed lessons when finding free slot', () async {
@@ -549,7 +557,8 @@ void main() {
         );
 
         final result = await handler.suggestReschedule('completed-session');
-        expect(result, contains('rescheduling'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('rescheduling'));
       });
     });
   });

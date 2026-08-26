@@ -13,18 +13,23 @@ class WeakAreasCard extends ConsumerWidget {
   final List<MasteryState> allMastery;
   final String Function(String) resolveTopicName;
   final void Function(String topicId)? onTopicTap;
+  final Set<String>? syllabusTopicIds;
 
   const WeakAreasCard({
     super.key,
     required this.allMastery,
     required this.resolveTopicName,
     this.onTopicTap,
+    this.syllabusTopicIds,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final weakStates = allMastery.where((s) => s.accuracy < 0.6).toList();
+    final filteredMastery = syllabusTopicIds == null
+        ? allMastery
+        : allMastery.where((s) => syllabusTopicIds!.contains(s.topicId)).toList();
+    final weakStates = filteredMastery.where((s) => s.accuracy < 0.6).toList();
     if (weakStates.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(16),

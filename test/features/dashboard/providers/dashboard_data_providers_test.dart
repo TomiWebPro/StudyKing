@@ -159,6 +159,10 @@ class _FakeTopicRepo extends TopicRepository {
 
   @override
   Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
+
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async =>
+      Result.success(_topics.where((t) => t.subjectId == subjectId).toList());
 }
 
 class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
@@ -269,7 +273,6 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
     return Result.success(_dueCounts[subjectId] ?? 0);
   }
 
-  @override
   Future<Result<Map<String, int>>> getDueCountsBySubject() async {
     return Result.success(Map<String, int>.from(_dueCounts));
   }
@@ -959,6 +962,120 @@ void main() {
 
       final result = await container.read(dashboardSyllabusProgressProvider('s1').future);
       expect(result, isEmpty);
+    });
+  });
+
+  group('dashboardSyllabusBreakdownProvider', () {
+    PersonalLearningPlan _planWithGoals() => PersonalLearningPlan(
+          studentId: 's1',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              {'subjectId': 'subj1', 'subjectTitle': 'Math'},
+              {'subjectId': 'subj2', 'subjectTitle': 'Science'},
+            ],
+          },
+        );
+
+    test('returns empty list when plan is null', () async {
+      final container = _createContainer(
+        plannerServiceParam: _FakePlannerService(plan: null),
+      );
+      addTearDown(container.dispose);
+
+      final result =
+          await container.read(dashboardSyllabusBreakdownProvider('s1').future);
+      expect(result, isEmpty);
+    });
+
+    test('derives per-syllabus stats scoped to each goal subject', () async {
+      final now = DateTime.now();
+      final masteryService = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            lastAttempt: now,
+            lastUpdated: now,
+            accuracy: 0.9,
+            masteryLevel: MasteryLevel.proficient,
+          ),
+          MasteryState(
+            studentId: 's1',
+            topicId: 't2',
+            lastAttempt: now,
+            lastUpdated: now,
+            accuracy: 0.5,
+          ),
+          MasteryState(
+            studentId: 's1',
+            topicId: 't3',
+            lastAttempt: now,
+            lastUpdated: now,
+            accuracy: 0.8,
+          ),
+        ],
+      );
+      final topicRepo = _FakeTopicRepo(topics: [
+        Topic(id: 't1', subjectId: 'subj1', title: 'A', description: '', syllabusText: ''),
+        Topic(id: 't2', subjectId: 'subj1', title: 'B', description: '', syllabusText: ''),
+        Topic(id: 't3', subjectId: 'subj2', title: 'C', description: '', syllabusText: ''),
+      ]);
+      final sessionRepo = _FakeSessionRepo(sessions: [
+        Session(
+          id: 's1',
+          studentId: 's1',
+          type: SessionType.practice,
+          startTime: now,
+          actualDurationMs: 7200000,
+          completed: true,
+          subjectId: 'subj1',
+        ),
+        Session(
+          id: 's2',
+          studentId: 's1',
+          type: SessionType.practice,
+          startTime: now,
+          actualDurationMs: 3600000,
+          completed: true,
+          subjectId: 'subj2',
+        ),
+      ]);
+      final container = _createContainer(
+        masteryService: masteryService,
+        topicRepo: topicRepo,
+        sessionRepo: sessionRepo,
+        plannerServiceParam: _FakePlannerService(plan: _planWithGoals()),
+      );
+      addTearDown(container.dispose);
+
+      final result =
+          await container.read(dashboardSyllabusBreakdownProvider('s1').future);
+      expect(result.length, 2);
+
+      final math = result.firstWhere((b) => b.subjectId == 'subj1');
+      expect(math.subjectTitle, 'Math');
+      expect(math.totalTopics, 2);
+      expect(math.masteredTopics, 1);
+      expect(math.weakTopics, 1);
+      expect(math.accuracy, closeTo(0.7, 0.001));
+      expect(math.studyHours, closeTo(2.0, 0.001));
+      expect(math.topicIds, containsAll(['t1', 't2']));
+      expect(math.weakTopicIds, contains('t2'));
+
+      final science = result.firstWhere((b) => b.subjectId == 'subj2');
+      expect(science.totalTopics, 1);
+      expect(science.studyHours, closeTo(1.0, 0.001));
     });
   });
 
