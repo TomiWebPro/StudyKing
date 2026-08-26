@@ -508,7 +508,8 @@ class ContentPipeline {
   }
 
   Future<Result<String>> fetchAndScrapeUrl(String url) async {
-    return _webScraper.fetchPageContent(url);
+    final result = await _webScraper.fetchPageContent(url);
+    return result.map((page) => page.content);
   }
 
   Source _updateStatus(Source source, ProcessingStatus status) {
