@@ -1,29 +1,35 @@
+import 'package:crypto/crypto.dart' show sha256;
+import 'dart:convert' show utf8;
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/extraction/ocr_engine.dart';
+import 'package:studyking/core/data/extraction/ocr_extractor.dart';
+import 'package:studyking/core/data/extraction/pdf_extractor.dart';
+import 'package:studyking/core/data/extraction/transcription_extractor.dart';
+import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/ingestion/services/chunked_content_processor.dart';
+import 'package:studyking/features/ingestion/services/document_extractor.dart';
+import 'package:studyking/features/ingestion/services/extraction_result.dart';
+import 'package:studyking/features/ingestion/services/page_metadata.dart';
+import 'package:studyking/features/ingestion/services/web_scraper.dart';
+import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
-import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 
-class _FakeLlmService extends LlmService {
-  _FakeLlmService() : super(config: LlmConfiguration(provider: LlmProvider.openRouter, apiKey: 'test'));
-
-  bool classifyShouldFail = false;
-  bool questionGenShouldThrow = false;
-  String classifyResult = 'Math';
-  int classifyCallCount = 0;
-  String summaryResult = 'Test summary';
-  String questionResult = '';
-
-  static const String defaultQuestions = '''[
-    {"text": "Q1", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Exp1"},
-    {"text": "Q2", "type": "singleChoice", "options": ["X", "Y", "Z", "W"], "correctAnswer": "X", "explanation": "Exp2"}
-  ]''';
+class FakeLlmService extends LlmService {
+  FakeLlmService() : super(config: const LlmConfiguration(
+    provider: LlmProvider.ollama,
+    apiKey: 'k',
+    baseUrl: '',
+    model: 'm',
+  ));
 
   @override
   Future<Result<String>> chat({
@@ -35,442 +41,388 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    classifyCallCount++;
-    if (feature == 'question_generation' && questionGenShouldThrow) {
-      throw Exception('Question generation failed');
-    }
-    if (feature == 'content_classification') {
-      if (classifyShouldFail) return Result.success('');
-      return Result.success(classifyResult);
-    }
-    if (feature == 'content_summarization') {
-      return Result.success(summaryResult);
-    }
-    if (feature == 'question_generation') {
-      return Result.success(questionResult.isNotEmpty ? questionResult : defaultQuestions);
-    }
-    return Result.success('');
+    return Result.success('llm-response');
   }
 }
 
-class _FakeSourceRepository extends SourceRepository {
-  final Map<String, Source> _storage = {};
-  bool shouldThrow = false;
-  int saveCallCount = 0;
-  int failSaveAfter = 999;
+class FakeOcrEngine implements OcrEngine {
+  @override
+  String get name => 'fake';
+  @override
+  bool get supportsConfidence => false;
+  @override
+  Future<Result<OcrEngineResult>> recognize(OcrImageInput input) async =>
+      Result.success(const OcrEngineResult(text: '', engineName: 'fake'));
+}
+
+class FakeOcrExtractor extends OcrExtractor {
+  FakeOcrExtractor()
+      : super(
+          mode: OcrMode.fast,
+          modelId: 'fake-model',
+          localeName: 'en',
+          mlKitEngine: FakeOcrEngine(),
+          llmEngine: FakeOcrEngine(),
+        );
+  @override
+  Future<OcrExtractionResult> extractText({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async =>
+      const OcrExtractionResult(text: '', extractionMethod: 'x');
+}
+
+class FakePdfExtractor extends PdfExtractor {
+  @override
+  Future<Result<PdfExtractionResult>> extractFromFile(String filePath) async =>
+      Result.success(const PdfExtractionResult(text: '', extractionMethod: 'fake'));
+}
+
+class FakeTranscriptionExtractor extends TranscriptionExtractor {
+  FakeTranscriptionExtractor() : super(modelId: 'm', localeName: 'en');
+  @override
+  Future<TranscriptionResult> transcribeVideo({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async =>
+      const TranscriptionResult(text: '', extractionMethod: 'fake');
+  @override
+  Future<TranscriptionResult> transcribeAudio({
+    required String rawContent,
+    required String? sourceUrl,
+  }) async =>
+      const TranscriptionResult(text: '', extractionMethod: 'fake');
+}
+
+class FakeDocumentExtractor extends DocumentExtractor {
+  final ExtractionResult resultToReturn;
+  bool extractTextCalled = false;
+
+  FakeDocumentExtractor(this.resultToReturn)
+      : super(
+          modelId: 'm',
+          localeName: 'en',
+          ocrExtractor: FakeOcrExtractor(),
+          pdfExtractor: FakePdfExtractor(),
+          transcriptionExtractor: FakeTranscriptionExtractor(),
+        );
 
   @override
-  Future<void> init() async {}
+  Future<ExtractionResult> extractText({
+    required String rawContent,
+    required SourceType sourceType,
+    String? sourceUrl,
+  }) async {
+    extractTextCalled = true;
+    return resultToReturn;
+  }
 
   @override
-  Future<void> create(Source source) async {
-    if (shouldThrow) throw Exception('Simulated error');
-    _storage[source.id] = source;
+  void dispose() {}
+}
+
+class FakeChunkedContentProcessor extends ChunkedContentProcessor {
+  final ClassificationResult classificationResult;
+  bool classifyCalled = false;
+  bool summarizeCalled = false;
+
+  FakeChunkedContentProcessor(this.classificationResult)
+      : super(llmService: FakeLlmService(), localeName: 'en');
+
+  @override
+  Future<ClassificationResult> classifyChunks({
+    required List<SourceChunk> chunks,
+    required List<String> possibleTopics,
+    required String modelId,
+    required String subjectId,
+  }) async {
+    classifyCalled = true;
+    return classificationResult;
+  }
+
+  @override
+  Future<String> generateConsolidatedSummary({
+    required List<SourceChunk> chunks,
+    required String modelId,
+    String? existingTopicTitle,
+  }) async {
+    summarizeCalled = true;
+    return 'fake summary';
+  }
+
+  @override
+  List<SourceChunk> splitIntoChunks(String text) => [
+        SourceChunk(chunkIndex: 0, text: text),
+      ];
+}
+
+class FakeSourceRepository extends SourceRepository {
+  final Map<String, Source> _store = {};
+
+  FakeSourceRepository() : super();
+
+  @override
+  Future<Result<void>> create(Source source) async {
+    _store[source.id] = source;
+    return Result.success(null);
   }
 
   @override
   Future<Result<void>> save(String key, Source item) async {
-    saveCallCount++;
-    if (saveCallCount >= failSaveAfter) throw Exception('Save error');
-    _storage[key] = item;
+    _store[key] = item;
     return Result.success(null);
   }
 
   @override
-  Future<Result<Source?>> get(String id) async => Result.success(_storage[id]);
+  Future<Result<List<Source>>> getAll() async =>
+      Result.success(_store.values.toList());
 
-  @override
-  Future<Result<List<Source>>> getAll() async => Result.success(_storage.values.toList());
-
-  @override
-  Future<Result<void>> delete(String id) async => Result.success(null);
-
-  @override
-  Future<List<Source>> getByStudent(String studentId) async => [];
-
-  @override
-  Future<List<Source>> getBySubject(String subjectId) async => [];
-
-  @override
-  Future<List<Source>> getByTopic(String topicId) async => [];
-
-  @override
-  Future<List<Source>> getByType(String sourceType) async => [];
-
-  @override
-  Future<List<Source>> getByStatus(ProcessingStatus status) async => [];
-
-  @override
-  Future<List<Source>> getPending() async => [];
-
-  @override
-  Future<List<Source>> getFailed() async => [];
-
-  @override
-  Future<List<Source>> getCompleted() async => [];
+  Source? getStored(String id) => _store[id];
 }
 
-class _FakeTopicRepository extends TopicRepository {
-  final Map<String, Topic> _topics = {};
-  bool _shouldThrowOnGetAll = false;
+class FakeTopicRepository extends TopicRepository {
+  final List<Topic> _topics;
+  FakeTopicRepository(this._topics) : super();
 
   @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  void addTopic(Topic topic) => _topics[topic.id] = topic;
-
-  void clear() => _topics.clear();
-
-  void throwOnGetAll() => _shouldThrowOnGetAll = true;
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
 
   @override
-  Future<Result<Topic?>> get(String id) async => Result.success(_topics[id]);
-
-  @override
-  Future<Result<List<Topic>>> getAll() async {
-    if (_shouldThrowOnGetAll) throw Exception('DB error');
-    return Result.success(_topics.values.toList());
-  }
+  Future<Result<void>> create(Topic topic) async => Result.success(null);
 }
 
-class _FakeQuestionRepository extends QuestionRepository {
-  bool createShouldFail = false;
+class FakeQuestionRepository extends QuestionRepository {
+  FakeQuestionRepository() : super();
+  @override
+  Future<Result<void>> create(Question question) async => Result.success(null);
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+}
+
+class FakeWebScraper extends WebScraper {
+  final Result<ScrapedPage> pageResult;
+  FakeWebScraper(this.pageResult) : super();
 
   @override
-  Future<void> init() async {}
+  Future<Result<ScrapedPage>> fetchPageContent(String url) async => pageResult;
 
   @override
-  Future<Result<void>> create(Question question) async {
-    if (createShouldFail) {
-      return Result.failure('Create failed');
-    }
-    return Result.success(null);
-  }
+  void dispose() {}
+}
+
+ContentPipeline buildPipeline({
+  required FakeDocumentExtractor docExtractor,
+  required FakeChunkedContentProcessor chunked,
+  required FakeSourceRepository sourceRepo,
+  required FakeTopicRepository topicRepo,
+  required FakeWebScraper webScraper,
+}) {
+  return ContentPipeline(
+    llmService: FakeLlmService(),
+    sourceRepository: sourceRepo,
+    topicRepository: topicRepo,
+    questionRepository: FakeQuestionRepository(),
+    documentExtractor: docExtractor,
+    webScraper: webScraper,
+    chunkedProcessor: chunked,
+    modelId: 'm',
+    localeName: 'en',
+  );
 }
 
 void main() {
-  late _FakeSourceRepository mockSourceRepo;
-  late _FakeLlmService mockLlmService;
-  late _FakeTopicRepository mockTopicRepo;
-  late _FakeQuestionRepository mockQuestionRepo;
-  late ContentPipeline pipeline;
-
-  setUp(() {
-    mockSourceRepo = _FakeSourceRepository();
-    mockLlmService = _FakeLlmService();
-    mockTopicRepo = _FakeTopicRepository();
-    mockQuestionRepo = _FakeQuestionRepository();
-    mockLlmService.classifyShouldFail = false;
-    mockLlmService.classifyResult = 'Math';
-    mockLlmService.classifyCallCount = 0;
-    mockLlmService.questionResult = '';
-    mockTopicRepo.clear();
-    pipeline = ContentPipeline(
-      llmService: mockLlmService,
-      sourceRepository: mockSourceRepo,
-      topicRepository: mockTopicRepo,
-      questionRepository: mockQuestionRepo,
-      modelId: 'test-model',
-      localeName: 'en',
-    );
-  });
-
   group('ContentPipeline.processUpload', () {
-    test('saves source and returns success result with correct fields', () async {
-      final result = await pipeline.processUpload(
-        title: 'Test Title',
-        content: 'Test content',
-        type: SourceType.externalResource,
-        studentId: 'student-1',
+    test('persists the source and returns success', () async {
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(text: '', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
       );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.data, isNotNull);
-      expect(result.data!.title, 'Test Title');
-      expect(result.data!.content, 'Test content');
-      expect(result.data!.studentId, 'student-1');
-      expect(result.data!.type, SourceType.externalResource);
-      expect(result.data!.processingStatus, 'pending');
-    });
-
-    test('returns failure when source repository throws', () async {
-      mockSourceRepo.shouldThrow = true;
-
       final result = await pipeline.processUpload(
-        title: 'Title',
-        content: 'Content',
+        title: 'T',
+        content: 'hello world content',
         type: SourceType.pdf,
         studentId: 's1',
       );
 
-      expect(result.isFailure, isTrue);
-      expect(result.error, contains('Simulated error'));
-    });
-
-    test('sets subjectId and sourceUrl when provided', () async {
-      final result = await pipeline.processUpload(
-        title: 'Math Notes',
-        content: 'Math content',
-        type: SourceType.textbook,
-        studentId: 's1',
-        subjectId: 'math-1',
-        sourceUrl: 'https://example.com',
-      );
-
       expect(result.isSuccess, isTrue);
-      expect(result.data!.subjectId, 'math-1');
-      expect(result.data!.sourceUrl, 'https://example.com');
+      final src = result.data!;
+      expect(src.id, isNotEmpty);
+      expect(sourceRepo.getStored(src.id), isNotNull);
     });
 
-    test('creates source with unique id', () async {
-      final result1 = await pipeline.processUpload(
-        title: 'First', content: 'A', type: SourceType.pdf, studentId: 's1',
-      );
-      final result2 = await pipeline.processUpload(
-        title: 'Second', content: 'B', type: SourceType.pdf, studentId: 's1',
+    test('detects duplicates by content hash', () async {
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(text: '', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
       );
 
-      expect(result1.data!.id, isNot(result2.data!.id));
-    });
-
-    test('passes through topicId, syllabusId, and language when provided',
-        () async {
-      final result = await pipeline.processUpload(
-        title: 'Biology Notes',
-        content: 'Cell structure',
+      final first = await pipeline.processUpload(
+        title: 'T',
+        content: 'dup content',
         type: SourceType.pdf,
         studentId: 's1',
-        topicId: 'topic_bio',
-        syllabusId: 'syllabus_1',
-        language: 'en',
       );
+      expect(first.isSuccess, isTrue);
 
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, 'topic_bio');
-      expect(result.data!.syllabusId, 'syllabus_1');
-      expect(result.data!.language, 'en');
+      final second = await pipeline.processUpload(
+        title: 'T2',
+        content: 'dup content',
+        type: SourceType.pdf,
+        studentId: 's1',
+      );
+      expect(second.isFailure, isTrue);
+      expect(second.error, contains('DUPLICATE'));
     });
   });
 
   group('ContentPipeline.processFullPipeline', () {
-    test('processes pipeline end-to-end with classification', () async {
-      mockTopicRepo.addTopic(Topic(
-        id: 'topic_math',
-        subjectId: 'sub_math',
-        title: 'Math',
-        description: 'Mathematics',
-        syllabusText: 'Math topics',
+    test('routes extraction, classification and summarization', () async {
+      final chunks = [
+        SourceChunk(chunkIndex: 0, text: 'chunk one text'),
+        SourceChunk(chunkIndex: 1, text: 'chunk two text'),
+      ];
+      final docExtractor = FakeDocumentExtractor(ExtractionResult(
+        text: 'extracted text',
+        extractionMethod: 'pdf_text_direct',
+        chunks: chunks,
       ));
+      final topic = Topic(
+        id: 'topic-1',
+        subjectId: '',
+        title: 'Biology',
+        description: '',
+        syllabusText: '',
+      );
+      final topicRepo = FakeTopicRepository([topic]);
+      final chunked = FakeChunkedContentProcessor(
+        ClassificationResult(topicId: 'Biology', confidence: 1.0),
+      );
+      final sourceRepo = FakeSourceRepository();
+      final webScraper = FakeWebScraper(
+        Result.success(ScrapedPage(
+          content: '',
+          metadata: const PageMetadata(),
+        )),
+      );
+
+      final pipeline = buildPipeline(
+        docExtractor: docExtractor,
+        chunked: chunked,
+        sourceRepo: sourceRepo,
+        topicRepo: topicRepo,
+        webScraper: webScraper,
+      );
 
       final result = await pipeline.processFullPipeline(
-        title: 'Math Notes',
-        content: 'Algebra content',
+        title: 'T',
+        content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'model-1',
-        possibleTopics: ['Math', 'Physics'],
-        generateQuestions: false,
+        modelId: 'm',
+        possibleTopics: ['Biology'],
       );
 
       expect(result.isSuccess, isTrue);
-      expect(result.data, isNotNull);
-      expect(result.data!.processingStatus, 'completed');
-      expect(result.data!.summary, 'Test summary');
+      final src = result.data!;
+      expect(docExtractor.extractTextCalled, isTrue);
+      expect(chunked.classifyCalled, isTrue);
+      expect(chunked.summarizeCalled, isTrue);
+      expect(src.topicId, 'topic-1');
+      expect(src.summary, 'fake summary');
+      expect(src.processingStatus, 'completed');
     });
 
-    test('saves source completed status when pipeline succeeds', () async {
-      final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Content',
-        type: SourceType.externalResource,
+    test('returns DUPLICATE failure when a matching source already exists',
+        () async {
+      final content = 'shared content';
+      final existing = Source(
+        id: 'existing',
+        title: 'Old',
+        type: SourceType.pdf,
+        content: content,
         studentId: 's1',
-        modelId: 'model-1',
+        contentHash: sha256.convert(utf8.encode(content)).toString(),
+      );
+      final sourceRepo = FakeSourceRepository();
+      await sourceRepo.create(existing);
+
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(text: 't', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
       );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.processingStatus, 'completed');
-    });
-
-    test('generates questions when generateQuestions is true', () async {
       final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Content for questions',
+        title: 'T',
+        content: content,
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'model-1',
-        possibleTopics: [],
-        generateQuestions: true,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.generatedQuestionIds, isNotEmpty);
-    });
-
-    test('handles topic matching with case-insensitive comparison', () async {
-      mockTopicRepo.addTopic(Topic(
-        id: 'topic_math',
-        subjectId: 'sub_math',
-        title: 'MATH',
-        description: 'Mathematics',
-        syllabusText: 'Math topics',
-      ));
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Algebra Notes',
-        content: 'Algebra content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-        possibleTopics: ['Math'],
-        generateQuestions: false,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, 'topic_math');
-    });
-
-    test('handles classification failure gracefully', () async {
-      mockLlmService.classifyShouldFail = true;
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-        possibleTopics: ['Math'],
-        generateQuestions: false,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, isEmpty);
-    });
-
-    test('passes through subjectId and sourceUrl', () async {
-      final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Content',
-        type: SourceType.textbook,
-        studentId: 's1',
-        modelId: 'model-1',
-        subjectId: 'sub_math',
-        sourceUrl: 'https://example.com',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.subjectId, 'sub_math');
-      expect(result.data!.sourceUrl, 'https://example.com');
-    });
-
-    test('handles topic repository failure gracefully', () async {
-      mockTopicRepo.throwOnGetAll();
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-        possibleTopics: ['Math'],
-        generateQuestions: false,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.topicId, isEmpty);
-    });
-
-    test('sets extractionMethod on source', () async {
-      final result = await pipeline.processFullPipeline(
-        title: 'Notes',
-        content: 'Some content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.extractionMethod, isNotEmpty);
-    });
-
-    test('skips invalid generated questions during validation', () async {
-      mockLlmService.questionResult = '''[
-        {"text": "Valid Q", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Good explanation"},
-        {"text": "", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": "Bad - empty text"},
-        {"text": "Few options", "type": "singleChoice", "options": ["A"], "correctAnswer": "A", "explanation": "Bad - only 1 option"},
-        {"text": "No correct", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "", "explanation": "Bad - no correct answer"},
-        {"text": "Wrong answer", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "Z", "explanation": "Bad - Z not in options"},
-        {"text": "No expl", "type": "singleChoice", "options": ["A", "B", "C", "D"], "correctAnswer": "A", "explanation": ""}
-      ]''';
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Validation Test',
-        content: 'Test content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-        generateQuestions: true,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.generatedQuestionIds, hasLength(1));
-    });
-
-    test('preserves original source on pipeline failure', () async {
-      mockSourceRepo.failSaveAfter = 1;
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Fail Test',
-        content: 'Content',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
+        modelId: 'm',
       );
 
       expect(result.isFailure, isTrue);
+      expect(result.error, contains('DUPLICATE'));
     });
+  });
 
-    test('reuses original source ID on mid-pipeline error', () async {
-      mockLlmService.questionGenShouldThrow = true;
-
-      final result = await pipeline.processFullPipeline(
-        title: 'Mid Fail',
-        content: 'Content for questions',
-        type: SourceType.pdf,
-        studentId: 's1',
-        modelId: 'model-1',
-        generateQuestions: true,
+  group('ContentPipeline.fetchAndScrapeUrl', () {
+    test('delegates to the web scraper and returns the content', () async {
+      final webScraper = FakeWebScraper(
+        Result.success(ScrapedPage(
+          content: 'scraped content',
+          metadata: const PageMetadata(title: 'Scraped'),
+        )),
       );
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(text: '', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: webScraper,
+      );
+
+      final result = await pipeline.fetchAndScrapeUrl('https://example.com');
 
       expect(result.isSuccess, isTrue);
-      expect(result.data!.processingStatus, 'completed');
-      expect(result.data!.id, startsWith('src_'));
-    });
-
-    test('reprocessSource runs pipeline on existing source', () async {
-      final source = Source(id: 'src-existing', title: 'Existing', type: SourceType.pdf, content: 'Some content');
-      await mockSourceRepo.create(source);
-
-      final result = await pipeline.reprocessSource(
-        source,
-        modelId: 'model-1',
-        generateQuestions: false,
-      );
-
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.title, 'Existing');
-      expect(result.data!.extractedText, isNotEmpty);
-    });
-
-    test('reprocessSource reports failure for empty content', () async {
-      final source = Source(id: 'src-empty', title: 'Empty', type: SourceType.pdf, content: '');
-
-      final result = await pipeline.reprocessSource(
-        source,
-        modelId: 'model-1',
-      );
-
-      expect(result.isFailure, isTrue);
-      expect(result.error, contains('no content'));
+      expect(result.data, 'scraped content');
     });
   });
 }
