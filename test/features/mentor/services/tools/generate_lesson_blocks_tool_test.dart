@@ -1,11 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
-
-T _required<T>() => throw UnimplementedError('stub not overridden');
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'test_helpers.dart';
 
 class FakeLessonAgentService extends LessonAgentService {
   Future<Lesson?> Function({
@@ -17,10 +19,24 @@ class FakeLessonAgentService extends LessonAgentService {
 
   FakeLessonAgentService()
       : super(
-          llmService: _required(),
-          modelId: '',
-          lessonRepository: _required(),
-          database: _required(),
+          llmService: LlmService(
+            config: LlmConfiguration(
+              provider: LlmProvider.openAI,
+              apiKey: 'test',
+            ),
+          ),
+          modelId: 'test',
+          lessonRepository: FakeLessonRepository(),
+          database: DatabaseService(
+            topicRepository: FakeTopicRepository(),
+            questionRepository: FakeQuestionRepository(),
+            attemptRepository: FakeAttemptRepository(),
+            lessonRepository: FakeLessonRepository(),
+            sessionRepository: FakeSessionRepository(),
+            subjectRepository: FakeSubjectRepository(),
+            conversationRepository: ConversationRepository(),
+            tutorSessionRepository: FakeTutorSessionRepository(),
+          ),
         );
 
   @override
