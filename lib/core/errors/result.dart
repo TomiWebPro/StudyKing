@@ -4,6 +4,8 @@ sealed class Result<T> {
   final T? data;
   final String? error;
 
+  static final Logger _logger = const Logger('Result');
+
   const Result({this.data, this.error});
 
   factory Result.success(T data) = SuccessResult<T>;
@@ -31,7 +33,7 @@ sealed class Result<T> {
       return Result.success(await block());
     } catch (e) {
       if (context != null) {
-        Logger(context).w('capture failed: $e');
+        _logger.w('capture failed ($context): $e');
       }
       return Result.failure(e.toString());
     }
@@ -42,7 +44,7 @@ sealed class Result<T> {
       return Result.success(block());
     } catch (e) {
       if (context != null) {
-        Logger(context).w('capture sync failed: $e');
+        _logger.w('capture sync failed ($context): $e');
       }
       return Result.failure(e.toString());
     }

@@ -356,6 +356,8 @@ class ChunkQuestionResult {
 }
 
 class QuestionParser {
+  static final Logger _logger = const Logger('QuestionParser');
+
   List<Map<String, dynamic>> parse(String response) {
     try {
       final cleaned = response
@@ -370,7 +372,7 @@ class QuestionParser {
         return List<Map<String, dynamic>>.from(decoded['questions']);
       }
     } catch (e) {
-      Logger('QuestionParser').w('Failed to parse question response', e);
+      _logger.w('Failed to parse question response', e);
     }
     return [];
   }
