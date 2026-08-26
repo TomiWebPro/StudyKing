@@ -463,7 +463,7 @@ final dashboardSyllabusBreakdownProvider =
       final completionPercent = totalTopics > 0 ? masteredTopics / totalTopics : 0.0;
       final studyMs = allSessions
           .where((s) => s.subjectId == goal.subjectId)
-          .fold<int>(0, (sum, s) => sum + (s.actualDurationMs ?? 0));
+          .fold<int>(0, (sum, s) => sum + s.actualDurationMs);
 
       breakdowns.add(SyllabusBreakdown(
         subjectId: goal.subjectId,

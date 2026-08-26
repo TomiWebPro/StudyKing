@@ -526,5 +526,71 @@ void main() {
         expect(result.data, isEmpty);
       });
     });
+
+    group('syllabus context', () {
+      PersonalLearningPlan planWithGoals() => PersonalLearningPlan(
+            studentId: 'test-student',
+            generatedAt: DateTime.now(),
+            dailyPlans: [],
+            summary: PlanSummary(
+              totalQuestions: 0,
+              totalMinutes: 0,
+              newTopics: 0,
+              reviewTopics: 0,
+              estimatedCoverage: 0,
+              focusAreas: [],
+            ),
+            recommendations: [],
+            metadata: {
+              'syllabus_goals': [
+                {'subjectId': 'subj1', 'subjectTitle': 'Math'},
+                {'subjectId': 'subj2', 'subjectTitle': 'Science'},
+              ],
+            },
+          );
+
+      test('loadSyllabusGoals returns goals from the plan', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals());
+        final builder = _createBuilder(plannerService: planner);
+        final result = await builder.loadSyllabusGoals();
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 2);
+        expect(result.data!.first.subjectTitle, 'Math');
+      });
+
+      test('includes syllabus goals in the built context', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals());
+        final builder = _createBuilder(plannerService: planner);
+        final result = await builder.buildContextPrompt();
+        expect(result, contains('Syllabus goals'));
+        expect(result, contains('Math'));
+        expect(result, contains('Science'));
+        expect(builder.currentSyllabusContext, contains('Math'));
+      });
+
+      test('omits syllabus context when plan has no goals', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+        ));
+        final builder = _createBuilder(plannerService: planner);
+        final result = await builder.buildContextPrompt();
+        expect(result, isNot(contains('Syllabus goals')));
+        expect(builder.currentSyllabusContext, isEmpty);
+      });
+    });
   });
 }

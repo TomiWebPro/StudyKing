@@ -966,7 +966,7 @@ void main() {
   });
 
   group('dashboardSyllabusBreakdownProvider', () {
-    PersonalLearningPlan _planWithGoals() => PersonalLearningPlan(
+    PersonalLearningPlan planWithGoals() => PersonalLearningPlan(
           studentId: 's1',
           generatedAt: DateTime.now(),
           dailyPlans: [],
@@ -1055,7 +1055,7 @@ void main() {
         masteryService: masteryService,
         topicRepo: topicRepo,
         sessionRepo: sessionRepo,
-        plannerServiceParam: _FakePlannerService(plan: _planWithGoals()),
+        plannerServiceParam: _FakePlannerService(plan: planWithGoals()),
       );
       addTearDown(container.dispose);
 

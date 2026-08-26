@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
-import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -41,7 +41,8 @@ class _FakeLlmService extends LlmService {
 }
 
 class _FakeExerciseEvaluator extends ExerciseEvaluator {
-  _FakeExerciseEvaluator() : super(llmService: _FakeLlmService(), modelId: 'm');
+  _FakeExerciseEvaluator()
+      : super(llmService: _FakeLlmService(), modelId: 'm', localeName: 'en');
 }
 
 void main() {

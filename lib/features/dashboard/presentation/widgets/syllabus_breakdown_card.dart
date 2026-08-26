@@ -37,7 +37,7 @@ class SyllabusBreakdownCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        ...visible.map((b) => _buildRow(context, l10n, b)).toList(),
+            ...visible.map((b) => _buildRow(context, l10n, b)),
       ],
     );
   }

@@ -312,7 +312,7 @@ Widget _buildApp({
       planOrchestratorProvider.overrideWithValue(planOrchestrator ?? _FakePlanAdherenceOrchestrator()),
       settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepo(settings ?? SettingsBox()))),
       notificationServiceProvider.overrideWithValue(NotificationService()),
-      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepository()),
+      focusSessionRepositoryProvider.overrideWith((ref) async => _FakeFocusSessionRepository()),
       badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
       if (masteryGraphService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryGraphService),

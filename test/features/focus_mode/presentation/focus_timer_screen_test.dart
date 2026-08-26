@@ -303,7 +303,7 @@ Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigato
       else
         studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
-      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepo()),
+      focusSessionRepositoryProvider.overrideWith((ref) async => _FakeFocusSessionRepo()),
       badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
     ],
     child: MaterialApp(
@@ -321,7 +321,7 @@ Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) 
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
       studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
-      focusSessionRepositoryProvider.overrideWithValue(_FakeFocusSessionRepo()),
+      focusSessionRepositoryProvider.overrideWith((ref) async => _FakeFocusSessionRepo()),
       badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
     ],
     child: MaterialApp(
