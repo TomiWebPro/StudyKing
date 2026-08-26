@@ -114,13 +114,14 @@ void main() {
         'llm',
         (_) => llmResult ?? Result.failure('no_llm'),
       );
-      return OcrExtractor(
+      final extractor = OcrExtractor(
         mode: mode,
         mlKitEngine: mlKit,
         llmEngine: llm,
         modelId: 'm',
         localeName: 'en',
       );
+      return extractor;
     }
 
     final highConf = OcrEngineResult(

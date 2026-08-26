@@ -6,8 +6,52 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/models/drawing_models.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/answer_validation_service.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 import 'package:studyking/core/services/handwriting_recognition_service.dart';
+
+class _FakeLlmAnswerEvaluator extends LlmAnswerEvaluator {
+  EvaluationResult? nextResult;
+  bool shouldFail = false;
+
+  _FakeLlmAnswerEvaluator()
+      : super(
+          llmClient: UnavailableMultimodalLlmClient(),
+          transcriptionService: UnavailableTranscriptionService(),
+          messages: ValidationMessagesForEvaluator.english,
+        );
+
+  @override
+  Future<Result<EvaluationResult>> evaluateGraphDrawing(
+    String drawingBase64,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateFileUpload(
+    String fileData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+
+  @override
+  Future<Result<EvaluationResult>> evaluateAudioRecording(
+    String audioData,
+    Markscheme? markscheme,
+  ) async {
+    if (shouldFail) return Result.failure('eval failed');
+    return Result.success(nextResult ??
+        const EvaluationResult(isCorrect: true, score: 1.0, feedback: 'ok'));
+  }
+}
 
 Question _question({
   required String id,
@@ -735,6 +779,74 @@ void main() {
       expect(service.isImageData(jpeg), isTrue);
       expect(service.isImageData(text), isFalse);
       expect(service.isImageData(''), isFalse);
+    });
+  });
+
+  group('AnswerValidationService - rich evaluation', () {
+    Question buildRichQuestion(QuestionType type) => Question(
+          id: 'q-rich',
+          text: 'Rich',
+          type: type,
+          subjectId: 'subject-a',
+          topicId: 'topic-a',
+          markscheme: Markscheme(questionId: 'q-rich', correctAnswer: 'expected'),
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+
+    test('evaluateRichAnswer returns failure for non-rich question type', () async {
+      final service = AnswerValidationService(messages: ValidationMessages.english);
+      final result = await service.evaluateRichAnswer(
+        buildRichQuestion(QuestionType.typedAnswer),
+        'answer',
+      );
+      expect(result.isFailure, isTrue);
+    });
+
+    test('evaluateRichAnswer flags manual review when no evaluator configured', () async {
+      final service = AnswerValidationService(messages: ValidationMessages.english);
+      final result = await service.evaluateRichAnswer(
+        buildRichQuestion(QuestionType.graphDrawing),
+        'data',
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+    });
+
+    test('evaluateRichAnswer delegates to evaluator when available', () async {
+      final evaluator = _FakeLlmAnswerEvaluator();
+      evaluator.nextResult = const EvaluationResult(
+        isCorrect: true,
+        score: 0.8,
+        feedback: 'Correct',
+      );
+      final service = AnswerValidationService(
+        messages: ValidationMessages.english,
+        evaluator: evaluator,
+      );
+      final result = await service.evaluateRichAnswer(
+        buildRichQuestion(QuestionType.graphDrawing),
+        'data',
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+      expect(result.data!.needsManualReview, isFalse);
+    });
+
+    test('evaluateRichAnswer flags manual review when evaluator fails', () async {
+      final evaluator = _FakeLlmAnswerEvaluator();
+      evaluator.shouldFail = true;
+      final service = AnswerValidationService(
+        messages: ValidationMessages.english,
+        evaluator: evaluator,
+      );
+      final result = await service.evaluateRichAnswer(
+        buildRichQuestion(QuestionType.fileUpload),
+        'data',
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
     });
   });
 }

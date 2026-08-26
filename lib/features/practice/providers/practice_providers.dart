@@ -14,6 +14,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 
 final attemptRepositoryProvider = Provider<AttemptRepository>((ref) {
   return AttemptRepository();
@@ -59,6 +60,14 @@ final masteryGraphServiceProvider = Provider<MasteryGraphService>((ref) {
   );
 });
 
+final llmAnswerEvaluatorProvider = Provider<LlmAnswerEvaluator>((ref) {
+  return LlmAnswerEvaluator(
+    llmClient: UnavailableMultimodalLlmClient(),
+    transcriptionService: UnavailableTranscriptionService(),
+    messages: ValidationMessagesForEvaluator.english,
+  );
+});
+
 final masteryRecorderProvider = Provider<MasteryRecorder>((ref) {
   return MasteryRecorder(
     masteryGraphService: ref.watch(masteryGraphServiceProvider),
@@ -66,6 +75,7 @@ final masteryRecorderProvider = Provider<MasteryRecorder>((ref) {
     attemptRepo: ref.watch(attemptRepositoryProvider),
     questionMasteryRepo: ref.watch(questionMasteryStateRepositoryProvider),
     questionRepo: ref.watch(questionRepositoryProvider),
+    evaluator: ref.watch(llmAnswerEvaluatorProvider),
   );
 });
 
@@ -82,6 +92,7 @@ final examSessionServiceProvider = Provider<ExamSessionService>((ref) {
   return ExamSessionService(
     sessionRepo: ref.watch(sessionRepositoryProvider),
     studentIdService: ref.watch(studentIdServiceProvider),
+    evaluator: ref.watch(llmAnswerEvaluatorProvider),
   );
 });
 

@@ -7,8 +7,12 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 
 class ExamConfig {
   final int durationMinutes;
@@ -145,6 +149,7 @@ class ExamSessionService {
   final SessionRepository _sessionRepo;
   final StudentIdService _studentIdService;
   final Clock _clock;
+  final LlmAnswerEvaluator? _evaluator;
 
   Timer? _examTimer;
   DateTime _examStartTime = DateTime.now();
@@ -157,9 +162,11 @@ class ExamSessionService {
     required SessionRepository sessionRepo,
     required StudentIdService studentIdService,
     Clock? clock,
+    LlmAnswerEvaluator? evaluator,
   })  : _sessionRepo = sessionRepo,
         _studentIdService = studentIdService,
-        _clock = clock ?? SystemClock();
+        _clock = clock ?? SystemClock(),
+        _evaluator = evaluator;
 
   bool get isActive => _isActive;
   DateTime get examStartTime => _examStartTime;
@@ -229,6 +236,55 @@ class ExamSessionService {
     return timeRemainingNotifier.value.isNegative ||
         timeRemainingNotifier.value == Duration.zero;
   }
+
+  /// Grades a rich answer (graph drawing, file upload, audio recording) for exam
+  /// mode using the injected [LlmAnswerEvaluator]. When no evaluator is
+  /// configured the answer is flagged for manual review rather than silently
+  /// graded correct. Returns a [Result] wrapping an [EvaluationResult].
+  Future<Result<EvaluationResult>> evaluateRichAnswer(
+    QuestionType questionType,
+    String userAnswer,
+    Markscheme? markscheme,
+  ) async {
+    if (!_isRichType(questionType)) {
+      return Result.failure('Question type ${questionType.name} is not a rich evaluation type');
+    }
+    if (_evaluator == null) {
+      _logger.w('No LLM evaluator configured; rich answer flagged for manual review');
+      return Result.success(EvaluationResult(
+        isCorrect: false,
+        score: 0.0,
+        feedback: 'No automated evaluation available; flagged for manual review.',
+        needsManualReview: true,
+      ));
+    }
+    Result<EvaluationResult> evalResult;
+    switch (questionType) {
+      case QuestionType.graphDrawing:
+        evalResult = await _evaluator.evaluateGraphDrawing(userAnswer, markscheme);
+      case QuestionType.fileUpload:
+        evalResult = await _evaluator.evaluateFileUpload(userAnswer, markscheme);
+      case QuestionType.audioRecording:
+        evalResult = await _evaluator.evaluateAudioRecording(userAnswer, markscheme);
+      default:
+        return Result.failure('Unsupported rich type: ${questionType.name}');
+    }
+    if (evalResult.isFailure) {
+      _logger.w('Rich evaluation failed; flagging manual review', evalResult.error);
+      return Result.success(EvaluationResult(
+        isCorrect: false,
+        score: 0.0,
+        feedback: 'Evaluation failed; flagged for manual review.',
+        needsManualReview: true,
+      ));
+    }
+    return evalResult;
+  }
+
+  bool _isRichType(QuestionType type) =>
+      type == QuestionType.graphDrawing ||
+      type == QuestionType.fileUpload ||
+      type == QuestionType.audioRecording;
 
   Future<ExamResult> finishExam({
     required ExamConfig config,

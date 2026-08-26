@@ -1,12 +1,14 @@
 import 'dart:convert';
 
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
 import '../data/models/question_model.dart';
 
 class ValidationResult {
@@ -33,9 +35,13 @@ class AnswerValidationService {
   }
 
   final ValidationMessages _messages;
+  final LlmAnswerEvaluator? _evaluator;
 
-  AnswerValidationService({required ValidationMessages messages})
-      : _messages = messages;
+  AnswerValidationService({
+    required ValidationMessages messages,
+    LlmAnswerEvaluator? evaluator,
+  })  : _messages = messages,
+        _evaluator = evaluator;
 
   QuestionAnswerValidator _getValidator(String questionId, Markscheme markscheme) {
     final signature = _signatureFor(markscheme);
@@ -71,6 +77,54 @@ class AnswerValidationService {
     final validator = _getValidator(question.id, markscheme);
     return validator.validate(answer, question.type);
   }
+
+  /// Evaluates a "rich" answer (graph drawing, file upload, audio recording)
+  /// using the injected [LlmAnswerEvaluator]. Rich types cannot be graded by the
+  /// deterministic [validateStatic] stubs, so when no evaluator is configured the
+  /// answer is flagged for manual review rather than silently marked correct.
+  ///
+  /// Returns a [Result] wrapping an [EvaluationResult].
+  Future<Result<EvaluationResult>> evaluateRichAnswer(Question question, String answer) async {
+    final type = question.type;
+    if (!_isRichType(type)) {
+      return Result.failure('Question type ${type.name} is not a rich evaluation type');
+    }
+    if (_evaluator == null) {
+      _logger.w('No LLM evaluator configured; rich answer flagged for manual review');
+      return Result.success(EvaluationResult(
+        isCorrect: false,
+        score: 0.0,
+        feedback: _messages.specialHandlingRequired,
+        needsManualReview: true,
+      ));
+    }
+    Result<EvaluationResult> evalResult;
+    switch (type) {
+      case QuestionType.graphDrawing:
+        evalResult = await _evaluator.evaluateGraphDrawing(answer, question.markscheme);
+      case QuestionType.fileUpload:
+        evalResult = await _evaluator.evaluateFileUpload(answer, question.markscheme);
+      case QuestionType.audioRecording:
+        evalResult = await _evaluator.evaluateAudioRecording(answer, question.markscheme);
+      default:
+        return Result.failure('Unsupported rich type: ${type.name}');
+    }
+    if (evalResult.isFailure) {
+      _logger.w('Rich evaluation failed; flagging manual review', evalResult.error);
+      return Result.success(EvaluationResult(
+        isCorrect: false,
+        score: 0.0,
+        feedback: _messages.specialHandlingRequired,
+        needsManualReview: true,
+      ));
+    }
+    return evalResult;
+  }
+
+  bool _isRichType(QuestionType type) =>
+      type == QuestionType.graphDrawing ||
+      type == QuestionType.fileUpload ||
+      type == QuestionType.audioRecording;
 
   /// Validates an answer that was produced by handwriting recognition or
   /// vision interpretation of a student's drawn/uploaded work. The recognized

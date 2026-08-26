@@ -7,6 +7,24 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/services/llm_answer_evaluator.dart';
+
+class RichAttemptOutcome {
+  final bool isCorrect;
+  final bool needsManualReview;
+  final double? score;
+  final String? feedback;
+
+  const RichAttemptOutcome({
+    required this.isCorrect,
+    required this.needsManualReview,
+    this.score,
+    this.feedback,
+  });
+}
 
 class MasteryRecorder {
   static final Logger _logger = const Logger('MasteryRecorder');
@@ -15,6 +33,7 @@ class MasteryRecorder {
   final AttemptRepository _attemptRepo;
   final QuestionMasteryStateRepository _questionMasteryRepo;
   final QuestionRepository _questionRepo;
+  final LlmAnswerEvaluator? _evaluator;
 
   MasteryRecorder({
     required MasteryGraphService masteryGraphService,
@@ -22,13 +41,126 @@ class MasteryRecorder {
     required AttemptRepository attemptRepo,
     required QuestionMasteryStateRepository questionMasteryRepo,
     required QuestionRepository questionRepo,
+    LlmAnswerEvaluator? evaluator,
   })  : _masteryGraphService = masteryGraphService,
         _srEngine = srEngine,
         _attemptRepo = attemptRepo,
         _questionMasteryRepo = questionMasteryRepo,
-        _questionRepo = questionRepo;
+        _questionRepo = questionRepo,
+        _evaluator = evaluator;
 
   Future<Result<void>> recordAttempt({
+    required String studentId,
+    required String questionId,
+    required String subjectId,
+    required String topicId,
+    required bool isCorrect,
+    required int timeSpentMs,
+    required int confidence,
+    required String userAnswer,
+    DateTime? timestamp,
+  }) async {
+    return _persistAttempt(
+      studentId: studentId,
+      questionId: questionId,
+      subjectId: subjectId,
+      topicId: topicId,
+      isCorrect: isCorrect,
+      timeSpentMs: timeSpentMs,
+      confidence: confidence,
+      userAnswer: userAnswer,
+      timestamp: timestamp,
+    );
+  }
+
+  /// Records an attempt for a rich question type (graph drawing, file upload,
+  /// audio recording). The answer is graded by the injected [LlmAnswerEvaluator]
+  /// when available. When the evaluator is unavailable or returns a low-confidence
+  /// result, the attempt is flagged for manual review rather than silently graded
+  /// correct. Returns a [RichAttemptOutcome] describing the result.
+  Future<Result<RichAttemptOutcome>> recordRichAttempt({
+    required String studentId,
+    required Question question,
+    required String userAnswer,
+    required int timeSpentMs,
+    required int confidence,
+    DateTime? timestamp,
+  }) async {
+    final type = question.type;
+    if (!_isRichType(type)) {
+      return Result.failure('recordRichAttempt called for non-rich type: ${type.name}');
+    }
+
+    EvaluationResult evaluation;
+    if (_evaluator != null) {
+      final evalResult = await _evaluateRich(type, userAnswer, question.markscheme);
+      if (evalResult.isSuccess) {
+        evaluation = evalResult.data!;
+      } else {
+        _logger.w('Rich evaluation unavailable; flagging manual review', evalResult.error);
+        evaluation = EvaluationResult(
+          isCorrect: false,
+          score: 0.0,
+          feedback: 'Evaluation unavailable; flagged for manual review.',
+          needsManualReview: true,
+        );
+      }
+    } else {
+      _logger.w('No evaluator configured; rich answer flagged for manual review');
+      evaluation = EvaluationResult(
+        isCorrect: false,
+        score: 0.0,
+        feedback: 'No automated evaluation available; flagged for manual review.',
+        needsManualReview: true,
+      );
+    }
+
+    final recordResult = await _persistAttempt(
+      studentId: studentId,
+      questionId: question.id,
+      subjectId: question.subjectId,
+      topicId: question.topicId,
+      isCorrect: evaluation.isCorrect,
+      timeSpentMs: timeSpentMs,
+      confidence: confidence,
+      userAnswer: userAnswer,
+      timestamp: timestamp,
+    );
+    if (recordResult.isFailure) {
+      return Result.failure(recordResult.error);
+    }
+
+    return Result.success(RichAttemptOutcome(
+      isCorrect: evaluation.isCorrect,
+      needsManualReview: evaluation.needsManualReview,
+      score: evaluation.score,
+      feedback: evaluation.feedback,
+    ));
+  }
+
+  bool _isRichType(QuestionType type) =>
+      type == QuestionType.graphDrawing ||
+      type == QuestionType.fileUpload ||
+      type == QuestionType.audioRecording;
+
+  Future<Result<EvaluationResult>> _evaluateRich(
+    QuestionType type,
+    String userAnswer,
+    Markscheme? markscheme,
+  ) {
+    switch (type) {
+      case QuestionType.graphDrawing:
+        return _evaluator!.evaluateGraphDrawing(userAnswer, markscheme);
+      case QuestionType.fileUpload:
+        return _evaluator!.evaluateFileUpload(userAnswer, markscheme);
+      case QuestionType.audioRecording:
+        return _evaluator!.evaluateAudioRecording(userAnswer, markscheme);
+      default:
+        return Future.value(Result<EvaluationResult>.failure('Not a rich question type'));
+    }
+  }
+
+  Future<Result<void>> _persistAttempt({
     required String studentId,
     required String questionId,
     required String subjectId,
