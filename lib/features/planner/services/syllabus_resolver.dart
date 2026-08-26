@@ -107,6 +107,13 @@ class SyllabusResolver {
         ));
       }
 
+      if (_containsCycle(nodes, topicMap)) {
+        return Result.failure(
+          l10n?.failedToResolveSyllabus('cyclic dependency detected') ??
+              'Failed to resolve syllabus: cyclic dependency detected',
+        );
+      }
+
       final sortedNodes = _topologicalSort(nodes, topicMap);
       return Result.success(sortedNodes);
     } catch (e) {
@@ -158,6 +165,38 @@ class SyllabusResolver {
         l10n?.failedToGetQuestionsForTopics(e.toString()) ?? 'Failed to get questions for topics: $e',
       );
     }
+  }
+
+  bool _containsCycle(
+    List<SyllabusTopicNode> nodes,
+    Map<String, Topic> topicMap,
+  ) {
+    final visited = <String>{};
+    final inProgress = <String>{};
+    final nodeMap = {for (final n in nodes) n.topic.id: n};
+    var hasCycle = false;
+
+    void visit(String topicId) {
+      if (visited.contains(topicId)) return;
+      if (inProgress.contains(topicId)) {
+        hasCycle = true;
+        return;
+      }
+      inProgress.add(topicId);
+      final node = nodeMap[topicId];
+      if (node != null) {
+        for (final prereqId in node.prerequisiteTopicIds) {
+          if (topicMap.containsKey(prereqId)) visit(prereqId);
+        }
+      }
+      inProgress.remove(topicId);
+      visited.add(topicId);
+    }
+
+    for (final node in nodes) {
+      visit(node.topic.id);
+    }
+    return hasCycle;
   }
 
   List<SyllabusTopicNode> _topologicalSort(

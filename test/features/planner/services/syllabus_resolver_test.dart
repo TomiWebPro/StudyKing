@@ -115,7 +115,7 @@ void main() {
         expect(result.isFailure, true);
       });
 
-      test('returns topics in topological order', () async {
+      test('returns topics in dependency-ordered output', () async {
         topicRepo.addTopic(Topic(
           id: 'topic-1',
           subjectId: 'sub_physics',
@@ -144,6 +144,44 @@ void main() {
 
         expect(result.isSuccess, true);
         expect(result.data!.length, 2);
+        final ids = result.data!.map((n) => n.topic.id).toList();
+        // The prerequisite (topic-2) must precede the dependent (topic-1).
+        expect(ids.indexOf('topic-2'), lessThan(ids.indexOf('topic-1')));
+      });
+
+      test('detects cyclic dependencies and returns failure', () async {
+        topicRepo.addTopic(Topic(
+          id: 'topic-a',
+          subjectId: 'sub_physics',
+          title: 'A',
+          description: '',
+          syllabusText: '',
+        ));
+        topicRepo.addTopic(Topic(
+          id: 'topic-b',
+          subjectId: 'sub_physics',
+          title: 'B',
+          description: '',
+          syllabusText: '',
+        ));
+
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'topic-a',
+          prerequisites: ['topic-b'],
+          downstreamTopics: [],
+        ));
+        masteryRepo.addDependency(TopicDependency(
+          topicId: 'topic-b',
+          prerequisites: ['topic-a'],
+          downstreamTopics: [],
+        ));
+
+        final result = await resolver.resolveSyllabus(
+          subjectId: 'sub_physics',
+          studentId: 'student-1',
+        );
+
+        expect(result.isFailure, true);
       });
 
       test('includes mastery state when studentId provided', () async {
@@ -383,30 +421,16 @@ void main() {
         expect(levels.first, containsAll(['topic-a', 'topic-b']));
       });
 
-      test('returns empty list when no level can be formed', () async {
-        topicRepo.addTopic(Topic(
-          id: 'topic-a', subjectId: 'sub', title: 'A', description: '',
-          syllabusText: '',
-        ));
-        topicRepo.addTopic(Topic(
-          id: 'topic-b', subjectId: 'sub', title: 'B', description: '',
-          syllabusText: '',
-        ));
-        masteryRepo.addDependency(TopicDependency(
-          topicId: 'topic-a',
-          prerequisites: ['topic-b'],
-          downstreamTopics: [],
-        ));
-        masteryRepo.addDependency(TopicDependency(
-          topicId: 'topic-b',
-          prerequisites: ['topic-a'],
-          downstreamTopics: [],
-        ));
-        final result = await resolver.resolveSyllabus(
-          subjectId: 'sub',
-          studentId: 'student-1',
+      test('returns empty list when no level can be formed', () {
+        final nodeA = SyllabusTopicNode(
+          topic: Topic(id: 'topic-a', subjectId: 'sub', title: 'A', description: '', syllabusText: ''),
+          prerequisiteTopicIds: ['topic-b'],
         );
-        final levels = resolver.buildLearningLevels(result.data!);
+        final nodeB = SyllabusTopicNode(
+          topic: Topic(id: 'topic-b', subjectId: 'sub', title: 'B', description: '', syllabusText: ''),
+          prerequisiteTopicIds: ['topic-a'],
+        );
+        final levels = resolver.buildLearningLevels([nodeA, nodeB]);
         expect(levels, isEmpty);
       });
     });
