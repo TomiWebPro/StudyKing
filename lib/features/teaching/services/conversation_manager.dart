@@ -90,7 +90,7 @@ class ConversationManager {
         _clock = clock ?? SystemClock(),
         _voiceService = voiceService,
         sessionStartTime = (clock ?? SystemClock()).now(),
-        _availableSyllabusTitles = availableSyllabi.map((g) => g.subjectTitle).toList(),
+        _availableSyllabi = availableSyllabi,
         _memory = ConversationMemory(
           maxTurns: 30,
           sessionId: sessionId,

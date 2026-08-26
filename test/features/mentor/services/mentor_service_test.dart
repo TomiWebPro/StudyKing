@@ -718,14 +718,17 @@ void main() {
     });
 
     group('initialize', () {
-      test('completes successfully without conversation repo', () async {
+      test('returns success Result without conversation repo', () async {
         final service = createMentorService();
-        await expectLater(service.initialize(), completes);
+        final result = await service.initialize();
+        expect(result.isSuccess, isTrue);
       });
 
-      test('does not throw when memory has no repository', () async {
+      test('does not throw and loads empty history when memory has no repository',
+          () async {
         final service = createMentorService();
-        await service.initialize();
+        final result = await service.initialize();
+        expect(result.isSuccess, isTrue);
         final history = service.memory.getHistory();
         expect(history, isEmpty);
       });
@@ -1142,7 +1145,8 @@ void main() {
         });
         final service = createMentorService(progressTracker: tracker);
         final result = await service.hasMeaningfulData();
-        expect(result, isFalse);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isFalse);
       });
 
       test('returns true when subjects exist', () async {
@@ -1171,7 +1175,8 @@ void main() {
         });
         final service = createMentorService(database: db, progressTracker: tracker);
         final result = await service.hasMeaningfulData();
-        expect(result, isTrue);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isTrue);
       });
     });
 
@@ -1187,7 +1192,8 @@ void main() {
           proposedTime: DateTime.now().add(const Duration(hours: 2)),
         );
         final result = await service.confirmSchedule(proposal);
-        expect(result, contains('scheduled'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('scheduled'));
         expect(fakePlanner.scheduleCallCount, equals(1));
       });
 
