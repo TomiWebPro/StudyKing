@@ -55,6 +55,7 @@ class ConversationPromptSet {
     required ConversationPhase phase,
     String? scheduledSessionId,
     LearningPreference? learningPreferences,
+    String? feedbackContext,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -79,6 +80,9 @@ class ConversationPromptSet {
       if (styleHint.isNotEmpty) {
         systemPrompt = '$systemPrompt\n\n$styleHint';
       }
+    }
+    if (feedbackContext != null && feedbackContext.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n$feedbackContext';
     }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);

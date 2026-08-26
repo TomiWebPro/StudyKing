@@ -14,6 +14,8 @@ class ChatBubble extends StatelessWidget {
   final bool showSender;
   final bool reduceMotion;
   final VoidCallback? onSpeak;
+  final VoidCallback? onThumbsUp;
+  final VoidCallback? onThumbsDown;
 
   const ChatBubble({
     super.key,
@@ -21,6 +23,8 @@ class ChatBubble extends StatelessWidget {
     this.showSender = true,
     this.reduceMotion = false,
     this.onSpeak,
+    this.onThumbsUp,
+    this.onThumbsDown,
   });
 
   @override
@@ -90,6 +94,10 @@ class ChatBubble extends StatelessWidget {
                         constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
                       ),
                     ),
+                  if (!isStudent &&
+                      !message.isStreaming &&
+                      (onThumbsUp != null || onThumbsDown != null))
+                    _buildMessageFeedback(context),
                 ],
               ),
             ),
@@ -98,6 +106,36 @@ class ChatBubble extends StatelessWidget {
           if (isStudent) _buildAvatar(context, false),
         ],
       ),
+    );
+  }
+
+  Widget _buildMessageFeedback(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (onThumbsUp != null)
+          IconButton(
+            icon: const Icon(Icons.thumb_up_outlined, size: 16),
+            onPressed: onThumbsUp,
+            tooltip: l10n.feedbackThumbsUp,
+            color: theme.colorScheme.onSurfaceVariant,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+        if (onThumbsDown != null)
+          IconButton(
+            icon: const Icon(Icons.thumb_down_outlined, size: 16),
+            onPressed: onThumbsDown,
+            tooltip: l10n.feedbackThumbsDown,
+            color: theme.colorScheme.onSurfaceVariant,
+            visualDensity: VisualDensity.compact,
+            padding: EdgeInsets.zero,
+            constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+          ),
+      ],
     );
   }
 

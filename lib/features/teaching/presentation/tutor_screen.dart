@@ -26,6 +26,8 @@ import 'widgets/voice_bar.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/teaching/presentation/widgets/slides_presentation_widget.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
+import 'package:studyking/features/teaching/data/models/lesson_feedback_model.dart';
+import 'package:studyking/features/teaching/providers/lesson_feedback_providers.dart';
 import 'package:studyking/features/teaching/presentation/widgets/lesson_feedback_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/data/models/drawing_models.dart';
@@ -1058,6 +1060,36 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     );
   }
 
+  Future<void> _submitMessageFeedback(
+    ConversationMessage message,
+    FeedbackSentiment sentiment,
+  ) async {
+    final manager = _manager;
+    if (manager == null || message.id.isEmpty) return;
+    final l10n = AppLocalizations.of(context);
+    try {
+      final repo = ref.read(lessonFeedbackRepositoryProvider);
+      final result = await repo.submitFeedback(
+        studentId: manager.studentId,
+        targetType: 'explanation',
+        messageId: message.id,
+        sentiment: sentiment.name,
+      );
+      if (result.isFailure && mounted && l10n != null) {
+        _logger.w('Failed to submit message feedback: ${result.error}');
+      } else if (mounted && l10n != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.feedbackThanks),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      _logger.w('Unexpected error submitting message feedback', e);
+    }
+  }
+
   Widget _buildMessageList(AppLocalizations l10n, bool isEnding, bool reduceMotion) {
     final messages = _manager!.messages;
     if (messages.isEmpty) {
@@ -1078,6 +1110,12 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
           reduceMotion: reduceMotion,
           onSpeak: isTutor && _voiceOutputEnabled && !msg.isStreaming && msg.content.isNotEmpty
               ? () => ref.read(voiceServiceProvider).speak(msg.content, localeName: l10n.localeName)
+              : null,
+          onThumbsUp: isTutor && !msg.isStreaming
+              ? () => _submitMessageFeedback(msg, FeedbackSentiment.positive)
+              : null,
+          onThumbsDown: isTutor && !msg.isStreaming
+              ? () => _submitMessageFeedback(msg, FeedbackSentiment.negative)
               : null,
         );
         if (reduceMotion) return child;

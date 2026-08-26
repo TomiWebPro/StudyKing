@@ -8,6 +8,7 @@ import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
+import 'package:studyking/features/teaching/providers/lesson_feedback_providers.dart';
 import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
 
@@ -48,6 +49,7 @@ final tutorServiceProvider = Provider<TutorService>((ref) {
     conversationRepository: database.conversationRepository,
     voiceService: ref.watch(voiceServiceProvider),
     longTermMemory: ref.watch(longTermMemoryProvider),
+    feedbackRepository: ref.watch(lessonFeedbackRepositoryProvider),
     clock: ref.watch(clockProvider),
   );
 });

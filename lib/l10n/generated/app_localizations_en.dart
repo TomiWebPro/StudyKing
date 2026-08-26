@@ -6099,6 +6099,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get feedbackTargetContent => 'Content';
 
   @override
+  String get lessonsNeedingReviewTitle => 'Lessons needing review';
+
+  @override
+  String get lessonsNeedingReviewEmpty => 'No lessons flagged for review';
+
+  @override
   String get mentorReportedFeedbackHeading => 'Reported AI content';
 
   @override

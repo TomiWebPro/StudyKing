@@ -6167,6 +6167,13 @@ class AppLocalizationsEs extends AppLocalizations {
   String get feedbackTargetContent => 'Contenido';
 
   @override
+  String get lessonsNeedingReviewTitle => 'Lecciones que necesitan revisión';
+
+  @override
+  String get lessonsNeedingReviewEmpty =>
+      'No hay lecciones marcadas para revisión';
+
+  @override
   String get mentorReportedFeedbackHeading => 'Contenido de IA reportado';
 
   @override
