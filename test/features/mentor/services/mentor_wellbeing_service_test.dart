@@ -16,10 +16,12 @@ class _FakeSessionRepo extends SessionRepository {
   List<Session> _allSessions = [];
   List<Session> _todaySessions = [];
   int _todayDurationMs = 0;
+  int? _consecutiveDays;
 
   void setAllSessions(List<Session> sessions) => _allSessions = sessions;
   void setTodaySessions(List<Session> sessions) => _todaySessions = sessions;
   void setTodayDurationMs(int ms) => _todayDurationMs = ms;
+  void setConsecutiveDays(int days) => _consecutiveDays = days;
 
   @override
   Future<Result<List<Session>>> getAll() async => Result.success(_allSessions);
@@ -29,6 +31,12 @@ class _FakeSessionRepo extends SessionRepository {
 
   @override
   Future<Result<int>> getTodayDurationMs() async => Result.success(_todayDurationMs);
+
+  @override
+  Future<Result<int>> getConsecutiveStudyDays() async {
+    if (_consecutiveDays != null) return Result.success(_consecutiveDays!);
+    return super.getConsecutiveStudyDays();
+  }
 }
 
 class _FakeNudgeRepo extends EngagementNudgeRepository {
@@ -276,7 +284,7 @@ void main() {
       });
 
       group('nudge cap limit', () {
-        test('prevents additional nudges when at max per day (overwork still generated)', () async {
+        test('prevents additional nudges when at max per day', () async {
           Hive.init(Directory.systemTemp.path);
           final box = await Hive.openBox(HiveBoxNames.settings);
           await box.put('dailyCapMinutes', 60);
@@ -292,11 +300,9 @@ void main() {
             nudgeRepo: nudgeRepo,
           );
 
-          // Overwork nudge is created before the cap check, so result has it
           final result = await service.checkWellbeingAndGenerateNudges();
-          expect(result.data, isNotEmpty);
-          // Only the overwork message should be present (others blocked by cap)
-          expect(result.data!.length, equals(1));
+          expect(result.data, isEmpty);
+          expect(nudgeRepo.createdNudges, isEmpty);
 
           await box.clear();
           await box.close();
@@ -357,6 +363,57 @@ void main() {
           final result = await service.checkWellbeingAndGenerateNudges();
           expect(result.data, isNotEmpty);
           expect(result.data!.any((m) => m.contains('study streak')), isTrue);
+        });
+
+        test('persists streak nudge to repository for 7+ consecutive days', () async {
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setConsecutiveDays(7);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.data, isNotEmpty);
+          expect(result.data!.any((m) => m.contains('study streak')), isTrue);
+          expect(nudgeRepo.createdNudges, isNotEmpty);
+          final persisted = nudgeRepo.createdNudges.firstWhere(
+            (n) => n.message.contains('study streak'),
+          );
+          expect(persisted.nudgeType, equals(NudgeType.planAdjustment.name));
+          expect(persisted.severity, equals(NudgeSeverity.low.name));
+          expect(persisted.studentId, equals('test-student'));
+        });
+
+        test('persists streak nudge for longer streak (e.g. 10 days)', () async {
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setConsecutiveDays(10);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          await service.checkWellbeingAndGenerateNudges();
+          expect(nudgeRepo.createdNudges, isNotEmpty);
+          expect(nudgeRepo.createdNudges.any((n) => n.nudgeType == NudgeType.planAdjustment.name), isTrue);
+        });
+
+        test('does not persist streak nudge for fewer than 7 days', () async {
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setConsecutiveDays(3);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          await service.checkWellbeingAndGenerateNudges();
+          expect(nudgeRepo.createdNudges.where((n) => n.message.contains('study streak')), isEmpty);
         });
       });
     });
