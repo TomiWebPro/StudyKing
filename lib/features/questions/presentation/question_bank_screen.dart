@@ -23,6 +23,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/core/utils/question_export_utils.dart';
 import 'package:studyking/core/utils/question_import_utils.dart';
@@ -356,6 +357,89 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       }
     } finally {
       textController.dispose();
+    }
+  }
+
+  Future<void> _pickAndImportCsv() async {
+    try {
+      final picked = await FilePicker.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['csv'],
+        withData: false,
+      );
+      if (picked == null || picked.files.single.path == null) return;
+      await _importFromCsvFile(picked.files.single.path!);
+    } catch (e) {
+      _logger.w('Failed to pick CSV file', e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context)!.somethingWentWrong)),
+      );
+    }
+  }
+
+  // ignore: unused_element
+  Future<void> _importFromCsvFile(String filePath) async {
+    final l10n = AppLocalizations.of(context)!;
+    final importResult = await QuestionImportUtils.importFromCsv(filePath);
+    if (!mounted) return;
+    if (importResult.isFailure) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(importResult.error ?? l10n.somethingWentWrong)),
+      );
+      return;
+    }
+    final csvResult = importResult.data!;
+    var saved = 0;
+    for (final q in csvResult.questions) {
+      final saveResult = await _questionRepo.create(q);
+      if (saveResult.isSuccess) {
+        saved++;
+        _allQuestions.add(q);
+      }
+    }
+    if (!mounted) return;
+    setState(() {});
+    final malformed = csvResult.skippedRows.length;
+    final skippedConflict = csvResult.skippedDueToConflict;
+    if (malformed > 0 || skippedConflict > 0) {
+      final parts = <String>[];
+      parts.add(l10n.questionsCount(saved));
+      if (malformed > 0) parts.add('$malformed malformed row(s) skipped');
+      if (skippedConflict > 0) parts.add('$skippedConflict duplicate(s) skipped');
+      final message = parts.join(' — ');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          duration: const Duration(seconds: 4),
+          action: malformed > 0
+              ? SnackBarAction(
+                  label: 'Details',
+                  onPressed: () {
+                    showDialog<void>(
+                      context: context,
+                      builder: (ctx) => AlertDialog(
+                        title: const Text('Details'),
+                        content: SingleChildScrollView(
+                          child: Text(csvResult.skippedRows.join('\n')),
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(ctx),
+                            child: Text(l10n.ok),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                )
+              : null,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.questionsCount(saved))),
+      );
     }
   }
 
@@ -1164,10 +1248,12 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
               onSelected: (v) {
                 if (v == 'export') _exportQuestions();
                 if (v == 'import') _batchImportQuestions();
+                if (v == 'importCsv') _pickAndImportCsv();
               },
               itemBuilder: (_) => [
                 PopupMenuItem(value: 'export', child: Text(l10n.exportCsv)),
                 PopupMenuItem(value: 'import', child: Text(l10n.importBackup)),
+                PopupMenuItem(value: 'importCsv', child: Text('${l10n.importBackup} (CSV)')),
               ],
             ),
             IconButton(
