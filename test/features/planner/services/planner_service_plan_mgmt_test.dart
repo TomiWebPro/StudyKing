@@ -214,10 +214,10 @@ void main() {
       ));
       sessionRepo.throwOnSave = true;
       final result = await service.acceptPendingAction('action-fail');
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
 
-    test('returns false when sessionRepo.save throws during execution', () async {
+    test('returns failure when sessionRepo.save throws during execution', () async {
       pendingActionRepo.addAction(PendingActionModel(
         id: 'action-catch',
         studentId: 'test-student',
@@ -232,7 +232,7 @@ void main() {
       ));
       sessionRepo.throwOnSave = true;
       final result = await service.acceptPendingAction('action-catch');
-      expect(result.data, isFalse);
+      expect(result.isFailure, isTrue);
     });
 
     test('returns failure when repo throws', () async {
