@@ -99,7 +99,15 @@ class MentorWellbeingService {
   Future<void> _checkStreak(List<String> messages) async {
     final consecutiveDays = (await _getConsecutiveStudyDays()).data ?? 0;
     if (consecutiveDays >= 7) {
-      messages.add(lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays));
+      final msg = lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays);
+      await _nudgeRepo.create(EngagementNudgeModel(
+        id: 'streak_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
+        studentId: _studentId,
+        nudgeType: NudgeType.planAdjustment.name,
+        message: msg,
+        severity: NudgeSeverity.low.name,
+      ));
+      messages.add(msg);
       return;
     }
     if (consecutiveDays > 0) return;
