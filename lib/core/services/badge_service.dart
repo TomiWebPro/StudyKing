@@ -21,8 +21,12 @@ class BadgeService {
   Future<Result<List<BadgeModel>>> getBadges(String studentId) async {
     try {
       await _repository.init();
-      final badges = await _repository.getByStudent(studentId);
-      return Result.success(badges);
+      final result = await _repository.getByStudent(studentId);
+      if (result.isFailure) {
+        _logger.w('getBadges failed for $studentId: ${result.error}');
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data!);
     } catch (e) {
       _logger.w('getBadges failed', e);
       return Result.failure(e.toString());
@@ -39,7 +43,12 @@ class BadgeService {
       final stats = statsResult != null && statsResult.isSuccess
           ? statsResult.data ?? <String, dynamic>{}
           : <String, dynamic>{};
-      final existing = await _repository.getBadgeMap(studentId);
+      final existingResult = await _repository.getBadgeMap(studentId);
+      if (existingResult.isFailure) {
+        _logger.w('getBadgeMap failed for $studentId: ${existingResult.error}');
+        return Result.failure(existingResult.error);
+      }
+      final existing = existingResult.data!;
       final newlyUnlocked = <BadgeModel>[];
 
       for (final definition in BadgeDefinitions.all) {
@@ -86,7 +95,11 @@ class BadgeService {
     try {
       await _repository.init();
       final result = await _repository.hasBadge(studentId, badgeId);
-      return Result.success(result);
+      if (result.isFailure) {
+        _logger.w('hasBadge failed for $studentId badge $badgeId: ${result.error}');
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data!);
     } catch (e) {
       _logger.w('hasBadge failed', e);
       return Result.failure(e.toString());
@@ -97,7 +110,11 @@ class BadgeService {
     try {
       await _repository.init();
       final result = await _repository.getBadgeCount(studentId);
-      return Result.success(result);
+      if (result.isFailure) {
+        _logger.w('getBadgeCount failed for $studentId: ${result.error}');
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data!);
     } catch (e) {
       _logger.w('getBadgeCount failed', e);
       return Result.failure(e.toString());
@@ -125,7 +142,12 @@ class BadgeService {
   Future<Result<List<BadgeDefinition>>> getLockedBadges(String studentId) async {
     try {
       await _repository.init();
-      final existing = await _repository.getBadgeMap(studentId);
+      final existingResult = await _repository.getBadgeMap(studentId);
+      if (existingResult.isFailure) {
+        _logger.w('getLockedBadges failed for $studentId: ${existingResult.error}');
+        return Result.failure(existingResult.error);
+      }
+      final existing = existingResult.data!;
       return Result.success(BadgeDefinitions.all
           .where((d) => !existing.containsKey(d.id))
           .toList());

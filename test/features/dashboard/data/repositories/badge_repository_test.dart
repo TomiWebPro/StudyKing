@@ -220,12 +220,15 @@ void main() {
         await repository.create(createTestBadge(
             id: 'b3', studentId: 's2'));
         final result = await repository.getByStudent('s1');
-        expect(result.length, 2);
-        expect(result.first.id, 'b2');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 2);
+        expect(result.data!.first.id, 'b2');
       });
 
       test('returns empty list for student with no badges', () async {
-        expect(await repository.getByStudent('none'), isEmpty);
+        final result = await repository.getByStudent('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
 
       test('orders by unlockedAt descending with multiple badges', () async {
@@ -239,26 +242,41 @@ void main() {
         await repository.create(createTestBadge(
             id: 'b3', studentId: 's1', unlockedAt: first));
         final result = await repository.getByStudent('s1');
-        expect(result[0].id, 'b3');
-        expect(result[1].id, 'b2');
-        expect(result[2].id, 'b1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data![0].id, 'b3');
+        expect(result.data![1].id, 'b2');
+        expect(result.data![2].id, 'b1');
+      });
+
+      test('returns Result.success with data', () async {
+        await repository.create(createTestBadge(id: 'b1', studentId: 's1'));
+        final result = await repository.getByStudent('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.error, isNull);
+        expect(result.data, isNotNull);
       });
     });
 
     group('hasBadge', () {
       test('returns true when student has the badge', () async {
         await repository.create(createTestBadge(id: 'b1', studentId: 's1'));
-        expect(await repository.hasBadge('s1', 'b1'), isTrue);
+        final result = await repository.hasBadge('s1', 'b1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isTrue);
       });
 
       test('returns false when student lacks the badge', () async {
         await repository.create(createTestBadge(id: 'b1', studentId: 's1'));
-        expect(await repository.hasBadge('s1', 'b2'), isFalse);
+        final result = await repository.hasBadge('s1', 'b2');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isFalse);
       });
 
       test('returns false when different student has the badge', () async {
         await repository.create(createTestBadge(id: 'b1', studentId: 's1'));
-        expect(await repository.hasBadge('s2', 'b1'), isFalse);
+        final result = await repository.hasBadge('s2', 'b1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isFalse);
       });
     });
 
@@ -270,7 +288,9 @@ void main() {
             id: 'b2', studentId: 's1', name: 'Second'));
         await repository.create(createTestBadge(
             id: 'b3', studentId: 's2'));
-        final map = await repository.getBadgeMap('s1');
+        final result = await repository.getBadgeMap('s1');
+        expect(result.isSuccess, isTrue);
+        final map = result.data!;
         expect(map.length, 2);
         expect(map['b1']?.name, 'First');
         expect(map['b2']?.name, 'Second');
@@ -278,7 +298,18 @@ void main() {
       });
 
       test('returns empty map when student has no badges', () async {
-        expect(await repository.getBadgeMap('none'), isEmpty);
+        final result = await repository.getBadgeMap('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('propagates failure cleanly via Result', () async {
+        await repository.create(createTestBadge(
+            id: 'unique-id', studentId: 's1', category: 'accuracy'));
+        final result = await repository.getBadgeMap('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.containsKey('unique-id'), isTrue);
+        expect(result.data!['unique-id']!.category, 'accuracy');
       });
     });
 
@@ -290,11 +321,15 @@ void main() {
             id: 'b2', studentId: 's1'));
         await repository.create(createTestBadge(
             id: 'b3', studentId: 's2'));
-        expect(await repository.getBadgeCount('s1'), 2);
+        final result = await repository.getBadgeCount('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 2);
       });
 
       test('returns zero when student has no badges', () async {
-        expect(await repository.getBadgeCount('none'), 0);
+        final result = await repository.getBadgeCount('none');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 0);
       });
 
       test('counts multiple badges for same student', () async {
@@ -302,7 +337,9 @@ void main() {
           await repository.create(createTestBadge(
               id: 'b$i', studentId: 's1'));
         }
-        expect(await repository.getBadgeCount('s1'), 5);
+        final result = await repository.getBadgeCount('s1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 5);
       });
     });
 
@@ -367,25 +404,33 @@ void main() {
       await repository.create(createTestBadge(id: 'b1', studentId: 's2'));
 
       final result = await repository.getByStudent('s1');
-      expect(result.length, 2);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.length, 2);
     });
 
     test('hasBadge works after init', () async {
       await repository.create(createTestBadge(id: 'h1', studentId: 's1'));
-      expect(await repository.hasBadge('s1', 'h1'), isTrue);
-      expect(await repository.hasBadge('s1', 'none'), isFalse);
+      final has = await repository.hasBadge('s1', 'h1');
+      expect(has.isSuccess, isTrue);
+      expect(has.data, isTrue);
+      final notHas = await repository.hasBadge('s1', 'none');
+      expect(notHas.isSuccess, isTrue);
+      expect(notHas.data, isFalse);
     });
 
     test('getBadgeCount works after init', () async {
       await repository.create(createTestBadge(id: 'c1', studentId: 's1'));
       await repository.create(createTestBadge(id: 'c2', studentId: 's1'));
-      expect(await repository.getBadgeCount('s1'), 2);
+      final result = await repository.getBadgeCount('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 2);
     });
 
     test('getBadgeMap works after init', () async {
       await repository.create(createTestBadge(id: 'm1', studentId: 's1'));
-      final map = await repository.getBadgeMap('s1');
-      expect(map, contains('m1'));
+      final result = await repository.getBadgeMap('s1');
+      expect(result.isSuccess, isTrue);
+      expect(result.data!, contains('m1'));
     });
 
     test('delete works after init', () async {
@@ -430,6 +475,36 @@ void main() {
     test('delete with throwing box returns failure', () async {
       final result = await repository.delete('any');
       expect(result.isFailure, isTrue);
+    });
+
+    test('getByStudent with throwing box returns failure', () async {
+      final result = await repository.getByStudent('s1');
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotNull);
+      expect(result.error, contains('Failed to getByStudent'));
+    });
+
+    test('hasBadge with throwing box returns failure', () async {
+      final result = await repository.hasBadge('s1', 'b1');
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Failed to hasBadge'));
+    });
+
+    test('getBadgeMap with throwing box returns failure', () async {
+      final result = await repository.getBadgeMap('s1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getBadgeCount with throwing box returns failure', () async {
+      final result = await repository.getBadgeCount('s1');
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Failed to getBadgeCount'));
+    });
+
+    test('Result failure wraps logged descriptive error', () async {
+      final result = await repository.getByStudent('s1');
+      expect(result.isFailure, isTrue);
+      expect(result.error!.isNotEmpty, isTrue);
     });
   });
 }
