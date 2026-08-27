@@ -335,7 +335,7 @@ void main() {
   });
 
   group('ExamSessionService error-state', () {
-    test('finishExam handles session save failure gracefully', () async {
+    test('finishExam returns failure when session save fails', () async {
       final failingRepo = _FailingSessionRepository();
       final studentIdService = FakeStudentIdService();
       final service = ExamSessionService(
@@ -361,8 +361,40 @@ void main() {
           ),
         ],
       );
-      expect(result, isA<ExamResult>());
-      expect(result.totalCorrect, 1);
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Save failed'));
+      service.dispose();
+    });
+
+    test('finishExam returns success when save succeeds', () async {
+      final repo = _FakeSessionRepo();
+      final studentIdService = FakeStudentIdService();
+      final service = ExamSessionService(
+        sessionRepo: repo,
+        studentIdService: studentIdService,
+        clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+
+      final config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'sub1',
+      );
+      service.startExam(config);
+
+      final result = await service.finishExam(
+        config: config,
+        questionResults: [
+          ExamQuestionResult(
+            question: _q(id: 'q1', text: 'Q'),
+            isCorrect: true,
+            timeSpentMs: 100,
+          ),
+        ],
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isA<ExamResult>());
+      expect(result.data!.totalCorrect, 1);
       service.dispose();
     });
 
@@ -451,7 +483,7 @@ void main() {
       );
       service.startExam(config);
 
-      await service.finishExam(
+      final result = await service.finishExam(
         config: config,
         questionResults: [
           ExamQuestionResult(
@@ -462,6 +494,7 @@ void main() {
         autoSubmitted: true,
       );
 
+      expect(result.isSuccess, isTrue);
       expect(sessionRepo.sessions.first.tags.contains('auto_submit:true'),
           isTrue);
     });
@@ -474,7 +507,7 @@ void main() {
       );
       service.startExam(config);
 
-      await service.finishExam(
+      final result = await service.finishExam(
         config: config,
         questionResults: [
           ExamQuestionResult(
@@ -484,6 +517,7 @@ void main() {
         ],
       );
 
+      expect(result.isSuccess, isTrue);
       expect(sessionRepo.sessions.first.tags.contains('auto_submit:false'),
           isTrue);
     });
@@ -589,6 +623,33 @@ void main() {
       );
 
       expect(result.isFailure, isTrue);
+    });
+  });
+
+  group('ExamSessionService.getSavedExamResults', () {
+    test('returns success with list (empty when no data)', () async {
+      final result = await ExamSessionService.getSavedExamResults();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isA<List<Map<String, dynamic>>>());
+    });
+
+    test('finishExam failure propagates via Result.capture logging', () async {
+      final failingRepo = _FailingSessionRepository();
+      final service = ExamSessionService(
+        sessionRepo: failingRepo,
+        studentIdService: FakeStudentIdService(),
+        clock: _FixedClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+      service.startExam(const ExamConfig(durationMinutes: 30, questionCount: 1, subjectId: 'sub1'));
+      final result = await service.finishExam(
+        config: const ExamConfig(durationMinutes: 30, questionCount: 1, subjectId: 'sub1'),
+        questionResults: [
+          ExamQuestionResult(question: _q(id: 'q1', text: 'Q'), isCorrect: true, timeSpentMs: 100),
+        ],
+      );
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotNull);
+      service.dispose();
     });
   });
 }

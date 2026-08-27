@@ -286,60 +286,72 @@ class ExamSessionService {
       type == QuestionType.fileUpload ||
       type == QuestionType.audioRecording;
 
-  Future<ExamResult> finishExam({
+  Future<Result<ExamResult>> finishExam({
     required ExamConfig config,
     required List<ExamQuestionResult> questionResults,
     bool autoSubmitted = false,
   }) async {
-    _examTimer?.cancel();
-    _isActive = false;
-    examActiveNotifier.value = false;
+    return Result.capture(() async {
+      _examTimer?.cancel();
+      _isActive = false;
+      examActiveNotifier.value = false;
 
-    final endTime = _clock.now();
-    final result = ExamResult(
-      config: config,
-      questionResults: questionResults,
-      startTime: _examStartTime,
-      endTime: endTime,
-      wasAutoSubmitted: autoSubmitted,
-    );
+      final endTime = _clock.now();
+      final result = ExamResult(
+        config: config,
+        questionResults: questionResults,
+        startTime: _examStartTime,
+        endTime: endTime,
+        wasAutoSubmitted: autoSubmitted,
+      );
 
-    final studentId = _studentIdService.getStudentId().data ?? '';
-    final session = Session(
-      id: 'exam_${_examStartTime.millisecondsSinceEpoch}',
-      studentId: studentId,
-      subjectId: config.subjectId,
-      type: SessionType.practice,
-      startTime: _examStartTime,
-      endTime: endTime,
-      actualDurationMs: endTime.difference(_examStartTime).inMilliseconds,
-      questionsAnswered: questionResults.length,
-      correctAnswers: result.totalCorrect,
-      completed: true,
-      tags: ['exam', 'auto_submit:${autoSubmitted ? 'true' : 'false'}'],
-    );
-    await _sessionRepo.save(session.id, session);
+      final studentId = _studentIdService.getStudentId().data ?? '';
+      final session = Session(
+        id: 'exam_${_examStartTime.millisecondsSinceEpoch}',
+        studentId: studentId,
+        subjectId: config.subjectId,
+        type: SessionType.practice,
+        startTime: _examStartTime,
+        endTime: endTime,
+        actualDurationMs: endTime.difference(_examStartTime).inMilliseconds,
+        questionsAnswered: questionResults.length,
+        correctAnswers: result.totalCorrect,
+        completed: true,
+        tags: ['exam', 'auto_submit:${autoSubmitted ? 'true' : 'false'}'],
+      );
+      final saveResult = await _sessionRepo.save(session.id, session);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to save exam session', saveResult.error);
+        throw Exception(saveResult.error ?? 'Failed to save exam session');
+      }
 
-    await _saveExamResult(result);
+      final examSaveResult = await _saveExamResult(result);
+      if (examSaveResult.isFailure) {
+        _logger.w('Failed to save exam result', examSaveResult.error);
+        throw Exception(examSaveResult.error ?? 'Failed to save exam result');
+      }
 
-    return result;
+      return result;
+    }, context: 'ExamSessionService.finishExam');
   }
 
-  static Future<List<Map<String, dynamic>>> getSavedExamResults() async {
+  static Future<Result<List<Map<String, dynamic>>>> getSavedExamResults() async {
     try {
       final box = await Hive.openBox(HiveBoxNames.examResults);
-      return box.values.cast<Map<String, dynamic>>().toList()
+      final list = box.values.cast<Map<String, dynamic>>().toList()
         ..sort((a, b) {
           final aTime = a['result']?['startTime'] as String? ?? '';
           final bTime = b['result']?['startTime'] as String? ?? '';
           return bTime.compareTo(aTime);
         });
+      return Result.success(list);
     } catch (e) {
-      return [];
+      _logger.w('Failed to load saved exam results', e);
+      return Result.failure(e.toString());
     }
   }
 
-  Future<void> _saveExamResult(ExamResult result) async {
+  Future<Result<void>> _saveExamResult(ExamResult result) async {
     try {
       final box = await Hive.openBox(HiveBoxNames.examResults);
       final id = 'exam_${result.startTime.millisecondsSinceEpoch}';
@@ -350,8 +362,10 @@ class ExamSessionService {
         'questionIds': result.questionResults.map((qr) => qr.question.id).toList(),
       };
       await box.put(id, data);
+      return Result.success(null);
     } catch (e) {
       _logger.w('Failed to save exam result', e);
+      return Result.failure(e.toString());
     }
   }
 

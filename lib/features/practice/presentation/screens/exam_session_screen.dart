@@ -14,6 +14,7 @@ import 'package:studyking/features/practice/services/mistake_review_service.dart
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
@@ -38,6 +39,7 @@ class ExamSessionScreen extends ConsumerStatefulWidget {
 }
 
 class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
+  static final Logger _logger = const Logger('ExamSessionScreen');
   late ExamSessionService _examService;
   late AnswerValidationService _validationService;
   late QuestionRepository _questionRepo;
@@ -250,14 +252,23 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
 
   Future<void> _finishExam() async {
     if (_config == null) return;
-    final result = await _examService.finishExam(
+    final finishResult = await _examService.finishExam(
       config: _config!,
       questionResults: _results,
       autoSubmitted: false,
     );
     if (!mounted) return;
+    if (finishResult.isFailure) {
+      _logger.w('Failed to finish exam', finishResult.error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.somethingWentWrong)),
+        );
+      }
+      return;
+    }
     setState(() {
-      _examResult = result;
+      _examResult = finishResult.data;
       _examFinished = true;
       _isExamActive = false;
     });
@@ -276,14 +287,23 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       ));
     }
 
-    final result = await _examService.finishExam(
+    final finishResult = await _examService.finishExam(
       config: _config!,
       questionResults: _results,
       autoSubmitted: true,
     );
     if (!mounted) return;
+    if (finishResult.isFailure) {
+      _logger.w('Failed to auto-submit exam', finishResult.error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.somethingWentWrong)),
+        );
+      }
+      return;
+    }
     setState(() {
-      _examResult = result;
+      _examResult = finishResult.data;
       _examFinished = true;
       _isExamActive = false;
     });
