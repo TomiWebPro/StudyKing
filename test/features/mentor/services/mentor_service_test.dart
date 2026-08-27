@@ -25,6 +25,7 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
@@ -289,6 +290,7 @@ MentorService createMentorService({
   PlannerService? plannerService,
   EngagementNudgeRepository? nudgeRepo,
   SessionRepository? sessionRepository,
+  LongTermMemory? longTermMemory,
   String modelId = 'test-model',
   String studentId = 'test-student',
   String localeName = 'en',
@@ -323,6 +325,7 @@ MentorService createMentorService({
     studentId: studentId,
     localeName: localeName,
     pendingActionRepo: pendingActionRepo,
+    longTermMemory: longTermMemory,
   );
 }
 
@@ -362,6 +365,61 @@ class _FakeSessionRepo extends SessionRepository {
 
   @override
   Future<Result<int>> getTodayDurationMs() async => Result.success(0);
+}
+
+class _FakeFailingLTM extends LongTermMemory {
+  final bool failInit;
+  final bool failBuild;
+  _FakeFailingLTM({this.failInit = false, this.failBuild = false});
+
+  @override
+  Future<void> init() async {
+    if (failInit) throw Exception('Simulated LTM init failure');
+  }
+
+  @override
+  Future<String> buildMemoryContext(String studentId) async {
+    if (failBuild) throw Exception('Simulated LTM build failure');
+    return 'fake memory context';
+  }
+
+  @override
+  Future<String> generateAndStoreSummary({
+    required LlmService llmService,
+    required String modelId,
+    required String studentId,
+    required String sessionId,
+    required List<Map<String, String>> conversationMessages,
+    String? topicTitle,
+    int exerciseCount = 0,
+    int correctCount = 0,
+    double confidenceRating = 0.0,
+  }) async {
+    return '';
+  }
+}
+
+class _FakeThrowingInitLTM extends LongTermMemory {
+  @override
+  Future<void> init() async => throw Exception('Simulated LTM init failure');
+
+  @override
+  Future<String> buildMemoryContext(String studentId) async => throw Exception('should not be reached');
+
+  @override
+  Future<String> generateAndStoreSummary({
+    required LlmService llmService,
+    required String modelId,
+    required String studentId,
+    required String sessionId,
+    required List<Map<String, String>> conversationMessages,
+    String? topicTitle,
+    int exerciseCount = 0,
+    int correctCount = 0,
+    double confidenceRating = 0.0,
+  }) async {
+    return '';
+  }
 }
 
 void main() {
@@ -1429,6 +1487,48 @@ void main() {
         expect(service.pendingRescheduleSessionId, isNotNull);
         service.clearPendingReschedule();
         expect(service.pendingRescheduleSessionId, isNull);
+      });
+    });
+
+    group('chat - long-term memory failure handling', () {
+      test('chat succeeds with fallback when LTM init throws', () async {
+        final llm = FakeLlmService();
+        final failingLtm = _FakeThrowingInitLTM();
+        final service = createMentorService(llmService: llm, longTermMemory: failingLtm);
+        // Failure in _buildLongTermMemoryContext should be logged and fall back to empty context
+        final chunks = await service.chat('hello').toList();
+        expect(chunks, isNotEmpty);
+        expect(chunks.first, equals('Mentor response'));
+        // Memory should still contain user and assistant messages despite LTM failure
+        final history = service.memory.getHistory();
+        expect(history.length, equals(2));
+      });
+
+      test('chat succeeds with fallback when LTM buildMemoryContext throws', () async {
+        final llm = FakeLlmService();
+        final failingLtm = _FakeFailingLTM(failInit: false, failBuild: true);
+        final service = createMentorService(llmService: llm, longTermMemory: failingLtm);
+        final chunks = await service.chat('hello').toList();
+        expect(chunks, isNotEmpty);
+        expect(chunks.first, equals('Mentor response'));
+      });
+
+      test('chat succeeds when LTM is null (no memory context)', () async {
+        final llm = FakeLlmService();
+        final service = createMentorService(llmService: llm, longTermMemory: null);
+        final chunks = await service.chat('hello').toList();
+        expect(chunks, isNotEmpty);
+        expect(chunks.first, equals('Mentor response'));
+      });
+
+      test('chat succeeds when LTM build returns empty context gracefully', () async {
+        final llm = FakeLlmService();
+        final emptyLtm = _FakeFailingLTM(failInit: false, failBuild: false);
+        final service = createMentorService(llmService: llm, longTermMemory: emptyLtm);
+        final chunks = await service.chat('hello').toList();
+        expect(chunks, isNotEmpty);
+        // LTM context is included but does not break chat
+        expect(llm.capturedMessage, isNotNull);
       });
     });
   });
