@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class SubjectHistoryTab extends StatelessWidget {
+  static final Logger _logger = const Logger('SubjectHistoryTab');
   final String subjectId;
   final void Function(Session session) onSessionTap;
   final SessionRepository? sessionRepository;
@@ -29,6 +31,7 @@ class SubjectHistoryTab extends StatelessWidget {
         final sessions = result.data ?? [];
         return sessions.where((s) => s.subjectId == subjectId).toList();
       } catch (e) {
+        _logger.w('Failed to load subject sessions', e);
         return [];
       }
     }

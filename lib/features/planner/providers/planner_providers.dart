@@ -234,6 +234,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       final result = await _service.getMissedLessons();
       return result.data ?? [];
     } catch (e) {
+      _logger.w('Failed to get missed lessons', e);
       return [];
     }
   }
@@ -243,6 +244,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       await _service.dismissAllMissed();
       state = state.copyWith(successMessage: l10n.missedDismissed);
     } catch (e) {
+      _logger.w('Failed to dismiss all missed lessons', e);
       state = state.copyWith(error: l10n.failedToDismissMissed);
     }
   }
@@ -642,6 +644,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       await loadExistingPlan();
       state = state.copyWith(successMessage: l10n.planAdjusted);
     } catch (e) {
+      _logger.w('Failed to adjust pace', e);
       state = state.copyWith(error: l10n.failedToAdjustPlan);
     }
   }

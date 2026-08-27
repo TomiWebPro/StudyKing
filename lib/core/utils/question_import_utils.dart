@@ -96,6 +96,7 @@ class QuestionImportUtils {
       }
       return null;
     } catch (e) {
+      _logger.w('Failed to parse CSV row', e);
       return null;
     }
   }

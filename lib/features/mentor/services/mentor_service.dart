@@ -218,6 +218,7 @@ class MentorService {
         yield chunk;
       }
     } catch (e) {
+      _logger.w('Mentor chat stream failed', e);
       final partialContent = buffer.toString();
       if (partialContent.isNotEmpty) {
         await _memory.addAssistantMessage(partialContent);
@@ -245,6 +246,7 @@ class MentorService {
       await ltm.init();
       return await ltm.buildMemoryContext(_studentId);
     } catch (e) {
+      _logger.w('Failed to build long-term memory context', e);
       return '';
     }
   }

@@ -927,6 +927,7 @@ class DocumentExtractor {
         }
         return buffer.toString().trim();
       } catch (e) {
+        _logger.w('Failed to extract slide text from PPTX XML', e);
         return '';
       }
     }
@@ -944,7 +945,7 @@ class DocumentExtractor {
           }
         }
       } catch (e) {
-        // Ignore parse errors
+        _logger.w('Failed to extract slide images from PPTX XML', e);
       }
       return images;
     }
