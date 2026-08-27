@@ -926,12 +926,13 @@ void main() {
       });
 
       group('getCurrentAdherence', () {
-        test('returns 0.0 when no records exist', () async {
-          final adherence = await svc.getCurrentAdherence('student1');
-          expect(adherence, equals(0.0));
+        test('returns success with 0.0 when no records exist', () async {
+          final result = await svc.getCurrentAdherence('student1');
+          expect(result.isSuccess, isTrue);
+          expect(result.data, equals(0.0));
         });
 
-        test('returns average adherence from records', () async {
+        test('returns success with average adherence from records', () async {
           final now = DateTime.now();
           await adherenceRepo.create(PlanAdherenceModel(
             id: 'adh-1', studentId: 'student1', date: now,
@@ -945,18 +946,45 @@ void main() {
             plannedMinutes: 30, actualMinutes: 15,
             adherenceScore: 0.5,
           ));
-          final adherence = await svc.getCurrentAdherence('student1');
-          expect(adherence, closeTo(0.65, 0.01));
+          final result = await svc.getCurrentAdherence('student1');
+          expect(result.isSuccess, isTrue);
+          expect(result.data, closeTo(0.65, 0.01));
+        });
+
+        test('returns failure when repository init fails', () async {
+          final failingAdherenceRepo = _FailingAdherenceRepository();
+          final failingSvc = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: failingAdherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+          );
+          final result = await failingSvc.getCurrentAdherence('student1');
+          expect(result.isFailure, isTrue);
+          expect(result.error, isNotNull);
+        });
+
+        test('returns failure when getAverageAdherence returns failure', () async {
+          final errorAdherenceRepo = _ErrorAdherenceRepository();
+          final errorSvc = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: errorAdherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+          );
+          final result = await errorSvc.getCurrentAdherence('student1');
+          expect(result.isFailure, isTrue);
         });
       });
 
       group('getConsecutiveLowAdherenceDays', () {
-        test('returns 0 when no records exist', () async {
-          final days = await svc.getConsecutiveLowAdherenceDays('student1');
-          expect(days, equals(0));
+        test('returns success with 0 when no records exist', () async {
+          final result = await svc.getConsecutiveLowAdherenceDays('student1');
+          expect(result.isSuccess, isTrue);
+          expect(result.data, equals(0));
         });
 
-        test('returns consecutive low days from records', () async {
+        test('returns success with consecutive low days from records', () async {
           final now = DateTime.now();
           await adherenceRepo.create(PlanAdherenceModel(
             id: 'adh-1', studentId: 'student1',
@@ -968,8 +996,34 @@ void main() {
             date: now.subtract(const Duration(days: 1)),
             adherenceScore: 0.4,
           ));
-          final days = await svc.getConsecutiveLowAdherenceDays('student1');
-          expect(days, greaterThan(0));
+          final result = await svc.getConsecutiveLowAdherenceDays('student1');
+          expect(result.isSuccess, isTrue);
+          expect(result.data, greaterThan(0));
+        });
+
+        test('returns failure when repository init fails', () async {
+          final failingAdherenceRepo = _FailingAdherenceRepository();
+          final failingSvc = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: failingAdherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+          );
+          final result = await failingSvc.getConsecutiveLowAdherenceDays('student1');
+          expect(result.isFailure, isTrue);
+          expect(result.error, isNotNull);
+        });
+
+        test('returns failure when getConsecutiveLowAdherenceDays returns failure', () async {
+          final errorAdherenceRepo = _ErrorAdherenceRepository();
+          final errorSvc = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: errorAdherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+          );
+          final result = await errorSvc.getConsecutiveLowAdherenceDays('student1');
+          expect(result.isFailure, isTrue);
         });
       });
 
@@ -1147,6 +1201,28 @@ class _EmptyMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
+}
+
+class _FailingAdherenceRepository extends PlanAdherenceRepository {
+  @override
+  Future<Result<void>> init() async => throw Exception('init failed');
+
+  @override
+  Future<Result<double>> getAverageAdherence(String studentId) async => Result.failure('failed');
+
+  @override
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async => Result.failure('failed');
+}
+
+class _ErrorAdherenceRepository extends PlanAdherenceRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<double>> getAverageAdherence(String studentId) async => Result.failure('getAverageAdherence failed');
+
+  @override
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId, {double threshold = 0.5}) async => Result.failure('getConsecutiveLowAdherenceDays failed');
 }
 
 class _FailingMasteryGraphRepository extends MasteryGraphRepository {

@@ -654,7 +654,12 @@ class PlannerService {
       final actionResult = await pendingActionRepo.get(actionId);
       final action = actionResult.data;
       if (action == null) return Result.success(false);
-      final executed = await actionExecutor.execute(action);
+      final executedResult = await actionExecutor.execute(action);
+      if (executedResult.isFailure) {
+        _logger.w('Failed to execute pending action: ${executedResult.error}');
+        return Result.failure(executedResult.error);
+      }
+      final executed = executedResult.data ?? false;
       if (executed) {
         await pendingActionRepo.markCompleted(actionId);
       }

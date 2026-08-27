@@ -39,7 +39,10 @@ class FakePlannerService extends PlannerService {
   String? lastSessionId;
   double? lastAdjustmentFactor;
   bool scheduleResult = true;
+  bool scheduleShouldFail = false;
+  String scheduleFailureMessage = 'schedule failed result';
   bool cancelResult = true;
+  bool cancelShouldFail = false;
   bool regenerateResult = true;
   bool throwOnSchedule = false;
   bool throwOnCancel = false;
@@ -59,6 +62,7 @@ class FakePlannerService extends PlannerService {
     int durationMinutes = 30,
   }) async {
     if (throwOnSchedule) throw Exception('Schedule failed');
+    if (scheduleShouldFail) return Result.failure(scheduleFailureMessage);
     scheduleCalled = true;
     lastTopicId = topicId;
     lastTopicTitle = topicTitle;
@@ -71,6 +75,7 @@ class FakePlannerService extends PlannerService {
   @override
   Future<Result<bool>> cancelLesson(String sessionId) async {
     if (throwOnCancel) throw Exception('Cancel failed');
+    if (cancelShouldFail) return Result.failure('cancel failed');
     cancelCalled = true;
     lastSessionId = sessionId;
     return Result.success(cancelResult);
@@ -118,10 +123,11 @@ void main() {
     });
 
     group('execute', () {
-      test('returns false for unknown action type', () async {
+      test('returns failure for unknown action type', () async {
         final action = createAction(actionType: 'unknown');
         final result = await executor.execute(action);
-        expect(result, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Unknown action type'));
       });
 
       group('schedule', () {
@@ -137,7 +143,8 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           expect(plannerService.scheduleCalled, isTrue);
           expect(plannerService.lastTopicId, 'topic-1');
           expect(plannerService.lastTopicTitle, 'Algebra');
@@ -155,11 +162,12 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           expect(plannerService.lastDurationMinutes, 30);
         });
 
-        test('returns false when topicId is missing', () async {
+        test('returns failure when topicId is missing', () async {
           final action = createAction(
             actionType: 'schedule',
             payload: {
@@ -168,10 +176,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when subjectId is missing', () async {
+        test('returns failure when subjectId is missing', () async {
           final action = createAction(
             actionType: 'schedule',
             payload: {
@@ -180,10 +188,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when scheduledTime is missing', () async {
+        test('returns failure when scheduledTime is missing', () async {
           final action = createAction(
             actionType: 'schedule',
             payload: {
@@ -192,10 +200,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when scheduledTime is invalid', () async {
+        test('returns failure when scheduledTime is invalid', () async {
           final action = createAction(
             actionType: 'schedule',
             payload: {
@@ -205,10 +213,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when plannerService returns false', () async {
+        test('returns success with false when plannerService returns false', () async {
           plannerService.scheduleResult = false;
           final action = createAction(
             actionType: 'schedule',
@@ -219,10 +227,26 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isFalse);
         });
 
-        test('returns false when plannerService throws', () async {
+        test('propagates failure when plannerService returns Result.failure', () async {
+          plannerService.scheduleShouldFail = true;
+          final action = createAction(
+            actionType: 'schedule',
+            payload: {
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-01T10:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result.isFailure, isTrue);
+          expect(result.error, contains('schedule failed result'));
+        });
+
+        test('returns failure when plannerService throws', () async {
           plannerService.throwOnSchedule = true;
           final action = createAction(
             actionType: 'schedule',
@@ -233,7 +257,7 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
       });
 
@@ -249,7 +273,8 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           expect(plannerService.cancelCalled, isFalse);
           expect(plannerService.scheduleCalled, isTrue);
           expect(plannerService.lastDurationMinutes, 45);
@@ -269,14 +294,15 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           expect(plannerService.cancelCalled, isTrue);
           expect(plannerService.lastSessionId, 'session-1');
           expect(plannerService.scheduleCalled, isTrue);
           expect(plannerService.lastDurationMinutes, 60);
         });
 
-        test('returns false when topicId is missing in reschedule', () async {
+        test('returns failure when topicId is missing in reschedule', () async {
           final action = createAction(
             actionType: 'reschedule',
             payload: {
@@ -286,10 +312,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when scheduledTime is invalid in reschedule', () async {
+        test('returns failure when scheduledTime is invalid in reschedule', () async {
           final action = createAction(
             actionType: 'reschedule',
             payload: {
@@ -300,10 +326,10 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when cancelLesson throws', () async {
+        test('returns failure when cancelLesson throws', () async {
           plannerService.throwOnCancel = true;
           final action = createAction(
             actionType: 'reschedule',
@@ -315,10 +341,26 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when scheduleLesson throws in reschedule', () async {
+        test('returns failure when cancelLesson returns Result.failure', () async {
+          plannerService.cancelShouldFail = true;
+          final action = createAction(
+            actionType: 'reschedule',
+            payload: {
+              'sessionId': 'session-1',
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-02T14:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result.isFailure, isTrue);
+          expect(result.error, contains('cancel failed'));
+        });
+
+        test('returns failure when scheduleLesson throws in reschedule', () async {
           plannerService.throwOnSchedule = true;
           final action = createAction(
             actionType: 'reschedule',
@@ -330,7 +372,22 @@ void main() {
             },
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
+        });
+
+        test('propagates failure when scheduleLesson returns Result.failure in reschedule', () async {
+          plannerService.scheduleShouldFail = true;
+          final action = createAction(
+            actionType: 'reschedule',
+            payload: {
+              'sessionId': 'session-1',
+              'topicId': 'topic-1',
+              'subjectId': 'subject-1',
+              'scheduledTime': '2026-06-02T14:00:00.000',
+            },
+          );
+          final result = await executor.execute(action);
+          expect(result.isFailure, isTrue);
         });
       });
 
@@ -341,22 +398,23 @@ void main() {
             payload: {'adjustmentFactor': 0.8},
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
           expect(orch.regenerateCalled, isTrue);
           expect(orch.lastAdjustmentFactor, 0.8);
         });
 
-        test('returns false when adjustmentFactor is missing', () async {
+        test('returns failure when adjustmentFactor is missing', () async {
           final action = createAction(
             actionType: 'planAdjustment',
             payload: {},
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
         });
 
-        test('returns false when suggestRegeneration fails', () async {
+        test('returns failure when suggestRegeneration fails', () async {
           final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
           orch.suggestFailure = true;
           final action = createAction(
@@ -364,7 +422,8 @@ void main() {
             payload: {'adjustmentFactor': 0.8},
           );
           final result = await executor.execute(action);
-          expect(result, isFalse);
+          expect(result.isFailure, isTrue);
+          expect(result.error, contains('suggest failed'));
         });
 
         test('executes plan adjustment with zero factor', () async {
@@ -373,7 +432,8 @@ void main() {
             payload: {'adjustmentFactor': 0.0},
           );
           final result = await executor.execute(action);
-          expect(result, isTrue);
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isTrue);
           final orch = plannerService.planOrchestrator as _FakePlanAdherenceOrchestrator;
           expect(orch.regenerateCalled, isTrue);
           expect(orch.lastAdjustmentFactor, 0.0);
