@@ -97,28 +97,43 @@ class _FakeSourceRepo extends SourceRepository {
   }
 
   @override
-  Future<List<Source>> getBySubject(String subjectId) async {
-    return _sources.where((s) => s.subjectId == subjectId).toList();
+  Future<Result<List<Source>>> getBySubject(String subjectId) async {
+    return Result.success(_sources.where((s) => s.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<Source>> getByTopic(String topicId) async {
-    return _sources.where((s) => s.topicId == topicId).toList();
+  Future<Result<List<Source>>> getByTopic(String topicId) async {
+    return Result.success(_sources.where((s) => s.topicId == topicId).toList());
   }
 
   @override
-  Future<List<Source>> getByStudent(String studentId) async {
-    return _sources.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<Source>>> getByStudent(String studentId) async {
+    return Result.success(_sources.where((s) => s.studentId == studentId).toList());
   }
 
   @override
-  Future<List<Source>> getByType(String sourceType) async {
-    return _sources.where((s) => s.type.name == sourceType).toList();
+  Future<Result<List<Source>>> getByType(String sourceType) async {
+    return Result.success(_sources.where((s) => s.type.name == sourceType).toList());
   }
 
   @override
-  Future<List<Source>> getByStatus(ProcessingStatus status) async {
-    return _sources.where((s) => s.statusEnum == status).toList();
+  Future<Result<List<Source>>> getByStatus(ProcessingStatus status) async {
+    return Result.success(_sources.where((s) => s.statusEnum == status).toList());
+  }
+
+  @override
+  Future<Result<List<Source>>> getPending() async {
+    return Result.success(_sources.where((s) => s.statusEnum == ProcessingStatus.pending).toList());
+  }
+
+  @override
+  Future<Result<List<Source>>> getFailed() async {
+    return Result.success(_sources.where((s) => s.statusEnum == ProcessingStatus.failed).toList());
+  }
+
+  @override
+  Future<Result<List<Source>>> getCompleted() async {
+    return Result.success(_sources.where((s) => s.statusEnum == ProcessingStatus.completed).toList());
   }
 }
 
@@ -409,8 +424,9 @@ void main() {
 
         final repo = container.read(sourceRepositoryProvider);
         final mathSources = await repo.getBySubject('math');
-        expect(mathSources, hasLength(1));
-        expect(mathSources.first.id, 's1');
+        expect(mathSources.isSuccess, isTrue);
+        expect(mathSources.data, hasLength(1));
+        expect(mathSources.data!.first.id, 's1');
       });
 
       test('behavioral: overridden repo filters by type', () async {
@@ -433,8 +449,9 @@ void main() {
 
         final repo = container.read(sourceRepositoryProvider);
         final pdfSources = await repo.getByType('pdf');
-        expect(pdfSources, hasLength(1));
-        expect(pdfSources.first.id, 's1');
+        expect(pdfSources.isSuccess, isTrue);
+        expect(pdfSources.data, hasLength(1));
+        expect(pdfSources.data!.first.id, 's1');
       });
 
       test('handles error from repo getAll', () async {
