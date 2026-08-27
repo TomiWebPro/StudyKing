@@ -628,9 +628,37 @@ void main() {
 
   group('ExamSessionService.getSavedExamResults', () {
     test('returns success with list (empty when no data)', () async {
+      final box = await Hive.openBox('exam_results');
+      await box.clear();
       final result = await ExamSessionService.getSavedExamResults();
       expect(result.isSuccess, isTrue);
       expect(result.data, isA<List<Map<String, dynamic>>>());
+      expect(result.data, isEmpty);
+      await box.clear();
+    });
+
+    test('returns failure when Hive box contains corrupted data', () async {
+      final box = await Hive.openBox('exam_results');
+      await box.clear();
+      await box.put('corrupt', 'not_a_map');
+      final result = await ExamSessionService.getSavedExamResults();
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotNull);
+      expect(result.data, isNull);
+      await box.clear();
+    });
+
+    test('failure Result is distinguishable from empty success (not [] )', () async {
+      final box = await Hive.openBox('exam_results');
+      await box.clear();
+      await box.put('bad', 12345);
+      final failureResult = await ExamSessionService.getSavedExamResults();
+      expect(failureResult.isFailure, isTrue);
+      final successEmpty = Result.success(<Map<String, dynamic>>[]);
+      expect(successEmpty.isSuccess, isTrue);
+      expect(failureResult.isSuccess, isFalse);
+      expect(successEmpty.isFailure, isFalse);
+      await box.clear();
     });
 
     test('finishExam failure propagates via Result.capture logging', () async {
