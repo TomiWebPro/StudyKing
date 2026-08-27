@@ -495,7 +495,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   Future<String> _endLessonInternal() async {
     if (_manager == null) return '';
     _cancelClosingGraceTimer();
-    final summary = await _manager!.generateSummary();
+    final summaryResult = await _manager!.generateSummary();
+    if (summaryResult.isFailure) {
+      _logger.w('Failed to generate summary: ${summaryResult.error}');
+    }
+    final summary = summaryResult.data ?? '';
     await _tutorService.endLesson();
     _timer?.cancel();
     return summary;

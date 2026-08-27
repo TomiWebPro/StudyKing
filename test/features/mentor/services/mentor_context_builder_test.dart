@@ -144,12 +144,13 @@ void main() {
       test('includes stats and accuracy in output', () async {
         final builder = _createBuilder();
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Total attempts: 10'));
-        expect(result, contains('Correct attempts: 7'));
-        expect(result, contains('Accuracy: 70'));
-        expect(result, contains('Topics studied: 3'));
-        expect(result, contains('Weekly activity: 5'));
-        expect(result, contains('Total study time: 2.5'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Total attempts: 10'));
+        expect(result.data, contains('Correct attempts: 7'));
+        expect(result.data, contains('Accuracy: 70'));
+        expect(result.data, contains('Topics studied: 3'));
+        expect(result.data, contains('Weekly activity: 5'));
+        expect(result.data, contains('Total study time: 2.5'));
       });
 
       test('includes weak topics when present', () async {
@@ -165,8 +166,9 @@ void main() {
         ]);
         final builder = _createBuilder(masteryService: mastery);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Weak topics'));
-        expect(result, contains('topic_weak'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Weak topics'));
+        expect(result.data, contains('topic_weak'));
       });
 
       test('includes plan info when plan exists', () async {
@@ -199,8 +201,9 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Plan exists'));
-        expect(result, contains('day 1 of 7'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Plan exists'));
+        expect(result.data, contains('day 1 of 7'));
       });
 
       test('includes upcoming lessons', () async {
@@ -217,8 +220,9 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Upcoming'));
-        expect(result, contains('Algebra'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Upcoming'));
+        expect(result.data, contains('Algebra'));
       });
 
       test('handles empty states gracefully', () async {
@@ -234,17 +238,19 @@ void main() {
           masteryService: mastery,
         );
         final result = await builder.buildContextPrompt();
-        expect(result, isNotEmpty);
-        expect(result, contains('Current student context'));
-        expect(result, contains('Total attempts: 10'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotEmpty);
+        expect(result.data, contains('Current student context'));
+        expect(result.data, contains('Total attempts: 10'));
       });
 
-      test('propagates provider errors when tracker throws', () async {
+      test('returns failure Result when tracker throws', () async {
         final failingTracker = _FakeProgressTracker();
         failingTracker.setStats({'throw': true});
 
         final builder = _createBuilder(progressTracker: failingTracker);
-        expect(() => builder.buildContextPrompt(), throwsA(isA<Exception>()));
+        final result = await builder.buildContextPrompt();
+        expect(result.isFailure, isTrue);
       });
 
       test('includes plan adherence when deviation exists', () async {
@@ -282,7 +288,8 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Plan adherence'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Plan adherence'));
       });
 
       test('includes active roadmaps when present', () async {
@@ -313,8 +320,9 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Active roadmaps'));
-        expect(result, contains('Learn Algebra'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Active roadmaps'));
+        expect(result.data, contains('Learn Algebra'));
       });
 
       test('includes pending actions when present', () async {
@@ -330,8 +338,9 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Pending actions'));
-        expect(result, contains('Algebra review'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Pending actions'));
+        expect(result.data, contains('Algebra review'));
       });
     });
 
@@ -344,9 +353,10 @@ void main() {
         ]);
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Missed lessons'));
-        expect(result, contains('Algebra'));
-        expect(result, contains('Geometry'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Missed lessons'));
+        expect(result.data, contains('Algebra'));
+        expect(result.data, contains('Geometry'));
       });
 
       test('limits missed lessons display to 3', () async {
@@ -358,8 +368,9 @@ void main() {
         )));
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Missed lessons: 5'));
-        expect(result.contains('Topic 3'), isFalse);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Missed lessons: 5'));
+        expect(result.data!.contains('Topic 3'), isFalse);
       });
 
       test('uses topicId fallback when tutorMetadata is null', () async {
@@ -370,7 +381,8 @@ void main() {
         ]);
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('algebra-101'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('algebra-101'));
       });
     });
 
@@ -381,7 +393,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, contains("Today's study time: 30 minutes"));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains("Today's study time: 30 minutes"));
       });
     });
 
@@ -398,7 +411,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('day study streak'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('day study streak'));
       });
 
       test('shows good consistency for 3-6 consecutive days', () async {
@@ -412,7 +426,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('consecutive study days'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('consecutive study days'));
       });
 
       test('does not show streak for fewer than 3 consecutive days', () async {
@@ -423,8 +438,9 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, isNot(contains('day study streak')));
-        expect(result, isNot(contains('consecutive study days')));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('day study streak')));
+        expect(result.data, isNot(contains('consecutive study days')));
       });
     });
 
@@ -439,7 +455,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('after 10 PM'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('after 10 PM'));
       });
 
       test('does not warn for daytime sessions', () async {
@@ -452,7 +469,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, isNot(contains('WARNING')));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('WARNING')));
       });
     });
 
@@ -467,7 +485,8 @@ void main() {
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Sessions today: 2'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Sessions today: 2'));
       });
     });
 
@@ -495,7 +514,8 @@ void main() {
 
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Low adherence for 3 consecutive days'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Low adherence for 3 consecutive days'));
       });
     });
 
@@ -564,9 +584,10 @@ void main() {
         planner.setPlan(planWithGoals());
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, contains('Syllabus goals'));
-        expect(result, contains('Math'));
-        expect(result, contains('Science'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Syllabus goals'));
+        expect(result.data, contains('Math'));
+        expect(result.data, contains('Science'));
         expect(builder.currentSyllabusContext, contains('Math'));
       });
 
@@ -588,7 +609,8 @@ void main() {
         ));
         final builder = _createBuilder(plannerService: planner);
         final result = await builder.buildContextPrompt();
-        expect(result, isNot(contains('Syllabus goals')));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Syllabus goals')));
         expect(builder.currentSyllabusContext, isEmpty);
       });
     });

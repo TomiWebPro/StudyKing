@@ -111,7 +111,8 @@ void main() {
         chunks: [SourceChunk(chunkIndex: 0, text: 'content')],
         modelId: 'm',
       );
-      expect(result, 'summary');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 'summary');
     });
 
     test('consolidates multiple chunk summaries', () async {
@@ -126,8 +127,51 @@ void main() {
         ],
         modelId: 'm',
       );
-      expect(result, isNotEmpty);
-      expect(result, 'summary');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotEmpty);
+      expect(result.data, 'summary');
+    });
+
+    test('returns failure when LLM fails for single chunk', () async {
+      final failing = _FailingLlmService();
+      final processor = ChunkedContentProcessor(
+        llmService: failing,
+        localeName: 'en',
+      );
+      final result = await processor.generateConsolidatedSummary(
+        chunks: [SourceChunk(chunkIndex: 0, text: 'content')],
+        modelId: 'm',
+      );
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns failure when LLM fails for multiple chunks', () async {
+      final failing = _FailingLlmService();
+      final processor = ChunkedContentProcessor(
+        llmService: failing,
+        localeName: 'en',
+      );
+      final result = await processor.generateConsolidatedSummary(
+        chunks: [
+          SourceChunk(chunkIndex: 0, text: 'one'),
+          SourceChunk(chunkIndex: 1, text: 'two'),
+        ],
+        modelId: 'm',
+      );
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns success with empty string for empty chunks', () async {
+      final processor = ChunkedContentProcessor(
+        llmService: FakeLlmService('summary'),
+        localeName: 'en',
+      );
+      final result = await processor.generateConsolidatedSummary(
+        chunks: [],
+        modelId: 'm',
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data, '');
     });
   });
 

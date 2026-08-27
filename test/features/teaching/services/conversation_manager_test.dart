@@ -461,29 +461,43 @@ void main() {
       test('returns summary from LLM service', () async {
         await manager.initialize();
 
-        final summary = await manager.generateSummary();
+        final result = await manager.generateSummary();
 
-        expect(summary, equals('Lesson summary mock'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, equals('Lesson summary mock'));
       });
 
-      test('returns empty string when LLM service fails', () async {
+      test('returns failure Result when LLM service fails', () async {
         await manager.initialize();
         llmService.shouldThrowOnChat = true;
 
-        final summary = await manager.generateSummary();
+        final result = await manager.generateSummary();
 
-        expect(summary, equals(''));
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
       });
 
       test('recovers after LLM error on subsequent call', () async {
         await manager.initialize();
         llmService.shouldThrowOnChat = true;
-        final firstSummary = await manager.generateSummary();
-        expect(firstSummary, equals(''));
+        final firstResult = await manager.generateSummary();
+        expect(firstResult.isFailure, isTrue);
 
         llmService.shouldThrowOnChat = false;
-        final secondSummary = await manager.generateSummary();
-        expect(secondSummary, equals('Lesson summary mock'));
+        final secondResult = await manager.generateSummary();
+        expect(secondResult.isSuccess, isTrue);
+        expect(secondResult.data, equals('Lesson summary mock'));
+      });
+
+      test('failure Result distinguishable from empty success', () async {
+        await manager.initialize();
+        llmService.shouldThrowOnChat = true;
+        final failure = await manager.generateSummary();
+        expect(failure.isFailure, isTrue);
+        // empty string success would be isSuccess with ''
+        final emptySuccess = Result<String>.success('');
+        expect(emptySuccess.isSuccess, isTrue);
+        expect(failure.isFailure, isNot(equals(emptySuccess.isFailure)));
       });
     });
 

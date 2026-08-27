@@ -12,6 +12,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/data/models/learning_preference_model.dart';
@@ -463,25 +464,33 @@ class ConversationManager {
     return (raw * adaptivePace).clamp(0.0, 1.0);
   }
 
-  Future<String> generateSummary() async {
-    final entry = _prompts.summary(
-      topicTitle: topicTitle,
-      exerciseCount: exerciseCount,
-      correctCount: correctCount,
-      confidenceRating: confidenceRating,
-      adaptivePace: adaptivePace,
-    );
+  Future<Result<String>> generateSummary() async {
+    try {
+      final entry = _prompts.summary(
+        topicTitle: topicTitle,
+        exerciseCount: exerciseCount,
+        correctCount: correctCount,
+        confidenceRating: confidenceRating,
+        adaptivePace: adaptivePace,
+      );
 
-    final result = await _llmService.chat(
-      message: entry.userPrompt,
-      modelId: _modelId,
-      systemPrompt: entry.systemPrompt,
-      feature: 'teaching_summary',
-    );
-    if (result.isFailure) return '';
-    final summary = result.data!;
-    totalTokensUsed += summary.length ~/ 4;
-    return summary;
+      final result = await _llmService.chat(
+        message: entry.userPrompt,
+        modelId: _modelId,
+        systemPrompt: entry.systemPrompt,
+        feature: 'teaching_summary',
+      );
+      if (result.isFailure) {
+        _logger.w('Failed to generate summary: ${result.error}');
+        return Result.failure(result.error ?? 'Failed to generate summary');
+      }
+      final summary = result.data!;
+      totalTokensUsed += summary.length ~/ 4;
+      return Result.success(summary);
+    } catch (e, stack) {
+      _logger.w('Failed to generate summary', e, stack);
+      return Result.failure(e.toString());
+    }
   }
 
   TutorSession toSession() {
