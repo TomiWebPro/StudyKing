@@ -182,12 +182,16 @@ class PlanAdherenceOrchestrator {
   /// Provides per-day real-time adherence feedback after a session.
   /// Returns a message like "You studied 20min today vs 45min planned (44%).
   /// Want to adjust tomorrow's target?"
-  Future<String?> getDailyAdherenceFeedback(String studentId) async {
+  Future<Result<String?>> getDailyAdherenceFeedback(String studentId) async {
     try {
       await _planRepository.init();
       final planResult = await _planRepository.loadPlan(studentId);
+      if (planResult.isFailure) {
+        _logger.w('getDailyAdherenceFeedback failed', planResult.error);
+        return Result.failure(planResult.error);
+      }
       final plan = planResult.data;
-      if (plan == null) return null;
+      if (plan == null) return Result.success(null);
 
       await _adherenceRepository.init();
       final today = DateTime.now();
@@ -205,6 +209,10 @@ class PlanAdherenceOrchestrator {
       }
 
       final todayResult = await _adherenceRepository.getByStudent(studentId);
+      if (todayResult.isFailure) {
+        _logger.w('getDailyAdherenceFeedback failed', todayResult.error);
+        return Result.failure(todayResult.error);
+      }
       final todayRecords = todayResult.data ?? [];
       int actualMinutes = 0;
       int actualQuestions = 0;
@@ -216,7 +224,7 @@ class PlanAdherenceOrchestrator {
         }
       }
 
-      if (plannedMinutes == 0 && plannedQuestions == 0) return null;
+      if (plannedMinutes == 0 && plannedQuestions == 0) return Result.success(null);
 
       final minRatio = plannedMinutes > 0
           ? actualMinutes / plannedMinutes
@@ -227,21 +235,21 @@ class PlanAdherenceOrchestrator {
       final overallRatio = (minRatio * 0.6 + qRatio * 0.4).clamp(0.0, 1.5);
 
       if (overallRatio < 0.3) {
-        return _l10n?.adherenceLowToday(actualMinutes, plannedMinutes)
+        return Result.success(_l10n?.adherenceLowToday(actualMinutes, plannedMinutes)
             ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
-               'Consider redistributing the remaining workload.';
+               'Consider redistributing the remaining workload.');
       } else if (overallRatio < 0.7) {
-        return _l10n?.adherencePartialToday(actualMinutes, plannedMinutes)
+        return Result.success(_l10n?.adherencePartialToday(actualMinutes, plannedMinutes)
             ?? 'You studied $actualMinutes min today vs $plannedMinutes min planned. '
-               'Try to catch up with the remaining topics.';
+               'Try to catch up with the remaining topics.');
       } else if (overallRatio > 1.2) {
-        return _l10n?.adherenceExceededToday(actualMinutes, plannedMinutes)
-            ?? 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.';
+        return Result.success(_l10n?.adherenceExceededToday(actualMinutes, plannedMinutes)
+            ?? 'Great work! You studied $actualMinutes min vs $plannedMinutes min planned.');
       }
-      return null;
+      return Result.success(null);
     } catch (e) {
       _logger.w('getDailyAdherenceFeedback failed', e);
-      return null;
+      return Result.failure(e.toString());
     }
   }
 

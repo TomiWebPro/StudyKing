@@ -326,7 +326,7 @@ void main() {
     });
 
     group('error-state: repository failures', () {
-      test('getMistakesFromSession handles attemptRepo failure', () async {
+      test('getMistakesFromSession propagates attemptRepo failure', () async {
         final failingRepo = _FailingAttemptRepository();
         final localService = MistakeReviewService(
           attemptRepo: failingRepo,
@@ -336,8 +336,7 @@ void main() {
           studentId: 's1',
           subjectId: 'sub1',
         );
-        expect(mistakes.isSuccess, isTrue);
-        expect(mistakes.data, isEmpty);
+        expect(mistakes.isFailure, isTrue);
       });
 
       test('getMistakesFromSession handles questionRepo failure', () async {
@@ -363,7 +362,7 @@ void main() {
         expect(mistakes.data, isEmpty);
       });
 
-      test('getPendingMistakes handles attemptRepo failure', () async {
+      test('getPendingMistakes propagates attemptRepo failure', () async {
         final failingRepo = _FailingAttemptRepository();
         final localService = MistakeReviewService(
           attemptRepo: failingRepo,
@@ -373,8 +372,17 @@ void main() {
           studentId: 's1',
           subjectId: 'sub1',
         );
-        expect(pending.isSuccess, isTrue);
-        expect(pending.data, isEmpty);
+        expect(pending.isFailure, isTrue);
+      });
+
+      test('isQuestionCorrected propagates attemptRepo failure', () async {
+        final failingRepo = _FailingAttemptRepository();
+        final localService = MistakeReviewService(
+          attemptRepo: failingRepo,
+          questionRepo: questionRepo,
+        );
+        final corrected = await localService.isQuestionCorrected('q1');
+        expect(corrected.isFailure, isTrue);
       });
     });
   });

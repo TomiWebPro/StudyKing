@@ -78,6 +78,20 @@ class _FakeSubjectRepository extends SubjectRepository {
   }
 }
 
+class _FailingSubjectRepository extends SubjectRepository {
+  final bool failOnGetAll;
+  _FailingSubjectRepository({this.failOnGetAll = false});
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<Subject>>> getAll() async {
+    if (failOnGetAll) return Result.failure('getAll failed');
+    return Result.success([]);
+  }
+}
+
 class TestSubjectAdapter extends TypeAdapter<Subject> {
   @override
   final int typeId = 11;
@@ -1094,11 +1108,10 @@ void main() {
     });
 
     group('Fallback behavior - uninitialized box', () {
-      test('getWithTopics returns empty list when box is not initialized', () async {
+      test('getWithTopics propagates failure when box is not initialized', () async {
         final repo = SubjectRepository();
         final result = await repo.getWithTopics(['topic-1']);
-        expect(result.isSuccess, isTrue);
-        expect(result.data, isEmpty);
+        expect(result.isFailure, isTrue);
       });
 
       test('addTopicToSubject returns success when box is not initialized', () async {
@@ -1113,9 +1126,36 @@ void main() {
         expect(result.isSuccess, isTrue);
       });
 
-      test('getByCode returns success(null) when box is not initialized', () async {
+      test('getByCode propagates failure when box is not initialized', () async {
         final repo = SubjectRepository();
         final result = await repo.getByCode('CODE-1');
+        expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('Failure propagation - inner Result', () {
+      test('getWithTopics propagates failure from getAll and logs', () async {
+        final repo = _FailingSubjectRepository(failOnGetAll: true);
+        final result = await repo.getWithTopics(['topic-1']);
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getWithTopics succeeds with empty list when inner succeeds empty', () async {
+        final repo = _FailingSubjectRepository(failOnGetAll: false);
+        final result = await repo.getWithTopics(['topic-1']);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getByCode propagates failure from getAll', () async {
+        final repo = _FailingSubjectRepository(failOnGetAll: true);
+        final result = await repo.getByCode('CODE-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getByCode succeeds with null when inner succeeds but no match', () async {
+        final repo = _FailingSubjectRepository(failOnGetAll: false);
+        final result = await repo.getByCode('MISSING');
         expect(result.isSuccess, isTrue);
         expect(result.data, isNull);
       });

@@ -18,6 +18,16 @@ class _FakeAttemptRepo extends AttemptRepository {
   @override
   Future<Result<void>> init() async => Result.success(null);
 
+  @override
+  Future<Result<void>> save(String key, StudentAttempt item) async {
+    _attempts.removeWhere((a) => a.id == item.id);
+    _attempts.add(item);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> put(String key, StudentAttempt item) async => save(key, item);
+
   void addAttempt(StudentAttempt attempt) {
     _attempts.add(attempt);
   }

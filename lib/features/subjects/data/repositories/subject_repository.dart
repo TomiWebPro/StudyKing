@@ -20,6 +20,10 @@ class SubjectRepository extends Repository<Subject> {
   Future<Result<List<Subject>>> getWithTopics(List<String> topicIds) async {
     try {
       final getAllResult = await getAll();
+      if (getAllResult.isFailure) {
+        _logger.w('Failed to get subjects with topics', getAllResult.error);
+        return Result.failure(getAllResult.error);
+      }
       final subjects = getAllResult.data ?? [];
       final filtered = subjects.where((s) {
         return s.topicIds.any((id) => topicIds.contains(id));
@@ -73,6 +77,10 @@ class SubjectRepository extends Repository<Subject> {
   Future<Result<Subject?>> getByCode(String code) async {
     try {
       final getAllResult = await getAll();
+      if (getAllResult.isFailure) {
+        _logger.w('Failed to get subject by code', getAllResult.error);
+        return Result.failure(getAllResult.error);
+      }
       final subjects = getAllResult.data ?? [];
       return Result.success(
           subjects.where((s) => s.code == code).firstOrNull);

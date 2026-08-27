@@ -40,6 +40,10 @@ class MistakeReviewService {
         studentId,
         subjectId,
       );
+      if (allAttemptsResult.isFailure) {
+        _logger.w('Error getting mistakes from session', allAttemptsResult.error);
+        return Result.failure(allAttemptsResult.error);
+      }
       final allAttempts = allAttemptsResult.data ?? [];
 
       var incorrectAttempts = allAttempts.where((a) => !a.isCorrect).toList();
@@ -83,6 +87,10 @@ class MistakeReviewService {
         studentId,
         subjectId,
       );
+      if (allAttemptsResult.isFailure) {
+        _logger.w('Error getting pending mistakes', allAttemptsResult.error);
+        return Result.failure(allAttemptsResult.error);
+      }
       final allAttempts = allAttemptsResult.data ?? [];
 
       final questionLastAttempts = <String, List<StudentAttempt>>{};
@@ -124,6 +132,10 @@ class MistakeReviewService {
   Future<Result<bool>> isQuestionCorrected(String questionId) async {
     try {
       final attemptsResult = await _attemptRepo.getByQuestion(questionId);
+      if (attemptsResult.isFailure) {
+        _logger.w('Error checking question corrected status', attemptsResult.error);
+        return Result.failure(attemptsResult.error);
+      }
       final attempts = attemptsResult.data ?? [];
       return Result.success(attempts.any((a) => a.isCorrect));
     } catch (e) {

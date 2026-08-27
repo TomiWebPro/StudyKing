@@ -142,10 +142,19 @@ class LongTermMemory {
     await _pendingActionRepo.create(action);
   }
 
-  Future<List<PendingActionModel>> getPendingActionItems(
+  Future<Result<List<PendingActionModel>>> getPendingActionItems(
       String studentId) async {
-    final result = await _pendingActionRepo.getPending(studentId);
-    return result.data ?? [];
+    try {
+      final result = await _pendingActionRepo.getPending(studentId);
+      if (result.isFailure) {
+        _logger.w('Failed to get pending action items', result.error);
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data ?? []);
+    } catch (e) {
+      _logger.w('Failed to get pending action items', e);
+      return Result.failure(e.toString());
+    }
   }
 
   Future<List<String>> getRecentStudentSummaries(
@@ -167,7 +176,11 @@ class LongTermMemory {
   Future<String> buildMemoryContext(String studentId) async {
     final profile = getStudentProfile(studentId);
     final recentSummaries = await getRecentStudentSummaries(studentId);
-    final pendingItems = await getPendingActionItems(studentId);
+    final pendingResult = await getPendingActionItems(studentId);
+    final pendingItems = pendingResult.isSuccess ? pendingResult.data! : <PendingActionModel>[];
+    if (pendingResult.isFailure) {
+      _logger.w('Failed to get pending action items for memory context', pendingResult.error);
+    }
 
     final buffer = StringBuffer();
     buffer.writeln('=== LONG-TERM MEMORY CONTEXT ===');

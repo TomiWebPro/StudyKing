@@ -25,14 +25,21 @@ class FocusPracticeService {
         _sessionRepository = sessionRepository,
         _questionRepository = questionRepository;
 
-  Future<List<Question>> getDueQuestions({
+  Future<Result<List<Question>>> getDueQuestions({
     required String studentId,
     List<String>? subjectIds,
     int limit = 20,
   }) async {
     try {
       final dueResult = await _srService.getQuestionsDueForReview();
-      if (dueResult.isFailure || dueResult.data == null) return [];
+      if (dueResult.isFailure) {
+        _logger.w('Failed to get due questions: ${dueResult.error}');
+        return Result.failure(dueResult.error);
+      }
+      if (dueResult.data == null) {
+        _logger.w('Due questions data is null');
+        return Result.failure('FocusPracticeService.getDueQuestions: data is null');
+      }
 
       var dueQuestions = dueResult.data!;
 
@@ -41,7 +48,10 @@ class FocusPracticeService {
       }
 
       final weakResult = await _masteryGraphService.getWeakTopics(studentId);
-      if (weakResult.isSuccess && weakResult.data != null && weakResult.data!.isNotEmpty) {
+      if (weakResult.isFailure) {
+        _logger.w('Failed to get weak topics for prioritization: ${weakResult.error}');
+        dueQuestions.shuffle();
+      } else if (weakResult.isSuccess && weakResult.data != null && weakResult.data!.isNotEmpty) {
         final weakTopicIds = weakResult.data!.map((s) => s.topicId).toSet();
         final weakQuestions = dueQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
         final otherQuestions = dueQuestions.where((q) => !weakTopicIds.contains(q.topicId)).toList();
@@ -52,26 +62,34 @@ class FocusPracticeService {
         dueQuestions.shuffle();
       }
 
-      return dueQuestions.take(limit).toList();
+      return Result.success(dueQuestions.take(limit).toList());
     } catch (e) {
       _logger.w('Failed to get due questions for focus practice', e);
-      return [];
+      return Result.failure('FocusPracticeService.getDueQuestions: $e');
     }
   }
 
-  Future<List<Question>> getWeakAreaQuestions({
+  Future<Result<List<Question>>> getWeakAreaQuestions({
     required String studentId,
     List<String>? subjectIds,
     int limit = 20,
   }) async {
     try {
       final weakResult = await _masteryGraphService.getWeakTopics(studentId);
-      if (weakResult.isFailure || weakResult.data == null || weakResult.data!.isEmpty) {
-        return [];
+      if (weakResult.isFailure) {
+        _logger.w('Failed to get weak topics: ${weakResult.error}');
+        return Result.failure(weakResult.error);
+      }
+      if (weakResult.data == null || weakResult.data!.isEmpty) {
+        return Result.success([]);
       }
 
       final weakTopicIds = weakResult.data!.map((s) => s.topicId).toSet();
       final allResult = await _questionRepository.getAll();
+      if (allResult.isFailure) {
+        _logger.w('Failed to get questions for weak areas: ${allResult.error}');
+        return Result.failure(allResult.error);
+      }
       final allQuestions = allResult.data ?? [];
 
       var filtered = allQuestions.where((q) => weakTopicIds.contains(q.topicId)).toList();
@@ -80,41 +98,50 @@ class FocusPracticeService {
       }
 
       filtered.shuffle();
-      return filtered.take(limit).toList();
+      return Result.success(filtered.take(limit).toList());
     } catch (e) {
       _logger.w('Failed to get weak area questions for focus practice', e);
-      return [];
+      return Result.failure('FocusPracticeService.getWeakAreaQuestions: $e');
     }
   }
 
-  Future<List<Question>> getQuestionsForSessionType({
+  Future<Result<List<Question>>> getQuestionsForSessionType({
     required FocusSessionType sessionType,
     required String studentId,
     List<String>? subjectIds,
     int limit = 20,
   }) async {
-    switch (sessionType) {
-      case FocusSessionType.quickPractice:
-        final allResult = await _questionRepository.getAll();
-        var all = allResult.data ?? [];
-        if (subjectIds != null && subjectIds.isNotEmpty) {
-          all = all.where((q) => subjectIds.contains(q.subjectId)).toList();
-        }
-        all.shuffle();
-        return all.take(limit).toList();
-      case FocusSessionType.weakAreaAttack:
-        return getWeakAreaQuestions(
-          studentId: studentId,
-          subjectIds: subjectIds,
-          limit: limit,
-        );
-      case FocusSessionType.spacedRepetition:
-      case FocusSessionType.freeFocus:
-        return getDueQuestions(
-          studentId: studentId,
-          subjectIds: subjectIds,
-          limit: limit,
-        );
+    try {
+      switch (sessionType) {
+        case FocusSessionType.quickPractice:
+          final allResult = await _questionRepository.getAll();
+          if (allResult.isFailure) {
+            _logger.w('Failed to get questions for quick practice: ${allResult.error}');
+            return Result.failure(allResult.error);
+          }
+          var all = allResult.data ?? [];
+          if (subjectIds != null && subjectIds.isNotEmpty) {
+            all = all.where((q) => subjectIds.contains(q.subjectId)).toList();
+          }
+          all.shuffle();
+          return Result.success(all.take(limit).toList());
+        case FocusSessionType.weakAreaAttack:
+          return await getWeakAreaQuestions(
+            studentId: studentId,
+            subjectIds: subjectIds,
+            limit: limit,
+          );
+        case FocusSessionType.spacedRepetition:
+        case FocusSessionType.freeFocus:
+          return await getDueQuestions(
+            studentId: studentId,
+            subjectIds: subjectIds,
+            limit: limit,
+          );
+      }
+    } catch (e) {
+      _logger.w('Failed to get questions for session type', e);
+      return Result.failure('FocusPracticeService.getQuestionsForSessionType: $e');
     }
   }
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
@@ -30,9 +31,9 @@ class SlideDeckGenerator {
 
   /// Generates a progressive slide deck from source content.
   ///
-  /// Returns a list of [Lesson] objects, one per chapter, each containing
-  /// structured slide blocks with chapter/section metadata.
-  Future<List<Lesson>> generateSlideDeck({
+  /// Returns a [Result] containing a list of [Lesson] objects, one per chapter,
+  /// each containing structured slide blocks with chapter/section metadata.
+  Future<Result<List<Lesson>>> generateSlideDeck({
     required String subjectId,
     required String topicId,
     required String topicTitle,
@@ -55,7 +56,7 @@ class SlideDeckGenerator {
           startIndex: 0,
           endIndex: sourceContent.length,
         );
-        return await _generateChapters(
+        final singleLessons = await _generateChapters(
           chapters: [singleChapter],
           sourceContent: sourceContent,
           subjectId: subjectId,
@@ -64,6 +65,27 @@ class SlideDeckGenerator {
           localeName: localeName,
           style: style,
         );
+        if (singleLessons.isEmpty) {
+          _logger.w('Chapter generation failed for single chapter fallback');
+          return Result.failure('SlideDeckGenerator.generateSlideDeck: chapter generation failed');
+        }
+        final tocLesson = _buildTableOfContents(
+          chapters: singleLessons,
+          subjectId: subjectId,
+          topicId: topicId,
+          topicTitle: topicTitle,
+        );
+        for (final chapter in singleLessons) {
+          final createResult = await _lessonRepository.create(chapter);
+          if (createResult.isFailure) {
+            _logger.w('Failed to save chapter lesson: ${createResult.error}');
+          }
+        }
+        final tocResult = await _lessonRepository.create(tocLesson);
+        if (tocResult.isFailure) {
+          _logger.w('Failed to save table of contents: ${tocResult.error}');
+        }
+        return Result.success([tocLesson, ...singleLessons]);
       }
 
       final chapters = await _generateChapters(
@@ -78,7 +100,7 @@ class SlideDeckGenerator {
 
       if (chapters.isEmpty) {
         _logger.w('Chapter generation failed');
-        return [];
+        return Result.failure('SlideDeckGenerator.generateSlideDeck: chapter generation failed');
       }
 
       final tocLesson = _buildTableOfContents(
@@ -100,10 +122,10 @@ class SlideDeckGenerator {
         _logger.w('Failed to save table of contents: ${tocResult.error}');
       }
 
-      return [tocLesson, ...chapters];
+      return Result.success([tocLesson, ...chapters]);
     } catch (e) {
       _logger.w('Slide deck generation failed', e);
-      return [];
+      return Result.failure('SlideDeckGenerator.generateSlideDeck: $e');
     }
   }
 

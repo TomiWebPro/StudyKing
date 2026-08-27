@@ -299,4 +299,52 @@ void main() {
       expect(result.isFailure, isTrue);
     });
   });
+
+  group('SpacedRepetitionService.getQuestionsDue', () {
+    late FakeQuestionRepository questionRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+    });
+
+    test('propagates failure when inner getQuestionsDueForReview fails', () async {
+      final failingService = _FailingSpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+      final result = await failingService.getQuestionsDue();
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns empty success when inner succeeds with empty list', () async {
+      final result = await service.getQuestionsDue(asOf: DateTime(2026, 1, 1));
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
+    });
+
+    test('returns due questions when inner succeeds with data', () async {
+      questionRepo._storage['due'] = _makeQuestion('due', nextReview: DateTime(2020, 1, 1));
+      questionRepo._storage['future'] = _makeQuestion('future', nextReview: DateTime(2099, 1, 1));
+      final result = await service.getQuestionsDue(asOf: DateTime(2026, 1, 1));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.map((q) => q.id), contains('due'));
+    });
+  });
+}
+
+class _FailingSpacedRepetitionService extends SpacedRepetitionService {
+  _FailingSpacedRepetitionService({
+    required super.questionRepo,
+    required super.attemptRepo,
+  });
+
+  @override
+  Future<Result<List<Question>>> getQuestionsDueForReview({DateTime? asOf}) async {
+    return Result.failure('inner failure');
+  }
 }

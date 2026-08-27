@@ -756,6 +756,68 @@ void main() {
         expect(result.isFailure, isTrue);
       });
     });
+
+    group('inner Result failure propagation', () {
+      late _FailingResultRepository failingResultRepo;
+      late StudyTimerService failingResultService;
+
+      setUp(() {
+        failingResultRepo = _FailingResultRepository();
+        failingResultService = StudyTimerService(repository: failingResultRepo);
+      });
+
+      tearDown(() async {
+        await failingResultService.dispose();
+      });
+
+      test('getTodayDurationMs propagates inner Result.failure', () async {
+        failingResultRepo.failOnGetTodayDurationMs = true;
+        final result = await failingResultService.getTodayDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayDurationMs succeeds with 0 when inner succeeds empty', () async {
+        final result = await failingResultService.getTodayDurationMs();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 0);
+      });
+
+      test('getTodaySessionCount propagates inner failure', () async {
+        failingResultRepo.failOnGetTodaySessionCount = true;
+        final result = await failingResultService.getTodaySessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayCompletedSessionCount propagates inner failure', () async {
+        failingResultRepo.failOnGetTodayCompletedSessionCount = true;
+        final result = await failingResultService.getTodayCompletedSessionCount();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayStats propagates inner failure', () async {
+        failingResultRepo.failOnGetTodayStats = true;
+        final result = await failingResultService.getTodayStats();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayStats succeeds with empty map when inner succeeds empty', () async {
+        final result = await failingResultService.getTodayStats();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isA<Map<String, dynamic>>());
+      });
+
+      test('getRecentSessions propagates inner failure', () async {
+        failingResultRepo.failOnGetAll = true;
+        final result = await failingResultService.getRecentSessions();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getRecentSessions succeeds with empty list when inner succeeds empty', () async {
+        final result = await failingResultService.getRecentSessions();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+    });
   });
 }
 
@@ -800,6 +862,47 @@ class _ThrowingFakeRepository extends SessionRepository {
   @override
   Future<Result<Map<String, dynamic>>> getTodayStats() async {
     if (throwOnGetTodayStats) throw Exception('getTodayStats failed');
+    return Result.success({});
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async => Result.success(null);
+}
+
+class _FailingResultRepository extends SessionRepository {
+  bool failOnGetAll = false;
+  bool failOnGetTodayDurationMs = false;
+  bool failOnGetTodaySessionCount = false;
+  bool failOnGetTodayCompletedSessionCount = false;
+  bool failOnGetTodayStats = false;
+
+  @override
+  Future<Result<List<Session>>> getAll() async {
+    if (failOnGetAll) return Result.failure('getAll failed');
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async {
+    if (failOnGetTodayDurationMs) return Result.failure('getTodayDurationMs failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getTodaySessionCount() async {
+    if (failOnGetTodaySessionCount) return Result.failure('getTodaySessionCount failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getTodayCompletedSessionCount() async {
+    if (failOnGetTodayCompletedSessionCount) return Result.failure('getTodayCompletedSessionCount failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> getTodayStats() async {
+    if (failOnGetTodayStats) return Result.failure('getTodayStats failed');
     return Result.success({});
   }
 
