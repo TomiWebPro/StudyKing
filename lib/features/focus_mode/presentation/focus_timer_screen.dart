@@ -240,7 +240,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         actualMinutes: actualMinutes,
       );
     } catch (e) {
-      // Logged internally by PlanAdherenceOrchestrator, non-critical for UX
+      _logger.w('Failed to record focus-mode adherence', e);
     }
   }
 
