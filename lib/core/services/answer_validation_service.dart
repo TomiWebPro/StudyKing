@@ -148,7 +148,8 @@ class AnswerValidationService {
       final isPng = decoded[0] == 0x89 && decoded[1] == 0x50 && decoded[2] == 0x4E && decoded[3] == 0x47;
       final isJpeg = decoded[0] == 0xFF && decoded[1] == 0xD8 && decoded[2] == 0xFF;
       return isPng || isJpeg;
-    } catch (_) {
+    } catch (e, st) {
+      _logger.w('Failed to validate image answer', e, st);
       return false;
     }
   }
