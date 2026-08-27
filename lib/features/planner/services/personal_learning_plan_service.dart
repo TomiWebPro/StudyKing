@@ -233,8 +233,10 @@ class PersonalLearningPlanService {
           : <String>[];
       final atRiskResult = await getAtRiskTopicIds(studentId);
       final atRiskIds = atRiskResult.data ?? [];
-      final adherence = await getCurrentAdherence(studentId);
-      final lowDays = await getConsecutiveLowAdherenceDays(studentId);
+      final adherenceResult = await getCurrentAdherence(studentId);
+      final lowDaysResult = await getConsecutiveLowAdherenceDays(studentId);
+      final adherence = adherenceResult.data ?? 0.0;
+      final lowDays = lowDaysResult.data ?? 0;
 
       final analysisResult = await advisor.analyzeForPlanGeneration(
         studentId: studentId,
@@ -1078,25 +1080,33 @@ class PersonalLearningPlanService {
     return Result.success(readyTopics);
   }
 
-  Future<double> getCurrentAdherence(String studentId) async {
+  Future<Result<double>> getCurrentAdherence(String studentId) async {
     try {
       await _adherenceRepository.init();
       final result = await _adherenceRepository.getAverageAdherence(studentId);
-      return result.data ?? 0.0;
+      if (result.isFailure) {
+        _logger.w('Failed to get current adherence: ${result.error}');
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data ?? 0.0);
     } catch (e) {
       _logger.w('Failed to get current adherence', e);
-      return 0.0;
+      return Result.failure(e.toString());
     }
   }
 
-  Future<int> getConsecutiveLowAdherenceDays(String studentId) async {
+  Future<Result<int>> getConsecutiveLowAdherenceDays(String studentId) async {
     try {
       await _adherenceRepository.init();
       final result = await _adherenceRepository.getConsecutiveLowAdherenceDays(studentId);
-      return result.data ?? 0;
+      if (result.isFailure) {
+        _logger.w('Failed to get consecutive low adherence days: ${result.error}');
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data ?? 0);
     } catch (e) {
       _logger.w('Failed to get consecutive low adherence days', e);
-      return 0;
+      return Result.failure(e.toString());
     }
   }
 }
