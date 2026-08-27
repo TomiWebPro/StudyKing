@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_math_fork/flutter_math.dart';
 
+import '../utils/logger.dart';
+
 class RichContentRenderer extends StatelessWidget {
+  static final Logger _logger = const Logger('RichContentRenderer');
+
+  static Logger? testLogger;
+
+  static Logger get _effectiveLogger => testLogger ?? _logger;
   final String content;
   final TextStyle? textStyle;
   final TextAlign textAlign;
@@ -53,6 +60,10 @@ class RichContentRenderer extends StatelessWidget {
         ),
         textScaleFactor: 1.0,
         onErrorFallback: (FlutterMathException e) {
+          _effectiveLogger.w(
+            'Failed to render LaTeX segment: ${segment.latex}',
+            e,
+          );
           return Text(
             segment.latex,
             style: TextStyle(
@@ -62,7 +73,12 @@ class RichContentRenderer extends StatelessWidget {
           );
         },
       );
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _effectiveLogger.w(
+        'Failed to render LaTeX segment: ${segment.latex}',
+        e,
+        stackTrace,
+      );
       return Text(
         segment.latex,
         style: TextStyle(

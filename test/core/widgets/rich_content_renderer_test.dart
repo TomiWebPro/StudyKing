@@ -1,6 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/widgets/rich_content_renderer.dart';
+
+class _SpyLogger extends Logger {
+  final List<String> warnMessages = [];
+  final List<Object?> warnErrors = [];
+
+  _SpyLogger() : super('RichContentRenderer');
+
+  @override
+  void w(String message, [Object? error, StackTrace? stack]) {
+    warnMessages.add(message);
+    warnErrors.add(error);
+  }
+}
 
 void main() {
   group('RichContentRenderer', () {
@@ -115,6 +129,65 @@ void main() {
       ));
 
       expect(find.byType(Wrap), findsOneWidget);
+    });
+
+    testWidgets(
+        'fallback renders raw latex on parse error without throwing and logs via w',
+        (tester) async {
+      final spy = _SpyLogger();
+      RichContentRenderer.testLogger = spy;
+      addTearDown(() => RichContentRenderer.testLogger = null);
+
+      const invalidLatex = r'\invalidcommand';
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: RichContentRenderer(
+              content: 'test \$$invalidLatex\$ end'),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(invalidLatex), findsOneWidget);
+      expect(spy.warnMessages, isNotEmpty);
+      expect(spy.warnMessages.first, contains(invalidLatex));
+    });
+
+    testWidgets('fallback preserves monospace style and logs for display mode',
+        (tester) async {
+      final spy = _SpyLogger();
+      RichContentRenderer.testLogger = spy;
+      addTearDown(() => RichContentRenderer.testLogger = null);
+
+      const invalidLatex = r'\unknown';
+      await tester.pumpWidget(MaterialApp(
+        home: Scaffold(
+          body: RichContentRenderer(
+              content: 'before \$\$$invalidLatex\$\$ after'),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(find.text(invalidLatex), findsOneWidget);
+      expect(spy.warnMessages, isNotEmpty);
+      expect(spy.warnMessages.first, contains(invalidLatex));
+    });
+
+    testWidgets('valid latex does not trigger warning log', (tester) async {
+      final spy = _SpyLogger();
+      RichContentRenderer.testLogger = spy;
+      addTearDown(() => RichContentRenderer.testLogger = null);
+
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: RichContentRenderer(content: r'$\frac{1}{2}$'),
+        ),
+      ));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+      expect(spy.warnMessages, isEmpty);
     });
   });
 }
