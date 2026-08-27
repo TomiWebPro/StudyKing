@@ -197,7 +197,9 @@ void main() {
           nextReview: now.add(const Duration(days: 1)),
         ));
 
-        final questions = await service.getDueQuestions(studentId: 'student-1');
+        final result = await service.getDueQuestions(studentId: 'student-1');
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions.length, 1);
         expect(questions[0].id, 'q1');
@@ -211,7 +213,9 @@ void main() {
           nextReview: now.add(const Duration(days: 1)),
         ));
 
-        final questions = await service.getDueQuestions(studentId: 'student-1');
+        final result = await service.getDueQuestions(studentId: 'student-1');
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isEmpty);
       });
@@ -229,10 +233,12 @@ void main() {
           nextReview: now.subtract(const Duration(hours: 1)),
         ));
 
-        final questions = await service.getDueQuestions(
+        final result = await service.getDueQuestions(
           studentId: 'student-1',
           subjectIds: ['math'],
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions.length, 1);
         expect(questions[0].subjectId, 'math');
@@ -248,10 +254,12 @@ void main() {
           ));
         }
 
-        final questions = await service.getDueQuestions(
+        final result = await service.getDueQuestions(
           studentId: 'student-1',
           limit: 3,
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions.length, 3);
       });
@@ -280,7 +288,9 @@ void main() {
           questionRepository: fakeQuestionRepo,
         );
 
-        final questions = await service.getDueQuestions(studentId: 'student-1', limit: 10);
+        final result = await service.getDueQuestions(studentId: 'student-1', limit: 10);
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions.length, 2);
         expect(questions[0].topicId, 'weak-topic');
@@ -297,7 +307,9 @@ void main() {
           questionRepository: throwingRepo,
         );
 
-        final questions = await throwingService.getDueQuestions(studentId: 'student-1');
+        final result = await throwingService.getDueQuestions(studentId: 'student-1');
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isEmpty);
       });
@@ -384,18 +396,22 @@ void main() {
 
     group('getWeakAreaQuestions', () {
       test('returns empty list when no weak topics', () async {
-        final questions = await service.getWeakAreaQuestions(
+        final result = await service.getWeakAreaQuestions(
           studentId: 'student-1',
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isEmpty);
       });
 
       test('returns empty list when repository throws', () async {
-        final questions = await service.getWeakAreaQuestions(
+        final result = await service.getWeakAreaQuestions(
           studentId: 'student-1',
           subjectIds: ['sub-1'],
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isEmpty);
       });
@@ -405,12 +421,12 @@ void main() {
       test('quickPractice returns empty when getAll fails', () async {
         fakeQuestionRepo.failOnGetAll = true;
 
-        final questions = await service.getQuestionsForSessionType(
+        final result = await service.getQuestionsForSessionType(
           sessionType: FocusSessionType.quickPractice,
           studentId: 'student-1',
         );
 
-        expect(questions, isEmpty);
+        expect(result.isFailure, isTrue);
       });
 
       test('quickPractice filters by subject when provided', () async {
@@ -426,21 +442,25 @@ void main() {
           nextReview: now,
         ));
 
-        final questions = await service.getQuestionsForSessionType(
+        final result = await service.getQuestionsForSessionType(
           sessionType: FocusSessionType.quickPractice,
           studentId: 'student-1',
           subjectIds: ['math'],
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions.length, 1);
         expect(questions[0].subjectId, 'math');
       });
 
       test('weakAreaAttack returns empty when no weak topics', () async {
-        final questions = await service.getQuestionsForSessionType(
+        final result = await service.getQuestionsForSessionType(
           sessionType: FocusSessionType.weakAreaAttack,
           studentId: 'student-1',
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isEmpty);
       });
@@ -453,10 +473,12 @@ void main() {
           nextReview: now.subtract(const Duration(hours: 1)),
         ));
 
-        final questions = await service.getQuestionsForSessionType(
+        final result = await service.getQuestionsForSessionType(
           sessionType: FocusSessionType.freeFocus,
           studentId: 'student-1',
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isNotEmpty);
       });
@@ -469,10 +491,12 @@ void main() {
           nextReview: now.subtract(const Duration(hours: 1)),
         ));
 
-        final questions = await service.getQuestionsForSessionType(
+        final result = await service.getQuestionsForSessionType(
           sessionType: FocusSessionType.spacedRepetition,
           studentId: 'student-1',
         );
+        expect(result.isSuccess, isTrue);
+        final questions = result.data!;
 
         expect(questions, isNotEmpty);
       });

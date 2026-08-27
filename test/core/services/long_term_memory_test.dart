@@ -163,22 +163,25 @@ void main() {
       await ltm.addActionItem('student1', 'review',
           topicTitle: 'Stoichiometry');
       final items = await ltm.getPendingActionItems('student1');
-      expect(items, hasLength(1));
-      expect(items.first.actionType, equals('review'));
-      expect(items.first.topicTitle, equals('Stoichiometry'));
+      expect(items.isSuccess, isTrue);
+      expect(items.data, hasLength(1));
+      expect(items.data!.first.actionType, equals('review'));
+      expect(items.data!.first.topicTitle, equals('Stoichiometry'));
     });
 
     test('getPendingActionItems returns empty list when none', () async {
       final items = await ltm.getPendingActionItems('student1');
-      expect(items, isEmpty);
+      expect(items.isSuccess, isTrue);
+      expect(items.data, isEmpty);
     });
 
     test('getPendingActionItems only returns pending items', () async {
       await ltm.addActionItem('student1', 'schedule');
       await ltm.addActionItem('student2', 'review', topicTitle: 'Algebra');
       final items = await ltm.getPendingActionItems('student1');
-      expect(items, hasLength(1));
-      expect(items.first.actionType, equals('schedule'));
+      expect(items.isSuccess, isTrue);
+      expect(items.data, hasLength(1));
+      expect(items.data!.first.actionType, equals('schedule'));
     });
   });
 
@@ -255,7 +258,8 @@ void main() {
       expect(ltm.getSessionSummary('student1', 's1'), isNull);
       expect(ltm.getStudentProfile('student1'), isNull);
       final items = await ltm.getPendingActionItems('student1');
-      expect(items, hasLength(1));
+      expect(items.isSuccess, isTrue);
+      expect(items.data, hasLength(1));
     });
   });
 
@@ -268,4 +272,46 @@ void main() {
       await expectLater(freshLtm.init(), completes);
     });
   });
+
+  group('LongTermMemory - failure propagation', () {
+    test('getPendingActionItems propagates inner Result.failure', () async {
+      final failingRepo = _FailingPendingActionRepository();
+      final ltmFail = LongTermMemory(
+        store: _FakeAgentMemoryStore(),
+        pendingActionRepo: failingRepo,
+      );
+      final result = await ltmFail.getPendingActionItems('student1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('getPendingActionItems succeeds with empty list when inner succeeds empty', () async {
+      final emptyLtm = LongTermMemory(
+        store: _FakeAgentMemoryStore(),
+        pendingActionRepo: _FakePendingActionRepository(),
+      );
+      final result = await emptyLtm.getPendingActionItems('unknown');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
+    });
+
+    test('buildMemoryContext gracefully handles pending failure and still returns context', () async {
+      final failingRepo = _FailingPendingActionRepository();
+      final ltmFail = LongTermMemory(
+        store: _FakeAgentMemoryStore(),
+        pendingActionRepo: failingRepo,
+      );
+      final context = await ltmFail.buildMemoryContext('student1');
+      expect(context, contains('LONG-TERM MEMORY CONTEXT'));
+    });
+  });
+}
+
+class _FailingPendingActionRepository extends PendingActionRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.failure('pending fetch failed');
+  }
 }

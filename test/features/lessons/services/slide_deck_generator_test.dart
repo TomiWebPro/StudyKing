@@ -195,13 +195,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test Topic',
           sourceContent: 'Source content here...',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         expect(lessons.length, 3);
         expect(lessons[0].title, contains('Table of Contents'));
@@ -231,13 +233,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Simple Topic',
           sourceContent: 'Some content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         expect(lessons.length, 2);
         expect(lessons[0].title, contains('Table of Contents'));
@@ -247,7 +251,7 @@ void main() {
       test('returns empty list when LLM throws exception', () async {
         fakeLlm.setFailNext();
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Failed Topic',
@@ -255,7 +259,7 @@ void main() {
           localeName: 'en',
         );
 
-        expect(lessons, isEmpty);
+        expect(result.isFailure, isTrue);
       });
 
       test('creates lessons with correct metadata', () async {
@@ -293,13 +297,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test Topic',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         final chapterLesson = lessons.firstWhere((l) => l.title == 'Chapter 1');
         expect(chapterLesson.subjectId, 'sub-1');
@@ -342,13 +348,15 @@ void main() {
 
         fakeLessonRepo.throwOnCreate = true;
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         expect(lessons.length, 2);
       });
@@ -383,13 +391,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         final chapterLesson = lessons.firstWhere((l) => l.title == 'Ch1');
         expect(chapterLesson.blocks.length, 6);
@@ -431,13 +441,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Math Book',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         final toc = lessons.first;
         expect(toc.title, contains('Table of Contents'));
@@ -475,14 +487,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
-
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
         final chapter = lessons.firstWhere((l) => l.title == 'Ch1');
         expect(chapter.blocks.length, 2);
         expect(chapter.blocks[0].content, 'Concept 1');
@@ -517,13 +530,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         final chapter = lessons.firstWhere((l) => l.title == 'Ch1');
         expect(chapter.blocks.length, 1);
@@ -561,13 +576,15 @@ void main() {
         final originalPrint = debugPrint;
         debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         debugPrint = originalPrint;
 
@@ -603,13 +620,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         final chapter = lessons.firstWhere((l) => l.title == 'Ch1');
         expect(chapter.blocks.length, 1);
@@ -641,13 +660,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         expect(lessons.length, 2);
         expect(lessons[1].title, 'Ch1');
@@ -674,13 +695,15 @@ void main() {
           return Result.success('');
         });
 
-        final lessons = await generator.generateSlideDeck(
+        final result = await generator.generateSlideDeck(
           subjectId: 'sub-1',
           topicId: 'topic-1',
           topicTitle: 'Test',
           sourceContent: 'Content',
           localeName: 'en',
         );
+        expect(result.isSuccess, isTrue);
+        final lessons = result.data!;
 
         expect(lessons.length, 2);
       });

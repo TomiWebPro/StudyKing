@@ -262,6 +262,10 @@ class StudyTimerService {
   Future<Result<int>> getTodayDurationMs() async {
     try {
       final result = await _repository.getTodayDurationMs();
+      if (result.isFailure) {
+        _logger.w('getTodayDurationMs failed', result.error);
+        return Result.failure(result.error);
+      }
       return Result.success(result.data ?? 0);
     } catch (e) {
       _logger.w('getTodayDurationMs failed', e);
@@ -272,6 +276,10 @@ class StudyTimerService {
   Future<Result<int>> getTodaySessionCount() async {
     try {
       final result = await _repository.getTodaySessionCount();
+      if (result.isFailure) {
+        _logger.w('getTodaySessionCount failed', result.error);
+        return Result.failure(result.error);
+      }
       return Result.success(result.data ?? 0);
     } catch (e) {
       _logger.w('getTodaySessionCount failed', e);
@@ -282,6 +290,10 @@ class StudyTimerService {
   Future<Result<int>> getTodayCompletedSessionCount() async {
     try {
       final result = await _repository.getTodayCompletedSessionCount();
+      if (result.isFailure) {
+        _logger.w('getTodayCompletedSessionCount failed', result.error);
+        return Result.failure(result.error);
+      }
       return Result.success(result.data ?? 0);
     } catch (e) {
       _logger.w('getTodayCompletedSessionCount failed', e);
@@ -292,6 +304,10 @@ class StudyTimerService {
   Future<Result<Map<String, dynamic>>> getTodayStats() async {
     try {
       final result = await _repository.getTodayStats();
+      if (result.isFailure) {
+        _logger.w('getTodayStats failed', result.error);
+        return Result.failure(result.error);
+      }
       return Result.success(result.data ?? {});
     } catch (e) {
       _logger.w('getTodayStats failed', e);
@@ -302,6 +318,10 @@ class StudyTimerService {
   Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async {
     try {
       final allResult = await _repository.getAll();
+      if (allResult.isFailure) {
+        _logger.w('getRecentSessions failed', allResult.error);
+        return Result.failure(allResult.error);
+      }
       final all = allResult.data ?? [];
       return Result.success(all.take(limit).toList());
     } catch (e) {

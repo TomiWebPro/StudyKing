@@ -300,7 +300,7 @@ void main() {
 
         expect(result.isSuccess, true);
         expect(result.data!['totalDays'], 0);
-        expect(result.data!['averageAdherence'], 1.0);
+        expect(result.data!['averageAdherence'], 0.0);
         expect(result.data!['lowAdherenceDays'], 0);
       });
 
@@ -330,7 +330,8 @@ void main() {
     group('getDailyAdherenceFeedback', () {
       test('returns null when no plan exists', () async {
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('returns null when plan has no daily plans for today', () async {
@@ -346,7 +347,8 @@ void main() {
         );
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('returns null when planned minutes and questions are both zero', () async {
@@ -372,7 +374,8 @@ void main() {
         );
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
       });
 
       test('returns low adherence feedback when ratio < 0.3', () async {
@@ -406,9 +409,10 @@ void main() {
         ));
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNotNull);
-        expect(result, contains('10 min today vs 60 min planned'));
-        expect(result, contains('redistributing'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data, contains('10 min today vs 60 min planned'));
+        expect(result.data, contains('redistributing'));
       });
 
       test('returns partial adherence feedback when ratio < 0.7', () async {
@@ -442,9 +446,10 @@ void main() {
         ));
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNotNull);
-        expect(result, contains('30 min today vs 60 min planned'));
-        expect(result, contains('catch up'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data, contains('30 min today vs 60 min planned'));
+        expect(result.data, contains('catch up'));
       });
 
       test('returns exceeded feedback when ratio > 1.2', () async {
@@ -478,9 +483,10 @@ void main() {
         ));
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNotNull);
-        expect(result, contains('Great work'));
-        expect(result, contains('90 min vs 60 min'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data, contains('Great work'));
+        expect(result.data, contains('90 min vs 60 min'));
       });
 
       test('returns null when ratio is within normal range', () async {
@@ -514,8 +520,99 @@ void main() {
         ));
 
         final result = await adapter.getDailyAdherenceFeedback('student-1');
-        expect(result, isNull);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNull);
+      });
+
+      test('propagates failure when planRepository loadPlan fails', () async {
+        final failingPlanRepo = _FailingPlanRepository();
+        final failingAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: failingPlanRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+        );
+        final result = await failingAdapter.getDailyAdherenceFeedback('student-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('propagates failure when adherenceRepository getByStudent fails', () async {
+        final failingAdherenceRepo = _FailingAdherenceRepository();
+        final now = DateTime.now();
+        final planRepoWithPlan = _FakePlanRepository()
+          ..storedPlan = PersonalLearningPlan(
+            studentId: 'student-1',
+            generatedAt: now,
+            dailyPlans: [
+              DailyPlan(
+                date: now,
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 10,
+                targetMinutes: 60,
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+              reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+            ),
+            recommendations: [],
+          );
+        final failingAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: failingAdherenceRepo,
+          planRepository: planRepoWithPlan,
+          planService: _FakePlanService(adherenceRepo: _FakePlanAdherenceRepository()),
+        );
+        final result = await failingAdapter.getDailyAdherenceFeedback('student-1');
+        expect(result.isFailure, isTrue);
+      });
+
+      test('succeeds with null when plan exists but no adherence data', () async {
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        final result = await adapter.getDailyAdherenceFeedback('student-1');
+        expect(result.isSuccess, isTrue);
       });
     });
   });
+}
+
+class _FailingPlanRepository extends PlanRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<PersonalLearningPlan?>> loadPlan(String studentId) async {
+    return Result.failure('plan load failed');
+  }
+}
+
+class _FailingAdherenceRepository extends PlanAdherenceRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
+    return Result.failure('adherence fetch failed');
+  }
 }

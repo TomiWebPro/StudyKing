@@ -85,13 +85,13 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
           ? [widget.subjectId!]
           : null;
 
-      final questions = await focusPracticeService.getQuestionsForSessionType(
+      final questionsResult = await focusPracticeService.getQuestionsForSessionType(
         sessionType: widget.sessionType,
         studentId: studentId,
         subjectIds: subjectIds,
         limit: widget.questionCount,
       );
-
+      final questions = questionsResult.data ?? [];
       var selected = questions.toList();
       if (widget.topicId != null && widget.topicId!.isNotEmpty) {
         selected = selected.where((q) => q.topicId == widget.topicId).toList();

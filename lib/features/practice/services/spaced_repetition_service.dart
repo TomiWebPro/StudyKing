@@ -71,6 +71,10 @@ class SpacedRepetitionService {
         return Result.failure(SpacedRepetitionErrorCode.boxClosed.name);
       }
       final dueQuestionsResult = await getQuestionsDueForReview(asOf: asOf);
+      if (dueQuestionsResult.isFailure) {
+        _logger.w('Error getting due questions', dueQuestionsResult.error);
+        return Result.failure(dueQuestionsResult.error);
+      }
       final dueQuestions = dueQuestionsResult.data ?? [];
       return Result.success(dueQuestions);
     } catch (e) {

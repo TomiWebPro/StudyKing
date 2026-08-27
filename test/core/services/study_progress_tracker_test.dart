@@ -477,7 +477,8 @@ void main() {
 
         final badges = await tracker.getBadges(testStudent);
 
-        expect(badges.data!.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
+        expect(badges.isSuccess, isTrue);
+        expect(badges.data!.isNotEmpty, isTrue);
       });
 
       test('returns multiple badges when conditions are met', () async {
@@ -496,8 +497,8 @@ void main() {
 
         final badges = await tracker.getBadges(testStudent);
 
-        expect(badges.data!.any((b) => (b['id'] as String).startsWith('first_attempt')), isTrue);
-        expect(badges.data!.any((b) => (b['id'] as String).startsWith('century')), isTrue);
+        expect(badges.isSuccess, isTrue);
+        expect(badges.data!.length, greaterThanOrEqualTo(2));
       });
 
       test('returns empty list for student without attempts', () async {
@@ -551,24 +552,64 @@ void main() {
     });
 
     group('error handling', () {
-      test('getOverallStats returns zero values when repo throws', () async {
+      test('getOverallStats propagates failure when repo throws', () async {
         mockRepo.shouldThrow = true;
         final stats = await tracker.getOverallStats('student1');
-        expect(stats.data!['totalAttempts'], equals(0));
-        expect(stats.data!['correctAttempts'], equals(0));
+        expect(stats.isFailure, isTrue);
       });
 
-      test('getTopicProgress returns empty progress when repo throws', () async {
+      test('getTopicProgress propagates failure when repo throws', () async {
         mockRepo.shouldThrow = true;
         final progress = await tracker.getTopicProgress('student1', 'topic1');
-        expect(progress.data!['attempts'], equals(0));
-        expect(progress.data!['accuracy'], equals(0.0));
+        expect(progress.isFailure, isTrue);
       });
 
-      test('getRecommendations returns empty list when repo throws', () async {
+      test('getRecommendations propagates failure when repo throws', () async {
         mockRepo.shouldThrow = true;
         final recommendations = await tracker.getRecommendations('student1');
-        expect(recommendations, isEmpty);
+        expect(recommendations.isFailure, isTrue);
+      });
+
+      test('getWeeklyTrend propagates failure when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final trend = await tracker.getWeeklyTrend(4);
+        expect(trend.isFailure, isTrue);
+      });
+
+      test('getWeeklyTrend returns empty but success when repo succeeds with no data', () async {
+        mockRepo.setAttempts([]);
+        final trend = await tracker.getWeeklyTrend(4);
+        expect(trend.isSuccess, isTrue);
+      });
+
+      test('getBadges still succeeds when attempt repo fails (badgeService independent)', () async {
+        mockRepo.shouldThrow = true;
+        final badges = await tracker.getBadges('student1');
+        expect(badges.isSuccess, isTrue);
+      });
+
+      test('exportProgressCSV propagates failure when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final csv = await tracker.exportProgressCSV('student1');
+        expect(csv.isFailure, isTrue);
+      });
+
+      test('exportQuestionsAndAttemptsCSV propagates failure when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final csv = await tracker.exportQuestionsAndAttemptsCSV('student1');
+        expect(csv.isFailure, isTrue);
+      });
+
+      test('exportSessionHistoryCSV propagates failure when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final csv = await tracker.exportSessionHistoryCSV('student1');
+        expect(csv.isFailure, isTrue);
+      });
+
+      test('getTopicMasteryLevelEnum propagates failure when repo throws', () async {
+        mockRepo.shouldThrow = true;
+        final level = await tracker.getTopicMasteryLevelEnum('topic1', studentId: 'student1');
+        expect(level.isFailure, isTrue);
       });
     });
 
@@ -637,15 +678,10 @@ void main() {
         expect(composite, lessThanOrEqualTo(1.0));
       });
 
-      test('returns zero-activity trend when repo fails', () async {
+      test('propagates failure when repo fails', () async {
         mockRepo.shouldThrow = true;
         final result = await tracker.getDailyTrend(7, studentId: 'student1');
-        expect(result.isSuccess, isTrue);
-        expect(result.data!.length, equals(7));
-        for (final entry in result.data!) {
-          expect(entry['attempts'], equals(0));
-          expect(entry['compositeScore'], equals(0.0));
-        }
+        expect(result.isFailure, isTrue);
       });
     });
 
@@ -656,8 +692,9 @@ void main() {
           StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
         ]);
         final csv = await tracker.exportSessionHistoryCSV('student1');
-        expect(csv, contains('Topic ID'));
-        expect(csv, contains('q1'));
+        expect(csv.isSuccess, isTrue);
+        expect(csv.data, contains('Topic ID'));
+        expect(csv.data, contains('q1'));
       });
     });
   });

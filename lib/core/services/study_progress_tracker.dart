@@ -37,6 +37,10 @@ class StudyProgressTracker {
   Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
     try {
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('Failed to get overall stats', attemptsResult.error);
+        return Result.failure(attemptsResult.error);
+      }
       final attempts = attemptsResult.data ?? [];
 
       final totalAttempts = attempts.length;
@@ -106,6 +110,10 @@ class StudyProgressTracker {
   Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async {
     try {
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('getTopicProgress failed', attemptsResult.error);
+        return Result.failure(attemptsResult.error);
+      }
       final attempts = attemptsResult.data ?? [];
       final topicAttempts = attempts.where((a) => a.questionId.contains(topicId)).toList();
 
@@ -142,6 +150,10 @@ class StudyProgressTracker {
     try {
       studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (allAttemptsResult.isFailure) {
+        _logger.w('getWeeklyTrend failed', allAttemptsResult.error);
+        return Result.failure(allAttemptsResult.error);
+      }
       final allAttempts = allAttemptsResult.data ?? [];
 
       bool hasPriorData = false;
@@ -190,11 +202,19 @@ class StudyProgressTracker {
     try {
       studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (allAttemptsResult.isFailure) {
+        _logger.w('getDailyTrend failed', allAttemptsResult.error);
+        return Result.failure(allAttemptsResult.error);
+      }
       final allAttempts = allAttemptsResult.data ?? [];
 
       List<Session> allSessions = [];
       if (_sessionRepo != null) {
         final sessionsResult = await _sessionRepo.getByStudent(studentId);
+        if (sessionsResult.isFailure) {
+          _logger.w('getDailyTrend failed', sessionsResult.error);
+          return Result.failure(sessionsResult.error);
+        }
         if (sessionsResult.isSuccess) {
           allSessions = sessionsResult.data ?? [];
         }
@@ -303,6 +323,10 @@ class StudyProgressTracker {
   Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
     try {
       final statsResult = await getOverallStats(studentId);
+      if (statsResult.isFailure) {
+        _logger.w('getRecommendations failed', statsResult.error);
+        return Result.failure(statsResult.error);
+      }
       final stats = statsResult.data ?? <String, dynamic>{};
 
       final recommendations = <Map<String, dynamic>>[];
@@ -373,6 +397,10 @@ class StudyProgressTracker {
         getStats: getOverallStats,
       );
       final badgesResult = await badgeService.getBadges(studentId);
+      if (badgesResult.isFailure) {
+        _logger.w('getBadges failed', badgesResult.error);
+        return Result.failure(badgesResult.error);
+      }
       final badges = badgesResult.data ?? [];
       final l10n = _l10n;
       final result = badges.map((b) => {
@@ -407,9 +435,13 @@ class StudyProgressTracker {
       }
 
       final statsResult = await getTopicProgress(studentId, topicId);
+      if (statsResult.isFailure) {
+        _logger.w('getTopicMasteryLevelEnum failed', statsResult.error);
+        return Result.failure(statsResult.error);
+      }
       final stats = statsResult.data ?? <String, dynamic>{};
-      final attempts = stats['attempts'] as int? ?? 0;
-      final accuracy = (stats['accuracy'] as int? ?? 0) / 100.0;
+      final attempts = (stats['attempts'] as num? ?? 0).toInt();
+      final accuracy = ((stats['accuracy'] as num? ?? 0).toDouble()) / 100.0;
       MasteryLevel level;
       if (attempts == 0) {
         level = MasteryLevel.novice;
@@ -444,10 +476,22 @@ class StudyProgressTracker {
   Future<Result<String>> exportProgressCSV(String studentId) async {
     try {
       final statsResult = await getOverallStats(studentId);
+      if (statsResult.isFailure) {
+        _logger.w('exportProgressCSV failed', statsResult.error);
+        return Result.failure(statsResult.error);
+      }
       final stats = statsResult.data ?? <String, dynamic>{};
       final trendResult = await getWeeklyTrend(4, studentId: studentId);
+      if (trendResult.isFailure) {
+        _logger.w('exportProgressCSV failed', trendResult.error);
+        return Result.failure(trendResult.error);
+      }
       final trend = trendResult.data ?? [];
       final badgesResult = await getBadges(studentId);
+      if (badgesResult.isFailure) {
+        _logger.w('exportProgressCSV failed', badgesResult.error);
+        return Result.failure(badgesResult.error);
+      }
       final badges = badgesResult.data ?? [];
 
       final csvLines = <String>[];
@@ -482,6 +526,10 @@ class StudyProgressTracker {
   Future<Result<String>> exportQuestionsAndAttemptsCSV(String studentId) async {
     try {
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('exportQuestionsAndAttemptsCSV failed', attemptsResult.error);
+        return Result.failure(attemptsResult.error);
+      }
       final attempts = attemptsResult.data ?? [];
 
       final csvLines = <String>[];
@@ -501,8 +549,16 @@ class StudyProgressTracker {
   Future<Result<String>> exportSessionHistoryCSV(String studentId) async {
     try {
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
+      if (attemptsResult.isFailure) {
+        _logger.w('exportSessionHistoryCSV failed', attemptsResult.error);
+        return Result.failure(attemptsResult.error);
+      }
       final attempts = attemptsResult.data ?? [];
       final masteryResult = await _masteryService.getAllTopicMastery(studentId);
+      if (masteryResult.isFailure) {
+        _logger.w('exportSessionHistoryCSV failed', masteryResult.error);
+        return Result.failure(masteryResult.error);
+      }
       final masteryStates = masteryResult.isSuccess ? masteryResult.data! : <MasteryState>[];
 
       final csvLines = <String>[];
