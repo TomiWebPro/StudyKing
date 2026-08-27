@@ -9789,6 +9789,12 @@ abstract class AppLocalizations {
   /// **'Failed to initialize tutor. Please check your API configuration in Settings and try again.'**
   String get tutorInitFailedGeneric;
 
+  /// Generic error message when mentor initialization fails (no error details exposed to user)
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to initialize mentor. Please check your API configuration in Settings and try again.'**
+  String get mentorInitFailedGeneric;
+
   /// Tagline shown on splash screen
   ///
   /// In en, this message translates to:

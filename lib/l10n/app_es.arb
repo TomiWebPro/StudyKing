@@ -7853,6 +7853,10 @@
     "@tutorInitFailedGeneric": {
       "description": "Generic error message when tutor initialization fails (no error details exposed to user)"
     },
+    "mentorInitFailedGeneric": "Error al iniciar el mentor. Verifique su configuración de API en Ajustes e intente de nuevo.",
+    "@mentorInitFailedGeneric": {
+      "description": "Generic error message when mentor initialization fails (no error details exposed to user)"
+    },
     "tagline": "Compañero de Aprendizaje con IA",
     "@tagline": {
       "description": "Tagline shown on splash screen"

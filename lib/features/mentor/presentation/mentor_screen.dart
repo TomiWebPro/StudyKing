@@ -160,12 +160,13 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) => _loadUpcomingLessons());
       }
     } catch (e) {
+      _logger.e('Mentor initialization failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
           _initError = true;
           _isRetrying = false;
-          _initErrorMessage = l10n.mentorInitFailed(e.toString());
+          _initErrorMessage = l10n.mentorInitFailedGeneric;
         });
       }
     }

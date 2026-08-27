@@ -5978,6 +5978,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Failed to initialize tutor. Please check your API configuration in Settings and try again.';
 
   @override
+  String get mentorInitFailedGeneric =>
+      'Failed to initialize mentor. Please check your API configuration in Settings and try again.';
+
+  @override
   String get tagline => 'AI-Native Learning Companion';
 
   @override

@@ -6042,6 +6042,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Error al iniciar el tutor. Verifique su configuración de API en Ajustes e intente de nuevo.';
 
   @override
+  String get mentorInitFailedGeneric =>
+      'Error al iniciar el mentor. Verifique su configuración de API en Ajustes e intente de nuevo.';
+
+  @override
   String get tagline => 'Compañero de Aprendizaje con IA';
 
   @override
