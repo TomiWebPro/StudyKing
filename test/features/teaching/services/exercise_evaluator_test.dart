@@ -6,6 +6,7 @@ import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 class FakeLlmForEvaluator extends LlmService {
   String responseJson;
   bool shouldFail = false;
+  bool shouldThrow = false;
 
   FakeLlmForEvaluator({this.responseJson = ''})
       : super(
@@ -25,6 +26,7 @@ class FakeLlmForEvaluator extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    if (shouldThrow) throw Exception('Simulated LLM throw');
     if (shouldFail) return Result.failure('LLM failure');
     return Result.success(responseJson);
   }
@@ -44,7 +46,7 @@ void main() {
       );
     });
 
-    test('evaluate returns EvaluationResult from LLM response', () async {
+    test('evaluate returns Result.success with EvaluationResult from LLM response', () async {
       llmService.responseJson =
           '{"score": 0.9, "explanation": "Excellent work!", "partialCredit": 0.0, "conceptBreakdown": {"Concept1": 0.9, "Concept2": 0.8}}';
 
@@ -55,13 +57,14 @@ void main() {
         topicTitle: 'Addition',
       );
 
-      expect(result.score, equals(0.9));
-      expect(result.explanation, contains('Excellent'));
-      expect(result.partialCredit, equals(0.0));
-      expect(result.conceptBreakdown, isNotNull);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, equals(0.9));
+      expect(result.data!.explanation, contains('Excellent'));
+      expect(result.data!.partialCredit, equals(0.0));
+      expect(result.data!.conceptBreakdown, isNotNull);
     });
 
-    test('evaluate handles LLM returning non-JSON gracefully', () async {
+    test('evaluate handles LLM returning non-JSON gracefully as success fallback', () async {
       llmService.responseJson = 'The answer looks correct overall.';
 
       final result = await evaluator.evaluate(
@@ -71,11 +74,12 @@ void main() {
         topicTitle: 'Photosynthesis',
       );
 
-      expect(result.score, equals(0.5));
-      expect(result.explanation, isNotEmpty);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, equals(0.5));
+      expect(result.data!.explanation, isNotEmpty);
     });
 
-    test('evaluate handles empty LLM response', () async {
+    test('evaluate handles empty LLM response as failure', () async {
       llmService.responseJson = '';
 
       final result = await evaluator.evaluate(
@@ -85,7 +89,8 @@ void main() {
         topicTitle: 'Topic',
       );
 
-      expect(result.score, equals(0.5));
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
     });
 
     test('evaluate handles low score', () async {
@@ -99,7 +104,8 @@ void main() {
         topicTitle: 'Capitals',
       );
 
-      expect(result.score, equals(0.2));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, equals(0.2));
     });
 
     test('accepts custom prompts', () async {
@@ -114,10 +120,11 @@ void main() {
         userPrompt: 'Custom user prompt',
       );
 
-      expect(result.score, equals(1.0));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, equals(1.0));
     });
 
-    test('returns fallback when LLM returns failure', () async {
+    test('returns failure Result when LLM returns failure', () async {
       llmService.responseJson = '';
       llmService.shouldFail = true;
 
@@ -128,8 +135,9 @@ void main() {
         topicTitle: 'Topic',
       );
 
-      expect(result.score, equals(0.5));
-      expect(result.explanation, isNotEmpty);
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
+      expect(result.error, contains('LLM failure'));
     });
 
     test('handles malformed JSON with missing required fields', () async {
@@ -142,7 +150,35 @@ void main() {
         topicTitle: 'Topic',
       );
 
-      expect(result.score, equals(0.8));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, equals(0.8));
+    });
+
+    test('returns failure when LLM chat throws unexpected exception', () async {
+      llmService.shouldThrow = true;
+
+      final result = await evaluator.evaluate(
+        question: 'Question?',
+        studentAnswer: 'Answer.',
+        subjectId: 'science',
+        topicTitle: 'Topic',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Simulated LLM throw'));
+    });
+
+    test('behavioral: failure Result contains descriptive logged error', () async {
+      llmService.shouldFail = true;
+      final result = await evaluator.evaluate(
+        question: 'Q',
+        studentAnswer: 'A',
+        subjectId: 's',
+        topicTitle: 't',
+      );
+      expect(result.isFailure, isTrue);
+      // error should be descriptive, not empty
+      expect(result.error!.length, greaterThan(3));
     });
 
     group('error-state: edge responses', () {
@@ -157,7 +193,8 @@ void main() {
           topicTitle: 'Topic',
         );
 
-        expect(result.score, equals(0.0));
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.score, equals(0.0));
       });
 
       test('handles score at 1.0 boundary', () async {
@@ -171,7 +208,8 @@ void main() {
           topicTitle: 'Topic',
         );
 
-        expect(result.score, equals(1.0));
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.score, equals(1.0));
       });
 
       test('handles extra unknown fields in JSON', () async {
@@ -185,8 +223,9 @@ void main() {
           topicTitle: 'Topic',
         );
 
-        expect(result.score, equals(0.7));
-        expect(result.explanation, equals('Good.'));
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.score, equals(0.7));
+        expect(result.data!.explanation, equals('Good.'));
       });
 
       test('handles explanation with special characters', () async {
@@ -200,8 +239,9 @@ void main() {
           topicTitle: 'Topic',
         );
 
-        expect(result.score, equals(0.5));
-        expect(result.explanation, isNotEmpty);
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.score, equals(0.5));
+        expect(result.data!.explanation, isNotEmpty);
       });
     });
   });

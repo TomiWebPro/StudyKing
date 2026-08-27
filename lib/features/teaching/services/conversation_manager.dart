@@ -369,12 +369,32 @@ class ConversationManager {
   Future<EvaluationResult> _evaluateExerciseResponse(String content) async {
     exerciseCount++;
 
-    final result = await _exerciseEvaluator.evaluate(
-      question: _lastExerciseQuestion,
-      studentAnswer: content,
-      subjectId: subjectId,
-      topicTitle: topicTitle,
-    );
+    EvaluationResult result;
+    try {
+      final evalResult = await _exerciseEvaluator.evaluate(
+        question: _lastExerciseQuestion,
+        studentAnswer: content,
+        subjectId: subjectId,
+        topicTitle: topicTitle,
+      );
+      if (evalResult.isFailure) {
+        _logger.w('Exercise evaluation failed: ${evalResult.error}');
+        final l10n = lookupAppLocalizations(Locale(localeName));
+        result = EvaluationResult(
+          score: 0.5,
+          explanation: evalResult.error ?? l10n.couldNotEvaluateAnswer,
+        );
+      } else {
+        result = evalResult.data!;
+      }
+    } catch (e, st) {
+      _logger.w('Exercise evaluation threw unexpected error', e, st);
+      final l10n = lookupAppLocalizations(Locale(localeName));
+      result = EvaluationResult(
+        score: 0.5,
+        explanation: l10n.couldNotEvaluateAnswer,
+      );
+    }
 
     lastEvaluationResult = result;
 

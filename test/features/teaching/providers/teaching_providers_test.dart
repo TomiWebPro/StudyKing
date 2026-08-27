@@ -12,7 +12,6 @@ import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/providers/teaching_providers.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
-import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -173,8 +172,8 @@ void main() {
         subjectId: 'test',
         topicTitle: 'test',
       );
-      expect(result, isA<EvaluationResult>());
-      expect(result.score, 0.8);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, 0.8);
     });
 
     test('uses teachingModelIdProvider for modelId', () async {
@@ -192,8 +191,8 @@ void main() {
         subjectId: 'math',
         topicTitle: 'arithmetic',
       );
-      expect(result, isA<EvaluationResult>());
-      expect(result.score, greaterThanOrEqualTo(0));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, greaterThanOrEqualTo(0));
     });
 
     test('behavioral: localeProvider affects evaluator locale', () async {
@@ -211,8 +210,8 @@ void main() {
         subjectId: 'test',
         topicTitle: 'test',
       );
-      expect(result, isA<EvaluationResult>());
-      expect(result.score, greaterThanOrEqualTo(0));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, greaterThanOrEqualTo(0));
     });
 
     test('is singleton', () {
@@ -242,11 +241,11 @@ void main() {
         subjectId: 'test',
         topicTitle: 'test',
       );
-      expect(result, isA<EvaluationResult>());
-      expect(result.score, greaterThanOrEqualTo(0));
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, greaterThanOrEqualTo(0));
     });
 
-    test('propagates errors from LLM service gracefully', () async {
+    test('propagates errors from LLM service gracefully as failure Result', () async {
       final fakeService = _FakeLlmService();
       fakeService.shouldThrow = true;
       final container = ProviderContainer(
@@ -262,8 +261,8 @@ void main() {
         subjectId: 'test',
         topicTitle: 'test',
       );
-      expect(result.score, 0.5);
-      expect(result.explanation, contains('Could not evaluate answer'));
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
     });
 
     test('recovers after LLM service error', () async {
@@ -282,7 +281,7 @@ void main() {
         subjectId: 'test',
         topicTitle: 'test',
       );
-      expect(result.score, 0.5);
+      expect(result.isFailure, isTrue);
 
       fakeService.shouldThrow = false;
       result = await evaluator.evaluate(
@@ -291,7 +290,8 @@ void main() {
         subjectId: 'math',
         topicTitle: 'arithmetic',
       );
-      expect(result.score, 0.8);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.score, 0.8);
     });
   });
 
