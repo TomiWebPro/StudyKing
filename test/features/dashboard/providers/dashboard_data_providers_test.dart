@@ -336,10 +336,10 @@ class _FakeSourceRepo extends SourceRepository {
       : _throwOnGetByStudent = throwOnGetByStudent;
 
   @override
-  Future<List<Source>> getByStudent(String studentId) async {
+  Future<Result<List<Source>>> getByStudent(String studentId) async {
     used = true;
     if (_throwOnGetByStudent) throw Exception('getByStudent error');
-    return [];
+    return Result.success([]);
   }
 }
 

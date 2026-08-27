@@ -42,42 +42,42 @@ class InMemorySourceRepository extends SourceRepository {
   }
 
   @override
-  Future<List<Source>> getBySubject(String subjectId) async {
-    return _store.values.where((s) => s.subjectId == subjectId).toList();
+  Future<Result<List<Source>>> getBySubject(String subjectId) async {
+    return Result.success(_store.values.where((s) => s.subjectId == subjectId).toList());
   }
 
   @override
-  Future<List<Source>> getByTopic(String topicId) async {
-    return _store.values.where((s) => s.topicId == topicId).toList();
+  Future<Result<List<Source>>> getByTopic(String topicId) async {
+    return Result.success(_store.values.where((s) => s.topicId == topicId).toList());
   }
 
   @override
-  Future<List<Source>> getByStudent(String studentId) async {
-    return _store.values.where((s) => s.studentId == studentId).toList();
+  Future<Result<List<Source>>> getByStudent(String studentId) async {
+    return Result.success(_store.values.where((s) => s.studentId == studentId).toList());
   }
 
   @override
-  Future<List<Source>> getByType(String sourceType) async {
-    return _store.values.where((s) => s.type.name == sourceType).toList();
+  Future<Result<List<Source>>> getByType(String sourceType) async {
+    return Result.success(_store.values.where((s) => s.type.name == sourceType).toList());
   }
 
   @override
-  Future<List<Source>> getByStatus(ProcessingStatus status) async {
-    return _store.values.where((s) => s.statusEnum == status).toList();
+  Future<Result<List<Source>>> getByStatus(ProcessingStatus status) async {
+    return Result.success(_store.values.where((s) => s.statusEnum == status).toList());
   }
 
   @override
-  Future<List<Source>> getPending() async {
+  Future<Result<List<Source>>> getPending() async {
     return getByStatus(ProcessingStatus.pending);
   }
 
   @override
-  Future<List<Source>> getFailed() async {
+  Future<Result<List<Source>>> getFailed() async {
     return getByStatus(ProcessingStatus.failed);
   }
 
   @override
-  Future<List<Source>> getCompleted() async {
+  Future<Result<List<Source>>> getCompleted() async {
     return getByStatus(ProcessingStatus.completed);
   }
 }
@@ -210,12 +210,12 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, subjectId: 'sub1'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, subjectId: 'sub1'));
         await repo.create(Source(id: 's3', title: 'S3', type: SourceType.pdf, subjectId: 'sub2'));
-        expect((await repo.getBySubject('sub1')).length, 2);
-        expect((await repo.getBySubject('sub1')).every((s) => s.subjectId == 'sub1'), isTrue);
+        expect((await repo.getBySubject('sub1')).data?.length ?? 0, 2);
+        expect((await repo.getBySubject('sub1')).data!.every((s) => s.subjectId == 'sub1'), isTrue);
       });
 
       test('returns empty for non-existent subject', () async {
-        expect(await repo.getBySubject('none'), isEmpty);
+        expect((await repo.getBySubject('none')).data, isEmpty);
       });
     });
 
@@ -223,18 +223,18 @@ void main() {
       test('returns sources for topic', () async {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, topicId: 't1'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, topicId: 't2'));
-        expect((await repo.getByTopic('t1')).length, 1);
-        expect((await repo.getByTopic('t1')).first.topicId, 't1');
+        expect((await repo.getByTopic('t1')).data?.length ?? 0, 1);
+        expect((await repo.getByTopic('t1')).data!.first.topicId, 't1');
       });
 
       test('returns empty for non-existent topic', () async {
-        expect(await repo.getByTopic('none'), isEmpty);
+        expect((await repo.getByTopic('none')).data, isEmpty);
       });
 
       test('returns sources with topicId empty string', () async {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, topicId: ''));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, topicId: 't1'));
-        expect((await repo.getByTopic('')).length, 1);
+        expect((await repo.getByTopic('')).data?.length ?? 0, 1);
       });
     });
 
@@ -242,12 +242,12 @@ void main() {
       test('returns sources for student', () async {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, studentId: 'stu1'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, studentId: 'stu2'));
-        expect((await repo.getByStudent('stu1')).length, 1);
-        expect((await repo.getByStudent('stu1')).first.studentId, 'stu1');
+        expect((await repo.getByStudent('stu1')).data?.length ?? 0, 1);
+        expect((await repo.getByStudent('stu1')).data!.first.studentId, 'stu1');
       });
 
       test('returns empty for non-existent student', () async {
-        expect(await repo.getByStudent('none'), isEmpty);
+        expect((await repo.getByStudent('none')).data, isEmpty);
       });
     });
 
@@ -256,7 +256,8 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.textbook));
         await repo.create(Source(id: 's3', title: 'S3', type: SourceType.pdf));
-        final pdfSources = await repo.getByType('pdf');
+        final pdfSourcesResult = await repo.getByType('pdf');
+        final pdfSources = pdfSourcesResult.data!;
         expect(pdfSources.length, 2);
         expect(pdfSources.every((s) => s.type == SourceType.pdf), isTrue);
       });
@@ -264,7 +265,7 @@ void main() {
       test('returns empty when no sources match the type', () async {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
         final result = await repo.getByType('video');
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
 
       test('handles all SourceType values', () async {
@@ -273,15 +274,15 @@ void main() {
         }
         for (final type in SourceType.values) {
           final results = await repo.getByType(type.name);
-          expect(results.length, 1, reason: 'Expected 1 source for type ${type.name}');
-          expect(results.first.type, type);
+          expect(results.data?.length ?? 0, 1, reason: 'Expected 1 source for type ${type.name}');
+          expect(results.data!.first.type, type);
         }
       });
 
       test('case-sensitive type matching', () async {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
         final result = await repo.getByType('PDF');
-        expect(result, isEmpty);
+        expect(result.data, isEmpty);
       });
     });
 
@@ -290,8 +291,8 @@ void main() {
         await repo.create(createTestSource(id: 's1', processingStatus: 'pending'));
         await repo.create(createTestSource(id: 's2', processingStatus: 'completed'));
         final pending = await repo.getByStatus(ProcessingStatus.pending);
-        expect(pending.length, 1);
-        expect(pending.first.id, 's1');
+        expect(pending.data?.length ?? 0, 1);
+        expect(pending.data!.first.id, 's1');
       });
 
       test('handles all ProcessingStatus values', () async {
@@ -302,32 +303,34 @@ void main() {
         }
         for (final status in ProcessingStatus.values) {
           final results = await repo.getByStatus(status);
-          expect(results.length, 1,
+          expect(results.data?.length ?? 0, 1,
               reason: 'Expected 1 source for status ${status.name}');
-          expect(results.first.processingStatus, status.name);
+          expect(results.data!.first.processingStatus, status.name);
         }
       });
 
       test('returns empty for status with no match', () async {
         await repo.create(createTestSource(id: 's1', processingStatus: 'pending'));
         final results = await repo.getByStatus(ProcessingStatus.completed);
-        expect(results, isEmpty);
+        expect(results.data, isEmpty);
       });
 
       test('statuses are distinct', () async {
         await repo.create(createTestSource(id: 's1', processingStatus: 'pending'));
         await repo.create(createTestSource(id: 's2', processingStatus: 'extracting'));
         await repo.create(createTestSource(id: 's3', processingStatus: 'classifying'));
-        await repo.create(createTestSource(id: 's4', processingStatus: 'generatingQuestions'));
-        await repo.create(createTestSource(id: 's5', processingStatus: 'validating'));
-        await repo.create(createTestSource(id: 's6', processingStatus: 'completed'));
-        await repo.create(createTestSource(id: 's7', processingStatus: 'failed'));
+        await repo.create(createTestSource(id: 's4', processingStatus: 'summarizing'));
+        await repo.create(createTestSource(id: 's5', processingStatus: 'generatingQuestions'));
+        await repo.create(createTestSource(id: 's6', processingStatus: 'generatingFlashcards'));
+        await repo.create(createTestSource(id: 's7', processingStatus: 'validating'));
+        await repo.create(createTestSource(id: 's8', processingStatus: 'completed'));
+        await repo.create(createTestSource(id: 's9', processingStatus: 'failed'));
 
         for (final status in ProcessingStatus.values) {
           final results = await repo.getByStatus(status);
-          expect(results.length, 1,
+          expect(results.data?.length ?? 0, 1,
               reason: 'Expected exactly 1 source for status $status');
-          expect(results.first.processingStatus, status.name);
+          expect(results.data!.first.processingStatus, status.name);
         }
       });
     });
@@ -337,8 +340,8 @@ void main() {
         await repo.create(createTestSource(id: 's1', processingStatus: 'pending'));
         await repo.create(createTestSource(id: 's2', processingStatus: 'completed'));
         final pending = await repo.getPending();
-        expect(pending.length, 1);
-        expect(pending.first.id, 's1');
+        expect(pending.data?.length ?? 0, 1);
+        expect(pending.data!.first.id, 's1');
       });
     });
 
@@ -347,8 +350,8 @@ void main() {
         await repo.create(createTestSource(id: 's1', processingStatus: 'completed'));
         await repo.create(createTestSource(id: 's2', processingStatus: 'failed'));
         final completed = await repo.getCompleted();
-        expect(completed.length, 1);
-        expect(completed.first.id, 's1');
+        expect(completed.data?.length ?? 0, 1);
+        expect(completed.data!.first.id, 's1');
       });
     });
 
@@ -357,8 +360,8 @@ void main() {
         await repo.create(createTestSource(id: 's1', processingStatus: 'failed'));
         await repo.create(createTestSource(id: 's2', processingStatus: 'pending'));
         final failed = await repo.getFailed();
-        expect(failed.length, 1);
-        expect(failed.first.id, 's1');
+        expect(failed.data?.length ?? 0, 1);
+        expect(failed.data!.first.id, 's1');
       });
     });
 
@@ -499,7 +502,8 @@ void main() {
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, subjectId: 'sub1'));
         await repo.create(Source(id: 's3', title: 'S3', type: SourceType.pdf, subjectId: 'sub2'));
         final results = await repo.getBySubject('sub1');
-        expect(results.length, 2);
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 2);
       });
 
       test('getByTopic filters correctly', () async {
@@ -508,8 +512,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, topicId: 't1'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, topicId: 't2'));
         final results = await repo.getByTopic('t1');
-        expect(results.length, 1);
-        expect(results.first.id, 's1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.id, 's1');
       });
 
       test('getByStudent filters correctly', () async {
@@ -518,8 +523,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, studentId: 'stu1'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, studentId: 'stu2'));
         final results = await repo.getByStudent('stu1');
-        expect(results.length, 1);
-        expect(results.first.studentId, 'stu1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.studentId, 'stu1');
       });
 
       test('getByType filters correctly', () async {
@@ -528,8 +534,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.textbook));
         final results = await repo.getByType('pdf');
-        expect(results.length, 1);
-        expect(results.first.type, SourceType.pdf);
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.type, SourceType.pdf);
       });
 
       test('getByStatus filters correctly', () async {
@@ -538,8 +545,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'pending'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'completed'));
         final results = await repo.getByStatus(ProcessingStatus.pending);
-        expect(results.length, 1);
-        expect(results.first.id, 's1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.id, 's1');
       });
 
       test('getPending returns only pending sources', () async {
@@ -548,8 +556,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'pending'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'completed'));
         final results = await repo.getPending();
-        expect(results.length, 1);
-        expect(results.first.id, 's1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.id, 's1');
       });
 
       test('getCompleted returns only completed sources', () async {
@@ -558,8 +567,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'completed'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'failed'));
         final results = await repo.getCompleted();
-        expect(results.length, 1);
-        expect(results.first.id, 's1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.id, 's1');
       });
 
       test('getFailed returns only failed sources', () async {
@@ -568,8 +578,9 @@ void main() {
         await repo.create(Source(id: 's1', title: 'S1', type: SourceType.pdf, processingStatus: 'failed'));
         await repo.create(Source(id: 's2', title: 'S2', type: SourceType.pdf, processingStatus: 'pending'));
         final results = await repo.getFailed();
-        expect(results.length, 1);
-        expect(results.first.id, 's1');
+        expect(results.isSuccess, isTrue);
+        expect(results.data?.length, 1);
+        expect(results.data!.first.id, 's1');
       });
     });
 
@@ -663,6 +674,8 @@ void main() {
       });
 
       test('get returns failure result on error', () async {
+        // Close Hive to simulate uninitialized state
+        await Hive.close();
         final repo = SourceRepository();
         // Don't init - uninitialized box will cause an error
         final result = await repo.get('anything');
@@ -670,21 +683,88 @@ void main() {
       });
 
       test('getAll returns failure on uninitialized box', () async {
+        await Hive.close();
         final repo = SourceRepository();
         final result = await repo.getAll();
         expect(result.isFailure, isTrue);
       });
 
       test('delete returns failure on uninitialized box', () async {
+        await Hive.close();
         final repo = SourceRepository();
         final result = await repo.delete('anything');
         expect(result.isFailure, isTrue);
       });
 
       test('save returns failure on uninitialized box', () async {
+        await Hive.close();
         final repo = SourceRepository();
         final result = await repo.save('k', Source(id: 'k', title: 'T', type: SourceType.pdf));
         expect(result.isFailure, isTrue);
+      });
+
+      test('getBySubject succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getBySubject('sub1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getByTopic succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getByTopic('t1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getByStudent succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getByStudent('stu1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getByType succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getByType('pdf');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getByStatus succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getByStatus(ProcessingStatus.pending);
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getPending succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getPending();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getFailed succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getFailed();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('getCompleted succeeds after auto-init when box was closed', () async {
+        await Hive.close();
+        final repo = SourceRepository();
+        final result = await repo.getCompleted();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
       });
     });
   });

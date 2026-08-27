@@ -1989,7 +1989,12 @@ class _FailedUploadsTileState extends ConsumerState<_FailedUploadsTile> {
     try {
       final repo = SourceRepository();
       await repo.init();
-      final failed = await repo.getFailed();
+      final failedResult = await repo.getFailed();
+      if (failedResult.isFailure) {
+        _logger.w('Failed to load failed count: ${failedResult.error}');
+        return;
+      }
+      final failed = failedResult.data ?? [];
       if (mounted) setState(() => _failedCount = failed.length);
     } catch (e) {
       _logger.w('Failed to load failed count', e);

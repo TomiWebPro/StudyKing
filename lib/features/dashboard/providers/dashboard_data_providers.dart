@@ -276,8 +276,12 @@ final dashboardDueReviewsProvider =
 final dashboardSourceCountProvider = FutureProvider.family<int, String>((ref, studentId) async {
   try {
     final repo = ref.watch(sourceRepositoryProvider);
-    final sources = await repo.getByStudent(studentId);
-    return sources.length;
+    final sourcesResult = await repo.getByStudent(studentId);
+    if (sourcesResult.isFailure) {
+      _dashboardLogger.w('Failed to get source count: ${sourcesResult.error}');
+      return 0;
+    }
+    return sourcesResult.data?.length ?? 0;
   } catch (e) {
     _dashboardLogger.w('Failed to get source count', e);
     return 0;
@@ -307,7 +311,7 @@ final dashboardChecklistProgressProvider = FutureProvider.family<ChecklistProgre
 
     final sourceRepo = ref.watch(sourceRepositoryProvider);
     final sourcesResult = await sourceRepo.getByStudent(studentId);
-    final hasSources = sourcesResult.isNotEmpty;
+    final hasSources = (sourcesResult.data ?? []).isNotEmpty;
 
     final sessionRepo = ref.watch(sessionRepositoryProvider);
     final allSessionsResult = await sessionRepo.getAll();

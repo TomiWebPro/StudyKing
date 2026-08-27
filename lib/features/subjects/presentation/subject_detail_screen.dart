@@ -53,7 +53,12 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     try {
       final repo = SourceRepository();
       await repo.init();
-      final sources = await repo.getBySubject(widget.subject.id);
+      final sourcesResult = await repo.getBySubject(widget.subject.id);
+      if (sourcesResult.isFailure) {
+        _logger.w('Failed to load source count: ${sourcesResult.error}');
+        return;
+      }
+      final sources = sourcesResult.data ?? [];
       if (mounted) setState(() => _sourceCount = sources.length);
     } catch (e) {
       _logger.w('Failed to load source count: $e');
@@ -455,7 +460,13 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
     setState(() { _isLoading = true; _error = null; });
     try {
       await _sourceRepo.init();
-      final sources = await _sourceRepo.getBySubject(widget.subjectId);
+      final sourcesResult = await _sourceRepo.getBySubject(widget.subjectId);
+      if (sourcesResult.isFailure) {
+        _logger.w('Failed to load sources: ${sourcesResult.error}');
+        if (mounted) setState(() { _isLoading = false; _error = AppLocalizations.of(context)!.somethingWentWrong; });
+        return;
+      }
+      final sources = sourcesResult.data ?? [];
       if (mounted) {
         setState(() {
           _items = sources.map((s) => _SourceItem(
