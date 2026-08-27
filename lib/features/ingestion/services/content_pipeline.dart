@@ -307,12 +307,20 @@ class ContentPipeline {
       onProgress?.call(ProcessingStatus.summarizing, 'Generating summary...');
       updated = _updateStatus(updated, ProcessingStatus.summarizing);
 
-      final summary = chunks.length > 1
-          ? await _chunkedProcessor.generateConsolidatedSummary(
-              chunks: chunks,
-              modelId: modelId,
-            )
-          : await _generateSummary(textToClassify, modelId);
+      String summary = '';
+      if (chunks.length > 1) {
+        final summaryResult = await _chunkedProcessor.generateConsolidatedSummary(
+          chunks: chunks,
+          modelId: modelId,
+        );
+        if (summaryResult.isFailure) {
+          _logger.w('Failed to generate consolidated summary: ${summaryResult.error}');
+        } else {
+          summary = summaryResult.data ?? '';
+        }
+      } else {
+        summary = await _generateSummary(textToClassify, modelId);
+      }
 
       if (summary.isNotEmpty) {
         updated = updated.copyWith(summary: summary);

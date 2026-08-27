@@ -141,13 +141,13 @@ class FakeChunkedContentProcessor extends ChunkedContentProcessor {
   }
 
   @override
-  Future<String> generateConsolidatedSummary({
+  Future<Result<String>> generateConsolidatedSummary({
     required List<SourceChunk> chunks,
     required String modelId,
     String? existingTopicTitle,
   }) async {
     summarizeCalled = true;
-    return 'fake summary';
+    return Result.success('fake summary');
   }
 
   @override

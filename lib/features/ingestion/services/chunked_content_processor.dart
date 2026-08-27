@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
@@ -191,58 +192,74 @@ class ChunkedContentProcessor {
     }
   }
 
-  Future<String> generateConsolidatedSummary({
+  Future<Result<String>> generateConsolidatedSummary({
     required List<SourceChunk> chunks,
     required String modelId,
     String? existingTopicTitle,
   }) async {
-    if (chunks.isEmpty) return '';
-
-    if (chunks.length == 1) {
-      return _summarizeChunk(chunks.first, modelId);
-    }
-
-    final chunkSummaries = <String>[];
-    final l10n = lookupAppLocalizations(Locale(_localeName));
-
-    for (var i = 0; i < chunks.length; i += _parallelBatchSize) {
-      if (_cancelled) break;
-      final batchEnd = (i + _parallelBatchSize).clamp(0, chunks.length);
-      final batch = chunks.sublist(i, batchEnd);
-
-      final results = await Future.wait(
-        batch.map((chunk) => _summarizeChunk(chunk, modelId)),
-      );
-
-      chunkSummaries.addAll(results.where((s) => s.isNotEmpty));
-
-      if (batchEnd < chunks.length) {
-        await Future.delayed(_delayBetweenBatches);
-      }
-    }
-
-    if (chunkSummaries.isEmpty) return '';
-
-    if (chunkSummaries.length == 1) return chunkSummaries.first;
-
-    final consolidatedPrompt = l10n.summarizeUserPrompt(
-      chunkSummaries.asMap().entries.map((e) =>
-        'Section ${e.key + 1}:\n${e.value}'
-      ).join('\n\n'),
-    );
-
     try {
-      final result = await _llmService.chat(
-        message: consolidatedPrompt,
-        modelId: modelId,
-        systemPrompt: l10n.summarizeSystemPrompt,
-        feature: 'content_summarization',
+      if (chunks.isEmpty) return Result.success('');
+
+      if (chunks.length == 1) {
+        final single = await _summarizeChunk(chunks.first, modelId);
+        if (single.isEmpty) {
+          _logger.w('Failed to summarize single chunk ${chunks.first.chunkIndex}');
+          return Result.failure('Failed to summarize chunk');
+        }
+        return Result.success(single);
+      }
+
+      final chunkSummaries = <String>[];
+      final l10n = lookupAppLocalizations(Locale(_localeName));
+
+      for (var i = 0; i < chunks.length; i += _parallelBatchSize) {
+        if (_cancelled) break;
+        final batchEnd = (i + _parallelBatchSize).clamp(0, chunks.length);
+        final batch = chunks.sublist(i, batchEnd);
+
+        final results = await Future.wait(
+          batch.map((chunk) => _summarizeChunk(chunk, modelId)),
+        );
+
+        chunkSummaries.addAll(results.where((s) => s.isNotEmpty));
+
+        if (batchEnd < chunks.length) {
+          await Future.delayed(_delayBetweenBatches);
+        }
+      }
+
+      if (chunkSummaries.isEmpty) {
+        _logger.w('Failed to generate consolidated summary: no chunk summaries produced');
+        return Result.failure('No chunk summaries produced');
+      }
+
+      if (chunkSummaries.length == 1) return Result.success(chunkSummaries.first);
+
+      final consolidatedPrompt = l10n.summarizeUserPrompt(
+        chunkSummaries.asMap().entries.map((e) =>
+          'Section ${e.key + 1}:\n${e.value}'
+        ).join('\n\n'),
       );
-      if (result.isFailure) return chunkSummaries.join('\n\n');
-      return result.data!.trim();
-    } catch (e) {
-      _logger.w('Summary consolidation failed, using concatenated chunk summaries', e);
-      return chunkSummaries.join('\n\n');
+
+      try {
+        final result = await _llmService.chat(
+          message: consolidatedPrompt,
+          modelId: modelId,
+          systemPrompt: l10n.summarizeSystemPrompt,
+          feature: 'content_summarization',
+        );
+        if (result.isFailure) {
+          _logger.w('Summary consolidation failed: ${result.error}');
+          return Result.failure(result.error ?? 'Failed to consolidate summary');
+        }
+        return Result.success(result.data!.trim());
+      } catch (e, stack) {
+        _logger.w('Summary consolidation failed', e, stack);
+        return Result.failure(e.toString());
+      }
+    } catch (e, stack) {
+      _logger.w('Failed to generate consolidated summary', e, stack);
+      return Result.failure(e.toString());
     }
   }
 

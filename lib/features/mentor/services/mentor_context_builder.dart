@@ -11,6 +11,7 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -20,6 +21,7 @@ import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorContextBuilder {
+  static final Logger _logger = const Logger('MentorContextBuilder');
 
   final StudyProgressTracker _progressTracker;
   final MasteryGraphService _masteryService;
@@ -47,8 +49,9 @@ class MentorContextBuilder {
         _learningAnalyticsService = learningAnalyticsService,
         _localeName = localeName;
 
-  Future<String> buildContextPrompt() async {
-    final statsResult = await _progressTracker.getOverallStats(_plannerService.studentId);
+  Future<Result<String>> buildContextPrompt() async {
+    try {
+      final statsResult = await _progressTracker.getOverallStats(_plannerService.studentId);
     final stats = statsResult.data ?? <String, dynamic>{};
     final weakTopics = (await _loadWeakTopics()).data ?? [];
     final plan = (await _loadPlan()).data;
@@ -209,7 +212,11 @@ class MentorContextBuilder {
       }
     }
 
-    return buffer.toString();
+      return Result.success(buffer.toString());
+    } catch (e, stack) {
+      _logger.w('Failed to build mentor context prompt', e, stack);
+      return Result.failure(e.toString());
+    }
   }
 
   Future<Result<List<Session>>> loadUpcomingLessons() async {

@@ -175,7 +175,11 @@ class MentorService {
     final memoryContext = await _buildLongTermMemoryContext();
 
     if (_agent != null) {
-      final context = await _contextBuilder.buildContextPrompt();
+      final contextResult = await _contextBuilder.buildContextPrompt();
+      if (contextResult.isFailure) {
+        _logger.w('Failed to build mentor context: ${contextResult.error}');
+      }
+      final context = contextResult.data ?? '';
       final systemPrompt = '${_mentorSystemPrompt()}\n\n$context\n\n$memoryContext';
       final history = _memory.getHistory().map((m) => {
         'role': m.role == MessageRole.student ? 'user' : 'assistant',
@@ -203,8 +207,12 @@ class MentorService {
       return;
     }
 
-    final context = await _contextBuilder.buildContextPrompt();
-    final fullPrompt = '$context\n\n$memoryContext\n\nStudent: $message';
+    final contextResult2 = await _contextBuilder.buildContextPrompt();
+    if (contextResult2.isFailure) {
+      _logger.w('Failed to build mentor context: ${contextResult2.error}');
+    }
+    final context2 = contextResult2.data ?? '';
+    final fullPrompt = '$context2\n\n$memoryContext\n\nStudent: $message';
 
     final buffer = StringBuffer();
     try {
