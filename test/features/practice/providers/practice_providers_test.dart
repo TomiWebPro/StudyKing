@@ -1,5 +1,7 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
@@ -294,12 +296,13 @@ void main() {
       addTearDown(container.dispose);
 
       final mistakeService = container.read(mistakeReviewServiceProvider);
-      final mistakes = await mistakeService.getMistakesFromSession(
+      final mistakesResult = await mistakeService.getMistakesFromSession(
         studentId: 'student-1',
         subjectId: 'sub-1',
         after: DateTime(2026, 5, 1, 9, 0),
       );
-      expect(mistakes, isA<List>());
+      expect(mistakesResult.isSuccess, isTrue);
+      expect(mistakesResult.data, isA<List>());
     });
 
     test('masteryGraphServiceProvider handles error-state when repo fails', () async {
@@ -376,11 +379,12 @@ void main() {
       addTearDown(container.dispose);
 
       final mistakeService = container.read(mistakeReviewServiceProvider);
-      final mistakes = await mistakeService.getMistakesFromSession(
+      final mistakesResult = await mistakeService.getMistakesFromSession(
         studentId: 'student-1',
         subjectId: 'sub-1',
       );
-      expect(mistakes, isEmpty);
+      expect(mistakesResult.isSuccess, isTrue);
+      expect(mistakesResult.data, isEmpty);
     });
 
     test('examSessionServiceProvider wired to overridden dependencies', () {
@@ -494,6 +498,10 @@ void main() {
     });
 
     test('examSessionServiceProvider finishExam saves session to repository', () async {
+      final tempDir = Directory.systemTemp.createTempSync('provider_exam_test_');
+      try {
+        Hive.init(tempDir.path);
+      } catch (_) {}
       final fakeSessionRepo = FakeSessionRepository();
       final fakeStudentId = FakeStudentIdService();
       fakeStudentId.setStudentId('test-student');
@@ -518,15 +526,20 @@ void main() {
 
       final result = await examService.finishExam(config: config, questionResults: questionResults);
 
-      expect(result.accuracy, 1.0);
-      expect(result.totalCorrect, 1);
-      expect(result.questionResults.length, 1);
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.accuracy, 1.0);
+      expect(result.data!.totalCorrect, 1);
+      expect(result.data!.questionResults.length, 1);
 
       final allSessionsResult = await fakeSessionRepo.getAll();
       expect(allSessionsResult.isSuccess, isTrue);
       expect(allSessionsResult.data!.length, 1);
       expect(allSessionsResult.data!.first.subjectId, 'sub-1');
       expect(allSessionsResult.data!.first.completed, isTrue);
+      await Hive.deleteFromDisk();
+      try {
+        tempDir.deleteSync(recursive: true);
+      } catch (_) {}
     });
 
     test('readinessScorerProvider scoreQuestions uses seeded mastery data', () async {
