@@ -11,6 +11,21 @@ import 'string_extensions.dart';
 
 enum ConflictStrategy { skipExisting, overwrite }
 
+class CsvImportResult {
+  final List<Question> questions;
+  final List<String> skippedRows;
+  final int skippedDueToConflict;
+
+  const CsvImportResult({
+    required this.questions,
+    this.skippedRows = const [],
+    this.skippedDueToConflict = 0,
+  });
+
+  int get malformedCount => skippedRows.length;
+  int get totalSkipped => skippedRows.length + skippedDueToConflict;
+}
+
 class QuestionImportUtils {
   static final Logger _logger = const Logger('QuestionImportUtils');
 
@@ -46,7 +61,7 @@ class QuestionImportUtils {
     }
   }
 
-  static Future<Result<List<Question>>> importFromCsv(
+  static Future<Result<CsvImportResult>> importFromCsv(
     String filePath, {
     Set<String> existingIds = const {},
     ConflictStrategy strategy = ConflictStrategy.skipExisting,
@@ -58,15 +73,19 @@ class QuestionImportUtils {
       }
       final lines = await file.readAsLines();
       if (lines.length < 2) {
-        return Result.success([]);
+        return Result.success(const CsvImportResult(questions: []));
       }
       final questions = <Question>[];
       var skipped = 0;
+      final malformedRows = <String>[];
       for (var i = 1; i < lines.length; i++) {
         final line = lines[i].trim();
         if (line.isEmpty) continue;
         final q = _parseCsvRow(line);
-        if (q == null) continue;
+        if (q == null) {
+          malformedRows.add(line);
+          continue;
+        }
         if (existingIds.contains(q.id)) {
           if (strategy == ConflictStrategy.skipExisting) {
             skipped++;
@@ -75,8 +94,21 @@ class QuestionImportUtils {
         }
         questions.add(q);
       }
-      _logger.i('Imported ${questions.length} questions from CSV ($skipped skipped)');
-      return Result.success(questions);
+      if (malformedRows.isNotEmpty) {
+        _logger.w(
+          'CSV import skipped ${malformedRows.length} malformed row(s)',
+        );
+      }
+      _logger.i(
+        'Imported ${questions.length} questions from CSV ($skipped skipped, ${malformedRows.length} malformed)',
+      );
+      return Result.success(
+        CsvImportResult(
+          questions: questions,
+          skippedRows: malformedRows,
+          skippedDueToConflict: skipped,
+        ),
+      );
     } catch (e) {
       _logger.w('Failed to import CSV', e);
       return Result.failure(e.toString());
@@ -94,8 +126,11 @@ class QuestionImportUtils {
       if (colCount >= 13) {
         return _parseCsvRowV13(values);
       }
+      _logger.w('Failed to parse question CSV row: insufficient columns ($colCount): $line');
       return null;
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to parse question CSV row', e, stackTrace);
+      _logger.w('Failed to parse question CSV row: $line', e);
       return null;
     }
   }

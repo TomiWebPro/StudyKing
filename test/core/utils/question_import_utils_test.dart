@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/utils/question_import_utils.dart';
@@ -177,45 +178,47 @@ void main() {
   group('QuestionImportUtils.importFromCsv', () {
     test('imports from CSV file with 18-column format', () async {
       final csv = '''id,text,type,difficulty,subjectId,topicId,variantIds,sourceIds,options,allowedAnswerTypes,correctAnswer,explanation,tags,model,difficultyText,nextReview,createdAt,updatedAt
-q_imp_1,Imported question,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Explanation text,tag1;tag2,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
+ q_imp_1,Imported question,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Explanation text,tag1;tag2,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
       final file = File('${Directory.systemTemp.path}/test_import_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(csv);
 
       final result = await QuestionImportUtils.importFromCsv(file.path);
       expect(result.isSuccess, true);
-      final questions = result.data!;
-      expect(questions.length, 1);
-      expect(questions[0].text, 'Imported question');
-      expect(questions[0].subjectId, 'subj_1');
-      expect(questions[0].topicId, 'topic_1');
-      expect(questions[0].options, ['opt1', 'opt2']);
-      expect(questions[0].allowedAnswerTypes, 'text');
-      expect(questions[0].markscheme?.correctAnswer, 'opt1');
-      expect(questions[0].explanation, 'Explanation text');
-      expect(questions[0].tags, ['tag1', 'tag2']);
-      expect(questions[0].difficultyText, 'easy');
-      expect(questions[0].nextReview, DateTime(2026, 6, 1));
+      final report = result.data!;
+      expect(report.questions.length, 1);
+      expect(report.questions[0].text, 'Imported question');
+      expect(report.questions[0].subjectId, 'subj_1');
+      expect(report.questions[0].topicId, 'topic_1');
+      expect(report.questions[0].options, ['opt1', 'opt2']);
+      expect(report.questions[0].allowedAnswerTypes, 'text');
+      expect(report.questions[0].markscheme?.correctAnswer, 'opt1');
+      expect(report.questions[0].explanation, 'Explanation text');
+      expect(report.questions[0].tags, ['tag1', 'tag2']);
+      expect(report.questions[0].difficultyText, 'easy');
+      expect(report.questions[0].nextReview, DateTime(2026, 6, 1));
+      expect(report.malformedCount, 0);
+      expect(report.skippedRows, isEmpty);
 
       await file.delete();
     });
 
     test('imports from old CSV with 13-column format (backward compat)', () async {
       final csv = '''id,text,type,difficulty,subjectId,topicId,sourceIds,options,correctAnswer,explanation,model,createdAt,updatedAt
-q_old,Old question,0,1,subj_1,topic_1,src_1,opt1|opt2,opt1,Old explanation,,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
+ q_old,Old question,0,1,subj_1,topic_1,src_1,opt1|opt2,opt1,Old explanation,,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
       final file = File('${Directory.systemTemp.path}/test_import_old_${DateTime.now().millisecondsSinceEpoch}.csv');
       await file.writeAsString(csv);
 
       final result = await QuestionImportUtils.importFromCsv(file.path);
       expect(result.isSuccess, true);
-      final questions = result.data!;
-      expect(questions.length, 1);
-      expect(questions[0].text, 'Old question');
-      expect(questions[0].subjectId, 'subj_1');
-      expect(questions[0].topicId, 'topic_1');
-      expect(questions[0].sourceIds, ['src_1']);
-      expect(questions[0].options, ['opt1', 'opt2']);
-      expect(questions[0].markscheme?.correctAnswer, 'opt1');
-      expect(questions[0].explanation, 'Old explanation');
+      final report = result.data!;
+      expect(report.questions.length, 1);
+      expect(report.questions[0].text, 'Old question');
+      expect(report.questions[0].subjectId, 'subj_1');
+      expect(report.questions[0].topicId, 'topic_1');
+      expect(report.questions[0].sourceIds, ['src_1']);
+      expect(report.questions[0].options, ['opt1', 'opt2']);
+      expect(report.questions[0].markscheme?.correctAnswer, 'opt1');
+      expect(report.questions[0].explanation, 'Old explanation');
 
       await file.delete();
     });
@@ -223,6 +226,77 @@ q_old,Old question,0,1,subj_1,topic_1,src_1,opt1|opt2,opt1,Old explanation,,2026
     test('importFromCsv fails on missing file', () async {
       final result = await QuestionImportUtils.importFromCsv('/nonexistent/file.csv');
       expect(result.isSuccess, false);
+    });
+
+    test('logs and reports malformed CSV row instead of silently dropping', () async {
+      final csv = '''id,text,type,difficulty,subjectId,topicId,variantIds,sourceIds,options,allowedAnswerTypes,correctAnswer,explanation,tags,model,difficultyText,nextReview,createdAt,updatedAt
+ q_valid,Valid question,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Explanation,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000
+MALFORMED_ROW_WITH_TOO_FEW_COLUMNS
+q_valid2,Another valid,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Exp,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
+      final file = File('${Directory.systemTemp.path}/test_import_malformed_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csv);
+
+      final records = <String>[];
+      final originalPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+      final result = await QuestionImportUtils.importFromCsv(file.path);
+
+      debugPrint = originalPrint;
+      await file.delete();
+
+      expect(result.isSuccess, true);
+      final report = result.data!;
+      expect(report.questions.length, 2);
+      expect(report.malformedCount, 1);
+      expect(report.skippedRows.length, 1);
+      expect(report.skippedRows.first, contains('MALFORMED_ROW_WITH_TOO_FEW_COLUMNS'));
+      expect(report.totalSkipped, 1);
+      // Verify malformed row was logged via _logger.w
+      expect(
+        records.any((r) => r.contains('Failed to parse question CSV row')),
+        isTrue,
+        reason: 'expected _logger.w for malformed CSV row',
+      );
+      // Verify summary log includes malformed count
+      expect(
+        records.any((r) => r.contains('malformed')),
+        isTrue,
+        reason: 'expected summary log with malformed count',
+      );
+    });
+
+    test('reports multiple malformed rows with skippedRows list', () async {
+      final csv = '''id,text,type,difficulty,subjectId,topicId,variantIds,sourceIds,options,allowedAnswerTypes,correctAnswer,explanation,tags,model,difficultyText,nextReview,createdAt,updatedAt
+q_good,Good question,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Exp,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000
+bad1,only_two
+bad2,also_bad
+q_good2,Second good,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Exp,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
+      final file = File('${Directory.systemTemp.path}/test_import_multi_malformed_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csv);
+
+      final result = await QuestionImportUtils.importFromCsv(file.path);
+      expect(result.isSuccess, true);
+      final report = result.data!;
+      expect(report.questions.length, 2);
+      expect(report.malformedCount, 2);
+      expect(report.skippedRows, contains('bad1,only_two'));
+      expect(report.skippedRows, contains('bad2,also_bad'));
+
+      await file.delete();
+    });
+
+    test('empty file with only header returns empty report', () async {
+      final csv = '''id,text,type,difficulty,subjectId,topicId,variantIds,sourceIds,options,allowedAnswerTypes,correctAnswer,explanation,tags,model,difficultyText,nextReview,createdAt,updatedAt''';
+      final file = File('${Directory.systemTemp.path}/test_import_empty_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csv);
+
+      final result = await QuestionImportUtils.importFromCsv(file.path);
+      expect(result.isSuccess, true);
+      expect(result.data!.questions, isEmpty);
+      expect(result.data!.malformedCount, 0);
+
+      await file.delete();
     });
   });
 
