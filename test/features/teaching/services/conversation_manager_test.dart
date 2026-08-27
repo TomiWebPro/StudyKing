@@ -75,6 +75,7 @@ class FakeLlmService extends LlmService {
 
 class FakeExerciseEvaluator extends ExerciseEvaluator {
   bool shouldThrow = false;
+  bool shouldReturnFailure = false;
 
   FakeExerciseEvaluator()
       : super(
@@ -84,7 +85,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
         );
 
   @override
-  Future<EvaluationResult> evaluate({
+  Future<Result<EvaluationResult>> evaluate({
     required String question,
     required String studentAnswer,
     required String subjectId,
@@ -93,13 +94,14 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
     String? userPrompt,
   }) async {
     if (shouldThrow) throw Exception('Simulated evaluator error');
+    if (shouldReturnFailure) return Result.failure('Simulated evaluator failure');
     final lower = studentAnswer.toLowerCase();
     if (lower.contains('correct') || lower.contains('right') || lower.contains('yes')) {
-      return EvaluationResult(score: 0.9, explanation: 'Correct answer.');
+      return Result.success(EvaluationResult(score: 0.9, explanation: 'Correct answer.'));
     } else if (lower.contains('wrong') || lower.contains('incorrect') || lower.contains('no')) {
-      return EvaluationResult(score: 0.2, explanation: 'Incorrect answer.');
+      return Result.success(EvaluationResult(score: 0.2, explanation: 'Incorrect answer.'));
     }
-    return EvaluationResult(score: 0.5, explanation: 'Partial answer.');
+    return Result.success(EvaluationResult(score: 0.5, explanation: 'Partial answer.'));
   }
 }
 
@@ -112,7 +114,7 @@ class RichResultEvaluator extends ExerciseEvaluator {
         );
 
   @override
-  Future<EvaluationResult> evaluate({
+  Future<Result<EvaluationResult>> evaluate({
     required String question,
     required String studentAnswer,
     required String subjectId,
@@ -120,12 +122,12 @@ class RichResultEvaluator extends ExerciseEvaluator {
     String? systemPrompt,
     String? userPrompt,
   }) async {
-    return EvaluationResult(
+    return Result.success(EvaluationResult(
       score: 0.85,
       explanation: 'Good work, mostly correct.',
       partialCredit: 0.5,
       conceptBreakdown: {'ConceptA': 0.9, 'ConceptB': 0.7},
-    );
+    ));
   }
 }
 
@@ -266,15 +268,31 @@ void main() {
         );
       });
 
-      test('throws when exercise evaluator fails during exercise phase', () async {
+      test('handles exercise evaluator throw gracefully with fallback result', () async {
         await manager.sendMessage('Hello').toList();
         manager.phase = ConversationPhase.exercise;
         exerciseEvaluator.shouldThrow = true;
 
-        expect(
-          () => manager.sendMessage('answer').toList(),
-          throwsA(isA<Exception>()),
-        );
+        final chunks = await manager.sendMessage('answer').toList();
+
+        expect(chunks.isNotEmpty, isTrue);
+        expect(manager.lastEvaluationResult, isNotNull);
+        expect(manager.lastEvaluationResult!.score, equals(0.5));
+        expect(manager.phase, equals(ConversationPhase.feedback));
+      });
+
+      test('handles evaluator Result.failure gracefully with fallback', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.exercise;
+        exerciseEvaluator.shouldReturnFailure = true;
+
+        final chunks = await manager.sendMessage('answer').toList();
+
+        expect(chunks.isNotEmpty, isTrue);
+        expect(manager.lastEvaluationResult, isNotNull);
+        expect(manager.lastEvaluationResult!.score, equals(0.5));
+        expect(manager.lastEvaluationResult!.explanation, contains('Simulated evaluator failure'));
+        expect(manager.phase, equals(ConversationPhase.feedback));
       });
 
       test('preserves exercise count after evaluator error during exercise', () async {
@@ -282,10 +300,7 @@ void main() {
         manager.phase = ConversationPhase.exercise;
         exerciseEvaluator.shouldThrow = true;
 
-        await expectLater(
-          () => manager.sendMessage('answer').toList(),
-          throwsA(isA<Exception>()),
-        );
+        await manager.sendMessage('answer').toList();
 
         expect(manager.exerciseCount, equals(1));
       });

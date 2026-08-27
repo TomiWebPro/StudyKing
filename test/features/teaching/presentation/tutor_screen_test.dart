@@ -68,7 +68,7 @@ class _FakeExerciseEvaluator extends ExerciseEvaluator {
         );
 
   @override
-  Future<EvaluationResult> evaluate({
+  Future<Result<EvaluationResult>> evaluate({
     required String question,
     required String studentAnswer,
     required String subjectId,
@@ -76,7 +76,7 @@ class _FakeExerciseEvaluator extends ExerciseEvaluator {
     String? systemPrompt,
     String? userPrompt,
   }) async {
-    return EvaluationResult(score: 0.8, explanation: 'Good work.');
+    return Result.success(EvaluationResult(score: 0.8, explanation: 'Good work.'));
   }
 }
 
