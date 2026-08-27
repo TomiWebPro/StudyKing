@@ -2,9 +2,12 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 
 class TutorSessionRepository extends Repository<TutorSession> {
+  static final Logger _logger = const Logger('TutorSessionRepository');
+
   TutorSessionRepository() : super(boxName: HiveBoxNames.tutorSessions);
 
   Future<void> init() async {
@@ -99,7 +102,8 @@ class TutorSessionRepository extends Repository<TutorSession> {
             : completed.fold<double>(0, (sum, s) => sum + s.accuracy) /
                 completed.length,
       });
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to get session stats', e, stackTrace);
       return Result.failure(e.toString());
     }
   }

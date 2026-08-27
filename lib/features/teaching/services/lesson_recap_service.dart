@@ -199,7 +199,8 @@ class LessonRecapService {
             session: session, messages: messages, id: id);
         await _repository.saveRecap(fallback);
         return Result.success(fallback);
-      } catch (storeErr) {
+      } catch (storeErr, stackTrace) {
+        _logger.w('Failed to generate and store lesson recap', storeErr, stackTrace);
         return Result.failure('Failed to generate lesson recap: $storeErr');
       }
     }

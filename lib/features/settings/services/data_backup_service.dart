@@ -142,7 +142,8 @@ class DataBackupService {
         if (encryptionPassword != null && encryptionPassword.isNotEmpty) {
           try {
             bytes = _decryptData(bytes, encryptionPassword);
-          } catch (e) {
+          } catch (e, stackTrace) {
+            _logger.w('Failed to decrypt backup data', e, stackTrace);
             return Result.failure('Decryption_failed: ${e.toString()}');
           }
         }

@@ -2,8 +2,11 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class SubjectRepository extends Repository<Subject> {
+  static final Logger _logger = const Logger('SubjectRepository');
+
   SubjectRepository() : super(boxName: HiveBoxNames.subjects);
 
   Future<void> init() async {
@@ -22,7 +25,8 @@ class SubjectRepository extends Repository<Subject> {
         return s.topicIds.any((id) => topicIds.contains(id));
       }).toList();
       return Result.success(filtered);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to get subjects with topics', e, stackTrace);
       return Result.failure(e.toString());
     }
   }
@@ -42,7 +46,8 @@ class SubjectRepository extends Repository<Subject> {
         return await super.put(subjectId, updated);
       }
       return Result.success(null);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to add topic to subject', e, stackTrace);
       return Result.failure(e.toString());
     }
   }
@@ -59,7 +64,8 @@ class SubjectRepository extends Repository<Subject> {
         return await super.put(subjectId, updated);
       }
       return Result.success(null);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to remove topic from subject', e, stackTrace);
       return Result.failure(e.toString());
     }
   }
@@ -70,7 +76,8 @@ class SubjectRepository extends Repository<Subject> {
       final subjects = getAllResult.data ?? [];
       return Result.success(
           subjects.where((s) => s.code == code).firstOrNull);
-    } catch (e) {
+    } catch (e, stackTrace) {
+      _logger.w('Failed to get subject by code', e, stackTrace);
       return Result.failure(e.toString());
     }
   }
