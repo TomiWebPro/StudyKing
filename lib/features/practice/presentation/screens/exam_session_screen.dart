@@ -250,14 +250,33 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
 
   Future<void> _finishExam() async {
     if (_config == null) return;
-    final result = await _examService.finishExam(
+    final resultWrapper = await _examService.finishExam(
       config: _config!,
       questionResults: _results,
       autoSubmitted: false,
     );
     if (!mounted) return;
+    if (resultWrapper.isFailure) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultWrapper.error ?? l10n.somethingWentWrong)),
+      );
+      final fallback = ExamResult(
+        config: _config!,
+        questionResults: _results,
+        startTime: _examService.examStartTime,
+        endTime: DateTime.now(),
+        wasAutoSubmitted: false,
+      );
+      setState(() {
+        _examResult = fallback;
+        _examFinished = true;
+        _isExamActive = false;
+      });
+      return;
+    }
     setState(() {
-      _examResult = result;
+      _examResult = resultWrapper.data!;
       _examFinished = true;
       _isExamActive = false;
     });
@@ -276,14 +295,33 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       ));
     }
 
-    final result = await _examService.finishExam(
+    final resultWrapper = await _examService.finishExam(
       config: _config!,
       questionResults: _results,
       autoSubmitted: true,
     );
     if (!mounted) return;
+    if (resultWrapper.isFailure) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(resultWrapper.error ?? l10n.somethingWentWrong)),
+      );
+      final fallback = ExamResult(
+        config: _config!,
+        questionResults: _results,
+        startTime: _examService.examStartTime,
+        endTime: DateTime.now(),
+        wasAutoSubmitted: true,
+      );
+      setState(() {
+        _examResult = fallback;
+        _examFinished = true;
+        _isExamActive = false;
+      });
+      return;
+    }
     setState(() {
-      _examResult = result;
+      _examResult = resultWrapper.data!;
       _examFinished = true;
       _isExamActive = false;
     });

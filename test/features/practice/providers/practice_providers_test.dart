@@ -26,6 +26,8 @@ import 'package:studyking/features/practice/data/models/student_attempt_model.da
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/providers/service_providers.dart';
+import 'package:hive/hive.dart';
+import 'dart:io';
 import '../../../helpers/fakes.dart';
 
 void main() {
@@ -294,12 +296,13 @@ void main() {
       addTearDown(container.dispose);
 
       final mistakeService = container.read(mistakeReviewServiceProvider);
-      final mistakes = await mistakeService.getMistakesFromSession(
+      final result = await mistakeService.getMistakesFromSession(
         studentId: 'student-1',
         subjectId: 'sub-1',
         after: DateTime(2026, 5, 1, 9, 0),
       );
-      expect(mistakes, isA<List>());
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isA<List<MistakeEntry>>());
     });
 
     test('masteryGraphServiceProvider handles error-state when repo fails', () async {
@@ -376,11 +379,12 @@ void main() {
       addTearDown(container.dispose);
 
       final mistakeService = container.read(mistakeReviewServiceProvider);
-      final mistakes = await mistakeService.getMistakesFromSession(
+      final result = await mistakeService.getMistakesFromSession(
         studentId: 'student-1',
         subjectId: 'sub-1',
       );
-      expect(mistakes, isEmpty);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
     });
 
     test('examSessionServiceProvider wired to overridden dependencies', () {
@@ -494,6 +498,12 @@ void main() {
     });
 
     test('examSessionServiceProvider finishExam saves session to repository', () async {
+      final tempDir = Directory.systemTemp.createTempSync('provider_exam_test_');
+      Hive.init(tempDir.path);
+      addTearDown(() async {
+        await Hive.deleteFromDisk();
+        try { Directory(tempDir.path).deleteSync(recursive: true); } catch (_) {}
+      });
       final fakeSessionRepo = FakeSessionRepository();
       final fakeStudentId = FakeStudentIdService();
       fakeStudentId.setStudentId('test-student');
@@ -516,11 +526,12 @@ void main() {
         ExamQuestionResult(question: question, isCorrect: true, timeSpentMs: 5000),
       ];
 
-      final result = await examService.finishExam(config: config, questionResults: questionResults);
+      final resultWrapper = await examService.finishExam(config: config, questionResults: questionResults);
 
-      expect(result.accuracy, 1.0);
-      expect(result.totalCorrect, 1);
-      expect(result.questionResults.length, 1);
+      expect(resultWrapper.isSuccess, isTrue);
+      expect(resultWrapper.data!.accuracy, 1.0);
+      expect(resultWrapper.data!.totalCorrect, 1);
+      expect(resultWrapper.data!.questionResults.length, 1);
 
       final allSessionsResult = await fakeSessionRepo.getAll();
       expect(allSessionsResult.isSuccess, isTrue);

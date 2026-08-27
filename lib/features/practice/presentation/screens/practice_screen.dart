@@ -561,7 +561,17 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   Future<void> _showExamHistory() async {
     final l10n = AppLocalizations.of(context)!;
     try {
-      final allResults = await ExamSessionService.getSavedExamResults();
+      final resultWrapper = await ExamSessionService.getSavedExamResults();
+      if (resultWrapper.isFailure) {
+        _logger.w('Failed to load exam history', resultWrapper.error);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.noExamHistory)),
+          );
+        }
+        return;
+      }
+      final allResults = resultWrapper.data ?? [];
       if (!mounted || allResults.isEmpty) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
