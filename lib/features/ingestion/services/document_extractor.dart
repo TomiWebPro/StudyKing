@@ -926,7 +926,8 @@ class DocumentExtractor {
           }
         }
         return buffer.toString().trim();
-      } catch (e) {
+      } catch (e, stackTrace) {
+        _logger.w('Failed to extract slide text', e, stackTrace);
         return '';
       }
     }
@@ -943,8 +944,8 @@ class DocumentExtractor {
             }
           }
         }
-      } catch (e) {
-        // Ignore parse errors
+      } catch (e, stackTrace) {
+        _logger.w('Failed to extract slide images', e, stackTrace);
       }
       return images;
     }
