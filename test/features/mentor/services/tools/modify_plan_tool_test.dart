@@ -1,8 +1,18 @@
-import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/widgets.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'test_helpers.dart';
+
+class _ThrowingPlannerService extends FakePlannerService {
+  _ThrowingPlannerService(super.plan);
+
+  @override
+  Future<Result<void>> adjustPace(double newTargetMinutesPerDay,
+          {bool recalculateDuration = false}) async =>
+      throw Exception('forced failure');
+}
 
 void main() {
   group('ModifyPlanTool', () {
@@ -103,6 +113,39 @@ void main() {
         'action': 'adjust_pace',
       });
       expect(result['success'], isFalse);
+    });
+
+    test('logs warning and preserves user-facing message on exception', () async {
+      final throwingPlanner = _ThrowingPlannerService(sampleLearningPlan());
+      final tool = ModifyPlanTool(
+        plannerService: throwingPlanner,
+        localeName: 'en',
+      );
+
+      final records = <String>[];
+      final originalPrint = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+      final result = await tool.execute({
+        'action': 'adjust_pace',
+        'newTargetMinutesPerDay': 40,
+      });
+
+      debugPrint = originalPrint;
+
+      expect(result['success'], isFalse);
+      expect(result['message'], isA<String>());
+      expect(result['message'], contains('Failed to modify'));
+      expect(
+        records.any((r) => r.contains('modify_plan_tool failed')),
+        isTrue,
+        reason: 'expected _logger.w to be called with modify_plan_tool failed',
+      );
+      expect(
+        records.any((r) => r.contains('forced failure')),
+        isTrue,
+        reason: 'expected logged output to include underlying exception',
+      );
     });
   });
 }
