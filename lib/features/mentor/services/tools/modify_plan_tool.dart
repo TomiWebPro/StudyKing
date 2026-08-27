@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ModifyPlanTool extends AgentTool {
+  static final Logger _logger = const Logger('ModifyPlanTool');
   final PlannerService _plannerService;
   final String _localeName;
 
@@ -83,6 +85,7 @@ class ModifyPlanTool extends AgentTool {
           };
       }
     } catch (e) {
+      _logger.w('modify_plan_tool failed', e);
       return {
         'success': false,
         'message': l10n.toolModifyPlanError,
