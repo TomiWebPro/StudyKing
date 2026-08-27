@@ -230,6 +230,7 @@ class LessonAgentService {
         order: (map['order'] as num?)?.toInt() ?? 0,
       );
     } catch (e) {
+      _logger.w('Skipping malformed lesson block', e);
       return null;
     }
   }

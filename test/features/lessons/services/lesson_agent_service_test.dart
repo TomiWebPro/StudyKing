@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -285,6 +286,75 @@ void main() {
         );
 
         expect(lesson, isNull);
+      });
+    });
+
+    group('_parseBlock malformed handling', () {
+      test('skips malformed block, logs warning, and returns valid blocks', () async {
+        // LLM returns one valid block and one malformed block (non-map) to trigger
+        // _parseBlock catch path. Malformed blocks should be skipped (return null)
+        // and logged via _logger.w('Skipping malformed lesson block', e).
+        fakeLlm.setResult(Result.success(jsonEncode([
+          {'type': 'text', 'content': 'Valid content', 'order': 0},
+          123, // malformed: not a Map, forces cast exception in _parseBlock
+          {'type': 'slide', 'content': 'Another valid', 'order': 2},
+        ])));
+
+        final records = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Malformed Test',
+          localeName: 'en',
+        );
+
+        debugPrint = originalPrint;
+
+        // Should not throw and should skip malformed block
+        expect(lesson, isNotNull);
+        expect(lesson!.blocks.length, 2);
+        expect(lesson.blocks[0].content, 'Valid content');
+        expect(lesson.blocks[1].content, 'Another valid');
+        // Verify the malformed-block log was emitted
+        expect(
+          records.any((r) => r.contains('Skipping malformed lesson block')),
+          isTrue,
+          reason: 'expected _logger.w to be called for malformed block',
+        );
+      });
+
+      test('skips all-malformed blocks and falls back gracefully without throwing', () async {
+        // When every block is malformed, _parseBlocks yields empty list so
+        // _generateLessonBlocks falls back to generic blocks.
+        fakeLlm.setResult(Result.success(jsonEncode([
+          123,
+          'not a map',
+          45.6,
+        ])));
+
+        final records = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) => records.add(message ?? '');
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'All Malformed',
+          localeName: 'en',
+        );
+
+        debugPrint = originalPrint;
+
+        expect(lesson, isNotNull);
+        // Fallback blocks contain the topic title
+        expect(lesson!.blocks.isNotEmpty, isTrue);
+        expect(
+          records.any((r) => r.contains('Skipping malformed lesson block')),
+          isTrue,
+        );
       });
     });
   });
