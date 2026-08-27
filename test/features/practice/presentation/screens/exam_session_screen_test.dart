@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -187,6 +189,20 @@ Future<void> _goNext(WidgetTester tester) async {
 }
 
 void main() {
+  late Directory tempDir;
+  setUpAll(() {
+    tempDir = Directory.systemTemp.createTempSync('exam_widget_test_');
+    try {
+      Hive.init(tempDir.path);
+    } catch (_) {}
+  });
+  tearDownAll(() async {
+    await Hive.deleteFromDisk();
+    try {
+      tempDir.deleteSync(recursive: true);
+    } catch (_) {}
+  });
+
   group('ExamSessionScreen', () {
     testWidgets('shows loading indicator initially', (tester) async {
       await tester.pumpWidget(_buildTestApp(questions: [
