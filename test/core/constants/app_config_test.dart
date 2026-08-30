@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/app_api_config.dart';
 import 'package:studyking/core/constants/app_build_config.dart';
 import 'package:studyking/core/constants/app_config.dart';
+import 'package:studyking/core/errors/exceptions.dart';
 
 void main() {
   group('AppConstants', () {
@@ -13,10 +14,10 @@ void main() {
       AppConstants.resetForTesting();
     });
 
-    test('throws StateError when not initialized', () {
+    test('throws AppException when not initialized', () {
       expect(
         () => AppConstants.instance,
-        throwsA(isA<StateError>()),
+        throwsA(isA<AppException>()),
       );
     });
 
@@ -37,7 +38,7 @@ void main() {
       AppConstants.resetForTesting();
       expect(
         () => AppConstants.instance,
-        throwsA(isA<StateError>()),
+        throwsA(isA<AppException>()),
       );
     });
 

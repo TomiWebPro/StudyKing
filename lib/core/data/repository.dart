@@ -33,11 +33,19 @@ class Repository<T> {
     _boxName = boxName;
     try {
       if (Hive.isBoxOpen(boxName)) {
+        // If the box was previously opened with a different (dynamic) type,
+        // reopen it with the correct type so typed access does not throw.
         _box = Hive.box<T>(boxName);
       } else {
         _box = await Hive.openBox<T>(boxName);
       }
-    } catch (e) {
+    } on HiveError catch (_) {
+      final existing = Hive.isBoxOpen(boxName) ? Hive.box(boxName) : null;
+      if (existing != null) {
+        await existing.close();
+      }
+      _box = await Hive.openBox<T>(boxName);
+    } on TypeError catch (_) {
       final existing = Hive.isBoxOpen(boxName) ? Hive.box(boxName) : null;
       if (existing != null) {
         await existing.close();

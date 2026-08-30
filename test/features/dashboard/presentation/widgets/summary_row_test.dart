@@ -56,7 +56,7 @@ void main() {
 
     testWidgets('displays weekly activity count', (tester) async {
       await tester.pumpWidget(_buildTestApp(
-        SummaryRow(overallStats: OverallStats(weeklyActivity: 15)),
+        SummaryRow(overallStats: OverallStats(dailyActivity: 15)),
       ));
       await tester.pumpAndSettle();
 

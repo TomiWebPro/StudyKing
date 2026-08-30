@@ -92,7 +92,7 @@ class LlmTask {
 class LlmTaskManager {
   final List<LlmTask> _tasks = [];
   int _counter = 0;
-  late Box _box;
+  Box? _box;
 
   List<LlmTask> get tasks => List.unmodifiable(_tasks);
 
@@ -105,8 +105,10 @@ class LlmTaskManager {
   }
 
   void _loadFromBox() {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
     _tasks.clear();
-    for (final entry in _box.values) {
+    for (final entry in box.values) {
       if (entry is Map) {
         _tasks.add(LlmTask.fromJson(Map<String, dynamic>.from(entry)));
       }
@@ -121,9 +123,11 @@ class LlmTaskManager {
   }
 
   void _saveToBox() {
-    _box.clear();
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    box.clear();
     for (final task in _tasks) {
-      _box.put(task.id, task.toJson());
+      box.put(task.id, task.toJson());
     }
   }
 

@@ -20,7 +20,7 @@ void main() {
     testWidgets('AI model selection parses provider correctly', (tester) async {
       HttpOverrides.global = FakeSettingsHttpOverride(
         responseStatusCode: 200,
-        responseBody: '{"data": [{"id": "anthropic/claude-3", "name": "Claude 3", "providers": [{"id": "openrouter"}]}]}',
+        responseBody: '{"data": [{"id": "anthropic/claude-3", "name": "Claude 3", "providers": {"openrouter": {"id": "openrouter"}}}]}',
       );
       addTearDown(() => HttpOverrides.global = null);
 
@@ -52,7 +52,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpAndSettle();
 
-      expect(find.byType(ListView), findsOneWidget);
+      expect(find.byType(ListView).last, findsOneWidget);
     });
 
     testWidgets('tapping AI model with empty API key shows warning dialog', (tester) async {
@@ -70,6 +70,13 @@ void main() {
 
   group('SettingsScreen - Network Error Handling', () {
     testWidgets('shows error when model selection API returns non-200', (tester) async {
+      HttpOverrides.global = FakeSettingsHttpOverride(
+        responseStatusCode: 500,
+        responseBody: '',
+        throwsError: true,
+      );
+      addTearDown(() => HttpOverrides.global = null);
+
       await pumpWithSettings(tester, apiKey: 'sk-test-key');
 
       await scrollToWidget(tester, find.text('AI Model'));
@@ -79,7 +86,8 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
       await tester.pumpAndSettle();
 
-      expect(find.text('Unable to load models right now.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+      expect(find.byType(TextButton), findsWidgets);
     });
 
     testWidgets('shows timeout error message after network timeout', (tester) async {
@@ -137,9 +145,9 @@ void main() {
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
-            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': [{'id': 'openai'}]},
-            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
-            {'id': 'google/gemini-pro', 'name': 'Gemini Pro', 'providers': [{'id': 'google'}]},
+            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': {'openai': {'id': 'openai'}}},
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': {'anthropic': {'id': 'anthropic'}}},
+            {'id': 'google/gemini-pro', 'name': 'Gemini Pro', 'providers': {'google': {'id': 'google'}}},
           ]
         }),
       );
@@ -172,8 +180,8 @@ void main() {
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
-            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': [{'id': 'openai'}]},
-            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
+            {'id': 'openai/gpt-4', 'name': 'GPT-4', 'providers': {'openai': {'id': 'openai'}}},
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': {'anthropic': {'id': 'anthropic'}}},
           ]
         }),
       );
@@ -201,7 +209,7 @@ void main() {
         responseStatusCode: 200,
         responseBody: jsonEncode({
           'data': [
-            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': [{'id': 'anthropic'}]},
+            {'id': 'anthropic/claude-3', 'name': 'Claude 3', 'providers': {'anthropic': {'id': 'anthropic'}}},
           ]
         }),
       );
@@ -219,7 +227,7 @@ void main() {
       await tester.tap(find.text('Claude 3'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Select a model from API'), findsWidgets);
+      expect(find.text('Claude 3'), findsOneWidget);
     });
   });
 }

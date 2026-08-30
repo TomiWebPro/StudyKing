@@ -1,3 +1,7 @@
+// ignore_for_file: override_on_non_overriding_member
+
+import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -188,6 +192,11 @@ class _ThrowingSettingsNotifier extends SettingsController {
   _ThrowingSettingsNotifier() : super(fakeRepo);
 
   @override
+  RemoveListener addListener(void Function(SettingsBox) listener, {bool fireImmediately = true}) {
+    return () {};
+  }
+
+  @override
   SettingsBox get state => throw Exception('Test settings error');
 }
 
@@ -227,6 +236,10 @@ Widget buildSettingsScreen({
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
+      onGenerateRoute: (settings) => MaterialPageRoute(
+        builder: (_) => Scaffold(body: Text('Route: ${settings.name}')),
+        settings: settings,
+      ),
       home: const SettingsScreen(),
     ),
   );
@@ -268,28 +281,295 @@ Future<void> scrollToWidget(WidgetTester tester, Finder target) async {
   await tester.pump();
 }
 
+class _FakeHttpHeaders implements HttpHeaders {
+  final Map<String, List<String>> _values = {};
+  @override
+  void add(String name, Object value, {bool preserveHeaderCase = false}) =>
+      (_values.putIfAbsent(name, () => [])..add(value.toString()));
+  @override
+  void set(String name, Object value, {bool preserveHeaderCase = false}) =>
+      _values[name] = [value.toString()];
+  @override
+  void remove(String name, Object value) => _values[name]?.remove(value.toString());
+  @override
+  void removeAll(String name) => _values.remove(name);
+  @override
+  void clear() => _values.clear();
+  @override
+  void forEach(void Function(String name, List<String> values) action) =>
+      _values.forEach(action);
+  @override
+  String? value(String name) => _values[name]?.first;
+  @override
+  List<String>? operator [](String name) => _values[name];
+  @override
+  DateTime? date;
+  @override
+  DateTime? expires;
+  @override
+  DateTime? ifModifiedSince;
+  @override
+  DateTime? lastModified;
+  @override
+  ContentType? contentType;
+  @override
+  int contentLength = -1;
+  @override
+  bool persistentConnection = true;
+  @override
+  void noFolding(String name) {}
+  @override
+  bool chunkedTransferEncoding = false;
+  @override
+  String? connection;
+  @override
+  String? proxyAuthenticate;
+  @override
+  String? wwwAuthenticate;
+  @override
+  String? host;
+  @override
+  int? port;
+  @override
+  String? pragma;
+}
+
+class _FakeHttpClientRequest implements HttpClientRequest {
+  _FakeHttpClientRequest(this._client, this.method, this.uri);
+  final _FakeHttpClient _client;
+  @override
+  final String method;
+  @override
+  final Uri uri;
+  @override
+  final HttpHeaders headers = _FakeHttpHeaders();
+  @override
+  bool followRedirects = true;
+  @override
+  int maxRedirects = 5;
+  @override
+  bool persistentConnection = true;
+  @override
+  int contentLength = -1;
+  @override
+  bool bufferOutput = true;
+  @override
+  Encoding encoding = utf8;
+  @override
+  List<Cookie> cookies = [];
+  @override
+  HttpConnectionInfo? connectionInfo;
+  @override
+  Future<HttpClientResponse> get done => close();
+  @override
+  void abort([Object? exception, StackTrace? stackTrace]) {}
+  @override
+  void add(List<int> data) {}
+  @override
+  void addError(Object error, [StackTrace? stackTrace]) {}
+  @override
+  Future<void> addStream(Stream<List<int>> stream) => stream.drain<void>();
+  @override
+  Future<HttpClientResponse> close() => _client._respond(this);
+  @override
+  Future<void> flush() async {}
+  @override
+  void write(Object? obj) {}
+  @override
+  void writeAll(Iterable<Object?> objects, [String separator = '']) {}
+  @override
+  void writeCharCode(int charCode) {}
+  @override
+  void writeln([Object? obj = '']) {}
+}
+
+class _FakeHttpClientResponse extends Stream<List<int>>
+    implements HttpClientResponse {
+  _FakeHttpClientResponse(this.statusCode, this._bodyBytes, this._headers);
+  @override
+  final int statusCode;
+  final List<int> _bodyBytes;
+  final HttpHeaders _headers;
+  @override
+  final String reasonPhrase = 'OK';
+  @override
+  final bool isRedirect = false;
+  @override
+  final bool persistentConnection = false;
+  @override
+  final HttpClientResponseCompressionState compressionState =
+      HttpClientResponseCompressionState.notCompressed;
+  @override
+  final List<Cookie> cookies = const [];
+  @override
+  final HttpConnectionInfo? connectionInfo = null;
+  @override
+  final X509Certificate? certificate = null;
+  @override
+  int get contentLength => _bodyBytes.length;
+  @override
+  HttpHeaders get headers => _headers;
+  @override
+  List<RedirectInfo> get redirects => const [];
+  @override
+  StreamSubscription<List<int>> listen(
+    void Function(List<int> event)? onData, {
+    Function? onError,
+    void Function()? onDone,
+    bool? cancelOnError,
+  }) {
+    final controller = StreamController<List<int>>();
+    controller.add(_bodyBytes);
+    controller.close();
+    return controller.stream.listen(
+      onData,
+      onError: onError,
+      onDone: onDone,
+      cancelOnError: cancelOnError,
+    );
+  }
+
+  @override
+  Future<Socket> detachSocket({bool? writeHeaders = true}) =>
+      throw UnimplementedError();
+  @override
+  Future<HttpClientResponse> redirect([
+    String? method,
+    Uri? url,
+    bool? followLoops,
+  ]) =>
+      throw UnimplementedError();
+}
+
+class _FakeHttpClient implements HttpClient {
+  _FakeHttpClient(this.statusCode, this.body, {this.hang = false, this.throwsError = false});
+  final int statusCode;
+  final String body;
+  final bool hang;
+  final bool throwsError;
+
+  Future<HttpClientResponse> _respond(_FakeHttpClientRequest request) {
+    if (hang) return Completer<HttpClientResponse>().future;
+    return Future.value(
+      _FakeHttpClientResponse(statusCode, utf8.encode(body), request.headers),
+    );
+  }
+
+  @override
+  Future<HttpClientRequest> openUrl(String method, Uri url) {
+    if (throwsError) {
+      throw const SocketException('Connection refused (fake)');
+    }
+    return Future.value(_FakeHttpClientRequest(this, method, url));
+  }
+  @override
+  Future<HttpClientRequest> getUrl(Uri url) => openUrl('GET', url);
+  @override
+  Future<HttpClientRequest> postUrl(Uri url) => openUrl('POST', url);
+  @override
+  Future<HttpClientRequest> putUrl(Uri url) => openUrl('PUT', url);
+  @override
+  Future<HttpClientRequest> deleteUrl(Uri url) => openUrl('DELETE', url);
+  @override
+  Future<HttpClientRequest> headUrl(Uri url) => openUrl('HEAD', url);
+  @override
+  Future<HttpClientRequest> patchUrl(Uri url) => openUrl('PATCH', url);
+  @override
+  Future<HttpClientRequest> get(String host, int port, String path) =>
+      openUrl('GET', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> post(String host, int port, String path) =>
+      openUrl('POST', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> put(String host, int port, String path) =>
+      openUrl('PUT', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> delete(String host, int port, String path) =>
+      openUrl('DELETE', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> head(String host, int port, String path) =>
+      openUrl('HEAD', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> patch(String host, int port, String path) =>
+      openUrl('PATCH', Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  Future<HttpClientRequest> open(
+    String method,
+    String host,
+    int port,
+    String path,
+  ) =>
+      openUrl(method, Uri(scheme: 'http', host: host, port: port, path: path));
+  @override
+  void close({bool force = false}) {}
+  @override
+  bool autoUncompress = true;
+  @override
+  String? userAgent;
+  @override
+  Duration idleTimeout = Duration.zero;
+  @override
+  int? maxConnectionsPerHost;
+  @override
+  bool? persistentConnection;
+  @override
+  String Function(Uri url)? findProxy = (Uri url) => 'DIRECT';
+  @override
+  void Function(String line)? keyLog;
+  @override
+  Future<bool> Function(Uri url, String scheme, String realm)? authenticate;
+  @override
+  Future<bool> Function(String host, int port, String scheme, String? realm)?
+      authenticateProxy;
+  @override
+  void addCredentials(
+    Uri url,
+    String realm,
+    HttpClientCredentials credentials,
+  ) {}
+  @override
+  void addProxyCredentials(
+    String host,
+    int port,
+    String realm,
+    HttpClientCredentials credentials,
+  ) {}
+  @override
+  bool Function(X509Certificate cert, String host, int port)?
+      badCertificateCallback;
+  @override
+  Future<ConnectionTask<Socket>> Function(
+    Uri url,
+    String? proxyHost,
+    int? proxyPort,
+  )? connectionFactory;
+  @override
+  Duration? connectionTimeout;
+  @override
+  SecurityContext? context;
+  @override
+  void Function(String host, int port, String path, String method)?
+      onBadCertificate;
+}
+
 class FakeSettingsHttpOverride extends HttpOverrides {
   final int responseStatusCode;
   final String responseBody;
+  final bool throwsError;
 
   FakeSettingsHttpOverride({
     required this.responseStatusCode,
     required this.responseBody,
+    this.throwsError = false,
   });
 
   @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    final client = super.createHttpClient(context);
-    client.findProxy = (uri) => 'PROXY localhost';
-    return client;
-  }
+  HttpClient createHttpClient(SecurityContext? context) =>
+      _FakeHttpClient(responseStatusCode, responseBody, throwsError: throwsError);
 }
 
 class TimeoutSettingsHttpOverride extends HttpOverrides {
   @override
-  HttpClient createHttpClient(SecurityContext? context) {
-    final client = super.createHttpClient(context);
-    client.findProxy = (uri) => 'PROXY localhost';
-    return client;
-  }
+  HttpClient createHttpClient(SecurityContext? context) =>
+      _FakeHttpClient(200, '', hang: true);
 }

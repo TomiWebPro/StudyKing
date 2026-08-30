@@ -12,6 +12,7 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import '../helpers/hive_init_helper.dart';
 
 class _FakePlanAdherenceRepo extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];
@@ -58,6 +59,10 @@ class _FakeTopicRepo extends TopicRepository {
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeHiveForIntegrationTests();
+  });
+
   group('Dashboard + Planner Integration — adherence data flow', () {
     test(
         'dashboardAdherenceDataProvider and planProgressProvider agree on '

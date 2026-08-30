@@ -34,7 +34,7 @@ class HiveInitializer {
 
   static Future<void> initialize() async {
     await DatabaseMigration.runMigrations();
-    await _registerAdapters();
+    registerAdapters();
 
     await Hive.openBox<QuestionEvaluation>(HiveBoxNames.questionEvaluations);
     await Hive.openBox<MasteryState>(HiveBoxNames.masteryStates);
@@ -78,19 +78,30 @@ class HiveInitializer {
     _logger.i('Hive initialized successfully with migrations');
   }
 
-  static Future<void> _registerAdapters() async {
-    registerSettingsAdapters();
-    registerIngestionAdapters();
-    registerSessionAdapters();
-    registerQuestionAdapters();
-    registerPracticeAdapters();
-    registerPlannerAdapters();
-    registerSubjectsAdapters();
-    registerTeachingAdapters();
-    registerLessonAdapters();
-    registerDashboardAdapters();
-    registerFlashcardAdapters();
-    registerCoreDataAdapters();
+  static void registerAdapters() {
+    void registerSafely(void Function() register) {
+      try {
+        register();
+      } on HiveError catch (e) {
+        // Re-initialization (e.g. across test processes or hot restart) may
+        // attempt to register adapters that are already present. That is
+        // expected and safe to ignore; any other Hive error still surfaces.
+        if (!e.message.contains('already a TypeAdapter')) rethrow;
+      }
+    }
+
+    registerSafely(registerSettingsAdapters);
+    registerSafely(registerIngestionAdapters);
+    registerSafely(registerSessionAdapters);
+    registerSafely(registerQuestionAdapters);
+    registerSafely(registerPracticeAdapters);
+    registerSafely(registerPlannerAdapters);
+    registerSafely(registerSubjectsAdapters);
+    registerSafely(registerTeachingAdapters);
+    registerSafely(registerLessonAdapters);
+    registerSafely(registerDashboardAdapters);
+    registerSafely(registerFlashcardAdapters);
+    registerSafely(registerCoreDataAdapters);
     validateHiveTypeIds();
   }
 }

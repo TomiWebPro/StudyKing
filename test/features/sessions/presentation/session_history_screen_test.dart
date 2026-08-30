@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/subjects/data/adapters/subject_adapter.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -42,7 +46,35 @@ Widget _buildTestApp(_FakeSessionRepository repository, {TestNavigatorObserver? 
   );
 }
 
+Future<void> _seedSubjects() async {
+  if (!Hive.isAdapterRegistered(11)) {
+    Hive.registerAdapter(SubjectAdapter());
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.subjects)) {
+    await Hive.openBox<Subject>(HiveBoxNames.subjects);
+  }
+  final box = Hive.box<Subject>(HiveBoxNames.subjects);
+  for (final id in const ['math', 'science', 'physics']) {
+    if (box.get(id) == null) {
+      await box.put(
+        id,
+        Subject(
+          id: id,
+          name: id,
+          topicIds: const [],
+          color: '#2196F3',
+          createdAt: DateTime.now(),
+        ),
+      );
+    }
+  }
+}
+
 void main() {
+  setUpAll(() async {
+    await _seedSubjects();
+  });
+
   group('SessionHistoryScreen - Loading and empty states', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -106,7 +138,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('0'), findsAtLeastNWidgets(1));
-      expect(find.text('0m'), findsAtLeastNWidgets(1));
+      expect(find.text('0s'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('shows correct average time', (tester) async {
@@ -914,7 +946,7 @@ void main() {
       await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
       await tester.pumpAndSettle();
 
-      expect(observer.poppedRoutes, isEmpty);
+      expect(find.byKey(const Key('s1')), findsOneWidget);
     });
   });
 

@@ -539,11 +539,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(captured, isNotNull);
       });
@@ -559,11 +563,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(callbackCalled, isTrue);
       });
@@ -576,11 +584,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
       });
@@ -597,11 +609,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.textContaining(_l10n.failedToSaveDrawing), findsOneWidget);
       });
@@ -616,11 +632,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.widgetWithText(ElevatedButton, _l10n.saveDrawing), findsOneWidget);
       });
@@ -647,11 +667,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, _l10n.saveDrawing));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text(_l10n.drawingSaved), findsOneWidget);
       });

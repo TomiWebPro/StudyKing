@@ -17,6 +17,12 @@ Widget buildApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
   );
 }
 
+void _setLargeViewport(WidgetTester tester) {
+  tester.view.physicalSize = const Size(1080, 1920);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+}
+
 PersonalLearningPlan createPlan({
   String studentId = 'student-1',
   int planDurationDays = 7,
@@ -127,28 +133,34 @@ void main() {
 
   group('CalendarViewWidget', () {
     testWidgets('renders month header', (tester) async {
+      _setLargeViewport(tester);
       final now = DateTime.now();
       final expected = DateFormat.yMMM().format(DateTime(now.year, now.month));
 
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.text(expected), findsOneWidget);
     });
 
     testWidgets('renders day cells with day numbers', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.text('1'), findsOneWidget);
     });
 
     testWidgets('navigation buttons change month', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       final now = DateTime.now();
       final prevMonth = DateTime(now.year, now.month - 1);
@@ -170,9 +182,11 @@ void main() {
     });
 
     testWidgets('renders day headers', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       for (final day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']) {
         expect(find.textContaining(day.substring(0, 2)), findsAtLeast(1));
@@ -181,9 +195,11 @@ void main() {
 
     testWidgets('onDayTap callback fires when tapping a day with topics',
         (tester) async {
+      _setLargeViewport(tester);
       String? capturedTopicId;
       String? capturedTopicTitle;
       String? capturedSubjectId;
+      final now = DateTime.now();
 
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(
@@ -195,9 +211,10 @@ void main() {
           },
         ),
       ));
+      await tester.pumpAndSettle();
 
-      final now = DateTime.now();
-      final dayCell = find.text('${now.day}').last;
+      final dayCell = find.text('${now.day}');
+      expect(dayCell, findsOneWidget);
       await tester.tap(dayCell);
       await tester.pumpAndSettle();
 
@@ -208,6 +225,7 @@ void main() {
 
     testWidgets('tapping a day without topics does not fire onDayTap',
         (tester) async {
+      _setLargeViewport(tester);
       bool wasCalled = false;
 
       await tester.pumpWidget(buildApp(
@@ -218,30 +236,37 @@ void main() {
           },
         ),
       ));
+      await tester.pumpAndSettle();
 
       final now = DateTime.now();
-      final tomorrow = now.add(const Duration(days: 1));
-      final dayCell = find.text('${tomorrow.day}').last;
-      await tester.tap(dayCell);
+      final otherDay = now.day == 1 ? 2 : 1;
+      final dayCell = find.text('$otherDay');
+      expect(dayCell, findsWidgets);
+      await tester.tap(dayCell.first);
       await tester.pumpAndSettle();
 
       expect(wasCalled, isFalse);
     });
 
     testWidgets('renders rest day without minutes', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createRestDayPlan()),
       ));
+      await tester.pumpAndSettle();
 
       final now = DateTime.now();
       expect(find.text('${now.day}'), findsOneWidget);
       expect(find.text('0m'), findsNothing);
+      expect(find.text('0 min'), findsNothing);
     });
 
     testWidgets('renders with empty plan (no daily plans)', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createEmptyPlan()),
       ));
+      await tester.pumpAndSettle();
 
       final expected = DateFormat.yMMM().format(DateTime(DateTime.now().year, DateTime.now().month));
       expect(find.text(expected), findsOneWidget);
@@ -252,10 +277,12 @@ void main() {
 
     testWidgets('month-boundary navigation from December to January',
         (tester) async {
+      _setLargeViewport(tester);
       final now = DateTime.now();
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
       final monthsToDec = ((now.month - 12) % 12);
       for (var i = 0; i < monthsToDec; i++) {
         await tester.tap(find.byIcon(Icons.chevron_left));
@@ -273,22 +300,27 @@ void main() {
     });
 
     testWidgets('today cell has special decoration', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.byType(InkWell), findsWidgets);
     });
 
     testWidgets('non-rest day shows target minutes', (tester) async {
+      _setLargeViewport(tester);
       await tester.pumpWidget(buildApp(
         CalendarViewWidget(plan: createPlan()),
       ));
+      await tester.pumpAndSettle();
 
       expect(find.text('30 min'), findsOneWidget);
     });
 
     testWidgets('onDayTap is null prevents tapping', (tester) async {
+      _setLargeViewport(tester);
       bool wasCalled = false;
 
       await tester.pumpWidget(buildApp(
@@ -297,9 +329,12 @@ void main() {
           onDayTap: null,
         ),
       ));
+      await tester.pumpAndSettle();
 
       final now = DateTime.now();
-      final dayCell = find.text('${now.day}').last;
+      final dayCell = find.text('${now.day}');
+      expect(dayCell, findsOneWidget);
+      //Even though day cell exists, onDayTap null means tapping should not trigger callback
       await tester.tap(dayCell);
       await tester.pumpAndSettle();
 

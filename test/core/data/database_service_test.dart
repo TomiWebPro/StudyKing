@@ -175,7 +175,8 @@ void main() {
         conversationRepository: conversationRepo,
         tutorSessionRepository: tutorSessionRepo,
       );
-      expect(service.init(), throwsA(isA<Exception>()));
+      final result = await service.init();
+      expect(result.isFailure, isTrue);
     });
 
     test('init stops at first failure and does not init remaining repos', () async {

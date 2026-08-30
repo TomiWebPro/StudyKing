@@ -103,7 +103,8 @@ class RoadmapsTab extends ConsumerWidget {
                     }
                     offset = 1;
                   }
-                  if (index == activeRoadmaps.length + offset) {
+                  if (completedRoadmapsList.isNotEmpty &&
+                      index == activeRoadmaps.length + offset) {
                     return Padding(
                       padding: const EdgeInsets.only(top: 12, bottom: 4),
                       child: Text(
@@ -115,10 +116,35 @@ class RoadmapsTab extends ConsumerWidget {
                       ),
                     );
                   }
-                  final roadmapIndex = index - offset;
-                  final roadmap = roadmapIndex < activeRoadmaps.length
-                      ? activeRoadmaps[roadmapIndex]
-                      : completedRoadmapsList[roadmapIndex - activeRoadmaps.length];
+                  // Adjust offset for completed header when present and index beyond it
+                  var effectiveOffset = offset;
+                  if (completedRoadmapsList.isNotEmpty &&
+                      index > activeRoadmaps.length + offset) {
+                    effectiveOffset += 1;
+                  }
+                  final adjustedIndex = index - effectiveOffset;
+                  RoadmapModel roadmap;
+                  if (adjustedIndex < activeRoadmaps.length) {
+                    roadmap = activeRoadmaps[adjustedIndex];
+                  } else if (adjustedIndex - activeRoadmaps.length <
+                      completedRoadmapsList.length) {
+                    roadmap = completedRoadmapsList[
+                        adjustedIndex - activeRoadmaps.length];
+                  } else {
+                    final other = state.roadmaps
+                        .where((r) =>
+                            r.status != 'active' && r.status != 'completed')
+                        .toList();
+                    final otherIndex = adjustedIndex -
+                        activeRoadmaps.length -
+                        completedRoadmapsList.length;
+                    if (otherIndex >= 0 && otherIndex < other.length) {
+                      roadmap = other[otherIndex];
+                    } else {
+                      roadmap = state.roadmaps[
+                          adjustedIndex.clamp(0, state.roadmaps.length - 1)];
+                    }
+                  }
                   return RoadmapCard(
                     roadmap: roadmap,
                     onToggleMilestone: (roadmapId, milestoneId, isCompleted) {

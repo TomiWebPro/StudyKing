@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/app_constants.dart' show defaultModelForProvider;
-import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, settingsProvider, SettingsController, l10nProvider;
+import 'package:studyking/core/providers/app_providers.dart' show llmProviderProvider, l10nProvider, selectedModelProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
@@ -10,9 +10,6 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
-import 'package:studyking/features/settings/data/models/settings_box.dart';
-import 'package:studyking/features/settings/data/models/settings_update.dart';
-import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -41,20 +38,6 @@ class _FakeAttemptRepo extends AttemptRepository {
   }
   @override
   Future<Result<void>> delete(String key) async => Result.success(null);
-}
-
-class _FakeSettingsRepository extends SettingsRepository {
-  @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<SettingsBox>> getSettings() async => Result.success(SettingsBox(selectedModel: 'custom-model'));
-
-  @override
-  Future<Result<void>> saveApiKey({required String service, required String key}) async => Result.success(null);
-
-  @override
-  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
 }
 
 void main() {
@@ -227,13 +210,9 @@ void main() {
     });
 
     test('mentorModelIdProvider uses saved model when selectedModel is non-empty', () async {
-      final fakeRepo = _FakeSettingsRepository();
-      final controller = SettingsController(fakeRepo);
-      await controller.saveApiKey('dummy');
-
       final container = ProviderContainer(
         overrides: [
-          settingsProvider.overrideWith((ref) => controller),
+          selectedModelProvider.overrideWith((ref) => 'custom-model'),
         ],
       );
       addTearDown(container.dispose);
@@ -274,8 +253,7 @@ void main() {
 
       final tracker = container.read(mentorProgressTrackerProvider);
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats.data!['totalAttempts'], 0);
-      expect(stats.data!['correctAttempts'], 0);
+      expect(stats.isFailure, isTrue);
     });
 
     test('mentorProgressTrackerProvider recovers after error', () async {
@@ -299,7 +277,7 @@ void main() {
 
       final tracker = container.read(mentorProgressTrackerProvider);
       var stats = await tracker.getOverallStats('stu1');
-      expect(stats.data!['totalAttempts'], 0);
+      expect(stats.isFailure, isTrue);
 
       fakeRepo.shouldThrow = false;
       stats = await tracker.getOverallStats('stu1');

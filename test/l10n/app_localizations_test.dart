@@ -74,7 +74,7 @@ void main() {
         expect(l10n.studyPlanner, 'Study Planner');
         expect(l10n.createStudyPlan, 'Create Study Plan');
         expect(l10n.courseSubject, 'Course/Subject');
-        expect(l10n.courseHint, 'e.g., IB Physics');
+        expect(l10n.courseHint, 'e.g., Organic Chemistry');
         expect(l10n.days, 'Days');
         expect(l10n.hoursPerDay, 'Hours/Day');
         expect(l10n.generatePlan, 'Generate Plan');
@@ -239,7 +239,7 @@ void main() {
         expect(l10n.subjectName, 'Subject Name');
         expect(l10n.subjectNameHint, 'e.g., Physics');
         expect(l10n.subjectCodeOptional, 'Subject Code (Optional)');
-        expect(l10n.subjectCodeHint, 'e.g., IB-PHYS');
+        expect(l10n.subjectCodeHint, 'e.g., BIO-101');
         expect(l10n.themeColor, 'Theme Color');
         expect(l10n.subjectColor, 'Subject Color');
         expect(l10n.examDateOptional, 'Exam Date (Optional)');
@@ -340,7 +340,7 @@ void main() {
         expect(l10n.selectSubjectLabel, 'Select Subject');
         expect(l10n.generateQuestionTypes, 'Generate Question Types');
         expect(l10n.lessonProgress, 'Lesson Progress');
-        expect(l10n.scheduleLesson, 'Schedule a Lesson');
+        expect(l10n.scheduleLesson, 'Schedule Lesson');
         expect(l10n.selectCalendarDate, 'Select calendar date for lesson');
         expect(l10n.done, 'Done');
         expect(l10n.createNewLesson, 'Create New Lesson');
@@ -685,7 +685,7 @@ void main() {
         expect(l10n.studyPlanner, 'Planificador de Estudio');
         expect(l10n.createStudyPlan, 'Crear Plan de Estudio');
         expect(l10n.courseSubject, 'Curso/Materia');
-        expect(l10n.courseHint, 'p. ej., Física IB');
+        expect(l10n.courseHint, 'p. ej., Química Orgánica');
         expect(l10n.days, 'Días');
         expect(l10n.hoursPerDay, 'Horas/Día');
         expect(l10n.generatePlan, 'Generar Plan');
@@ -850,7 +850,7 @@ void main() {
         expect(l10n.subjectName, 'Nombre de la Materia');
         expect(l10n.subjectNameHint, 'p. ej., Física');
         expect(l10n.subjectCodeOptional, 'Código de Materia (Opcional)');
-        expect(l10n.subjectCodeHint, 'p. ej., IB-FIS');
+        expect(l10n.subjectCodeHint, 'p. ej., BIO-101');
         expect(l10n.themeColor, 'Color del Tema');
         expect(l10n.subjectColor, 'Color de la Materia');
         expect(l10n.examDateOptional, 'Fecha de Examen (Opcional)');
@@ -951,7 +951,7 @@ void main() {
         expect(l10n.selectSubjectLabel, 'Seleccionar Materia');
         expect(l10n.generateQuestionTypes, 'Generar Tipos de Preguntas');
         expect(l10n.lessonProgress, 'Progreso de la Lección');
-        expect(l10n.scheduleLesson, 'Programar una Lección');
+        expect(l10n.scheduleLesson, 'Programar Lección');
         expect(l10n.selectCalendarDate, 'Seleccione una fecha de calendario para la lección');
         expect(l10n.done, 'Hecho');
         expect(l10n.createNewLesson, 'Crear Nueva Lección');

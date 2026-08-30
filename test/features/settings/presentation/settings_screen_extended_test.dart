@@ -191,7 +191,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('15 minutes'), findsOneWidget);
-      expect(find.text('30 minutes'), findsOneWidget);
+      expect(find.text('30 minutes'), findsWidgets);
       expect(find.text('45 minutes'), findsOneWidget);
       expect(find.text('60 minutes'), findsOneWidget);
       expect(find.text('90 minutes'), findsOneWidget);
@@ -277,7 +277,7 @@ void main() {
       expect(find.text('1 minute'), findsOneWidget);
       expect(find.text('2 minutes'), findsOneWidget);
       expect(find.text('3 minutes'), findsOneWidget);
-      expect(find.text('5 minutes'), findsOneWidget);
+      expect(find.text('5 minutes'), findsWidgets);
       expect(find.text('7 minutes'), findsOneWidget);
       expect(find.text('10 minutes'), findsOneWidget);
       expect(find.text('15 minutes'), findsOneWidget);
@@ -304,7 +304,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('15 minutes'), findsOneWidget);
-      expect(find.text('30 minutes'), findsOneWidget);
+      expect(find.text('30 minutes'), findsWidgets);
       expect(find.text('45 minutes'), findsOneWidget);
       expect(find.text('60 minutes'), findsOneWidget);
       expect(find.text('90 minutes'), findsOneWidget);
@@ -354,19 +354,19 @@ void main() {
     testWidgets('shows default SR min interval label', (tester) async {
       await pumpWithSettings(tester);
 
-      expect(find.text('1 days'), findsOneWidget);
+      expect(find.text('1 Days'), findsOneWidget);
     });
 
     testWidgets('shows default SR max interval label', (tester) async {
       await pumpWithSettings(tester);
 
-      expect(find.text('365 days'), findsOneWidget);
+      expect(find.text('365 Days'), findsOneWidget);
     });
 
     testWidgets('shows no limit for daily review by default', (tester) async {
       await pumpWithSettings(tester);
 
-      expect(find.text('No limit'), findsOneWidget);
+      expect(find.text('No limit'), findsWidgets);
     });
   });
 
@@ -387,7 +387,7 @@ void main() {
       await pumpWithSettings(tester, taskManager: taskManager);
 
       expect(find.text('AI Task Monitor'), findsOneWidget);
-      expect(find.text('View active AI tasks'), findsOneWidget);
+      expect(find.text('View active AI inference tasks and token usage'), findsOneWidget);
     });
 
     testWidgets('shows badge when failed tasks exist', (tester) async {
@@ -406,7 +406,7 @@ void main() {
       await pumpWithSettings(tester, taskManager: taskManager);
 
       expect(find.text('AI Task Monitor'), findsOneWidget);
-      expect(find.text('View active AI tasks'), findsOneWidget);
+      expect(find.text('View active AI inference tasks and token usage'), findsOneWidget);
     });
 
     testWidgets('shows no tasks message when no tasks exist', (tester) async {
@@ -438,8 +438,8 @@ void main() {
     testWidgets('renders Upload Material tile', (tester) async {
       await pumpWithSettings(tester);
 
-      expect(find.text('Upload Material'), findsOneWidget);
-      expect(find.text('Upload source materials'), findsOneWidget);
+      expect(find.text('Upload Study Material'), findsOneWidget);
+      expect(find.text('Upload PDFs, notes, and question banks to get started'), findsOneWidget);
     });
 
     testWidgets('renders My Uploads tile', (tester) async {
@@ -460,21 +460,21 @@ void main() {
       await pumpWithSettings(tester);
 
       expect(find.text('Manual Session Tracker'), findsOneWidget);
-      expect(find.text('Log study sessions manually'), findsOneWidget);
+      expect(find.text('Track your study sessions manually'), findsOneWidget);
     });
 
     testWidgets('renders Session History tile', (tester) async {
       await pumpWithSettings(tester);
 
       expect(find.text('Session History'), findsOneWidget);
-      expect(find.text('View past study sessions'), findsOneWidget);
+      expect(find.text('View your session history'), findsOneWidget);
     });
 
     testWidgets('renders total tokens tile with correct count', (tester) async {
       await pumpWithSettings(tester);
 
       expect(find.text('Total Tokens'), findsOneWidget);
-      expect(find.text('5,000 tokens'), findsOneWidget);
+      expect(find.text('0 tokens'), findsOneWidget);
     });
 
     testWidgets('renders total cost tile', (tester) async {

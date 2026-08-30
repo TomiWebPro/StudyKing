@@ -233,7 +233,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final todayMs = await service.getTodayDurationMs();
-      expect(todayMs.data!, 0);
+      expect(todayMs.isFailure, isTrue);
     });
 
     test('propagates getByDate failure through getTodayStats', () async {
@@ -263,7 +263,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final count = await service.getTodaySessionCount();
-      expect(count.data!, 0);
+      expect(count.isFailure, isTrue);
     });
 
     test('propagates getByDate failure through getTodayCompletedSessionCount', () async {
@@ -278,7 +278,7 @@ void main() {
 
       final service = container.read(studyTimerServiceProvider);
       final count = await service.getTodayCompletedSessionCount();
-      expect(count.data!, 0);
+      expect(count.isFailure, isTrue);
     });
 
     test('returns today stats through provider with fake repo', () async {

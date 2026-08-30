@@ -12,11 +12,27 @@ class LessonBlockAdapter extends TypeAdapter<LessonBlock> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    final rawType = fields[3];
+    final LessonBlockType type;
+    if (rawType is int) {
+      type = LessonBlockType.values[rawType.clamp(0, LessonBlockType.values.length - 1)];
+    } else if (rawType is LessonBlockType) {
+      type = rawType;
+    } else {
+      type = LessonBlockType.text;
+    }
+    final rawSlide = fields[11];
+    SlideType? slideType;
+    if (rawSlide is int) {
+      slideType = SlideType.values[rawSlide.clamp(0, SlideType.values.length - 1)];
+    } else if (rawSlide is SlideType) {
+      slideType = rawSlide;
+    }
     return LessonBlock(
       id: fields[0] as String,
       subjectId: fields[1] as String,
       lessonId: fields[2] as String,
-      type: fields[3] as LessonBlockType,
+      type: type,
       content: fields[4] as String,
       order: fields[5] as int? ?? 0,
       answerKey: fields[6] as String? ?? '',
@@ -24,7 +40,7 @@ class LessonBlockAdapter extends TypeAdapter<LessonBlock> {
       sectionTitle: fields[8] as String?,
       chapterOrder: fields[9] as int?,
       sectionOrder: fields[10] as int?,
-      slideType: fields[11] as SlideType?,
+      slideType: slideType,
     );
   }
 
@@ -39,7 +55,7 @@ class LessonBlockAdapter extends TypeAdapter<LessonBlock> {
       ..writeByte(2)
       ..write(obj.lessonId)
       ..writeByte(3)
-      ..write(obj.type)
+      ..write(obj.type.index)
       ..writeByte(4)
       ..write(obj.content)
       ..writeByte(5)
@@ -55,7 +71,7 @@ class LessonBlockAdapter extends TypeAdapter<LessonBlock> {
       ..writeByte(10)
       ..write(obj.sectionOrder)
       ..writeByte(11)
-      ..write(obj.slideType);
+      ..write(obj.slideType?.index);
   }
 
   @override

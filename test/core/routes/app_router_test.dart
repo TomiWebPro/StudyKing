@@ -266,7 +266,7 @@ void main() {
       );
       expect(args.topicId, 't1');
       expect(args.topicTitle, 'Algebra');
-      expect(args.subjectId, '');
+      expect(args.subjectId, isNull);
     });
 
     test('creates with all fields', () {
@@ -280,12 +280,12 @@ void main() {
       expect(args.subjectId, 's1');
     });
 
-    test('subjectId defaults to empty string', () {
+    test('subjectId defaults to null', () {
       final args = const LessonListArgs(
         topicId: 't1',
         topicTitle: 'Algebra',
       );
-      expect(args.subjectId, '');
+      expect(args.subjectId, isNull);
     });
   });
 

@@ -135,7 +135,7 @@ void main() {
       expect(subjects, isEmpty);
     });
 
-    test('throws when repository getAll fails', () async {
+    test('returns empty list when repository getAll fails', () async {
       final fakeRepo = _FakeSubjectRepository();
       fakeRepo.throwOnGetAll = true;
 
@@ -146,10 +146,9 @@ void main() {
       ]);
       addTearDown(container.dispose);
 
-      expect(
-        () => container.read(subjectListProvider.future),
-        throwsA(isA<Exception>()),
-      );
+      final subjects = await container.read(subjectListProvider.future);
+
+      expect(subjects, isEmpty);
     });
 
     test('injected fake repo is used by the provider', () async {

@@ -187,7 +187,7 @@ void main() {
       expect(l10n.noPlanForToday, 'No plan for today');
       expect(l10n.adjustPlan, 'Adjust Plan');
       expect(l10n.dismiss, 'Dismiss');
-      expect(l10n.voiceInput, 'Voice input');
+      expect(l10n.voiceInput, 'Voice Input');
       expect(l10n.captureImage, 'Capture Image');
       expect(l10n.camera, 'Camera');
     });
@@ -589,7 +589,7 @@ void main() {
       expect(l10n.noPlanForToday, 'Sin plan para hoy');
       expect(l10n.adjustPlan, 'Ajustar Plan');
       expect(l10n.dismiss, 'Descartar');
-      expect(l10n.voiceInput, 'Entrada de voz');
+      expect(l10n.voiceInput, 'Entrada de Voz');
       expect(l10n.captureImage, 'Capturar Imagen');
       expect(l10n.camera, 'Cámara');
     });

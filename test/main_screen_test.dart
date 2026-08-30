@@ -20,8 +20,34 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
+import 'dart:io';
+
+import 'package:hive/hive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart' show MainScreen;
+import 'package:studyking/core/data/hive_initializer.dart';
+import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
+import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/flashcards/data/repositories/concept_map_repository.dart';
+import 'package:studyking/features/flashcards/data/repositories/flashcard_repository.dart';
+import 'package:studyking/features/flashcards/data/repositories/study_guide_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_recap_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/lesson_feedback_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/practice/data/repositories/question_evaluation_repository.dart';
+import 'package:studyking/features/planner/data/repositories/advisor_suggestions_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
+import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
+import 'package:studyking/features/planner/data/repositories/student_availability_repository.dart';
+import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 
 class _FakeSubjectRepository extends SubjectRepository {
   @override
@@ -184,6 +210,40 @@ Widget _buildTestApp() {
 
 void main() {
   group('MainScreen', () {
+    setUpAll(() async {
+      try {
+        Hive.init(Directory.systemTemp.createTempSync('main_screen_').path);
+      } catch (_) {
+        // Hive may already be initialized by the global test bootstrap.
+      }
+      HiveInitializer.registerAdapters();
+      await SubjectRepository().init();
+      await TopicRepository().init();
+      await QuestionRepository().init();
+      await SourceRepository().init();
+      await AttemptRepository().init();
+      await LessonRepository().init();
+      await LessonFeedbackRepository().init();
+      await PlanRepository().init();
+      await SessionRepository().init();
+      await PlanAdherenceRepository().init();
+      await RoadmapRepository().init();
+      await AdvisorSuggestionsRepository().init();
+      await PendingActionRepository().init();
+      await StudentAvailabilityRepository().init();
+      await ConversationRepository().init();
+      await TutorSessionRepository().init();
+      await LessonRecapRepository().init();
+      await QuestionEvaluationRepository().init();
+      await MasteryStateRepository().init();
+      await QuestionMasteryStateRepository().init();
+      await EngagementNudgeRepository().init();
+      await BadgeRepository().init();
+      await ConceptMapRepository().init();
+      await FlashcardRepository().init();
+      await StudyGuideRepository().init();
+    });
+
     Future<void> pumpAndSettleSafe(WidgetTester tester) async {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 500));
@@ -194,7 +254,7 @@ void main() {
       await pumpAndSettleSafe(tester);
 
       expect(find.byType(NavigationBar), findsOneWidget);
-      expect(find.byType(NavigationDestination), findsNWidgets(5));
+      expect(find.byType(NavigationDestination), findsNWidgets(6));
     });
 
     testWidgets('starts with subjects tab selected', (tester) async {
@@ -213,7 +273,7 @@ void main() {
       await pumpAndSettleSafe(tester);
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 1);
+      expect(navBar.selectedIndex, 2);
     });
 
     testWidgets('switching to mentor tab updates selected index', (tester) async {
@@ -224,18 +284,18 @@ void main() {
       await pumpAndSettleSafe(tester);
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 2);
+      expect(navBar.selectedIndex, 3);
     });
 
     testWidgets('switching to focus mode tab updates selected index', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await pumpAndSettleSafe(tester);
 
-      await tester.tap(find.text('Focus Mode'));
+      await tester.tap(find.text('Study'));
       await pumpAndSettleSafe(tester);
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 3);
+      expect(navBar.selectedIndex, 4);
     });
 
     testWidgets('switching to settings tab updates selected index', (tester) async {
@@ -246,14 +306,14 @@ void main() {
       await pumpAndSettleSafe(tester);
 
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
-      expect(navBar.selectedIndex, 4);
+      expect(navBar.selectedIndex, 5);
     });
 
     testWidgets('FAB opens dashboard screen', (tester) async {
       await tester.pumpWidget(_buildTestApp());
       await pumpAndSettleSafe(tester);
 
-      expect(find.byType(FloatingActionButton), findsOneWidget);
+      expect(find.byType(FloatingActionButton), findsNothing);
     });
 
     testWidgets('can cycle through all tabs without crashing', (tester) async {

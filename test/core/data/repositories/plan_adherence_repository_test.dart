@@ -341,10 +341,11 @@ void main() {
   });
 
   group('error handling', () {
-    test('getByStudent throws when box throws', () async {
+    test('getByStudent returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.getByStudent('test'), throwsException);
+      final result = await repo.getByStudent('test');
+      expect(result.isFailure, isTrue);
     });
 
     test('create does not throw when box throws (caught by base)', () async {
@@ -361,43 +362,49 @@ void main() {
       expect(result.isFailure, isTrue);
     });
 
-    test('getByDateRange throws when box throws', () async {
+    test('getByDateRange returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(
-        () => repo.getByDateRange('test', DateTime(2024, 1, 1), DateTime(2024, 12, 31)),
-        throwsException,
-      );
+      final result = await repo.getByDateRange(
+        'test', DateTime(2024, 1, 1), DateTime(2024, 12, 31));
+      expect(result.isFailure, isTrue);
     });
 
-    test('getWeekly throws when box throws', () async {
+    test('getWeekly returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.getWeekly('test'), throwsException);
+      final result = await repo.getWeekly('test');
+      expect(result.isFailure, isTrue);
     });
 
-    test('getAverageAdherence throws when box throws', () async {
+    test('getAverageAdherence returns 0.0 when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.getAverageAdherence('test'), throwsException);
+      final result = await repo.getAverageAdherence('test');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 0.0);
     });
 
-    test('getConsecutiveLowAdherenceDays throws when box throws', () async {
+    test('getConsecutiveLowAdherenceDays returns 0 when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.getConsecutiveLowAdherenceDays('test'), throwsException);
+      final result = await repo.getConsecutiveLowAdherenceDays('test');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 0);
     });
 
-    test('getToday throws when box throws', () async {
+    test('getToday returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.getToday('test'), throwsException);
+      final result = await repo.getToday('test');
+      expect(result.isFailure, isTrue);
     });
 
-    test('deleteByStudent throws when box throws', () async {
+    test('deleteByStudent returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
-      expect(() => repo.deleteByStudent('test'), throwsException);
+      final result = await repo.deleteByStudent('test');
+      expect(result.isFailure, isTrue);
     });
   });
 
@@ -434,7 +441,7 @@ void main() {
       await repository.create(createTestAdherence(id: 'a1', studentId: 's1'));
       await repository.create(createTestAdherence(id: 'a2', studentId: 's1'));
       await repository.create(createTestAdherence(id: 'a3', studentId: 's2'));
-      expect(await repository.getByStudent('s1'), hasLength(2));
+      expect((await repository.getByStudent('s1')).data, hasLength(2));
     });
 
     test('delete works after init', () async {

@@ -721,6 +721,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
               FilledButton(
                 onPressed: () {
                   final isMulti = selectedType == QuestionType.multiChoice.name;
+                  FocusScope.of(ctx).unfocus();
                   Navigator.pop(ctx, {
                     'text': textController.text.trim(),
                     'subjectId': selectedSubjectId,
@@ -795,6 +796,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       );
       await _questionRepo.save(question.id, updated);
       if (mounted) {
+        await Future<void>.delayed(Duration.zero);
+        if (!mounted) return;
         setState(() {
           final idx = _allQuestions.indexWhere((q) => q.id == question.id);
           if (idx != -1) _allQuestions[idx] = updated;
@@ -894,6 +897,10 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
 
       final saveResult = await _questionRepo.create(question);
       if (saveResult.isSuccess && mounted) {
+        // Defer setState to next frame to avoid building dirty widget
+        // while dialog route is still deactivating (focus scope error).
+        await Future<void>.delayed(Duration.zero);
+        if (!mounted) return;
         setState(() => _allQuestions.add(question));
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.questionCreated)),
@@ -1178,6 +1185,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                         optionControllers.any((c) => c.text.trim().isEmpty)) {
                       return;
                     }
+                    FocusScope.of(ctx).unfocus();
                     Navigator.pop(ctx, {'saveAndAddAnother': saveAndAddAnother});
                   },
                   child: Text(l10n.save),

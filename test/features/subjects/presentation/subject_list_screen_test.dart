@@ -149,7 +149,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.school), findsOneWidget);
-      expect(find.byIcon(Icons.arrow_forward_ios), findsWidgets);
+      expect(find.byIcon(Icons.chevron_right), findsWidgets);
     });
 
     testWidgets('books icon visible in empty state', (tester) async {

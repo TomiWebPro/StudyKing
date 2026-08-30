@@ -241,8 +241,8 @@ void main() {
       await tester.tap(find.text('Algebra'));
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoutes, hasLength(1));
-      expect(observer.pushedRoutes.first.settings.name, '/lesson-detail');
+      expect(observer.pushedRoutes, hasLength(2));
+      expect(observer.pushedRoutes.last.settings.name, '/lesson-detail');
     });
 
     testWidgets('does not show lessons from other subjects', (tester) async {
@@ -297,7 +297,7 @@ void main() {
       await tester.tap(find.text('Algebra'));
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoutes, hasLength(1));
+      expect(observer.pushedRoutes, hasLength(2));
       expect(capturedArgs, isNotNull);
       expect(capturedArgs!.lessonId, 'l1');
       expect(capturedArgs!.topicId, 'topic-1');

@@ -91,7 +91,7 @@ void main() {
       }
 
       // Redesigned layout: a centered grid of tappable tiles, no ChoiceChip.
-      expect(find.byType(GridView), findsOneWidget);
+      expect(find.byType(Wrap), findsOneWidget);
       expect(find.byType(ChoiceChip), findsNothing);
     });
 

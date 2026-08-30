@@ -35,7 +35,7 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       final gradient = decoration.gradient as LinearGradient;
 
-      expect(gradient.colors[0].toARGB32(), equals(Colors.red.withValues(alpha: 0.2).toARGB32()));
+      expect(gradient.colors[0].toARGB32(), equals(Colors.red.withValues(alpha: 0.3).toARGB32()));
     });
 
     testWidgets('applies custom borderRadius', (tester) async {
@@ -131,7 +131,7 @@ void main() {
       final decoration = container.decoration as BoxDecoration;
       final gradient = decoration.gradient as LinearGradient;
 
-      expect(gradient.colors[0].toARGB32(), equals(Colors.blue.withValues(alpha: 0.3).toARGB32()));
+      expect(gradient.colors[0].toARGB32(), equals(Colors.blue.withValues(alpha: 0.5).toARGB32()));
     });
 
     testWidgets('has null padding when no padding provided', (tester) async {

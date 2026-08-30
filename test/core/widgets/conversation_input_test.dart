@@ -45,6 +45,7 @@ void main() {
       ));
 
       await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pumpAndSettle();
       expect(sent, isTrue);
     });
 
@@ -63,6 +64,7 @@ void main() {
 
       await tester.enterText(find.byType(TextField), 'hello');
       await tester.testTextInput.receiveAction(TextInputAction.send);
+      await tester.pumpAndSettle();
       expect(sent, isTrue);
     });
 
@@ -317,7 +319,7 @@ void main() {
       expect(find.byTooltip('Send message'), findsOneWidget);
     });
 
-    testWidgets('Ctrl+Enter keyboard shortcut triggers onSend', (tester) async {
+    testWidgets('Ctrl+Enter does not trigger onSend', (tester) async {
       final controller = TextEditingController();
       bool sent = false;
 
@@ -336,9 +338,9 @@ void main() {
       await tester.sendKeyDownEvent(LogicalKeyboardKey.control);
       await tester.sendKeyEvent(LogicalKeyboardKey.enter);
       await tester.sendKeyUpEvent(LogicalKeyboardKey.control);
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(sent, isTrue);
+      expect(sent, isFalse);
     });
 
     testWidgets('does not render CircularProgressIndicator when not loading', (tester) async {

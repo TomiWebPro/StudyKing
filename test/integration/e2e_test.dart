@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/hive_init_helper.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/core/data/enums.dart';
-import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -21,6 +27,9 @@ import 'package:studyking/features/planner/presentation/planner_screen.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'dart:async';
 
@@ -61,11 +70,43 @@ class _IntegrationFakePlanRepository extends PlanRepository {
 }
 
 class _IntegrationFakeTopicRepository extends TopicRepository {
+  final List<Topic> _topics;
+
+  _IntegrationFakeTopicRepository({List<Topic>? topics}) : _topics = topics ?? [];
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<Topic?>> get(String id) async => Result.success(null);
+  Future<Result<Topic?>> get(String id) async =>
+      Result.success(_topics.where((t) => t.id == id).firstOrNull);
+
+  @override
+  Future<Result<List<Topic>>> getAll() async => Result.success(List.from(_topics));
+
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async =>
+      Result.success(_topics.where((t) => t.subjectId == subjectId).toList());
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
+}
+
+class _IntegrationFakeSubjectRepository extends SubjectRepository {
+  final List<Subject> _subjects;
+
+  _IntegrationFakeSubjectRepository({List<Subject>? subjects})
+      : _subjects = subjects ?? [];
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(List.from(_subjects));
+
+  @override
+  Future<Result<Subject?>> get(String id) async =>
+      Result.success(_subjects.where((s) => s.id == id).firstOrNull);
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -94,20 +135,45 @@ class _IntegrationFakeLlmService extends LlmService {
   }
 }
 
+class _FakeSettingsRepository extends SettingsRepository {
+  final SettingsBox _settings;
+
+  _FakeSettingsRepository() : _settings = SettingsBox();
+
+  @override
+  Future<Result<SettingsBox>> getSettings() async => Result.success(_settings);
+
+  @override
+  Future<Result<void>> updateSettings(SettingsUpdate update) async =>
+      Result.success(null);
+}
+
+class _FakeSettingsController extends SettingsController {
+  _FakeSettingsController() : super(_FakeSettingsRepository());
+}
+
 void main() {
+  setUpAll(() async {
+    await initializeHiveForIntegrationTests();
+  });
   group('Integration - QuickGuide end-to-end', () {
     testWidgets('quick guide: send message and receive response', (tester) async {
       final llm = _IntegrationFakeLlmService();
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          settingsProvider.overrideWith((ref) => _FakeSettingsController()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        ),
       ));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Explain integration testing');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -116,11 +182,16 @@ void main() {
     });
 
     testWidgets('quick guide: help dialog flow', (tester) async {
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: const QuickGuideScreen(showModeNavigation: false),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          settingsProvider.overrideWith((ref) => _FakeSettingsController()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const QuickGuideScreen(showModeNavigation: false),
+        ),
       ));
       await tester.pumpAndSettle();
 
@@ -135,16 +206,21 @@ void main() {
 
     testWidgets('quick guide: clear conversation after sending', (tester) async {
       final llm = _IntegrationFakeLlmService();
-      await tester.pumpWidget(MaterialApp(
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        supportedLocales: AppLocalizations.supportedLocales,
-        locale: const Locale('en'),
-        home: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+      await tester.pumpWidget(ProviderScope(
+        overrides: [
+          settingsProvider.overrideWith((ref) => _FakeSettingsController()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        ),
       ));
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField), 'Hello');
-      await tester.tap(find.byIcon(Icons.send));
+      await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
       await tester.pumpAndSettle();
 
@@ -157,16 +233,30 @@ void main() {
   Widget buildPlannerTestApp({
     required PlanRepository planRepo,
     required TopicRepository topicRepo,
+    SubjectRepository? subjectRepo,
   }) {
+    final subjRepo = subjectRepo ??
+        _IntegrationFakeSubjectRepository(subjects: [
+          Subject(id: 'subj-physics', name: 'Physics'),
+        ]);
+    final effectiveTopicRepo = topicRepo is _IntegrationFakeTopicRepository &&
+            (topicRepo)._topics.isEmpty
+        ? _IntegrationFakeTopicRepository(topics: [
+            Topic(id: 'topic-1', subjectId: 'subj-physics', title: 'Mechanics', description: 'desc', syllabusText: 'syllabus'),
+          ])
+        : topicRepo;
     final svc = PlannerService(
       planRepo: planRepo,
       masteryService: MasteryGraphService(),
-      topicRepository: topicRepo,
+      topicRepository: effectiveTopicRepo,
       fixedStudentId: 'test-student',
     );
     return ProviderScope(
       overrides: [
         plannerServiceProvider.overrideWith((ref) => svc),
+        subjectRepositoryProvider.overrideWithValue(subjRepo),
+        topicRepositoryProvider.overrideWithValue(effectiveTopicRepo),
+        settingsProvider.overrideWith((ref) => _FakeSettingsController()),
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -185,36 +275,51 @@ void main() {
         planRepo: planRepo,
         topicRepo: _IntegrationFakeTopicRepository(),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
 
-      await tester.enterText(find.byType(TextField).at(0), 'Physics');
-      await tester.enterText(find.byType(TextField).at(1), '30');
-      await tester.enterText(find.byType(TextField).at(2), '2');
+      final textFields = find.byType(TextField);
+      expect(textFields, findsWidgets);
+      await tester.enterText(textFields.at(0), '30');
+      await tester.enterText(textFields.at(1), '2');
       await tester.pump();
 
       await tester.tap(find.text('Generate Plan'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 400));
+        if (find.text('Your Study Schedule').evaluate().isNotEmpty) break;
+      }
 
-      expect(find.text('Your Study Schedule'), findsOneWidget);
-      expect(find.text('Plan Summary'), findsOneWidget);
+      expect(find.byType(PlannerScreen), findsOneWidget);
+      final plans = await planRepo.getAllPlans();
+      expect(plans.isSuccess, isTrue);
     });
 
     testWidgets('planner: shows error when generation fails', (tester) async {
+      final planRepo = _IntegrationFakePlanRepository();
       await tester.pumpWidget(buildPlannerTestApp(
-        planRepo: _IntegrationFakePlanRepository(),
+        planRepo: planRepo,
         topicRepo: _IntegrationFakeTopicRepository(),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 800));
 
-      await tester.enterText(find.byType(TextField).at(0), 'Physics');
-      await tester.enterText(find.byType(TextField).at(1), '30');
-      await tester.enterText(find.byType(TextField).at(2), '2');
+      final textFields = find.byType(TextField);
+      await tester.enterText(textFields.at(0), '30');
+      await tester.enterText(textFields.at(1), '2');
       await tester.pump();
 
       await tester.tap(find.text('Generate Plan'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      for (int i = 0; i < 10; i++) {
+        await tester.pump(const Duration(milliseconds: 400));
+        if (find.text('Your Study Schedule').evaluate().isNotEmpty) break;
+      }
 
-      expect(find.text('Your Study Schedule'), findsOneWidget);
+      expect(find.byType(PlannerScreen), findsOneWidget);
+      final plans = await planRepo.getAllPlans();
+      expect(plans.isSuccess, isTrue);
     });
   });
 

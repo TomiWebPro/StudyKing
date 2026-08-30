@@ -15,11 +15,17 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class SubjectStatsTab extends StatefulWidget {
   final String subjectId;
   final SessionRepository? sessionRepository;
+  final TopicRepository? topicRepository;
+  final MasteryStateRepository? masteryStateRepository;
+  final StudentIdService? studentIdService;
 
   const SubjectStatsTab({
     super.key,
     required this.subjectId,
     this.sessionRepository,
+    this.topicRepository,
+    this.masteryStateRepository,
+    this.studentIdService,
   });
 
   @override
@@ -47,20 +53,26 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
 
   Future<_SyllabusProgressData> _loadSyllabusProgress() async {
     try {
-      final topicRepo = TopicRepository();
-      await topicRepo.init();
+      final topicRepo = widget.topicRepository ?? TopicRepository();
+      if (widget.topicRepository == null) {
+        await topicRepo.init();
+      }
       final topicsResult = await topicRepo.getBySubject(widget.subjectId);
       final allTopics = topicsResult.data ?? [];
 
       if (allTopics.isEmpty) return const _SyllabusProgressData(totalTopics: 0, masteredCount: 0);
 
-      final studentIdService = StudentIdService();
-      await studentIdService.init();
+      final studentIdService = widget.studentIdService ?? StudentIdService();
+      if (widget.studentIdService == null) {
+        await studentIdService.init();
+      }
       final studentId = studentIdService.getStudentId().data ?? '';
       if (studentId.isEmpty) return _SyllabusProgressData(totalTopics: allTopics.length, masteredCount: 0);
 
-      final masteryRepo = MasteryStateRepository();
-      await masteryRepo.init();
+      final masteryRepo = widget.masteryStateRepository ?? MasteryStateRepository();
+      if (widget.masteryStateRepository == null) {
+        await masteryRepo.init();
+      }
       final masteryResult = await masteryRepo.getAllMasteryStates(studentId);
       final states = masteryResult.data ?? [];
 

@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/hive_init_helper.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -8,6 +9,9 @@ import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/features/llm_tasks/services/llm_task_service.dart';
 
 void main() {
+  setUpAll(() async {
+    await initializeHiveForIntegrationTests();
+  });
   group('LlmTasks + Ingestion integration', () {
     late LlmTaskManager taskManager;
     late LlmTaskService taskService;

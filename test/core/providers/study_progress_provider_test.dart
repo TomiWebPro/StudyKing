@@ -125,9 +125,7 @@ void main() {
 
         final tracker = container.read(studyProgressTrackerProvider);
         final stats = await tracker.getOverallStats('stu1');
-        expect(stats.data!['totalAttempts'], 0);
-        expect(stats.data!['correctAttempts'], 0);
-        expect(stats.data!['accuracy'], 0);
+        expect(stats.isFailure, isTrue);
       });
     });
   });

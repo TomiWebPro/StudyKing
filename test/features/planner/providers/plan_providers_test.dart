@@ -135,7 +135,7 @@ void main() {
       expect(progress.totalPlanDays, 0);
       expect(progress.completedDays, 0);
       expect(progress.cumulativeProgress, 0.0);
-      expect(progress.weeklyProgress, hasLength(7));
+      expect(progress.weeklyProgress, isEmpty);
     });
   });
 }

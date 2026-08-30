@@ -135,7 +135,6 @@ void main() {
       expect(find.text('Physics Textbook'), findsOneWidget);
       expect(find.text('Completed'), findsOneWidget);
       expect(find.text('PDF'), findsOneWidget);
-      expect(find.text('src1'), findsOneWidget);
       expect(find.textContaining('summary of physics'), findsOneWidget);
     });
 
@@ -181,8 +180,9 @@ void main() {
         questionRepo: _FakeQuestionRepo(),
       ));
       await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.textContaining('Exception'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
 
@@ -201,13 +201,18 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       await tester.tap(find.byIcon(Icons.more_vert));
-      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
-      await tester.tap(find.text('Delete').first);
-      await tester.pump(const Duration(seconds: 1));
-
+      // Popup menu Delete (last Delete is the menu item, first is off-screen bottom button)
       await tester.tap(find.text('Delete').last);
-      await tester.pump(const Duration(seconds: 1));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Confirm dialog Delete button
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete').last);
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(navigatorObserver.poppedRoutes, isNotEmpty);
     });

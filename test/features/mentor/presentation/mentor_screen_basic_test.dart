@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider, mentorProgressTrackerProvider;
@@ -82,6 +83,8 @@ void main() {
       }
 
       expect(find.text('You'), findsWidgets);
+      // drain any pending timers (throttle, debounce) before test ends
+      await tester.pump(const Duration(seconds: 3));
     });
 
     testWidgets('shows error message when LLM fails', (tester) async {
@@ -175,11 +178,15 @@ void main() {
             break;
           }
         }
+        // allow debounce to settle before next message (avoid pumpAndSettle while typing indicator is animating)
+        await tester.pump(const Duration(milliseconds: 200));
       }
 
-      expect(find.text('Message 0'), findsOneWidget);
-      expect(find.text('Message 1'), findsOneWidget);
-      expect(find.text('Message 2'), findsOneWidget);
+      expect(find.text('Message 0', skipOffstage: false), findsOneWidget);
+      expect(find.text('Message 1', skipOffstage: false), findsOneWidget);
+      expect(find.text('Message 2', skipOffstage: false), findsOneWidget);
+      // drain any pending throttle timer
+      await tester.pump(const Duration(seconds: 3));
     });
 
     testWidgets('whitespace-only input is rejected', (tester) async {
@@ -279,6 +286,8 @@ void main() {
             mentorSessionRepositoryProvider.overrideWithValue(FakeSessionRepo()),
             masteryGraphServiceProvider.overrideWithValue(FakeMasteryGraphService()),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -302,10 +311,11 @@ void main() {
 
       expect(find.text('Hello'), findsOneWidget);
       expect(find.text('Mentor response'), findsOneWidget);
+      await tester.pump(const Duration(seconds: 1));
     });
 
     testWidgets('dispose does not throw when widget is removed from tree', (tester) async {
-      final commonOverrides = [
+      final List<Override> commonOverrides = [
         llmServiceProvider.overrideWithValue(FakeLlmService()),
         settingsProvider.overrideWith(
           (ref) => SettingsController(FakeSettingsRepo()),
@@ -315,6 +325,8 @@ void main() {
         mentorSessionRepositoryProvider.overrideWithValue(FakeSessionRepo()),
         masteryGraphServiceProvider.overrideWithValue(FakeMasteryGraphService()),
         mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+        llmAgentProvider.overrideWith((ref, studentId) => null),
+        longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
       ];
 
       await tester.pumpWidget(
@@ -437,7 +449,7 @@ void main() {
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [
+          overrides: <Override>[
             llmServiceProvider.overrideWithValue(FakeLlmService()),
             settingsProvider.overrideWith(
               (ref) => SettingsController(FakeSettingsRepo()),
@@ -447,6 +459,8 @@ void main() {
             mentorSessionRepositoryProvider.overrideWithValue(FakeSessionRepo()),
             masteryGraphServiceProvider.overrideWithValue(FakeMasteryGraphService()),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

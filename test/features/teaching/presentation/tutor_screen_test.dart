@@ -18,7 +18,14 @@ import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
-import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
+import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider, studentIdServiceProvider, voiceServiceProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show settingsProvider, SettingsController;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider;
+import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/services/voice_service.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/fakes.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -160,6 +167,36 @@ class _NullSubjectRepository extends SubjectRepository {
   Future<Result<void>> init() async => Result.success(null);
 }
 
+class _FakeSettingsRepository extends SettingsRepository {
+  final SettingsBox _box = SettingsBox();
+
+  @override
+  Future<Result<SettingsBox>> getSettings() async => Result.success(_box);
+
+  @override
+  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
+}
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  Result<String> getStudentId() => Result.success('test-student-id');
+}
+
+class _FakeVoiceService extends VoiceService {
+  @override
+  bool get isAvailable => true;
+  @override
+  bool get isListening => false;
+  @override
+  Stream<String> get transcribedText => const Stream.empty();
+  @override
+  Future<Result<void>> startListening({String? localeName}) async => Result.success(null);
+  @override
+  Future<void> stopListening() async {}
+  @override
+  Future<bool> requestPermission() async => true;
+}
+
 class _FakeTutorService extends TutorService {
   final bool shouldFail;
 
@@ -184,6 +221,7 @@ class _FakeTutorService extends TutorService {
     String? scheduledSessionId,
     String localeName = 'en',
   }) async {
+    if (shouldFail) throw Exception('LLM connection failed');
     final manager = ConversationManager(
       llmService: _FakeLlmService(),
       modelId: 'test-model',
@@ -207,6 +245,10 @@ Widget _wrapApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
   return ProviderScope(
     overrides: [
       studentIdValueProvider.overrideWith((ref) => 'test-student-id'),
+      studentIdServiceProvider.overrideWithValue(_FakeStudentIdService()),
+      settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepository())),
+      voiceServiceProvider.overrideWithValue(_FakeVoiceService()),
+      llmAgentProvider.overrideWith((ref, studentId) => null),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -222,7 +264,7 @@ void main() {
     testWidgets('shows loading indicator before initialization', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
@@ -235,13 +277,15 @@ void main() {
     testWidgets('displays topic title in app bar', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra Basics',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('Algebra Basics'), findsAtLeast(1));
     });
@@ -249,14 +293,16 @@ void main() {
     testWidgets('shows LessonProgressBar after initialization', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           durationMinutes: 45,
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
@@ -264,13 +310,15 @@ void main() {
     testWidgets('renders chat messages from manager', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(ListView), findsOneWidget);
     });
@@ -278,27 +326,31 @@ void main() {
     testWidgets('shows end lesson button after initialization', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.byIcon(Icons.stop_circle_outlined), findsOneWidget);
+      expect(find.byIcon(Icons.more_vert), findsOneWidget);
     });
 
     testWidgets('displays ConversationInput widget', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(TextField), findsOneWidget);
     });
@@ -306,13 +358,15 @@ void main() {
     testWidgets('mic button is present for voice input', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byIcon(Icons.mic_none), findsOneWidget);
     });
@@ -320,34 +374,44 @@ void main() {
     testWidgets('image picker button shows SnackBar', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.tap(find.byIcon(Icons.image_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
-      expect(find.text('Coming soon'), findsOneWidget);
+      expect(find.text('Capture Image'), findsOneWidget);
+      expect(find.text('Camera'), findsOneWidget);
+      expect(find.text('Gallery'), findsOneWidget);
     });
 
     testWidgets('sending a message adds user and tutor messages to chat', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.enterText(find.byType(TextField), 'Hello tutor');
       await tester.tap(find.byIcon(Icons.send_rounded));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('Hello tutor'), findsOneWidget);
     });
@@ -355,22 +419,31 @@ void main() {
     testWidgets('end lesson button shows confirmation then summary dialog', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
+      await tester.tap(find.byIcon(Icons.more_vert));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
       await tester.tap(find.byIcon(Icons.stop_circle_outlined));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('End your lesson? Your progress will be saved.'), findsOneWidget);
 
       await tester.tap(find.widgetWithText(FilledButton, 'End Lesson'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byType(AlertDialog), findsOneWidget);
       expect(find.text('Lesson Complete'), findsOneWidget);
@@ -379,14 +452,16 @@ void main() {
     testWidgets('shows lesson time ended text when duration expires', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           durationMinutes: 45,
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       await tester.pump(const Duration(minutes: 46));
 
@@ -399,14 +474,16 @@ void main() {
     testWidgets('shows stats in lesson progress bar after initialization', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           durationMinutes: 45,
           tutorService: _FakeTutorService(),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('45 min remaining'), findsOneWidget);
     });
@@ -415,14 +492,16 @@ void main() {
       final observer = TestNavigatorObserver();
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
         navigatorObserver: observer,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(observer.poppedRoutes, isEmpty);
     });
@@ -431,14 +510,16 @@ void main() {
       final observer = TestNavigatorObserver();
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(),
         ),
         navigatorObserver: observer,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(observer.poppedRoutes, isEmpty);
     });
@@ -446,31 +527,35 @@ void main() {
     testWidgets('shows error state when tutor service fails to initialize', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(shouldFail: true),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
-      expect(find.text('Tutor initialization failed: Exception: LLM connection failed. Go to Settings to configure your AI provider, or retry.'), findsOneWidget);
+      expect(find.text('Failed to initialize tutor. Please check your API configuration in Settings and try again.'), findsOneWidget);
     });
 
     testWidgets('shows retry and settings buttons in error state', (tester) async {
       await tester.pumpWidget(_wrapApp(
         TutorScreen(
-          topicId: 'topic-1',
+          topicId: '',
           topicTitle: 'Algebra',
           subjectId: 'math',
           tutorService: _FakeTutorService(shouldFail: true),
         ),
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('Retry'), findsOneWidget);
-      expect(find.text('Settings'), findsOneWidget);
+      expect(find.text('Go to Settings'), findsOneWidget);
     });
   });
 }

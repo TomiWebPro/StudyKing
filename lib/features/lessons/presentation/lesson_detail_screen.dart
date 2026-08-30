@@ -44,6 +44,7 @@ class _LessonDetailScreenState extends ConsumerState<LessonDetailScreen> {
   }
 
   void _startTimer() {
+    _timer?.cancel();
     _timer = Timer.periodic(Timeouts.second, (_) {
       if (mounted) {
         setState(() => _elapsed = _elapsed + Timeouts.second);

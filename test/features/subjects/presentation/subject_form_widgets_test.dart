@@ -255,7 +255,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('e.g., Physics'), findsOneWidget);
-      expect(find.text('e.g., IB-PHYS'), findsOneWidget);
+      expect(find.text('e.g., BIO-101'), findsOneWidget);
       expect(find.text('Enter teacher name'), findsOneWidget);
     });
 
@@ -338,7 +338,7 @@ void main() {
       expect(syllabusCtrl.text, 'IB');
 
       // Verify that the syllabus field is multi-line
-      final syllabusWidget = tester.widget<TextField>(syllabusField);
+      final syllabusWidget = tester.widget<TextField>(find.byType(TextField).at(3));
       expect(syllabusWidget.maxLines, 3);
     });
 

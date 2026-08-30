@@ -70,7 +70,7 @@ void main() {
     testWidgets('shows no plan message when plan is null', (tester) async {
       await tester.pumpWidget(buildApp(const PaceAdjustmentCard()));
 
-      expect(find.text('No Study Plan Yet'), findsOneWidget);
+      expect(find.text('No study plan yet'), findsOneWidget);
       expect(find.byIcon(Icons.rocket_launch), findsOneWidget);
     });
 

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/empty_state_widget.dart';
 
 void main() {
@@ -79,7 +80,7 @@ void main() {
       expect(actionFired, isTrue);
     });
 
-    testWidgets('icon has sematic label', (tester) async {
+    testWidgets('icon uses responsive size and is excluded from semantics', (tester) async {
       await tester.pumpWidget(MaterialApp(
         home: Scaffold(
           body: EmptyStateWidget(
@@ -89,8 +90,16 @@ void main() {
         ),
       ));
 
+      final iconElement = tester.element(find.byIcon(Icons.inbox));
+      final expectedSize = ResponsiveUtils.emptyStateIconSize(iconElement);
       final icon = tester.widget<Icon>(find.byIcon(Icons.inbox));
-      expect(icon.size, 64);
+      expect(icon.size, expectedSize);
+
+      final excludeSemantics = find.ancestor(
+        of: find.byIcon(Icons.inbox),
+        matching: find.byType(ExcludeSemantics),
+      );
+      expect(excludeSemantics, findsOneWidget);
     });
   });
 }

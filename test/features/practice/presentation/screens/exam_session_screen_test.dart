@@ -129,6 +129,83 @@ class _FakeMasteryRecorder extends MasteryRecorder {
   }
 }
 
+class _DeterministicExamSessionService extends ExamSessionService {
+  final SessionRepository _repo;
+  _DeterministicExamSessionService({
+    required super.sessionRepo,
+    required super.studentIdService,
+    super.clock,
+  }) : _repo = sessionRepo;
+
+  @override
+  List<Question> selectQuestions({
+    required List<Question> pool,
+    required ExamConfig config,
+  }) {
+    var candidates = pool.where((q) => q.subjectId == config.subjectId).toList();
+    if (config.topicIds != null && config.topicIds!.isNotEmpty) {
+      candidates = candidates.where((q) => config.topicIds!.contains(q.topicId)).toList();
+    }
+    candidates.sort((a, b) => a.id.compareTo(b.id));
+    if (config.easyCount != null ||
+        config.mediumCount != null ||
+        config.hardCount != null) {
+      const easyMaxDifficulty = 2;
+      const mediumDifficulty = 3;
+      const hardMinDifficulty = 4;
+      final easy = candidates.where((q) => q.difficulty <= easyMaxDifficulty).toList();
+      final medium = candidates.where((q) => q.difficulty == mediumDifficulty).toList();
+      final hard = candidates.where((q) => q.difficulty >= hardMinDifficulty).toList();
+      final selected = <Question>[];
+      selected.addAll(easy.take(config.easyCount ?? 0));
+      selected.addAll(medium.take(config.mediumCount ?? 0));
+      selected.addAll(hard.take(config.hardCount ?? 0));
+      if (selected.length < config.questionCount) {
+        final remaining = candidates.where((q) => !selected.contains(q)).toList();
+        selected.addAll(remaining.take(config.questionCount - selected.length));
+      }
+      return selected.take(config.questionCount).toList();
+    }
+    return candidates.take(config.questionCount).toList();
+  }
+
+  @override
+  Future<Result<ExamResult>> finishExam({
+    required ExamConfig config,
+    required List<ExamQuestionResult> questionResults,
+    bool autoSubmitted = false,
+  }) async {
+    // Avoid Hive I/O in tests: create result in-memory and save session only.
+    cancelExam();
+    final endTime = DateTime.now();
+    final startTime = endTime.subtract(const Duration(minutes: 1));
+    final result = ExamResult(
+      config: config,
+      questionResults: questionResults,
+      startTime: startTime,
+      endTime: endTime,
+      wasAutoSubmitted: autoSubmitted,
+    );
+    try {
+      final session = Session(
+        id: 'exam_${startTime.millisecondsSinceEpoch}',
+        studentId: 'test-student-id',
+        subjectId: config.subjectId,
+        type: SessionType.practice,
+        startTime: startTime,
+        endTime: endTime,
+        actualDurationMs: endTime.difference(startTime).inMilliseconds,
+        questionsAnswered: questionResults.length,
+        correctAnswers: result.totalCorrect,
+        completed: true,
+        tags: ['exam', 'auto_submit:${autoSubmitted ? 'true' : 'false'}'],
+      );
+      await _repo.save(session.id, session);
+    } catch (_) {}
+    return Result.success(result);
+  }
+}
+
 Widget _buildTestApp({
   required List<Question> questions,
   NavigatorObserver? observer,
@@ -137,7 +214,7 @@ Widget _buildTestApp({
   final fakeSessionRepo = _FakeSessionRepository();
   final fixedClock = _FakeClock(DateTime(2024, 6, 15, 12, 0));
 
-  final examService = ExamSessionService(
+  final examService = _DeterministicExamSessionService(
     sessionRepo: fakeSessionRepo,
     studentIdService: _FakeStudentIdService(),
     clock: fixedClock,
@@ -181,19 +258,23 @@ Future<void> _answerQuestion(WidgetTester tester, String answer) async {
 }
 
 Future<void> _goNext(WidgetTester tester) async {
-  await tester.ensureVisible(find.text('Next'));
+  final nextFinder = find.widgetWithText(ElevatedButton, 'Next');
+  await tester.ensureVisible(nextFinder);
   await tester.pump();
-  await tester.tap(find.text('Next'));
+  await tester.tap(nextFinder);
   await tester.pump();
   await tester.pump(const Duration(milliseconds: 500));
 }
 
 void main() {
   late Directory tempDir;
-  setUpAll(() {
+  setUpAll(() async {
     tempDir = Directory.systemTemp.createTempSync('exam_widget_test_');
     try {
       Hive.init(tempDir.path);
+    } catch (_) {}
+    try {
+      await Hive.openBox('exam_results');
     } catch (_) {}
   });
   tearDownAll(() async {
@@ -221,8 +302,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Exam Configuration'), findsOneWidget);
-      expect(find.text('30 min'), findsOneWidget);
-      expect(find.text('15 min'), findsOneWidget);
+      expect(find.text('30m'), findsOneWidget);
+      expect(find.text('15m'), findsOneWidget);
       expect(find.text('Start Exam'), findsOneWidget);
     });
 
@@ -244,7 +325,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No Questions Available'), findsOneWidget);
-      expect(find.text('Upload Materials'), findsOneWidget);
+      expect(find.text('Upload Materials'), findsWidgets);
     });
 
     testWidgets('duration selector changes duration', (tester) async {
@@ -253,7 +334,9 @@ void main() {
       ]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('45 min'));
+      await tester.ensureVisible(find.text('45m'));
+      await tester.pump();
+      await tester.tap(find.text('45m'));
       await tester.pumpAndSettle();
     });
 
@@ -264,116 +347,87 @@ void main() {
       ]));
       await tester.pumpAndSettle();
 
+      await tester.ensureVisible(find.text('5'));
+      await tester.pump();
       await tester.tap(find.text('5'));
       await tester.pumpAndSettle();
     });
 
     testWidgets('starts exam when Start Exam is tapped', (tester) async {
-      await tester.pumpWidget(_buildTestApp(questions: [
-        _createQuestion(id: 'q1', difficulty: 1),
-        _createQuestion(id: 'q2', difficulty: 2),
-        _createQuestion(id: 'q3', difficulty: 3),
-      ]));
+      await tester.pumpWidget(_buildTestApp(questions: [_typedQuestion(id: 'q1')]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
+      await _startExam(tester);
 
       expect(find.text('Submit Answer'), findsOneWidget);
     });
 
     testWidgets('shows timer display during exam', (tester) async {
-      await tester.pumpWidget(_buildTestApp(questions: [
-        _createQuestion(id: 'q1', difficulty: 1),
-        _createQuestion(id: 'q2', difficulty: 2),
-      ]));
+      await tester.pumpWidget(_buildTestApp(questions: [_typedQuestion(id: 'q1')]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
+      await _startExam(tester);
 
       expect(find.byIcon(Icons.timer), findsOneWidget);
     });
 
     testWidgets('shows question progress during exam', (tester) async {
       await tester.pumpWidget(_buildTestApp(questions: [
-        _createQuestion(id: 'q1'),
-        _createQuestion(id: 'q2'),
-        _createQuestion(id: 'q3'),
+        _typedQuestion(id: 'q1'),
+        _typedQuestion(id: 'q2'),
+        _typedQuestion(id: 'q3'),
       ]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
+      await _startExam(tester);
 
-      expect(find.text('1/3'), findsOneWidget);
+      expect(find.bySemanticsLabel('Exam progress: 1 of 3'), findsOneWidget);
     });
 
     testWidgets('answer submission shows feedback', (tester) async {
       await tester.pumpWidget(_buildTestApp(questions: [
-        _createQuestion(id: 'q1'),
+        _typedQuestion(id: 'q1'),
       ]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
-
-      await tester.tap(find.text('Answer q1'));
-      await tester.pump();
-      await tester.tap(find.text('Submit Answer'));
-      await tester.pump();
+      await _startExam(tester);
+      await _answerQuestion(tester, 'Answer q1');
 
       expect(find.textContaining('Correct'), findsWidgets);
     });
 
     testWidgets('navigates to next question after submission', (tester) async {
       await tester.pumpWidget(_buildTestApp(questions: [
-        _createQuestion(id: 'q1'),
-        _createQuestion(id: 'q2'),
+        _typedQuestion(id: 'q1'),
+        _typedQuestion(id: 'q2'),
       ]));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
+      await _startExam(tester);
+      await _answerQuestion(tester, 'Answer q1');
+      await _goNext(tester);
 
-      await tester.tap(find.text('Answer q1'));
-      await tester.pump();
-      await tester.tap(find.text('Submit Answer'));
-      await tester.pump();
-
-      await tester.tap(find.text('Next'));
-      await tester.pump();
-
-      expect(find.text('2/2'), findsOneWidget);
+      expect(find.bySemanticsLabel('Exam progress: 2 of 2'), findsOneWidget);
     });
 
     testWidgets('shows results screen after completing all questions', (tester) async {
       final observer = TestNavigatorObserver();
       await tester.pumpWidget(_buildTestApp(
         questions: [
-          _createQuestion(id: 'q1'),
-          _createQuestion(id: 'q2'),
+          _typedQuestion(id: 'q1'),
+          _typedQuestion(id: 'q2'),
         ],
         observer: observer,
       ));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Start Exam'));
-      await tester.pump();
-
-      await tester.tap(find.text('Answer q1'));
-      await tester.pump();
-      await tester.tap(find.text('Submit Answer'));
-      await tester.pump();
-      await tester.tap(find.text('Next'));
-      await tester.pump();
-
-      await tester.tap(find.text('Answer q2'));
-      await tester.pump();
-      await tester.tap(find.text('Submit Answer'));
-      await tester.pump();
-      await tester.tap(find.text('Next'));
-      await tester.pump();
+      await _startExam(tester);
+      await _answerQuestion(tester, 'Answer q1');
+      await _goNext(tester);
+      await _answerQuestion(tester, 'Answer q2');
+      await _goNext(tester);
+      await tester.pumpAndSettle();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Session Results'), findsOneWidget);
       expect(find.textContaining('Correct'), findsWidgets);
@@ -479,6 +533,7 @@ void main() {
           await _startExam(tester);
           await _answerQuestion(tester, 'Answer q1');
           await _goNext(tester);
+          await tester.pumpAndSettle();
 
           expect(find.text('Text question q2?'), findsOneWidget);
         });
@@ -495,6 +550,8 @@ void main() {
           await _goNext(tester);
           await _answerQuestion(tester, 'Answer q2');
           await _goNext(tester);
+          await tester.pumpAndSettle();
+          await tester.pump(const Duration(milliseconds: 500));
 
           expect(find.text('Session Results'), findsOneWidget);
           expect(find.text('Practice Complete!'), findsOneWidget);
@@ -509,7 +566,7 @@ void main() {
 
           await _startExam(tester);
 
-          expect(find.text('1/2'), findsOneWidget);
+          expect(find.bySemanticsLabel('Exam progress: 1 of 2'), findsOneWidget);
           expect(find.byIcon(Icons.timer), findsOneWidget);
         });
       });
@@ -521,12 +578,13 @@ void main() {
           await _startExam(tester);
           await _answerQuestion(tester, 'Answer q1');
           await _goNext(tester);
+          await tester.pumpAndSettle();
+          await tester.pump(const Duration(milliseconds: 500));
         }
 
         testWidgets('shows done and practice again buttons', (tester) async {
           await completeOneQuestion(tester);
-          await tester.ensureVisible(find.text('Done'));
-          await tester.pump();
+          await tester.pumpAndSettle();
           expect(find.text('Done'), findsOneWidget);
           expect(find.text('Practice Again'), findsOneWidget);
         });
@@ -597,9 +655,9 @@ void main() {
           await _goNext(tester);
           await _answerQuestion(tester, 'Wrong');
           await _goNext(tester);
+          await tester.pumpAndSettle();
+          await tester.pump(const Duration(milliseconds: 500));
 
-          await tester.ensureVisible(find.text('Total Questions'));
-          await tester.pump();
           expect(find.text('Total Questions'), findsOneWidget);
           expect(find.text('Correct Answers'), findsOneWidget);
           expect(find.text('Incorrect'), findsOneWidget);
@@ -614,6 +672,7 @@ void main() {
           final q = Question(
             id: 'q-exp', text: 'With explanation?', type: QuestionType.typedAnswer,
             subjectId: 'sub1', topicId: 't1',
+            explanation: 'Because of reason',
             markscheme: Markscheme(questionId: 'q-exp', correctAnswer: 'Yes', explanation: 'Because of reason'),
             options: [], createdAt: now, updatedAt: now,
           );

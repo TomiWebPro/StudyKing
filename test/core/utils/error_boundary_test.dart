@@ -30,14 +30,13 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
     });
 
-    testWidgets('renders error icon, title, message, and retry button', (
-      tester,
-    ) async {
+    testWidgets('renders error icon, title, and message', (tester) async {
       final details = FlutterErrorDetails(
         exception: Exception('test error'),
       );
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: AppErrorWidgetBuilder.build(details),
         ),
@@ -46,26 +45,25 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.textContaining('Error:'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
-      expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
 
-    testWidgets('tap retry triggers rebuild', (tester) async {
+    testWidgets('renders error UI without retry when no callback provided', (
+      tester,
+    ) async {
       final details = FlutterErrorDetails(
         exception: Exception('test error'),
       );
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: AppErrorWidgetBuilder.build(details),
         ),
       ));
 
-      await tester.tap(find.text('Retry'));
-      await tester.pump();
-
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Retry'), findsNothing);
     });
 
     testWidgets('handles null AppLocalizations gracefully', (tester) async {
@@ -81,7 +79,6 @@ void main() {
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('An unexpected error occurred.'), findsOneWidget);
-      expect(find.text('Retry'), findsOneWidget);
     });
   });
 }

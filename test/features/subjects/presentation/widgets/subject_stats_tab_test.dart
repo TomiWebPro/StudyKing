@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -18,6 +23,40 @@ class _FakeSessionRepository extends SessionRepository {
     if (shouldThrow) throw Exception('test error');
     return Result.success(_sessions);
   }
+}
+
+class _FakeTopicRepository extends TopicRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async => Result.success([]);
+}
+
+class _FakeMasteryStateRepository extends MasteryStateRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async => Result.success([]);
+}
+
+class _FakeStudentIdService extends StudentIdService {
+  @override
+  Future<void> init() async {}
+
+  @override
+  Result<String> getStudentId() => Result.success('test-student-id');
+}
+
+SubjectStatsTab _createTab(String subjectId, SessionRepository repo) {
+  return SubjectStatsTab(
+    subjectId: subjectId,
+    sessionRepository: repo,
+    topicRepository: _FakeTopicRepository(),
+    masteryStateRepository: _FakeMasteryStateRepository(),
+    studentIdService: _FakeStudentIdService(),
+  );
 }
 
 Session _session({
@@ -57,7 +96,7 @@ void main() {
       final repo = _FakeSessionRepository([]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -78,14 +117,14 @@ void main() {
       final repo = _FakeSessionRepository([], shouldThrow: true);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.error_outline), findsOneWidget);
       expect(find.byIcon(Icons.refresh), findsOneWidget);
-      expect(find.text('An error occurred'), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('displays correct session count', (tester) async {
@@ -95,7 +134,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -114,7 +153,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -129,7 +168,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -156,7 +195,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -173,7 +212,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -188,7 +227,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -209,7 +248,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -224,7 +263,7 @@ void main() {
       final repo = _FakeSessionRepository([]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -243,7 +282,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -264,7 +303,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -283,7 +322,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -302,7 +341,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -316,7 +355,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -336,7 +375,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -355,7 +394,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -376,7 +415,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -400,7 +439,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -419,7 +458,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -440,7 +479,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -456,7 +495,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -476,7 +515,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -496,7 +535,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -515,7 +554,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -542,7 +581,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();
@@ -557,7 +596,7 @@ void main() {
       ]);
       await tester.pumpWidget(
         _buildTestApp(
-          SubjectStatsTab(subjectId: testSubjectId, sessionRepository: repo),
+          _createTab(testSubjectId, repo),
         ),
       );
       await tester.pumpAndSettle();

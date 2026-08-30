@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/hive_init_helper.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/help_dialog.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -13,6 +14,9 @@ Widget _buildTestApp({required Widget child}) {
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeHiveForIntegrationTests();
+  });
   group('QuickGuide + Teaching integration', () {
     testWidgets('QuickGuideHelpDialog renders in teaching context', (tester) async {
       await tester.pumpWidget(_buildTestApp(
@@ -28,7 +32,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(QuickGuideHelpDialog), findsOneWidget);
-      expect(find.text('How to Use StudyKing Guide'), findsOneWidget);
+      expect(find.text('Quick Guide Help'), findsOneWidget);
       expect(find.text('Got it'), findsOneWidget);
     });
 

@@ -40,6 +40,13 @@ class InMemorySessionRepository extends SessionRepository {
   }
 
   @override
+  Future<Result<void>> delete(String key) async {
+    if (_failNextOperations) return Result.failure('Simulated failure');
+    _store.remove(key);
+    return Result.success(null);
+  }
+
+  @override
   Future<Result<List<Session>>> getAll() async {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final sessions = _store.values.toList();

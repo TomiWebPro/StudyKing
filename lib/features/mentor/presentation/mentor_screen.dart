@@ -52,6 +52,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   bool _didInit = false;
   List<Session> _upcomingLessons = [];
   bool _isLoadingUpcoming = false;
+  Timer? _throttleTimer;
 
   @override
   void initState() {
@@ -154,10 +155,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         });
         await _loadUnreadNudges();
         if (loadedMessages.isEmpty && _messages.isEmpty) {
-          _sendWelcomeMessage();
+          if (mounted) _sendWelcomeMessage();
         }
-        WidgetsBinding.instance.addPostFrameCallback((_) => _refreshCheck());
-        WidgetsBinding.instance.addPostFrameCallback((_) => _loadUpcomingLessons());
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _refreshCheck();
+        });
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _loadUpcomingLessons();
+        });
       }
     } catch (e) {
       _logger.e('Mentor initialization failed', e);
@@ -173,6 +178,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   }
 
   Future<void> _sendWelcomeMessage() async {
+    if (!mounted) return;
     final l10n = AppLocalizations.of(context)!;
     final welcome = ConversationMessage(
       id: 'welcome',
@@ -183,6 +189,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       timestamp: DateTime.now(),
     );
 
+    if (!mounted) return;
     setState(() {
       _messages.add(ChatMessageData(
         message: welcome,
@@ -241,6 +248,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   }
 
   Future<void> _loadUpcomingLessons() async {
+    if (!mounted) return;
     setState(() => _isLoadingUpcoming = true);
     try {
       final lessons = await _mentorService.getUpcomingLessons();
@@ -312,6 +320,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     try {
       await for (final chunk in _mentorService.chat(text)) {
         buffer.write(chunk);
+        if (!mounted) return;
         final idx = _messages.length - 1;
         setState(() {
           _messages[idx] = ChatMessageData(
@@ -325,6 +334,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _scrollToBottom();
       }
 
+      if (!mounted) return;
       final idx = _messages.length - 1;
       setState(() {
         _messages[idx] = ChatMessageData(
@@ -337,6 +347,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _isSending = false;
       });
     } catch (e) {
+      if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       final idx = _messages.length - 1;
       _pendingRetryText = text;
@@ -356,7 +367,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _throttleWasActive = _mentorService.wasThrottleActive;
       });
       if (_throttleWasActive) {
-        Future.delayed(const Duration(seconds: 2), () {
+        _throttleTimer?.cancel();
+        _throttleTimer = Timer(const Duration(seconds: 2), () {
           if (mounted) setState(() => _throttleWasActive = false);
         });
       }
@@ -648,7 +660,8 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
       onPressed: isAvailable
           ? () async {
               if (voiceService.isListening) {
-                voiceService.stopListening();
+                await voiceService.stopListening();
+                if (mounted) setState(() {});
               } else {
                 final voiceResult = await voiceService.startListening(localeName: l10n.localeName);
                 if (voiceResult.isFailure && mounted) {
@@ -663,6 +676,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                     TextPosition(offset: text.length),
                   );
                 });
+                if (mounted) setState(() {});
               }
             }
           : null,
@@ -671,6 +685,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   @override
   void dispose() {
+    _throttleTimer?.cancel();
     _voiceSubscription?.cancel();
     _textController.dispose();
     _scrollController.dispose();

@@ -699,20 +699,21 @@ void main() {
     });
 
     testWidgets('falls back to grey when bodySmall color is null', (tester) async {
+      final theme = ThemeData.light().copyWith(
+        textTheme: const TextTheme(
+          bodyLarge: TextStyle(color: Colors.black),
+          bodyMedium: TextStyle(color: Colors.black),
+          bodySmall: TextStyle(),
+          titleLarge: TextStyle(color: Colors.black),
+          titleSmall: TextStyle(color: Colors.black),
+          displayLarge: TextStyle(color: Colors.black),
+          labelSmall: TextStyle(color: Colors.black),
+        ),
+      );
       await tester.pumpWidget(MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        theme: ThemeData.light().copyWith(
-          textTheme: const TextTheme(
-            bodyLarge: TextStyle(color: Colors.black),
-            bodyMedium: TextStyle(color: Colors.black),
-            bodySmall: TextStyle(),
-            titleLarge: TextStyle(color: Colors.black),
-            titleSmall: TextStyle(color: Colors.black),
-            displayLarge: TextStyle(color: Colors.black),
-            labelSmall: TextStyle(color: Colors.black),
-          ),
-        ),
+        theme: theme,
         home: Scaffold(
           body: SizedBox(
             height: 1200,
@@ -725,7 +726,7 @@ void main() {
       ));
 
       final icon = tester.widget<Icon>(find.byIcon(Icons.calendar_month));
-      expect(icon.color, Colors.grey);
+      expect(icon.color, theme.colorScheme.onSurfaceVariant);
     });
 
     testWidgets('uses bodySmall color when available', (tester) async {

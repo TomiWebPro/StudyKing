@@ -17,6 +17,11 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show initSettingsRepository;
+import 'package:studyking/core/constants/app_config.dart';
+import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/features/settings/data/models/settings_update.dart';
+import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 
 class _BehavioralFakeSourceRepo extends SourceRepository {
   final List<Source> _sources = [];
@@ -104,8 +109,23 @@ class _FailingLlmService extends LlmService {
   }
 }
 
+class _FakeSettingsRepository extends SettingsRepository {
+  final SettingsBox _box = SettingsBox();
+
+  @override
+  Future<Result<SettingsBox>> getSettings() async => Result.success(_box);
+
+  @override
+  Future<Result<void>> updateSettings(SettingsUpdate update) async => Result.success(null);
+}
+
 void main() {
   group('ingestionProviders', () {
+    setUp(() {
+      AppConstants.initialize();
+      initSettingsRepository(_FakeSettingsRepository());
+    });
+
     group('documentExtractorProvider', () {
       test('creates a DocumentExtractor', () {
         final container = ProviderContainer(
@@ -223,7 +243,7 @@ void main() {
         final scraper = container.read(webScraperProvider);
         final result = await scraper.fetchPageContent('https://example.com');
         expect(result.isSuccess, isTrue);
-        expect(result.data, contains('Fetched content from'));
+        expect(result.data!.content, contains('Fetched content from'));
       });
 
       test('error-state: handles HTTP 500 from overridden client', () async {

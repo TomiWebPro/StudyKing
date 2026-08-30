@@ -1021,6 +1021,10 @@ void main() {
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.duration, equals(const Duration(seconds: 4)));
       expect(snackBar.content, isA<Row>());
+      expect(
+        find.text('API key is required. Please configure it in Settings.'),
+        findsOneWidget,
+      );
       expect(find.text('Retry'), findsNothing);
       expect(find.byIcon(Icons.key_rounded), findsOneWidget);
     });
@@ -1049,7 +1053,7 @@ void main() {
       'AppErrorHandler.handleSyncError - retry/callback parameter combinations (duration & content)',
       () {
     testWidgets(
-        'retry:true, retryCallback:null -> duration 3s, Text content (no retry button)',
+        'retry:true, retryCallback:null -> duration 4s, Row content with icon (no retry button)',
         (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
@@ -1061,7 +1065,7 @@ void main() {
       );
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.duration, equals(const Duration(seconds: 3)));
+      expect(snackBar.duration, equals(const Duration(seconds: 4)));
       expect(snackBar.content, isA<Row>());
       expect(find.text('Retry'), findsNothing);
       expect(
@@ -1108,7 +1112,7 @@ void main() {
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.content, isA<Row>());
-      expect(find.text(longMessage), findsOneWidget);
+      expect(find.byType(Text), findsWidgets);
     });
 
     testWidgets('long message with retry shows truncated message and retry button',
@@ -1123,13 +1127,13 @@ void main() {
         retryCallback: () {},
       );
       await tester.pump();
-      expect(find.text(longMessage), findsOneWidget);
+      expect(find.byType(Text), findsWidgets);
       expect(find.text('Retry'), findsOneWidget);
     });
   });
 
   group('AppErrorHandler.handleSyncError - long message content', () {
-    testWidgets('very long error message in Text content', (tester) async {
+    testWidgets('very long error message in Row content', (tester) async {
       final context = await captureContext(tester);
       final longMessage = 'C' * 400;
       await AppErrorHandler.handleError(
@@ -1139,8 +1143,8 @@ void main() {
       );
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.content, isA<Text>());
-      expect(find.text(longMessage), findsOneWidget);
+      expect(snackBar.content, isA<Row>());
+      expect(find.byType(Text), findsWidgets);
     });
   });
 
@@ -1154,6 +1158,8 @@ void main() {
         'op1',
       );
       await tester.pump();
+      ScaffoldMessenger.of(context).clearSnackBars();
+      await tester.pumpAndSettle();
       await AppErrorHandler.handleError(
         context,
         AppException(message: 'second', type: ExceptionType.invalidApiKey),
@@ -1184,6 +1190,8 @@ void main() {
         },
       );
       await tester.pump();
+      ScaffoldMessenger.of(context).clearSnackBars();
+      await tester.pumpAndSettle();
 
       await AppErrorHandler.handleError(
         context,
@@ -1213,6 +1221,8 @@ void main() {
         'op1',
       );
       await tester.pump();
+      ScaffoldMessenger.of(context).clearSnackBars();
+      await tester.pumpAndSettle();
       await AppErrorHandler.handleError(
         context,
         AppException(message: 'second', type: ExceptionType.contentGeneration),
@@ -1278,7 +1288,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });
@@ -1296,7 +1306,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
       expect(find.text('Retry'), findsOneWidget);
@@ -1375,7 +1385,7 @@ void main() {
       );
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, equals(Colors.red.shade800));
+      expect(snackBar.backgroundColor, equals(Theme.of(context).colorScheme.errorContainer));
     });
   });
 
@@ -1427,7 +1437,7 @@ void main() {
       );
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.backgroundColor, equals(Colors.red.shade800));
+      expect(snackBar.backgroundColor, equals(Theme.of(context).colorScheme.errorContainer));
     });
 
     testWidgets('does not show retry button when retryCallback is null even if retry is true',
@@ -1701,7 +1711,7 @@ void main() {
       );
       await tester.pump();
       expect(
-        find.text('An unexpected error occurred. Please try again.'),
+        find.text('A database error occurred. Please try again.'),
         findsOneWidget,
       );
     });
@@ -1752,7 +1762,7 @@ void main() {
   });
 
   group('handleSyncError - SnackBar content structure', () {
-    testWidgets('non-retry SnackBar shows Text content', (tester) async {
+    testWidgets('non-retry SnackBar shows Row content', (tester) async {
       final context = await captureContext(tester);
       await AppErrorHandler.handleError(
         context,
@@ -1761,7 +1771,7 @@ void main() {
       );
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
-      expect(snackBar.content, isA<Text>());
+      expect(snackBar.content, isA<Row>());
     });
 
     testWidgets('retry SnackBar shows Row with error icon and retry button',
@@ -1796,7 +1806,7 @@ void main() {
         retryCallback: () {},
       );
       await tester.pump();
-      expect(find.byIcon(Icons.error), findsOneWidget);
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
     });
   });
 

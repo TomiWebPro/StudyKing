@@ -269,13 +269,13 @@ void main() {
         expect(result.data, isEmpty);
       });
 
-      test('returns empty list on network error', () async {
+      test('returns failure on network error', () async {
         final client = _FakeHttpClient();
         client.handler = (_) async => throw Exception('Connection failed');
 
         final service = ModelListingService(apiKey: 'key', httpClient: client);
         final result = await service.fetchAvailableModels();
-        expect(result.data, isEmpty);
+        expect(result.isFailure, isTrue);
     });
     });
 

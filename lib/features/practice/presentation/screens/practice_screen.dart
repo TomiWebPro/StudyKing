@@ -1165,48 +1165,52 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
     if (_subjects.isEmpty) return const Center(child: PracticeEmptyState());
     return RefreshIndicator(
       onRefresh: _loadSubjects,
-      child: ListView(
+      child: SingleChildScrollView(
         padding: ResponsiveUtils.listPadding(context),
-        children: [
-          if (_dueCountsLoadFailed || _questionCountLoadFailed)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: ErrorRetryWidget(
-                message: l10n.somethingWentWrong,
-                retryLabel: l10n.retry,
-                onRetry: () {
-                  setState(() {
-                    _dueCountsLoadFailed = false;
-                    _questionCountLoadFailed = false;
-                  });
-                  _loadDueCounts();
-                  _loadQuestionCount();
-                },
+        physics: const AlwaysScrollableScrollPhysics(),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if (_dueCountsLoadFailed || _questionCountLoadFailed)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: ErrorRetryWidget(
+                  message: l10n.somethingWentWrong,
+                  retryLabel: l10n.retry,
+                  onRetry: () {
+                    setState(() {
+                      _dueCountsLoadFailed = false;
+                      _questionCountLoadFailed = false;
+                    });
+                    _loadDueCounts();
+                    _loadQuestionCount();
+                  },
+                ),
               ),
+            _buildSummaryRow(),
+            const SizedBox(height: 8),
+            _buildActivitySection(),
+            const SizedBox(height: 8),
+            if (_totalQuestionCount == 0) _buildNoQuestionsBanner() else
+            PracticeModeGrid(
+              isLoadingDueCounts: _isLoadingDueCounts,
+              dueCounts: _dueCounts,
+              totalQuestionCount: _totalQuestionCount,
+              customQuestionCount: _customQuestionCount,
+              hasSubjects: _subjects.isNotEmpty,
+              isNewUser: _practiceStreak < 3 && _weeklyActivity < 10,
+              onQuickPractice: _showPracticeModeDialog,
+              onSpacedRepetition: _showSpacedRepetitionSubjectSelector,
+              onTopicFocus: _showTopicSelector,
+              onWeakAreas: _startWeakAreasPractice,
+              onMyQuestions: _startMyQuestionsPractice,
             ),
-          _buildSummaryRow(),
-          const SizedBox(height: 8),
-          _buildActivitySection(),
-          const SizedBox(height: 8),
-          if (_totalQuestionCount == 0) _buildNoQuestionsBanner() else
-          PracticeModeGrid(
-            isLoadingDueCounts: _isLoadingDueCounts,
-            dueCounts: _dueCounts,
-            totalQuestionCount: _totalQuestionCount,
-            customQuestionCount: _customQuestionCount,
-            hasSubjects: _subjects.isNotEmpty,
-            isNewUser: _practiceStreak < 3 && _weeklyActivity < 10,
-            onQuickPractice: _showPracticeModeDialog,
-            onSpacedRepetition: _showSpacedRepetitionSubjectSelector,
-            onTopicFocus: _showTopicSelector,
-            onWeakAreas: _startWeakAreasPractice,
-            onMyQuestions: _startMyQuestionsPractice,
-          ),
-          SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
-          _buildExtraModes(),
-          SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
-          _buildSubjectSection(context),
-        ],
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+            _buildExtraModes(),
+            SizedBox(height: ResponsiveUtils.verticalSpacing(context) * 2),
+            _buildSubjectSection(context),
+          ],
+        ),
       ),
     );
   }

@@ -91,16 +91,16 @@ void main() {
       expect(result.type, ExceptionType.invalidApiKey);
     });
 
-    test('converts error with "403" to AppException(apiRateLimit)', () {
+    test('converts error with "403" to AppException(apiAuth)', () {
       final error = Exception('403 Forbidden');
       final result = AppErrorHandler.convertToAppException(error, _en);
-      expect(result.type, ExceptionType.apiRateLimit);
+      expect(result.type, ExceptionType.apiAuth);
     });
 
-    test('converts error with "forbidden" keyword to AppException(apiRateLimit)', () {
+    test('converts error with "forbidden" keyword to AppException(apiAuth)', () {
       final error = Exception('forbidden access');
       final result = AppErrorHandler.convertToAppException(error, _en);
-      expect(result.type, ExceptionType.apiRateLimit);
+      expect(result.type, ExceptionType.apiAuth);
     });
 
     test('converts error with "404" to AppException(apiNotFound)', () {

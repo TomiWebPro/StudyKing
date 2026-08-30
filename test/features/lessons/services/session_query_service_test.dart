@@ -275,7 +275,7 @@ void main() {
 
   group('getUpcomingLessons', () {
     test('returns only future, uncompleted lessons', () async {
-      final now = DateTime(2025, 6, 10);
+      final now = DateTime.now();
       fakeSessionRepo.addSession(Session(
         id: 'future-1',
         startTime: now.add(const Duration(days: 1)),

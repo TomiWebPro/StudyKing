@@ -42,7 +42,7 @@ void main() {
         ),
       ));
 
-      expect(find.textContaining('0 / 0'), findsOneWidget);
+      expect(find.text('No progress yet'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
     });
 
@@ -74,7 +74,7 @@ void main() {
         ),
       ));
 
-      expect(find.textContaining('0 / 2'), findsOneWidget);
+      expect(find.text('No progress yet'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
     });
 

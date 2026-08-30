@@ -4017,7 +4017,7 @@ class AppLocalizationsEn extends AppLocalizations {
     String topicTitle,
     int durationMinutes,
   ) {
-    return 'You are a knowledgeable AI tutor for $subjectId. Create a structured lesson plan for the topic \"$topicTitle\".\n\nThe lesson should be $durationMinutes minutes long.\n\nReturn a JSON object.';
+    return 'You are a knowledgeable AI tutor for $subjectId. Create a structured lesson plan for the topic \"$topicTitle\".\n\nThe lesson should be $durationMinutes minutes long.\n\nReturn a JSON object with keys \"goals\", \"sections\", \"checkpoints\", and \"estimatedDifficulty\".';
   }
 
   @override

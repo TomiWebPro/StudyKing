@@ -21,10 +21,11 @@ class LoadingScreen extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     final effectiveLabel = semanticsLabel ?? message ?? l10n.loading;
 
-    return Semantics(
-      label: effectiveLabel,
-      liveRegion: true,
-      child: LoadingIndicator(message: message),
+    return LoadingIndicator(
+      message: message,
+      strokeWidth: strokeWidth,
+      color: color,
+      semanticsLabel: effectiveLabel,
     );
   }
 }

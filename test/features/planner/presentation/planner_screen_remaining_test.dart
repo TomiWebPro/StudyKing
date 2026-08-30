@@ -1,10 +1,26 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'planner_screen_test_helpers.dart';
+import 'package:studyking/features/planner/presentation/widgets/adherence_banner.dart';
+
+class _TopicRepoWithTopics extends FakeTopicRepository {
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async => Result.success([
+    Topic(
+      id: '$subjectId-t1',
+      subjectId: subjectId,
+      title: 'Kinematics',
+      description: 'desc',
+      syllabusText: 'syllabus',
+    ),
+  ]);
+}
 
 void main() {
   group('PlannerScreen - Pending Actions', () {
@@ -52,7 +68,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Physics'), findsOneWidget);
+      expect(find.text('Physics'), findsWidgets);
 
       await tester.tap(find.byIcon(Icons.check_circle_outline));
       await tester.pumpAndSettle();
@@ -102,13 +118,12 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Course/Subject +'), findsNothing);
+      expect(find.text('Add Course/Subject'), findsNothing);
 
       await tester.tap(find.text('Subjects'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpAndSettle();
 
-      expect(find.text('Course/Subject +'), findsOneWidget);
+      expect(find.text('Add Course/Subject'), findsOneWidget);
       expect(find.byIcon(Icons.add), findsOneWidget);
     });
 
@@ -116,22 +131,18 @@ void main() {
       await tester.pumpWidget(buildPlannerTestApp(
         fixedStudentId: 'test-student',
       ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
 
       await tester.tap(find.text('Subjects'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Course/Subject +'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Add Course/Subject'));
+      await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.remove_circle_outline), findsOneWidget);
 
-      await tester.tap(find.text('Course/Subject +'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.tap(find.text('Add Course/Subject'));
+      await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.remove_circle_outline), findsNWidgets(2));
 
@@ -157,9 +168,6 @@ void main() {
       await tester.tap(find.text('Subjects'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Course/Subject +'));
-      await tester.pumpAndSettle();
-
       await tester.tap(find.text('Generate Plan'));
       await tester.pumpAndSettle();
 
@@ -169,7 +177,7 @@ void main() {
     testWidgets('multi-syllabus with valid inputs triggers generation', (tester) async {
       final planRepo = FakePlanRepository();
       final masteryRepo = FakeMasteryGraphRepository();
-      final topicRepo = FakeTopicRepository();
+      final topicRepo = _TopicRepoWithTopics();
 
       await tester.pumpWidget(buildPlannerTestApp(
         planRepository: planRepo,
@@ -182,20 +190,17 @@ void main() {
       await tester.tap(find.text('Subjects'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Course/Subject +'));
+      await tester.tap(find.text('Add Course/Subject'));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
-      await tester.enterText(find.byType(TextField).at(1), '30');
-      await tester.enterText(find.byType(TextField).at(2), '2');
+      await tester.enterText(find.byType(TextField).at(0), '30');
+      await tester.enterText(find.byType(TextField).at(1), '2');
       await tester.pump();
-
-      expect(find.text('Generate Plan'), findsOneWidget);
 
       await tester.tap(find.text('Generate Plan'));
-      await tester.pump();
+      await tester.pumpAndSettle();
 
-      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.byType(SnackBar), findsWidgets);
     });
   });
 
@@ -234,7 +239,7 @@ void main() {
 
       expect(find.text('Redistribute'), findsOneWidget);
       expect(find.text('Regenerate Plan'), findsOneWidget);
-      expect(find.byIcon(Icons.info_outline), findsOneWidget);
+      expect(find.byType(AdherenceBanner), findsOneWidget);
     });
 
     testWidgets('banner shows escalation styling when requiresEscalation', (tester) async {
@@ -532,20 +537,13 @@ void main() {
       await tester.pumpWidget(buildPlannerTestApp(
         planRepository: FakePlanRepository(),
         masteryGraphRepository: masteryRepo,
-        topicRepository: FakeTopicRepository(),
+        topicRepository: _TopicRepoWithTopics(),
         fixedStudentId: 'test-student',
       ));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
-      await tester.enterText(find.byType(TextField).at(1), '30');
-      await tester.enterText(find.byType(TextField).at(2), '2');
-      await tester.pump();
-
       await tester.tap(find.text('Generate Plan'));
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
     });
@@ -571,20 +569,13 @@ void main() {
       await tester.pumpWidget(buildPlannerTestApp(
         planRepository: planRepo,
         masteryGraphRepository: masteryRepo,
-        topicRepository: FakeTopicRepository(),
+        topicRepository: _TopicRepoWithTopics(),
         fixedStudentId: 'test-student',
       ));
       await tester.pumpAndSettle();
 
-      await tester.enterText(find.byType(TextField).at(0), 'IB Physics');
-      await tester.enterText(find.byType(TextField).at(1), '30');
-      await tester.enterText(find.byType(TextField).at(2), '2');
-      await tester.pump();
-
       await tester.tap(find.text('Generate Plan'));
-      for (var i = 0; i < 10; i++) {
-        await tester.pump(const Duration(milliseconds: 100));
-      }
+      await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
     });
@@ -607,7 +598,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(TextField), findsNWidgets(3));
-      expect(find.byType(ElevatedButton), findsOneWidget);
+      expect(find.widgetWithText(ElevatedButton, 'Generate Plan'), findsOneWidget);
     });
   });
 }

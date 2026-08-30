@@ -46,9 +46,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(AnimatedBarChart), findsOneWidget);
-      expect(find.text('W3'), findsOneWidget);
-      expect(find.text('W2'), findsOneWidget);
-      expect(find.text('W1'), findsOneWidget);
+      expect(find.text('Week 2'), findsOneWidget);
+      expect(find.text('Week 1'), findsOneWidget);
+      expect(find.text('This Week'), findsOneWidget);
     });
 
     testWidgets('limits to 7 data points', (tester) async {
@@ -61,8 +61,8 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('W7'), findsOneWidget);
-      expect(find.text('W10'), findsNothing);
+      expect(find.text('This Week'), findsOneWidget);
+      expect(find.text('Week 7'), findsNothing);
     });
 
     testWidgets('shows default day labels when trend is empty', (tester) async {
@@ -99,7 +99,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('W1'), findsOneWidget);
+      expect(find.text('This Week'), findsOneWidget);
       expect(find.byType(AnimatedBarChart), findsOneWidget);
     });
 
@@ -112,7 +112,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(WeeklyChart(weeklyTrend: trend)));
       await tester.pumpAndSettle();
 
-      expect(find.text('No Activity'), findsWidgets);
+      expect(find.text('No activity — you were away this week.'), findsWidgets);
     });
 
     testWidgets('shows chart without gap legend when no gaps', (tester) async {

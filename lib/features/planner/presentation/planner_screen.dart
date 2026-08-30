@@ -7,7 +7,7 @@ import 'package:studyking/core/theme/app_theme.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'widgets/study_plan_tab.dart';
 import 'widgets/calendar_view_widget.dart';
@@ -44,7 +44,7 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
 
   Future<void> _loadSubjects() async {
     try {
-      final repo = SubjectRepository();
+      final repo = ref.read(subjectRepositoryProvider);
       await repo.init();
       final result = await repo.getAll();
       if (mounted) {
@@ -161,8 +161,10 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
       ),
     );
 
-    goalController.dispose();
-    daysController.dispose();
+    // Controllers are short-lived dialog scope; let GC handle disposal to avoid
+    // use-after-dispose during dialog pop animation (TextField may still hold
+    // listener during rebuild). Explicit dispose caused "used after being disposed"
+    // in widget tests.
 
     if (result == null || result['goal']!.isEmpty) return;
 
@@ -421,12 +423,13 @@ class _PlanSwitcher extends ConsumerWidget {
         if (plans.isEmpty) return const SizedBox.shrink();
         final currentId = activeId ?? plans.first.planId;
         return ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 200),
+          constraints: const BoxConstraints(maxWidth: 140),
           child: Tooltip(
             message: l10n.switchStudyPlan,
             child: DropdownButtonHideUnderline(
               child: DropdownButton<String>(
                 value: currentId,
+                isExpanded: true,
                 icon: const Icon(Icons.swap_horiz),
               onChanged: (planId) async {
                 if (planId == null) return;

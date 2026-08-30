@@ -18,6 +18,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -153,6 +154,77 @@ class _FakeRoadmapRepository extends RoadmapRepository {
   @override
   Future<Result<void>> deleteRoadmap(String id) async {
     _roadmaps.remove(id);
+    return Result.success(null);
+  }
+}
+
+class _FakePlanService extends PersonalLearningPlanService {
+  bool returnsNull = false;
+  bool throwsOnGenerate = false;
+  bool throwsOnSyllabus = false;
+  bool throwsOnRedistribute = false;
+
+  _FakePlanService({
+    super.masteryService,
+    super.repository,
+    super.topicRepository,
+    super.planRepository,
+    super.roadmapRepository,
+    this.throwsOnRedistribute = false,
+  });
+
+  PersonalLearningPlan _plan(
+    String studentId, {
+    List<SyllabusGoal>? syllabusGoals,
+  }) {
+    return PersonalLearningPlan(
+      studentId: studentId,
+      generatedAt: DateTime(2024, 1, 1),
+      dailyPlans: const [],
+      summary: PlanSummary(
+        totalQuestions: 0,
+        totalMinutes: 0,
+        newTopics: 0,
+        reviewTopics: 0,
+        estimatedCoverage: 0,
+        focusAreas: const [],
+      ),
+      recommendations: const [],
+      metadata: syllabusGoals == null
+          ? null
+          : {
+              'syllabus_goals': syllabusGoals.map((g) => g.toJson()).toList(),
+            },
+    );
+  }
+
+  @override
+  Future<Result<PersonalLearningPlan>> generatePlan(
+    String studentId, {
+    String courseName = '',
+  }) async {
+    if (throwsOnGenerate) throw Exception('plan generation error');
+    if (returnsNull) return Result.failure('no plan generated');
+    return Result.success(_plan(studentId));
+  }
+
+  @override
+  Future<Result<PersonalLearningPlan>> generatePlanFromSyllabus({
+    required String studentId,
+    required List<SyllabusGoal> syllabusGoals,
+  }) async {
+    if (throwsOnSyllabus) throw Exception('syllabus generation error');
+    if (returnsNull) return Result.failure('no plan generated');
+    return Result.success(_plan(studentId, syllabusGoals: syllabusGoals));
+  }
+
+  @override
+  Future<Result<void>> redistributeMissedWorkloadForStudent(
+    String studentId,
+    int missedMinutes, {
+    String strategy = 'days:3',
+  }) async {
+    if (throwsOnRedistribute) throw Exception('redistribute error');
     return Result.success(null);
   }
 }
@@ -365,28 +437,21 @@ class _FakeErrorPlannerService extends PlannerService {
   final bool throwOnRedistribute;
 
   _FakeErrorPlannerService({
-    required PlanRepository planRepo,
-    required MasteryGraphService masteryService,
-    required TopicRepository topicRepository,
-    required RoadmapRepository roadmapRepo,
-    required SessionRepository sessionRepo,
-    required PendingActionRepository pendingActionRepo,
-    required PlanAdherenceOrchestrator planOrchestrator,
+    required PlanRepository super.planRepo,
+    required MasteryGraphService super.masteryService,
+    required TopicRepository super.topicRepository,
+    required RoadmapRepository super.roadmapRepo,
+    required SessionRepository super.sessionRepo,
+    required PendingActionRepository super.pendingActionRepo,
+    required PlanAdherenceOrchestrator super.planOrchestrator,
+    super.planService,
     super.fixedStudentId,
     super.repository,
     this.throwOnScheduleLesson = false,
     this.throwOnAcceptPendingAction = false,
     this.throwOnDismissPendingAction = false,
     this.throwOnRedistribute = false,
-  }) : super(
-    planRepo: planRepo,
-    masteryService: masteryService,
-    topicRepository: topicRepository,
-    roadmapRepo: roadmapRepo,
-    sessionRepo: sessionRepo,
-    pendingActionRepo: pendingActionRepo,
-    planOrchestrator: planOrchestrator,
-  );
+  });
 
   @override
   Future<Result<bool>> scheduleLesson({
@@ -434,6 +499,7 @@ PlannerService _createService({
   _FakePlanAdherenceOrchestrator? planOrchestrator,
   _FakeAdherenceRepo? adherenceRepo,
   SyllabusResolver? syllabusResolver,
+  PersonalLearningPlanService? planService,
   String? fixedStudentId,
 }) {
   final pRepo = planRepo ?? _FakePlanRepository();
@@ -458,6 +524,14 @@ PlannerService _createService({
     planOrchestrator: adapter,
     adherenceRepo: adherenceRepo,
     syllabusResolver: resolver,
+    planService: planService ??
+        _FakePlanService(
+          masteryService: _FakeMasteryGraphService(),
+          repository: mRepo,
+          topicRepository: tRepo,
+          planRepository: pRepo,
+          roadmapRepository: rRepo,
+        ),
     fixedStudentId: fixedStudentId ?? 'test-student',
   );
 }
@@ -470,6 +544,7 @@ _FakeErrorPlannerService _createErrorService({
   _FakeSessionRepo? sessionRepo,
   _FakePendingActionRepo? pendingActionRepo,
   _FakePlanAdherenceOrchestrator? planOrchestrator,
+  PersonalLearningPlanService? planService,
   bool throwOnScheduleLesson = false,
   bool throwOnAcceptPendingAction = false,
   bool throwOnDismissPendingAction = false,
@@ -484,6 +559,8 @@ _FakeErrorPlannerService _createErrorService({
     sessionRepo: sessionRepo ?? _FakeSessionRepo(),
     pendingActionRepo: pendingActionRepo ?? _FakePendingActionRepo(),
     planOrchestrator: planOrchestrator ?? _FakePlanAdherenceOrchestrator(),
+    planService: planService ??
+        _FakePlanService(throwsOnRedistribute: throwOnRedistribute),
     fixedStudentId: 'test-student',
     throwOnScheduleLesson: throwOnScheduleLesson,
     throwOnAcceptPendingAction: throwOnAcceptPendingAction,
@@ -556,6 +633,7 @@ void main() {
     late _FakeSessionRepo sessionRepo;
     late _FakePendingActionRepo pendingActionRepo;
     late _FakePlanAdherenceOrchestrator planOrchestrator;
+    late _FakePlanService fakePlanService;
     late PlannerService service;
     late PlannerNotifier notifier;
 
@@ -574,6 +652,14 @@ void main() {
         masteryRepository: masteryRepo,
       );
 
+      fakePlanService = _FakePlanService(
+        masteryService: _FakeMasteryGraphService(),
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepository: planRepo,
+        roadmapRepository: roadmapRepo,
+      );
+
       service = _createService(
         planRepo: planRepo,
         masteryRepo: masteryRepo,
@@ -583,6 +669,7 @@ void main() {
         pendingActionRepo: pendingActionRepo,
         planOrchestrator: planOrchestrator,
         syllabusResolver: syllabusResolver,
+        planService: fakePlanService,
       );
 
       notifier = PlannerNotifier(service);
@@ -662,7 +749,7 @@ void main() {
       });
 
       test('sets error when service returns null', () async {
-        masteryRepo.setReturnFailure();
+        fakePlanService.returnsNull = true;
 
         await notifier.generatePlan(
           course: 'Physics',
@@ -676,7 +763,7 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        masteryRepo.setThrowOnGetAllMasteryStates();
+        fakePlanService.throwsOnGenerate = true;
 
         await notifier.generatePlan(
           course: 'Physics',
@@ -686,7 +773,7 @@ void main() {
         );
 
         expect(notifier.currentState.isGenerating, false);
-        expect(notifier.currentState.error, contains('Error:'));
+        expect(notifier.currentState.error, l10n.failedToGeneratePlan);
       });
     });
 
@@ -742,7 +829,7 @@ void main() {
       });
 
       test('sets error when service returns null', () async {
-        masteryRepo.setReturnFailure();
+        fakePlanService.returnsNull = true;
 
         await notifier.generatePlanFromSyllabus(
           syllabusGoals: [
@@ -763,7 +850,7 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        masteryRepo.setThrowOnGetAllMasteryStates();
+        fakePlanService.throwsOnSyllabus = true;
 
         await notifier.generatePlanFromSyllabus(
           syllabusGoals: [
@@ -780,7 +867,7 @@ void main() {
         );
 
         expect(notifier.currentState.isGenerating, false);
-        expect(notifier.currentState.error, contains('Error:'));
+        expect(notifier.currentState.error, l10n.failedToGenerateSyllabusPlan);
       });
     });
 
@@ -1151,7 +1238,7 @@ void main() {
         await notifier.regenerateFromAdherence(l10n);
 
         expect(notifier.currentState.isGenerating, false);
-        expect(notifier.currentState.error, contains('Error:'));
+        expect(notifier.currentState.error, l10n.somethingWentWrong);
       });
     });
 
@@ -1421,8 +1508,18 @@ void main() {
       });
 
       test('sets error when service throws', () async {
-        sessionRepo.setThrowOnGetSessions();
-        final result = await notifier.scheduleLessonWithConflictCheck(
+        final fakeService = _createErrorService(
+          planRepo: planRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
+          roadmapRepo: roadmapRepo,
+          sessionRepo: sessionRepo,
+          pendingActionRepo: pendingActionRepo,
+          planOrchestrator: planOrchestrator,
+          throwOnScheduleLesson: true,
+        );
+        final throwingNotifier = PlannerNotifier(fakeService);
+        final result = await throwingNotifier.scheduleLessonWithConflictCheck(
           topicId: 'topic-1',
           topicTitle: 'Kinematics',
           subjectId: 'sub_physics',
@@ -1430,7 +1527,7 @@ void main() {
           l10n: l10n,
         );
         expect(result, false);
-        expect(notifier.currentState.error, 'Failed to schedule lesson');
+        expect(throwingNotifier.currentState.error, 'Failed to schedule lesson');
       });
     });
 

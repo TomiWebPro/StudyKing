@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/prerequisite_check_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Topic _topic(String id, String subjectId, String title) {
   return Topic(
@@ -23,6 +24,8 @@ void main() {
 
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
               return ElevatedButton(
@@ -59,6 +62,8 @@ void main() {
       bool callbackCalled = false;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
               return ElevatedButton(
@@ -97,6 +102,8 @@ void main() {
       bool? dialogResult;
       await tester.pumpWidget(
         MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Builder(
             builder: (context) {
               return ElevatedButton(

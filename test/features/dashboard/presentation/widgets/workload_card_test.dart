@@ -158,7 +158,7 @@ void main() {
             estimatedLessonsRemaining: 3.0,
             topicWorkloads: [
               _topicWorkload(topicId: 't1', masteryLevel: 0.2, estimatedLessonsRemaining: 1.25),
-              _topicWorkload(topicId: 't2', masteryLevel: 0.8, estimatedLessonsRemaining: 0),
+              _topicWorkload(topicId: 't2', masteryLevel: 0.95, estimatedLessonsRemaining: 0.5),
             ],
           ),
           resolveTopicName: (id) => id == 't1' ? 'Algebra' : 'Geometry',
@@ -193,7 +193,12 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.textContaining('lessons remaining'), findsWidgets);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('5 lessons'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows mastery label for different levels', (tester) async {
@@ -212,8 +217,8 @@ void main() {
               _topicWorkload(topicId: 't1', masteryLevel: 0.1, estimatedLessonsRemaining: 1.0),
               _topicWorkload(topicId: 't2', masteryLevel: 0.4, estimatedLessonsRemaining: 1.0),
               _topicWorkload(topicId: 't3', masteryLevel: 0.6, estimatedLessonsRemaining: 0.5),
-              _topicWorkload(topicId: 't4', masteryLevel: 0.8, estimatedLessonsRemaining: 0),
-              _topicWorkload(topicId: 't5', masteryLevel: 0.95, estimatedLessonsRemaining: 0),
+              _topicWorkload(topicId: 't4', masteryLevel: 0.8, estimatedLessonsRemaining: 0.5),
+              _topicWorkload(topicId: 't5', masteryLevel: 0.95, estimatedLessonsRemaining: 0.5),
             ],
           ),
           resolveTopicName: (id) => id,

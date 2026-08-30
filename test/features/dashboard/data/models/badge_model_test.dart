@@ -412,7 +412,8 @@ void main() {
       );
       final json = original.toJson();
       final restored = BadgeModel.fromJson(json);
-      expect(restored.unlockedAt, isNull);
+      expect(restored.unlockedAt, isNotNull);
+      expect(restored.unlockedAt, original.unlockedAt);
       expect(restored.criteria, isNull);
       expect(restored.iconName, 'emoji_events');
       expect(restored.category, 'general');

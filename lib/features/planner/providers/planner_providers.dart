@@ -371,6 +371,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       final roadmap = roadmapResult.data;
       if (roadmap != null) {
         state = state.copyWith(successMessage: l10n.roadmapCreated(roadmap.goal));
+      } else if (roadmapResult.isFailure) {
+        state = state.copyWith(error: l10n.failedToCreateRoadmap);
       }
     } catch (e) {
       _logger.w('Failed to create roadmap', e);
@@ -435,6 +437,8 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
             successMessage: l10n.milestoneUpdated,
           );
         }
+      } else if (updatedResult.isFailure) {
+        state = state.copyWith(error: l10n.failedToUpdateMilestone);
       }
     } catch (e) {
       _logger.w('Failed to toggle milestone completion', e);

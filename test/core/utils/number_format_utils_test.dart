@@ -99,7 +99,7 @@ void main() {
 
   group('formatCurrency', () {
     test('en locale uses period decimal separator', () {
-      expect(formatCurrency(0.0025, 'en', minFractionDigits: 4, maxFractionDigits: 4), '\$0.0025');
+      expect(formatCurrency(0.0025, 'en', minFractionDigits: 4, maxFractionDigits: 4, symbol: '\$'), '\$0.0025');
     });
 
     test('es locale uses comma decimal separator', () {
@@ -109,18 +109,18 @@ void main() {
     });
 
     test('strips trailing zeros when min < max fraction digits (m8)', () {
-      final result = formatCurrency(1.5, 'en', minFractionDigits: 0, maxFractionDigits: 4);
+      final result = formatCurrency(1.5, 'en', minFractionDigits: 0, maxFractionDigits: 4, symbol: '\$');
       expect(result, '\$1.5');
     });
 
     test('keeps zeros when value has many fractional digits', () {
-      final result = formatCurrency(1.2345, 'en', minFractionDigits: 2, maxFractionDigits: 4);
+      final result = formatCurrency(1.2345, 'en', minFractionDigits: 2, maxFractionDigits: 4, symbol: '\$');
       expect(result, '\$1.2345');
     });
 
     test('pads to min fraction digits when value has fewer digits', () {
-      final result = formatCurrency(1.5, 'en', minFractionDigits: 2, maxFractionDigits: 4);
-      expect(result, '\$1.5');
+      final result = formatCurrency(1.5, 'en', minFractionDigits: 2, maxFractionDigits: 4, symbol: '\$');
+      expect(result, '\$1.50');
     });
   });
 }

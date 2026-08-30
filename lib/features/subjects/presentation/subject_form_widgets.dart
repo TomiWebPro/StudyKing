@@ -206,6 +206,10 @@ class SubjectFormFields extends StatelessWidget {
             },
             onSelected: (selection) => nameController.text = selection,
             fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+              if (controller.text != nameController.text) {
+                controller.text = nameController.text;
+                controller.selection = TextSelection.collapsed(offset: controller.text.length);
+              }
               return TextFormField(
                 controller: controller,
                 focusNode: focusNode,
@@ -220,6 +224,7 @@ class SubjectFormFields extends StatelessWidget {
                   }
                   return null;
                 },
+                onChanged: (value) => nameController.text = value,
               );
             },
           ),
@@ -280,6 +285,10 @@ class SubjectFormFields extends StatelessWidget {
             },
             onSelected: (selection) => syllabusController.text = selection,
             fieldViewBuilder: (context, controller, focusNode, onSubmit) {
+              if (controller.text != syllabusController.text) {
+                controller.text = syllabusController.text;
+                controller.selection = TextSelection.collapsed(offset: controller.text.length);
+              }
               return TextFormField(
                 controller: controller,
                 focusNode: focusNode,

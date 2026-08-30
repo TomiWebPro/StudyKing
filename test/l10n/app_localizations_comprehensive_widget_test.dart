@@ -95,7 +95,7 @@ void main() {
       expect(find.text('Roadmaps'), findsOneWidget);
       expect(find.text('Create Roadmap'), findsOneWidget);
       expect(find.text('Learning Goal'), findsOneWidget);
-      expect(find.text('e.g., I want to learn IB Physics in 180 days'), findsOneWidget);
+      expect(find.text('e.g., I want to learn Python in 90 days'), findsOneWidget);
       expect(find.text('Generate Roadmap'), findsOneWidget);
       expect(find.text('My Roadmaps'), findsOneWidget);
       expect(find.text('Milestones'), findsOneWidget);
@@ -294,7 +294,7 @@ void main() {
       expect(find.text('No plan for today'), findsOneWidget);
       expect(find.text('Adjust Plan'), findsOneWidget);
       expect(find.text('Dismiss'), findsOneWidget);
-      expect(find.text('Voice input'), findsOneWidget);
+      expect(find.text('Voice Input'), findsOneWidget);
       expect(find.text('Capture Image'), findsOneWidget);
       expect(find.text('Camera'), findsOneWidget);
       expect(find.text('Connection successful! Latency: 120ms'), findsOneWidget);

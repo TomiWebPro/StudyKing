@@ -41,17 +41,19 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
     }
 
     if (!_initialized && state.plan != null) {
-      _paceHours = state.plan!.targetMinutesPerDay / 60;
+      _paceHours = (state.plan!.targetMinutesPerDay / 60).clamp(0.5, 8.0);
       _initialized = true;
     }
 
     final goals = state.plan!.syllabusGoals;
     final hasMultipleSubjects = goals.length > 1;
-    final firstPlanDate = state.plan!.dailyPlans.first.date;
+    final firstPlanDate = state.plan!.dailyPlans.isNotEmpty
+        ? state.plan!.dailyPlans.first.date
+        : state.plan!.generatedAt;
 
     if (!hasMultipleSubjects) {
-      final currentHours = state.plan!.targetMinutesPerDay / 60;
-      _paceHours = currentHours;
+      final currentHours = (state.plan!.targetMinutesPerDay / 60).clamp(0.5, 8.0);
+      _paceHours = currentHours.toDouble();
       final estEndDate = _estimateCompletionDate(firstPlanDate, _paceHours, state.plan!.summary.totalMinutes);
 
       return _buildPaceAdjustmentCard(

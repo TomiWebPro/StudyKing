@@ -14,10 +14,15 @@ class HiveOnboardingStorage implements OnboardingStorage {
   Future<bool> getBool(String key, {bool defaultValue = false}) async {
     try {
       final box = await Hive.openBox(HiveBoxNames.settings);
-      return box.get(key, defaultValue: defaultValue) as bool;
+      final value = box.get(key, defaultValue: defaultValue);
+      if (value is bool) return value;
+      if (value != null) {
+        _logger.w('Non-boolean value for key $key: $value');
+      }
+      return defaultValue;
     } catch (e) {
       _logger.w('Failed to read onboarding key', e);
-      return true;
+      return defaultValue;
     }
   }
 
@@ -42,7 +47,12 @@ class InMemoryOnboardingStorage implements OnboardingStorage {
 
   @override
   Future<bool> getBool(String key, {bool defaultValue = false}) async {
-    return _store[key] as bool? ?? defaultValue;
+    final value = _store[key];
+    if (value is bool) return value;
+    if (value != null) {
+      const Logger('InMemoryOnboardingStorage').w('Non-boolean value for key $key: $value');
+    }
+    return defaultValue;
   }
 
   @override

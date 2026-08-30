@@ -71,11 +71,12 @@ PlanAdvisorSuggestionModel createTestSuggestion({
   String studentId = 'student-1',
   String suggestionType = 'plan_generation',
   bool applied = false,
+  DateTime? generatedAt,
 }) {
   return PlanAdvisorSuggestionModel(
     id: id,
     studentId: studentId,
-    generatedAt: DateTime(2026, 5, 20),
+    generatedAt: generatedAt ?? DateTime(2026, 5, 20),
     suggestionType: suggestionType,
     workloadEstimate: applied ? null : '~3h/day',
     applied: applied,
@@ -108,9 +109,11 @@ void main() {
         mockBox.addSuggestion(createTestSuggestion(
           id: 'old', studentId: 's1',
           applied: true,
+          generatedAt: DateTime(2026, 5, 20),
         ));
         mockBox.addSuggestion(createTestSuggestion(
           id: 'recent', studentId: 's1',
+          generatedAt: DateTime(2026, 5, 21),
         ));
         final result = await repository.getLatestByStudent('s1');
         expect(result.isSuccess, isTrue);

@@ -127,7 +127,7 @@ void main() {
       ));
 
       final matchingSemantics = find.byWidgetPredicate(
-        (w) => w is Semantics && w.properties.label == 'Accuracy: 95%',
+        (w) => w is Semantics && w.properties.label == 'Accuracy 95%',
       );
       expect(matchingSemantics, findsOneWidget);
     });

@@ -25,11 +25,14 @@ void main() {
       expect(id1, isNot(equals(id2)));
     });
 
-    test('reset clears counter so ids are unique from base', () {
-      final id1 = IdGenerator.generate('x');
+    test('reset clears counter so ids restart from base', () {
+      IdGenerator.generate('x');
+      final second = IdGenerator.generate('x');
+      expect(second, endsWith('_2'));
       IdGenerator.reset();
       final id2 = IdGenerator.generate('x');
-      expect(id1, isNot(equals(id2)));
+      expect(id2, startsWith('x_'));
+      expect(id2, endsWith('_1'));
     });
 
     test('different prefixes generate independently', () {

@@ -3,11 +3,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/practice_performance_card.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget _buildTestApp(Widget widget) {
   return MaterialApp(
     home: Scaffold(body: widget),
-    localizationsDelegates: const [],
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
   );
 }
 

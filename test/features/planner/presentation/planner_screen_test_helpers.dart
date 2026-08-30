@@ -11,11 +11,17 @@ import 'package:studyking/features/planner/data/repositories/plan_repository.dar
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/planner/data/repositories/plan_context_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
+import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/presentation/planner_screen.dart';
@@ -58,6 +64,28 @@ class FakePlanRepository extends PlanRepository {
   @override
   Future<Result<void>> deletePlan(String studentId) async {
     _storage.remove(studentId);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<PersonalLearningPlan>>> getAllPlansForStudent(String studentId) async {
+    if (failOnInit) throw Exception('Init failed');
+    return Result.success(_storage.values.where((p) => p.studentId == studentId).toList());
+  }
+
+  @override
+  Future<Result<PersonalLearningPlan?>> loadPlanById(String planId) async {
+    if (failOnInit) throw Exception('Init failed');
+    try {
+      return Result.success(_storage.values.firstWhere((p) => p.planId == planId));
+    } catch (_) {
+      return Result.success(null);
+    }
+  }
+
+  @override
+  Future<Result<void>> deletePlanById(String planId) async {
+    _storage.removeWhere((key, value) => value.planId == planId);
     return Result.success(null);
   }
 }
@@ -109,6 +137,14 @@ class FakeTopicRepository extends TopicRepository {
 
   @override
   Future<Result<Topic?>> get(String id) async => Result.success(null);
+
+  @override
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async {
+    return Result.success([
+      Topic(id: 'topic-1', subjectId: subjectId, title: 'Topic 1', description: 'Desc', syllabusText: 'text'),
+      Topic(id: 'topic-2', subjectId: subjectId, title: 'Topic 2', description: 'Desc', syllabusText: 'text'),
+    ]);
+  }
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
@@ -231,6 +267,35 @@ class FakePendingActionRepository extends PendingActionRepository {
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
+class FakePlanContextRepository extends PlanContextRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<String?>> getActivePlanId(String studentId) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> setActivePlanId(String studentId, String planId) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<void>> clearActivePlanId(String studentId) async =>
+      Result.success(null);
+}
+
+class FakeSubjectRepository extends SubjectRepository {
+  final List<Subject> _subjects = [
+    Subject(id: 'subj-1', name: 'Physics', color: '#2196F3', iconName: 'school'),
+  ];
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+}
+
 class FakeAdherenceRepo extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];
 
@@ -281,28 +346,42 @@ Widget buildPlannerTestApp({
   PendingActionRepository? pendingActionRepository,
   PlanAdherenceOrchestrator? planOrchestrator,
   PlanAdherenceRepository? planAdherenceRepository,
+  PlanContextRepository? planContextRepository,
+  SubjectRepository? subjectRepository,
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
 }) {
   final id = fixedStudentId ?? 'test-student';
   final repo = masteryGraphRepository ?? FakeMasteryGraphRepository();
+  final topicRepo = topicRepository ?? FakeTopicRepository();
+  final subjectRepo = subjectRepository ?? FakeSubjectRepository();
+  final fakePlanRepo = planRepository ?? FakePlanRepository();
+  final fakePlanService = PersonalLearningPlanService(
+    repository: repo,
+    topicRepository: topicRepo,
+    planRepository: fakePlanRepo,
+  );
   final svc = PlannerService(
-    planRepo: planRepository ?? FakePlanRepository(),
+    planRepo: fakePlanRepo,
     masteryService: MasteryGraphService(),
     repository: repo,
-    topicRepository: topicRepository ?? FakeTopicRepository(),
+    topicRepository: topicRepo,
     roadmapRepo: roadmapRepository ?? FakeRoadmapRepository(),
     sessionRepo: sessionRepository ?? FakeSessionRepository(),
     pendingActionRepo: pendingActionRepository ?? FakePendingActionRepository(),
     planOrchestrator: planOrchestrator ?? FakePlanAdherenceOrchestrator(),
     adherenceRepo: planAdherenceRepository ?? FakeAdherenceRepo(),
+    planContextRepo: planContextRepository ?? FakePlanContextRepository(),
+    planService: fakePlanService,
     fixedStudentId: id,
   );
 
   return ProviderScope(
     overrides: [
       plannerServiceProvider.overrideWith((ref) => svc),
+      subjectRepositoryProvider.overrideWith((ref) => subjectRepo),
+      topicRepositoryProvider.overrideWith((ref) => topicRepo),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

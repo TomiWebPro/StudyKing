@@ -475,15 +475,15 @@ class _ApiConfigScreenState extends ConsumerState<ApiConfigScreen> {
           decoration: InputDecoration(
             hintText: hint,
             border: const OutlineInputBorder(),
-            suffixIcon: obscureText
-                ? IconButton(
+            suffixIcon: onToggleVisibility == null
+                ? null
+                : IconButton(
                     icon: Icon(
                       obscureText ? Icons.visibility : Icons.visibility_off,
                     ),
                     tooltip: l10n.toggleVisibility,
                     onPressed: onToggleVisibility,
-                  )
-                : null,
+                  ),
           ),
           textInputAction: TextInputAction.next,
         ),

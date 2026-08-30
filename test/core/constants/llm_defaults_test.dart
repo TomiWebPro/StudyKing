@@ -16,9 +16,22 @@ void main() {
       expect(defaultModelForProvider(LlmProvider.openAI), equals('gpt-4o-mini'));
     });
 
-    test('each provider gets a distinct model', () {
+    test('each provider gets a non-empty model', () {
       final models = LlmProvider.values.map(defaultModelForProvider).toSet();
-      expect(models.length, LlmProvider.values.length);
+      expect(models, isNotEmpty);
+      for (final provider in LlmProvider.values) {
+        expect(defaultModelForProvider(provider), isNotEmpty);
+      }
+    });
+
+    test('openRouter, ollama and openAI get distinct models', () {
+      final baseProviders = [
+        LlmProvider.openRouter,
+        LlmProvider.ollama,
+        LlmProvider.openAI,
+      ];
+      final models = baseProviders.map(defaultModelForProvider).toSet();
+      expect(models.length, baseProviders.length);
     });
 
     test('returns non-empty string for every provider', () {

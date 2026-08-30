@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 
 void main() {
@@ -99,8 +101,11 @@ void main() {
   group('LlmTaskManager', () {
     late LlmTaskManager manager;
 
-    setUp(() {
+    setUp(() async {
+      await Hive.openBox(HiveBoxNames.llmTasks);
+      await Hive.box(HiveBoxNames.llmTasks).clear();
       manager = LlmTaskManager();
+      await manager.init();
     });
 
     test('starts with empty task list', () {

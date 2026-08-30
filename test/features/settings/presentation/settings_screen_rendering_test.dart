@@ -26,6 +26,7 @@ void main() {
       expect(find.text('AI Configuration'), findsOneWidget);
       expect(find.text('Study Preferences'), findsOneWidget);
       expect(find.text('Study Analytics'), findsOneWidget);
+      await scrollToWidget(tester, find.text('About'));
       expect(find.text('About'), findsOneWidget);
     });
 
@@ -142,6 +143,7 @@ void main() {
     testWidgets('shows About StudyKing tile', (tester) async {
       await pumpWithSettings(tester);
 
+      await scrollToWidget(tester, find.widgetWithText(ListTile, 'About StudyKing'));
       expect(find.widgetWithText(ListTile, 'About StudyKing'), findsOneWidget);
       expect(find.text('Version 0.1.0'), findsOneWidget);
     });
@@ -149,6 +151,7 @@ void main() {
     testWidgets('shows Sign Out tile', (tester) async {
       await pumpWithSettings(tester);
 
+      await scrollToWidget(tester, find.text('Sign Out'));
       expect(find.text('Sign Out'), findsWidgets);
     });
 
@@ -156,7 +159,7 @@ void main() {
       await pumpWithSettings(tester, selectedModel: '');
 
       expect(find.text('AI Model'), findsOneWidget);
-      expect(find.text('Select a model from API'), findsOneWidget);
+      expect(find.text('⚠ Select a model from API'), findsOneWidget);
     });
 
     testWidgets('AI model label parses model path correctly', (tester) async {
@@ -170,7 +173,7 @@ void main() {
       await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'gpt-4'));
 
       expect(find.text('AI Model'), findsOneWidget);
-      expect(find.text('Gpt 4'), findsOneWidget);
+      expect(find.text('gpt-4'), findsOneWidget);
     });
 
     testWidgets('AI model label handles underscores', (tester) async {
@@ -184,7 +187,7 @@ void main() {
       await pumpWithSettings(tester, initialSettings: SettingsBox(selectedModel: 'provider/'));
 
       expect(find.text('AI Model'), findsOneWidget);
-      expect(find.text('Provider/'), findsOneWidget);
+      expect(find.text('provider/'), findsOneWidget);
     });
   });
 
@@ -269,7 +272,8 @@ void main() {
     testWidgets('renders Focus Mode section', (tester) async {
       await pumpWithSettings(tester);
 
-      expect(find.text('Focus Mode'), findsOneWidget);
+      await scrollToWidget(tester, find.text('Study'));
+      expect(find.text('Study'), findsOneWidget);
     });
 
     testWidgets('renders Study Analytics section', (tester) async {
@@ -281,7 +285,7 @@ void main() {
     testWidgets('renders About section', (tester) async {
       await pumpWithSettings(tester);
 
-      scrollToWidget(tester, find.text('About'));
+      await scrollToWidget(tester, find.text('About'));
       expect(find.text('About'), findsOneWidget);
     });
   });

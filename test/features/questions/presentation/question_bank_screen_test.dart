@@ -224,6 +224,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'Newton');
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       expect(find.text('What is Newton\'s first law?'), findsOneWidget);
@@ -360,7 +361,8 @@ void main() {
       await tester.pumpAndSettle();
 
       final popupMenus = find.byType(PopupMenuButton<String>);
-      expect(popupMenus, findsNWidgets(3));
+      // 3 question cards + 1 AppBar export menu
+      expect(popupMenus, findsNWidgets(4));
     });
 
     testWidgets('all three filter chips are displayed', (tester) async {
@@ -373,7 +375,8 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('All subjects'), findsWidgets);
-      expect(find.text('All types'), findsOneWidget);
+      // Two chips show "All types": type filter and model filter (both default to All types)
+      expect(find.text('All types'), findsNWidgets(2));
       expect(find.text('All sources'), findsOneWidget);
     });
 
@@ -443,11 +446,13 @@ void main() {
 
       expect(find.text('Edit Question'), findsOneWidget);
 
-      final textField = find.widgetWithText(TextField, 'What is Newton\'s first law?');
+      final textField = find.byType(TextField).first;
       await tester.enterText(textField, 'What is Newton\'s third law?');
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
 
       expect(find.text('What is Newton\'s third law?'), findsOneWidget);
@@ -500,7 +505,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('All types'), findsOneWidget);
+      expect(find.text('All types'), findsWidgets);
     });
 
     testWidgets('source filter filters questions', (tester) async {
@@ -559,6 +564,7 @@ void main() {
 
       final searchField = find.byType(TextField).first;
       await tester.enterText(searchField, 'Newton');
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       expect(find.text('What is Newton\'s first law?'), findsOneWidget);
@@ -566,6 +572,7 @@ void main() {
       expect(find.text('Solve for x: 2x + 3 = 7'), findsNothing);
 
       await tester.enterText(searchField, '');
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       expect(find.text('What is Newton\'s first law?'), findsOneWidget);
@@ -583,6 +590,7 @@ void main() {
       await tester.pumpAndSettle();
 
       await tester.enterText(find.byType(TextField).first, 'Solve');
+      await tester.pump(const Duration(milliseconds: 350));
       await tester.pumpAndSettle();
 
       await tester.tap(find.text('All subjects').last);
@@ -882,14 +890,14 @@ void main() {
       );
       expect(questionField, findsOneWidget);
       await tester.enterText(questionField, 'New test question');
-      await tester.pumpAndSettle();
+      await tester.pump();
 
       final option1Field = find.byWidgetPredicate(
         (w) => w is TextField && w.decoration?.hintText == 'Add Option 1',
       );
       if (option1Field.evaluate().isNotEmpty) {
         await tester.enterText(option1Field, 'Option 1 text');
-        await tester.pumpAndSettle();
+        await tester.pump();
       }
 
       final option2Field = find.byWidgetPredicate(
@@ -897,10 +905,12 @@ void main() {
       );
       if (option2Field.evaluate().isNotEmpty) {
         await tester.enterText(option2Field, 'Option 2 text');
-        await tester.pumpAndSettle();
+        await tester.pump();
       }
 
       await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
       await tester.pumpAndSettle();
 
       expect(find.text('New test question'), findsOneWidget);

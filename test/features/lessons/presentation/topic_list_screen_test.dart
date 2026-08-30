@@ -110,8 +110,7 @@ void main() {
 
     testWidgets('shows error snackbar with retry when load fails', (tester) async {
       await tester.pumpWidget(_buildTestApp(shouldThrow: true));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
@@ -126,14 +125,13 @@ void main() {
         topicRepo: repo,
         shouldThrow: true,
       ));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pumpAndSettle();
 
       expect(find.byType(SnackBar), findsOneWidget);
       expect(repo.getAllCallCount, 1);
 
       repo.shouldThrow = false;
-      await tester.tap(find.text('Retry'));
+      await tester.tap(find.widgetWithText(TextButton, 'Retry'));
       await tester.pumpAndSettle();
 
       expect(repo.getAllCallCount, 2);
@@ -179,7 +177,8 @@ void main() {
       ]));
       await tester.pumpAndSettle();
 
-      final semantics = find.bySemanticsLabel(RegExp(r'Algebra, Algebra basics'));
+      // lib now uses l10n.topicTitleLabel/topicDescriptionLabel: "Topic Title: Algebra, Topic Description: Algebra basics"
+      final semantics = find.bySemanticsLabel(RegExp(r'Topic Title: Algebra.*Topic Description: Algebra basics'));
       expect(semantics, findsOneWidget);
     });
 

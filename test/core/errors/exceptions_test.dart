@@ -51,7 +51,7 @@ void main() {
 
   group('ExceptionType enum values', () {
     test('has all expected values', () {
-      expect(ExceptionType.values.length, 13);
+      expect(ExceptionType.values.length, 14);
       expect(ExceptionType.values, containsAll([
         ExceptionType.network,
         ExceptionType.apiKeyMissing,
@@ -60,6 +60,7 @@ void main() {
         ExceptionType.apiRateLimit,
         ExceptionType.apiNotFound,
         ExceptionType.apiInternalServer,
+        ExceptionType.apiError,
         ExceptionType.database,
         ExceptionType.validation,
         ExceptionType.pdfParse,
@@ -133,8 +134,8 @@ void main() {
 
   group('Exception Equality and Identity', () {
     test('two exceptions with same message are not identical', () {
-      const e1 = AppException(message: 'test');
-      const e2 = AppException(message: 'test');
+      final e1 = AppException(message: 'test');
+      final e2 = AppException(message: 'test');
       expect(e1, isNot(same(e2)));
       expect(e1.message, equals(e2.message));
     });

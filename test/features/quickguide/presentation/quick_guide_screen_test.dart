@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/providers/app_providers.dart'
+    show selectedModelProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
@@ -250,6 +251,7 @@ void main() {
       await tester.enterText(find.byType(TextField), '   ');
       await tester.tap(find.byIcon(Icons.send_rounded));
       await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
 
       expect(find.text('Quick Guide'), findsOneWidget);
     });
@@ -429,7 +431,7 @@ void main() {
 
     testWidgets('empty API key uses fallback without calling LLM stream',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(
           llmService: llm,
@@ -452,7 +454,7 @@ void main() {
     });
 
     testWidgets('fallback maps "explain" keyword correctly', (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -471,7 +473,7 @@ void main() {
     });
 
     testWidgets('fallback maps "quiz" keyword correctly', (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -491,7 +493,7 @@ void main() {
 
     testWidgets('fallback maps "question" keyword to quiz response',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -511,7 +513,7 @@ void main() {
     });
 
     testWidgets('fallback maps "math" keyword correctly', (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -531,7 +533,7 @@ void main() {
 
     testWidgets('fallback maps "calculate" keyword to math response',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -550,7 +552,7 @@ void main() {
     });
 
     testWidgets('fallback maps general query correctly', (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
       ));
@@ -1318,6 +1320,9 @@ void main() {
           overrides: [
             llmServiceProvider.overrideWith((ref) => llm),
             selectedModelProvider.overrideWith((ref) => 'saved-gpt-model'),
+            settingsProvider.overrideWith(
+              (ref) => FakeSettingsController(SettingsBox()),
+            ),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -1349,6 +1354,9 @@ void main() {
           overrides: [
             llmServiceProvider.overrideWith((ref) => llm),
             selectedModelProvider.overrideWith((ref) => ''),
+            settingsProvider.overrideWith(
+              (ref) => FakeSettingsController(SettingsBox()),
+            ),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -1622,7 +1630,7 @@ void main() {
     testWidgets(
         'fallback handles case-insensitive keyword matching for Explain',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen:
             QuickGuideScreen(llmService: llm, showModeNavigation: false),
@@ -1644,7 +1652,7 @@ void main() {
     testWidgets(
         'fallback handles case-insensitive keyword matching for Math',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen:
             QuickGuideScreen(llmService: llm, showModeNavigation: false),
@@ -1665,7 +1673,7 @@ void main() {
 
     testWidgets('fallback handles uppercase keyword CALCULATE',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen:
             QuickGuideScreen(llmService: llm, showModeNavigation: false),
@@ -1686,7 +1694,7 @@ void main() {
 
     testWidgets('fallback handles uppercase QUIZ keyword',
         (tester) async {
-      final llm = FakeLlmService(apiKey: '');
+      final llm = FakeLlmService()..shouldThrow = true;
       await tester.pumpWidget(buildTestApp(
         screen:
             QuickGuideScreen(llmService: llm, showModeNavigation: false),

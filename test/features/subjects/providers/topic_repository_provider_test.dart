@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -391,6 +392,15 @@ void main() {
   });
 
   group('topicRepositoryProvider (real Hive init)', () {
+    setUp(() async {
+      final container = ProviderContainer();
+      final repo = container.read(topicRepositoryProvider);
+      await repo.init();
+      if (Hive.isBoxOpen(HiveBoxNames.topics)) {
+        await Hive.box<Topic>(HiveBoxNames.topics).clear();
+      }
+      container.dispose();
+    });
 
     test('real provider creates TopicRepository', () {
       final container = ProviderContainer();

@@ -1219,11 +1219,15 @@ void main() {
         await gesture.up();
         await tester.pump();
 
-        await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+        await tester.runAsync(() async {
+          await tester.tap(find.widgetWithText(ElevatedButton, 'Save Drawing'));
+          await tester.pump();
+          await tester.pump(const Duration(seconds: 1));
+          await Future.delayed(const Duration(milliseconds: 500));
+          await tester.pump();
+        });
         await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-        await tester.pump();
-        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
         expect(changedAnswer, isNotNull);
         expect(changedAnswer!.isNotEmpty, isTrue);

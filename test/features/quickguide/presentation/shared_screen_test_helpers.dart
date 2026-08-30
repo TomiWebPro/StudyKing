@@ -122,11 +122,11 @@ Widget buildTestApp({
   if (llmService != null) {
     overrides.add(llmServiceProvider.overrideWith((ref) => llmService));
   }
-  if (settingsBox != null) {
-    overrides.add(
-      settingsProvider.overrideWith((ref) => FakeSettingsController(settingsBox)),
-    );
-  }
+  overrides.add(
+    settingsProvider.overrideWith(
+      (ref) => FakeSettingsController(settingsBox ?? SettingsBox()),
+    ),
+  );
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(
@@ -155,11 +155,11 @@ Widget buildTestAppWithProvider({
   final overrides = <Override>[
     llmServiceProvider.overrideWith((ref) => llmService),
   ];
-  if (settingsBox != null) {
-    overrides.add(
-      settingsProvider.overrideWith((ref) => FakeSettingsController(settingsBox)),
-    );
-  }
+  overrides.add(
+    settingsProvider.overrideWith(
+      (ref) => FakeSettingsController(settingsBox ?? SettingsBox()),
+    ),
+  );
   return ProviderScope(
     overrides: overrides,
     child: MaterialApp(

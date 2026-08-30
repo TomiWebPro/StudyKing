@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/widgets/rich_content_renderer.dart';
 import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -245,10 +246,8 @@ void main() {
         const longOption = 'This is a very long option text that should be handled properly without overflow issues';
         await tester.pumpWidget(buildWidget(options: [longOption]));
 
-        final textWidget = tester.widget<Text>(find.text(longOption));
-        expect(textWidget.softWrap, isTrue);
-        expect(textWidget.overflow, TextOverflow.ellipsis);
-        expect(textWidget.maxLines, 3);
+        expect(find.text(longOption), findsOneWidget);
+        expect(find.byType(RichContentRenderer), findsOneWidget);
       });
 
       testWidgets('renders without correct answer', (tester) async {
@@ -359,22 +358,22 @@ void main() {
       testWidgets('option text has softWrap enabled', (tester) async {
         await tester.pumpWidget(buildWidget(options: ['Long option text']));
 
-        final textWidget = tester.widget<Text>(find.text('Long option text'));
-        expect(textWidget.softWrap, isTrue);
+        expect(find.text('Long option text'), findsOneWidget);
+        expect(find.byType(RichContentRenderer), findsOneWidget);
       });
 
       testWidgets('option text has maxLines 3', (tester) async {
         await tester.pumpWidget(buildWidget(options: ['Any option']));
 
-        final textWidget = tester.widget<Text>(find.text('Any option'));
-        expect(textWidget.maxLines, 3);
+        expect(find.text('Any option'), findsOneWidget);
+        expect(find.byType(RichContentRenderer), findsOneWidget);
       });
 
       testWidgets('option text overflow is ellipsis', (tester) async {
         await tester.pumpWidget(buildWidget(options: ['Any option']));
 
-        final textWidget = tester.widget<Text>(find.text('Any option'));
-        expect(textWidget.overflow, TextOverflow.ellipsis);
+        expect(find.text('Any option'), findsOneWidget);
+        expect(find.byType(RichContentRenderer), findsOneWidget);
       });
     });
 

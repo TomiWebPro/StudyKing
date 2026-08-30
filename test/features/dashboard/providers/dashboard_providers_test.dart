@@ -118,9 +118,8 @@ void main() {
       expect(tracker, isA<StudyProgressTracker>());
 
       final stats = await tracker.getOverallStats('stu1');
-      expect(stats.data!['totalAttempts'], 0);
-      expect(stats.data!['correctAttempts'], 0);
-      expect(stats.data!['accuracy'], 0.0);
+      expect(stats.isFailure, isTrue);
+      expect(stats.error, isNotNull);
     });
 
     test('dashboardInstrumentationServiceProvider uses shared adherence repo', () {

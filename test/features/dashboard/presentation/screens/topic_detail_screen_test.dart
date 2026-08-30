@@ -166,6 +166,7 @@ Widget _buildTestApp(
       settingsProvider.overrideWith(
         (ref) => SettingsController(SettingsRepository()),
       ),
+      dashboardInitProvider.overrideWith((ref) => Future.value()),
       sessionRepositoryProvider.overrideWithValue(_FakeSessionRepo()),
       masteryGraphServiceProvider.overrideWithValue(
         masteryService ?? _FakeMasteryGraphService(),
@@ -198,6 +199,7 @@ Widget _buildTestAppWithRoutes(
       settingsProvider.overrideWith(
         (ref) => SettingsController(SettingsRepository()),
       ),
+      dashboardInitProvider.overrideWith((ref) => Future.value()),
       sessionRepositoryProvider.overrideWithValue(_FakeSessionRepo()),
       masteryGraphServiceProvider.overrideWithValue(
         masteryService ?? _FakeMasteryGraphService(),

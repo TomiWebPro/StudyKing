@@ -74,7 +74,9 @@ class ExportSection extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 12),
-        Row(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
           children: [
             TextButton.icon(
               onPressed: () => _exportProgressCSV(context, tracker, studentId),
@@ -87,7 +89,6 @@ class ExportSection extends ConsumerWidget {
                     fontSize: 12),
               ),
             ),
-            const SizedBox(width: 16),
             TextButton.icon(
               onPressed: () => Navigator.pushNamed(context, AppRoutes.sessionHistory),
               icon: Icon(Icons.history, size: 16,
@@ -99,7 +100,6 @@ class ExportSection extends ConsumerWidget {
                     fontSize: 12),
               ),
             ),
-            const SizedBox(width: 16),
             TextButton.icon(
               onPressed: () =>
                   _exportInstrumentation(context, instrumentation, studentId),
@@ -112,7 +112,6 @@ class ExportSection extends ConsumerWidget {
                     fontSize: 12),
               ),
             ),
-            const SizedBox(width: 16),
             TextButton.icon(
               onPressed: () =>
                   _exportBackupDirect(context, ref),

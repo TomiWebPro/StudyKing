@@ -118,7 +118,7 @@ void main() {
     test('about application details', () {
       expect(l10n.aboutApplicationName, 'StudyKing');
       expect(l10n.aboutVersion, 'v1.0.0');
-      expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
+      expect(l10n.aboutLegalese, '© 2026 StudyKing.');
     });
 
     test('model and miscellaneous helpers', () {
@@ -144,10 +144,10 @@ void main() {
       expect(l10n.mentorActivityCheckError, 'I had trouble checking your activity. How can I help you today?');
       expect(l10n.mentorNewSessionAdded, 'Great! I\'ve added a new study session to your schedule. You can check your planner for details.');
       expect(l10n.mentorChangesDone, 'Done! The changes have been made to your schedule.');
-      expect(l10n.mentorProgressReportTitle, '📊 **Your Study Progress Report**\n');
-      expect(l10n.mentorAreasNeedingAttention, '\n**Areas needing attention:**');
-      expect(l10n.mentorBadgesEarned, '\n**Badges earned:**');
-      expect(l10n.mentorRecommendations, '\n**Recommendations:**');
+      expect(l10n.mentorProgressReportTitle, '📊 Your Study Progress Report\n');
+      expect(l10n.mentorAreasNeedingAttention, '\nAreas needing attention:');
+      expect(l10n.mentorBadgesEarned, '\nBadges earned:');
+      expect(l10n.mentorRecommendations, '\nRecommendations:');
       expect(l10n.mentorProgressReportError, 'Unable to generate progress report. Please try again later.');
       expect(l10n.mentorNoSubjects, 'You haven\'t added any subjects yet. Would you like help setting up your first subject?');
       expect(l10n.mentorDoingWell, 'You\'re doing well! Would you like to review your progress, schedule a new lesson, or practice some questions?');
@@ -256,23 +256,23 @@ void main() {
     });
 
     test('mentorOverallAccuracy', () {
-      expect(l10n.mentorOverallAccuracy('85', '17', '20'), '**Overall Accuracy:** 85% (17/20 correct)');
+      expect(l10n.mentorOverallAccuracy('85', '17', '20'), 'Overall Accuracy: 85% (17/20 correct)');
     });
 
     test('mentorTotalStudyTime', () {
-      expect(l10n.mentorTotalStudyTime('12.5'), '**Total Study Time:** 12.5 hours');
+      expect(l10n.mentorTotalStudyTime('12.5'), 'Total Study Time: 12.5 hours');
     });
 
     test('mentorWeeklyActivity', () {
-      expect(l10n.mentorWeeklyActivity('42'), '**Weekly Activity:** 42 attempts');
+      expect(l10n.mentorWeeklyActivity('42'), 'Weekly Activity: 42 attempts');
     });
 
     test('mentorCompletedLessons', () {
-      expect(l10n.mentorCompletedLessons('8'), '**Completed Lessons:** 8');
+      expect(l10n.mentorCompletedLessons('8'), 'Completed Lessons: 8');
     });
 
     test('mentorTopicsStudied', () {
-      expect(l10n.mentorTopicsStudied('15'), '**Topics Studied:** 15');
+      expect(l10n.mentorTopicsStudied('15'), 'Topics Studied: 15');
     });
 
     test('mentorTopicAccuracyEntry', () {
@@ -363,7 +363,7 @@ void main() {
     test('about application details', () {
       expect(l10n.aboutApplicationName, 'StudyKing');
       expect(l10n.aboutVersion, 'v1.0.0');
-      expect(l10n.aboutLegalese, '\u00a9 2026 StudyKing.');
+      expect(l10n.aboutLegalese, '© 2026 StudyKing.');
     });
 
     test('model and miscellaneous helpers', () {
@@ -389,10 +389,10 @@ void main() {
       expect(l10n.mentorActivityCheckError, 'Tuve problemas al verificar su actividad. ¿Cómo puedo ayudarle hoy?');
       expect(l10n.mentorNewSessionAdded, '¡Genial! He agregado una nueva sesión de estudio a su horario. Puede revisar los detalles en su planificador.');
       expect(l10n.mentorChangesDone, '¡Listo! Los cambios se han realizado en su horario.');
-      expect(l10n.mentorProgressReportTitle, '📊 **Su Informe de Progreso de Estudio**\n');
-      expect(l10n.mentorAreasNeedingAttention, '\n**Áreas que necesitan atención:**');
-      expect(l10n.mentorBadgesEarned, '\n**Insignias obtenidas:**');
-      expect(l10n.mentorRecommendations, '\n**Recomendaciones:**');
+      expect(l10n.mentorProgressReportTitle, '📊 Su Informe de Progreso de Estudio\n');
+      expect(l10n.mentorAreasNeedingAttention, '\nÁreas que necesitan atención:');
+      expect(l10n.mentorBadgesEarned, '\nInsignias obtenidas:');
+      expect(l10n.mentorRecommendations, '\nRecomendaciones:');
       expect(l10n.mentorProgressReportError, 'No se pudo generar el informe de progreso. Inténtelo de nuevo más tarde.');
       expect(l10n.mentorNoSubjects, 'Aún no ha añadido ninguna materia. ¿Le gustaría ayuda para configurar su primera materia?');
       expect(l10n.mentorDoingWell, '¡Lo está haciendo bien! ¿Le gustaría revisar su progreso, programar una nueva lección o practicar algunas preguntas?');
@@ -491,23 +491,23 @@ void main() {
     });
 
     test('mentorOverallAccuracy', () {
-      expect(l10n.mentorOverallAccuracy('85', '17', '20'), '**Precisión General:** 85% (17/20 correctas)');
+      expect(l10n.mentorOverallAccuracy('85', '17', '20'), 'Precisión General: 85% (17/20 correctas)');
     });
 
     test('mentorTotalStudyTime', () {
-      expect(l10n.mentorTotalStudyTime('12.5'), '**Tiempo Total de Estudio:** 12.5 horas');
+      expect(l10n.mentorTotalStudyTime('12.5'), 'Tiempo Total de Estudio: 12.5 horas');
     });
 
     test('mentorWeeklyActivity', () {
-      expect(l10n.mentorWeeklyActivity('42'), '**Actividad Semanal:** 42 intentos');
+      expect(l10n.mentorWeeklyActivity('42'), 'Actividad Semanal: 42 intentos');
     });
 
     test('mentorCompletedLessons', () {
-      expect(l10n.mentorCompletedLessons('8'), '**Lecciones Completadas:** 8');
+      expect(l10n.mentorCompletedLessons('8'), 'Lecciones Completadas: 8');
     });
 
     test('mentorTopicsStudied', () {
-      expect(l10n.mentorTopicsStudied('15'), '**Temas Estudiados:** 15');
+      expect(l10n.mentorTopicsStudied('15'), 'Temas Estudiados: 15');
     });
 
     test('mentorTopicAccuracyEntry', () {

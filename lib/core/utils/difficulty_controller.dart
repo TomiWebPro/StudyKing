@@ -18,6 +18,12 @@ class DifficultyController {
 
   int get currentDifficulty => _currentDifficulty;
 
+  int _clampDifficulty(int value) {
+    final lo = minDifficulty <= maxDifficulty ? minDifficulty : maxDifficulty;
+    final hi = minDifficulty <= maxDifficulty ? maxDifficulty : minDifficulty;
+    return value.clamp(lo, hi);
+  }
+
   void recordResult(bool isCorrect) {
     if (isCorrect) {
       _consecutiveCorrect++;
@@ -30,9 +36,9 @@ class DifficultyController {
 
   int suggestNextDifficulty() {
     if (_consecutiveCorrect >= correctStreakThreshold) {
-      _currentDifficulty = (_currentDifficulty + 1).clamp(minDifficulty, maxDifficulty);
+      _currentDifficulty = _clampDifficulty(_currentDifficulty + 1);
     } else if (_consecutiveIncorrect >= incorrectStreakThreshold) {
-      _currentDifficulty = (_currentDifficulty - 1).clamp(minDifficulty, maxDifficulty);
+      _currentDifficulty = _clampDifficulty(_currentDifficulty - 1);
     }
     return _currentDifficulty;
   }
@@ -41,7 +47,7 @@ class DifficultyController {
     _consecutiveCorrect = 0;
     _consecutiveIncorrect = 0;
     if (initialDifficulty != null) {
-      _currentDifficulty = initialDifficulty.clamp(minDifficulty, maxDifficulty);
+      _currentDifficulty = _clampDifficulty(initialDifficulty);
     } else {
       _currentDifficulty = 1;
     }

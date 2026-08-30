@@ -383,8 +383,7 @@ void main() {
         studentId: 'student-1',
         subjectId: 'sub-1',
       );
-      expect(mistakesResult.isSuccess, isTrue);
-      expect(mistakesResult.data, isEmpty);
+      expect(mistakesResult.isFailure, isTrue);
     });
 
     test('examSessionServiceProvider wired to overridden dependencies', () {

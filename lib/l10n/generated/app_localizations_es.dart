@@ -4060,7 +4060,7 @@ class AppLocalizationsEs extends AppLocalizations {
     String topicTitle,
     int durationMinutes,
   ) {
-    return 'Usted es un tutor de IA experto en $subjectId. Cree un plan de lección estructurado para el tema \"$topicTitle\".\n\nLa lección debe durar $durationMinutes minutos.\n\nDevuelva un objeto JSON.';
+    return 'Usted es un tutor de IA experto en $subjectId. Cree un plan de lección estructurado para el tema \"$topicTitle\".\n\nLa lección debe durar $durationMinutes minutos.\n\nDevuelva un objeto JSON con claves \"goals\", \"sections\", \"checkpoints\" y \"estimatedDifficulty\".';
   }
 
   @override

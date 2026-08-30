@@ -620,12 +620,12 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('Microphone Permission Required'), findsOneWidget);
-      expect(find.text('Microphone permission is required to use voice input.'), findsOneWidget);
+      expect(find.text('Microphone access denied. Please enable it in Settings to use voice input.'), findsOneWidget);
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
 
       await tester.tap(find.text('Cancel'));
-      await tester.pump();
+      await tester.pumpAndSettle();
       expect(find.text('Microphone Permission Required'), findsNothing);
 
       deniedController.setPermissionResult(false);
@@ -636,8 +636,8 @@ void main() {
       expect(find.text('Microphone Permission Required'), findsOneWidget);
 
       await tester.tap(find.text('Retry'));
-      await tester.pump();
-      expect(find.text('Microphone Permission Required'), findsNothing);
+      await tester.pumpAndSettle();
+      expect(find.text('Microphone Permission Required'), findsOneWidget);
 
       deniedController.dispose();
     });
@@ -657,7 +657,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 100));
 
-      expect(find.text('Microphone permission is required to use voice input.'), findsOneWidget);
+      expect(find.text('Microphone access denied. Please enable it in Settings to use voice input.'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
 
       unavailableController.dispose();

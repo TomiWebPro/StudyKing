@@ -7,7 +7,6 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -29,31 +28,30 @@ class _FakeTopicRepository extends TopicRepository {
   Future<Result<List<Topic>>> getAll() async => Result.success(_topics.values.toList());
 }
 
-class _FakeTutorSessionRepository extends TutorSessionRepository {
-  final Map<String, TutorSession> _sessions = {};
-  bool _throwOnGetStudentSessions = false;
+class _FakeSessionRepository extends SessionRepository {
+  final List<Session> _sessions = [];
+  bool _throwOnGetByStudent = false;
 
-  void setThrowOnGetStudentSessions() => _throwOnGetStudentSessions = true;
+  void setThrowOnGetByStudent() => _throwOnGetByStudent = true;
+
+  void addSession(Session session) => _sessions.add(session);
 
   @override
-  Future<Result<void>> init() async => Result.success(null);
-
-  @override
-  Future<Result<List<TutorSession>>> getStudentSessions(String studentId) async {
-    if (_throwOnGetStudentSessions) throw Exception('Repo failure');
-    final result = _sessions.values
-        .where((s) => s.studentId == studentId)
-        .toList()
-      ..sort((a, b) => b.startTime.compareTo(a.startTime));
-    return Result.success(result);
+  Future<Result<List<Session>>> getAll() async {
+    if (_throwOnGetByStudent) throw Exception('Repo failure');
+    return Result.success(List.from(_sessions));
   }
 
-  void addSession(TutorSession session) => _sessions[session.id] = session;
-
-  void clear() => _sessions.clear();
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async {
+    if (_throwOnGetByStudent) return Result.failure('Repo failure');
+    return Result.success(
+      _sessions.where((s) => s.studentId == studentId).toList(),
+    );
+  }
 }
 
-TutorSession _session({
+Session _session({
   String id = 's1',
   String studentId = 'stu1',
   String subjectId = 'Math',
@@ -65,37 +63,37 @@ TutorSession _session({
 }) {
   final start = startTime ?? DateTime(2025, 6, 15, 10, 0);
   final tid = topicId.isNotEmpty ? topicId : 'topic-$id';
-  return TutorSession(
+  return Session(
     id: id,
     studentId: studentId,
     subjectId: subjectId,
     topicId: tid,
-    topicTitle: 'Topic $id',
-    status: status,
     startTime: start,
-    endTime: endTime ?? start.add(Duration(minutes: plannedDurationMinutes)),
+    endTime: endTime,
     plannedDurationMinutes: plannedDurationMinutes,
+    status: status,
+    completed: status == SessionStatus.completed,
   );
 }
 
 void main() {
   late _FakeTopicRepository topicRepo;
-  late _FakeTutorSessionRepository sessionRepo;
+  late _FakeSessionRepository sessionRepo;
   late DatabaseService database;
   late SessionQueryService service;
 
   setUp(() {
     topicRepo = _FakeTopicRepository();
-    sessionRepo = _FakeTutorSessionRepository();
+    sessionRepo = _FakeSessionRepository();
     database = DatabaseService(
       topicRepository: topicRepo,
       questionRepository: QuestionRepository(),
       attemptRepository: AttemptRepository(),
       lessonRepository: LessonRepository(),
-      sessionRepository: SessionRepository(),
+      sessionRepository: sessionRepo,
       subjectRepository: SubjectRepository(),
       conversationRepository: ConversationRepository(),
-      tutorSessionRepository: sessionRepo,
+      tutorSessionRepository: TutorSessionRepository(),
     );
     service = SessionQueryService(database: database);
   });
@@ -117,11 +115,10 @@ void main() {
       expect(result.data!.first.id, 's1');
     });
 
-    test('returns empty list when repository throws', () async {
-      sessionRepo.setThrowOnGetStudentSessions();
+    test('returns failure when repository fails', () async {
+      sessionRepo.setThrowOnGetByStudent();
       final result = await service.getLessonsForStudent('stu1');
-      expect(result.isSuccess, true);
-      expect(result.data, isEmpty);
+      expect(result.isFailure, true);
     });
   });
 
@@ -467,6 +464,7 @@ void main() {
         id: 's1',
         status: SessionStatus.planned,
         startTime: DateTime.now().add(const Duration(days: 1)),
+        endTime: null,
       ));
       sessionRepo.addSession(_session(
         id: 's2',
@@ -502,11 +500,13 @@ void main() {
         id: 's1',
         status: SessionStatus.planned,
         startTime: DateTime.now().add(const Duration(days: 3)),
+        endTime: null,
       ));
       sessionRepo.addSession(_session(
         id: 's2',
         status: SessionStatus.planned,
         startTime: DateTime.now().add(const Duration(days: 1)),
+        endTime: null,
       ));
 
       final result = await service.getUpcomingLessons('stu1');

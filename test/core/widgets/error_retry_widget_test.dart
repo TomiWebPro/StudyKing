@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/error_retry_widget.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
   group('ErrorRetryWidget', () {
     testWidgets('renders error icon and message', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ErrorRetryWidget(message: 'Something went wrong'),
         ),
@@ -17,6 +20,8 @@ void main() {
 
     testWidgets('renders retry button with default label', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ErrorRetryWidget(
             message: 'Something went wrong',
@@ -32,6 +37,8 @@ void main() {
 
     testWidgets('renders retry button with custom label', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ErrorRetryWidget(
             message: 'Something went wrong',
@@ -46,6 +53,8 @@ void main() {
 
     testWidgets('does not render retry button when onRetry is null', (tester) async {
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ErrorRetryWidget(message: 'Something went wrong'),
         ),
@@ -57,6 +66,8 @@ void main() {
     testWidgets('retry button fires onRetry callback', (tester) async {
       bool retried = false;
       await tester.pumpWidget(MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: ErrorRetryWidget(
             message: 'Something went wrong',

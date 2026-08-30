@@ -34,21 +34,21 @@ void main() {
 
   group('UsageRecord.priceDisplayWithLocale', () {
     test('formats with en locale', () {
-      expect(record.priceDisplayWithLocale('en'), '\$0.0123');
+      expect(record.priceDisplayWithLocale('en'), 'USD0.0123');
     });
 
     test('handles zero cost', () {
-      expect(zeroRecord.priceDisplayWithLocale('en'), '\$0.0000');
+      expect(zeroRecord.priceDisplayWithLocale('en'), 'USD0.0000');
     });
   });
 
   group('UsageRecord.priceDisplayWithLocale', () {
     test('formats with en locale', () {
-      expect(record.priceDisplayWithLocale('en'), '\$0.0123');
+      expect(record.priceDisplayWithLocale('en'), 'USD0.0123');
     });
 
     test('handles zero cost', () {
-      expect(zeroRecord.priceDisplayWithLocale('en'), '\$0.0000');
+      expect(zeroRecord.priceDisplayWithLocale('en'), 'USD0.0000');
     });
   });
 
@@ -56,14 +56,14 @@ void main() {
     test('includes date, price, and cost per token', () {
       final formatted = record.formattedTextWithLocale('en');
       expect(formatted, contains('2026-05-11'));
-      expect(formatted, contains('\$0.0123'));
+      expect(formatted, contains('USD0.0123'));
       expect(formatted, contains('cost/tk'));
     });
 
     test('handles zero tokens gracefully', () {
       final formatted = zeroRecord.formattedTextWithLocale('en');
       expect(formatted, contains('2026-05-11'));
-      expect(formatted, contains('\$0.0000'));
+      expect(formatted, contains('USD0.0000'));
     });
   });
 
@@ -71,7 +71,7 @@ void main() {
     test('includes date, price, and cost per token', () {
       final formatted = record.formattedTextWithLocale('en');
       expect(formatted, contains('2026-05-11'));
-      expect(formatted, contains('\$0.0123'));
+      expect(formatted, contains('USD0.0123'));
       expect(formatted, contains('cost/tk'));
     });
   });
@@ -94,7 +94,7 @@ void main() {
       expect(summary, contains('1500 tokens'));
       expect(summary, contains('avg'));
       expect(summary, contains('per 1k tokens'));
-      expect(summary, contains('\$'));
+      expect(summary, contains('USD'));
     });
 
     test('accepts explicit en locale', () {

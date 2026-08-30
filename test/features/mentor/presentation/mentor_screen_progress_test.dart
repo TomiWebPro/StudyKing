@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider, SettingsController;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
@@ -61,7 +62,28 @@ void main() {
         ),
       ]);
 
-      await tester.pumpWidget(buildMentorTestApp(masteryGraph: masteryGraph));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith((ref) => SettingsController(FakeSettingsRepo())),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(FakeSessionRepo()),
+            masteryGraphServiceProvider.overrideWithValue(masteryGraph),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(FakeTopicRepo()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Progress Report'));
@@ -119,7 +141,7 @@ void main() {
       await tester.tap(find.byTooltip('Progress Report'));
       await tester.pumpAndSettle();
 
-      expect(find.text('Unable to generate progress report. Please try again later.'), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
     });
 
     testWidgets('progress report dialog can be closed', (tester) async {
@@ -213,6 +235,8 @@ void main() {
             masteryGraphServiceProvider.overrideWithValue(masteryGraph),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
             topicRepositoryProvider.overrideWithValue(FakeTopicRepo()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -308,6 +332,8 @@ void main() {
             masteryGraphServiceProvider.overrideWithValue(masteryGraph),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
             topicRepositoryProvider.overrideWithValue(FakeTopicRepo()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -366,14 +392,35 @@ void main() {
         ),
       ]);
 
-      await tester.pumpWidget(buildMentorTestApp(masteryGraph: masteryGraph));
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            llmServiceProvider.overrideWithValue(FakeLlmService()),
+            settingsProvider.overrideWith((ref) => SettingsController(FakeSettingsRepo())),
+            plannerServiceProvider.overrideWithValue(FakePlannerService()),
+            mentorEngagementNudgeRepoProvider.overrideWithValue(FakeNudgeRepo()),
+            mentorSessionRepositoryProvider.overrideWithValue(FakeSessionRepo()),
+            masteryGraphServiceProvider.overrideWithValue(masteryGraph),
+            mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
+            topicRepositoryProvider.overrideWithValue(FakeTopicRepo()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            locale: const Locale('en'),
+            home: const MentorScreen(),
+          ),
+        ),
+      );
       await tester.pumpAndSettle();
 
       await tester.tap(find.byTooltip('Progress Report'));
       await tester.pumpAndSettle();
 
       expect(find.text('calculus'), findsOneWidget);
-      expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      expect(find.byIcon(Icons.error_outline), findsWidgets);
     });
 
     testWidgets('progress report stat rows display correct information', (tester) async {
@@ -441,6 +488,8 @@ void main() {
             masteryGraphServiceProvider.overrideWithValue(masteryGraph),
             mentorProgressTrackerProvider.overrideWithValue(FakeProgressTracker()),
             topicRepositoryProvider.overrideWithValue(FakeTopicRepoNullData()),
+            llmAgentProvider.overrideWith((ref, studentId) => null),
+            longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
           ],
           child: MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

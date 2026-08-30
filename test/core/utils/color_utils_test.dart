@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:flutter/material.dart';
 import 'package:studyking/core/utils/color_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
@@ -57,9 +58,13 @@ void main() {
         expect(color.toARGB32(), 0xFFFFFFFF);
       });
 
-      test('returns default for very long string', () {
-        final color = ColorUtils.stringToColor('#1234567890ABCDEF');
-        expect(color, ColorUtils.defaultColor);
+      test('parses very long string as raw hex', () {
+        final color =
+            ColorUtils.stringToColor('#1234567890ABCDEF');
+        expect(
+          color,
+          Color(int.parse('1234567890ABCDEF', radix: 16) + 0xFF000000),
+        );
       });
 
       test('returns default for null-like empty after hash', () {

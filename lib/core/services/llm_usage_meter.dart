@@ -58,7 +58,7 @@ class LlmUsageRecord {
 
 class LlmUsageMeter {
   final List<LlmUsageRecord> _records = [];
-  late Box _box;
+  Box? _box;
 
   Future<void> init() async {
     _box = await Hive.openBox(HiveBoxNames.llmUsageRecords);
@@ -66,8 +66,10 @@ class LlmUsageMeter {
   }
 
   void _loadFromBox() {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
     _records.clear();
-    for (final entry in _box.values) {
+    for (final entry in box.values) {
       if (entry is Map) {
         _records.add(LlmUsageRecord.fromJson(Map<String, dynamic>.from(entry)));
       }
@@ -75,9 +77,11 @@ class LlmUsageMeter {
   }
 
   void _saveToBox() {
-    _box.clear();
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    box.clear();
     for (final record in _records) {
-      _box.put(record.id, record.toJson());
+      box.put(record.id, record.toJson());
     }
   }
 

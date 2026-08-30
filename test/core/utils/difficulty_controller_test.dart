@@ -139,9 +139,9 @@ void main() {
           incorrectStreakThreshold: 0,
         );
         adapter.recordResult(true);
-        expect(adapter.suggestNextDifficulty(), 3);
+        expect(adapter.suggestNextDifficulty(), 4);
         adapter.recordResult(false);
-        expect(adapter.suggestNextDifficulty(), 3);
+        expect(adapter.suggestNextDifficulty(), 5);
       });
 
       test('negative thresholds are handled gracefully', () {
@@ -152,7 +152,7 @@ void main() {
         );
         adapter.recordResult(true);
         adapter.recordResult(false);
-        expect(adapter.suggestNextDifficulty(), 3);
+        expect(adapter.suggestNextDifficulty(), 4);
       });
 
       test('very large threshold never triggers change', () {

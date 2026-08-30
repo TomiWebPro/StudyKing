@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import '../helpers/hive_init_helper.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
@@ -8,17 +9,43 @@ class _FakeLessonRepo extends LessonRepository {
 
   @override
   Future<Result<List<Lesson>>> getAll() async =>
-      shouldThrow ? Result.failure('error') : Result.success(_lessons);
+      shouldThrow ? Result.failure('error') : Result.success(List.unmodifiable(_lessons));
 
   @override
   Future<Result<Lesson?>> get(String id) async =>
       Result.success(_lessons.where((l) => l.id == id).firstOrNull);
 
   @override
+  Future<Result<void>> save(String key, Lesson item) async {
+    final idx = _lessons.indexWhere((l) => l.id == key);
+    if (idx >= 0) {
+      _lessons[idx] = item;
+    } else {
+      _lessons.add(item);
+    }
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> put(String key, Lesson item) async => save(key, item);
+
+  @override
+  Future<Result<void>> create(Lesson lesson) async => save(lesson.id, lesson);
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    _lessons.removeWhere((l) => l.id == key);
+    return Result.success(null);
+  }
+
+  @override
   Future<void> init() async {}
 }
 
 void main() {
+  setUpAll(() async {
+    await initializeHiveForIntegrationTests();
+  });
   group('Ingestion → Lessons integration', () {
     test('lesson repo stores and retrieves lessons after generation', () async {
       final lessonRepo = _FakeLessonRepo();

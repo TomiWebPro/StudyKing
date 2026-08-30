@@ -29,7 +29,12 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text(' due for review'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('Due for Review'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows subject breakdown', (tester) async {
@@ -109,7 +114,12 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text('15'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('15'),
+        ),
+        findsWidgets,
+      );
     });
 
     testWidgets('shows large due count', (tester) async {
@@ -124,9 +134,14 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text('999'), findsOneWidget);
-      expect(find.text('500'), findsWidgets);
-      expect(find.text('499'), findsWidgets);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('999'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('500 due'), findsWidgets);
+      expect(find.text('499 due'), findsWidgets);
     });
 
     testWidgets('shows subject due count numbers', (tester) async {
@@ -140,7 +155,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text('25 questions due'), findsOneWidget);
+      expect(find.text('25 due'), findsOneWidget);
     });
 
     testWidgets('shows empty breakdown when no subjectBreakdown list', (tester) async {
@@ -152,8 +167,18 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text('5'), findsOneWidget);
-      expect(find.text(' due for review'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('5'),
+        ),
+        findsOneWidget,
+      );
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('Due for Review'),
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows zero due count with subjects', (tester) async {
@@ -167,7 +192,12 @@ void main() {
       await tester.pumpWidget(_buildTestApp(DueReviewsCard(data: data)));
       await tester.pumpAndSettle();
 
-      expect(find.text('0'), findsOneWidget);
+      expect(
+        find.byWidgetPredicate(
+          (w) => w is RichText && w.text.toPlainText().contains('0'),
+        ),
+        findsOneWidget,
+      );
       expect(find.text('Math'), findsNothing);
     });
   });

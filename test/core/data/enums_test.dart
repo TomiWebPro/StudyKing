@@ -62,14 +62,16 @@ void main() {
 
   group('ProcessingStatus', () {
     test('has all expected values', () {
-      expect(ProcessingStatus.values.length, 7);
+      expect(ProcessingStatus.values.length, 9);
       expect(ProcessingStatus.pending.index, 0);
       expect(ProcessingStatus.extracting.index, 1);
       expect(ProcessingStatus.classifying.index, 2);
-      expect(ProcessingStatus.generatingQuestions.index, 3);
-      expect(ProcessingStatus.validating.index, 4);
-      expect(ProcessingStatus.completed.index, 5);
-      expect(ProcessingStatus.failed.index, 6);
+      expect(ProcessingStatus.summarizing.index, 3);
+      expect(ProcessingStatus.generatingQuestions.index, 4);
+      expect(ProcessingStatus.generatingFlashcards.index, 5);
+      expect(ProcessingStatus.validating.index, 6);
+      expect(ProcessingStatus.completed.index, 7);
+      expect(ProcessingStatus.failed.index, 8);
     });
 
     test('index round-trip from values list', () {

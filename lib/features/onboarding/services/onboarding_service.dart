@@ -20,7 +20,7 @@ class OnboardingService {
       return Result.success(!completed && !dontShow);
     } catch (e) {
       _logger.w('Failed to check onboarding needed: $e');
-      return Result.failure(e.toString());
+      return Result.success(true);
     }
   }
 
@@ -50,7 +50,7 @@ class OnboardingService {
       return Result.success(!completed);
     } catch (e) {
       _logger.w('Failed to check first launch: $e');
-      return Result.failure(e.toString());
+      return Result.success(true);
     }
   }
 

@@ -41,7 +41,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('No roadmaps yet'), findsOneWidget);
-      expect(find.text('e.g., I want to learn IB Physics in 180 days'), findsOneWidget);
+      expect(find.text('e.g., I want to learn Python in 90 days'), findsOneWidget);
     });
 
     testWidgets('loadRoadmaps shows ListView of roadmap cards when roadmaps exist', (tester) async {
@@ -84,7 +84,7 @@ void main() {
 
       expect(find.text('Learn IB Physics'), findsOneWidget);
       expect(find.text('In Progress'), findsOneWidget);
-      expect(find.text('1/2 milestones'), findsOneWidget);
+      expect(find.text('1/2 Milestones'), findsOneWidget);
     });
 
     testWidgets('loadRoadmaps error path does not crash and shows empty state', (tester) async {
@@ -233,7 +233,7 @@ void main() {
 
       expect(find.text('Master Python'), findsOneWidget);
       expect(find.text('Completed'), findsOneWidget);
-      expect(find.text('1/3 milestones'), findsOneWidget);
+      expect(find.text('1/3 Milestones'), findsOneWidget);
       expect(find.textContaining('Target Completion'), findsOneWidget);
     });
 

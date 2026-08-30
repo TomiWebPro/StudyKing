@@ -234,7 +234,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Weak Topics'), findsOneWidget);
+      expect(find.text('Weak Areas'), findsOneWidget);
     });
 
     testWidgets('handles zero totalTopics gracefully', (tester) async {

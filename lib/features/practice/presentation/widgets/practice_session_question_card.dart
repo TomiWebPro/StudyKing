@@ -90,22 +90,25 @@ class PracticeSessionQuestionCard extends ConsumerWidget {
         shrinkWrap: true,
         children: options.map((option) {
           final isSelected = selected.contains(option);
-          return CheckboxListTile(
-            value: isSelected,
-            onChanged: isSubmitted
-                ? null
-                : (value) {
-                    final updated = Set<String>.from(selected);
-                    if (value ?? false) {
-                      updated.add(option);
-                    } else {
-                      updated.remove(option);
-                    }
-                    onAnswerSelected(updated.isEmpty ? null : updated.join('||'));
-                  },
-            controlAffinity: ListTileControlAffinity.leading,
-            contentPadding: EdgeInsets.zero,
-            title: Text(option),
+          return Material(
+            color: Colors.transparent,
+            child: CheckboxListTile(
+              value: isSelected,
+              onChanged: isSubmitted
+                  ? null
+                  : (value) {
+                      final updated = Set<String>.from(selected);
+                      if (value ?? false) {
+                        updated.add(option);
+                      } else {
+                        updated.remove(option);
+                      }
+                      onAnswerSelected(updated.isEmpty ? null : updated.join('||'));
+                    },
+              controlAffinity: ListTileControlAffinity.leading,
+              contentPadding: EdgeInsets.zero,
+              title: Text(option),
+            ),
           );
         }).toList(),
       ),

@@ -340,14 +340,19 @@ void main() {
         ),
       );
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.byType(SnackBar), findsOneWidget);
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.ensureVisible(find.text('Retry'));
+      await tester.pump(const Duration(milliseconds: 200));
 
       repo.shouldThrow = false;
       await tester.tap(find.text('Retry'));
       await tester.pump();
-      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Lesson 1'), findsOneWidget);
     });

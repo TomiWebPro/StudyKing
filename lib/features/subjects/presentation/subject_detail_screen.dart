@@ -26,11 +26,13 @@ import 'package:studyking/features/subjects/presentation/widgets/subject_stats_t
 class SubjectDetailScreen extends ConsumerStatefulWidget {
   final Subject subject;
   final SessionRepository? sessionRepository;
+  final SourceRepository? sourceRepository;
 
   const SubjectDetailScreen({
     super.key,
     required this.subject,
     this.sessionRepository,
+    this.sourceRepository,
   });
 
   @override
@@ -51,7 +53,7 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 
   Future<void> _loadSourceCount() async {
     try {
-      final repo = SourceRepository();
+      final repo = widget.sourceRepository ?? SourceRepository();
       await repo.init();
       final sourcesResult = await repo.getBySubject(widget.subject.id);
       if (sourcesResult.isFailure) {
@@ -218,13 +220,20 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
                     onStartSpacedRepetition: () => _startPractice(isSpacedRepetition: true),
                   ),
                   SubjectTopicsTab(subjectId: widget.subject.id),
-                  _SubjectSourcesTab(subjectId: widget.subject.id, subjectName: widget.subject.name),
+                  _SubjectSourcesTab(
+                    subjectId: widget.subject.id,
+                    subjectName: widget.subject.name,
+                    sourceRepository: widget.sourceRepository,
+                  ),
                   SubjectHistoryTab(
                     subjectId: widget.subject.id,
                     onSessionTap: (session) => _showSessionDetails(session),
                     sessionRepository: widget.sessionRepository,
                   ),
-                  SubjectStatsTab(subjectId: widget.subject.id),
+                  SubjectStatsTab(
+                    subjectId: widget.subject.id,
+                    sessionRepository: widget.sessionRepository,
+                  ),
                 ],
               ),
             ),
@@ -436,8 +445,13 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
 class _SubjectSourcesTab extends ConsumerStatefulWidget {
   final String subjectId;
   final String subjectName;
+  final SourceRepository? sourceRepository;
 
-  const _SubjectSourcesTab({required this.subjectId, required this.subjectName});
+  const _SubjectSourcesTab({
+    required this.subjectId,
+    required this.subjectName,
+    this.sourceRepository,
+  });
 
   @override
   ConsumerState<_SubjectSourcesTab> createState() => _SubjectSourcesTabState();
@@ -445,7 +459,7 @@ class _SubjectSourcesTab extends ConsumerStatefulWidget {
 
 class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
   static final Logger _logger = const Logger('SubjectDetailScreen.SubjectSourcesTab');
-  final _sourceRepo = SourceRepository();
+  SourceRepository get _sourceRepo => widget.sourceRepository ?? SourceRepository();
   List<_SourceItem> _items = [];
   bool _isLoading = true;
   String? _error;

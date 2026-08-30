@@ -20,7 +20,7 @@ class _FakeTopicRepository extends TopicRepository {
 
   @override
   Future<Result<Topic?>> get(String id) async {
-    if (shouldThrow) throw Exception('Topic error');
+    if (shouldThrow) return Result.failure('Topic error');
     return Result.success(_topics[id]);
   }
 }

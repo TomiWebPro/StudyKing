@@ -1,11 +1,29 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/instrumentation_service.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/progress_export_service.dart';
+import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/dashboard/providers/dashboard_providers.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/export_section.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+class _FakeAttemptRepo extends AttemptRepository {
+  @override
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async =>
+      Result.success([]);
+}
+
+class _FakeMasteryGraphService extends MasteryGraphService {
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async =>
+      Result.success([]);
+}
 
 class _FakeInstrumentation extends InstrumentationService {
   _FakeInstrumentation() : super(repository: null);
@@ -20,35 +38,58 @@ class _FakeInstrumentation extends InstrumentationService {
       });
 }
 
-class _FakeProgressTracker {
-  void updateLocalization(AppLocalizations l10n) {}
+class _FakeProgressTracker extends StudyProgressTracker {
+  _FakeProgressTracker()
+      : super(
+          attemptRepo: _FakeAttemptRepo(),
+          masteryService: _FakeMasteryGraphService(),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+  @override
   Future<Result<String>> exportProgressCSV(String studentId) async =>
       Result.success('progress,csv,data');
+
+  @override
   Future<Result<String>> exportSessionHistoryCSV(String studentId) async =>
       Result.success('session,history,csv');
 }
 
-class _FakeExportService {
-  Future<String> exportComprehensiveCSV(String studentId, AppLocalizations l10n) async =>
-      'csv,data';
-  Future<List<int>> exportComprehensivePDF(
+class _FakeExportService extends ProgressExportService {
+  _FakeExportService()
+      : super(
+          tracker: _FakeProgressTracker(),
+          masteryService: _FakeMasteryGraphService(),
+          attemptRepo: _FakeAttemptRepo(),
+        );
+
+  @override
+  Future<Result<String>> exportComprehensiveCSV(String studentId,
+          {AppLocalizations? l10n}) async =>
+      Result.success('csv,data');
+
+  @override
+  Future<Result<List<int>>> exportComprehensivePDF(
           String studentId, AppLocalizations l10n) async =>
-      [1, 2, 3];
-  Future<String> exportComprehensiveJSON(String studentId, AppLocalizations l10n) async =>
-      '{}';
+      Result.success([1, 2, 3]);
+
+  @override
+  Future<Result<String>> exportComprehensiveJSON(
+          String studentId, AppLocalizations l10n) async =>
+      Result.success('{}');
 }
 
 Widget _buildTestApp(Widget child) {
   return ProviderScope(
     overrides: [
       dashboardStudyProgressTrackerProvider.overrideWithValue(
-        _FakeProgressTracker() as dynamic,
+        _FakeProgressTracker(),
       ),
       dashboardInstrumentationServiceProvider.overrideWithValue(
         _FakeInstrumentation(),
       ),
       dashboardExportServiceProvider.overrideWithValue(
-        _FakeExportService() as dynamic,
+        _FakeExportService(),
       ),
     ],
     child: MaterialApp(
@@ -75,7 +116,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Comprehensive Report'), findsOneWidget);
+      expect(find.text('Export Full Progress Report'), findsWidgets);
     });
 
     testWidgets('renders Export CSV button', (tester) async {
@@ -123,7 +164,7 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Instrumentation'), findsOneWidget);
+      expect(find.text('Progress Analytics'), findsOneWidget);
     });
 
     testWidgets('renders backup export button', (tester) async {

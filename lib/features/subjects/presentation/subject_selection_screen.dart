@@ -103,6 +103,10 @@ class _SubjectSelectionScreenState
           : null;
       if (seedEntry != null && mounted) {
         try {
+          if (!Hive.isBoxOpen(HiveBoxNames.topics)) {
+            _logger.w('Skipping seed topic creation: topics box not open', null);
+            throw Exception('Hive topics box not open');
+          }
           final topicRepo = TopicRepository();
           await topicRepo.init();
           final createdTopicIds = <String>[];
@@ -157,10 +161,23 @@ class _SubjectSelectionScreenState
       if (!mounted) return;
       final l10nCtx = AppLocalizations.of(context)!;
       final subjectName = subject.name;
-      final settingsBox = await Hive.openBox(HiveBoxNames.settings);
+      Box? settingsBox;
+      String apiKey = '';
+      bool hasApiKey = false;
+      try {
+        if (Hive.isBoxOpen(HiveBoxNames.settings)) {
+          settingsBox = Hive.box(HiveBoxNames.settings);
+          apiKey = settingsBox.get('apiKey', defaultValue: '') as String? ?? '';
+          hasApiKey = apiKey.isNotEmpty;
+        } else {
+          _logger.w('Settings box not open, using fallback hasApiKey true', null);
+          hasApiKey = true;
+        }
+      } catch (e) {
+        _logger.w('Failed to get apiKey', e);
+        hasApiKey = true;
+      }
       if (!mounted) return;
-      final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
-      final hasApiKey = apiKey.isNotEmpty;
 
       if (!hasApiKey) {
         if (!mounted) return;

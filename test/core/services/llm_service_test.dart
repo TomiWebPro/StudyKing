@@ -57,6 +57,7 @@ void main() {
         LlmProvider.openRouter,
         LlmProvider.ollama,
         LlmProvider.openAI,
+        LlmProvider.custom,
       ]);
     });
   });
@@ -73,7 +74,8 @@ void main() {
           message: 'Hello',
           modelId: 'test-model',
         );
-        expect(result, '');
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('API key is empty'));
       });
 
       test('calls OpenRouter provider successfully', () async {
@@ -104,7 +106,8 @@ void main() {
           message: 'Test message',
           modelId: 'openrouter-model',
         );
-        expect(result, 'OpenRouter response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'OpenRouter response');
       });
 
       test('calls Ollama provider successfully', () async {
@@ -131,7 +134,8 @@ void main() {
           message: 'Hi',
           modelId: 'ollama-model',
         );
-        expect(result, 'Ollama response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Ollama response');
       });
 
       test('calls Ollama with custom baseUrl', () async {
@@ -157,7 +161,8 @@ void main() {
           message: 'Hi',
           modelId: 'model',
         );
-        expect(result, 'Custom Ollama');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Custom Ollama');
       });
 
       test('calls OpenAI provider successfully', () async {
@@ -185,7 +190,8 @@ void main() {
           message: 'Hello',
           modelId: 'gpt-4',
         );
-        expect(result, 'OpenAI response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'OpenAI response');
       });
 
       test('calls OpenAI with custom baseUrl', () async {
@@ -212,7 +218,8 @@ void main() {
           message: 'Hi',
           modelId: 'gpt-4',
         );
-        expect(result, 'Custom OpenAI');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Custom OpenAI');
       });
 
       test('throws on OpenRouter API error', () async {
@@ -225,10 +232,8 @@ void main() {
           apiKey: 'key',
         );
         final service = LlmService(config: config, httpClient: mockClient);
-        await expectLater(
-          service.chat(message: 'Hi', modelId: 'm'),
-          throwsA(isA<Exception>()),
-        );
+        final result = await service.chat(message: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
       });
 
       test('throws on Ollama API error', () async {
@@ -241,10 +246,8 @@ void main() {
           apiKey: 'key',
         );
         final service = LlmService(config: config, httpClient: mockClient);
-        await expectLater(
-          service.chat(message: 'Hi', modelId: 'm'),
-          throwsA(isA<Exception>()),
-        );
+        final result = await service.chat(message: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
       });
 
       test('throws on OpenAI API error', () async {
@@ -257,10 +260,8 @@ void main() {
           apiKey: 'key',
         );
         final service = LlmService(config: config, httpClient: mockClient);
-        await expectLater(
-          service.chat(message: 'Hi', modelId: 'gpt-4'),
-          throwsA(isA<Exception>()),
-        );
+        final result = await service.chat(message: 'Hi', modelId: 'gpt-4');
+        expect(result.isFailure, isTrue);
       });
 
       test('uses ConversationMemory history', () async {
@@ -294,7 +295,8 @@ void main() {
           modelId: 'm',
           memory: memory,
         );
-        expect(result, 'With memory');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'With memory');
       });
 
       test('uses history list', () async {
@@ -327,7 +329,8 @@ void main() {
           modelId: 'm',
           history: [{'role': 'user', 'content': 'User msg'}],
         );
-        expect(result, 'From history');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'From history');
       });
 
       test('uses custom system prompt', () async {
@@ -356,7 +359,8 @@ void main() {
           modelId: 'm',
           systemPrompt: 'Custom prompt',
         );
-        expect(result, 'Custom response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Custom response');
       });
     });
 
@@ -371,7 +375,7 @@ void main() {
           message: 'Hello',
           modelId: 'm',
         );
-        await expectLater(stream, emitsDone);
+        await expectLater(stream, emits(startsWith('API key not configured')));
       });
     });
 
@@ -391,6 +395,7 @@ void main() {
         });
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -412,6 +417,7 @@ void main() {
         });
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -422,10 +428,8 @@ void main() {
           taskManager: taskManager,
         );
 
-        await expectLater(
-          service.chat(message: 'Hi', modelId: 'm'),
-          throwsA(isA<Exception>()),
-        );
+        final result = await service.chat(message: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
         expect(taskManager.tasks.length, 1);
         expect(taskManager.tasks.first.status, LlmTaskStatus.failed);
       });
@@ -447,6 +451,7 @@ void main() {
         });
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openAI,
           apiKey: 'key',
@@ -674,6 +679,7 @@ void main() {
         });
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -695,6 +701,7 @@ void main() {
         final mockClient = MockClient((_) async => throw Exception('Stream error'));
 
         final taskManager = LlmTaskManager();
+        await taskManager.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -724,6 +731,7 @@ void main() {
         });
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openRouter,
           apiKey: 'key',
@@ -770,7 +778,8 @@ void main() {
           modelId: 'm',
           memory: memory,
         );
-        expect(result, 'Ollama memory response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Ollama memory response');
       });
 
       test('OpenAI chat with memory', () async {
@@ -806,7 +815,8 @@ void main() {
           modelId: 'gpt-4',
           memory: memory,
         );
-        expect(result, 'OpenAI memory response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'OpenAI memory response');
       });
 
       test('Ollama chat with history', () async {
@@ -835,7 +845,8 @@ void main() {
             {'role': 'assistant', 'content': 'Previous response'},
           ],
         );
-        expect(result, 'Ollama history response');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 'Ollama history response');
       });
     });
 
@@ -915,6 +926,7 @@ void main() {
         });
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.ollama,
           apiKey: 'key',
@@ -941,6 +953,7 @@ void main() {
         });
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.ollama,
           apiKey: 'key',
@@ -967,6 +980,7 @@ void main() {
         });
 
         final usageMeter = LlmUsageMeter();
+        await usageMeter.init();
         const config = LlmConfiguration(
           provider: LlmProvider.openAI,
           apiKey: 'key',

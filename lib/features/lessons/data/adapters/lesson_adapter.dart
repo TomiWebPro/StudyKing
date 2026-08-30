@@ -13,6 +13,15 @@ class LessonAdapter extends TypeAdapter<Lesson> {
     final fields = <int, dynamic>{
       for (int i = 0; i < numOfFields; i++) reader.readByte(): reader.read(),
     };
+    final rawGen = fields[6];
+    final GeneratedBy gen;
+    if (rawGen is int) {
+      gen = GeneratedBy.values[rawGen.clamp(0, GeneratedBy.values.length - 1)];
+    } else if (rawGen is GeneratedBy) {
+      gen = rawGen;
+    } else {
+      gen = GeneratedBy.manual;
+    }
     return Lesson(
       id: fields[0] as String,
       subjectId: fields[1] as String,
@@ -20,7 +29,7 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       topicId: fields[3] as String,
       blocks: (fields[4] as List?)?.cast<LessonBlock>() ?? [],
       difficulty: fields[5] as int? ?? 1,
-      generatedBy: fields[6] as GeneratedBy? ?? GeneratedBy.manual,
+      generatedBy: gen,
       createdAt: fields[7] as DateTime,
       markscheme: fields[8] as String?,
       sessionId: fields[9] as String?,
@@ -44,7 +53,7 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       ..writeByte(5)
       ..write(obj.difficulty)
       ..writeByte(6)
-      ..write(obj.generatedBy)
+      ..write(obj.generatedBy.index)
       ..writeByte(7)
       ..write(obj.createdAt)
       ..writeByte(8)

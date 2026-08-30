@@ -292,7 +292,7 @@ void main() {
         SessionSummaryCard(recentSessions: sessions),
       ));
 
-      expect(find.text('08:05'), findsOneWidget);
+      expect(find.textContaining('8:05'), findsOneWidget);
     });
 
     testWidgets('shows correct icon for completed session', (tester) async {

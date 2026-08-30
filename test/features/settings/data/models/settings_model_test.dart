@@ -98,7 +98,7 @@ void main() {
       expect(key == Object(), isFalse);
     });
 
-    test('toJson/fromJson round-trip preserves all fields', () {
+    test('toJson/fromJson round-trip preserves fields (password excluded for security)', () {
       const original = SettingsAPIKey(
         provider: 'openai',
         key: 'sk-test-key',
@@ -108,7 +108,7 @@ void main() {
       final restored = SettingsAPIKey.fromJson(json);
       expect(restored.provider, original.provider);
       expect(restored.key, original.key);
-      expect(restored.password, original.password);
+      expect(restored.password, isNull);
     });
 
     test('toJson/fromJson round-trip with null password', () {
@@ -196,7 +196,7 @@ void main() {
         expect(record.promptTokens, 1200);
         expect(record.completionTokens, 300);
         expect(record.totalCost, greaterThan(0));
-        expect(record.priceDisplayWithLocale('en'), startsWith('\$0.'));
+        expect(record.priceDisplayWithLocale('en'), startsWith('USD0.'));
         expect(record.tokenDisplay, '(1200 in / 300 out)');
       });
 
@@ -263,7 +263,7 @@ void main() {
           provider: 'p', modelId: 'm',
           inputTokens: 100, outputTokens: 50, totalCost: 0.01234,
         );
-        expect(record.priceDisplayWithLocale('en'), '\$0.0123');
+        expect(record.priceDisplayWithLocale('en'), 'USD0.0123');
       });
 
       test('priceDisplayWithLocale handles zero cost', () {
@@ -272,7 +272,7 @@ void main() {
           provider: 'p', modelId: 'm',
           inputTokens: 0, outputTokens: 0, totalCost: 0,
         );
-        expect(record.priceDisplayWithLocale('en'), '\$0.0000');
+        expect(record.priceDisplayWithLocale('en'), 'USD0.0000');
       });
 
       test('tokenDisplay formats input and output', () {
@@ -292,7 +292,7 @@ void main() {
         );
         final formatted = record.formattedTextWithLocale('en');
         expect(formatted, contains('2026-05-11'));
-        expect(formatted, contains('\$0.0150'));
+        expect(formatted, contains('USD0.0150'));
         expect(formatted, contains('cost/tk'));
       });
     });

@@ -12,6 +12,7 @@ import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider, mentorProgressTrackerProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider, PlannerNotifier;
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
@@ -30,6 +31,8 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/providers/service_providers.dart';
+import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
+import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -58,6 +61,8 @@ class FakeSettingsRepo extends SettingsRepository {
 }
 
 class FakePlannerService extends PlannerService {
+  FakePlannerService() : super(planOrchestrator: _FakeAdherenceOrchestrator());
+
   @override
   Future<Result<PersonalLearningPlan?>> loadExistingPlan() async => Result.success(null);
   @override
@@ -67,11 +72,18 @@ class FakePlannerService extends PlannerService {
   @override
   Future<Result<List<Session>>> getScheduledLessons() async => Result.success([]);
   @override
+  Future<Result<List<Session>>> getMissedLessons() async => Result.success([]);
+  @override
   Future<Result<bool>> hasSchedulingConflict({required DateTime startTime, required int durationMinutes, String? excludeSessionId}) async => Result.success(false);
   @override
   Future<Result<bool>> scheduleLesson({required String topicId, required String topicTitle, required String subjectId, required DateTime scheduledTime, int durationMinutes = 30}) async => Result.success(true);
   @override
   Future<Result<RoadmapModel?>> createRoadmap({required String goal, required int days, required AppLocalizations l10n, String? subjectId}) async => Result.success(null);
+}
+
+class _FakeAdherenceOrchestrator extends PlanAdherenceOrchestrator {
+  @override
+  Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async => Result.success(AdherenceDeviation());
 }
 
 class FakeNudgeRepo extends EngagementNudgeRepository {
@@ -261,6 +273,11 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 }
 
+class FakeLongTermMemory extends LongTermMemory {
+  @override
+  Future<void> init() async {}
+}
+
 class FakeProgressTracker extends StudyProgressTracker {
   Map<String, dynamic> _overallStats = const {
     'totalAttempts': 100,
@@ -323,6 +340,8 @@ Widget buildMentorTestApp({
       mentorProgressTrackerProvider.overrideWithValue(
         progressTracker ?? FakeProgressTracker(),
       ),
+      llmAgentProvider.overrideWith((ref, studentId) => null),
+      longTermMemoryProvider.overrideWithValue(FakeLongTermMemory()),
       if (voiceService != null)
         voiceServiceProvider.overrideWithValue(voiceService),
     ],

@@ -22,7 +22,7 @@ void main() {
 
       Logger.setVerbose(false);
       expect(Logger.shouldLog(LogLevel.debug), isFalse);
-      expect(Logger.shouldLog(LogLevel.info), isFalse);
+      expect(Logger.shouldLog(LogLevel.info), isTrue);
     });
 
     test('error and warn always log regardless of verbose', () {
@@ -31,10 +31,10 @@ void main() {
       expect(Logger.shouldLog(LogLevel.warn), isTrue);
     });
 
-    test('debug and info only log when verbose', () {
+    test('debug only logs when verbose; info and warn always log', () {
       Logger.setVerbose(false);
       expect(Logger.shouldLog(LogLevel.debug), isFalse);
-      expect(Logger.shouldLog(LogLevel.info), isFalse);
+      expect(Logger.shouldLog(LogLevel.info), isTrue);
 
       Logger.setVerbose(true);
       expect(Logger.shouldLog(LogLevel.debug), isTrue);

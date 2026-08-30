@@ -59,7 +59,7 @@ void main() {
       expect(data.lowAdherenceDays, 0);
       expect(data.currentStreak, 0);
       expect(data.bestStreak, 0);
-      expect(data.weeklyTrend, hasLength(7));
+      expect(data.weeklyTrend, isEmpty);
     });
 
     test('computes adherence summary correctly', () async {

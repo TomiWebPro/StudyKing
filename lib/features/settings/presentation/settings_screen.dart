@@ -696,8 +696,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                     trailing: m == current
                         ? Icon(Icons.check, color: Theme.of(context).colorScheme.primary)
                         : null,
-                    onTap: () {
-                      Hive.box(HiveBoxNames.settings).put('dailyCapMinutes', m);
+                  onTap: () {
+                      try {
+                        if (Hive.isBoxOpen(HiveBoxNames.settings)) {
+                          Hive.box(HiveBoxNames.settings).put('dailyCapMinutes', m);
+                        }
+                      } catch (e) {
+                        _logger.w('Failed to set daily cap: $e', e);
+                      }
                       ref.invalidate(settingsProvider);
                       Navigator.pop(context);
                     },
@@ -1821,7 +1827,7 @@ void _showAboutDialog(BuildContext context) async {
   final l10n = AppLocalizations.of(context)!;
   String version = l10n.aboutVersion;
   try {
-    final info = await getPackageInfo();
+    final info = await getPackageInfo().timeout(const Duration(milliseconds: 200));
     if (info.version.isNotEmpty) {
       version = '${info.version}+${info.buildNumber}';
     }
@@ -1885,7 +1891,10 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
       );
       if (!mounted) return;
       if (result.isFailure) {
-        setState(() => _error = result.error ?? '');
+        setState(() {
+          _error = result.error ?? '';
+          _isLoading = false;
+        });
         return;
       }
       final items = result.data!.take(100).map((m) => _ModelItem(name: m.name, provider: m.provider, id: m.id)).toList();
@@ -1896,12 +1905,18 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
     } on TimeoutException {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        setState(() => _error = l10n.modelRequestTimedOut);
+        setState(() {
+          _error = l10n.modelRequestTimedOut;
+          _isLoading = false;
+        });
       }
     } catch (e) {
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
-        setState(() => _error = l10n.unableToLoadModelsTryAgain);
+        setState(() {
+          _error = l10n.unableToLoadModelsTryAgain;
+          _isLoading = false;
+        });
       }
     }
   }

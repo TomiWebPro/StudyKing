@@ -7,6 +7,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/next_up_card.dart';
+import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
+import 'package:studyking/features/dashboard/providers/dashboard_data_providers.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -76,6 +78,12 @@ Widget _buildTestApp({
       plannerServiceProvider.overrideWith(
         (ref) => _FakePlannerService(scheduledLessons: scheduledLessons),
       ),
+      dashboardDueReviewsProvider.overrideWith(
+        (ref, id) async => DueReviewsData(
+          totalDue: dueCount,
+          subjectBreakdown: const [],
+        ),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -95,7 +103,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.byType(Card), findsNothing);
+      expect(find.byType(Card), findsOneWidget);
+      expect(find.text('All caught up!'), findsOneWidget);
     });
 
     testWidgets('renders NextUpCard without crashing', (tester) async {
@@ -117,7 +126,7 @@ void main() {
 
       expect(find.text('Next Up'), findsOneWidget);
       expect(find.text('Algebra 101'), findsOneWidget);
-      expect(find.text('1 upcoming lesson(s)'), findsOneWidget);
+      expect(find.text('1 upcoming lesson'), findsOneWidget);
     });
 
     testWidgets('renders multiple upcoming lesson counts', (tester) async {
@@ -132,7 +141,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('2 upcoming lesson(s)'), findsOneWidget);
+      expect(find.text('2 upcoming lessons'), findsOneWidget);
     });
 
     testWidgets('renders due review count when dueCount > 0', (tester) async {
@@ -143,7 +152,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('3 review(s) due'), findsOneWidget);
+      expect(find.text('3 reviews due'), findsOneWidget);
       expect(find.text('Due for spaced repetition review'), findsOneWidget);
     });
 
@@ -165,7 +174,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));
 
-      expect(find.text('1 weak topic(s)'), findsOneWidget);
+      expect(find.text('1 weak topic'), findsOneWidget);
     });
 
     testWidgets('navigates to planner when lesson tile is tapped', (tester) async {
@@ -187,12 +196,19 @@ void main() {
             plannerServiceProvider.overrideWith(
               (ref) => _FakePlannerService(scheduledLessons: lessons),
             ),
+            dashboardDueReviewsProvider.overrideWith(
+              (ref, id) async => DueReviewsData(
+                totalDue: 0,
+                subjectBreakdown: const [],
+              ),
+            ),
           ],
           child: const NextUpCard(studentId: 'test'),
         ),
         onGenerateRoute: (settings) {
           if (settings.name == AppRoutes.planner) {
             return MaterialPageRoute(
+              settings: settings,
               builder: (_) => const Scaffold(body: Text('Planner Page')),
             );
           }

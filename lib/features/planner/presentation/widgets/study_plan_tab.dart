@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
-import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
@@ -62,13 +62,16 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
 
   Future<void> _loadSubjects() async {
     try {
-      final repo = SubjectRepository();
+      final repo = ref.read(subjectRepositoryProvider);
       await repo.init();
       final result = await repo.getAll();
       if (mounted) {
         setState(() {
           _allSubjects = result.data ?? [];
           _subjectsError = null;
+          if (_allSubjects.isNotEmpty && _selectedSubjectId == null) {
+            _selectedSubjectId = _allSubjects.first.id;
+          }
         });
       }
     } catch (e) {
@@ -100,7 +103,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
       }
 
       for (final entry in validEntries) {
-        final topicRepo = TopicRepository();
+        final topicRepo = ref.read(topicRepositoryProvider);
         await topicRepo.init();
         final topicsResult = await topicRepo.getBySubject(entry.selectedSubjectId!);
         final topics = topicsResult.data ?? [];
@@ -153,7 +156,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
       return;
     }
 
-    final topicRepo = TopicRepository();
+    final topicRepo = ref.read(topicRepositoryProvider);
     await topicRepo.init();
     final topicsResult = await topicRepo.getBySubject(selectedSubject.id);
     final hasTopics = (topicsResult.data ?? []).isNotEmpty;

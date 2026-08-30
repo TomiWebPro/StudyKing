@@ -62,16 +62,22 @@ class _FakeSourceRepo extends SourceRepository {
       Result.success(_sources.where((s) => s.id == key).firstOrNull);
 }
 
+class _FakeQuestionRepo extends QuestionRepository {
+  @override
+  Future<void> init() async {}
+}
+
 Widget _buildWidget({
   SourceRepository? sourceRepo,
   QuestionRepository? questionRepo,
   SubjectRepository? subjectRepo,
   TestNavigatorObserver? navigatorObserver,
 }) {
+  final effectiveQuestionRepo = questionRepo ?? _FakeQuestionRepo();
   return ProviderScope(
     overrides: [
       if (sourceRepo != null) sourceRepositoryProvider.overrideWithValue(sourceRepo),
-      if (questionRepo != null) questionRepositoryProvider.overrideWithValue(questionRepo),
+      questionRepositoryProvider.overrideWithValue(effectiveQuestionRepo),
       if (subjectRepo != null) subjectRepositoryProvider.overrideWithValue(subjectRepo),
     ],
     child: MaterialApp(
@@ -80,6 +86,21 @@ Widget _buildWidget({
       locale: const Locale('en'),
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: const ContentLibraryScreen(),
+      onGenerateRoute: (settings) {
+        if (settings.name == AppRoutes.sourceDetail) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Source Detail')),
+          );
+        }
+        if (settings.name == AppRoutes.upload) {
+          return MaterialPageRoute(
+            settings: settings,
+            builder: (_) => const Scaffold(body: Text('Upload')),
+          );
+        }
+        return null;
+      },
     ),
   );
 }
@@ -120,7 +141,9 @@ void main() {
         sourceRepo: sourceRepo,
         subjectRepo: subjectRepo,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Content Library'), findsOneWidget);
       expect(find.text('Physics Textbook'), findsOneWidget);
@@ -137,7 +160,9 @@ void main() {
         sourceRepo: sourceRepo,
         subjectRepo: subjectRepo,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('No sources available'), findsOneWidget);
       expect(find.byIcon(Icons.folder_open), findsOneWidget);
@@ -153,9 +178,11 @@ void main() {
         sourceRepo: sourceRepo,
         subjectRepo: subjectRepo,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
-      expect(find.text('Exception: Source repo failed'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
     });
 
@@ -169,14 +196,17 @@ void main() {
         subjectRepo: subjectRepo,
         navigatorObserver: navigatorObserver,
       ));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
 
       await tester.tap(find.text('Physics Textbook'));
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
       expect(navigatorObserver.pushedRoutes, isNotEmpty);
-      final pushedRoute = navigatorObserver.pushedRoutes.first;
-      expect(pushedRoute.settings.name, AppRoutes.sourceDetail);
+      final hasDetail = navigatorObserver.pushedRoutes.any((r) => r.settings.name == AppRoutes.sourceDetail);
+      expect(hasDetail, isTrue);
     });
   });
 }

@@ -40,7 +40,8 @@ void initDatabaseService(DatabaseService db) {
 SettingsRepository? _settingsRepo;
 
 final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
-  return _settingsRepo!;
+  if (_settingsRepo != null) return _settingsRepo!;
+  return SettingsRepository();
 });
 
 void initSettingsRepository(SettingsRepository repo) {
@@ -77,7 +78,7 @@ class SettingsController extends StateNotifier<SettingsBox> {
     if (_hasLoadedOnce) return;
     _hasLoadedOnce = true;
     final result = await _repository.getSettings();
-    if (result.isSuccess) {
+    if (result.isSuccess && result.data != null) {
       state = result.data!;
     } else {
       _logger.w('Error loading settings: ${result.error}');
@@ -107,7 +108,12 @@ class SettingsController extends StateNotifier<SettingsBox> {
       _logger.w('Error saving API key: ${result.error}');
       return;
     }
-    await _loadSettings();
+    final settingsResult = await _repository.getSettings();
+    if (settingsResult.isSuccess) {
+      state = settingsResult.data!;
+    } else {
+      _logger.w('Error loading settings after saving API key: ${settingsResult.error}');
+    }
   }
 
   Future<void> updateStats({

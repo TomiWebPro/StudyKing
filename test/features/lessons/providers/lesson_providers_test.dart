@@ -213,7 +213,8 @@ void main() {
       final service = container.read(lessonServiceProvider);
       // Should not throw; returns empty list on error
       final lessons = await service.getLessonsForStudent('stu1');
-      expect(lessons, isEmpty);
+      expect(lessons.isSuccess, isTrue);
+      expect(lessons.data, isEmpty);
     });
   });
 }

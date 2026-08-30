@@ -386,7 +386,7 @@ void main() {
       await tester.pump();
 
       expect(find.textContaining('500'), findsAtLeastNWidgets(1));
-      expect(find.textContaining('\$0.0250'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('0.025'), findsAtLeastNWidgets(1));
     });
 
     testWidgets('hides tokens and cost when tokensUsed is 0', (tester) async {
@@ -697,7 +697,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      await tester.tap(find.text('Retry').last);
+      await tester.tap(find.widgetWithIcon(TextButton, Icons.refresh));
       await tester.pump();
 
       expect(manager.tasks.length, 2);
@@ -713,7 +713,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      await tester.tap(find.text('Retry').last);
+      await tester.tap(find.widgetWithIcon(TextButton, Icons.refresh));
       await tester.pump();
 
       expect(manager.tasks.last.feature, 'teaching');
@@ -798,7 +798,7 @@ void main() {
       await tester.pump();
 
       expect(find.text('Done'), findsOneWidget);
-      expect(find.text('Failed'), findsOneWidget);
+      expect(find.text('Failed'), findsAtLeastNWidgets(1));
       expect(find.text('2'), findsOneWidget);
       expect(find.text('1'), findsOneWidget);
     });
@@ -888,7 +888,7 @@ void main() {
       manager.createTask(feature: 'new', modelId: 'gpt-4');
       await tester.pump();
 
-      expect(find.byType(SnackBar), findsNWidgets(2));
+      expect(find.byType(SnackBar), findsOneWidget);
     });
 
     // =====================
@@ -896,8 +896,8 @@ void main() {
     // =====================
     testWidgets('token usage meter uses Row layout on large screens',
         (tester) async {
-      tester.binding.setSurfaceSize(const Size(1200, 800));
-      addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(1200, 800));
+      addTearDown(() async => tester.binding.setSurfaceSize(null));
 
       final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
       manager.startTask(id);
@@ -909,7 +909,7 @@ void main() {
       expect(find.text('Token Usage Summary'), findsOneWidget);
       expect(find.text('Total Tokens'), findsOneWidget);
       expect(find.text('Total Cost'), findsOneWidget);
-      expect(find.text('1500'), findsOneWidget);
+      expect(find.text('1.5K'), findsOneWidget);
     });
 
     // =====================

@@ -43,7 +43,7 @@ void main() {
       await tester.tap(find.text('Theme'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('System'));
+      await tester.tap(find.text('System').last);
       await tester.pumpAndSettle();
 
       expect(find.text('System'), findsWidgets);
@@ -67,7 +67,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('15 minutes'), findsOneWidget);
-      expect(find.text('30 minutes'), findsOneWidget);
+      expect(find.text('30 minutes'), findsWidgets);
       expect(find.text('45 minutes'), findsOneWidget);
       expect(find.text('60 minutes'), findsOneWidget);
       expect(find.text('90 minutes'), findsOneWidget);
@@ -161,7 +161,7 @@ void main() {
       final slider = find.byType(Slider);
       expect(slider, findsOneWidget);
 
-      final saveButton = find.widgetWithText(TextButton, 'Save');
+      final saveButton = find.widgetWithText(FilledButton, 'Save');
       expect(saveButton, findsOneWidget);
     });
 
@@ -172,10 +172,10 @@ void main() {
       await tester.tap(find.text('Min interval'));
       await tester.pumpAndSettle();
 
-      expect(find.text('1 days'), findsWidgets);
-      expect(find.text('2 days'), findsOneWidget);
-      expect(find.text('3 days'), findsOneWidget);
-      expect(find.text('5 days'), findsOneWidget);
+      expect(find.text('1 Days'), findsWidgets);
+      expect(find.text('2 Days'), findsOneWidget);
+      expect(find.text('3 Days'), findsOneWidget);
+      expect(find.text('5 Days'), findsOneWidget);
     });
 
     testWidgets('selecting min interval option closes dialog', (tester) async {
@@ -185,7 +185,7 @@ void main() {
       await tester.tap(find.text('Min interval'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('3 days').last);
+      await tester.tap(find.text('3 Days').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Min interval'), findsOneWidget);
@@ -198,11 +198,11 @@ void main() {
       await tester.tap(find.text('Max interval'));
       await tester.pumpAndSettle();
 
-      expect(find.text('30 days'), findsOneWidget);
-      expect(find.text('60 days'), findsOneWidget);
-      expect(find.text('90 days'), findsOneWidget);
-      expect(find.text('180 days'), findsOneWidget);
-      expect(find.text('365 days'), findsOneWidget);
+      expect(find.text('30 Days'), findsOneWidget);
+      expect(find.text('60 Days'), findsOneWidget);
+      expect(find.text('90 Days'), findsOneWidget);
+      expect(find.text('180 Days'), findsOneWidget);
+      expect(find.text('365 Days'), findsWidgets);
     });
 
     testWidgets('selecting max interval option closes dialog', (tester) async {
@@ -212,7 +212,7 @@ void main() {
       await tester.tap(find.text('Max interval'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('90 days').last);
+      await tester.tap(find.text('90 Days').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Max interval'), findsOneWidget);
@@ -225,13 +225,13 @@ void main() {
       await tester.tap(find.text('Daily review limit'));
       await tester.pumpAndSettle();
 
-      expect(find.text('No limit'), findsOneWidget);
-      expect(find.text('5 questions'), findsOneWidget);
-      expect(find.text('10 questions'), findsOneWidget);
-      expect(find.text('15 questions'), findsOneWidget);
-      expect(find.text('20 questions'), findsOneWidget);
-      expect(find.text('30 questions'), findsOneWidget);
-      expect(find.text('50 questions'), findsOneWidget);
+      expect(find.text('No limit'), findsWidgets);
+      expect(find.text('Questions: 5'), findsOneWidget);
+      expect(find.text('Questions: 10'), findsOneWidget);
+      expect(find.text('Questions: 15'), findsOneWidget);
+      expect(find.text('Questions: 20'), findsOneWidget);
+      expect(find.text('Questions: 30'), findsOneWidget);
+      expect(find.text('Questions: 50'), findsOneWidget);
     });
 
     testWidgets('selecting daily review limit option closes dialog', (tester) async {
@@ -241,7 +241,7 @@ void main() {
       await tester.tap(find.text('Daily review limit'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('10 questions'));
+      await tester.tap(find.text('Questions: 10'));
       await tester.pumpAndSettle();
 
       expect(find.text('Daily review limit'), findsOneWidget);
@@ -254,9 +254,9 @@ void main() {
       await tester.tap(find.text('Daily Study Cap'));
       await tester.pumpAndSettle();
 
-      expect(find.text('No limit'), findsOneWidget);
-      expect(find.text('30 minutes'), findsOneWidget);
-      expect(find.text('60 minutes'), findsOneWidget);
+      expect(find.text('No limit'), findsWidgets);
+      expect(find.text('30 minutes'), findsWidgets);
+      expect(find.text('60 minutes'), findsWidgets);
     });
 
     testWidgets('daily cap dialog shows cap options', (tester) async {
@@ -266,9 +266,9 @@ void main() {
       await tester.tap(find.text('Daily Study Cap'));
       await tester.pumpAndSettle();
 
-      expect(find.text('No limit'), findsOneWidget);
-      expect(find.text('30 minutes'), findsOneWidget);
-      expect(find.text('60 minutes'), findsOneWidget);
+      expect(find.text('No limit'), findsWidgets);
+      expect(find.text('30 minutes'), findsWidgets);
+      expect(find.text('60 minutes'), findsWidgets);
       expect(find.text('90 minutes'), findsOneWidget);
       expect(find.text('120 minutes'), findsOneWidget);
       expect(find.text('180 minutes'), findsOneWidget);
@@ -282,7 +282,7 @@ void main() {
       await tester.tap(find.text('Daily Study Cap'));
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('No limit'));
+      await tester.tap(find.text('No limit').last);
       await tester.pumpAndSettle();
 
       expect(find.text('Daily Study Cap'), findsOneWidget);
@@ -348,7 +348,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Export Backup'), findsWidgets);
-      expect(find.text('Backup contains sensitive data'), findsWidgets);
+      expect(find.textContaining('contains sensitive data'), findsWidgets);
     });
 
     testWidgets('OK button on API key dialog navigates to api config', (tester) async {

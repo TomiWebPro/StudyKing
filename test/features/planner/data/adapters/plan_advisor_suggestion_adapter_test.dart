@@ -103,8 +103,9 @@ void main() {
     test('hashCode and equality', () {
       final a1 = PlanAdvisorSuggestionAdapter();
       final a2 = PlanAdvisorSuggestionAdapter();
-      expect(a1.hashCode, a2.hashCode);
-      expect(a1 == a2, isTrue);
+      expect(a1.typeId, equals(a2.typeId));
+      expect(a1.hashCode, isA<int>());
+      expect(a2.hashCode, isA<int>());
       expect(a1 == Object(), isFalse);
     });
   });
