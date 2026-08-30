@@ -1,5 +1,14 @@
 # Changelog
 
+- 2026-08-30: Daily release `daily-20260830` (first tagged daily release; no prior tags, so this covers all 287 commits since the initial commit):
+  - **Quality gates green:** `flutter analyze` — no issues found; `flutter test` — 11,905 tests, all passing (0 failed)
+  - **Issue pipeline:** 223 issues closed, 0 open (tracked locally under `issues/`, never in git)
+  - **Result<T> error-handling migration (recent wave):** public repository/service methods now return `Result<T>` (BadgeRepository, SourceRepository, ExamSessionService, PlannerService adherence/action executors, LLM context builder, core services); silent catch blocks replaced with `Logger` calls; inner `Result` failures propagated instead of masked as success; malformed CSV import rows surfaced instead of silently dropped
+  - **Recent fixes:** focus timer adherence error logging, mentor long-term-memory context failure logging, ModifyPlanTool error-cause logging, OCR `OcrMode` unit tests, wellbeing streak nudge persistence, generic init-failure message instead of raw exception leak
+  - **Recent features/coverage:** student lesson-quality feedback mechanism, multi-syllabus dashboard + mentor integration, cyclic syllabus-dependency detection in SyllabusResolver, behavioral tests for spaced-repetition core, mentor agent tools, and ingestion pipeline
+  - **Test suite stabilization:** Hive bootstrap in tests, deterministic practice/session tests, 129 suites green, analyzer clean
+  - **Earlier history in this range:** content ingestion pipeline (PDF/OCR/transcription), AI tutor with lesson generation, spaced-repetition practice engine, planner with lesson booking and syllabus resolver, dashboard overhaul, EN/ES internationalization with locale-aware formatting, Material 3 migration, onboarding, focus mode/study hub
+
 - 2026-05-21: UI/UX Master — Round 2 issue report fixes (ui_ux_master.md):
   - **B-2 (BLOCKER):** ContentLibraryScreen — replaced inline `SourceRepository()`/`QuestionRepository()`/`SubjectRepository()` with Riverpod providers (`sourceRepositoryProvider`, `questionRepositoryProvider`, `subjectRepositoryProvider`); removed widget constructor fallback params; added `dispose()` override
   - **M-1 (MAJOR):** TutorScreen — replaced `l10n.tutorInitFailed(e.toString())` with generic `l10n.tutorInitFailedGeneric` in both catch blocks; full exception logged to `_logger`
