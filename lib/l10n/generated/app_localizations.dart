@@ -6701,7 +6701,7 @@ abstract class AppLocalizations {
   /// User prompt for lesson plan generation
   ///
   /// In en, this message translates to:
-  /// **'You are a knowledgeable AI tutor for {subjectId}. Create a structured lesson plan for the topic \"{topicTitle}\".\n\nThe lesson should be {durationMinutes} minutes long.\n\nReturn a JSON object.'**
+  /// **'You are a knowledgeable AI tutor for {subjectId}. Create a structured lesson plan for the topic \"{topicTitle}\".\n\nThe lesson should be {durationMinutes} minutes long.\n\nReturn a JSON object with keys \"goals\", \"sections\", \"checkpoints\", and \"estimatedDifficulty\".'**
   String lessonPlanUserPrompt(
     String subjectId,
     String topicTitle,

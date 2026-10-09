@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "opencode-go/hy3",
+  "model": "commandcode/qwen3.7-flash",
   "references": {
     "docs": {
       "path": "./docs",
