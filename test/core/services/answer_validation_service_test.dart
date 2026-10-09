@@ -219,15 +219,12 @@ void main() {
       expect(result.isCorrect, isFalse);
     });
 
-    test('validates essay answer (length > 50 chars is correct)', () {
-      final question = _question(
-        id: 'q-essay',
-        type: QuestionType.essay,
-        correctAnswer: '',
-      );
-
-      final result = service.validateAnswerForQuestion(question, 'A' * 60);
-      expect(result.isCorrect, isTrue);
+    test('validateEssayAnswer gibberish over 50 chars NOT auto-corrected', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'mitochondria powerhouse cell');
+      // This used to pass because the bug marked anything >50 chars as correct
+      final gibberish = 'xyz abc def ghi jkl mno pqr stu vwx yz1 234 567 890 abc';
+      final result = service.validateWithMarkscheme(gibberish, QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
     });
 
     test('accepts answers from acceptable answers list', () {
@@ -467,24 +464,40 @@ void main() {
       expect(result.isCorrect, isFalse);
     });
 
-    test('validateEssayAnswer answer between 10 and 50 chars returns incorrect but not empty', () {
+    test('validateEssayAnswer empty markscheme correctAnswer flags manual review', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
-      final result = service.validateWithMarkscheme('Exactly 20 chars!!', QuestionType.essay, markscheme);
+      final result = service.validateWithMarkscheme('Some substantive content here', QuestionType.essay, markscheme);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('special handling'));
+    });
+
+    test('validateEssayAnswer gibberish not auto-corrected by length', () {
+      // The critical bug: gibberish over 50 chars should NOT be marked correct
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'photosynthesis is essential');
+      final gibberish = 'asdf jkl; zxcv qwerty uiop asdf ghjkl zxcvbnm qwer tyui';
+      final result = service.validateWithMarkscheme(gibberish, QuestionType.essay, markscheme);
       expect(result.isCorrect, isFalse);
     });
 
-    test('validateEssayAnswer answer exactly 10 chars returns incorrect', () {
-      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
-      final tenChars = 'A' * 10;
-      final result = service.validateWithMarkscheme(tenChars, QuestionType.essay, markscheme);
+    test('validateEssayAnswer matching keywords returns correct', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'mitochondria is the powerhouse of the cell');
+      final answer = 'Mitochondria are cellular powerhouses responsible for energy production';
+      final result = service.validateWithMarkscheme(answer, QuestionType.essay, markscheme);
+      expect(result.isCorrect, isTrue);
+    });
+
+    test('validateEssayAnswer completely unrelated returns incorrect', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'the capital of France is Paris');
+      final answer = 'quantum mechanics describes subatomic particle behavior';
+      final result = service.validateWithMarkscheme(answer, QuestionType.essay, markscheme);
       expect(result.isCorrect, isFalse);
     });
 
-    test('validateEssayAnswer answer just under 10 chars returns incorrect', () {
-      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
-      final nineChars = 'A' * 9;
-      final result = service.validateWithMarkscheme(nineChars, QuestionType.essay, markscheme);
-      expect(result.isCorrect, isFalse);
+    test('validateEssayAnswer short but relevant answer returns incorrect if no keyword overlap', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'the mitochondria produces ATP through oxidative phosphorylation');
+      final shortAnswer = 'cell respiration';
+      final result = service.validateWithMarkscheme(shortAnswer, QuestionType.essay, markscheme);
+      expect(result.isCorrect, false);
     });
 
     test('validateCanvasDrawing with non-empty valid data returns correct', () {
@@ -615,10 +628,17 @@ void main() {
       expect(result.isCorrect, isFalse);
     });
 
-    test('fileUpload question type returns correct when answer provided', () {
-      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+    test('fileUpload question type returns correct when answer contains expected filename', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'notes.pdf');
       final result = QuestionAnswerValidator.validateStatic('notes.pdf||/tmp/notes.pdf', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
       expect(result.isCorrect, isTrue);
+    });
+
+    test('fileUpload question type flags manual review when no markscheme comparison possible', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('notes.pdf||/tmp/notes.pdf', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('special handling'));
     });
 
     test('audioRecording question type returns incorrect for empty answer', () {
@@ -627,10 +647,17 @@ void main() {
       expect(result.isCorrect, isFalse);
     });
 
-    test('audioRecording question type returns correct when answer provided', () {
-      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+    test('audioRecording question type returns correct when answer matches expected reference', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: 'recording_123.m4a');
       final result = QuestionAnswerValidator.validateStatic('/tmp/recording_123.m4a', QuestionType.audioRecording, markscheme, messages: ValidationMessages.english);
       expect(result.isCorrect, isTrue);
+    });
+
+    test('audioRecording question type flags manual review when no markscheme comparison possible', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('/tmp/recording_123.m4a', QuestionType.audioRecording, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('special handling'));
     });
 
     test('validateWithMarkscheme multiChoice with null markscheme returns incorrect', () {

@@ -299,7 +299,7 @@ void main() {
         questionRepo: _FakeQuestionRepository(questions),
       ));
       await tester.pumpAndSettle();
-      expect(find.text('0 correct'), findsOneWidget);
+      expect(find.text('0 Correct'), findsOneWidget);
     });
 
     testWidgets('shows submit button before answering', (tester) async {

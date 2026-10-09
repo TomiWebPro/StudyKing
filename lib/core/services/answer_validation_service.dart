@@ -483,14 +483,30 @@ class QuestionAnswerValidator {
     if (userAnswer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }
-    if (userAnswer.trim().length < 10) {
-      return ValidationResult(isCorrect: false, explanation: msgs.answerTooShort);
+    if (markscheme == null || markscheme.correctAnswer.isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: msgs.specialHandlingRequired,
+      );
+    }
+    // Compare against markscheme correctAnswer using normalized comparison
+    // Essay answers require meaningful overlap with expected content
+    final normalizedUser = userAnswer.normalized;
+    final normalizedExpected = markscheme.correctAnswer.normalized;
+    // Require minimum content overlap: user answer must contain at least one
+    // word from the expected answer (or vice versa) to avoid auto-correcting gibberish
+    final userWords = normalizedUser.split(RegExp(r'\s+')).toSet();
+    final expectedWords = normalizedExpected.split(RegExp(r'\s+')).toSet();
+    final commonWords = userWords.intersection(expectedWords);
+    if (commonWords.isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: msgs.incorrect,
+      );
     }
     return ValidationResult(
-      isCorrect: userAnswer.trim().length > 50,
-      explanation: userAnswer.trim().length > 50
-          ? msgs.goodResponseLength
-          : msgs.answerTooShortForCredit,
+      isCorrect: true,
+      explanation: (markscheme.explanation?.isNotEmpty ?? false) ? markscheme.explanation! : msgs.correct,
     );
   }
 
@@ -551,7 +567,27 @@ class QuestionAnswerValidator {
     if (answer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }
-    return ValidationResult(isCorrect: true, explanation: msgs.correct);
+    // Without a markscheme correctAnswer to compare against, flag for manual review
+    // rather than auto-correcting any non-empty submission.
+    if (markscheme == null || markscheme.correctAnswer.isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: msgs.specialHandlingRequired,
+      );
+    }
+    // Check if the file name/reference contains expected content from markscheme
+    final normalizedUser = answer.normalized;
+    final normalizedExpected = markscheme.correctAnswer.normalized;
+    if (normalizedUser.contains(normalizedExpected)) {
+      return ValidationResult(
+        isCorrect: true,
+        explanation: msgs.correct,
+      );
+    }
+    return ValidationResult(
+      isCorrect: false,
+      explanation: msgs.incorrect,
+    );
   }
 
   static ValidationResult validateAudioRecording(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
@@ -559,6 +595,26 @@ class QuestionAnswerValidator {
     if (answer.trim().isEmpty) {
       return ValidationResult(isCorrect: false, explanation: msgs.pleaseProvideAnswer);
     }
-    return ValidationResult(isCorrect: true, explanation: msgs.correct);
+    // Without a markscheme correctAnswer to compare against, flag for manual review
+    // rather than auto-correcting any non-empty submission.
+    if (markscheme == null || markscheme.correctAnswer.isEmpty) {
+      return ValidationResult(
+        isCorrect: false,
+        explanation: msgs.specialHandlingRequired,
+      );
+    }
+    // Compare transcript reference against markscheme expected answer
+    final normalizedUser = answer.normalized;
+    final normalizedExpected = markscheme.correctAnswer.normalized;
+    if (normalizedUser.contains(normalizedExpected)) {
+      return ValidationResult(
+        isCorrect: true,
+        explanation: msgs.correct,
+      );
+    }
+    return ValidationResult(
+      isCorrect: false,
+      explanation: msgs.incorrect,
+    );
   }
 }
