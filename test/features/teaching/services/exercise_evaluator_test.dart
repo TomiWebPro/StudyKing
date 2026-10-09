@@ -64,7 +64,7 @@ void main() {
       expect(result.data!.conceptBreakdown, isNotNull);
     });
 
-    test('evaluate handles LLM returning non-JSON gracefully as success fallback', () async {
+    test('evaluate returns failure when LLM returns non-JSON (no false mastery)', () async {
       llmService.responseJson = 'The answer looks correct overall.';
 
       final result = await evaluator.evaluate(
@@ -74,9 +74,52 @@ void main() {
         topicTitle: 'Photosynthesis',
       );
 
-      expect(result.isSuccess, isTrue);
-      expect(result.data!.score, equals(0.5));
-      expect(result.data!.explanation, isNotEmpty);
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
+    });
+
+    test('evaluate returns failure on truncated JSON', () async {
+      llmService.responseJson = '{"score": 0';
+
+      final result = await evaluator.evaluate(
+        question: 'Q?',
+        studentAnswer: 'A.',
+        subjectId: 's',
+        topicTitle: 't',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
+    });
+
+    test('evaluate returns failure on completely empty string from LLM parse path', () async {
+      // Empty string is caught by the explicit empty check above; this test
+      // covers edge cases where jsonDecode might receive unexpected content
+      llmService.responseJson = '{not valid json}';
+
+      final result = await evaluator.evaluate(
+        question: 'Q?',
+        studentAnswer: 'A.',
+        subjectId: 's',
+        topicTitle: 't',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
+    });
+
+    test('evaluate returns failure on HTML garble from LLM', () async {
+      llmService.responseJson = '<html><body>Server Error 500</body></html>';
+
+      final result = await evaluator.evaluate(
+        question: 'Q?',
+        studentAnswer: 'A.',
+        subjectId: 's',
+        topicTitle: 't',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotEmpty);
     });
 
     test('evaluate handles empty LLM response as failure', () async {

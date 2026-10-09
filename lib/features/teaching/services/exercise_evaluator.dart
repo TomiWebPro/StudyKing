@@ -85,10 +85,8 @@ class ExerciseEvaluator {
         return Result.success(EvaluationResult.fromJson(json));
       } catch (e, st) {
         _logger.w('Failed to parse evaluation response', e, st);
-        return Result.success(EvaluationResult(
-          score: 0.5,
-          explanation: response,
-        ));
+        final l10n = lookupAppLocalizations(Locale(_localeName));
+        return Result.failure(l10n.couldNotEvaluateAnswer);
       }
     } catch (e, st) {
       _logger.w('Unexpected error during exercise evaluation', e, st);
