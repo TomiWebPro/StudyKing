@@ -1010,14 +1010,20 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     );
   }
 
-  void _startInlinePractice(Subject subject) {
+  Future<void> _startInlinePractice(Subject subject) async {
+    // Snapshot pre-practice mastery so the completion summary reports a real
+    // delta instead of the topic's absolute accuracy.
+    await _captureMasteryBefore();
+    if (!mounted) return;
     setState(() {
       _inlinePracticeActive = true;
       _inlinePracticeSubject = subject;
     });
   }
 
-  void _startAllSubjectsInlinePractice() {
+  Future<void> _startAllSubjectsInlinePractice() async {
+    await _captureMasteryBefore();
+    if (!mounted) return;
     setState(() {
       _inlinePracticeActive = true;
       _inlinePracticeSubject = null;
@@ -1063,6 +1069,9 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     } catch (e) {
       _logger.w('Failed to compute mastery changes', e);
     }
+    // The before-snapshot is consumed: reset it so a later session cannot
+    // reuse stale pre-practice values as its baseline.
+    _masteryBeforeValues = {};
 
     if (mounted) {
       final focusSession = FocusSession(

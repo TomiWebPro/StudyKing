@@ -12,9 +12,12 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/providers/service_providers.dart' show studentIdValueProvider;
 import 'package:studyking/features/focus_mode/presentation/focus_timer_screen.dart';
+import 'package:studyking/features/focus_mode/presentation/widgets/inline_practice_widget.dart';
 import 'package:studyking/core/routes/app_router.dart' show AppRoutes;
 import 'package:studyking/features/focus_mode/presentation/widgets/focus_timer_widget.dart';
 import 'package:studyking/features/focus_mode/providers/focus_mode_providers.dart';
+import 'package:studyking/features/focus_mode/services/focus_practice_service.dart';
+import 'package:studyking/features/focus_mode/data/models/focus_session_type.dart';
 import 'package:studyking/features/focus_mode/data/repositories/focus_session_repository.dart';
 import 'package:studyking/features/focus_mode/data/models/focus_session_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -117,6 +120,39 @@ class _FakeQuestionRepository extends QuestionRepository {
 
   @override
   Future<Result<List<Question>>> getAll() async => Result.success(List.from(_questions));
+}
+
+// ── Fake FocusPracticeService ────────────────────────────────────
+
+class _FakeFocusPracticeService extends FocusPracticeService {
+  final List<Question> _questions;
+  _FakeFocusPracticeService(this._questions)
+      : super(
+          srService: _FakeSpacedRepetitionService([]),
+          masteryGraphService: _FakeMasteryGraphService([]),
+          sessionRepository: _FakeSessionRepo(),
+          questionRepository: _FakeQuestionRepository([]),
+        );
+
+  @override
+  Future<Result<List<Question>>> getQuestionsForSessionType({
+    required FocusSessionType sessionType,
+    required String studentId,
+    List<String>? subjectIds,
+    int limit = 20,
+  }) async =>
+      Result.success(List.from(_questions));
+}
+
+// ── Fake MutableMasteryGraphService (stateful weak topics) ─────
+
+class _MutableMasteryGraphService extends MasteryGraphService {
+  List<MasteryState> weakTopics;
+  _MutableMasteryGraphService(this.weakTopics);
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async =>
+      Result.success(List.from(weakTopics));
 }
 
 // ── Fake PlanAdherenceOrchestrator ───────────────────────────────────────────────────
@@ -296,9 +332,11 @@ Widget _buildApp({
   SpacedRepetitionService? srService,
   MasteryGraphService? masteryGraphService,
   QuestionRepository? questionRepo,
+  FocusPracticeService? focusPracticeService,
   PlanAdherenceOrchestrator? planOrchestrator,
   StudyTimerService? timerService,
   SettingsBox? settings,
+  FocusSessionRepository? focusSessionRepo,
   TestNavigatorObserver? navigatorObserver,
 }) {
   return ProviderScope(
@@ -308,11 +346,13 @@ Widget _buildApp({
       subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(subjectRepo)),
       spacedRepetitionServiceProvider.overrideWithValue(srService ?? _FakeSpacedRepetitionService([])),
       questionRepositoryProvider.overrideWithValue(questionRepo ?? _FakeQuestionRepository([])),
+      if (focusPracticeService != null)
+        focusPracticeServiceProvider.overrideWithValue(focusPracticeService),
       studentIdValueProvider.overrideWithValue('test-student'),
       planOrchestratorProvider.overrideWithValue(planOrchestrator ?? _FakePlanAdherenceOrchestrator()),
       settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepo(settings ?? SettingsBox()))),
       notificationServiceProvider.overrideWithValue(NotificationService()),
-      focusSessionRepositoryProvider.overrideWith((ref) async => _FakeFocusSessionRepository()),
+      focusSessionRepositoryProvider.overrideWith((ref) async => focusSessionRepo ?? _FakeFocusSessionRepository()),
       badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
       if (masteryGraphService != null)
         masteryGraphServiceProvider.overrideWithValue(masteryGraphService),
@@ -760,6 +800,149 @@ void main() {
 
       expect(find.text('Break Time!'), findsOneWidget);
       expect(find.byIcon(Icons.self_improvement), findsOneWidget);
+    });
+  });
+
+  group('FocusTimerScreen - Inline Practice Mastery Delta', () {
+    Question singleChoiceQuestion() {
+      return Question(
+        id: 'q1',
+        text: 'What is 2 + 2?',
+        type: QuestionType.singleChoice,
+        subjectId: 's1',
+        topicId: 't1',
+        options: const ['Four', 'Five'],
+        createdAt: _now,
+        updatedAt: _now,
+      );
+    }
+
+    MasteryState halfAccuracyTopic() {
+      return MasteryState(
+        studentId: 'test-student',
+        topicId: 't1',
+        accuracy: 0.5,
+        lastAttempt: _now,
+        lastUpdated: _now,
+      );
+    }
+
+    Future<void> answerAndCompleteInlinePractice(WidgetTester tester) async {
+      // Answer the single question, then finish and close the practice.
+      await tester.tap(find.text('Four'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text('Done'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.widgetWithText(FilledButton, 'Close'), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Close'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+    }
+
+    testWidgets('per-subject inline practice reports a real mastery delta, not absolute accuracy',
+        (tester) async {
+      final focusSessionRepo = _FakeFocusSessionRepository();
+      await pumpScreen(tester, _buildApp(
+        child: const FocusTimerScreen(),
+        subjectRepo: _FakeSubjectRepository([Subject(id: 's1', name: 'Math')]),
+        masteryGraphService: _FakeMasteryGraphService([halfAccuracyTopic()]),
+        focusPracticeService: _FakeFocusPracticeService([singleChoiceQuestion()]),
+        focusSessionRepo: focusSessionRepo,
+      ));
+
+      // Open the subject options sheet and start inline (quick) practice.
+      await tester.tap(find.text('Math'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      // The session-type selector also renders a "Quick Practice" chip,
+      // so target the sheet's ListTile specifically.
+      final quickPracticeTile = find.widgetWithText(ListTile, 'Quick Practice');
+      expect(quickPracticeTile, findsOneWidget);
+
+      await tester.tap(quickPracticeTile);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.byType(InlinePracticeWidget), findsOneWidget);
+      await answerAndCompleteInlinePractice(tester);
+
+      // The topic stayed at 0.5 accuracy: the delta must be ~0, not +50%.
+      final latest = await focusSessionRepo.getLatest();
+      expect(latest.data, isNotNull);
+      expect(latest.data!.masteryChanges['t1'], closeTo(0.0, 1e-9));
+
+      expect(find.text('Mastery Change'), findsOneWidget);
+      expect(find.text('t1: +0.0%'), findsOneWidget);
+      expect(find.text('t1: +50.0%'), findsNothing);
+    });
+
+    testWidgets('inline practice mastery delta reflects the accuracy change during practice',
+        (tester) async {
+      final weakTopics = [halfAccuracyTopic()];
+      final focusSessionRepo = _FakeFocusSessionRepository();
+      await pumpScreen(tester, _buildApp(
+        child: const FocusTimerScreen(),
+        subjectRepo: _FakeSubjectRepository([Subject(id: 's1', name: 'Math')]),
+        masteryGraphService: _MutableMasteryGraphService(weakTopics),
+        focusPracticeService: _FakeFocusPracticeService([singleChoiceQuestion()]),
+        focusSessionRepo: focusSessionRepo,
+      ));
+
+      // Start inline practice: the pre-practice snapshot captures 0.5.
+      await tester.tap(find.text('Math'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.widgetWithText(ListTile, 'Quick Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(InlinePracticeWidget), findsOneWidget);
+
+      await tester.tap(find.text('Four'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Done'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The practice improved the topic's accuracy from 0.5 to 0.8.
+      weakTopics
+        ..clear()
+        ..add(MasteryState(
+          studentId: 'test-student',
+          topicId: 't1',
+          accuracy: 0.8,
+          lastAttempt: _now,
+          lastUpdated: _now,
+        ));
+
+      await tester.tap(find.widgetWithText(FilledButton, 'Close'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The delta must be the 0.3 improvement, not the 0.8 absolute accuracy.
+      final latest = await focusSessionRepo.getLatest();
+      expect(latest.data, isNotNull);
+      expect(latest.data!.masteryChanges['t1'], closeTo(0.3, 1e-9));
+
+      expect(find.text('t1: +30.0%'), findsOneWidget);
+      expect(find.text('t1: +80.0%'), findsNothing);
     });
   });
 }
