@@ -393,6 +393,10 @@
   "@topicBreakdown": {
     "description": "Heading for topic breakdown section in results"
   },
+  "answerSourceBreakdown": "Origen de las Respuestas",
+  "@answerSourceBreakdown": {
+    "description": "Heading for manual vs AI-generated answer source breakdown section"
+  },
   "masteryDelta": "Cambio de Dominio",
   "@masteryDelta": {
     "description": "Heading for mastery change/delta section in session results"

@@ -221,7 +221,7 @@ class PracticeResultsScreen extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          l10n.topicBreakdown,
+          l10n.answerSourceBreakdown,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600),
         ),
         SizedBox(height: ResponsiveUtils.verticalSpacing(context)),

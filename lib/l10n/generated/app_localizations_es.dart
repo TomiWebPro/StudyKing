@@ -332,6 +332,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get topicBreakdown => 'Desglose por Tema';
 
   @override
+  String get answerSourceBreakdown => 'Origen de las Respuestas';
+
+  @override
   String get masteryDelta => 'Cambio de Dominio';
 
   @override

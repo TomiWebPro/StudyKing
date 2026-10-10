@@ -328,6 +328,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get topicBreakdown => 'Topic Breakdown';
 
   @override
+  String get answerSourceBreakdown => 'Answer Source';
+
+  @override
   String get masteryDelta => 'Mastery Change';
 
   @override

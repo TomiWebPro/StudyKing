@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_results_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 
 TestNavigatorObserver? testNavigatorObserver;
 
-Widget _buildTestApp(Widget child) {
+Widget _buildTestApp(Widget child, {Locale? locale}) {
   return MaterialApp(
+    locale: locale,
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     navigatorObservers: testNavigatorObserver != null ? [testNavigatorObserver!] : [],
@@ -333,6 +336,100 @@ void main() {
         expect(find.text('Topic Breakdown'), findsOneWidget);
         expect(find.text('SingleTopic'), findsOneWidget);
         expect(find.text('50%'), findsOneWidget);
+      });
+    });
+
+    group('answer source breakdown', () {
+      Question makeQuestion(String id, {String? model}) {
+        return Question(
+          id: id,
+          text: 'Question $id',
+          type: QuestionType.singleChoice,
+          subjectId: 'subject-1',
+          topicId: 'topic-1',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+          model: model,
+        );
+      }
+
+      testWidgets('shows Answer Source heading once alongside a single Topic Breakdown heading', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          PracticeResultsScreen(
+            totalQuestions: 10,
+            correctAnswers: 7,
+            onPracticeAgain: () {},
+            topicBreakdown: {'Algebra': 0.8, 'Geometry': 0.6},
+            reviewQuestions: [
+              QuestionReviewData(
+                question: makeQuestion('q1'), // model == null → manual source
+                userAnswer: '4',
+                correctAnswer: '4',
+                isCorrect: true,
+              ),
+              QuestionReviewData(
+                question: makeQuestion('q2', model: 'ai-model'),
+                userAnswer: '5',
+                correctAnswer: '4',
+                isCorrect: false,
+              ),
+            ],
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        // Regression: the manual/AI section must not reuse the topic
+        // breakdown heading (previously rendered two identical headings).
+        expect(find.text('Topic Breakdown'), findsOneWidget);
+        expect(find.text('Answer Source'), findsOneWidget);
+        expect(find.text('Manual'), findsOneWidget);
+        expect(find.text('AI-generated'), findsOneWidget);
+      });
+
+      testWidgets('renders localized headings in Spanish without duplicating the topic heading', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          PracticeResultsScreen(
+            totalQuestions: 10,
+            correctAnswers: 7,
+            onPracticeAgain: () {},
+            topicBreakdown: {'Algebra': 0.8},
+            reviewQuestions: [
+              QuestionReviewData(
+                question: makeQuestion('q1'),
+                userAnswer: '4',
+                correctAnswer: '4',
+                isCorrect: true,
+              ),
+              QuestionReviewData(
+                question: makeQuestion('q2', model: 'ai-model'),
+                userAnswer: '5',
+                correctAnswer: '4',
+                isCorrect: false,
+              ),
+            ],
+          ),
+          locale: const Locale('es'),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Desglose por Tema'), findsOneWidget);
+        expect(find.text('Origen de las Respuestas'), findsOneWidget);
+      });
+
+      testWidgets('does not show answer source section when review questions are empty', (tester) async {
+        await tester.pumpWidget(_buildTestApp(
+          PracticeResultsScreen(
+            totalQuestions: 10,
+            correctAnswers: 7,
+            onPracticeAgain: () {},
+            topicBreakdown: {'Algebra': 0.8},
+            reviewQuestions: const [],
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Answer Source'), findsNothing);
+        expect(find.text('Topic Breakdown'), findsOneWidget);
       });
     });
   });

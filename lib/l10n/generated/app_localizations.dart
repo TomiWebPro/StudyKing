@@ -596,6 +596,12 @@ abstract class AppLocalizations {
   /// **'Topic Breakdown'**
   String get topicBreakdown;
 
+  /// Heading for manual vs AI-generated answer source breakdown section
+  ///
+  /// In en, this message translates to:
+  /// **'Answer Source'**
+  String get answerSourceBreakdown;
+
   /// Heading for mastery change/delta section in session results
   ///
   /// In en, this message translates to:
