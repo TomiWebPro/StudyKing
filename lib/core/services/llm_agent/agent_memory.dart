@@ -59,7 +59,7 @@ class AgentMemoryStore {
       if (existing.length > 100) {
         existing.removeAt(0);
       }
-      await _box?.put(listKey, existing.join(','));
+      await _box?.put(listKey, jsonEncode(existing));
     }
   }
 
@@ -76,6 +76,16 @@ class AgentMemoryStore {
     final listKey = 'agent_sessions_$studentId';
     final raw = _box?.get(listKey) as String?;
     if (raw == null || raw.isEmpty) return [];
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is List) {
+        return decoded.whereType<String>().toList();
+      }
+    } catch (e) {
+      // Data written by older versions was a comma-joined string; fall back to it
+      // so existing installs keep working.
+      _logger.w('Agent session list is not JSON; falling back to legacy comma split', e);
+    }
     return raw.split(',');
   }
 

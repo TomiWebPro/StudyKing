@@ -34,7 +34,7 @@ Manages the tutoring session lifecycle:
 
 Manages the conversational flow during a tutoring session:
 
-- Maintains conversation history using `ConversationMemory` (max 30 turns)
+- Maintains conversation history using `ConversationMemory` (max 20 turns)
 - Determines conversation phase and handles phase transitions
 - `sendMessage(content)` — Streams AI response with adaptive chunk pacing
 - `processImage(base64Image)` — Streams AI analysis of submitted images
