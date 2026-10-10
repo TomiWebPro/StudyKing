@@ -21,8 +21,7 @@ import 'package:studyking/features/ingestion/data/repositories/source_repository
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
-import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
-import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/providers/app_providers.dart' show planOrchestratorProvider, settingsProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/practice/presentation/widgets/confidence_selector.dart';
@@ -534,7 +533,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     final elapsedMinutes = DateTime.now()
         .difference(_sessionService.sessionStartTime)
         .inMinutes;
-    final planOrchestrator = PlanAdherenceOrchestrator();
+    final planOrchestrator = ref.read(planOrchestratorProvider);
     await planOrchestrator.recordActivity(
       studentId: _studentIdService.getStudentId().data ?? '',
       actualQuestions: _questions.length,

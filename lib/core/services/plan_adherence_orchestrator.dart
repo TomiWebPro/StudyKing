@@ -43,7 +43,7 @@ class PlanAdherenceOrchestrator {
   PlanAdherenceRepository get adherenceRepository => _adherenceRepository;
   final PlanRepository _planRepository;
   final PersonalLearningPlanService _planService;
-  final AppLocalizations? _l10n;
+  AppLocalizations? _l10n;
 
   PlanAdherenceOrchestrator({
     PlanAdherenceRepository? adherenceRepository,
@@ -55,6 +55,13 @@ class PlanAdherenceOrchestrator {
         _planRepository = planRepository ?? PlanRepository(),
         _planService = planService ?? PersonalLearningPlanService(),
         _l10n = l10n;
+
+  /// Updates the [AppLocalizations] used for adherence deviation and daily
+  /// feedback messages. Called when the app locale changes (see
+  /// `l10nProvider`), mirroring `StudyProgressTracker.updateLocalization`.
+  void updateLocalization(AppLocalizations l10n) {
+    _l10n = l10n;
+  }
 
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
     try {

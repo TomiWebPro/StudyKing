@@ -31,7 +31,19 @@ final apiBaseUrlProvider = StateProvider<String>((ref) => ApiConfig.openRouterBa
 final selectedModelProvider = StateProvider<String>((ref) => '');
 
 final planOrchestratorProvider = Provider<PlanAdherenceOrchestrator>((ref) {
-  return PlanAdherenceOrchestrator();
+  final l10n = ref.watch(l10nProvider);
+  final orchestrator = PlanAdherenceOrchestrator(
+    l10n: l10n ??
+        (() {
+          _appProvidersLogger.w(
+              'l10nProvider returned null for planOrchestratorProvider, using English fallback');
+          return lookupAppLocalizations(const Locale('en'));
+        })(),
+  );
+  ref.listen(l10nProvider, (_, next) {
+    if (next != null) orchestrator.updateLocalization(next);
+  });
+  return orchestrator;
 });
 
 final _appProvidersLogger = const Logger('AppProviders');
@@ -47,6 +59,7 @@ final engagementAdherenceRepoProvider = Provider<PlanAdherenceRepository>((ref) 
 final engagementPlannerServiceProvider = Provider<PlannerService>((ref) {
   return PlannerService(
     masteryService: ref.watch(masteryGraphServiceProvider),
+    planOrchestrator: ref.watch(planOrchestratorProvider),
   );
 });
 

@@ -95,6 +95,7 @@ class EngagementScheduler {
   Future<Result<void>> updateLocalization(AppLocalizations l10n) async {
     _l10n = l10n;
     _notificationService.setAppLocalizations(l10n);
+    _planOrchestrator?.updateLocalization(l10n);
     return Result.success(null);
   }
 

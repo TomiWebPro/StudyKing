@@ -7,6 +7,7 @@ import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/providers/shared_providers.dart' show localeProvider;
+import 'package:studyking/core/providers/app_providers.dart' show planOrchestratorProvider;
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/utils/study_utils.dart';
@@ -22,6 +23,7 @@ final plannerServiceProvider = Provider<PlannerService>((ref) {
   return PlannerService(
     lessonAgentService: ref.watch(lessonAgentServiceProvider),
     localeName: locale.languageCode,
+    planOrchestrator: ref.watch(planOrchestratorProvider),
   );
 });
 

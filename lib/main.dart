@@ -209,7 +209,7 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
         masteryService: masteryService,
         nudgeRepository: EngagementNudgeRepository(),
         adherenceRepository: PlanAdherenceRepository(),
-        planOrchestrator: PlanAdherenceOrchestrator(),
+        planOrchestrator: PlanAdherenceOrchestrator(l10n: defaultL10n),
         sessionRepository: mainDb.sessionRepository,
         plannerService: PlannerService(),
         l10n: defaultL10n,

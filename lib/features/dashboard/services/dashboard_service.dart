@@ -44,7 +44,8 @@ class DashboardService {
               sessionRepo: sessionRepo,
               l10n: l10n ?? _dashboardServiceDefaultL10n(),
             ),
-        _planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),
+        _planOrchestrator = planOrchestrator ??
+            PlanAdherenceOrchestrator(l10n: l10n ?? _dashboardServiceDefaultL10n()),
         _sessionRepo = sessionRepo ?? SessionRepository(),
         _adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
         _topicRepo = topicRepo ?? TopicRepository();

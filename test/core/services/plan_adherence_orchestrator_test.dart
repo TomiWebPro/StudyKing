@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -10,6 +11,7 @@ import 'package:studyking/core/data/repositories/plan_adherence_repository.dart'
 import 'package:studyking/features/planner/data/repositories/plan_repository.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _storage = [];
@@ -226,6 +228,75 @@ void main() {
         expect(result.data!.consecutiveLowDays, 0);
         expect(result.data!.requiresRegeneration, false);
       });
+
+      test('returns localized Spanish regenerate message when es l10n is supplied', () async {
+        final esL10n = lookupAppLocalizations(const Locale('es'));
+        final localizedAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+          l10n: esL10n,
+        );
+        for (var i = 0; i < 3; i++) {
+          await adherenceRepo.create(PlanAdherenceModel(
+            id: 'adh_es_low_$i',
+            studentId: 'student-1',
+            date: DateTime.now().subtract(Duration(days: i)),
+            adherenceScore: 0.3,
+          ));
+        }
+
+        final result = await localizedAdapter.checkAdherence('student-1');
+
+        expect(result.isSuccess, true);
+        expect(result.data!.message, esL10n.adherenceLowDaysRegenerate(3));
+        expect(result.data!.message, contains('días consecutivos'));
+      });
+
+      test('returns localized Spanish escalation message when es l10n is supplied', () async {
+        final esL10n = lookupAppLocalizations(const Locale('es'));
+        final localizedAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+          l10n: esL10n,
+        );
+        for (var i = 0; i < 7; i++) {
+          await adherenceRepo.create(PlanAdherenceModel(
+            id: 'adh_es_vlow_$i',
+            studentId: 'student-1',
+            date: DateTime.now().subtract(Duration(days: i)),
+            adherenceScore: 0.2,
+          ));
+        }
+
+        final result = await localizedAdapter.checkAdherence('student-1');
+
+        expect(result.isSuccess, true);
+        expect(result.data!.message, esL10n.adherenceLowDaysAdjust(7));
+        expect(result.data!.message, contains('días consecutivos'));
+      });
+
+      test('updateLocalization switches subsequent messages to the new locale', () async {
+        for (var i = 0; i < 3; i++) {
+          await adherenceRepo.create(PlanAdherenceModel(
+            id: 'adh_switch_$i',
+            studentId: 'student-1',
+            date: DateTime.now().subtract(Duration(days: i)),
+            adherenceScore: 0.3,
+          ));
+        }
+
+        final before = await adapter.checkAdherence('student-1');
+        expect(before.data!.message, contains('consecutive days of low adherence'));
+
+        adapter.updateLocalization(lookupAppLocalizations(const Locale('es')));
+
+        final after = await adapter.checkAdherence('student-1');
+        expect(after.data!.message,
+            lookupAppLocalizations(const Locale('es')).adherenceLowDaysRegenerate(3));
+        expect(after.data!.message, contains('días consecutivos'));
+      });
     });
 
     group('recordActivity', () {
@@ -413,6 +484,49 @@ void main() {
         expect(result.data, isNotNull);
         expect(result.data, contains('10 min today vs 60 min planned'));
         expect(result.data, contains('redistributing'));
+      });
+
+      test('returns localized Spanish feedback when es l10n is supplied', () async {
+        final esL10n = lookupAppLocalizations(const Locale('es'));
+        final localizedAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+          l10n: esL10n,
+        );
+        final now = DateTime.now();
+        planRepo.storedPlan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 60,
+            ),
+          ],
+          summary: PlanSummary(
+            totalQuestions: 10, totalMinutes: 60, newTopics: 1,
+            reviewTopics: 0, estimatedCoverage: 0.1, focusAreas: [],
+          ),
+          recommendations: [],
+        );
+        // actual = 10 min -> ratio = 10/60 = 0.167 < 0.3
+        await adherenceRepo.create(PlanAdherenceModel(
+          id: 'fb_es_low', studentId: 'student-1', date: now.dateOnly,
+          plannedMinutes: 60, actualMinutes: 10,
+          plannedQuestions: 10, actualQuestions: 2,
+          adherenceScore: 0.17,
+        ));
+
+        final result = await localizedAdapter.getDailyAdherenceFeedback('student-1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, esL10n.adherenceLowToday(10, 60));
       });
 
       test('returns partial adherence feedback when ratio < 0.7', () async {
