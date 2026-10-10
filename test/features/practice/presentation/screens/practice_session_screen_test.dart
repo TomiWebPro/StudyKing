@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 
 import 'package:flutter/material.dart';
@@ -23,6 +24,19 @@ import '../../../../helpers/navigator_observer_helper.dart';
 import '../shared_test_helpers.dart';
 
 final _l10n = AppLocalizationsEn();
+/// Hand-written fake whose [getBySubject] future only completes when the
+/// test explicitly resolves it, so a test can pop the screen while the
+/// repository call is still in flight.
+class _ControllableQuestionRepository extends QuestionRepository {
+  final Completer<Result<List<Question>>> _completer = Completer();
+
+  void completeWith(Result<List<Question>> result) => _completer.complete(result);
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) =>
+      _completer.future;
+}
+
 void main() {
   group('PracticeSessionScreen', () {
     group('question type branches', () {
@@ -536,6 +550,62 @@ void main() {
         await tester.pump(const Duration(milliseconds: 100));
 
         expect(find.text(_l10n.noQuestionsAvailable), findsOneWidget);
+      });
+    });
+
+    group('pop during question load', () {
+      testWidgets('guards no-questions dialog when popped before empty load completes', (tester) async {
+        final repo = _ControllableQuestionRepository();
+        await tester.pumpWidget(
+          sessionApp(result: Result.success(const []), questionRepository: repo),
+        );
+        await tester.tap(find.text('Open Session'));
+        await tester.pump(); // loading scaffold is showing
+
+        // Unmount the screen while the repository call is still in flight
+        // (the user pressed back during the loading scaffold).
+        await tester.pumpWidget(const SizedBox());
+
+        repo.completeWith(Result.success(const []));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('guards no-questions dialog when popped before failed load completes', (tester) async {
+        final repo = _ControllableQuestionRepository();
+        await tester.pumpWidget(
+          sessionApp(result: Result.failure('Load error'), questionRepository: repo),
+        );
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+
+        repo.completeWith(Result.failure('Load error'));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+      });
+
+      testWidgets('guards no-questions dialog when popped before ordered load completes', (tester) async {
+        final repo = _ControllableQuestionRepository();
+        await tester.pumpWidget(
+          sessionApp(
+            result: Result.success(const []),
+            orderedQuestionIds: ['q1'],
+            questionRepository: repo,
+          ),
+        );
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+
+        repo.completeWith(Result.success(const []));
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
       });
     });
 

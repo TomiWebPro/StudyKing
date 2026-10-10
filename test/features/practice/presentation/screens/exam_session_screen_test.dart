@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -102,6 +103,21 @@ class _FailingQuestionRepository extends QuestionRepository {
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
     throw Exception('Network error');
   }
+}
+
+/// Hand-written fake whose [getBySubject] future only completes when the
+/// test explicitly resolves it, so a test can pop the screen while the
+/// repository call is still in flight.
+class _ControllableQuestionRepository extends QuestionRepository {
+  final Completer<Result<List<Question>>> _completer = Completer();
+
+  void completeWith(Result<List<Question>> result) => _completer.complete(result);
+
+  void completeWithError(Object error) => _completer.completeError(error);
+
+  @override
+  Future<Result<List<Question>>> getBySubject(String subjectId) =>
+      _completer.future;
 }
 
 class _FakeMasteryRecorder extends MasteryRecorder {
@@ -209,8 +225,9 @@ class _DeterministicExamSessionService extends ExamSessionService {
 Widget _buildTestApp({
   required List<Question> questions,
   NavigatorObserver? observer,
+  QuestionRepository? questionRepository,
 }) {
-  final fakeQuestionRepo = _FakeQuestionRepository(questions);
+  final fakeQuestionRepo = questionRepository ?? _FakeQuestionRepository(questions);
   final fakeSessionRepo = _FakeSessionRepository();
   final fixedClock = _FakeClock(DateTime(2024, 6, 15, 12, 0));
 
@@ -433,7 +450,56 @@ void main() {
       expect(find.textContaining('Correct'), findsWidgets);
     });
 
-    group('additional coverage', () {
+    group('pop during question load', () {
+    testWidgets('guards setState when popped before load completes', (tester) async {
+      final repo = _ControllableQuestionRepository();
+      await tester.pumpWidget(
+        _buildTestApp(questions: [_createQuestion()], questionRepository: repo),
+      );
+      await tester.pump(); // loading scaffold is showing
+
+      // Unmount the screen while the repository call is still in flight
+      // (the user pressed back during the loading scaffold).
+      await tester.pumpWidget(const SizedBox());
+
+      repo.completeWith(Result.success([_createQuestion()]));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('guards no-questions dialog when popped before load completes', (tester) async {
+      final repo = _ControllableQuestionRepository();
+      await tester.pumpWidget(
+        _buildTestApp(questions: [], questionRepository: repo),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox());
+
+      repo.completeWith(Result.success(const []));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('guards error dialog when popped before load fails', (tester) async {
+      final repo = _ControllableQuestionRepository();
+      await tester.pumpWidget(
+        _buildTestApp(questions: [], questionRepository: repo),
+      );
+      await tester.pump();
+
+      await tester.pumpWidget(const SizedBox());
+
+      repo.completeWithError(Exception('Network error'));
+      await tester.pump();
+
+      expect(tester.takeException(), isNull);
+    });
+  });
+
+  group('additional coverage', () {
       group('config screen', () {
         testWidgets('shows no questions upload screen when empty', (tester) async {
           await tester.pumpWidget(_buildTestApp(questions: []));

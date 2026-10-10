@@ -147,7 +147,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
 
       final result = await _questionRepo.getBySubject(widget.args.subjectId);
       if (result.isFailure || result.data == null) {
-        if (mounted) setState(() => _questions = []);
+        if (!mounted) return;
+        setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
@@ -156,7 +157,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         filteredQuestions = filteredQuestions.where((q) => q.topicId == widget.args.topicId).toList();
       }
       if (filteredQuestions.isEmpty) {
-        if (mounted) setState(() => _questions = []);
+        if (!mounted) return;
+        setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
@@ -177,7 +179,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     try {
       final result = await _questionRepo.getBySubject(widget.args.subjectId);
       if (result.isFailure || result.data == null) {
-        if (mounted) setState(() => _questions = []);
+        if (!mounted) return;
+        setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
@@ -187,7 +190,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           .whereType<Question>()
           .toList();
       if (ordered.isEmpty) {
-        if (mounted) setState(() => _questions = []);
+        if (!mounted) return;
+        setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
@@ -207,7 +211,8 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     try {
       final result = await _srService.getPracticeQuestions(widget.args.subjectId);
       if (result.isFailure || result.data == null || result.data!.isEmpty) {
-        if (mounted) setState(() => _questions = []);
+        if (!mounted) return;
+        setState(() => _questions = []);
         _showNoQuestionsDialog();
         return;
       }
@@ -246,6 +251,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   void _initializeSession() {
+    if (!mounted) return;
     if (_questions.isEmpty) {
       _showNoQuestionsDialog();
       return;

@@ -109,6 +109,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   Future<void> _loadQuestions() async {
     try {
       final result = await _questionRepo.getBySubject(widget.subjectId);
+      if (!mounted) return;
       if (result.isSuccess && result.data != null && result.data!.isNotEmpty) {
         _totalAvailableQuestions = result.data!.length;
         _config = ExamConfig(
@@ -138,6 +139,7 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       }
     } catch (e) {
       _logger.w('Failed to load exam questions', e);
+      if (!mounted) return;
       _totalAvailableQuestions = 0;
       setState(() {
         _isLoadingConfig = false;

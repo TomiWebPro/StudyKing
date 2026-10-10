@@ -256,11 +256,15 @@ Widget sessionApp({
   SessionRepository? sessionRepo,
   SpacedRepetitionService? srService,
   bool isSpacedRepetition = false,
+  List<String>? orderedQuestionIds,
+  QuestionRepository? questionRepository,
 }) {
   return ProviderScope(
     overrides: [
       settingsProvider.overrideWith((ref) => FakeSettingsController()),
-      questionRepositoryProvider.overrideWithValue(FakeQuestionRepository(result)),
+      questionRepositoryProvider.overrideWithValue(
+        questionRepository ?? FakeQuestionRepository(result),
+      ),
       sourceRepositoryProvider.overrideWithValue(FakeSourceRepository()),
       topicRepositoryProvider.overrideWithValue(FakeTopicRepository()),
       studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
@@ -292,6 +296,7 @@ Widget sessionApp({
                       topicId: topicId,
                       questionCount: questionCount,
                       isSpacedRepetition: isSpacedRepetition,
+                      orderedQuestionIds: orderedQuestionIds,
                     ),
                   ),
                 ),
