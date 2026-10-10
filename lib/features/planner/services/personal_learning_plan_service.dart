@@ -54,6 +54,7 @@ class PersonalLearningPlanService {
   final RoadmapRepository _roadmapRepository;
   final SyllabusResolver? _syllabusResolver;
   final PlannerAdvisorStrategy? _advisor;
+  final StudentIdService? _studentIdService;
   PlanGenerationConfig config;
   AppLocalizations? _l10n;
 
@@ -67,6 +68,7 @@ class PersonalLearningPlanService {
     QuestionRepository? questionRepository,
     SyllabusResolver? syllabusResolver,
     PlannerAdvisorStrategy? advisor,
+    StudentIdService? studentIdService,
     PlanGenerationConfig? config,
     AppLocalizations? l10n,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
@@ -78,6 +80,7 @@ class PersonalLearningPlanService {
         _questionRepository = questionRepository ?? QuestionRepository(),
         _syllabusResolver = syllabusResolver,
         _advisor = advisor,
+        _studentIdService = studentIdService,
         config = config ?? PlanGenerationConfig(),
         _l10n = l10n;
 
@@ -717,6 +720,19 @@ class PersonalLearningPlanService {
         }
       }
 
+      // Days that can still receive redistributed minutes: future,
+      // non-rest days. When there are none (the plan has ended, or every
+      // remaining day is a rest day) there is nothing to redistribute
+      // onto, so no-op gracefully. This also keeps the clamp calls below
+      // safe: a lower bound of 1 never exceeds an upper bound that is
+      // at least 1.
+      final remainingDays = plan.dailyPlans.where((d) =>
+        d.date.dateOnly.isAfter(todayStart) && !d.isRestDay
+      ).length;
+      if (remainingDays == 0) {
+        return Result.success(null);
+      }
+
       int redistributeDays;
       if (strategy == 'all') {
         redistributeDays = plan.dailyPlans.length;
@@ -727,10 +743,8 @@ class PersonalLearningPlanService {
         redistributeDays = 3;
       }
 
-      final remainingDays = plan.dailyPlans.where((d) =>
-        d.date.dateOnly.isAfter(todayStart) && !d.isRestDay
-      ).length;
-      final daysSinceLastActivity = StudentIdService().getDaysSinceLastActivity();
+      final daysSinceLastActivity =
+          (_studentIdService ?? StudentIdService()).getDaysSinceLastActivity();
       if (daysSinceLastActivity > 0) {
         redistributeDays = daysSinceLastActivity.clamp(1, remainingDays);
       }

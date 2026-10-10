@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -1025,6 +1027,123 @@ void main() {
           );
           expect(result.isSuccess, isTrue);
         });
+
+        test('returns success when no future non-rest days remain and student was away', () async {
+          // Regression: daysSinceLastActivity.clamp(1, remainingDays)
+          // threw ArgumentError when every remaining day was a rest day.
+          final awayService = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: adherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+            studentIdService: await _studentIdServiceAwayFor(days: 3),
+          );
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [
+              DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+                isRestDay: true),
+              DailyPlan(date: now.add(const Duration(days: 2)), dayNumber: 2,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study',
+                isRestDay: true),
+            ],
+            summary: PlanSummary(totalQuestions: 30, totalMinutes: 60, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 3,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await awayService.redistributeMissedWorkload(
+            'student1', 30, plan, strategy: 'days:2',
+          );
+          expect(result.isSuccess, isTrue);
+        });
+
+        test('returns success when plan ends today and student was away', () async {
+          // Regression: the same clamp(1, 0) throw when the plan has
+          // no future days left at all.
+          final awayService = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: adherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+            studentIdService: await _studentIdServiceAwayFor(days: 3),
+          );
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [
+              DailyPlan(date: now, dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study'),
+            ],
+            summary: PlanSummary(totalQuestions: 15, totalMinutes: 30, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 1,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await awayService.redistributeMissedWorkload('student1', 30, plan);
+          expect(result.isSuccess, isTrue);
+        });
+
+        test('returns success when plan has no daily plans', () async {
+          // Regression: the strategy clamp (parsed ?? 3).clamp(1, 0)
+          // threw ArgumentError for an empty dailyPlans list.
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [],
+            summary: PlanSummary(totalQuestions: 0, totalMinutes: 0, newTopics: 0, reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 3,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.redistributeMissedWorkload('student1', 30, plan);
+          expect(result.isSuccess, isTrue);
+        });
+
+        test('still redistributes to remaining days when student was away longer', () async {
+          final awayService = PersonalLearningPlanService(
+            planRepository: planRepo,
+            adherenceRepository: adherenceRepo,
+            roadmapRepository: roadmapRepo,
+            config: PlanGenerationConfig(planDurationDays: 3),
+            studentIdService: await _studentIdServiceAwayFor(days: 5),
+          );
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [
+              DailyPlan(date: now.add(const Duration(days: 1)), dayNumber: 1,
+                priorityTopics: [], reviewQuestionIds: [], stretchGoalQuestionIds: [],
+                targetQuestions: 15, targetMinutes: 30, focus: 'Study'),
+            ],
+            summary: PlanSummary(totalQuestions: 15, totalMinutes: 30, newTopics: 1, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 1,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await awayService.redistributeMissedWorkload(
+            'student1', 30, plan, strategy: 'days:3',
+          );
+          expect(result.isSuccess, isTrue);
+          final stored = planRepo.storedPlan!;
+          // redistributeDays = daysSinceLastActivity.clamp(1, 1) = 1, so
+          // baseExtraPerDay = 30, capped at maxExtraPerDay (30 * 0.5 = 15):
+          // the single remaining day gains 15 minutes.
+          expect(stored.dailyPlans.first.targetMinutes, equals(45));
+        });
       });
 
       group('extendPlan', () {
@@ -1259,6 +1378,22 @@ void main() {
       });
     });
   });
+}
+
+/// Creates a [StudentIdService] whose last recorded activity was
+/// [days] days ago, so `getDaysSinceLastActivity()` reports a
+/// positive absence. The stale `lastActivityAt` key is removed
+/// again after the test.
+Future<StudentIdService> _studentIdServiceAwayFor({required int days}) async {
+  final service = StudentIdService();
+  await service.init();
+  final box = Hive.box(HiveBoxNames.studentId);
+  await box.put('lastActivityAt',
+      DateTime.now().subtract(Duration(days: days)).toIso8601String());
+  addTearDown(() async {
+    await box.delete('lastActivityAt');
+  });
+  return service;
 }
 
 class FakePlannerAdvisorStrategy implements PlannerAdvisorStrategy {
