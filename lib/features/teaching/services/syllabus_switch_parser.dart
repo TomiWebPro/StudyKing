@@ -74,18 +74,58 @@ class SyllabusSwitchParser {
     String normalized,
     List<String> availableTitles,
   ) {
-    final mentionsSyllabus = normalized.contains('syllabus');
-    final hasSwitchKeyword =
-        _switchKeywords.any((k) => normalized.contains(k));
-    if (!mentionsSyllabus || !hasSwitchKeyword) {
+    // Natural-language switches always require a known syllabus title to be
+    // explicitly mentioned. This eliminates false positives such as:
+    //   "this syllabus is hard, but let's continue" (mentions syllabus, no target)
+    //   "I love science" (no switch intent, no title)
+    //   "Can you open the Math syllabus for review?" (matches 'open' + syllabus;
+    //     may be a viewing request rather than a switch — still matched when
+    //     a known title is present.)
+
+    final matchedTitle = _matchTitle(normalized, availableTitles);
+    if (matchedTitle == null) {
       return const SyllabusSwitchResult(matched: false);
     }
 
-    final matchedTitle = _matchTitle(normalized, availableTitles);
-    if (matchedTitle != null) {
+    // There is a known title mentioned.  Confirm switch intent via one of:
+    //   • Command-style:  "to [title]", "with [title]", "[title] syllabus"
+    //   • Explicit verbs: switch / change / select / use
+    final hasExplicitVerb =
+        _switchKeywords.any((k) => normalized.contains(k));
+
+    if (hasExplicitVerb) {
       return SyllabusSwitchResult(matched: true, syllabusTitle: matchedTitle);
     }
+
+    // Check for structured phrasing patterns:
+    //   "to Math", "with Math", "Math syllabus", "[title] please"
+    // NOTE: these are NOT raw strings — the ${...} interpolation must
+    // execute to embed the (escaped) title into the pattern. The title
+    // is escaped from its normalized form because the haystack
+    // (`normalized`) is lowercased and RegExp is case-sensitive.
+    final normalizedTitle = matchedTitle.normalized;
+    final patterns = [
+      RegExp('\\b(to|with|for|about)\\s+${_escapedMatchPattern(normalizedTitle)}\\b'),
+      RegExp('${_escapedMatchPattern(normalizedTitle)}\\s+(syllabus|subject|topic)'),
+      RegExp('${_escapedMatchPattern(normalizedTitle)}\\s+(please|now|thanks)'),
+    ];
+
+    for (final pattern in patterns) {
+      if (pattern.hasMatch(normalized)) {
+        return SyllabusSwitchResult(matched: true, syllabusTitle: matchedTitle);
+      }
+    }
+
+    // Title mentioned but no clear switch intent → do not match
     return const SyllabusSwitchResult(matched: false);
+  }
+
+  static String _escapedMatchPattern(String title) {
+    // Escape regex special characters so title substrings don't break matching
+    return title.replaceAllMapped(
+      RegExp(r'[.*+?^(){}\[\]\\|\-\$]'),
+      (m) => '\\${m.group(0)}',
+    );
   }
 
   static String? _matchTitle(String text, List<String> availableTitles) {

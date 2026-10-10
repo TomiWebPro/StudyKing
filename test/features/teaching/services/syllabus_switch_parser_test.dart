@@ -100,5 +100,75 @@ void main() {
       expect(result.matched, isTrue);
       expect(result.syllabusTitle, 'Math');
     });
+
+    test('matches structured phrasing "to <title>"', () {
+      final result = SyllabusSwitchParser.parse(
+        'to Math',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Math');
+    });
+
+    test('matches structured phrasing "with <title>"', () {
+      final result = SyllabusSwitchParser.parse(
+        'with Science',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Science');
+    });
+
+    test('matches structured phrasing "<title> syllabus"', () {
+      final result = SyllabusSwitchParser.parse(
+        'Math syllabus',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Math');
+    });
+
+    test('matches structured phrasing "<title> please"', () {
+      final result = SyllabusSwitchParser.parse(
+        'Science please',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Science');
+    });
+
+    test('matches title containing regex-special characters', () {
+      const special = ['Math 101 (Honors)'];
+
+      final asSyllabus = SyllabusSwitchParser.parse(
+        'Math 101 (Honors) syllabus',
+        availableTitles: special,
+      );
+      expect(asSyllabus.matched, isTrue);
+      expect(asSyllabus.syllabusTitle, 'Math 101 (Honors)');
+
+      final asPlease = SyllabusSwitchParser.parse(
+        'Math 101 (Honors) please',
+        availableTitles: special,
+      );
+      expect(asPlease.matched, isTrue);
+      expect(asPlease.syllabusTitle, 'Math 101 (Honors)');
+    });
+
+    test('structured phrasing does not match a longer title-like word', () {
+      final result = SyllabusSwitchParser.parse(
+        'with Mathew',
+        availableTitles: available,
+      );
+      expect(result.matched, isFalse);
+    });
+
+    test('does not match a title mention without switch intent', () {
+      final result = SyllabusSwitchParser.parse(
+        'I like Math',
+        availableTitles: available,
+      );
+      expect(result.matched, isFalse);
+    });
   });
 }
