@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -87,6 +89,7 @@ class _FakeQuestionRepository extends QuestionRepository {
 class _FakeMasteryRecorder extends MasteryRecorder {
   int recordAttemptCallCount = 0;
   bool? lastIsCorrect;
+  Completer<void>? recordAttemptGate;
 
   _FakeMasteryRecorder()
       : super(
@@ -115,6 +118,9 @@ class _FakeMasteryRecorder extends MasteryRecorder {
     required String userAnswer,
     DateTime? timestamp,
   }) async {
+    if (recordAttemptGate != null) {
+      await recordAttemptGate!.future;
+    }
     recordAttemptCallCount++;
     lastIsCorrect = isCorrect;
     return Result.success(null);
@@ -473,6 +479,41 @@ void main() {
 
       expect(recorder.recordAttemptCallCount, 1);
       expect(recorder.lastIsCorrect, false);
+    });
+
+    testWidgets('avoids setState after dispose when popped while recordAttempt is in flight', (tester) async {
+      final gate = Completer<void>();
+      final recorder = _FakeMasteryRecorder()..recordAttemptGate = gate;
+      final questions = [
+        typedQuestion(id: 'q1'),
+        typedQuestion(id: 'q2'),
+      ];
+      await tester.pumpWidget(_buildTestApp(
+        InlinePracticeWidget(onComplete: _noopOnComplete, sessionType: FocusSessionType.quickPractice),
+        questionRepo: _FakeQuestionRepository(questions),
+        masteryRecorder: recorder,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField), 'Paris');
+      await tester.pump();
+      await tester.tap(find.text('Submit Answer'));
+      await tester.pumpAndSettle();
+
+      // Tap Next: _nextQuestion blocks on the in-flight recordAttempt (Hive write).
+      await tester.tap(find.text('Next'));
+      await tester.pump();
+
+      // User pops the screen while the write is still in flight → State disposed.
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      // The write completes after the pop; the continuation must not touch state.
+      gate.complete();
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(recorder.recordAttemptCallCount, 1);
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('filters questions by subjectId when provided', (tester) async {

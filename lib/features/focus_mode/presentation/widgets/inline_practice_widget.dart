@@ -174,6 +174,8 @@ class _InlinePracticeWidgetState extends ConsumerState<InlinePracticeWidget> {
       _logger.w('Failed to record attempt in inline practice', e);
     }
 
+    if (!mounted) return;
+
     if (_currentIndex + 1 >= _questions.length) {
       _finish();
       return;
