@@ -21,12 +21,13 @@ class EngagementNudgeModelAdapter extends TypeAdapter<EngagementNudgeModel> {
       sentAt: fields[6] as DateTime,
       wasActedUpon: fields[7] as bool? ?? false,
       actedUponAt: fields[8] as DateTime?,
+      hoursStudied: fields[9] as double?,
     );
   }
 
   @override
   void write(BinaryWriter writer, EngagementNudgeModel obj) {
-    writer.writeByte(9);
+    writer.writeByte(10);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -45,5 +46,7 @@ class EngagementNudgeModelAdapter extends TypeAdapter<EngagementNudgeModel> {
     writer.write(obj.wasActedUpon);
     writer.writeByte(8);
     writer.write(obj.actedUponAt);
+    writer.writeByte(9);
+    writer.write(obj.hoursStudied);
   }
 }

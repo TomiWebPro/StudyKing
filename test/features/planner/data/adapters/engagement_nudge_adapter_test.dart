@@ -12,7 +12,7 @@ void main() {
       expect(EngagementNudgeModelAdapter().typeId, 32);
     });
 
-    test('write/read round-trips all 9 fields', () {
+    test('write/read round-trips all fields', () {
       final registry = TypeRegistryImpl()
         ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
         ..registerAdapter(EngagementNudgeModelAdapter());
@@ -29,6 +29,7 @@ void main() {
         sentAt: now,
         wasActedUpon: true,
         actedUponAt: actedAt,
+        hoursStudied: 4.5,
       );
 
       final writer = BinaryWriterImpl(registry);
@@ -45,6 +46,7 @@ void main() {
       expect(restored.sentAt.millisecondsSinceEpoch, now.millisecondsSinceEpoch);
       expect(restored.wasActedUpon, true);
       expect(restored.actedUponAt!.millisecondsSinceEpoch, actedAt.millisecondsSinceEpoch);
+      expect(restored.hoursStudied, 4.5);
     });
 
     test('write/read with null optionals and defaults', () {
@@ -73,6 +75,7 @@ void main() {
       expect(restored.topicId, isNull);
       expect(restored.wasActedUpon, false);
       expect(restored.actedUponAt, isNull);
+      expect(restored.hoursStudied, isNull);
     });
 
     test('write/read with edge values (empty strings, zero-length)', () {

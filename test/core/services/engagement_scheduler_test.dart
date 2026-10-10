@@ -168,6 +168,51 @@ class _FakeSessionRepo extends SessionRepository {
   Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
 }
 
+class _FakeNotificationService extends NotificationService {
+  final List<double> overworkHoursStudied = [];
+
+  @override
+  Future<Result<void>> showOverworkWarning({
+    required int id,
+    required double hoursStudied,
+  }) async {
+    overworkHoursStudied.add(hoursStudied);
+    return Result.success(null);
+  }
+}
+
+class _OverworkTracker extends StudyProgressTracker {
+  final double hours;
+
+  _OverworkTracker(this.hours)
+      : super(
+          attemptRepo: _FakeAttemptRepo(),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+  @override
+  Future<Result<Map<String, dynamic>>> getOverallStats(String studentId) async {
+    return Result.success({
+      'accuracy': 80,
+      'totalStudyTimeHours': hours,
+      'weeklyActivity': 25,
+      'topicsStudied': 10,
+      'correctAttempts': 40,
+      'totalAttempts': 50,
+    });
+  }
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
+    return Result.success([]);
+  }
+}
+
 void main() {
   group('EngagementScheduler', () {
     late _FakeNudgeRepository nudgeRepo;
@@ -204,6 +249,67 @@ void main() {
         final result = await scheduler.getOverworkNudge('test-student');
         expect(result.isSuccess, true);
         expect(result.data, isEmpty);
+      });
+    });
+
+    group('overwork nudge hours propagation', () {
+      test('getOverworkNudge stores the raw study hours on the nudge', () async {
+        final esScheduler = EngagementScheduler(
+          tracker: _OverworkTracker(4.5),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _FakeSessionRepo(),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('es')),
+        );
+
+        final result = await esScheduler.getOverworkNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.hoursStudied, 4.5);
+        // The message is localized; in 'es' the hours render as "4,5".
+        expect(result.data!.first.message, contains('4,5'));
+      });
+
+      test('notification receives the raw hours, not the value re-parsed from the localized message', () async {
+        final notif = _FakeNotificationService();
+        final esScheduler = EngagementScheduler(
+          tracker: _OverworkTracker(4.5),
+          masteryService: masteryService,
+          notificationService: notif,
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _FakeSessionRepo(),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('es')),
+        );
+
+        await esScheduler.runDailyChecksNow();
+
+        // The 'es' message reads "…4,5 horas…". Re-parsing it (the old bug)
+        // would strip the comma and inflate 4.5h into 45.0h. The notification
+        // must receive the raw 4.5 value carried on the nudge instead.
+        expect(notif.overworkHoursStudied, hasLength(1));
+        expect(notif.overworkHoursStudied.first, 4.5);
+        expect(notif.overworkHoursStudied.first, isNot(45.0));
+
+        final stored = nudgeRepo.storedNudges
+            .where((n) => n.nudgeType == 'overwork')
+            .toList();
+        expect(stored, hasLength(1));
+        expect(stored.first.hoursStudied, 4.5);
       });
     });
 

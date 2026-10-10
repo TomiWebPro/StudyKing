@@ -29,6 +29,9 @@ class EngagementNudgeModel extends HiveObject {
   @HiveField(8)
   final DateTime? actedUponAt;
 
+  @HiveField(9)
+  final double? hoursStudied;
+
   EngagementNudgeModel({
     required this.id,
     required this.studentId,
@@ -39,6 +42,7 @@ class EngagementNudgeModel extends HiveObject {
     DateTime? sentAt,
     this.wasActedUpon = false,
     this.actedUponAt,
+    this.hoursStudied,
   }) : sentAt = sentAt ?? DateTime.now();
 
   Map<String, dynamic> toJson() => {
@@ -51,6 +55,7 @@ class EngagementNudgeModel extends HiveObject {
     'sentAt': sentAt.toIso8601String(),
     'wasActedUpon': wasActedUpon,
     'actedUponAt': actedUponAt?.toIso8601String(),
+    'hoursStudied': hoursStudied,
   };
 
   factory EngagementNudgeModel.fromJson(Map<String, dynamic> json) => EngagementNudgeModel(
@@ -63,6 +68,7 @@ class EngagementNudgeModel extends HiveObject {
     sentAt: json['sentAt'] != null ? DateTime.parse(json['sentAt'] as String) : null,
     wasActedUpon: json['wasActedUpon'] as bool? ?? false,
     actedUponAt: json['actedUponAt'] != null ? DateTime.parse(json['actedUponAt'] as String) : null,
+    hoursStudied: (json['hoursStudied'] as num?)?.toDouble(),
   );
 
   EngagementNudgeModel copyWith({
@@ -75,6 +81,7 @@ class EngagementNudgeModel extends HiveObject {
     DateTime? sentAt,
     bool? wasActedUpon,
     DateTime? actedUponAt,
+    double? hoursStudied,
   }) {
     return EngagementNudgeModel(
       id: id ?? this.id,
@@ -86,6 +93,7 @@ class EngagementNudgeModel extends HiveObject {
       sentAt: sentAt ?? this.sentAt,
       wasActedUpon: wasActedUpon ?? this.wasActedUpon,
       actedUponAt: actedUponAt ?? this.actedUponAt,
+      hoursStudied: hoursStudied ?? this.hoursStudied,
     );
   }
 }

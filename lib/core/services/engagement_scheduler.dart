@@ -277,9 +277,7 @@ class EngagementScheduler {
         await _nudgeRepository.create(nudge);
         final notifResult = await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
-          hoursStudied: double.tryParse(
-                  nudge.message.replaceAll(RegExp(r'[^0-9.]'), '')) ??
-              0,
+          hoursStudied: nudge.hoursStudied ?? 0.0,
         );
         if (notifResult.isFailure) {
           _logger.w('Failed to show overwork warning notification: ${notifResult.error}');
@@ -445,6 +443,7 @@ class EngagementScheduler {
           nudgeType: NudgeType.overwork.name,
           message: _l10n.nudgeOverwork(hoursStr),
           severity: NudgeSeverity.medium.name,
+          hoursStudied: totalHours,
         )]);
       }
       return Result.success([]);

@@ -42,6 +42,7 @@ void main() {
           sentAt: now,
           wasActedUpon: true,
           actedUponAt: now,
+          hoursStudied: 4.5,
         );
 
         expect(nudge.severity, severity);
@@ -49,6 +50,18 @@ void main() {
         expect(nudge.sentAt, now);
         expect(nudge.wasActedUpon, isTrue);
         expect(nudge.actedUponAt, now);
+        expect(nudge.hoursStudied, 4.5);
+      });
+
+      test('hoursStudied defaults to null', () {
+        final nudge = EngagementNudgeModel(
+          id: id,
+          studentId: studentId,
+          nudgeType: nudgeType,
+          message: message,
+        );
+
+        expect(nudge.hoursStudied, isNull);
       });
     });
 
@@ -71,6 +84,16 @@ void main() {
         expect(copy.severity, severity);
         expect(copy.wasActedUpon, isTrue);
         expect(copy.message, message);
+      });
+
+      test('updates hoursStudied', () {
+        final nudge = EngagementNudgeModel(
+          id: id, studentId: studentId, nudgeType: nudgeType, message: message,
+          hoursStudied: 4.5,
+        );
+        final copy = nudge.copyWith(hoursStudied: 6.0);
+        expect(copy.hoursStudied, 6.0);
+        expect(nudge.hoursStudied, 4.5);
       });
     });
 
@@ -147,6 +170,7 @@ void main() {
           sentAt: now,
           wasActedUpon: true,
           actedUponAt: now,
+          hoursStudied: 4.5,
         );
         final json = original.toJson();
         final restored = EngagementNudgeModel.fromJson(json);
@@ -159,6 +183,7 @@ void main() {
         expect(restored.sentAt, original.sentAt);
         expect(restored.wasActedUpon, original.wasActedUpon);
         expect(restored.actedUponAt, original.actedUponAt);
+        expect(restored.hoursStudied, original.hoursStudied);
       });
 
       test('toJson/fromJson round-trip with null optionals', () {
