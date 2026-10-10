@@ -67,6 +67,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   bool _initError = false;
   String _initErrorMessage = '';
   String? _retryMessage;
+  /// Screen-level message list that mirrors the manager history plus a
+  /// streaming tutor placeholder, so replies render progressively while the
+  /// LLM stream is still open (the manager only persists the assistant
+  /// message after the stream ends).
+  List<ConversationMessage> _displayMessages = [];
   Timer? _timer;
   Timer? _closingTimer;
   int _elapsedMinutes = 0;
@@ -155,6 +160,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
           _manager = manager;
           _manager!.enableVoiceOutput = _voiceOutputEnabled;
           _manager!.reduceMotion = settings.reduceMotion;
+          _displayMessages = List.of(manager.messages);
           _isInitialized = true;
           _initError = false;
         });
@@ -179,17 +185,24 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final buffer = StringBuffer();
 
     final l10n = AppLocalizations.of(context)!;
+    final greeting = widget.scheduledSessionId != null
+        ? l10n.scheduledLessonGreeting(widget.topicTitle)
+        : l10n.readyToLearnAbout(widget.topicTitle);
+    _beginStreamingExchange(studentContent: greeting);
+    setState(() {});
+    _scrollToBottom();
+
     try {
-      final greeting = widget.scheduledSessionId != null
-          ? l10n.scheduledLessonGreeting(widget.topicTitle)
-          : l10n.readyToLearnAbout(widget.topicTitle);
       await for (final chunk in _manager!.sendMessage(greeting)) {
         buffer.write(chunk);
+        _updateStreamingMessage(buffer);
         setState(() {});
         _scrollToBottom();
       }
+      _finishStreamingExchange();
     } catch (e) {
       _logger.w('Initial greeting failed: $e');
+      _finalizeStreamingMessage();
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
@@ -231,12 +244,17 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   Future<void> _sendText(String text) async {
     setState(() => _isSending = true);
     final buffer = StringBuffer();
+    _beginStreamingExchange(studentContent: text);
+    setState(() {});
+    _scrollToBottom();
     try {
       await for (final chunk in _manager!.sendMessage(text)) {
         buffer.write(chunk);
+        _updateStreamingMessage(buffer);
         setState(() {});
         _scrollToBottom();
       }
+      _finishStreamingExchange();
     } catch (e) {
       // ignore: use_build_context_synchronously
       final l10n = AppLocalizations.of(context)!;
@@ -252,6 +270,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         userMessage = l10n.responseInterrupted;
       }
       await _manager!.addAssistantMessage(userMessage);
+      _finishStreamingExchange();
       _retryMessage = text;
       setState(() {});
       _scrollToBottom();
@@ -276,6 +295,64 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     setState(() {
       _retryMessage = null;
     });
+  }
+
+  ConversationMessage _studentMessage(String content) => ConversationMessage(
+        id: 'student_${DateTime.now().microsecondsSinceEpoch}',
+        sessionId: _manager!.sessionId,
+        role: MessageRole.student,
+        type: MessageType.text,
+        content: content,
+        timestamp: DateTime.now(),
+      );
+
+  ConversationMessage _streamingPlaceholder() => ConversationMessage(
+        id: 'tutor_${DateTime.now().microsecondsSinceEpoch}',
+        sessionId: _manager!.sessionId,
+        role: MessageRole.tutor,
+        type: MessageType.text,
+        content: '',
+        timestamp: DateTime.now(),
+        isStreaming: true,
+      );
+
+  /// Mirrors the manager history and appends a streaming tutor placeholder so
+  /// a typing indicator is visible before the first chunk arrives.
+  void _beginStreamingExchange({String? studentContent}) {
+    _displayMessages = [
+      ..._manager!.messages,
+      if (studentContent != null) _studentMessage(studentContent),
+      _streamingPlaceholder(),
+    ];
+  }
+
+  /// Rebuilds from the manager history (which gains the student message and
+  /// any evaluation system message before the first chunk) and updates the
+  /// placeholder with the accumulated stream content.
+  void _updateStreamingMessage(StringBuffer buffer) {
+    _displayMessages = [
+      ..._manager!.messages,
+      _displayMessages.last.copyWith(
+        content: buffer.toString(),
+        isStreaming: true,
+      ),
+    ];
+  }
+
+  /// The manager persisted the assistant message; replace the placeholder
+  /// with the real history.
+  void _finishStreamingExchange() {
+    _displayMessages = List.of(_manager!.messages);
+  }
+
+  /// Stream failed without an assistant message being added: stop the typing
+  /// indicator but keep any partial text that already arrived.
+  void _finalizeStreamingMessage() {
+    if (_displayMessages.isEmpty) return;
+    _displayMessages = [
+      ..._displayMessages.sublist(0, _displayMessages.length - 1),
+      _displayMessages.last.copyWith(isStreaming: false),
+    ];
   }
 
   Future<void> _pickImage() async {
@@ -324,16 +401,25 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final bytes = await pickedFile.readAsBytes();
     final base64Image = base64Encode(bytes);
 
+    _beginStreamingExchange();
+    setState(() {});
+    _scrollToBottom();
+
+    final buffer = StringBuffer();
     try {
-      await for (final _ in _manager!.processImage(base64Image)) {
+      await for (final chunk in _manager!.processImage(base64Image)) {
+        buffer.write(chunk);
+        _updateStreamingMessage(buffer);
         setState(() {});
         _scrollToBottom();
       }
+      _finishStreamingExchange();
     } catch (e) {
       _logger.w('Image processing failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         await _manager!.addAssistantMessage(l10n.errorWithResponse);
+        _finishStreamingExchange();
         setState(() {});
       }
     }
@@ -359,24 +445,36 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
     setState(() => _isSending = true);
 
+    final isTextSubmission = result.isText && result.text != null;
+    _beginStreamingExchange(studentContent: isTextSubmission ? result.text : null);
+    setState(() {});
+    _scrollToBottom();
+
+    final buffer = StringBuffer();
     try {
-      if (result.isText && result.text != null) {
-        await for (final _ in _manager!.sendMessage(result.text!)) {
+      if (isTextSubmission) {
+        await for (final chunk in _manager!.sendMessage(result.text!)) {
+          buffer.write(chunk);
+          _updateStreamingMessage(buffer);
           setState(() {});
           _scrollToBottom();
         }
       } else if (result.imageData != null) {
         final base64Drawing = base64Encode(result.imageData!);
-        await for (final _ in _manager!.processImage(base64Drawing)) {
+        await for (final chunk in _manager!.processImage(base64Drawing)) {
+          buffer.write(chunk);
+          _updateStreamingMessage(buffer);
           setState(() {});
           _scrollToBottom();
         }
       }
+      _finishStreamingExchange();
     } catch (e) {
       _logger.w('Drawing processing failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         await _manager!.addAssistantMessage(l10n.errorWithResponse);
+        _finishStreamingExchange();
         setState(() {});
       }
     }
@@ -407,6 +505,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
             onPressed: () {
               Navigator.pop(ctx);
               _manager!.clearMessages();
+              _displayMessages = List.of(_manager!.messages);
               setState(() {});
             },
             child: Text(l10n.clearConversation),
@@ -1095,7 +1194,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
   }
 
   Widget _buildMessageList(AppLocalizations l10n, bool isEnding, bool reduceMotion) {
-    final messages = _manager!.messages;
+    final messages = _displayMessages;
     if (messages.isEmpty) {
       return Center(
         child: Text(l10n.startingLesson),

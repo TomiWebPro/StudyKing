@@ -14,6 +14,7 @@ import 'package:studyking/features/teaching/data/repositories/conversation_repos
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/presentation/tutor_screen.dart';
+import 'package:studyking/features/teaching/presentation/widgets/chat_bubble.dart';
 import 'package:studyking/features/teaching/services/conversation_manager.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
@@ -63,6 +64,44 @@ class _FakeLlmService extends LlmService {
     String feature = 'general',
   }) async* {
     yield 'Mock tutor response for: $message';
+  }
+}
+
+class _SlowStreamLlmService extends LlmService {
+  _SlowStreamLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    return Result.success('{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}');
+  }
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    yield 'partial tutor reply';
+    await Future.delayed(const Duration(seconds: 2));
+    yield ' now complete';
   }
 }
 
@@ -199,11 +238,13 @@ class _FakeVoiceService extends VoiceService {
 
 class _FakeTutorService extends TutorService {
   final bool shouldFail;
+  final LlmService llm;
 
-  _FakeTutorService({this.shouldFail = false})
-      : super(
+  _FakeTutorService({this.shouldFail = false, LlmService? llmService})
+      : llm = llmService ?? _FakeLlmService(),
+        super(
           database: _createFakeDatabase(),
-          llmService: _FakeLlmService(),
+          llmService: llmService ?? _FakeLlmService(),
           masteryService: _FakeMasteryGraphService(),
           spacedRepetitionService: _FakeSpacedRepetitionService(),
           modelId: 'test-model',
@@ -223,7 +264,7 @@ class _FakeTutorService extends TutorService {
   }) async {
     if (shouldFail) throw Exception('LLM connection failed');
     final manager = ConversationManager(
-      llmService: _FakeLlmService(),
+      llmService: llm,
       modelId: 'test-model',
       sessionId: 'test-session',
       studentId: studentId,
@@ -414,6 +455,52 @@ void main() {
       await tester.pump(const Duration(seconds: 2));
 
       expect(find.text('Hello tutor'), findsOneWidget);
+    });
+
+    testWidgets('displays tutor reply progressively while streaming', (tester) async {
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: '',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: _FakeTutorService(llmService: _SlowStreamLlmService()),
+        ),
+      ));
+      await tester.pump();
+      // Let the lesson start and the greeting stream finish (2s inter-chunk delay).
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+
+      // Greeting finished: no bubble is still streaming.
+      expect(
+        find.byWidgetPredicate((w) => w is ChatBubble && w.message.isStreaming),
+        findsNothing,
+      );
+
+      await tester.enterText(find.byType(TextField), 'Hello tutor');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Mid-stream: a tutor bubble is visible with partial content while the
+      // stream is still open (previously nothing rendered until stream end).
+      expect(
+        find.byWidgetPredicate((w) => w is ChatBubble && w.message.isStreaming),
+        findsOneWidget,
+      );
+      expect(find.text('partial tutor reply'), findsOneWidget);
+
+      // Let the delayed final chunk arrive; the reply completes.
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+
+      expect(
+        find.byWidgetPredicate((w) => w is ChatBubble && w.message.isStreaming),
+        findsNothing,
+      );
+      expect(find.text('partial tutor reply now complete'), findsAtLeast(1));
     });
 
     testWidgets('end lesson button shows confirmation then summary dialog', (tester) async {
