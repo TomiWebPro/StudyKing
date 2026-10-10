@@ -4,12 +4,36 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show selectedModelProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/quickguide/presentation/quick_guide_screen.dart';
 import 'package:studyking/features/quickguide/presentation/widgets/message_list_widget.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 import 'shared_screen_test_helpers.dart';
+
+/// Hand-written fake whose [chatStream] errors only after [errorDelay],
+/// simulating an LLM stream that fails while the user has already
+/// popped the screen (a real event-loop async gap, unlike a microtask).
+class _DelayedErrorLlmService extends FakeLlmService {
+  _DelayedErrorLlmService({required this.errorDelay});
+
+  final Duration errorDelay;
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    await Future<void>.delayed(errorDelay);
+    throw Exception('Simulated stream error after delay');
+  }
+}
 
 void main() {
   group('QuickGuideScreen', () {
@@ -1724,6 +1748,37 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(find.text('Choose a study mode'), findsNothing);
+    });
+  });
+
+  group('QuickGuideScreen - async gap guards', () {
+    testWidgets(
+        'stream error after pop does not look up l10n on the deactivated screen',
+        (tester) async {
+      final llm = _DelayedErrorLlmService(
+        errorDelay: const Duration(milliseconds: 50),
+      );
+      await tester.pumpWidget(buildTestApp(
+        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Explain fractions');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+
+      // Pop the screen while the LLM stream is still in flight.
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump();
+
+      // The stream errors after the pop, so the catch block runs on the
+      // disposed State. The fallback response must use the l10n captured
+      // before the first await, not AppLocalizations.of(context)!.
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(tester.takeException(), isNull);
     });
   });
 }

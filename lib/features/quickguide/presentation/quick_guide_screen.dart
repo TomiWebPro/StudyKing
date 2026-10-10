@@ -91,6 +91,11 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     final text = _textController.text.trim();
     if (text.isEmpty || _isStreaming) return;
 
+    // Resolved before the first await so post-await paths (including the
+    // catch block after the LLM stream) never read `context` once the
+    // screen may have been popped (i18n Locale Switching Gotcha).
+    final l10n = AppLocalizations.of(context)!;
+
     setState(() {
       _hasInteracted = true;
       _showSuggestions = false;
@@ -132,8 +137,6 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     try {
       final llm = _getLlmService();
       if (llm.config.apiKey.isEmpty) {
-        // ignore: use_build_context_synchronously
-        final l10n = AppLocalizations.of(context)!;
         await _showNoApiKeyMessage(l10n);
         if (mounted) {
           final idx = _messages.length - 1;
@@ -145,8 +148,6 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         return;
       }
 
-      // ignore: use_build_context_synchronously
-      final l10n = AppLocalizations.of(context)!;
       final effectiveSystem = widget.systemPrompt ?? l10n.quickGuideSystemPrompt;
       final savedModel = ref.read(selectedModelProvider);
       final provider = ref.read(llmProviderProvider);
@@ -176,7 +177,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
       }
     } catch (e) {
       _logger.w('QuickGuide error', e);
-      buffer.write(_fallbackResponse(text));
+      buffer.write(_fallbackResponse(text, l10n));
     }
 
     if (mounted) {
@@ -194,8 +195,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
     _scrollToBottom();
   }
 
-  String _fallbackResponse(String text) {
-    final l10n = AppLocalizations.of(context)!;
+  String _fallbackResponse(String text, AppLocalizations l10n) {
     final lower = text.normalized;
     if (lower.contains('explain')) return l10n.fallbackExplainResponse;
     if (lower.contains('quiz') || lower.contains('question')) return l10n.fallbackQuizResponse;
