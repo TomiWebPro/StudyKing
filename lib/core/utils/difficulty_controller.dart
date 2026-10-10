@@ -37,8 +37,13 @@ class DifficultyController {
   int suggestNextDifficulty() {
     if (_consecutiveCorrect >= correctStreakThreshold) {
       _currentDifficulty = _clampDifficulty(_currentDifficulty + 1);
+      // The streak is consumed by this adjustment: reset it so the next
+      // level-up requires a full new streak of `correctStreakThreshold`.
+      _consecutiveCorrect = 0;
     } else if (_consecutiveIncorrect >= incorrectStreakThreshold) {
       _currentDifficulty = _clampDifficulty(_currentDifficulty - 1);
+      // Same for the downward direction: one level-down per full streak.
+      _consecutiveIncorrect = 0;
     }
     return _currentDifficulty;
   }

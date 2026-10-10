@@ -270,4 +270,72 @@ void main() {
       expect(adapter.suggestNextDifficulty(), 3);
     });
   });
+
+  group('DifficultyController - streak consumption (regression)', () {
+    test(
+        'difficulty stays put after a level-up until a full new streak accumulates',
+        () {
+      final adapter = DifficultyController(
+        initialDifficulty: 2,
+        correctStreakThreshold: 3,
+      );
+
+      // First full streak of 3: level up 2 -> 3.
+      adapter.recordResult(true);
+      adapter.recordResult(true);
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 3);
+
+      // The streak was consumed: further correct answers must not raise
+      // difficulty again (previously every answer after the streak leveled up).
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 3);
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 3);
+
+      // Only a full new streak of 3 triggers the next level-up.
+      adapter.recordResult(true);
+      expect(adapter.suggestNextDifficulty(), 4);
+    });
+
+    test(
+        'difficulty stays put after a level-down until a full new streak accumulates',
+        () {
+      final adapter = DifficultyController(
+        initialDifficulty: 4,
+        incorrectStreakThreshold: 2,
+      );
+
+      // First full streak of 2 wrong answers: level down 4 -> 3.
+      adapter.recordResult(false);
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 3);
+
+      // The streak was consumed: further wrong answers must not lower
+      // difficulty again.
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 3);
+
+      // Only a full new streak of 2 triggers the next level-down.
+      adapter.recordResult(false);
+      expect(adapter.suggestNextDifficulty(), 2);
+    });
+
+    test('six consecutive correct answers yield exactly two level-ups (threshold 3)',
+        () {
+      final adapter = DifficultyController(
+        initialDifficulty: 1,
+        correctStreakThreshold: 3,
+      );
+
+      // Before the fix this ramped to max (5) after 6 answers; with one
+      // level-up per full streak of 3, six answers produce exactly two.
+      for (var i = 0; i < 6; i++) {
+        adapter.recordResult(true);
+        adapter.suggestNextDifficulty();
+      }
+
+      expect(adapter.currentDifficulty, 3);
+    });
+  });
 }
