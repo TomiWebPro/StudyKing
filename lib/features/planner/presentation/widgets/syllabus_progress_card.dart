@@ -52,7 +52,15 @@ class SyllabusProgressCard extends StatelessWidget {
     final masteryRepo = MasteryGraphRepository();
     await masteryRepo.init();
     final masteryResult = await masteryRepo.getAllMasteryStates(studentId);
-    final states = masteryResult.data ?? [];
+    // Scope the mastery states to this subject's topics (mirrors the pattern
+    // in dashboard_data_providers.dart): getAllMasteryStates returns states
+    // for ALL subjects, while totalTopics counts only this subject's topics.
+    // Without this filter, masteredCount mixes in proficient topics from other
+    // subjects and progress can exceed 1.0 (e.g. "Mastered 13 / 5", 260%).
+    final topicIds = allTopics.map((t) => t.id).toSet();
+    final states = (masteryResult.data ?? [])
+        .where((m) => topicIds.contains(m.topicId))
+        .toList();
 
     return _ProgressData(masteryStates: states, totalTopics: totalTopics);
   }
