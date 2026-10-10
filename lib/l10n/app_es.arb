@@ -5257,6 +5257,10 @@
   "@toolScheduleLessonFail": {
     "description": "Result message when scheduling fails via tool"
   },
+  "toolScheduleLessonInvalidTime": "scheduledTime no válido. Proporciona una fecha y hora en formato ISO 8601 (p. ej. 2025-01-31T14:00:00Z).",
+  "@toolScheduleLessonInvalidTime": {
+    "description": "Error message when schedule_lesson receives an unparseable scheduledTime"
+  },
   "toolGenerateBlocksFail": "Error al generar bloques de lección",
   "@toolGenerateBlocksFail": {
     "description": "Result message when lesson block generation fails via tool"

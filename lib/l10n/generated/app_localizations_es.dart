@@ -3985,6 +3985,10 @@ class AppLocalizationsEs extends AppLocalizations {
   String get toolScheduleLessonFail => 'Error al programar la lección';
 
   @override
+  String get toolScheduleLessonInvalidTime =>
+      'scheduledTime no válido. Proporciona una fecha y hora en formato ISO 8601 (p. ej. 2025-01-31T14:00:00Z).';
+
+  @override
   String get toolGenerateBlocksFail => 'Error al generar bloques de lección';
 
   @override

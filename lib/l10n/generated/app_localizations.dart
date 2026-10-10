@@ -6602,6 +6602,12 @@ abstract class AppLocalizations {
   /// **'Failed to schedule lesson'**
   String get toolScheduleLessonFail;
 
+  /// Error message when schedule_lesson receives an unparseable scheduledTime
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid scheduledTime. Provide an ISO 8601 datetime string (e.g. 2025-01-31T14:00:00Z).'**
+  String get toolScheduleLessonInvalidTime;
+
   /// Result message when lesson block generation fails via tool
   ///
   /// In en, this message translates to:

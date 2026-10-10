@@ -241,6 +241,8 @@ class FakeTopicDependencyRepository extends TopicDependencyRepository {
 class FakePlannerService extends PlannerService {
   PersonalLearningPlan? plan;
   bool scheduleResult = true;
+  int scheduleLessonCallCount = 0;
+  DateTime? lastScheduledTime;
 
   FakePlannerService([this.plan])
       : super(
@@ -283,8 +285,11 @@ class FakePlannerService extends PlannerService {
     required String subjectId,
     required DateTime scheduledTime,
     int durationMinutes = 30,
-  }) async =>
-      Result.success(scheduleResult);
+  }) async {
+    scheduleLessonCallCount++;
+    lastScheduledTime = scheduledTime;
+    return Result.success(scheduleResult);
+  }
 }
 
 class FakeSpacedRepetitionService extends SpacedRepetitionService {

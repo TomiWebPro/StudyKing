@@ -3942,6 +3942,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get toolScheduleLessonFail => 'Failed to schedule lesson';
 
   @override
+  String get toolScheduleLessonInvalidTime =>
+      'Invalid scheduledTime. Provide an ISO 8601 datetime string (e.g. 2025-01-31T14:00:00Z).';
+
+  @override
   String get toolGenerateBlocksFail => 'Failed to generate lesson blocks';
 
   @override

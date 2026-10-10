@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ScheduleLessonTool extends AgentTool {
+  static final Logger _logger = const Logger('ScheduleLessonTool');
   final PlannerService _plannerService;
   final String _localeName;
 
@@ -40,15 +42,42 @@ class ScheduleLessonTool extends AgentTool {
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+
+    // The LLM may emit relative or non-ISO date strings (e.g. "tomorrow
+    // 5pm") despite the schema. Parse defensively and report a validation
+    // failure instead of letting FormatException escape execute().
+    final scheduledTimeRaw = args['scheduledTime'];
+    DateTime? scheduledTime;
+    if (scheduledTimeRaw is String && scheduledTimeRaw.isNotEmpty) {
+      try {
+        scheduledTime = DateTime.parse(scheduledTimeRaw);
+      } catch (e) {
+        _logger.w(
+          'schedule_lesson received unparseable scheduledTime: '
+          '$scheduledTimeRaw',
+          e,
+        );
+      }
+    } else {
+      _logger.w('schedule_lesson called without a scheduledTime string');
+    }
+
+    if (scheduledTime == null) {
+      return {
+        'success': false,
+        'message': l10n.toolScheduleLessonInvalidTime,
+      };
+    }
+
     final successResult = await _plannerService.scheduleLesson(
       topicId: args['topicId'] as String,
       topicTitle: args['topicTitle'] as String,
       subjectId: args['subjectId'] as String,
-      scheduledTime: DateTime.parse(args['scheduledTime'] as String),
+      scheduledTime: scheduledTime,
       durationMinutes: (args['durationMinutes'] as num?)?.toInt() ?? 30,
     );
     final success = successResult.data ?? false;
-    final l10n = lookupAppLocalizations(Locale(_localeName));
     return {
       'success': success,
       'message': success

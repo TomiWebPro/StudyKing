@@ -21,15 +21,18 @@ void main() {
         localeName: 'en',
       );
 
+      final scheduledTime = DateTime.now();
       final result = await tool.execute({
         'topicId': 't1',
         'topicTitle': 'Algebra',
         'subjectId': 's1',
-        'scheduledTime': DateTime.now().toIso8601String(),
+        'scheduledTime': scheduledTime.toIso8601String(),
       });
 
       expect(result['success'], isTrue);
       expect(result['message'], isA<String>());
+      expect(planner.scheduleLessonCallCount, 1);
+      expect(planner.lastScheduledTime, scheduledTime);
     });
 
     test('reports failure when scheduling does not succeed', () async {
@@ -48,6 +51,66 @@ void main() {
 
       expect(result['success'], isFalse);
       expect(result['message'], isA<String>());
+      expect(planner.scheduleLessonCallCount, 1);
+    });
+
+    test('returns validation failure for a relative date string',
+        () async {
+      final tool = ScheduleLessonTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final result = await tool.execute({
+        'topicId': 't1',
+        'topicTitle': 'Algebra',
+        'subjectId': 's1',
+        'scheduledTime': 'tomorrow 5pm',
+      });
+
+      expect(result['success'], isFalse);
+      expect(
+        result['message'],
+        lookupAppLocalizations(const Locale('en'))
+            .toolScheduleLessonInvalidTime,
+      );
+      expect(planner.scheduleLessonCallCount, 0);
+    });
+
+    test('returns validation failure for a non-ISO date string', () async {
+      final tool = ScheduleLessonTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final result = await tool.execute({
+        'topicId': 't1',
+        'topicTitle': 'Algebra',
+        'subjectId': 's1',
+        'scheduledTime': 'not-a-date',
+      });
+
+      expect(result['success'], isFalse);
+      expect(result['message'], isA<String>());
+      expect(planner.scheduleLessonCallCount, 0);
+    });
+
+    test('returns validation failure when scheduledTime is missing',
+        () async {
+      final tool = ScheduleLessonTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final result = await tool.execute({
+        'topicId': 't1',
+        'topicTitle': 'Algebra',
+        'subjectId': 's1',
+      });
+
+      expect(result['success'], isFalse);
+      expect(result['message'], isA<String>());
+      expect(planner.scheduleLessonCallCount, 0);
     });
   });
 }

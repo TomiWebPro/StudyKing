@@ -5265,6 +5265,10 @@
   "@toolScheduleLessonFail": {
     "description": "Result message when scheduling fails via tool"
   },
+  "toolScheduleLessonInvalidTime": "Invalid scheduledTime. Provide an ISO 8601 datetime string (e.g. 2025-01-31T14:00:00Z).",
+  "@toolScheduleLessonInvalidTime": {
+    "description": "Error message when schedule_lesson receives an unparseable scheduledTime"
+  },
   "toolGenerateBlocksFail": "Failed to generate lesson blocks",
   "@toolGenerateBlocksFail": {
     "description": "Result message when lesson block generation fails via tool"
