@@ -65,14 +65,23 @@ String formatCurrency(
     final separator = NumberFormat.decimalPattern(localeName)
         .format(0.1)
         .substring(1, 2);
-    final parts = result.split(separator);
-    if (parts.length == 2) {
-      var fraction = parts[1];
-      while (fraction.length > minFractionDigits &&
-          fraction.endsWith('0')) {
+    final separatorIndex = result.indexOf(separator);
+    if (separatorIndex >= 0) {
+      // Strip trailing zeros only from the digit run immediately after the
+      // decimal separator, stopping at the first non-digit character. This
+      // keeps currency suffixes intact for locales where the currency name or
+      // symbol follows the number (e.g. de/es/fr/it: "1,5000 EUR").
+      var fractionEnd = separatorIndex + separator.length;
+      while (fractionEnd < result.length &&
+          result[fractionEnd].compareTo('0') >= 0 &&
+          result[fractionEnd].compareTo('9') <= 0) {
+        fractionEnd++;
+      }
+      var fraction = result.substring(separatorIndex + separator.length, fractionEnd);
+      while (fraction.length > minFractionDigits && fraction.endsWith('0')) {
         fraction = fraction.substring(0, fraction.length - 1);
       }
-      return '${parts[0]}$separator$fraction';
+      return '${result.substring(0, separatorIndex + separator.length)}$fraction${result.substring(fractionEnd)}';
     }
   }
   return result;

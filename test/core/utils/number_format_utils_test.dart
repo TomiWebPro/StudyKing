@@ -122,5 +122,54 @@ void main() {
       final result = formatCurrency(1.5, 'en', minFractionDigits: 2, maxFractionDigits: 4, symbol: '\$');
       expect(result, '\$1.50');
     });
+
+    test('de locale strips trailing zeros for suffix-currency pattern', () {
+      final result = formatCurrency(1.5, 'de');
+      expect(result, contains('1,50'));
+      expect(result, isNot(contains('5000')));
+      expect(result, contains('EUR'));
+    });
+
+    test('es locale strips trailing zeros for suffix-currency pattern', () {
+      final result = formatCurrency(1.5, 'es');
+      expect(result, contains('1,50'));
+      expect(result, isNot(contains('5000')));
+      expect(result, contains('EUR'));
+    });
+
+    test('fr locale strips trailing zeros for suffix-currency pattern', () {
+      final result = formatCurrency(1.5, 'fr');
+      expect(result, contains('1,50'));
+      expect(result, isNot(contains('5000')));
+    });
+
+    test('it locale strips trailing zeros for suffix-currency pattern', () {
+      final result = formatCurrency(1.5, 'it');
+      expect(result, contains('1,50'));
+      expect(result, isNot(contains('5000')));
+      expect(result, contains('EUR'));
+    });
+
+    test('de locale strips to minFractionDigits=0 without leaving extra digits', () {
+      final result = formatCurrency(1.5, 'de', minFractionDigits: 0, maxFractionDigits: 4);
+      expect(result, contains('1,5'));
+      expect(result, isNot(contains(',50')));
+    });
+
+    test('de locale keeps genuine four-digit fractions', () {
+      final result = formatCurrency(1.2345, 'de');
+      expect(result, contains('1,2345'));
+    });
+
+    test('de locale strips trailing zeros with thousands grouping present', () {
+      final result = formatCurrency(1234.5, 'de');
+      expect(result, contains('1.234,50'));
+      expect(result, isNot(contains(',5000')));
+    });
+
+    test('en locale strips trailing zeros with thousands grouping present', () {
+      final result = formatCurrency(1234.5, 'en', symbol: '\$');
+      expect(result, '\$1,234.50');
+    });
   });
 }
