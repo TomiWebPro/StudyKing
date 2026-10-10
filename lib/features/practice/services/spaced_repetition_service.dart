@@ -192,8 +192,11 @@ class SpacedRepetitionService {
       }
 
       final all = _questionRepo.box.values.toList();
+      final now = DateTime.now();
+      // Never-scheduled questions (nextReview == null, e.g. newly ingested)
+      // are practiceable too; only future-scheduled reviews are excluded.
       final practiceQuestions = all.where((q) =>
-          (q.nextReview ?? DateTime.now()).isBefore(DateTime.now()) &&
+          (q.nextReview == null || q.nextReview!.isBefore(now)) &&
           q.subjectId == subjectId);
 
       return Result.success(practiceQuestions.toList());

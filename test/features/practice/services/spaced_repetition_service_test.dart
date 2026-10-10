@@ -131,13 +131,14 @@ class _SpyEngine extends SpacedRepetitionEngine {
   }
 }
 
-Question _makeQuestion(String id, {DateTime? nextReview, String? srDataJson}) {
+Question _makeQuestion(String id,
+    {DateTime? nextReview, String? srDataJson, String subjectId = 'math'}) {
   final now = DateTime(2026, 1, 1);
   return Question(
     id: id,
     text: 'What is 2+2?',
     type: QuestionType.typedAnswer,
-    subjectId: 'math',
+    subjectId: subjectId,
     topicId: 'arithmetic',
     createdAt: now,
     updatedAt: now,
@@ -333,6 +334,53 @@ void main() {
       final result = await service.getQuestionsDue(asOf: DateTime(2026, 1, 1));
       expect(result.isSuccess, isTrue);
       expect(result.data!.map((q) => q.id), contains('due'));
+    });
+  });
+
+  group('SpacedRepetitionService.getPracticeQuestions', () {
+    late FakeQuestionRepository questionRepo;
+    late SpacedRepetitionService service;
+
+    setUp(() {
+      questionRepo = FakeQuestionRepository();
+      service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+    });
+
+    test('includes never-practiced questions (null nextReview)', () async {
+      questionRepo._storage['new'] = _makeQuestion('new');
+
+      final result = await service.getPracticeQuestions('math');
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.map((q) => q.id), ['new']);
+    });
+
+    test('includes due and new questions but excludes future-scheduled ones',
+        () async {
+      questionRepo._storage['new'] = _makeQuestion('new');
+      questionRepo._storage['due'] =
+          _makeQuestion('due', nextReview: DateTime(2020, 1, 1));
+      questionRepo._storage['future'] =
+          _makeQuestion('future', nextReview: DateTime(2099, 1, 1));
+
+      final result = await service.getPracticeQuestions('math');
+
+      expect(result.isSuccess, isTrue);
+      final ids = result.data!.map((q) => q.id).toList();
+      expect(ids, containsAll(['new', 'due']));
+      expect(ids, isNot(contains('future')));
+    });
+
+    test('excludes questions belonging to another subject', () async {
+      questionRepo._storage['other'] = _makeQuestion('other', subjectId: 'physics');
+
+      final result = await service.getPracticeQuestions('math');
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
     });
   });
 }
