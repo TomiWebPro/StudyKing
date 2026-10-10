@@ -386,7 +386,7 @@ class QuestionAnswerValidator {
       case QuestionType.essay:
         return validateEssayAnswer(answer, markscheme, messages: msgs);
       case QuestionType.canvas:
-        return validateCanvasDrawing([], markscheme, messages: msgs);
+        return validateCanvasAnswer(answer, markscheme, messages: msgs);
       case QuestionType.stepByStep:
         return validateStepByStep(answer, markscheme, messages: msgs);
       case QuestionType.graphDrawing:
@@ -546,13 +546,8 @@ class QuestionAnswerValidator {
       return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
     }
     try {
-      final decoded = base64Decode(answer);
-      if (decoded.isEmpty) {
-        return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
-      }
-      final jsonStr = utf8.decode(decoded);
-      final data = jsonDecode(jsonStr);
-      if (data is! List || data.isEmpty) {
+      final data = _decodeDrawingPayload(answer);
+      if (data == null || data.isEmpty) {
         return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
       }
       return ValidationResult(isCorrect: true, explanation: msgs.drawingDetected);
@@ -560,6 +555,43 @@ class QuestionAnswerValidator {
       AnswerValidationService._logger.w('Error validating graph drawing', e);
       return ValidationResult(isCorrect: false, explanation: msgs.invalidDrawingData);
     }
+  }
+
+  static ValidationResult validateCanvasAnswer(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {
+    final msgs = messages;
+    if (answer.trim().isEmpty) {
+      return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
+    }
+    try {
+      final data = _decodeDrawingPayload(answer);
+      if (data == null || data.isEmpty) {
+        return ValidationResult(isCorrect: false, explanation: msgs.noDrawingDetected);
+      }
+      return validateCanvasDrawing(
+        data.cast<Map<String, dynamic>>(),
+        markscheme,
+        messages: msgs,
+      );
+    } catch (e) {
+      AnswerValidationService._logger.w('Error validating canvas drawing', e);
+      return ValidationResult(isCorrect: false, explanation: msgs.invalidDrawingData);
+    }
+  }
+
+  /// Decodes a base64-encoded JSON drawing payload into its raw JSON list.
+  ///
+  /// Returns `null` when the answer is blank, decodes to empty bytes, or is
+  /// not a non-empty JSON list. Decode failures (invalid base64, non-UTF-8
+  /// bytes, malformed JSON) propagate to the caller, which maps them to
+  /// [ValidationMessages.invalidDrawingData].
+  static List<dynamic>? _decodeDrawingPayload(String answer) {
+    if (answer.trim().isEmpty) return null;
+    final decoded = base64Decode(answer);
+    if (decoded.isEmpty) return null;
+    final jsonStr = utf8.decode(decoded);
+    final data = jsonDecode(jsonStr);
+    if (data is! List || data.isEmpty) return null;
+    return data;
   }
 
   static ValidationResult validateFileUpload(String answer, Markscheme? markscheme, {required ValidationMessages messages}) {

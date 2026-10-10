@@ -622,6 +622,62 @@ void main() {
       expect(result.explanation, contains('Invalid drawing'));
     });
 
+    test('canvas question type validates a decoded drawing payload', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final payload = base64Encode(utf8.encode(jsonEncode([
+        {'x': 10.0, 'y': 20.0},
+        {'x': 15.0, 'y': 25.0},
+      ])));
+      final result = QuestionAnswerValidator.validateStatic(payload, QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isTrue);
+      expect(result.explanation, contains('Drawing detected'));
+    });
+
+    test('canvas question type returns incorrect for empty answer', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('', QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('No drawing'));
+    });
+
+    test('canvas question type returns incorrect for invalid base64', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final result = QuestionAnswerValidator.validateStatic('not-base64', QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('Invalid drawing'));
+    });
+
+    test('canvas question type returns incorrect for empty decoded payload', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final payload = base64Encode(utf8.encode('[]'));
+      final result = QuestionAnswerValidator.validateStatic(payload, QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('No drawing'));
+    });
+
+    test('canvas question type returns incorrect for malformed payload elements', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final payload = base64Encode(utf8.encode(jsonEncode(['not-a-point-map'])));
+      final result = QuestionAnswerValidator.validateStatic(payload, QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isFalse);
+      expect(result.explanation, contains('Invalid drawing'));
+    });
+
+    test('canvas answer with valid drawing payload grades correct via validateAnswerForQuestion', () {
+      final question = _question(
+        id: 'q-canvas-payload',
+        type: QuestionType.canvas,
+        correctAnswer: '',
+      );
+      final payload = base64Encode(utf8.encode(jsonEncode([
+        {'x': 1.0, 'y': 2.0},
+        {'x': 3.0, 'y': 4.0},
+      ])));
+      final result = service.validateAnswerForQuestion(question, payload);
+      expect(result.isCorrect, isTrue);
+      expect(result.explanation, contains('Drawing detected'));
+    });
+
     test('fileUpload question type returns incorrect for empty answer', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
       final result = QuestionAnswerValidator.validateStatic('', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
