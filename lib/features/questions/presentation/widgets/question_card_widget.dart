@@ -10,6 +10,7 @@ import '../../../../core/utils/responsive.dart';
 import '../../../../core/widgets/rich_content_renderer.dart';
 import '../../../../core/providers/service_providers.dart' show visionInterpretationServiceProvider;
 import 'package:studyking/core/utils/answer_comparator.dart';
+import 'package:studyking/core/utils/label_helpers.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'single_answer_widget.dart';
 import 'canvas_drawing_widget.dart';
@@ -549,16 +550,6 @@ class _QuestionCardWidgetState extends State<QuestionCardWidget> {
     }
   }
 
-  String _difficultyLabel(int value, AppLocalizations l10n) {
-    switch (value) {
-      case 1:
-        return l10n.easy;
-      case 2:
-        return l10n.difficultyMedium;
-      case 3:
-        return l10n.hard;
-      default:
-        return value.toString();
-    }
-  }
+  String _difficultyLabel(int value, AppLocalizations l10n) =>
+      difficultyWord(value, l10n);
 }

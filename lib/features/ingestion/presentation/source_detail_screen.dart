@@ -490,7 +490,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
                               child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
                             ),
                             title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(l10n.questionSubtitle(questionTypeLabel(q.type, l10n), q.difficultyText ?? l10n.difficultyLabel(q.difficulty.toString()))),
+                            subtitle: Text(l10n.questionSubtitle(questionTypeLabel(q.type, l10n), q.difficultyText ?? difficultyWord(q.difficulty, l10n))),
                             trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
                             onTap: () {
                               Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);

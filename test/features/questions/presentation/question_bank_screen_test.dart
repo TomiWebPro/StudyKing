@@ -346,9 +346,12 @@ void main() {
       ));
       await tester.pumpAndSettle();
 
-      expect(find.text('Difficulty: 1'), findsOneWidget);
-      expect(find.text('Difficulty: 2'), findsOneWidget);
-      expect(find.text('Difficulty: 3'), findsOneWidget);
+      expect(find.text('Difficulty: Easy'), findsOneWidget);
+      expect(find.text('Difficulty: Medium'), findsOneWidget);
+      expect(find.text('Difficulty: Hard'), findsOneWidget);
+      expect(find.text('Difficulty: 1'), findsNothing);
+      expect(find.text('Difficulty: 2'), findsNothing);
+      expect(find.text('Difficulty: 3'), findsNothing);
     });
 
     testWidgets('popup menu is present on each question card', (tester) async {

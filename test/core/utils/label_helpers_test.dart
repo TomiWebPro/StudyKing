@@ -48,6 +48,25 @@ void main() {
     });
   });
 
+  group('difficultyWord', () {
+    test('returns Easy for difficulty 1', () {
+      expect(difficultyWord(1, l10n), 'Easy');
+    });
+
+    test('returns Medium for difficulty 2', () {
+      expect(difficultyWord(2, l10n), 'Medium');
+    });
+
+    test('returns Hard for difficulty 3', () {
+      expect(difficultyWord(3, l10n), 'Hard');
+    });
+
+    test('falls back to raw number for out-of-range value', () {
+      expect(difficultyWord(0, l10n), '0');
+      expect(difficultyWord(4, l10n), '4');
+    });
+  });
+
   group('sourceTypeLabel', () {
     test('returns PDF for pdf', () {
       expect(sourceTypeLabel(SourceType.pdf, l10n), 'PDF');

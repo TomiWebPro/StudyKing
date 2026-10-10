@@ -26,6 +26,21 @@ String questionTypeLabel(QuestionType type, AppLocalizations l10n) {
   }
 }
 
+/// Maps a 1–3 difficulty int to its localized word (Easy/Medium/Hard).
+/// Out-of-range values fall back to the raw number as a string.
+String difficultyWord(int value, AppLocalizations l10n) {
+  switch (value) {
+    case 1:
+      return l10n.easy;
+    case 2:
+      return l10n.difficultyMedium;
+    case 3:
+      return l10n.hard;
+    default:
+      return value.toString();
+  }
+}
+
 String sourceTypeLabel(SourceType type, AppLocalizations l10n) {
   switch (type) {
     case SourceType.pdf:

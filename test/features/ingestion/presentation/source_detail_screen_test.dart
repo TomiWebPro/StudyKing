@@ -71,11 +71,15 @@ class _FakeTopicRepo extends TopicRepository {
 }
 
 class _FakeQuestionRepo extends QuestionRepository {
+  final List<Question> _questions;
+
+  _FakeQuestionRepo([this._questions = const []]);
+
   @override
   Future<void> init() async {}
 
   @override
-  Future<Result<List<Question>>> getAll() async => Result.success([]);
+  Future<Result<List<Question>>> getAll() async => Result.success(List.from(_questions));
 
   @override
   Future<Result<void>> delete(String key) async => Result.success(null);
@@ -184,6 +188,42 @@ void main() {
 
       expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('question subtitle shows localized difficulty word', (tester) async {
+      final sourceWithQuestions = Source(
+        id: 'src1',
+        title: 'Physics Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        generatedQuestionIds: ['sq1'],
+        createdAt: DateTime(2024, 1, 15),
+      );
+      final generatedQuestion = Question(
+        id: 'sq1',
+        text: 'What is Newton\'s first law?',
+        type: QuestionType.typedAnswer,
+        difficulty: 2,
+        subjectId: 'sub1',
+        topicId: '',
+        createdAt: DateTime(2024, 1, 15),
+        updatedAt: DateTime(2024, 1, 15),
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithQuestions}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo([generatedQuestion]),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      // difficultyText is null, so the 1–3 int must map to the localized word.
+      expect(find.text('Text Answer • Medium'), findsOneWidget);
+      expect(find.textContaining('Difficulty: 2'), findsNothing);
     });
 
     testWidgets('uses NavigatorObserver for back-navigation on delete', (tester) async {

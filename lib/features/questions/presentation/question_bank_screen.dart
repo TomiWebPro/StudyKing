@@ -1350,7 +1350,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
                                                       runSpacing: 4,
                                                       children: [
                                                         _smallChip(questionTypeLabel(q.type, l10n), theme),
-                                                        _smallChip(l10n.difficultyLabel(q.difficulty.toString()), theme),
+                                                        _smallChip(l10n.difficultyLabel(difficultyWord(q.difficulty, l10n)), theme),
                                                         if (subjectName != null) _smallChip(subjectName, theme),
                                                         if (topicName != null) _smallChip(topicName, theme),
                                                         if (q.sourceIds.isNotEmpty)
