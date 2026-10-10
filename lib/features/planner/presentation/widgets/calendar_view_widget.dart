@@ -39,7 +39,9 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
 
     final firstDay = DateTime(_currentMonth.year, _currentMonth.month, 1);
     final lastDay = DateTime(_currentMonth.year, _currentMonth.month + 1, 0);
-    final startWeekday = firstDay.weekday % 7;
+    // Headers are Monday-first (see _buildDayHeaders), so the leading-empty-cell
+    // offset must use the Monday-first encoding: Mon=0 ... Sun=6.
+    final startWeekday = firstDay.weekday - 1;
 
     return Column(
       children: [

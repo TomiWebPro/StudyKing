@@ -341,6 +341,43 @@ void main() {
       expect(wasCalled, isFalse);
     });
 
+    testWidgets('day 1 renders under its actual weekday column (Monday-first grid)',
+        (tester) async {
+      _setLargeViewport(tester);
+      final now = DateTime.now();
+      final firstDay = DateTime(now.year, now.month, 1);
+      final expectedWeekday = DateFormat.EEEE('en').format(firstDay);
+      const weekdayPrefixes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final expectedPrefix = expectedWeekday.substring(0, 3);
+
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(plan: createPlan()),
+      ));
+      await tester.pumpAndSettle();
+
+      // Headers are Monday-first: Monday is the leftmost column, Sunday the rightmost.
+      final headerCenters = <String, double>{};
+      for (final prefix in weekdayPrefixes) {
+        final header = find.textContaining(prefix);
+        expect(header, findsOneWidget);
+        headerCenters[prefix] = tester.getCenter(header).dx;
+      }
+      for (var i = 0; i < weekdayPrefixes.length - 1; i++) {
+        expect(
+          headerCenters[weekdayPrefixes[i]]!,
+          lessThan(headerCenters[weekdayPrefixes[i + 1]]!),
+        );
+      }
+
+      // Day 1 must be centered in the same column as its actual weekday's header.
+      final dayOneCenter = tester.getCenter(find.text('1')).dx;
+      final columnWidth = 1080 / 7;
+      expect(
+        (dayOneCenter - headerCenters[expectedPrefix]!).abs(),
+        lessThan(columnWidth / 2),
+      );
+    });
+
     // CalendarViewWidget uses an onDayTap callback for navigation;
     // navigation is handled by the parent widget, not internally.
   });
