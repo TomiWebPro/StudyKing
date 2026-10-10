@@ -6,7 +6,7 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
-import 'package:studyking/core/providers/shared_providers.dart' show localeProvider;
+import 'package:studyking/core/providers/shared_providers.dart' show localeProvider, l10nProvider;
 import 'package:studyking/core/providers/app_providers.dart' show planOrchestratorProvider;
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import '../../../core/services/plan_adherence_orchestrator.dart';
@@ -20,10 +20,12 @@ export 'adherence_providers.dart' show AdherenceSummaryData, TodayAdherenceData,
 
 final plannerServiceProvider = Provider<PlannerService>((ref) {
   final locale = ref.watch(localeProvider);
+  final l10n = ref.watch(l10nProvider);
   return PlannerService(
     lessonAgentService: ref.watch(lessonAgentServiceProvider),
     localeName: locale.languageCode,
     planOrchestrator: ref.watch(planOrchestratorProvider),
+    l10n: l10n,
   );
 });
 

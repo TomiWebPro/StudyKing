@@ -55,7 +55,7 @@ class PersonalLearningPlanService {
   final SyllabusResolver? _syllabusResolver;
   final PlannerAdvisorStrategy? _advisor;
   PlanGenerationConfig config;
-  final AppLocalizations? _l10n;
+  AppLocalizations? _l10n;
 
   PersonalLearningPlanService({
     MasteryGraphService? masteryService,
@@ -80,6 +80,14 @@ class PersonalLearningPlanService {
         _advisor = advisor,
         config = config ?? PlanGenerationConfig(),
         _l10n = l10n;
+
+  /// Updates the [AppLocalizations] used for generated plan strings.
+  /// Called when the app locale changes (see `l10nProvider`), mirroring
+  /// `PlanAdherenceOrchestrator.updateLocalization`, so regenerated plans
+  /// use the new locale without re-creating the service.
+  void updateLocalization(AppLocalizations l10n) {
+    _l10n = l10n;
+  }
 
   Future<Result<PersonalLearningPlan>> generatePlan(
     String studentId, {
@@ -935,8 +943,7 @@ class PersonalLearningPlanService {
   }
 
   String _generateRecommendationReason(MasteryState state) {
-    final l10n = _l10n;
-    return planRecommendationReason(state.accuracy, state.reviewUrgency, l10n!);
+    return planRecommendationReason(state.accuracy, state.reviewUrgency, _l10n);
   }
 
   String _classifyRecommendation(MasteryState state) {
@@ -994,9 +1001,11 @@ class PersonalLearningPlanService {
   String _generateFocus(List<PlannedTopic> topics, {String courseName = ''}) {
     final l10n = _l10n;
     final prefix = courseName.isNotEmpty ? '$courseName: ' : '';
-    if (topics.isEmpty) return '$prefix${planFocusLabel(isEmpty: true, weakRatio: 0, l10n: l10n!)}';
+    if (topics.isEmpty) {
+      return '$prefix${planFocusLabel(isEmpty: true, weakRatio: 0, l10n: l10n)}';
+    }
     final weakCount = topics.where((t) => t.reviewUrgency > 0.6).length;
-    return '$prefix${planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length, l10n: l10n!)}';
+    return '$prefix${planFocusLabel(isEmpty: false, weakRatio: weakCount / topics.length, l10n: l10n)}';
   }
 
   PlanSummary _generateSummary(

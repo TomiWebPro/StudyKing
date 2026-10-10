@@ -70,6 +70,7 @@ class PlannerService {
     this.advisor,
     this.fixedStudentId,
     String localeName = 'en',
+    AppLocalizations? l10n,
   })  : _localeName = localeName,
         planRepo = planRepo ?? PlanRepository(),
         masteryService = masteryService ?? MasteryGraphService(),
@@ -79,7 +80,8 @@ class PlannerService {
             PersonalLearningPlanService(
               masteryService: masteryService ?? MasteryGraphService(),
               advisor: advisor,
-            ),
+              l10n: l10n,
+        ),
         sessionRepo = sessionRepo ?? SessionRepository(),
         pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         planOrchestrator = planOrchestrator ?? PlanAdherenceOrchestrator(),

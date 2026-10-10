@@ -57,9 +57,12 @@ final engagementAdherenceRepoProvider = Provider<PlanAdherenceRepository>((ref) 
 });
 
 final engagementPlannerServiceProvider = Provider<PlannerService>((ref) {
+  final l10n = ref.watch(l10nProvider) ??
+      lookupAppLocalizations(const Locale('en'));
   return PlannerService(
     masteryService: ref.watch(masteryGraphServiceProvider),
     planOrchestrator: ref.watch(planOrchestratorProvider),
+    l10n: l10n,
   );
 });
 

@@ -23,6 +23,7 @@ import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 class FakeMasteryGraphService extends MasteryGraphService {
   final MasteryGraphRepository _fakeRepo;
@@ -450,6 +451,49 @@ void main() {
         expect(result.data!.summary, isNotNull);
         expect(result.data!.summary.totalQuestions, greaterThanOrEqualTo(0));
         expect(result.data!.summary.totalMinutes, greaterThanOrEqualTo(0));
+      });
+
+      test('generates plan successfully without l10n (no null-check crash)',
+          () async {
+        final serviceWithoutL10n = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
+          repository: mockRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 3),
+        );
+
+        final result = await serviceWithoutL10n.generatePlan('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNotNull);
+        expect(result.data!.dailyPlans, hasLength(3));
+        for (final day in result.data!.dailyPlans) {
+          expect(day.focus, isNotEmpty);
+        }
+        for (final recommendation in result.data!.recommendations) {
+          expect(recommendation.reason, isNotEmpty);
+        }
+      });
+
+      test('updateLocalization refreshes locale for subsequently generated plans',
+          () async {
+        final serviceWithoutL10n = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
+          repository: mockRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 1),
+        );
+
+        final before = await serviceWithoutL10n.generatePlan('student1');
+        expect(before.isSuccess, isTrue);
+        expect(before.data!.dailyPlans.first.focus, isNotEmpty);
+
+        serviceWithoutL10n.updateLocalization(AppLocalizationsEs());
+
+        final after = await serviceWithoutL10n.generatePlan('student1');
+        expect(after.isSuccess, isTrue);
+        // Spanish focus labels replace the English fallbacks after the refresh.
+        expect(after.data!.dailyPlans.first.focus, contains('repaso'));
       });
 
       test('includes rest days when configured', () async {

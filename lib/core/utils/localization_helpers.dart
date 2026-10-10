@@ -24,20 +24,37 @@ String badgeDescription(String badgeId, AppLocalizations l10n) {
   };
 }
 
-String planRecommendationReason(double accuracy, double reviewUrgency, AppLocalizations l10n) {
-  if (accuracy >= 0.9) return l10n.planHighMastery;
-  if (accuracy >= 0.8) return l10n.planGoodProgress;
-  if (accuracy >= 0.6) return l10n.planDeveloping;
-  if (reviewUrgency > 0.7) return l10n.planAtRisk;
-  return l10n.planNeedsAttention;
+/// Accepts a nullable [AppLocalizations] and falls back to the English
+/// strings (mirroring the `l10n?.key ?? 'fallback'` pattern) so callers
+/// that run before localization is available never crash.
+String planRecommendationReason(
+  double accuracy,
+  double reviewUrgency,
+  AppLocalizations? l10n,
+) {
+  if (accuracy >= 0.9) {
+    return l10n?.planHighMastery ?? 'High mastery — ready to advance';
+  }
+  if (accuracy >= 0.8) {
+    return l10n?.planGoodProgress ?? 'Good progress — maintain consistency';
+  }
+  if (accuracy >= 0.6) {
+    return l10n?.planDeveloping ?? 'Developing — needs more practice';
+  }
+  if (reviewUrgency > 0.7) {
+    return l10n?.planAtRisk ?? 'At risk — review overdue';
+  }
+  return l10n?.planNeedsAttention ?? 'Needs attention — focus on fundamentals';
 }
 
 String planFocusLabel({
   required bool isEmpty,
   required double weakRatio,
-  required AppLocalizations l10n,
+  required AppLocalizations? l10n,
 }) {
-  if (isEmpty) return l10n.planGeneralReview;
-  if (weakRatio > 0.5) return l10n.planFocusWeakAreas;
-  return l10n.planPracticeAndReview;
+  if (isEmpty) return l10n?.planGeneralReview ?? 'General review';
+  if (weakRatio > 0.5) {
+    return l10n?.planFocusWeakAreas ?? 'Focus on weak areas';
+  }
+  return l10n?.planPracticeAndReview ?? 'Practice and review';
 }

@@ -212,7 +212,7 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
         adherenceRepository: PlanAdherenceRepository(),
         planOrchestrator: PlanAdherenceOrchestrator(l10n: defaultL10n),
         sessionRepository: mainDb.sessionRepository,
-        plannerService: PlannerService(),
+        plannerService: PlannerService(l10n: defaultL10n),
         l10n: defaultL10n,
       );
       await schedulerRef.init();
