@@ -96,32 +96,38 @@ class InstrumentationService {
     await _improvementTracker.init();
   }
 
-  void recordPlanAdherence({
+  Future<Result<void>> recordPlanAdherence({
     required String studentId,
     required int plannedQuestions,
     required int actualQuestions,
     required int plannedMinutes,
     required int actualMinutes,
     DateTime? date,
-  }) {
-    final recordDate = date ?? DateTime.now();
-    final score = calculateAdherenceScore(
-      plannedQuestions: plannedQuestions,
-      actualQuestions: actualQuestions,
-      plannedMinutes: plannedMinutes,
-      actualMinutes: actualMinutes,
-    );
-    final model = PlanAdherenceModel(
-      id: IdGenerator.generate('adh'),
-      studentId: studentId,
-      date: recordDate,
-      plannedQuestions: plannedQuestions,
-      actualQuestions: actualQuestions,
-      plannedMinutes: plannedMinutes,
-      actualMinutes: actualMinutes,
-      adherenceScore: score,
-    );
-    _adherenceRepository?.create(model);
+  }) async {
+    try {
+      final recordDate = date ?? DateTime.now();
+      final score = calculateAdherenceScore(
+        plannedQuestions: plannedQuestions,
+        actualQuestions: actualQuestions,
+        plannedMinutes: plannedMinutes,
+        actualMinutes: actualMinutes,
+      );
+      final model = PlanAdherenceModel(
+        id: IdGenerator.generate('adh'),
+        studentId: studentId,
+        date: recordDate,
+        plannedQuestions: plannedQuestions,
+        actualQuestions: actualQuestions,
+        plannedMinutes: plannedMinutes,
+        actualMinutes: actualMinutes,
+        adherenceScore: score,
+      );
+      await _adherenceRepository?.create(model);
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to record plan adherence for $studentId', e);
+      return Result.failure(e.toString());
+    }
   }
 
 
@@ -199,23 +205,32 @@ class InstrumentationService {
     }
   }
 
-  Future<List<PlanAdherenceModel>> getAdherenceHistory(String studentId) async {
-    if (_adherenceRepository == null) return [];
+  Future<Result<List<PlanAdherenceModel>>> getAdherenceHistory(String studentId) async {
+    if (_adherenceRepository == null) return Result.failure('AdherenceRepository not available');
     final result = await _adherenceRepository.getByStudent(studentId);
     if (result.isFailure) {
       _logger.w('getAdherenceHistory failed for $studentId: ${result.error}');
-      return [];
+      return Result.failure(result.error);
     }
-    return result.data ?? [];
+    return result;
   }
 
-  List<MasteryImprovementMetric> getImprovementHistory(String studentId) {
-    return _improvementTracker.getImprovements(studentId);
+  Result<List<MasteryImprovementMetric>> getImprovementHistory(String studentId) {
+    try {
+      return Result.success(_improvementTracker.getImprovements(studentId));
+    } catch (e) {
+      _logger.w('getImprovementHistory failed for $studentId', e);
+      return Result.failure(e.toString());
+    }
   }
 
   Future<Result<void>> exportInstrumentationData(String studentId) async {
     try {
-      final improvements = getImprovementHistory(studentId);
+      final improvementsResult = getImprovementHistory(studentId);
+      if (improvementsResult.isFailure) {
+        _logger.w('exportInstrumentationData: improvement history failed for $studentId');
+      }
+      final improvements = improvementsResult.data ?? [];
 
       List<Map<String, dynamic>> adherenceData = [];
       if (_adherenceRepository != null) {

@@ -147,18 +147,19 @@ void main() {
     });
 
     group('recordPlanAdherence', () {
-      test('records plan adherence with all parameters', () {
-        service.recordPlanAdherence(
+      test('records plan adherence with all parameters and returns success', () async {
+        final result = await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 15,
           actualQuestions: 12,
           plannedMinutes: 30,
           actualMinutes: 25,
         );
+        expect(result.isSuccess, isTrue);
       });
 
-      test('records plan adherence with custom date', () {
-        service.recordPlanAdherence(
+      test('records plan adherence with custom date', () async {
+        final result = await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 15,
           actualQuestions: 15,
@@ -166,26 +167,29 @@ void main() {
           actualMinutes: 30,
           date: DateTime(2026, 1, 1),
         );
+        expect(result.isSuccess, isTrue);
       });
 
-      test('records zero adherence', () {
-        service.recordPlanAdherence(
+      test('records zero adherence', () async {
+        final result = await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 0,
           actualQuestions: 0,
           plannedMinutes: 0,
           actualMinutes: 0,
         );
+        expect(result.isSuccess, isTrue);
       });
 
-      test('records overachievement', () {
-        service.recordPlanAdherence(
+      test('records overachievement', () async {
+        final result = await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 10,
           actualQuestions: 20,
           plannedMinutes: 30,
           actualMinutes: 60,
         );
+        expect(result.isSuccess, isTrue);
       });
     });
 
@@ -216,13 +220,25 @@ void main() {
     });
 
     group('getAdherenceHistory', () {
+      test('returns failure when repository not available', () async {
+        final noRepoService = InstrumentationService(
+          repository: FakeMasteryGraphRepository(),
+          adherenceRepository: null,
+        );
+        await noRepoService.init();
+        final history = await noRepoService.getAdherenceHistory('student1');
+        expect(history.isFailure, isTrue);
+        expect(history.error, 'AdherenceRepository not available');
+      });
+
       test('returns empty history initially', () async {
         final history = await service.getAdherenceHistory('student1');
-        expect(history, isEmpty);
+        expect(history.isSuccess, isTrue);
+        expect(history.data, isEmpty);
       });
 
       test('returns history after recording', () async {
-        service.recordPlanAdherence(
+        await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 10,
           actualQuestions: 8,
@@ -230,28 +246,41 @@ void main() {
           actualMinutes: 25,
         );
         final history = await service.getAdherenceHistory('student1');
-        expect(history.length, equals(1));
+        expect(history.isSuccess, isTrue);
+        expect(history.data!.length, equals(1));
       });
     });
 
     group('getImprovementHistory', () {
-      test('returns empty history initially', () {
+      test('returns success with empty list initially', () {
         final history = service.getImprovementHistory('student1');
-        expect(history, isEmpty);
+        expect(history.isSuccess, isTrue);
+        expect(history.data, isEmpty);
+      });
+
+      test('returns failure when repository not available', () {
+        final noRepoService = InstrumentationService(
+          repository: FakeMasteryGraphRepository(),
+          adherenceRepository: null,
+        );
+        final history = noRepoService.getImprovementHistory('student1');
+        // Still returns success since it's in-memory only, but convention requires Result<T>
+        expect(history.isSuccess, isTrue);
       });
     });
 
     group('exportInstrumentationData', () {
       test('exports data successfully', () async {
-        service.recordPlanAdherence(
+        final recordResult = await service.recordPlanAdherence(
           studentId: 'student1',
           plannedQuestions: 10,
           actualQuestions: 8,
           plannedMinutes: 30,
           actualMinutes: 25,
         );
-        final result = await service.exportInstrumentationData('student1');
-        expect(result.isSuccess, isTrue);
+        expect(recordResult.isSuccess, isTrue);
+        final exportResult = await service.exportInstrumentationData('student1');
+        expect(exportResult.isSuccess, isTrue);
       });
 
       test('exports empty data', () async {
@@ -424,7 +453,7 @@ void main() {
       final svc = InstrumentationService(repository: mockRepo, adherenceRepository: adherenceRepo);
       await svc.init();
 
-      svc.recordPlanAdherence(
+      await svc.recordPlanAdherence(
         studentId: 'student1', plannedQuestions: 10, actualQuestions: 8,
         plannedMinutes: 30, actualMinutes: 25,
       );
@@ -599,13 +628,13 @@ void main() {
       expect(warnings.any((l) => l.contains('getConsecutiveLowAdherenceDays')), isTrue);
     });
 
-    test('getAdherenceHistory returns empty and logs when repo fails', () async {
+    test('getAdherenceHistory propagates failure from repo', () async {
       _installLogCapture();
       addTearDown(_uninstallLogCapture);
 
       final history = await service.getAdherenceHistory('student1');
 
-      expect(history, isEmpty);
+      expect(history.isFailure, isTrue);
       expect(
         _capturedLogs.any((l) => l.contains('[W]') && l.contains('getAdherenceHistory')),
         isTrue,

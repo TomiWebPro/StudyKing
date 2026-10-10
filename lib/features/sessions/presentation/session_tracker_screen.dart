@@ -234,7 +234,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
             adherenceRepository: PlanAdherenceRepository(),
           );
           await instrumentation.init();
-          instrumentation.recordPlanAdherence(
+          final recordResult = await instrumentation.recordPlanAdherence(
             studentId: studentId,
             date: DateTime.now(),
             plannedQuestions: todayPlan.targetQuestions,
@@ -242,6 +242,9 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
             plannedMinutes: todayPlan.targetMinutes,
             actualMinutes: duration ~/ msPerMinute,
           );
+          if (recordResult.isFailure) {
+            _logger.w('Failed to record plan adherence for $studentId: ${recordResult.error}');
+          }
         }
       }
     } catch (e) {
