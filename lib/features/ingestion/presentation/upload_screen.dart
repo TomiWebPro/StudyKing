@@ -279,6 +279,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               ],
             ),
           );
+          if (!mounted) return;
           if (proceed != true) {
             setState(() {
               _error = null;
@@ -333,6 +334,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             }
           },
         );
+        if (!mounted) return;
         if (result.isFailure) {
           setState(() {
             _error = l10n.uploadFailed(result.error ?? '');
@@ -357,6 +359,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
         );
+        if (!mounted) return;
         if (result.isFailure) {
           setState(() {
             _error = l10n.uploadFailed(result.error ?? '');
@@ -370,6 +373,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         }
       }
 
+      if (!mounted) return;
       _processingStopwatch.stop();
       setState(() {
         _success = l10n.contentUploadedSuccessfully;
@@ -421,6 +425,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     } catch (e) {
       _logger.w('Upload failed', e);
       _processingStopwatch.stop();
+      if (!mounted) return;
       setState(() {
         _error = AppLocalizations.of(context)!.uploadFailed('');
         _isUploading = false;

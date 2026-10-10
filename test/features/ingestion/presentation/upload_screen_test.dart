@@ -682,6 +682,59 @@ void main() {
       });
     });
 
+    group('discard mid-upload', () {
+      testWidgets('discarding mid-upload does not setState after dispose',
+          (tester) async {
+        final pipeline = _DelayedPipeline();
+
+        await tester.pumpWidget(_buildWidget(pipeline: pipeline));
+        await tester.pump();
+
+        await tester.enterText(find.byType(TextField).first, 'Title');
+        await tester.pump();
+        await tester.enterText(find.byType(TextField).last, 'Content');
+        await tester.pump();
+
+        final uploadButton =
+            find.widgetWithText(FilledButton, 'Upload & Analyze');
+        await tester.ensureVisible(uploadButton);
+        await tester.pump();
+        await tester.tap(uploadButton);
+        await tester.pump();
+
+        expect(find.text('Uploading...'), findsOneWidget);
+
+        // Simulate a back-button press while the upload is in flight.
+        // maybePop consults PopScope (canPop: false while uploading),
+        // which raises the discard dialog.
+        final navigator =
+            Navigator.of(tester.element(find.byType(UploadScreen)));
+        await navigator.maybePop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        expect(find.text('Upload in Progress'), findsOneWidget);
+
+        // Confirm discard: the in-flight upload keeps running while the
+        // route pops.
+        await tester.tap(find.widgetWithText(FilledButton, 'Discard'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // The route is popped and the State is disposed, but the upload
+        // future is still pending.
+        expect(find.byType(UploadScreen), findsNothing);
+
+        // The in-flight upload completes after the pop. Without the
+        // mounted guards this throws "setState() called after dispose()".
+        pipeline.completer.complete();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(tester.takeException(), isNull);
+      });
+    });
+
     group('navigation', () {
       testWidgets('PopScope allows back navigation when idle', (tester) async {
         await tester.pumpWidget(_buildWidget());
