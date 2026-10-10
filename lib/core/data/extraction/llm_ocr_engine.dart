@@ -10,21 +10,21 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 /// OCR engine that delegates to an LLM's vision capability.
 ///
 /// Used as the fallback for complex/low-confidence cases or when on-device OCR
-/// is unavailable. Reports a fixed [fallbackConfidence] because LLM vision APIs
-/// do not expose a reliable confidence score.
+/// is unavailable. LLM vision APIs do not expose a reliable confidence score,
+/// so this engine reports no confidence at all: `supportsConfidence` is false
+/// and successful results carry `confidence: null` with no segments, rather
+/// than a fabricated value that could masquerade as measured confidence.
 class LlmOcrEngine implements OcrEngine {
   static final Logger _logger = const Logger('LlmOcrEngine');
 
   final LlmService? _llmService;
   final String _modelId;
   final String _localeName;
-  final double fallbackConfidence;
 
   LlmOcrEngine({
     LlmService? llmService,
     required String modelId,
     required String localeName,
-    this.fallbackConfidence = 0.7,
   })  : _llmService = llmService,
         _modelId = modelId,
         _localeName = localeName {
@@ -82,8 +82,8 @@ class LlmOcrEngine implements OcrEngine {
       return Result.success(
         OcrEngineResult(
           text: response.trim(),
-          confidence: fallbackConfidence,
-          segments: [OcrSegment(response.trim(), fallbackConfidence)],
+          confidence: null,
+          segments: const [],
           engineName: name,
         ),
       );

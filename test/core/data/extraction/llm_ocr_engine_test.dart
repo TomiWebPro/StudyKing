@@ -55,19 +55,21 @@ void main() {
       expect(engine.supportsConfidence, isFalse);
     });
 
-    test('returns extracted text with configurable fallback confidence', () async {
+    test('returns extracted text without fabricating confidence', () async {
       final engine = LlmOcrEngine(
         llmService: _FakeLlmService(onChat: () async => Result.success('  Extracted line  ')),
         modelId: 'm',
         localeName: 'en',
-        fallbackConfidence: 0.6,
       );
       final result = await engine.recognize(
         OcrImageInput(rawContent: 'x', bytes: [1, 2, 3]),
       );
       expect(result.isSuccess, isTrue);
       expect(result.data!.text, 'Extracted line');
-      expect(result.data!.confidence, 0.6);
+      // LLM vision APIs expose no reliable confidence; the engine must not
+      // masquerade a hardcoded value as measured confidence.
+      expect(result.data!.confidence, isNull);
+      expect(result.data!.segments, isEmpty);
     });
 
     test('returns success with empty text when LLM yields nothing', () async {
