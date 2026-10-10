@@ -391,6 +391,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         setState(() {});
       }
     } catch (e) {
+      _logger.w('Failed to start focus session', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -462,6 +463,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         _loadDueCounts();
       }
     } catch (e) {
+      _logger.w('Failed to start weak-areas practice', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.noWeakAreasFound)),
@@ -494,6 +496,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         _loadDueCounts();
       }
     } catch (e) {
+      _logger.w('Failed to start spaced repetition session', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.noQuestionsAvailable)),

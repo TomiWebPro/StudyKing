@@ -347,6 +347,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         _isSending = false;
       });
     } catch (e) {
+      _logger.w('Failed to send mentor message', e);
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
       final idx = _messages.length - 1;
@@ -1411,6 +1412,9 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
                                   );
                                 }
                               } catch (e) {
+                                _logger.w(
+                                    'Failed to resolve subject for practice launch',
+                                    e);
                                 if (!context.mounted) return;
                                 messenger.showSnackBar(
                                   SnackBar(content: Text(l10n.unableToResolveSubject)),
@@ -1485,12 +1489,14 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
           },
         );
       } catch (e) {
+        _logger.w('Failed to show mentor progress report dialog', e);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.mentorProgressReportError)),
         );
       }
     } catch (e) {
+      _logger.w('Failed to load mentor progress report', e);
       if (!mounted) return;
       try {
         Navigator.of(context).pop();

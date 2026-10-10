@@ -427,9 +427,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
               )) as PracticeSessionResult?;
       _onSessionResult(result);
     } catch (e) {
+      _logger.w('Failed to start weak-areas practice', e);
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
+            .showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
       }
     }
   }
@@ -467,10 +468,11 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
               )) as PracticeSessionResult?;
       _onSessionResult(srResult);
     } catch (e) {
+      _logger.w('Failed to start spaced repetition session', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
             content:
-                Text(AppLocalizations.of(context)!.noQuestionsAvailable)));
+                Text(AppLocalizations.of(context)!.errorOccurred)));
       }
     }
   }
@@ -535,9 +537,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
           )) as PracticeSessionResult?;
       _onSessionResult(result);
     } catch (e) {
+      _logger.w('Failed to start at-risk questions practice', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.noWeakAreasFound)));
+            SnackBar(content: Text(l10n.errorOccurred)));
       }
     }
   }
@@ -704,9 +707,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             }
           });
     } catch (e) {
+      _logger.w('Failed to load practice sources', e);
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noSourcesAvailable)));
+            .showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
       }
     }
   }
@@ -770,9 +774,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
           topics: topics,
           onTopicSelected: (topicId) => _startTopicPractice(topicId));
     } catch (e) {
+      _logger.w('Failed to load practice topics', e);
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noTopicsAvailable)));
+            .showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
       }
     }
   }
@@ -818,9 +823,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       ) as PracticeSessionResult?;
       _onSessionResult(result);
     } catch (e) {
+      _logger.w('Failed to start custom practice session', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(l10n.noQuestionsAvailable)),
+          SnackBar(content: Text(l10n.errorOccurred)),
         );
       }
     }
@@ -849,9 +855,10 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
             await _launchWeakAreasForSubject(masteryService, subject);
           });
     } catch (e) {
+      _logger.w('Failed to show weak-areas selector', e);
       if (mounted) {
         ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(l10n.noWeakAreasFound)));
+            .showSnackBar(SnackBar(content: Text(l10n.errorOccurred)));
       }
     }
   }

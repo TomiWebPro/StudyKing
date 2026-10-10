@@ -31,8 +31,11 @@ import '../../../helpers/navigator_observer_helper.dart';
 final _today = DateTime.now();
 
 class _FakeSubjectRepo extends SubjectRepository {
+  final List<Subject> subjects;
+  _FakeSubjectRepo({this.subjects = const []});
+
   @override
-  Future<Result<List<Subject>>> getAll() async => Result.success([]);
+  Future<Result<List<Subject>>> getAll() async => Result.success(subjects);
 }
 
 class _TestSubjectsNotifier extends SubjectsRepositoryNotifier {
@@ -309,7 +312,8 @@ class _FakeFocusSessionRepo extends FocusSessionRepository {
 }
 
 class _FakeSettingsRepository extends SettingsRepository {
-  final SettingsBox _box = SettingsBox();
+  final SettingsBox _box;
+  _FakeSettingsRepository({SettingsBox? box}) : _box = box ?? SettingsBox();
 
   @override
   Future<Result<SettingsBox>> getSettings() async => Result.success(_box);
@@ -321,6 +325,28 @@ class _FakeSettingsRepository extends SettingsRepository {
 class _FakeMasteryGraphService extends MasteryGraphService {
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success(<MasteryState>[]);
+}
+
+class _ThrowingMasteryGraphService extends MasteryGraphService {
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async =>
+      throw Exception('Mastery service unavailable');
+}
+
+/// Mounts [FocusTimerScreen] only after the subjects repository has
+/// finished loading, so the screen's one-shot subject read observes
+/// the fake subjects instead of an still-loading provider state.
+class _SubjectsGate extends ConsumerWidget {
+  const _SubjectsGate();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final subjects = ref.watch(subjectsRepositoryProvider);
+    if (subjects.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    return const FocusTimerScreen();
+  }
 }
 
 class _FakePlanOrchestrator extends PlanAdherenceOrchestrator {
@@ -367,16 +393,22 @@ Widget _wrapApp(Widget widget, {StudyTimerService? serviceOverride, TestNavigato
   );
 }
 
-Widget _buildTestApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
+Widget _buildTestApp(
+  Widget widget, {
+  TestNavigatorObserver? navigatorObserver,
+  SubjectRepository? subjectRepo,
+  MasteryGraphService? masteryOverride,
+  SettingsRepository? settingsRepo,
+}) {
   return ProviderScope(
     overrides: [
       sessionRepositoryProvider.overrideWithValue(FakeSessionRepository()),
       studyTimerServiceProvider.overrideWithValue(FakeStudyTimerService()),
-      subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(_FakeSubjectRepo())),
+      subjectsRepositoryProvider.overrideWith(() => _TestSubjectsNotifier(subjectRepo ?? _FakeSubjectRepo())),
       focusSessionRepositoryProvider.overrideWith((ref) async => _FakeFocusSessionRepo()),
       badgeServiceProvider.overrideWithValue(_FakeBadgeService()),
-      settingsRepositoryProvider.overrideWithValue(_FakeSettingsRepository()),
-      masteryGraphServiceProvider.overrideWith((ref) => _FakeMasteryGraphService()),
+      settingsRepositoryProvider.overrideWithValue(settingsRepo ?? _FakeSettingsRepository()),
+      masteryGraphServiceProvider.overrideWith((ref) => masteryOverride ?? _FakeMasteryGraphService()),
       planOrchestratorProvider.overrideWith((ref) => _FakePlanOrchestrator()),
     ],
     child: MediaQuery(
@@ -410,6 +442,47 @@ void main() {
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('Study'), findsOneWidget);
+    });
+
+    testWidgets('weak-areas practice failure logs warning',
+        (tester) async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      try {
+        final repo = _FakeSubjectRepo(subjects: [
+          Subject(id: '1', name: 'Mathematics'),
+        ]);
+
+        await tester.pumpWidget(_buildTestApp(
+          const _SubjectsGate(),
+          subjectRepo: repo,
+          masteryOverride: _ThrowingMasteryGraphService(),
+          settingsRepo: _FakeSettingsRepository(
+            box: SettingsBox(firstFocusVisit: false),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final weakAreasButton =
+            find.widgetWithText(OutlinedButton, 'Weak Areas');
+        await tester.ensureVisible(weakAreasButton);
+        await tester.pumpAndSettle();
+        await tester.tap(weakAreasButton);
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(
+          logs.where((l) =>
+              l.contains('[W]') &&
+              l.contains('Failed to start weak-areas practice')),
+          isNotEmpty,
+        );
+      } finally {
+        debugPrint = original;
+      }
     });
 
     testWidgets('shows setup view after initialization', (tester) async {

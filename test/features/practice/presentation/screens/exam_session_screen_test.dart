@@ -602,25 +602,42 @@ void main() {
       });
 
       group('error handling', () {
-        testWidgets('load error shows no-questions dialog', (tester) async {
-          await tester.pumpWidget(ProviderScope(
-            overrides: [
-              questionRepositoryProvider.overrideWithValue(_FailingQuestionRepository()),
-              sessionRepositoryProvider.overrideWithValue(_FakeSessionRepository()),
-            ],
-            child: MaterialApp(
-              localizationsDelegates: AppLocalizations.localizationsDelegates,
-              supportedLocales: AppLocalizations.supportedLocales,
-              locale: const Locale('en'),
-              home: ExamSessionScreen(subjectId: 'sub1', subjectName: 'Mathematics'),
-            ),
-          ));
-          await tester.pump();
-          await tester.pump(const Duration(milliseconds: 100));
+        testWidgets('load error logs the failure and shows an error dialog',
+            (tester) async {
+          final logs = <String>[];
+          final original = debugPrint;
+          debugPrint = (String? message, {int? wrapWidth}) {
+            if (message != null) logs.add(message);
+          };
+          try {
+            await tester.pumpWidget(ProviderScope(
+              overrides: [
+                questionRepositoryProvider.overrideWithValue(_FailingQuestionRepository()),
+                sessionRepositoryProvider.overrideWithValue(_FakeSessionRepository()),
+              ],
+              child: MaterialApp(
+                localizationsDelegates: AppLocalizations.localizationsDelegates,
+                supportedLocales: AppLocalizations.supportedLocales,
+                locale: const Locale('en'),
+                home: ExamSessionScreen(subjectId: 'sub1', subjectName: 'Mathematics'),
+              ),
+            ));
+            await tester.pump();
+            await tester.pump(const Duration(milliseconds: 100));
 
-          expect(find.text('No Questions Available'), findsOneWidget);
-          expect(find.text('Upload Materials'), findsWidgets);
-          expect(find.text('OK'), findsOneWidget);
+            // An exception must surface as a generic error dialog, not the
+            // misleading "no questions" empty-state dialog.
+            expect(find.text('Unknown error'), findsOneWidget);
+            expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+            expect(find.text('No Questions Available'), findsNothing);
+            expect(
+              logs.where((l) =>
+                  l.contains('[W]') && l.contains('Failed to load exam questions')),
+              isNotEmpty,
+            );
+          } finally {
+            debugPrint = original;
+          }
         });
       });
 

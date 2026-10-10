@@ -261,18 +261,32 @@ void main() {
     });
 
     testWidgets('shows snackbar when save fails', (tester) async {
-      final repo = _FakeSessionRepository(throwOnSave: true);
-      await tester.pumpWidget(_buildTestApp(repo));
-      await tester.pumpAndSettle();
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      try {
+        final repo = _FakeSessionRepository(throwOnSave: true);
+        await tester.pumpWidget(_buildTestApp(repo));
+        await tester.pumpAndSettle();
 
-      await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
-      await tester.pump();
-      await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
-      await tester.pumpAndSettle();
-      await tester.tap(find.widgetWithText(FilledButton, 'Save'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+        await tester.pump();
+        await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pumpAndSettle();
 
-      expect(find.textContaining('Failed to save session'), findsOneWidget);
+        expect(find.textContaining('Failed to save session'), findsOneWidget);
+        expect(
+          logs.where((l) =>
+              l.contains('[W]') && l.contains('Failed to save manual session')),
+          isNotEmpty,
+        );
+      } finally {
+        debugPrint = original;
+      }
     });
 
     testWidgets('view all navigates to history screen', (tester) async {

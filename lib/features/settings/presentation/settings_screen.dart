@@ -138,6 +138,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final apiBaseUrl = ref.watch(apiBaseUrlProvider);
       return _buildSettingsBody(context, l10n, settings, apiKey, llmProvider, apiBaseUrl);
     } catch (e) {
+      _logger.w('Failed to build settings screen', e);
       return _buildSettingsError(context, l10n, e);
     }
   }
@@ -320,6 +321,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                       );
                     }
                   } catch (e) {
+                    _logger.w('Nudge check run failed', e);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(content: Text(l10n.nudgeCheckFailed)),
@@ -846,6 +848,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       final box = Hive.box(HiveBoxNames.settings);
       return box.get(key, defaultValue: defaultValue) as int;
     } catch (e) {
+      _logger.w('Failed to read SR config value for key "$key"', e);
       return defaultValue;
     }
   }
@@ -1872,6 +1875,7 @@ class _AiModelLoadingSheet extends StatefulWidget {
 }
 
 class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
+  static final Logger _logger = const Logger('AiModelLoadingSheet');
   List<_ModelItem>? _models;
   String? _error;
   bool _isLoading = true;
@@ -1914,6 +1918,7 @@ class _AiModelLoadingSheetState extends State<_AiModelLoadingSheet> {
         });
       }
     } catch (e) {
+      _logger.w('Failed to load model list', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {

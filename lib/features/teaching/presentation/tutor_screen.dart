@@ -168,6 +168,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         _sendInitialGreeting();
       }
     } catch (e) {
+      _logger.w('Failed to initialize tutor conversation', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {

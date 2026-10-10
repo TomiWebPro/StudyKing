@@ -113,6 +113,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         });
       }
     } catch (e) {
+      _logger.w('File picker failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -145,6 +146,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         );
       }
     } catch (e) {
+      _logger.w('Camera capture failed', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -186,6 +188,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         );
       }
     } catch (e) {
+      _logger.w('URL content fetch failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -416,6 +419,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         setState(() => _success = null);
       }
     } catch (e) {
+      _logger.w('Upload failed', e);
       _processingStopwatch.stop();
       setState(() {
         _error = AppLocalizations.of(context)!.uploadFailed('');

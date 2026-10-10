@@ -561,22 +561,36 @@ void main() {
 
       testWidgets('shows error snackbar when URL fetch throws',
           (tester) async {
-        final pipeline = _ThrowingFetchPipeline();
+        final logs = <String>[];
+        final original = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) logs.add(message);
+        };
+        try {
+          final pipeline = _ThrowingFetchPipeline();
 
-        await tester.pumpWidget(_buildWidget(pipeline: pipeline));
-        await tester.pump();
+          await tester.pumpWidget(_buildWidget(pipeline: pipeline));
+          await tester.pump();
 
-        await tester.tap(find.text('URL / Link'));
-        await tester.pump();
+          await tester.tap(find.text('URL / Link'));
+          await tester.pump();
 
-        await enterTextInLastField(
-            tester, 'https://example.com/error');
+          await enterTextInLastField(
+              tester, 'https://example.com/error');
 
-        await tester.tap(find.text('Fetch & Scrape'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
+          await tester.tap(find.text('Fetch & Scrape'));
+          await tester.pump();
+          await tester.pump(const Duration(milliseconds: 500));
 
-        expect(find.text('URL fetch error: '), findsOneWidget);
+          expect(find.text('URL fetch error: '), findsOneWidget);
+          expect(
+            logs.where((l) =>
+                l.contains('[W]') && l.contains('URL content fetch failed')),
+            isNotEmpty,
+          );
+        } finally {
+          debugPrint = original;
+        }
       });
     });
 

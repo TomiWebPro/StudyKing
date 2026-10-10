@@ -137,13 +137,31 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
         _showNoQuestionsDialog();
       }
     } catch (e) {
+      _logger.w('Failed to load exam questions', e);
       _totalAvailableQuestions = 0;
       setState(() {
         _isLoadingConfig = false;
         _isReloadingQuestions = false;
       });
-      _showNoQuestionsDialog();
+      _showErrorDialog();
     }
+  }
+
+  void _showErrorDialog() {
+    final l10n = AppLocalizations.of(context)!;
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(l10n.unknownError),
+        content: Text(l10n.errorOccurred),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(l10n.ok),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showNoQuestionsDialog() {

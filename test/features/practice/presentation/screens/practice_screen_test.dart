@@ -156,6 +156,30 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   }
 }
 
+class _ThrowingMasteryGraphService extends MasteryGraphService {
+  @override
+  Future<Result<void>> init() async =>
+      throw Exception('Mastery service unavailable');
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(
+    String studentId, {
+    double threshold = 0.5,
+  }) async {
+    return Result.success([]);
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(String studentId) async {
+    return Result.success([]);
+  }
+}
+
 class _FakeStudyProgressTracker extends StudyProgressTracker {
   _FakeStudyProgressTracker() : super(attemptRepo: _FakeAttemptRepository(), l10n: AppLocalizationsEn());
   @override
@@ -288,6 +312,47 @@ void main() {
       expect(find.textContaining('No Practice'), findsWidgets);
       expect(find.text(_kAddSubjectsAndQuestions), findsOneWidget);
       expect(find.text(_kAddSubject), findsOneWidget);
+    });
+
+    testWidgets('weak-areas failure logs warning and shows error snackbar',
+        (tester) async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      try {
+        final box = _FakeSubjectBox();
+        box.addSubject(_subject(id: '1', name: 'Mathematics'));
+        final repo = _FakeSubjectRepository(box);
+        final qRepo = _FakeQuestionRepository([_makeQuestion()]);
+
+        await tester.pumpWidget(_buildTestApp(
+          subjectRepo: repo,
+          questionRepo: qRepo,
+          masteryService: _ThrowingMasteryGraphService(),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.ensureVisible(find.textContaining('Weak Areas'));
+        await tester.pumpAndSettle();
+        await tester.tap(find.textContaining('Weak Areas'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Exception path shows a generic error, not the misleading
+        // "no weak areas" empty-state message.
+        expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+        expect(find.text('No weak areas found'), findsNothing);
+        expect(
+          logs.where((l) =>
+              l.contains('[W]') &&
+              l.contains('Failed to show weak-areas selector')),
+          isNotEmpty,
+        );
+      } finally {
+        debugPrint = original;
+      }
     });
 
     testWidgets('shows practice modes grid when subjects exist', (tester) async {

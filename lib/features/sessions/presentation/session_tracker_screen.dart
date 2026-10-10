@@ -211,6 +211,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       );
       await _sessionRepository.save(session.id, session);
     } catch (e) {
+      _logger.w('Failed to save manual session', e);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveSession(''))),
