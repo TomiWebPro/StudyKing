@@ -610,8 +610,10 @@ void main() {
           sourceUrl: null,
         );
 
-        expect(result.text, 'page based transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; YouTube without captions returns empty
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
+        expect(result.errorMessage, isNotNull);
         extractor.dispose();
       });
 
@@ -632,8 +634,10 @@ void main() {
           sourceUrl: null,
         );
 
-        expect(result.text, 'id based transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; YouTube without captions returns empty
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
+        expect(result.errorMessage, isNotNull);
         extractor.dispose();
       });
 
@@ -656,8 +660,9 @@ void main() {
           sourceUrl: null,
         );
 
-        expect(result.text, 'fallback transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; network failure also returns no-transcript
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
         extractor.dispose();
       });
 
@@ -676,6 +681,7 @@ void main() {
           sourceUrl: null,
         );
 
+        // Fetch exception and no-transcript converge to the same result
         expect(result.text, '');
         expect(result.extractionMethod, 'youtube_no_transcript');
         extractor.dispose();
@@ -742,8 +748,10 @@ void main() {
           rawContent: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
           sourceUrl: null,
         );
-        expect(result.text, 'transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; YouTube without captions returns empty
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
+        expect(result.errorMessage, isNotNull);
         extractor.dispose();
       });
 
@@ -762,8 +770,10 @@ void main() {
           rawContent: 'https://youtu.be/dQw4w9WgXcQ',
           sourceUrl: null,
         );
-        expect(result.text, 'transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; YouTube without captions returns empty
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
+        expect(result.errorMessage, isNotNull);
         extractor.dispose();
       });
 
@@ -782,8 +792,10 @@ void main() {
           rawContent: 'https://youtu.be/dQw4w9WgXcQ?t=30',
           sourceUrl: null,
         );
-        expect(result.text, 'transcript');
-        expect(result.extractionMethod, 'transcribed_llm');
+        // LLM hallucination fallback removed; YouTube without captions returns empty
+        expect(result.text, '');
+        expect(result.extractionMethod, 'youtube_no_transcript');
+        expect(result.errorMessage, isNotNull);
         extractor.dispose();
       });
     });

@@ -183,10 +183,17 @@ class TranscriptionExtractor {
       return youtubeResult;
     }
 
-    if (_llmService != null) {
-      return _transcribeWithLlm('YouTube URL: $url');
+    if (_llmService != null && youtubeResult.extractionMethod != 'youtube_invalid_url') {
+      _logger.w('Pipeline: YouTube has no captions; LLM cannot transcribe video from URL alone');
     }
-    return youtubeResult;
+    if (youtubeResult.extractionMethod == 'youtube_invalid_url') {
+      return youtubeResult;
+    }
+    return const TranscriptionResult(
+      text: '',
+      extractionMethod: 'youtube_no_transcript',
+      errorMessage: 'YouTube video has no available captions or subtitles.',
+    );
   }
 
   Future<TranscriptionResult> _fetchYouTubeTranscript(String url) async {
@@ -199,37 +206,30 @@ class TranscriptionExtractor {
         );
       }
 
+      // Attempt to fetch transcript via API
       final transcript = await _fetchTranscript(videoId);
-      if (transcript != null && transcript.isNotEmpty) {
+      if (transcript?.isNotEmpty == true) {
         return TranscriptionResult(
-          text: transcript,
+          text: transcript!,
           extractionMethod: 'youtube_transcript_fetched',
         );
       }
 
-      final pageContent = await _fetchYoutubePageContent(videoId);
-      if (pageContent != null && _llmService != null) {
-        return await _transcribeWithLlm(
-          'YouTube video ID: $videoId\nPage content: $pageContent',
-        );
-      }
+      // No transcript found or fetch failed; try getting page content as fallback context
+      await _fetchYoutubePageContent(videoId);
 
-      if (_llmService != null) {
-        return await _transcribeWithLlm('YouTube video ID: $videoId\nURL: $url');
-      }
-
+      _logger.w('Pipeline: YouTube video has no captions/transcript available');
       return const TranscriptionResult(
         text: '',
         extractionMethod: 'youtube_no_transcript',
+        errorMessage: 'YouTube video has no available captions or subtitles.',
       );
     } catch (e) {
       _logger.w('YouTube transcript fetch failed', e);
-      if (_llmService != null) {
-        return _transcribeWithLlm('YouTube URL: $url');
-      }
       return const TranscriptionResult(
         text: '',
         extractionMethod: 'youtube_fetch_failed',
+        errorMessage: 'Failed to fetch YouTube transcript.',
       );
     }
   }
@@ -250,54 +250,52 @@ class TranscriptionExtractor {
   }
 
   Future<String?> _fetchTranscript(String videoId) async {
-    try {
-      final urls = [
-        '${ApiConfig.youtubetranscriptBaseUrl}/?v=$videoId',
-        '${ApiConfig.youtubetranscriptApiUrl}/$videoId',
-      ];
+    final urls = [
+      '${ApiConfig.youtubetranscriptBaseUrl}/?v=$videoId',
+      '${ApiConfig.youtubetranscriptApiUrl}/$videoId',
+    ];
 
-      for (final url in urls) {
-        try {
-          final response = await _httpClient.get(
-            Uri.parse(url),
-            headers: {
-              'User-Agent': ApiConfig.userAgent,
-            },
-          );
+    for (final url in urls) {
+      try {
+        final response = await _httpClient.get(
+          Uri.parse(url),
+          headers: {
+            'User-Agent': ApiConfig.userAgent,
+          },
+        );
 
-          if (response.statusCode == 200 && response.body.isNotEmpty) {
-            final body = response.body;
+        if (response.statusCode == 200 && response.body.isNotEmpty) {
+          final body = response.body;
 
-            if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
-              try {
-                final decoded = jsonDecode(body);
-                if (decoded is List && decoded.isNotEmpty) {
-                  final textParts = decoded
-                      .map((segment) =>
-                          (segment is Map ? segment['text'] : null) as String?)
-                      .where((t) => t != null && t.isNotEmpty)
-                      .join(' ');
-                  if (textParts.isNotEmpty) return textParts;
-                }
-              } catch (e) {
-                _logger.w('Failed to parse YouTube transcript JSON', e);
+          if (body.trim().startsWith('{') || body.trim().startsWith('[')) {
+            try {
+              final decoded = jsonDecode(body);
+              if (decoded is List && decoded.isNotEmpty) {
+                final textParts = decoded
+                    .map((segment) =>
+                        (segment is Map ? segment['text'] : null) as String?)
+                    .where((t) => t != null && t.isNotEmpty)
+                    .join(' ');
+                if (textParts.isNotEmpty) return textParts;
               }
-            }
-
-            if (!body.trim().startsWith('<') && body.length > 50) {
-              return body;
+            } catch (e) {
+              _logger.w('Failed to parse YouTube transcript JSON', e);
             }
           }
-        } catch (e) {
-          _logger.w('Failed to fetch YouTube transcript from URL', e);
-        }
-      }
 
-      return null;
-    } catch (e) {
-      _logger.w('Failed to fetch YouTube transcript', e);
-      return null;
+          if (!body.trim().startsWith('<') && body.length > 50) {
+            return body;
+          }
+        }
+      } catch (e) {
+        // Network error: keep trying other URLs
+        _logger.w('Failed to fetch YouTube transcript from URL', e);
+      }
     }
+
+    // All URL attempts exhausted (either network errors or no content returned)
+    // We can't distinguish here, so we return a special value to signal caller
+    return '';
   }
 
   Future<String?> _fetchYoutubePageContent(String videoId) async {
@@ -332,7 +330,7 @@ class TranscriptionExtractor {
       return null;
     } catch (e) {
       _logger.w('Failed to fetch YouTube page', e);
-      return null;
+      return '__URL_FETCH_FAILED__';
     }
   }
 

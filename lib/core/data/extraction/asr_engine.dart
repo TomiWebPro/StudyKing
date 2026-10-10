@@ -107,7 +107,7 @@ class WhisperApiAsrEngine implements AsrEngine {
             final segText = seg['text'] as String? ?? '';
             final segStart = (seg['start'] as num?)?.toDouble() ?? 0.0;
             final segEnd = (seg['end'] as num?)?.toDouble() ?? 0.0;
-            final avgLogprob = (seg['no_speech_prob'] as num?)?.toDouble() ?? 1.0;
+            final avgLogprob = (seg['avg_logprob'] as num?)?.toDouble() ?? 0.0;
             final confidence = _avgLogprobToConfidence(avgLogprob);
 
             segments.add(TranscriptionSegment(

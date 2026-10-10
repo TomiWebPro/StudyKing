@@ -353,7 +353,7 @@ void main() {
       pipeline.dispose();
     });
 
-    test('falls back to LLM for YouTube when transcript unavailable', () async {
+    test('YouTube with no captions returns empty without hallucination', () async {
       final llm = _FakeLlmService(
         onChat: () async => Result.success('youtube llm transcript'),
       );
@@ -372,15 +372,16 @@ void main() {
         llmService: llm,
       );
 
+      // LLM hallucination removed; YouTube without captions returns empty
       final result = await pipeline.transcribe(
         rawContent: 'https://youtube.com/watch?v=abc123',
       );
 
-      expect(result.text, 'youtube llm transcript');
+      expect(result.text, '');
       pipeline.dispose();
     });
 
-    test('handles youtu.be short URLs', () async {
+    test('handles youtu.be short URLs with no captions', () async {
       final llm = _FakeLlmService(
         onChat: () async => Result.success('youtu.be transcript'),
       );
@@ -399,11 +400,12 @@ void main() {
         llmService: llm,
       );
 
+      // LLM hallucination removed; YouTube without captions returns empty
       final result = await pipeline.transcribe(
         rawContent: 'https://youtu.be/abc123',
       );
 
-      expect(result.text, 'youtu.be transcript');
+      expect(result.text, '');
       pipeline.dispose();
     });
 
