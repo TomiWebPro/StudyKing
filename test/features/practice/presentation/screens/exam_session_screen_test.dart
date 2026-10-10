@@ -222,6 +222,35 @@ class _DeterministicExamSessionService extends ExamSessionService {
   }
 }
 
+/// Deterministic service that captures the [ExamQuestionResult] list and
+/// the `autoSubmitted` flag passed to `finishExam`, so a test can assert
+/// exactly what the screen persists when the timer expires.
+class _CapturingExamSessionService extends _DeterministicExamSessionService {
+  List<ExamQuestionResult>? capturedResults;
+  bool? capturedAutoSubmitted;
+
+  _CapturingExamSessionService({
+    required super.sessionRepo,
+    required super.studentIdService,
+    super.clock,
+  });
+
+  @override
+  Future<Result<ExamResult>> finishExam({
+    required ExamConfig config,
+    required List<ExamQuestionResult> questionResults,
+    bool autoSubmitted = false,
+  }) async {
+    capturedResults = List<ExamQuestionResult>.from(questionResults);
+    capturedAutoSubmitted = autoSubmitted;
+    return super.finishExam(
+      config: config,
+      questionResults: questionResults,
+      autoSubmitted: autoSubmitted,
+    );
+  }
+}
+
 Widget _buildTestApp({
   required List<Question> questions,
   NavigatorObserver? observer,
@@ -550,6 +579,102 @@ void main() {
       expect(tester.takeException(), isNull);
       // The shared notifier is still live and readable after re-entry.
       expect(examService.timeRemainingNotifier.value, Duration.zero);
+    });
+  });
+
+  group('auto-submit', () {
+    Widget buildAppWithCapturingService(
+      _CapturingExamSessionService service,
+      List<Question> questions,
+    ) {
+      return ProviderScope(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(
+            _FakeQuestionRepository(questions),
+          ),
+          examSessionServiceProvider.overrideWithValue(service),
+          sessionRepositoryProvider.overrideWithValue(_FakeSessionRepository()),
+          masteryRecorderProvider.overrideWith((ref) => _FakeMasteryRecorder()),
+          studentIdServiceProvider.overrideWith((ref) => _FakeStudentIdService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const ExamSessionScreen(subjectId: 'sub1', subjectName: 'Mathematics'),
+        ),
+      );
+    }
+
+    testWidgets('timer expiry does not re-add the already-submitted current question as skipped',
+        (tester) async {
+      final examService = _CapturingExamSessionService(
+        sessionRepo: _FakeSessionRepository(),
+        studentIdService: _FakeStudentIdService(),
+        clock: _FakeClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+      await tester.pumpWidget(buildAppWithCapturingService(
+        examService,
+        [_typedQuestion(id: 'q1'), _typedQuestion(id: 'q2')],
+      ));
+      await tester.pumpAndSettle();
+
+      await _startExam(tester);
+      // Submit q1: it is appended to _results with its real answer and
+      // the screen stays on it (feedback showing, _isSubmitted == true,
+      // _currentIndex not yet advanced).
+      await _answerQuestion(tester, 'Answer q1');
+      expect(find.text('Correct!'), findsOneWidget);
+
+      // The exam timer expires while the student is still viewing the
+      // feedback of the just-submitted question.
+      examService.timeRemainingNotifier.value = Duration.zero;
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(examService.capturedAutoSubmitted, isTrue);
+      final results = examService.capturedResults!;
+
+      // The submitted question appears exactly once, with its real answer.
+      final q1Results = results.where((r) => r.question.id == 'q1').toList();
+      expect(q1Results, hasLength(1));
+      expect(q1Results.single.wasSkipped, isFalse);
+      expect(q1Results.single.userAnswer, 'Answer q1');
+
+      // Only the unanswered question is counted as skipped.
+      final skipped = results.where((r) => r.wasSkipped).toList();
+      expect(skipped, hasLength(1));
+      expect(skipped.single.question.id, 'q2');
+
+      // No double-count: one answered + one skipped = two results.
+      expect(results, hasLength(2));
+    });
+
+    testWidgets('timer expiry still skips the current question when it was not yet submitted',
+        (tester) async {
+      final examService = _CapturingExamSessionService(
+        sessionRepo: _FakeSessionRepository(),
+        studentIdService: _FakeStudentIdService(),
+        clock: _FakeClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+      await tester.pumpWidget(buildAppWithCapturingService(
+        examService,
+        [_typedQuestion(id: 'q1'), _typedQuestion(id: 'q2')],
+      ));
+      await tester.pumpAndSettle();
+
+      await _startExam(tester);
+      // No answer submitted: the current question is still pending.
+      examService.timeRemainingNotifier.value = Duration.zero;
+      await tester.pump();
+      await tester.pumpAndSettle();
+
+      expect(examService.capturedAutoSubmitted, isTrue);
+      final results = examService.capturedResults!;
+      // Both questions are unanswered, so both must be skipped exactly once.
+      expect(results, hasLength(2));
+      expect(results.where((r) => r.wasSkipped), hasLength(2));
+      expect(results.map((r) => r.question.id).toList(), ['q1', 'q2']);
     });
   });
 

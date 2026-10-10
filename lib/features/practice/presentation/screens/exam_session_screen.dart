@@ -308,7 +308,12 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   Future<void> _autoSubmitExam() async {
     if (_config == null || !_isExamActive) return;
 
-    for (final q in _questions.skip(_currentIndex)) {
+    // Mirror _onWillPop's guard: when the timer expires while the
+    // feedback of the just-submitted question is still showing
+    // (_isSubmitted, _currentIndex not yet advanced), that question
+    // is already in _results with its real answer — skip it here so
+    // it is not appended a second time as skipped.
+    for (final q in _questions.skip(_currentIndex + (_isSubmitted ? 1 : 0))) {
       _results.add(ExamQuestionResult(
         question: q,
         userAnswer: null,
