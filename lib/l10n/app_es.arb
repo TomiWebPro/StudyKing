@@ -8151,5 +8151,75 @@
   "tutorSyllabusSwitchedAll": "Mostrando todos los syllabi.",
   "@tutorSyllabusSwitchedAll": {
     "description": "Tutor acknowledgement when the student clears the active syllabus filter"
+  },
+  "learningStyleInsightsTitle": "Información del Estilo de Aprendizaje",
+  "@learningStyleInsightsTitle": {
+    "description": "Title of the learning style insights card on the dashboard"
+  },
+  "preferredContentLabel": "Contenido Preferido",
+  "@preferredContentLabel": {
+    "description": "Label for the preferred content type row in the learning insights card"
+  },
+  "optimalSessionLabel": "Sesión Óptima",
+  "@optimalSessionLabel": {
+    "description": "Label for the optimal session length row in the learning insights card"
+  },
+  "visualLearnerLabel": "Aprendiz Visual",
+  "@visualLearnerLabel": {
+    "description": "Label for the visual learner preference row in the learning insights card"
+  },
+  "yesLabel": "Sí",
+  "@yesLabel": {
+    "description": "Affirmative answer label"
+  },
+  "noLabel": "No",
+  "@noLabel": {
+    "description": "Negative answer label"
+  },
+  "highlyEffectiveLabel": "Muy efectivo",
+  "@highlyEffectiveLabel": {
+    "description": "Value shown when spaced repetition effectiveness is high"
+  },
+  "malformedRowsSkipped": "{count,plural,=1{1 fila malformada omitida} other{{count} filas malformadas omitidas}}",
+  "@malformedRowsSkipped": {
+    "description": "CSV import feedback: number of malformed rows that were skipped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicateRowsSkipped": "{count,plural,=1{1 duplicado omitido} other{{count} duplicados omitidos}}",
+  "@duplicateRowsSkipped": {
+    "description": "CSV import feedback: number of duplicate rows that were skipped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsLabel": "Detalles",
+  "@detailsLabel": {
+    "description": "Label for the details action and dialog shown for skipped CSV rows"
+  },
+  "drawModeLabel": "Dibujar",
+  "@drawModeLabel": {
+    "description": "Label for the draw input mode segment on the drawing canvas"
+  },
+  "textModeLabel": "Texto",
+  "@textModeLabel": {
+    "description": "Label for the text input mode segment on the drawing canvas"
+  },
+  "exitFullScreenTooltip": "Salir de pantalla completa",
+  "@exitFullScreenTooltip": {
+    "description": "Tooltip for leaving the fullscreen slide presentation"
+  },
+  "fullScreenTooltip": "Pantalla completa",
+  "@fullScreenTooltip": {
+    "description": "Tooltip for entering the fullscreen slide presentation"
+  },
+  "slideGridTooltip": "Cuadrícula de diapositivas",
+  "@slideGridTooltip": {
+    "description": "Tooltip for toggling the slide thumbnail grid"
   }
 }

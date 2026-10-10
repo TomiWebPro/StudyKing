@@ -274,21 +274,21 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: SegmentedButton<CanvasInputMode>(
-        segments: const [
+        segments: [
           ButtonSegment<CanvasInputMode>(
             value: CanvasInputMode.draw,
-            label: Text('Draw'),
-            icon: Icon(Icons.brush, size: 16),
+            label: Text(l10n.drawModeLabel),
+            icon: const Icon(Icons.brush, size: 16),
           ),
           ButtonSegment<CanvasInputMode>(
             value: CanvasInputMode.handwriteText,
-            label: Text('Text'),
-            icon: Icon(Icons.text_fields, size: 16),
+            label: Text(l10n.textModeLabel),
+            icon: const Icon(Icons.text_fields, size: 16),
           ),
           ButtonSegment<CanvasInputMode>(
             value: CanvasInputMode.handwriteMath,
-            label: Text('Math'),
-            icon: Icon(Icons.functions, size: 16),
+            label: Text(l10n.math),
+            icon: const Icon(Icons.functions, size: 16),
           ),
         ],
         selected: {_effectiveInputMode},

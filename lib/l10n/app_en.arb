@@ -8172,5 +8172,75 @@
   "tutorSyllabusSwitchedAll": "Showing all syllabi.",
   "@tutorSyllabusSwitchedAll": {
     "description": "Tutor acknowledgement when the student clears the active syllabus filter"
+  },
+  "learningStyleInsightsTitle": "Learning Style Insights",
+  "@learningStyleInsightsTitle": {
+    "description": "Title of the learning style insights card on the dashboard"
+  },
+  "preferredContentLabel": "Preferred Content",
+  "@preferredContentLabel": {
+    "description": "Label for the preferred content type row in the learning insights card"
+  },
+  "optimalSessionLabel": "Optimal Session",
+  "@optimalSessionLabel": {
+    "description": "Label for the optimal session length row in the learning insights card"
+  },
+  "visualLearnerLabel": "Visual Learner",
+  "@visualLearnerLabel": {
+    "description": "Label for the visual learner preference row in the learning insights card"
+  },
+  "yesLabel": "Yes",
+  "@yesLabel": {
+    "description": "Affirmative answer label"
+  },
+  "noLabel": "No",
+  "@noLabel": {
+    "description": "Negative answer label"
+  },
+  "highlyEffectiveLabel": "Highly effective",
+  "@highlyEffectiveLabel": {
+    "description": "Value shown when spaced repetition effectiveness is high"
+  },
+  "malformedRowsSkipped": "{count,plural,=1{1 malformed row skipped} other{{count} malformed rows skipped}}",
+  "@malformedRowsSkipped": {
+    "description": "CSV import feedback: number of malformed rows that were skipped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "duplicateRowsSkipped": "{count,plural,=1{1 duplicate skipped} other{{count} duplicates skipped}}",
+  "@duplicateRowsSkipped": {
+    "description": "CSV import feedback: number of duplicate rows that were skipped",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "detailsLabel": "Details",
+  "@detailsLabel": {
+    "description": "Label for the details action and dialog shown for skipped CSV rows"
+  },
+  "drawModeLabel": "Draw",
+  "@drawModeLabel": {
+    "description": "Label for the draw input mode segment on the drawing canvas"
+  },
+  "textModeLabel": "Text",
+  "@textModeLabel": {
+    "description": "Label for the text input mode segment on the drawing canvas"
+  },
+  "exitFullScreenTooltip": "Exit full screen",
+  "@exitFullScreenTooltip": {
+    "description": "Tooltip for leaving the fullscreen slide presentation"
+  },
+  "fullScreenTooltip": "Full screen",
+  "@fullScreenTooltip": {
+    "description": "Tooltip for entering the fullscreen slide presentation"
+  },
+  "slideGridTooltip": "Slide grid",
+  "@slideGridTooltip": {
+    "description": "Tooltip for toggling the slide thumbnail grid"
   }
 }

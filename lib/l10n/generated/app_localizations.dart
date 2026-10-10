@@ -10208,6 +10208,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Showing all syllabi.'**
   String get tutorSyllabusSwitchedAll;
+
+  /// Title of the learning style insights card on the dashboard
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Style Insights'**
+  String get learningStyleInsightsTitle;
+
+  /// Label for the preferred content type row in the learning insights card
+  ///
+  /// In en, this message translates to:
+  /// **'Preferred Content'**
+  String get preferredContentLabel;
+
+  /// Label for the optimal session length row in the learning insights card
+  ///
+  /// In en, this message translates to:
+  /// **'Optimal Session'**
+  String get optimalSessionLabel;
+
+  /// Label for the visual learner preference row in the learning insights card
+  ///
+  /// In en, this message translates to:
+  /// **'Visual Learner'**
+  String get visualLearnerLabel;
+
+  /// Affirmative answer label
+  ///
+  /// In en, this message translates to:
+  /// **'Yes'**
+  String get yesLabel;
+
+  /// Negative answer label
+  ///
+  /// In en, this message translates to:
+  /// **'No'**
+  String get noLabel;
+
+  /// Value shown when spaced repetition effectiveness is high
+  ///
+  /// In en, this message translates to:
+  /// **'Highly effective'**
+  String get highlyEffectiveLabel;
+
+  /// CSV import feedback: number of malformed rows that were skipped
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural,=1{1 malformed row skipped} other{{count} malformed rows skipped}}'**
+  String malformedRowsSkipped(int count);
+
+  /// CSV import feedback: number of duplicate rows that were skipped
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural,=1{1 duplicate skipped} other{{count} duplicates skipped}}'**
+  String duplicateRowsSkipped(int count);
+
+  /// Label for the details action and dialog shown for skipped CSV rows
+  ///
+  /// In en, this message translates to:
+  /// **'Details'**
+  String get detailsLabel;
+
+  /// Label for the draw input mode segment on the drawing canvas
+  ///
+  /// In en, this message translates to:
+  /// **'Draw'**
+  String get drawModeLabel;
+
+  /// Label for the text input mode segment on the drawing canvas
+  ///
+  /// In en, this message translates to:
+  /// **'Text'**
+  String get textModeLabel;
+
+  /// Tooltip for leaving the fullscreen slide presentation
+  ///
+  /// In en, this message translates to:
+  /// **'Exit full screen'**
+  String get exitFullScreenTooltip;
+
+  /// Tooltip for entering the fullscreen slide presentation
+  ///
+  /// In en, this message translates to:
+  /// **'Full screen'**
+  String get fullScreenTooltip;
+
+  /// Tooltip for toggling the slide thumbnail grid
+  ///
+  /// In en, this message translates to:
+  /// **'Slide grid'**
+  String get slideGridTooltip;
 }
 
 class _AppLocalizationsDelegate

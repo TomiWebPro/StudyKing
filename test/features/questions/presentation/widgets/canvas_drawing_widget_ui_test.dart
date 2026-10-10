@@ -7,6 +7,7 @@ import 'package:studyking/features/questions/presentation/painters/grid_painter.
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 final _l10n = AppLocalizationsEn();
 
@@ -21,11 +22,12 @@ Widget buildWidget({
   bool showColorPicker = false,
   bool showStrokeWidth = false,
   bool showInputModeSelector = false,
+  Locale locale = const Locale('en'),
 }) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
+    locale: locale,
     home: Scaffold(
       body: CanvasDrawingWidget(
         instruction: instruction,
@@ -821,9 +823,22 @@ void main() {
       testWidgets('input mode selector shows draw, text, and math options', (tester) async {
         await tester.pumpWidget(buildWidget(showInputModeSelector: true));
         await tester.pump();
-        expect(find.text('Draw'), findsOneWidget);
-        expect(find.text('Text'), findsOneWidget);
-        expect(find.text('Math'), findsOneWidget);
+        expect(find.text(_l10n.drawModeLabel), findsOneWidget);
+        expect(find.text(_l10n.textModeLabel), findsOneWidget);
+        expect(find.text(_l10n.math), findsOneWidget);
+      });
+
+      testWidgets('input mode selector labels are localized in Spanish', (tester) async {
+        final l10nEs = AppLocalizationsEs();
+        await tester.pumpWidget(
+          buildWidget(showInputModeSelector: true, locale: const Locale('es')),
+        );
+        await tester.pump();
+        expect(find.text(l10nEs.drawModeLabel), findsOneWidget);
+        expect(find.text(l10nEs.textModeLabel), findsOneWidget);
+        expect(find.text(l10nEs.math), findsOneWidget);
+        expect(find.text('Draw'), findsNothing);
+        expect(find.text('Text'), findsNothing);
       });
 
       testWidgets('input mode change calls onInputModeChanged callback', (tester) async {

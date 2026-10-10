@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class LearningInsightsCard extends StatelessWidget {
   final Map<String, dynamic>? insights;
@@ -11,6 +12,7 @@ class LearningInsightsCard extends StatelessWidget {
       return const SizedBox.shrink();
     }
 
+    final l10n = AppLocalizations.of(context)!;
     final preferredBlock = insights!['preferredBlockType'] as String? ?? 'exercise';
     final optimalMinutes = insights!['optimalSessionMinutes'] as int? ?? 25;
     final prefersVisual = insights!['prefersVisual'] as bool? ?? false;
@@ -26,37 +28,37 @@ class LearningInsightsCard extends StatelessWidget {
               children: [
                 Icon(Icons.psychology, color: Theme.of(context).colorScheme.primary, size: 20),
                 const SizedBox(width: 8),
-                Text('Learning Style Insights', style: Theme.of(context).textTheme.titleMedium),
+                Text(l10n.learningStyleInsightsTitle, style: Theme.of(context).textTheme.titleMedium),
               ],
             ),
             const Divider(),
             _buildInsightRow(
               context,
               Icons.view_module,
-              'Preferred Content',
+              l10n.preferredContentLabel,
               preferredBlock.toUpperCase(),
             ),
             const SizedBox(height: 8),
             _buildInsightRow(
               context,
               Icons.timer,
-              'Optimal Session',
-              '$optimalMinutes minutes',
+              l10n.optimalSessionLabel,
+              l10n.minutesValue(optimalMinutes),
             ),
             const SizedBox(height: 8),
             _buildInsightRow(
               context,
               Icons.visibility,
-              'Visual Learner',
-              prefersVisual ? 'Yes' : 'No',
+              l10n.visualLearnerLabel,
+              prefersVisual ? l10n.yesLabel : l10n.noLabel,
             ),
             if (srEffectiveness > 0.5) ...[
               const SizedBox(height: 8),
               _buildInsightRow(
                 context,
                 Icons.repeat,
-                'Spaced Repetition',
-                'Highly effective',
+                l10n.spacedRepetition,
+                l10n.highlyEffectiveLabel,
               ),
             ],
           ],

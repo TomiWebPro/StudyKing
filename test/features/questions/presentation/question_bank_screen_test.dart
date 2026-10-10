@@ -1,4 +1,7 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
@@ -16,6 +19,7 @@ import 'package:studyking/features/subjects/providers/subject_repository_provide
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeQuestionRepo extends QuestionRepository {
@@ -1026,6 +1030,74 @@ void main() {
       expect(find.text('What is 2 + 3?'), findsOneWidget);
       // 2 variants -> "2 variants" chip is rendered.
       expect(find.text('2 variants'), findsOneWidget);
+    });
+
+    testWidgets('CSV import feedback is localized with plural skipped rows',
+        (tester) async {
+      // The import flow performs real file IO (temp CSV + file picker),
+      // so it must run in the real async zone via runAsync.
+      await tester.runAsync(() async {
+        final tempDir = Directory.systemTemp.createTempSync('csv_import_test');
+        addTearDown(() => tempDir.deleteSync(recursive: true));
+        final csvFile = File('${tempDir.path}/questions.csv');
+        await csvFile.writeAsString(
+          'id,text,type,difficulty,subjectId,topicId,sourceIds,options,'
+          'correctAnswer,explanation,model,createdAt,updatedAt\n'
+          'q9,What is 2+2?,0,1,sub1,t1,,,4,,,2024-01-01T00:00:00,'
+          '2024-01-01T00:00:00\n'
+          'badrow\n',
+        );
+
+        const pickerChannel = MethodChannel('miguelruivo.flutter.plugins.filepicker');
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(pickerChannel, (call) async => [
+                  {
+                    'path': csvFile.path,
+                    'name': 'questions.csv',
+                    'size': csvFile.lengthSync(),
+                  },
+                ]);
+        addTearDown(() => TestDefaultBinaryMessengerBinding.instance
+            .defaultBinaryMessenger.setMockMethodCallHandler(pickerChannel, null));
+
+        final l10n = AppLocalizationsEn();
+        await tester.pumpWidget(_buildWidget(
+          questionRepo: _FakeQuestionRepo(mockQuestions),
+          subjectRepo: _FakeSubjectRepo(subjects),
+          topicRepo: _FakeTopicRepo(topics),
+          sourceRepo: _FakeSourceRepo([]),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.tap(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.byType(PopupMenuButton<String>),
+          ),
+        );
+        await tester.pumpAndSettle();
+        await tester.tap(find.text('${l10n.importBackup} (CSV)'));
+        await tester.pumpAndSettle();
+
+        // Wait for the real-async CSV import to finish and the SnackBar to show.
+        final feedbackText =
+            '${l10n.questionsCount(1)} — ${l10n.malformedRowsSkipped(1)}';
+        for (var i = 0;
+            i < 100 && find.text(feedbackText).evaluate().isEmpty;
+            i++) {
+          await tester.pump();
+          await Future<void>.delayed(const Duration(milliseconds: 10));
+        }
+        // "Questions: 1 — 1 malformed row skipped" (plural-aware, localized).
+        expect(find.text(feedbackText), findsOneWidget);
+
+        // Details action opens the dialog with the localized title.
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(l10n.detailsLabel));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.detailsLabel), findsWidgets);
+        expect(find.text('badrow'), findsOneWidget);
+      });
     });
   });
 }

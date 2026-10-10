@@ -4,12 +4,13 @@ import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/features/teaching/presentation/widgets/slides_presentation_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
-Widget buildApp(Widget widget) {
+Widget buildApp(Widget widget, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
+    locale: locale,
     home: Scaffold(body: widget),
   );
 }
@@ -340,6 +341,37 @@ void main() {
 
       expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
       expect(find.byIcon(Icons.functions), findsOneWidget);
+    });
+
+    testWidgets('fullscreen and grid buttons have localized tooltips',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        SlidesPresentationWidget(blocks: [slideBlock(content: 'Hello World')]),
+      ));
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip('Full screen'), findsOneWidget);
+      expect(find.byTooltip('Slide grid'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.fullscreen));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Exit full screen'), findsOneWidget);
+    });
+
+    testWidgets('tooltips are localized in Spanish', (tester) async {
+      final l10nEs = AppLocalizationsEs();
+      await tester.pumpWidget(
+        buildApp(
+          SlidesPresentationWidget(blocks: [slideBlock(content: 'Hola')]),
+          locale: const Locale('es'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.byTooltip(l10nEs.fullScreenTooltip), findsOneWidget);
+      expect(find.byTooltip(l10nEs.slideGridTooltip), findsOneWidget);
+      expect(find.byTooltip('Full screen'), findsNothing);
+      expect(find.byTooltip('Slide grid'), findsNothing);
     });
   });
 }

@@ -1395,4 +1395,63 @@ void main() {
       });
     });
   });
+
+  group('Newly localized keys (insights card, CSV import, canvas, slides)',
+      () {
+    test('en plural getters handle singular and plural forms', () {
+      final en = AppLocalizationsEn();
+      expect(en.malformedRowsSkipped(1), '1 malformed row skipped');
+      expect(en.malformedRowsSkipped(3), '3 malformed rows skipped');
+      expect(en.duplicateRowsSkipped(1), '1 duplicate skipped');
+      expect(en.duplicateRowsSkipped(2), '2 duplicates skipped');
+      expect(en.minutesValue(1), '1 minute');
+      expect(en.minutesValue(45), '45 minutes');
+    });
+
+    test('es plural getters handle singular and plural forms', () {
+      final es = AppLocalizationsEs();
+      expect(es.malformedRowsSkipped(1), '1 fila malformada omitida');
+      expect(es.malformedRowsSkipped(3), '3 filas malformadas omitidas');
+      expect(es.duplicateRowsSkipped(1), '1 duplicado omitido');
+      expect(es.duplicateRowsSkipped(2), '2 duplicados omitidos');
+      expect(es.minutesValue(1), '1 minuto');
+      expect(es.minutesValue(45), '45 minutos');
+    });
+
+    test('en simple getters for the localized surfaces', () {
+      final en = AppLocalizationsEn();
+      expect(en.learningStyleInsightsTitle, 'Learning Style Insights');
+      expect(en.preferredContentLabel, 'Preferred Content');
+      expect(en.optimalSessionLabel, 'Optimal Session');
+      expect(en.visualLearnerLabel, 'Visual Learner');
+      expect(en.yesLabel, 'Yes');
+      expect(en.noLabel, 'No');
+      expect(en.highlyEffectiveLabel, 'Highly effective');
+      expect(en.detailsLabel, 'Details');
+      expect(en.drawModeLabel, 'Draw');
+      expect(en.textModeLabel, 'Text');
+      expect(en.math, 'Math');
+      expect(en.exitFullScreenTooltip, 'Exit full screen');
+      expect(en.fullScreenTooltip, 'Full screen');
+      expect(en.slideGridTooltip, 'Slide grid');
+    });
+
+    test('es simple getters for the localized surfaces', () {
+      final es = AppLocalizationsEs();
+      expect(es.learningStyleInsightsTitle, 'Información del Estilo de Aprendizaje');
+      expect(es.preferredContentLabel, 'Contenido Preferido');
+      expect(es.optimalSessionLabel, 'Sesión Óptima');
+      expect(es.visualLearnerLabel, 'Aprendiz Visual');
+      expect(es.yesLabel, 'Sí');
+      expect(es.noLabel, 'No');
+      expect(es.highlyEffectiveLabel, 'Muy efectivo');
+      expect(es.detailsLabel, 'Detalles');
+      expect(es.drawModeLabel, 'Dibujar');
+      expect(es.textModeLabel, 'Texto');
+      expect(es.math, 'Matemáticas');
+      expect(es.exitFullScreenTooltip, 'Salir de pantalla completa');
+      expect(es.fullScreenTooltip, 'Pantalla completa');
+      expect(es.slideGridTooltip, 'Cuadrícula de diapositivas');
+    });
+  });
 }

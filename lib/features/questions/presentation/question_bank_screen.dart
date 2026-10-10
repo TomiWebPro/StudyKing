@@ -405,8 +405,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     if (malformed > 0 || skippedConflict > 0) {
       final parts = <String>[];
       parts.add(l10n.questionsCount(saved));
-      if (malformed > 0) parts.add('$malformed malformed row(s) skipped');
-      if (skippedConflict > 0) parts.add('$skippedConflict duplicate(s) skipped');
+      if (malformed > 0) parts.add(l10n.malformedRowsSkipped(malformed));
+      if (skippedConflict > 0) parts.add(l10n.duplicateRowsSkipped(skippedConflict));
       final message = parts.join(' — ');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -414,12 +414,12 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
           duration: const Duration(seconds: 4),
           action: malformed > 0
               ? SnackBarAction(
-                  label: 'Details',
+                  label: l10n.detailsLabel,
                   onPressed: () {
                     showDialog<void>(
                       context: context,
                       builder: (ctx) => AlertDialog(
-                        title: const Text('Details'),
+                        title: Text(l10n.detailsLabel),
                         content: SingleChildScrollView(
                           child: Text(csvResult.skippedRows.join('\n')),
                         ),

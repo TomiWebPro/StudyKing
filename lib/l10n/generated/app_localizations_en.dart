@@ -6214,4 +6214,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorSyllabusSwitchedAll => 'Showing all syllabi.';
+
+  @override
+  String get learningStyleInsightsTitle => 'Learning Style Insights';
+
+  @override
+  String get preferredContentLabel => 'Preferred Content';
+
+  @override
+  String get optimalSessionLabel => 'Optimal Session';
+
+  @override
+  String get visualLearnerLabel => 'Visual Learner';
+
+  @override
+  String get yesLabel => 'Yes';
+
+  @override
+  String get noLabel => 'No';
+
+  @override
+  String get highlyEffectiveLabel => 'Highly effective';
+
+  @override
+  String malformedRowsSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count malformed rows skipped',
+      one: '1 malformed row skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String duplicateRowsSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count duplicates skipped',
+      one: '1 duplicate skipped',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get detailsLabel => 'Details';
+
+  @override
+  String get drawModeLabel => 'Draw';
+
+  @override
+  String get textModeLabel => 'Text';
+
+  @override
+  String get exitFullScreenTooltip => 'Exit full screen';
+
+  @override
+  String get fullScreenTooltip => 'Full screen';
+
+  @override
+  String get slideGridTooltip => 'Slide grid';
 }

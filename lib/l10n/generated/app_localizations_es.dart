@@ -6283,4 +6283,66 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get tutorSyllabusSwitchedAll => 'Mostrando todos los syllabi.';
+
+  @override
+  String get learningStyleInsightsTitle =>
+      'Información del Estilo de Aprendizaje';
+
+  @override
+  String get preferredContentLabel => 'Contenido Preferido';
+
+  @override
+  String get optimalSessionLabel => 'Sesión Óptima';
+
+  @override
+  String get visualLearnerLabel => 'Aprendiz Visual';
+
+  @override
+  String get yesLabel => 'Sí';
+
+  @override
+  String get noLabel => 'No';
+
+  @override
+  String get highlyEffectiveLabel => 'Muy efectivo';
+
+  @override
+  String malformedRowsSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count filas malformadas omitidas',
+      one: '1 fila malformada omitida',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String duplicateRowsSkipped(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count duplicados omitidos',
+      one: '1 duplicado omitido',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get detailsLabel => 'Detalles';
+
+  @override
+  String get drawModeLabel => 'Dibujar';
+
+  @override
+  String get textModeLabel => 'Texto';
+
+  @override
+  String get exitFullScreenTooltip => 'Salir de pantalla completa';
+
+  @override
+  String get fullScreenTooltip => 'Pantalla completa';
+
+  @override
+  String get slideGridTooltip => 'Cuadrícula de diapositivas';
 }
