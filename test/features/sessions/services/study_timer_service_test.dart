@@ -392,6 +392,40 @@ void main() {
         await repository.save(existing.id, existing);
         expect((await service.isDailyCapExceededMidSession()).data, isFalse);
       });
+
+      test('includes the current session elapsed time toward the cap', () async {
+        service.setDailyCapMinutes(120);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(minutes: 100)),
+          actualDurationMs: 6000000, // 100 minutes already studied today
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        await service.startSession(plannedDurationMinutes: 60);
+        service.reconcileElapsedMs(1200000); // 20 minutes into the session
+        // 100 min persisted + 20 min in progress == 120 min cap
+        expect((await service.isDailyCapExceededMidSession()).data, isTrue);
+      });
+
+      test('current session tips the total over the cap', () async {
+        service.setDailyCapMinutes(120);
+        final existing = Session(
+          id: 'existing',
+          studentId: 'student-1',
+          startTime: DateTime.now().subtract(const Duration(minutes: 100)),
+          actualDurationMs: 6000000, // 100 minutes already studied today
+          completed: true,
+          type: SessionType.focus,
+        );
+        await repository.save(existing.id, existing);
+        await service.startSession(plannedDurationMinutes: 60);
+        service.reconcileElapsedMs(1500000); // 25 minutes into the session
+        // 100 min persisted + 25 min in progress = 125 min > 120 min cap
+        expect((await service.isDailyCapExceededMidSession()).data, isTrue);
+      });
     });
 
     group('getRemainingDailyCapMinutes', () {

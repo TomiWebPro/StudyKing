@@ -94,8 +94,14 @@ class StudyTimerService {
       final todayStatsResult = await _repository.getTodayStats();
       if (todayStatsResult.isFailure) return Result.failure(todayStatsResult.error);
       final totalMs = (todayStatsResult.data!['totalMs'] as int? ?? 0);
-      final withoutCurrent = _elapsedMs > 0 ? totalMs - _elapsedMs : totalMs;
-      return Result.success((withoutCurrent ~/ msPerMinute) >= capMinutes);
+      // getTodayStats() sums actualDurationMs of persisted sessions; the
+      // in-progress session is persisted with actualDurationMs == 0 at
+      // startSession, so totalMs already excludes its live elapsed time.
+      // Add the current session's elapsed time (mirrors isDailyCapReached's
+      // `todayMinutes + additionalMinutes`) instead of subtracting it, which
+      // double-removes it and delays the daily-limit dialog.
+      final withCurrent = totalMs + _elapsedMs;
+      return Result.success((withCurrent ~/ msPerMinute) >= capMinutes);
     } catch (e) {
       _logger.w('Failed to check mid-session cap', e);
       return Result.failure(e.toString());
