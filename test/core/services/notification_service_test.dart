@@ -2,11 +2,13 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
+
   group('NotificationService', () {
     setUp(() {
       debugDefaultTargetPlatformOverride = TargetPlatform.android;
@@ -63,92 +65,144 @@ void main() {
       expect(service.init(), completes);
     });
 
-    test('showNotification does not throw', () async {
-      final service = NotificationService();
-      expect(service.showNotification(id: 1, title: 'T', body: 'B'), completes);
-    });
+    // --- Behavioral assertions: Result<T> return types and l10n fallback ---
 
-    test('showDailyReminder does not throw', () async {
+    test('showNotification returns success when l10n is set', () async {
       final service = NotificationService();
-      final remindAt = TimeOfDay.now();
-      expect(
-        service.showDailyReminder(id: 1, title: 'T', body: 'B', remindAt: remindAt),
-        completes,
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showNotification(
+        id: 1, title: 'T', body: 'B',
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+      expect(result.error, isNull);
     });
 
-    test('showRevisionNudge does not throw', () async {
+    test('showNotification returns failure when l10n is not set', () async {
       final service = NotificationService();
-      expect(
-        service.showRevisionNudge(id: 1, topicName: 'Algebra', daysSinceLastPractice: 3),
-        completes,
+      // Intentionally NOT calling setAppLocalizations
+      final result = await service.showNotification(
+        id: 1, title: 'T', body: 'B',
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('l10n not initialized'));
     });
 
-    test('showOverworkWarning does not throw', () async {
+    test('showDailyReminder returns success when l10n is set', () async {
       final service = NotificationService();
-      expect(
-        service.showOverworkWarning(id: 1, hoursStudied: 5.0),
-        completes,
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showDailyReminder(
+        id: 1, title: 'T', body: 'B', remindAt: TimeOfDay.now(),
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
-    test('showPlanAdjustmentSuggestion does not throw', () async {
+    test('showDailyReminder returns failure when l10n is not set', () async {
       final service = NotificationService();
-      expect(
-        service.showPlanAdjustmentSuggestion(id: 1, consecutiveLowDays: 5),
-        completes,
+      final result = await service.showDailyReminder(
+        id: 1, title: 'T', body: 'B', remindAt: TimeOfDay.now(),
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('l10n not initialized'));
     });
 
-    test('showLessonReminder does not throw', () async {
+    test('showRevisionNudge returns success when l10n is set', () async {
       final service = NotificationService();
-      expect(
-        service.showLessonReminder(
-          id: 1,
-          lessonTitle: 'Math',
-          startTime: DateTime.now(),
-        ),
-        completes,
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showRevisionNudge(
+        id: 1, topicName: 'Algebra', daysSinceLastPractice: 3,
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
-    test('showLowMasteryWarning with empty list does nothing', () async {
+    test('showOverworkWarning returns success when l10n is set', () async {
       final service = NotificationService();
-      expect(
-        service.showLowMasteryWarning(id: 1, weakTopics: []),
-        completes,
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showOverworkWarning(
+        id: 1, hoursStudied: 5.0,
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
-    test('showLowMasteryWarning with topics does not throw', () async {
+    test('showPlanAdjustmentSuggestion returns success when l10n is set',
+        () async {
       final service = NotificationService();
-      expect(
-        service.showLowMasteryWarning(id: 1, weakTopics: ['Algebra', 'Geometry']),
-        completes,
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showPlanAdjustmentSuggestion(
+        id: 1, consecutiveLowDays: 5,
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
-    test('showBadgeUnlocked does not throw', () async {
+    test('showLessonReminder returns failure when l10n is not set', () async {
       final service = NotificationService();
-      expect(
-        service.showBadgeUnlocked(
-          id: 1,
-          badgeName: 'Test',
-          badgeDescription: 'Desc',
-        ),
-        completes,
+      final result = await service.showLessonReminder(
+        id: 1, lessonTitle: 'Math', startTime: DateTime.now(),
       );
+      expect(result, isA<Result<void>>());
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('l10n not initialized'));
     });
 
-    test('cancelNotification does not throw', () async {
+    test('showLowMasteryWarning with empty list returns success immediately',
+        () async {
       final service = NotificationService();
-      expect(service.cancelNotification(1), completes);
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result =
+          await service.showLowMasteryWarning(id: 1, weakTopics: []);
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
-    test('cancelAll does not throw', () async {
+    test('showLowMasteryWarning with topics returns success when l10n is set',
+        () async {
       final service = NotificationService();
-      expect(service.cancelAll(), completes);
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showLowMasteryWarning(
+        id: 1, weakTopics: ['Algebra', 'Geometry'],
+      );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('showBadgeUnlocked returns success when l10n is set', () async {
+      final service = NotificationService();
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showBadgeUnlocked(
+        id: 1, badgeName: 'Test', badgeDescription: 'Desc',
+      );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('showLessonReady returns success when l10n is set', () async {
+      final service = NotificationService();
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showLessonReady(
+        id: 1, topicTitle: 'Algebra', lessonId: 'lesson_1',
+      );
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('cancelNotification returns success on mocked plugin', () async {
+      final service = NotificationService();
+      final result = await service.cancelNotification(1);
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('cancelAll returns success on mocked plugin', () async {
+      final service = NotificationService();
+      final result = await service.cancelAll();
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
     });
 
     test('public API methods exist', () {

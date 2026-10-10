@@ -72,14 +72,13 @@ class BadgeService {
           await _repository.create(badge);
           newlyUnlocked.add(badge);
 
-          try {
-            await _notificationService.showBadgeUnlocked(
-              id: DateTime.now().millisecondsSinceEpoch,
-              badgeName: definition.name,
-              badgeDescription: definition.description,
-            );
-          } catch (e) {
-            _logger.w('Failed to show badge notification', e);
+          final notifResult = await _notificationService.showBadgeUnlocked(
+            id: DateTime.now().millisecondsSinceEpoch,
+            badgeName: definition.name,
+            badgeDescription: definition.description,
+          );
+          if (notifResult.isFailure) {
+            _logger.w('Failed to show badge notification: ${notifResult.error}');
           }
         }
       }

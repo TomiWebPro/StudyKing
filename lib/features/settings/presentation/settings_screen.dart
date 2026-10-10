@@ -807,12 +807,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       await ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(dailyReminderHour: picked.hour, dailyReminderMinute: picked.minute));
       final notifService = NotificationService();
       await notifService.init();
-      await notifService.showDailyReminder(
+      final reminderResult = await notifService.showDailyReminder(
         id: 9999,
         title: l10n.dailyReminderNotificationTitle,
         body: l10n.dailyReminderNotificationBody,
         remindAt: picked,
       );
+      if (reminderResult.isFailure) {
+        debugPrint('Failed to schedule daily reminder: ${reminderResult.error}');
+      }
     }
   }
 

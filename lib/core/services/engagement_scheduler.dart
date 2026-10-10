@@ -179,13 +179,16 @@ class EngagementScheduler {
       final result = await mentorService.checkWellbeingAndGenerateNudges();
       final nudges = result.data ?? [];
       if (nudges.isNotEmpty) {
-        await _notificationService.showMentorMessage(
+        final notifResult = await _notificationService.showMentorMessage(
           id: _notificationIdCounter++,
           title: _l10n.mentorCheckIn,
           body: nudges.first.length > 120
               ? '${nudges.first.substring(0, 120)}...'
               : nudges.first,
         );
+        if (notifResult.isFailure) {
+          _logger.w('Failed to show mentor nudge notification: ${notifResult.error}');
+        }
       }
     } catch (e) {
       _logger.w('Failed to send mentor nudges: $e');
@@ -238,11 +241,14 @@ class EngagementScheduler {
         final diff = lesson.startTime.difference(now);
         if (diff.inMinutes > 0 && diff.inMinutes <= 30) {
           final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Lesson';
-          await _notificationService.showLessonReminder(
+          final notifResult = await _notificationService.showLessonReminder(
             id: _notificationIdCounter++,
             lessonTitle: title,
             startTime: lesson.startTime,
           );
+          if (notifResult.isFailure) {
+            _logger.w('Failed to show lesson reminder notification: ${notifResult.error}');
+          }
         }
       }
     } catch (e) {
@@ -268,12 +274,15 @@ class EngagementScheduler {
       final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
         await _nudgeRepository.create(nudge);
-        await _notificationService.showOverworkWarning(
+        final notifResult = await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
           hoursStudied: double.tryParse(
                   nudge.message.replaceAll(RegExp(r'[^0-9.]'), '')) ??
               0,
         );
+        if (notifResult.isFailure) {
+          _logger.w('Failed to show overwork warning notification: ${notifResult.error}');
+        }
       }
     } catch (e) {
       _logger.w('Failed to send overwork nudge: $e');
@@ -292,11 +301,14 @@ class EngagementScheduler {
         await _nudgeRepository.create(nudge);
         if (nudge.topicId != null) {
           final days = _extractInt(nudge.message) ?? 3;
-          await _notificationService.showRevisionNudge(
+          final notifResult = await _notificationService.showRevisionNudge(
             id: _notificationIdCounter++,
             topicName: nudge.topicId!,
             daysSinceLastPractice: days,
           );
+          if (notifResult.isFailure) {
+            _logger.w('Failed to show revision nudge notification: ${notifResult.error}');
+          }
         }
       }
     } catch (e) {
@@ -315,10 +327,13 @@ class EngagementScheduler {
       for (final nudge in nudges) {
         await _nudgeRepository.create(nudge);
         final days = _extractInt(nudge.message) ?? 3;
-        await _notificationService.showPlanAdjustmentSuggestion(
+        final notifResult = await _notificationService.showPlanAdjustmentSuggestion(
           id: _notificationIdCounter++,
           consecutiveLowDays: days,
         );
+        if (notifResult.isFailure) {
+          _logger.w('Failed to show plan adjustment notification: ${notifResult.error}');
+        }
       }
     } catch (e) {
       _logger.w('Failed to send plan adjustment nudge: $e');
@@ -333,10 +348,13 @@ class EngagementScheduler {
     try {
       final weakResult = await _masteryService.getWeakTopics(studentId);
       if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
-        await _notificationService.showLowMasteryWarning(
+        final notifResult = await _notificationService.showLowMasteryWarning(
           id: _notificationIdCounter++,
           weakTopics: weakResult.data!.map((s) => s.topicId).toList(),
         );
+        if (notifResult.isFailure) {
+          _logger.w('Failed to show low mastery warning notification: ${notifResult.error}');
+        }
       }
     } catch (e) {
       _logger.w('Failed to check weak topics for nudge: $e');

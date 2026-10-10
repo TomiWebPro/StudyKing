@@ -208,17 +208,13 @@ class StudyTimerService {
     );
 
     if (_elapsedMs > 0) {
-      try {
-        await _notificationService?.showNotification(
-          id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
-          title: 'Focus Session Complete',
-          body: 'Great focus! You completed ${_elapsedMs ~/ msPerMinute} minutes.',
-        );
-        // Note: Notification titles/bodies are intentionally invariant (English)
-        // because they are not rendered inside the app UI; they appear in the
-        // OS notification shade where locale is controlled by the OS, not the app.
-      } catch (e) {
-        _logger.w('Failed to show session complete notification', e);
+      final notifResult = await _notificationService?.showNotification(
+        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title: 'Focus Session Complete',
+        body: 'Great focus! You completed ${_elapsedMs ~/ msPerMinute} minutes.',
+      );
+      if (notifResult?.isFailure ?? true) {
+        _logger.w('Failed to show session complete notification');
       }
     }
 
