@@ -679,6 +679,85 @@ void main() {
           expect(adherenceRepo.records.first.adherenceScore, greaterThanOrEqualTo(0.5));
         });
 
+        test('persists the plan\'s own planId (not studentId) when planId is omitted', () async {
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            planId: 'plan-regenerated-42',
+            generatedAt: now,
+            dailyPlans: [
+              DailyPlan(
+                date: now,
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 15,
+                targetMinutes: 30,
+                focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 15, totalMinutes: 30,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.recordDailyAdherence(
+            studentId: 'student1',
+            actualQuestions: 15,
+            actualMinutes: 30,
+          );
+          expect(result.isSuccess, isTrue);
+          expect(adherenceRepo.records, hasLength(1));
+          // The record must reference the plan it belongs to. When a plan is
+          // regenerated over an existing one, plan.planId differs from
+          // studentId, so falling back to studentId mislinks the history.
+          expect(adherenceRepo.records.first.planId, 'plan-regenerated-42');
+          expect(adherenceRepo.records.first.planId, isNot('student1'));
+        });
+
+        test('uses the explicit planId parameter when provided', () async {
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            planId: 'plan-own-id',
+            generatedAt: now,
+            dailyPlans: [
+              DailyPlan(
+                date: now,
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 15,
+                targetMinutes: 30,
+                focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 15, totalMinutes: 30,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.recordDailyAdherence(
+            studentId: 'student1',
+            actualQuestions: 15,
+            actualMinutes: 30,
+            planId: 'plan-explicit-77',
+          );
+          expect(result.isSuccess, isTrue);
+          expect(adherenceRepo.records, hasLength(1));
+          expect(adherenceRepo.records.first.planId, 'plan-explicit-77');
+        });
+
         test('records poor adherence and triggers redistribute', () async {
           final now = DateTime.now();
           final futurePlan = PersonalLearningPlan(

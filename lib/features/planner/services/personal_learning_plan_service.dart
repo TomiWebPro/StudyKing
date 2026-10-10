@@ -603,7 +603,7 @@ class PersonalLearningPlanService {
         plannedMinutes: plannedMinutes,
         actualMinutes: actualMinutes,
         adherenceScore: adherenceScore,
-        planId: planId ?? plan.studentId,
+        planId: planId ?? plan.planId,
       );
 
       await _adherenceRepository.create(model);
