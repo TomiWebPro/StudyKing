@@ -76,6 +76,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   int _previousIndex = 0;
   String? _currentAnswer;
   bool _isSubmitted = false;
+  bool _isSubmitting = false;
   bool _isFeedbackVisible = false;
   bool _isSessionComplete = false;
   bool _sessionAutoSaved = false;
@@ -257,6 +258,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     }
     _currentAnswer = null;
     _isSubmitted = false;
+    _isSubmitting = false;
     _isFeedbackVisible = false;
     _currentConfidence = 3;
     _questionStartTime = DateTime.now();
@@ -313,7 +315,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   }
 
   Future<void> _submitAnswer() async {
-    if (_currentAnswer == null || _questions.isEmpty) return;
+    if (_currentAnswer == null || _questions.isEmpty || _isSubmitting) return;
+    // The submit button stays enabled until the awaited mastery write
+    // completes, so guard the async window: a fast second tap must not
+    // append the answer and record the attempt a second time.
+    _isSubmitting = true;
     final question = _questions[_currentIndex];
     final isCorrect = _validateAnswer(question, _currentAnswer!);
     if (isCorrect) _correctAnswers++;
@@ -397,6 +403,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         _currentIndex++;
         _currentAnswer = null;
         _isSubmitted = false;
+        _isSubmitting = false;
         _isFeedbackVisible = false;
         _currentConfidence = 3;
         _questionStartTime = DateTime.now();
@@ -480,6 +487,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _sessionAutoSaved = false;
       _currentAnswer = null;
       _isSubmitted = false;
+      _isSubmitting = false;
       _isFeedbackVisible = false;
     });
     _sessionService.startTimer();
@@ -593,6 +601,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       _isSessionComplete = false;
       _currentAnswer = null;
       _isSubmitted = false;
+      _isSubmitting = false;
       _isFeedbackVisible = false;
       _sessionAutoSaved = false;
     });
@@ -766,7 +775,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
                                         child: Semantics(
                                           label: l10n.submitAnswer,
                                           child: FilledButton(
-                                            onPressed: _currentAnswer != null ? _submitAnswer : null,
+                                            onPressed: _currentAnswer != null && !_isSubmitting
+                                                ? _submitAnswer
+                                                : null,
                                             style: FilledButton.styleFrom(minimumSize: const Size.fromHeight(48)),
                                             child: Text(l10n.submitAnswer),
                                           ),
