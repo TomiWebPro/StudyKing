@@ -136,7 +136,8 @@ void main() {
       expect(meter.getRecords().first.success, isFalse);
     });
 
-    test('recordUsage calculates non-zero cost', () {
+    test('recordUsage calculates dollar-scale cost for a million tokens',
+        () {
       final record = meter.recordUsage(
         id: 'r1',
         feature: 'chat',
@@ -144,7 +145,8 @@ void main() {
         inputTokens: 1000000,
         outputTokens: 500000,
       );
-      expect(record.cost, greaterThan(0));
+      // 1M input ($6.00) + 0.5M output ($1.20) at default per-token prices.
+      expect(record.cost, closeTo(7.20, 1e-9));
     });
 
     test('getRecords returns most recent first', () {
