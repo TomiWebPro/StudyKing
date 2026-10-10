@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 
 class _SearchTool extends AgentTool {
@@ -12,6 +15,49 @@ class _SearchTool extends AgentTool {
   @override
   Future<dynamic> execute(Map<String, dynamic> args) async {
     return {'results': ['Q1', 'Q2'], 'count': 2};
+  }
+}
+
+class _BrokenTool extends AgentTool {
+  @override
+  String get name => 'broken';
+  @override
+  String get description => 'Always throws';
+  @override
+  Map<String, dynamic> get parameters => {};
+
+  @override
+  Future<dynamic> execute(Map<String, dynamic> args) async {
+    throw StateError('tool exploded');
+  }
+}
+
+/// Hand-written fake that scripts LLM replies and records the
+/// conversation history seen on each call.
+class _FakeLlmService extends LlmService {
+  final List<String> _scriptedResponses;
+  final List<List<Map<String, String>>> historyCalls = [];
+
+  _FakeLlmService(this._scriptedResponses)
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    historyCalls.add(List<Map<String, String>>.from(history ?? []));
+    return Result.success(_scriptedResponses.removeAt(0));
   }
 }
 
@@ -33,6 +79,84 @@ void main() {
     test('unknown tool returns null from registry', () {
       final registry = ToolRegistry();
       expect(registry.get('unknown'), isNull);
+    });
+  });
+
+  group('AgentLoop conversation', () {
+    test('tool result message names the tool and carries its result', () async {
+      final fakeLlm = _FakeLlmService([
+        'TOOL_CALL: searchQuestions\nARGUMENTS: {"topic": "physics"}',
+        'Here are the results.',
+      ]);
+      final registry = ToolRegistry()..register(_SearchTool());
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Find physics questions',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      );
+
+      expect(response.content, 'Here are the results.');
+      expect(response.toolCalls, hasLength(1));
+      expect(response.toolCalls.first.toolName, 'searchQuestions');
+      expect(response.toolCalls.first.arguments, {'topic': 'physics'});
+
+      // The history fed back to the LLM must contain a well-formed tool
+      // result message naming the tool, not "Instance of '_ParsedResponse'".
+      final toolResultMessage = fakeLlm.historyCalls[1].last['content']!;
+      expect(toolResultMessage, startsWith('Tool result for searchQuestions:'));
+      expect(toolResultMessage, contains('{"results":["Q1","Q2"],"count":2}'));
+      expect(toolResultMessage, isNot(contains('Instance of')));
+    });
+
+    test('unknown tool error names the requested tool', () async {
+      final fakeLlm = _FakeLlmService([
+        'TOOL_CALL: nonexistent\nARGUMENTS: {}',
+      ]);
+      final registry = ToolRegistry()..register(_SearchTool());
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Do something',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      );
+
+      expect(response.content, contains('nonexistent'));
+      expect(response.content, isNot(contains('Instance of')));
+    });
+
+    test('tool execution errors are surfaced to the agent', () async {
+      final fakeLlm = _FakeLlmService([
+        'TOOL_CALL: broken\nARGUMENTS: {}',
+        'Done.',
+      ]);
+      final registry = ToolRegistry()..register(_BrokenTool());
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Trigger a failing tool',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      );
+
+      expect(response.content, 'Done.');
+      final toolResultMessage = fakeLlm.historyCalls[1].last['content']!;
+      expect(toolResultMessage, startsWith('Tool result for broken:'));
+      expect(toolResultMessage, contains('error'));
     });
   });
 }

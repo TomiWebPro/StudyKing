@@ -75,7 +75,7 @@ class AgentLoop {
 
         final tool = _toolRegistry.get(parsed.toolName);
         if (tool == null) {
-          finalContent = 'I tried to use a tool "$parsed" but it is not available.';
+          finalContent = 'I tried to use a tool "${parsed.toolName}" but it is not available.';
           break;
         }
 
@@ -110,7 +110,7 @@ class AgentLoop {
           'tool_call_id': toolCallId,
           'arguments': parsed.toolArguments,
         })});
-        messages.add({'role': 'user', 'content': 'Tool result for $parsed.toolName}: $resultStr'});
+        messages.add({'role': 'user', 'content': 'Tool result for ${parsed.toolName}: $resultStr'});
 
         toolCalls.last.result = resultStr;
       }
@@ -161,23 +161,6 @@ class AgentLoop {
       }
     } catch (e) {
       _logger.w('Failed to parse inline JSON tool call: $e');
-    }
-
-    final jsonBlock = RegExp(r'```(?:json)?\s*\n?(\{[\s\S]*?\})\s*\n?```').firstMatch(response);
-    if (jsonBlock != null) {
-      try {
-        final parsed = jsonDecode(jsonBlock.group(1)!);
-        if (parsed is Map<String, dynamic>) {
-          final toolName = parsed['tool'] as String? ?? parsed['tool_call'] as String? ?? '';
-          final args = parsed['arguments'] ?? parsed['args'] ?? <String, dynamic>{};
-          final argsStr = args is String ? args : jsonEncode(args);
-          if (toolName.isNotEmpty) {
-            return _ParsedResponse(toolName: toolName, toolArguments: argsStr);
-          }
-        }
-      } catch (e) {
-        _logger.w('Failed to parse JSON block tool call: $e');
-      }
     }
 
     return null;
