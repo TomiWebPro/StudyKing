@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -435,6 +436,7 @@ class _FakeErrorPlannerService extends PlannerService {
   final bool throwOnAcceptPendingAction;
   final bool throwOnDismissPendingAction;
   final bool throwOnRedistribute;
+  final bool throwOnAdjustPace;
 
   _FakeErrorPlannerService({
     required PlanRepository super.planRepo,
@@ -451,6 +453,7 @@ class _FakeErrorPlannerService extends PlannerService {
     this.throwOnAcceptPendingAction = false,
     this.throwOnDismissPendingAction = false,
     this.throwOnRedistribute = false,
+    this.throwOnAdjustPace = false,
   });
 
   @override
@@ -481,6 +484,18 @@ class _FakeErrorPlannerService extends PlannerService {
   Future<Result<bool>> dismissPendingAction(String actionId) async {
     if (throwOnDismissPendingAction) throw Exception('dismiss error');
     return super.dismissPendingAction(actionId);
+  }
+
+  @override
+  Future<Result<void>> adjustPace(
+    double newTargetMinutesPerDay, {
+    bool recalculateDuration = false,
+  }) async {
+    if (throwOnAdjustPace) throw Exception('adjust pace error');
+    return super.adjustPace(
+      newTargetMinutesPerDay,
+      recalculateDuration: recalculateDuration,
+    );
   }
 
   Future<Result<void>> redistributeWorkload(int missedMinutes, {String strategy = 'days:3'}) async {
@@ -549,6 +564,7 @@ _FakeErrorPlannerService _createErrorService({
   bool throwOnAcceptPendingAction = false,
   bool throwOnDismissPendingAction = false,
   bool throwOnRedistribute = false,
+  bool throwOnAdjustPace = false,
 }) {
   return _FakeErrorPlannerService(
     planRepo: planRepo ?? _FakePlanRepository(),
@@ -566,6 +582,7 @@ _FakeErrorPlannerService _createErrorService({
     throwOnAcceptPendingAction: throwOnAcceptPendingAction,
     throwOnDismissPendingAction: throwOnDismissPendingAction,
     throwOnRedistribute: throwOnRedistribute,
+    throwOnAdjustPace: throwOnAdjustPace,
   );
 }
 
@@ -1551,6 +1568,42 @@ void main() {
         final failingNotifier = PlannerNotifier(failingService);
         await failingNotifier.redistributeWorkload(30, l10n);
         expect(failingNotifier.currentState.error, 'Failed to redistribute workload');
+      });
+    });
+
+    group('adjustPace', () {
+      test('sets success message on successful adjustment', () async {
+        await notifier.adjustPace(45, l10n);
+
+        expect(notifier.currentState.successMessage, l10n.planAdjusted);
+        expect(notifier.currentState.error, isNull);
+      });
+
+      test('sets error and logs exception when service throws', () async {
+        final logs = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+        addTearDown(() => debugPrint = originalPrint);
+
+        final throwingService = _createErrorService(
+          planRepo: planRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
+          roadmapRepo: roadmapRepo,
+          sessionRepo: sessionRepo,
+          pendingActionRepo: pendingActionRepo,
+          planOrchestrator: planOrchestrator,
+          throwOnAdjustPace: true,
+        );
+        final throwingNotifier = PlannerNotifier(throwingService);
+
+        await throwingNotifier.adjustPace(45, l10n);
+
+        expect(throwingNotifier.currentState.error, l10n.failedToAdjustPlan);
+        expect(throwingNotifier.currentState.successMessage, isNull);
+        final logOutput = logs.join('\n');
+        expect(logOutput, contains('Failed to adjust plan pace'));
+        expect(logOutput, contains('adjust pace error'));
       });
     });
 

@@ -648,6 +648,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       await loadExistingPlan();
       state = state.copyWith(successMessage: l10n.planAdjusted);
     } catch (e) {
+      _logger.w('Failed to adjust plan pace', e);
       state = state.copyWith(error: l10n.failedToAdjustPlan);
     }
   }
