@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/database_migration.dart';
@@ -57,6 +59,25 @@ void main() {
 
       expect(result.isValid, isFalse);
       expect(result.hasErrors, isTrue);
+    });
+
+    test('validateSchema logs the error when the version box is missing', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      // dbVersion box was never opened, so validateSchema hits its outer catch.
+      final result = await DatabaseMigration.validateSchema();
+
+      expect(result.isValid, isFalse);
+      expect(result.hasErrors, isTrue);
+      expect(
+        logs.where((l) => l.contains('[W]') && l.contains('Schema validation failed')),
+        isNotEmpty,
+      );
     });
 
     test('DatabaseValidationResult defaults', () {

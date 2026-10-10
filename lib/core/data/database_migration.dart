@@ -44,6 +44,7 @@ class DatabaseMigration {
         currentVersion: Hive.box(versionBoxName).get('version', defaultValue: 0),
       );
     } catch (e) {
+      _logger.w('Schema validation failed', e);
       return DatabaseValidationResult(
         isValid: false,
         error: e.toString(),

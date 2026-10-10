@@ -1,9 +1,12 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/flashcards/data/models/flashcard_model.dart';
 
 class FlashcardRepository extends Repository<Flashcard> {
+  static final Logger _logger = const Logger('FlashcardRepository');
+
   FlashcardRepository() : super(boxName: HiveBoxNames.flashcards);
 
   Future<Result<void>> init() async {
@@ -11,6 +14,7 @@ class FlashcardRepository extends Repository<Flashcard> {
       await openBox(HiveBoxNames.flashcards);
       return Result.success(null);
     } catch (e) {
+      _logger.w('Failed to initialize flashcards box', e);
       return Result.failure(e.toString());
     }
   }

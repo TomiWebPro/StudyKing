@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
@@ -116,6 +117,31 @@ void main() {
       final result = await repo.init();
       expect(result.isSuccess, isTrue);
       expect(repo.isOpen, isTrue);
+    });
+
+    test('init logs a warning when the box was opened with a different type', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      if (Hive.isBoxOpen(HiveBoxNames.flashcards)) {
+        await Hive.box<Flashcard>(HiveBoxNames.flashcards).close();
+        await Hive.deleteBoxFromDisk(HiveBoxNames.flashcards);
+      }
+      // Open as dynamic to force the type-mismatch recovery path in init.
+      await Hive.openBox(HiveBoxNames.flashcards);
+      final repo = FlashcardRepository();
+      final result = await repo.init();
+
+      expect(result.isSuccess, isTrue);
+      expect(
+        logs.where((l) => l.contains('[W]') && l.contains(HiveBoxNames.flashcards)),
+        isNotEmpty,
+      );
+      await Hive.deleteBoxFromDisk(HiveBoxNames.flashcards);
     });
   });
 

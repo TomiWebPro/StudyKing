@@ -2,8 +2,11 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 class TopicRepository extends Repository<Topic> {
+  static final Logger _logger = const Logger('TopicRepository');
+
   TopicRepository() : super(boxName: HiveBoxNames.topics);
 
   Future<Result<void>> init() async {
@@ -11,6 +14,7 @@ class TopicRepository extends Repository<Topic> {
       await openBox(HiveBoxNames.topics);
       return Result.success(null);
     } catch (e) {
+      _logger.w('Failed to initialize topics box', e);
       return Result.failure(e.toString());
     }
   }

@@ -82,6 +82,13 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<void>> updateTopicDependency(TopicDependency dependency) async => Result.success(null);
 }
 
+class _ThrowingSnapshotRepository extends FakeMasteryGraphRepository {
+  @override
+  Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async {
+    throw Exception('snapshot store unavailable');
+  }
+}
+
 class FakeFailingPlanAdherenceRepository extends PlanAdherenceRepository {
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -216,6 +223,26 @@ void main() {
         final weeklyAdherence = result.data!['planAdherence'] as Map;
         expect(weeklyAdherence['weeklyMetricsCount'], equals(0));
         expect(weeklyAdherence['weeklyAdherenceAvg'], equals(0.0));
+      });
+
+      test('logs a warning when the mastery snapshot throws', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        final throwingService = InstrumentationService(
+          repository: _ThrowingSnapshotRepository(),
+          adherenceRepository: adherenceRepo,
+        );
+        await throwingService.init();
+
+        final result = await throwingService.getInstrumentationDashboard('student1');
+
+        expect(result.isFailure, isTrue);
+        expect(
+          _capturedLogs.any((l) =>
+              l.contains('[W]') && l.contains('getInstrumentationDashboard')),
+          isTrue,
+        );
       });
     });
 

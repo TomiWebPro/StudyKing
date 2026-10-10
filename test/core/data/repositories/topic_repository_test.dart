@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'dart:io';
@@ -817,6 +819,26 @@ void main() {
       await repository.init();
       await repository.create(createTestTopic(id: 't1', title: 'After re-init'));
       expect((await repository.get('t1')).data, isNotNull);
+    });
+
+    test('init logs a warning when the box was opened with a different type', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      // Reopen the box as dynamic to force the type-mismatch recovery path.
+      await repository.box.close();
+      await Hive.openBox(HiveBoxNames.topics);
+      final result = await repository.init();
+
+      expect(result.isSuccess, isTrue);
+      expect(
+        logs.where((l) => l.contains('[W]') && l.contains(HiveBoxNames.topics)),
+        isNotEmpty,
+      );
     });
 
     test('getAll returns empty after init', () async {

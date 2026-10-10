@@ -106,6 +106,7 @@ class PersonalLearningPlanService {
     try {
       await _repository.init();
     } catch (e) {
+      _logger.w('Failed to initialize repository for plan build', e);
       return Result.failure(e.toString());
     }
     if (syllabusGoals != null) {

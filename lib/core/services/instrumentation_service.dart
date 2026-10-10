@@ -201,6 +201,7 @@ class InstrumentationService {
         'generatedAt': DateTime.now().toIso8601String(),
       });
     } catch (e) {
+      _logger.w('getInstrumentationDashboard failed for $studentId', e);
       return Result.failure(e.toString());
     }
   }
@@ -252,6 +253,7 @@ class InstrumentationService {
       _logger.d('Instrumentation data exported: ${data.keys.length} categories');
       return Result.success(null);
     } catch (e) {
+      _logger.w('exportInstrumentationData failed for $studentId', e);
       return Result.failure(e.toString());
     }
   }

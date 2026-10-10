@@ -39,13 +39,15 @@ class Repository<T> {
       } else {
         _box = await Hive.openBox<T>(boxName);
       }
-    } on HiveError catch (_) {
+    } on HiveError catch (e) {
+      _logger.w('HiveError while opening box "$boxName"; closing and reopening with the requested type', e);
       final existing = Hive.isBoxOpen(boxName) ? Hive.box(boxName) : null;
       if (existing != null) {
         await existing.close();
       }
       _box = await Hive.openBox<T>(boxName);
-    } on TypeError catch (_) {
+    } on TypeError catch (e) {
+      _logger.w('TypeError while opening box "$boxName"; closing and reopening with the requested type', e);
       final existing = Hive.isBoxOpen(boxName) ? Hive.box(boxName) : null;
       if (existing != null) {
         await existing.close();

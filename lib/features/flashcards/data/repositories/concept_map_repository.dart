@@ -1,9 +1,12 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/flashcards/data/models/concept_map_model.dart';
 
 class ConceptMapRepository extends Repository<ConceptMap> {
+  static final Logger _logger = const Logger('ConceptMapRepository');
+
   ConceptMapRepository() : super(boxName: HiveBoxNames.conceptMaps);
 
   Future<Result<void>> init() async {
@@ -11,6 +14,7 @@ class ConceptMapRepository extends Repository<ConceptMap> {
       await openBox(HiveBoxNames.conceptMaps);
       return Result.success(null);
     } catch (e) {
+      _logger.w('Failed to initialize concept maps box', e);
       return Result.failure(e.toString());
     }
   }

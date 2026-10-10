@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
@@ -405,6 +407,33 @@ void main() {
         final result = await failingService.generatePlan('student1');
 
         expect(result.isFailure, isTrue);
+      });
+
+      test('logs a warning when repository init fails during plan build', () async {
+        final logs = <String>[];
+        final original = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+        addTearDown(() => debugPrint = original);
+
+        final failingRepo = _FailingMasteryGraphRepository();
+        final failingService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(failingRepo),
+          repository: failingRepo,
+          topicRepository: mockTopicRepo,
+          l10n: AppLocalizationsEn(),
+        );
+
+        final result = await failingService.generatePlan('student1');
+
+        expect(result.isFailure, isTrue);
+        expect(
+          logs.where((l) =>
+              l.contains('[W]') &&
+              l.contains('Failed to initialize repository for plan build')),
+          isNotEmpty,
+        );
       });
 
       test('generates plan with recommendations', () async {

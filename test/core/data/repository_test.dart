@@ -1,4 +1,6 @@
 import 'dart:io';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/repository.dart';
@@ -174,6 +176,34 @@ void main() {
     test('openBox box getter works', () {
       expect(repo.box, isNotNull);
       expect(repo.box.name, boxName);
+    });
+
+    test('openBox logs a warning when recovering from a type mismatch', () async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      addTearDown(() => debugPrint = original);
+
+      // A box already open with a different value type forces the
+      // close-and-reopen recovery path in openBox.
+      const recoveryBoxName = 'recovery_type_box';
+      await Hive.openBox(recoveryBoxName);
+      addTearDown(() async {
+        if (Hive.isBoxOpen(recoveryBoxName)) {
+          await Hive.deleteBoxFromDisk(recoveryBoxName);
+        }
+      });
+
+      final repo = _TestRepository();
+      await repo.openBox(recoveryBoxName);
+
+      expect(repo.isOpen, isTrue);
+      expect(
+        logs.where((l) => l.contains('[W]') && l.contains(recoveryBoxName)),
+        isNotEmpty,
+      );
     });
   });
 }
