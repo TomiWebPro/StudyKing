@@ -168,6 +168,24 @@ class _FakeSessionRepo extends SessionRepository {
   Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
 }
 
+class _RecordingSessionRepo extends SessionRepository {
+  final List<Session> _sessions;
+  final List<Session> _saved = [];
+
+  _RecordingSessionRepo(this._sessions);
+
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
+
+  @override
+  Future<Result<void>> save(String key, Session item) async {
+    _saved.add(item);
+    return Result.success(null);
+  }
+
+  List<Session> get savedSessions => List.unmodifiable(_saved);
+}
+
 class _FakeNotificationService extends NotificationService {
   final List<double> overworkHoursStudied = [];
 
@@ -399,6 +417,88 @@ void main() {
         final deviation = await planOrchestrator.checkAdherence('test-student');
         expect(deviation.data!.requiresRegeneration, false);
         expect(deviation.data!.requiresEscalation, false);
+      });
+    });
+
+    group('auto-finalize stale sessions', () {
+      test('finalizes an orphaned stale session as cancelled with completed: false', () async {
+        final staleSession = Session(
+          id: 'stale-1',
+          studentId: 'test-student',
+          startTime: DateTime.now().subtract(const Duration(hours: 25)),
+          plannedDurationMinutes: 45,
+          status: SessionStatus.inProgress,
+        );
+        final sessionRepo = _RecordingSessionRepo([staleSession]);
+        final finalizeScheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: sessionRepo,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+        final result = await finalizeScheduler.init();
+        expect(result.isSuccess, true);
+
+        // The abandoned session is persisted exactly once…
+        expect(sessionRepo.savedSessions, hasLength(1));
+        final finalized = sessionRepo.savedSessions.first;
+        expect(finalized.id, 'stale-1');
+        // …as cancelled (matching StudyTimerService.cancelSession)…
+        expect(finalized.status, SessionStatus.cancelled);
+        // …and must NOT be marked completed: a cancelled session that counts
+        // as completed inflates completed-session counters and study streaks.
+        expect(finalized.completed, false);
+        expect(finalized.endTime, isNotNull);
+        expect(finalized.endTime, staleSession.startTime.add(const Duration(minutes: 45)));
+      });
+
+      test('leaves recent open sessions and already-finished sessions untouched', () async {
+        final recentOpen = Session(
+          id: 'recent-open',
+          studentId: 'test-student',
+          startTime: DateTime.now().subtract(const Duration(minutes: 30)),
+          status: SessionStatus.inProgress,
+        );
+        final finishedLongAgo = Session(
+          id: 'finished-long-ago',
+          studentId: 'test-student',
+          startTime: DateTime.now().subtract(const Duration(hours: 30)),
+          endTime: DateTime.now().subtract(const Duration(hours: 29)),
+          completed: true,
+          status: SessionStatus.completed,
+        );
+        final sessionRepo = _RecordingSessionRepo([recentOpen, finishedLongAgo]);
+        final finalizeScheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: sessionRepo,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+        await finalizeScheduler.init();
+
+        // Neither a still-active recent session nor an already-finished
+        // session should be re-saved by the stale-session sweep.
+        expect(sessionRepo.savedSessions, isEmpty);
       });
     });
 

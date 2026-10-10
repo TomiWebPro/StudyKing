@@ -397,7 +397,7 @@ class EngagementScheduler {
             endTime: session.startTime.add(
               Duration(minutes: session.plannedDurationMinutes ?? 30),
             ),
-            completed: true,
+            completed: false,
           );
           await _sessionRepository!.save(finalized.id, finalized);
           _logger.w('Auto-finalized stale session: ${session.id}');
