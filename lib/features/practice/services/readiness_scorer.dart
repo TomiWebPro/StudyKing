@@ -221,7 +221,8 @@ class ReadinessScorer {
       score += 0.5 * confidenceGapWeight;
     }
 
-    final difficultyNorm = (question.difficulty - 1) / 4.0;
+    // Difficulty uses the canonical 1–3 scale; normalize to 0–1.
+    final difficultyNorm = (question.difficulty - 1) / 2.0;
     score += difficultyNorm * 0.05;
 
     if (relatedToWrong) {

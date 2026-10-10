@@ -294,6 +294,115 @@ void main() {
     });
   });
 
+  group('ExamSessionService.selectQuestions difficulty distribution', () {
+    late ExamSessionService service;
+
+    setUp(() {
+      service = ExamSessionService(
+        sessionRepo: _FakeSessionRepo(),
+        studentIdService: FakeStudentIdService(),
+      );
+    });
+
+    tearDown(() {
+      service.dispose();
+    });
+
+    test('selects one question per band on the canonical 1–3 scale', () {
+      final pool = [
+        _q(id: 'easy', text: 'easy', difficulty: 1),
+        _q(id: 'medium', text: 'medium', difficulty: 2),
+        _q(id: 'hard', text: 'hard', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 3,
+        subjectId: 'subject-a',
+        easyCount: 1,
+        mediumCount: 1,
+        hardCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      final difficulties = selected.map((q) => q.difficulty).toList()
+        ..sort();
+      expect(difficulties, [1, 2, 3]);
+    });
+
+    test('hard band is satisfiable (regression: hard used difficulty >= 4)',
+        () {
+      final pool = [
+        _q(id: 'hard-a', text: 'hard a', difficulty: 3),
+        _q(id: 'hard-b', text: 'hard b', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'subject-a',
+        hardCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(1));
+      expect(selected.single.difficulty, 3);
+    });
+
+    test('easy band does not leak medium questions', () {
+      final pool = [
+        _q(id: 'easy', text: 'easy', difficulty: 1),
+        _q(id: 'medium', text: 'medium', difficulty: 2),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'subject-a',
+        easyCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(1));
+      expect(selected.single.difficulty, 1);
+    });
+
+    test('medium band does not return hard questions', () {
+      final pool = [
+        _q(id: 'medium', text: 'medium', difficulty: 2),
+        _q(id: 'hard', text: 'hard', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 1,
+        subjectId: 'subject-a',
+        mediumCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(1));
+      expect(selected.single.difficulty, 2);
+    });
+
+    test('backfills from leftovers when a band has too few questions', () {
+      final pool = [
+        _q(id: 'easy-a', text: 'easy a', difficulty: 1),
+        _q(id: 'easy-b', text: 'easy b', difficulty: 1),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 3,
+        subjectId: 'subject-a',
+        easyCount: 1,
+        mediumCount: 1,
+        hardCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      // Only two easy questions exist; medium/hard bands are empty, so
+      // the shortfall is backfilled from the remaining easy candidates.
+      expect(selected, hasLength(2));
+      expect(selected.every((q) => q.difficulty == 1), isTrue);
+    });
+  });
+
   group('ExamQuestionResult', () {
     test('creates with required fields', () {
       final q = _q(id: 'q1', text: 'Test');

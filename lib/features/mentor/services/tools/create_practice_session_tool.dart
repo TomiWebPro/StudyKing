@@ -390,9 +390,9 @@ class CreatePracticeSessionTool extends AgentTool {
     final questionIds = selected.map((q) => q.id).toList();
     final topics = selected.map((q) => q.topicId).toSet().toList();
 
-    final easySelected = selected.where((q) => q.difficulty <= 2).length;
-    final mediumSelected = selected.where((q) => q.difficulty == 3).length;
-    final hardSelected = selected.where((q) => q.difficulty >= 4).length;
+    final easySelected = selected.where((q) => q.difficulty <= 1).length;
+    final mediumSelected = selected.where((q) => q.difficulty == 2).length;
+    final hardSelected = selected.where((q) => q.difficulty >= 3).length;
 
     return {
       'success': true,

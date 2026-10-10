@@ -309,6 +309,22 @@ void main() {
         expect(result[0].score, greaterThan(result[1].score));
       });
 
+      test('difficulty weight spans the full canonical 1–3 scale',
+          () async {
+        final easyQ = _createQ(id: 'q1', difficulty: 1);
+        final hardQ = _createQ(id: 'q2', difficulty: 3);
+        final scorer = ReadinessScorer();
+        final result = await scorer.scoreQuestions([easyQ, hardQ]);
+
+        final easyScore =
+            result.firstWhere((s) => s.question.id == 'q1').score;
+        final hardScore =
+            result.firstWhere((s) => s.question.id == 'q2').score;
+        // (3 - 1) / 2.0 * 0.05 == 0.05: the full difficulty weight.
+        // On the old 1–5 normalization the delta was only 0.025.
+        expect(hardScore - easyScore, closeTo(0.05, 1e-9));
+      });
+
       test('extreme confidence gap gives high boost', () async {
         final now = DateTime.now();
         final questions = [_createQ(id: 'q1')];

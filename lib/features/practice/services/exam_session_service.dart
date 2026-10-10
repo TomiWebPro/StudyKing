@@ -186,9 +186,11 @@ class ExamSessionService {
     if (config.easyCount != null ||
         config.mediumCount != null ||
         config.hardCount != null) {
-      const easyMaxDifficulty = 2;
-      const mediumDifficulty = 3;
-      const hardMinDifficulty = 4;
+      // Canonical difficulty scale is 1–3 (see difficultyWord):
+      // easy=1, medium=2, hard=3.
+      const easyMaxDifficulty = 1;
+      const mediumDifficulty = 2;
+      const hardMinDifficulty = 3;
       final easy = candidates.where((q) => q.difficulty <= easyMaxDifficulty).toList()..shuffle();
       final medium = candidates.where((q) => q.difficulty == mediumDifficulty).toList()..shuffle();
       final hard = candidates.where((q) => q.difficulty >= hardMinDifficulty).toList()..shuffle();

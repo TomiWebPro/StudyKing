@@ -452,8 +452,8 @@ void main() {
       final questions = [
         Question(id: 'q1', subjectId: 'sub-1', topicId: 't-1', text: 'q1', type: QuestionType.typedAnswer, difficulty: 1, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
         Question(id: 'q2', subjectId: 'sub-1', topicId: 't-1', text: 'q2', type: QuestionType.typedAnswer, difficulty: 1, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
-        Question(id: 'q3', subjectId: 'sub-1', topicId: 't-1', text: 'q3', type: QuestionType.typedAnswer, difficulty: 3, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
-        Question(id: 'q4', subjectId: 'sub-1', topicId: 't-1', text: 'q4', type: QuestionType.typedAnswer, difficulty: 5, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q3', subjectId: 'sub-1', topicId: 't-1', text: 'q3', type: QuestionType.typedAnswer, difficulty: 2, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
+        Question(id: 'q4', subjectId: 'sub-1', topicId: 't-1', text: 'q4', type: QuestionType.typedAnswer, difficulty: 3, markscheme: Markscheme(correctAnswer: 'yes'), createdAt: now, updatedAt: now),
       ];
       final container = ProviderContainer(
         overrides: [
@@ -468,6 +468,11 @@ void main() {
       final selected = examService.selectQuestions(pool: questions, config: config);
 
       expect(selected.length, 3);
+      // Behavioral: the requested 1/1/1 distribution maps onto the
+      // canonical 1–3 difficulty scale (easy=1, medium=2, hard=3).
+      final difficulties = selected.map((q) => q.difficulty).toList()
+        ..sort();
+      expect(difficulties, [1, 2, 3]);
     });
 
     test('examSessionServiceProvider startExam activates and cancelExam deactivates', () {

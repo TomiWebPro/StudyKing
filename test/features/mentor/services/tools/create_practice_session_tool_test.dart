@@ -156,8 +156,8 @@ void main() {
     test('exam mode returns a difficulty breakdown', () async {
       questionRepo.setQuestions([
         _q('q1', 's1', 't1', 1),
-        _q('q2', 's1', 't1', 3),
-        _q('q3', 's1', 't1', 5),
+        _q('q2', 's1', 't1', 2),
+        _q('q3', 's1', 't1', 3),
       ]);
       final tool = CreatePracticeSessionTool(
         questionRepo: questionRepo,
