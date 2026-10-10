@@ -239,6 +239,7 @@ class _FakeVoiceService extends VoiceService {
 class _FakeTutorService extends TutorService {
   final bool shouldFail;
   final LlmService llm;
+  ConversationManager? lastManager;
 
   _FakeTutorService({this.shouldFail = false, LlmService? llmService})
       : llm = llmService ?? _FakeLlmService(),
@@ -275,6 +276,7 @@ class _FakeTutorService extends TutorService {
       localeName: localeName,
     );
     await manager.initialize();
+    lastManager = manager;
     return manager;
   }
 
@@ -643,6 +645,58 @@ void main() {
 
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('Go to Settings'), findsOneWidget);
+    });
+
+    testWidgets('streaming loops stop consuming after the route is popped mid-stream', (tester) async {
+      final tutorService = _FakeTutorService(llmService: _SlowStreamLlmService());
+      await tester.pumpWidget(_wrapApp(
+        TutorScreen(
+          topicId: '',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          tutorService: tutorService,
+        ),
+      ));
+      await tester.pump();
+      // Let the lesson start and the greeting stream finish (2s inter-chunk delay).
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+
+      final manager = tutorService.lastManager!;
+
+      // Send a message; the reply streams one chunk, then pauses 2s mid-stream.
+      await tester.enterText(find.byType(TextField), 'Hello tutor');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.text('partial tutor reply'), findsOneWidget);
+
+      // Pop mid-stream through the back-navigation confirm dialog
+      // ("Save and Exit" keeps the conversation manager alive).
+      // PopScope vetoes the raw pop while a lesson is active and
+      // routes it through _handleBackNavigation instead.
+      await tester.state<NavigatorState>(find.byType(Navigator)).maybePop();
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(find.byType(AlertDialog), findsOneWidget);
+      await tester.tap(find.widgetWithText(FilledButton, 'Save and Exit'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // The delayed final chunk arrives after the route was popped and the
+      // State disposed: the streaming loop must not consume it.
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+      await tester.pump(const Duration(seconds: 2));
+
+      // Pre-fix, the unguarded setState after dispose threw inside the loop,
+      // the catch block appended this fallback message to the conversation,
+      // and the unguarded setState in the catch surfaced an uncaught error.
+      expect(
+        manager.messages.where((m) => m.content.contains('Response interrupted')),
+        isEmpty,
+      );
+      expect(tester.takeException(), isNull);
     });
   });
 }

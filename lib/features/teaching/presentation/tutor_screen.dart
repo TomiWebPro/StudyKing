@@ -195,6 +195,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
 
     try {
       await for (final chunk in _manager!.sendMessage(greeting)) {
+        if (!mounted) return;
         buffer.write(chunk);
         _updateStreamingMessage(buffer);
         setState(() {});
@@ -250,6 +251,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     _scrollToBottom();
     try {
       await for (final chunk in _manager!.sendMessage(text)) {
+        if (!mounted) return;
         buffer.write(chunk);
         _updateStreamingMessage(buffer);
         setState(() {});
@@ -409,6 +411,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     final buffer = StringBuffer();
     try {
       await for (final chunk in _manager!.processImage(base64Image)) {
+        if (!mounted) return;
         buffer.write(chunk);
         _updateStreamingMessage(buffer);
         setState(() {});
@@ -455,6 +458,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     try {
       if (isTextSubmission) {
         await for (final chunk in _manager!.sendMessage(result.text!)) {
+          if (!mounted) return;
           buffer.write(chunk);
           _updateStreamingMessage(buffer);
           setState(() {});
@@ -463,6 +467,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       } else if (result.imageData != null) {
         final base64Drawing = base64Encode(result.imageData!);
         await for (final chunk in _manager!.processImage(base64Drawing)) {
+          if (!mounted) return;
           buffer.write(chunk);
           _updateStreamingMessage(buffer);
           setState(() {});
