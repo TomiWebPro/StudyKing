@@ -92,7 +92,11 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
   @override
   void dispose() {
     _examService.timeRemainingNotifier.removeListener(_onTimeChanged);
-    _examService.dispose();
+    // The service is a provider-owned singleton; its notifiers must
+    // outlive this screen. Cancel the in-flight exam (stops the
+    // timer and resets notifier values) without disposing the
+    // shared notifiers, so re-entry can re-add listeners safely.
+    _examService.cancelExam();
     super.dispose();
   }
 

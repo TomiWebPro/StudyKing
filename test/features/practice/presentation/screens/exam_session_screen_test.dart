@@ -499,6 +499,60 @@ void main() {
     });
   });
 
+  group('singleton service lifecycle', () {
+    Widget buildAppWithSharedService(
+      ExamSessionService service,
+      List<Question> questions,
+    ) {
+      return ProviderScope(
+        overrides: [
+          questionRepositoryProvider.overrideWithValue(
+            _FakeQuestionRepository(questions),
+          ),
+          examSessionServiceProvider.overrideWithValue(service),
+          sessionRepositoryProvider.overrideWithValue(_FakeSessionRepository()),
+          masteryRecorderProvider.overrideWith((ref) => _FakeMasteryRecorder()),
+          studentIdServiceProvider.overrideWith((ref) => _FakeStudentIdService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: const ExamSessionScreen(subjectId: 'sub1', subjectName: 'Mathematics'),
+        ),
+      );
+    }
+
+    testWidgets('re-entering the screen reuses the live singleton notifiers',
+        (tester) async {
+      // The provider is a non-autoDispose singleton, so the same service
+      // instance must survive across screen visits.
+      final examService = _DeterministicExamSessionService(
+        sessionRepo: _FakeSessionRepository(),
+        studentIdService: _FakeStudentIdService(),
+        clock: _FakeClock(DateTime(2024, 6, 15, 12, 0)),
+      );
+      final questions = [_typedQuestion(id: 'q1')];
+
+      // First visit: initState adds a listener to the shared notifier.
+      await tester.pumpWidget(buildAppWithSharedService(examService, questions));
+      await tester.pumpAndSettle();
+
+      // Leave the screen: dispose must not dispose the shared notifiers.
+      await tester.pumpWidget(const SizedBox());
+      await tester.pump();
+
+      // Second visit: initState re-adds a listener to the same notifier.
+      // Before the fix this threw "ValueNotifier used after being disposed".
+      await tester.pumpWidget(buildAppWithSharedService(examService, questions));
+      await tester.pumpAndSettle();
+
+      expect(tester.takeException(), isNull);
+      // The shared notifier is still live and readable after re-entry.
+      expect(examService.timeRemainingNotifier.value, Duration.zero);
+    });
+  });
+
   group('additional coverage', () {
       group('config screen', () {
         testWidgets('shows no questions upload screen when empty', (tester) async {
