@@ -13,6 +13,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/sessions/presentation/utils/session_utils.dart';
 import 'package:studyking/features/sessions/services/session_export_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -149,10 +150,13 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
           {
             final attemptRepo = AttemptRepository();
             await attemptRepo.init();
+            final questionRepo = QuestionRepository();
+            await questionRepo.init();
             final masteryService = MasteryGraphService();
             await masteryService.init();
             final tracker = StudyProgressTracker(
               attemptRepo: attemptRepo,
+              questionRepo: questionRepo,
               l10n: l10n,
             );
             final exportService = ProgressExportService(

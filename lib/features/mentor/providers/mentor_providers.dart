@@ -31,6 +31,7 @@ final mentorProgressTrackerProvider = Provider<StudyProgressTracker>((ref) {
     attemptRepo: ref.watch(mentorAttemptRepositoryProvider),
     masteryService: ref.watch(masteryGraphServiceProvider),
     sessionRepo: ref.watch(mentorSessionRepositoryProvider),
+    questionRepo: ref.watch(databaseProvider).questionRepository,
     l10n: l10n ?? defaultL10n,
   );
   if (l10n != null) {

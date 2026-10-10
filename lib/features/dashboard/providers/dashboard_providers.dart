@@ -7,6 +7,8 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show attemptRepositoryProvider, masteryGraphServiceProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show questionRepositoryProvider;
 import 'package:studyking/features/sessions/providers/session_providers.dart' show sessionRepositoryProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -22,6 +24,7 @@ final dashboardStudyProgressTrackerProvider = Provider<StudyProgressTracker>((re
     attemptRepo: ref.read(attemptRepositoryProvider),
     sessionRepo: ref.read(sessionRepositoryProvider),
     masteryService: ref.read(masteryGraphServiceProvider),
+    questionRepo: ref.read(questionRepositoryProvider),
     l10n: l10n ?? defaultL10n,
   );
   if (l10n != null) {

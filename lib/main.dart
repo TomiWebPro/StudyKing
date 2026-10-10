@@ -204,6 +204,7 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
           attemptRepo: mainDb.attemptRepository,
           masteryService: masteryService,
           sessionRepo: mainDb.sessionRepository,
+          questionRepo: mainDb.questionRepository,
           l10n: defaultL10n,
         ),
         masteryService: masteryService,

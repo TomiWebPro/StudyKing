@@ -5,6 +5,7 @@ import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../errors/result.dart';
@@ -12,22 +13,26 @@ import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import '../utils/logger.dart';
 import 'badge_service.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 
 class StudyProgressTracker {
   static final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
   final SessionRepository? _sessionRepo;
+  final QuestionRepository? _questionRepo;
   AppLocalizations _l10n;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
     SessionRepository? sessionRepo,
+    QuestionRepository? questionRepo,
     required AppLocalizations l10n,
   })  : _attemptRepo = attemptRepo,
         _masteryService = masteryService ?? MasteryGraphService(),
         _sessionRepo = sessionRepo,
+        _questionRepo = questionRepo,
         _l10n = l10n;
 
   void updateLocalization(AppLocalizations l10n) {
@@ -93,10 +98,7 @@ class StudyProgressTracker {
         'totalStudyTimeHours': totalStudyTimeMs / 3600000,
         'weeklyActivity': weeklyAttempts,
         'dailyActivity': dailyAttempts,
-        'topicsStudied': attempts
-          .map((a) => a.questionId.split('_').first)
-          .toSet()
-          .length,
+        'topicsStudied': await _countDistinctTopicsStudied(attempts),
         'sessionCount': sessionCount,
         'tutorSessionCount': tutorSessionCount,
         'focusSessionCount': focusSessionCount,
@@ -105,6 +107,33 @@ class StudyProgressTracker {
       _logger.w('Failed to get overall stats: $e');
       return Result.failure('StudyProgressTracker.getOverallStats: $e');
     }
+  }
+
+  /// Counts the distinct topics the student has actually attempted.
+  ///
+  /// Production question IDs (`q_<timestamp>_<counter>`) carry no topic
+  /// information, so the topic is resolved by joining attempts to their
+  /// questions through [QuestionRepository]. When no repository is wired
+  /// (tests, legacy call sites) or no question resolves (box not open,
+  /// question deleted), falls back to the question-ID prefix heuristic.
+  Future<int> _countDistinctTopicsStudied(List<StudentAttempt> attempts) async {
+    if (_questionRepo == null) {
+      return attempts.map((a) => a.questionId.split('_').first).toSet().length;
+    }
+    final topics = <String>{};
+    var resolvedAny = false;
+    for (final questionId in attempts.map((a) => a.questionId).toSet()) {
+      final result = await _questionRepo.get(questionId);
+      final question = result.data;
+      if (question != null && question.topicId.isNotEmpty) {
+        topics.add(question.topicId);
+        resolvedAny = true;
+      }
+    }
+    if (!resolvedAny) {
+      return attempts.map((a) => a.questionId.split('_').first).toSet().length;
+    }
+    return topics.length;
   }
 
   Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async {

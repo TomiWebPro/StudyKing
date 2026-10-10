@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
@@ -14,6 +16,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class FakeAttemptRepository extends AttemptRepository {
@@ -98,6 +101,32 @@ class FakeSessionRepository extends SessionRepository {
     return Result.success(
         _sessions.where((s) => s.studentId == studentId).toList());
   }
+}
+
+class FakeQuestionRepository extends QuestionRepository {
+  final Map<String, Question> _questions = {};
+
+  void addQuestion(Question question) {
+    _questions[question.id] = question;
+  }
+
+  @override
+  Future<Result<Question?>> get(String key) async {
+    return Result.success(_questions[key]);
+  }
+}
+
+Question _productionQuestion(String id, String topicId) {
+  final now = DateTime.now();
+  return Question(
+    id: id,
+    text: 'Question $id',
+    type: QuestionType.singleChoice,
+    subjectId: 'subject1',
+    topicId: topicId,
+    createdAt: now,
+    updatedAt: now,
+  );
 }
 
 class _BadgeModelAdapter extends TypeAdapter<BadgeModel> {
@@ -327,10 +356,104 @@ void main() {
 
       test('counts unique topics studied', () async {
         final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_math'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000001_0', 'topic_math'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000002_0', 'topic_science'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000001_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q_1700000000002_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'science'),
+        ]);
+
+        final stats = await tracker.getOverallStats('student1');
+
+        expect(stats.data!['topicsStudied'], equals(2));
+      });
+
+      test('does not collapse production question IDs into a single topic (regression)', () async {
+        // Production question IDs (IdGenerator.generate('q')) embed no topic
+        // information, so the distinct-topic count must come from the joined
+        // questions — not from the shared "q" ID prefix.
+        final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000001_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000002_0', 'topic_geometry'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000003_0', 'topic_statistics'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000001_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q_1700000000002_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a4', studentId: 'student1', questionId: 'q_1700000000003_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final stats = await tracker.getOverallStats('student1');
+
+        expect(stats.data!['topicsStudied'], equals(3));
+      });
+
+      test('counts the same topic once across multiple attempts', () async {
+        final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000001_0', 'topic_algebra'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000001_0', isCorrect: false, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final stats = await tracker.getOverallStats('student1');
+
+        expect(stats.data!['topicsStudied'], equals(1));
+      });
+
+      test('falls back to question ID prefix when no question repository is wired', () async {
+        final now = DateTime.now();
         mockRepo.setAttempts([
           StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'math_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
-          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'math_q2', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
-          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'science_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'science'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'science_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'science'),
+        ]);
+
+        final stats = await tracker.getOverallStats('student1');
+
+        expect(stats.data!['topicsStudied'], equals(2));
+      });
+
+      test('falls back to question ID prefix when questions cannot be resolved', () async {
+        final now = DateTime.now();
+        // Repository is wired but holds none of the attempted questions.
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: FakeQuestionRepository(),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'math_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'science_q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'science'),
         ]);
 
         final stats = await tracker.getOverallStats('student1');
