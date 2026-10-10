@@ -24,6 +24,7 @@ import 'package:studyking/features/subjects/providers/subjects_repository_provid
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/widgets/metric_card.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart' show MasteryState;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -122,6 +123,9 @@ class FakeStudyTimerService extends StudyTimerService {
 
   @override
   Future<Result<int>> getTodayDurationMs() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getWeeklyDurationMs() async => Result.success(0);
 
   @override
   Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async => Result.success([]);
@@ -242,6 +246,9 @@ class _FakeStatsService extends FakeStudyTimerService {
 
   @override
   Future<Result<int>> getTodayDurationMs() async => Result.success(7200000);
+
+  @override
+  Future<Result<int>> getWeeklyDurationMs() async => Result.success(9000000);
 
   @override
   Future<Result<List<Session>>> getRecentSessions({int limit = 10}) async {
@@ -835,9 +842,35 @@ void main() {
       await tester.pump(const Duration(milliseconds: 100));
 
       expect(find.text('1h 0m 0s'), findsOneWidget);
-      expect(find.text('2h 0m 0s'), findsOneWidget);
+      expect(find.text('2h 30m 0s'), findsOneWidget);
+      // Today's raw duration (2h) must not leak into the "This week" card.
+      expect(find.text('2h 0m 0s'), findsNothing);
       expect(find.text('2/3'), findsOneWidget);
       expect(find.text('Recent Sessions'), findsOneWidget);
+    });
+
+    testWidgets(
+        'This week metric sums the last 7 days, not only today',
+        (tester) async {
+      // Today: 1h (stats card), today duration API: 2h, weekly API: 2.5h.
+      // Regression guard for the weekly metric being fed by getTodayDurationMs.
+      final statsService = _FakeStatsService();
+      await tester.pumpWidget(_wrapApp(
+        const FocusTimerScreen(),
+        serviceOverride: statsService,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await _scrollTap(tester, find.byType(Switch));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final weekCard = find.widgetWithText(MetricCard, '2h 30m 0s');
+      expect(weekCard, findsOneWidget);
+      // The weekly value must be the 7-day sum, distinct from today's values.
+      expect(find.text('1h 0m 0s'), findsOneWidget);
+      expect(find.text('2h 0m 0s'), findsNothing);
     });
 
     testWidgets('navigator observes no pops initially', (tester) async {

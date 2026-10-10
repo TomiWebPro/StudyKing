@@ -275,6 +275,20 @@ class StudyTimerService {
     }
   }
 
+  Future<Result<int>> getWeeklyDurationMs() async {
+    try {
+      final result = await _repository.getWeeklyDurationMs();
+      if (result.isFailure) {
+        _logger.w('getWeeklyDurationMs failed', result.error);
+        return Result.failure(result.error);
+      }
+      return Result.success(result.data ?? 0);
+    } catch (e) {
+      _logger.w('getWeeklyDurationMs failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<int>> getTodaySessionCount() async {
     try {
       final result = await _repository.getTodaySessionCount();

@@ -44,6 +44,17 @@ class FakeSessionRepository extends SessionRepository {
   }
 
   @override
+  Future<Result<int>> getWeeklyDurationMs() async {
+    final weekAgo = DateTime.now().subtract(const Duration(days: 7));
+    final week = _store.values
+        .where((s) => s.startTime.isAfter(weekAgo))
+        .toList();
+    return Result.success(
+      week.fold<int>(0, (sum, s) => sum + s.actualDurationMs),
+    );
+  }
+
+  @override
   Future<Result<int>> getTodaySessionCount() async {
     final todayResult = await getByDate(DateTime.now());
     final today = todayResult.data!;
@@ -633,6 +644,61 @@ void main() {
         expect((await service.getTodayDurationMs()).data, 5000);
       });
 
+      test('getWeeklyDurationMs returns 0 when no sessions', () async {
+        expect((await service.getWeeklyDurationMs()).data, 0);
+      });
+
+      test('getWeeklyDurationMs delegates to repository', () async {
+        final sess = Session(
+          id: 'week-session',
+          studentId: 'student-1',
+          startTime: DateTime.now(),
+          actualDurationMs: 5000,
+          type: SessionType.focus,
+        );
+        await repository.save(sess.id, sess);
+        expect((await service.getWeeklyDurationMs()).data, 5000);
+      });
+
+      test('getWeeklyDurationMs sums the last 7 days, not just today',
+          () async {
+        final now = DateTime.now();
+        final threeDaysAgo = now.subtract(const Duration(days: 3));
+        final earlierThisWeek = Session(
+          id: 'earlier-week-session',
+          studentId: 'student-1',
+          startTime: threeDaysAgo,
+          actualDurationMs: 5000,
+          type: SessionType.focus,
+        );
+        final todaySession = Session(
+          id: 'today-session',
+          studentId: 'student-1',
+          startTime: now,
+          actualDurationMs: 2500,
+          type: SessionType.focus,
+        );
+        await repository.save(earlierThisWeek.id, earlierThisWeek);
+        await repository.save(todaySession.id, todaySession);
+        // Weekly includes sessions before today; today-only would be 2500.
+        expect((await service.getWeeklyDurationMs()).data, 7500);
+        expect((await service.getTodayDurationMs()).data, 2500);
+      });
+
+      test('getWeeklyDurationMs excludes sessions older than 7 days',
+          () async {
+        final eightDaysAgo = DateTime.now().subtract(const Duration(days: 8));
+        final staleSession = Session(
+          id: 'stale-session',
+          studentId: 'student-1',
+          startTime: eightDaysAgo,
+          actualDurationMs: 5000,
+          type: SessionType.focus,
+        );
+        await repository.save(staleSession.id, staleSession);
+        expect((await service.getWeeklyDurationMs()).data, 0);
+      });
+
       test('getTodaySessionCount delegates to repository', () async {
         final sess3 = Session(
           id: 's1',
@@ -766,6 +832,13 @@ void main() {
         expect(result.isFailure, isTrue);
       });
 
+      test('getWeeklyDurationMs returns failure when repository throws',
+          () async {
+        throwingRepo.throwOnGetWeeklyDurationMs = true;
+        final result = await throwingService.getWeeklyDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
       test('getTodaySessionCount returns failure when repository throws', () async {
         throwingRepo.throwOnGetTodaySessionCount = true;
         final result = await throwingService.getTodaySessionCount();
@@ -816,6 +889,19 @@ void main() {
         expect(result.data, 0);
       });
 
+      test('getWeeklyDurationMs propagates inner Result.failure', () async {
+        failingResultRepo.failOnGetWeeklyDurationMs = true;
+        final result = await failingResultService.getWeeklyDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getWeeklyDurationMs succeeds with 0 when inner succeeds empty',
+          () async {
+        final result = await failingResultService.getWeeklyDurationMs();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, 0);
+      });
+
       test('getTodaySessionCount propagates inner failure', () async {
         failingResultRepo.failOnGetTodaySessionCount = true;
         final result = await failingResultService.getTodaySessionCount();
@@ -859,6 +945,7 @@ class _ThrowingFakeRepository extends SessionRepository {
   bool throwOnSave = false;
   bool throwOnGetAll = false;
   bool throwOnGetTodayDurationMs = false;
+  bool throwOnGetWeeklyDurationMs = false;
   bool throwOnGetTodaySessionCount = false;
   bool throwOnGetTodayCompletedSessionCount = false;
   bool throwOnGetTodayStats = false;
@@ -878,6 +965,12 @@ class _ThrowingFakeRepository extends SessionRepository {
   @override
   Future<Result<int>> getTodayDurationMs() async {
     if (throwOnGetTodayDurationMs) throw Exception('getTodayDurationMs failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getWeeklyDurationMs() async {
+    if (throwOnGetWeeklyDurationMs) throw Exception('getWeeklyDurationMs failed');
     return Result.success(0);
   }
 
@@ -906,6 +999,7 @@ class _ThrowingFakeRepository extends SessionRepository {
 class _FailingResultRepository extends SessionRepository {
   bool failOnGetAll = false;
   bool failOnGetTodayDurationMs = false;
+  bool failOnGetWeeklyDurationMs = false;
   bool failOnGetTodaySessionCount = false;
   bool failOnGetTodayCompletedSessionCount = false;
   bool failOnGetTodayStats = false;
@@ -919,6 +1013,12 @@ class _FailingResultRepository extends SessionRepository {
   @override
   Future<Result<int>> getTodayDurationMs() async {
     if (failOnGetTodayDurationMs) return Result.failure('getTodayDurationMs failed');
+    return Result.success(0);
+  }
+
+  @override
+  Future<Result<int>> getWeeklyDurationMs() async {
+    if (failOnGetWeeklyDurationMs) return Result.failure('getWeeklyDurationMs failed');
     return Result.success(0);
   }
 

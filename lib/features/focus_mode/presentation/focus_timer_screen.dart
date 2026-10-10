@@ -314,7 +314,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Future<void> _loadStats() async {
     try {
       final statsResult = await _service.getTodayStats();
-      final weeklyResult = await _service.getTodayDurationMs();
+      final weeklyResult = await _service.getWeeklyDurationMs();
       final recentResult = await _service.getRecentSessions();
       final stats = statsResult.data ?? <String, dynamic>{};
       final weekly = weeklyResult.data ?? 0;
