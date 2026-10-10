@@ -726,8 +726,9 @@ void main() {
       });
 
       group('linkDailyPlanToRoadmap', () {
-        test('completes without error when no roadmaps exist', () async {
-          await svc.linkDailyPlanToRoadmap('student1', ['topic-1']);
+        test('returns success when no roadmaps exist', () async {
+          final result = await svc.linkDailyPlanToRoadmap('student1', ['topic-1']);
+          expect(result.isSuccess, isTrue);
         });
 
         test('marks milestone completed when topic matches', () async {

@@ -38,6 +38,8 @@ class HiveOnboardingStorage implements OnboardingStorage {
 }
 
 class InMemoryOnboardingStorage implements OnboardingStorage {
+  static final _logger = const Logger('InMemoryOnboardingStorage');
+
   final Map<String, dynamic> _store;
 
   InMemoryOnboardingStorage([Map<String, bool>? initial])
@@ -50,7 +52,7 @@ class InMemoryOnboardingStorage implements OnboardingStorage {
     final value = _store[key];
     if (value is bool) return value;
     if (value != null) {
-      const Logger('InMemoryOnboardingStorage').w('Non-boolean value for key $key: $value');
+      _logger.w('Non-boolean value for key $key: $value');
     }
     return defaultValue;
   }

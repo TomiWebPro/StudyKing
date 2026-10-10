@@ -622,7 +622,10 @@ class PersonalLearningPlanService {
             .map((t) => t.topicId)
             .toList();
         if (completedTopicIds.isNotEmpty) {
-          await linkDailyPlanToRoadmap(studentId, completedTopicIds);
+          final roadmapResult = await linkDailyPlanToRoadmap(studentId, completedTopicIds);
+          if (roadmapResult.isFailure) {
+            _logger.w('Failed to update roadmap milestones during adherence record: ${roadmapResult.error}');
+          }
         }
       }
       return Result.success(null);
@@ -632,34 +635,40 @@ class PersonalLearningPlanService {
     }
   }
 
-  Future<void> linkDailyPlanToRoadmap(
+  Future<Result<void>> linkDailyPlanToRoadmap(
     String studentId,
     List<String> completedTopicIds,
   ) async {
-    await _roadmapRepository.init();
-    final roadmapsResult = await _roadmapRepository.getRoadmapsByStudent(studentId);
-    final roadmaps = roadmapsResult.data ?? [];
-    for (final roadmap in roadmaps) {
-      if (roadmap.status == 'completed') continue;
-      bool changed = false;
-      final updatedMilestones = roadmap.milestones.map((m) {
-        if (m.isCompleted) return m;
-        final hasAny = completedTopicIds.any((id) => m.topicsCovered.contains(id));
-        if (hasAny) {
-          changed = true;
-          return m.copyWith(isCompleted: true);
+    try {
+      await _roadmapRepository.init();
+      final roadmapsResult = await _roadmapRepository.getRoadmapsByStudent(studentId);
+      final roadmaps = roadmapsResult.data ?? [];
+      for (final roadmap in roadmaps) {
+        if (roadmap.status == 'completed') continue;
+        bool changed = false;
+        final updatedMilestones = roadmap.milestones.map((m) {
+          if (m.isCompleted) return m;
+          final hasAny = completedTopicIds.any((id) => m.topicsCovered.contains(id));
+          if (hasAny) {
+            changed = true;
+            return m.copyWith(isCompleted: true);
+          }
+          return m;
+        }).toList();
+        if (changed) {
+          final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
+          final newPercentage = (completedCount / updatedMilestones.length * 100);
+          await _roadmapRepository.saveRoadmap(roadmap.copyWith(
+            milestones: updatedMilestones,
+            completionPercentage: newPercentage,
+            status: newPercentage >= 100 ? 'completed' : roadmap.status,
+          ));
         }
-        return m;
-      }).toList();
-      if (changed) {
-        final completedCount = updatedMilestones.where((m) => m.isCompleted).length;
-        final newPercentage = (completedCount / updatedMilestones.length * 100);
-        await _roadmapRepository.saveRoadmap(roadmap.copyWith(
-          milestones: updatedMilestones,
-          completionPercentage: newPercentage,
-          status: newPercentage >= 100 ? 'completed' : roadmap.status,
-        ));
       }
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to link daily plan milestones to roadmaps', e);
+      return Result.failure(e.toString());
     }
   }
 

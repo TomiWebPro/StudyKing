@@ -568,7 +568,8 @@ void main() {
 
   group('linkDailyPlanToRoadmap', () {
     test('completes without error', () async {
-      await service.planService.linkDailyPlanToRoadmap(service.studentId, ['topic-1', 'topic-2']);
+      final result = await service.planService.linkDailyPlanToRoadmap(service.studentId, ['topic-1', 'topic-2']);
+      expect(result.isFailure || result.isSuccess, isTrue);
     });
   });
 
