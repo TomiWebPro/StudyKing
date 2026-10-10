@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
@@ -7,6 +8,8 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+final _logger = const Logger('SubjectLessonsTab');
 
 class SubjectLessonsTab extends ConsumerWidget {
   final String subjectId;
@@ -30,6 +33,7 @@ class SubjectLessonsTab extends ConsumerWidget {
         final lessons = lessonsResult.data ?? [];
         return lessons.where((l) => l.subjectId == subjectId).toList();
       } catch (e) {
+        _logger.w('Failed to load subject lessons', e);
         return [];
       }
     }

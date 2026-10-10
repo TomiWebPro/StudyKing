@@ -718,6 +718,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       final result = await repo.getAll();
       return result.data ?? [];
     } catch (e) {
+      _logger.w('Failed to load sources for practice screen', e);
       return [];
     }
   }
