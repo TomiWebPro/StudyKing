@@ -75,6 +75,96 @@ void main() {
       expect(pref.preferredBlockType, 'quiz');
     });
 
+    test('recordBlockTypeEngagement computes a true mean across repeated observations', () async {
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.8,
+      );
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.4,
+      );
+      final pref = (await service.getPreference('stu1')).data!;
+      // True mean of 0.8 and 0.4 is 0.6 (the old pseudo-count formula
+      // froze the score near the first observation at ~0.795).
+      expect(pref.methodEffectivenessScores['quiz'], closeTo(0.6, 1e-9));
+      expect(pref.methodObservationCounts['quiz'], 2);
+    });
+
+    test('recordBlockTypeEngagement keeps averaging on a third observation', () async {
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.8,
+      );
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.4,
+      );
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.4,
+      );
+      final pref = (await service.getPreference('stu1')).data!;
+      expect(pref.methodEffectivenessScores['quiz'], closeTo((0.8 + 0.4 + 0.4) / 3, 1e-9));
+      expect(pref.methodObservationCounts['quiz'], 3);
+    });
+
+    test('observation counts persist across service instances', () async {
+      await service.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.8,
+      );
+      final freshService = LearningMethodAnalyticsService();
+      await freshService.init();
+      await freshService.recordBlockTypeEngagement(
+        studentId: 'stu1',
+        blockType: 'quiz',
+        quizScore: 0.4,
+      );
+      final pref = (await freshService.getPreference('stu1')).data!;
+      expect(pref.methodEffectivenessScores['quiz'], closeTo(0.6, 1e-9));
+      expect(pref.methodObservationCounts['quiz'], 2);
+    });
+
+    test('recordVisualPreference computes a true mean across repeated observations', () async {
+      await service.recordVisualPreference(
+        studentId: 'stu1',
+        usedSlides: true,
+        quizScore: 0.8,
+      );
+      await service.recordVisualPreference(
+        studentId: 'stu1',
+        usedSlides: true,
+        quizScore: 0.4,
+      );
+      final pref = (await service.getPreference('stu1')).data!;
+      expect(pref.methodEffectivenessScores['visual_slides'], closeTo(0.6, 1e-9));
+      expect(pref.methodObservationCounts['visual_slides'], 2);
+    });
+
+    test('recordSpacedRepetitionEffectiveness computes a true mean across repeated observations', () async {
+      await service.recordSpacedRepetitionEffectiveness(
+        studentId: 'stu1',
+        usedSpacedRepetition: true,
+        retentionScore: 0.9,
+      );
+      await service.recordSpacedRepetitionEffectiveness(
+        studentId: 'stu1',
+        usedSpacedRepetition: true,
+        retentionScore: 0.3,
+      );
+      final pref = (await service.getPreference('stu1')).data!;
+      expect(pref.methodEffectivenessScores['sr_adherence'], closeTo(0.6, 1e-9));
+      expect(pref.spacedRepetitionEffectiveness, closeTo(0.6, 1e-9));
+      expect(pref.methodObservationCounts['sr_adherence'], 2);
+    });
+
     test('recordSessionDuration decreases optimal when too long', () async {
       await service.recordSessionDuration(
         studentId: 'stu1',

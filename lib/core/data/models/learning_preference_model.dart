@@ -6,6 +6,7 @@ class LearningPreference {
   final bool prefersStepByStep;
   final double spacedRepetitionEffectiveness;
   final Map<String, double> methodEffectivenessScores;
+  final Map<String, int> methodObservationCounts;
   final DateTime lastUpdated;
 
   const LearningPreference({
@@ -16,6 +17,7 @@ class LearningPreference {
     this.prefersStepByStep = true,
     this.spacedRepetitionEffectiveness = 0.0,
     this.methodEffectivenessScores = const {},
+    this.methodObservationCounts = const {},
     required this.lastUpdated,
   });
 
@@ -35,6 +37,7 @@ class LearningPreference {
       'prefersStepByStep': prefersStepByStep,
       'spacedRepetitionEffectiveness': spacedRepetitionEffectiveness,
       'methodEffectivenessScores': methodEffectivenessScores,
+      'methodObservationCounts': methodObservationCounts,
       'lastUpdated': lastUpdated.toIso8601String(),
     };
   }
@@ -54,6 +57,10 @@ class LearningPreference {
           (map['methodEffectivenessScores'] as Map<String, dynamic>?)
                   ?.map((k, v) => MapEntry(k, (v as num).toDouble())) ??
               {},
+      methodObservationCounts:
+          (map['methodObservationCounts'] as Map<String, dynamic>?)
+                  ?.map((k, v) => MapEntry(k, (v as num).toInt())) ??
+              {},
       lastUpdated: map['lastUpdated'] != null
           ? DateTime.tryParse(map['lastUpdated'] as String) ??
               DateTime.now()
@@ -68,6 +75,7 @@ class LearningPreference {
     bool? prefersStepByStep,
     double? spacedRepetitionEffectiveness,
     Map<String, double>? methodEffectivenessScores,
+    Map<String, int>? methodObservationCounts,
   }) {
     return LearningPreference(
       studentId: studentId,
@@ -81,6 +89,8 @@ class LearningPreference {
           this.spacedRepetitionEffectiveness,
       methodEffectivenessScores:
           methodEffectivenessScores ?? this.methodEffectivenessScores,
+      methodObservationCounts:
+          methodObservationCounts ?? this.methodObservationCounts,
       lastUpdated: DateTime.now(),
     );
   }

@@ -42,6 +42,7 @@ void main() {
         prefersStepByStep: false,
         spacedRepetitionEffectiveness: 0.8,
         methodEffectivenessScores: {'quiz': 0.7, 'exercise': 0.5},
+        methodObservationCounts: {'quiz': 2, 'exercise': 1},
         lastUpdated: updated,
       );
       await box.put('stu1', pref);
@@ -53,6 +54,8 @@ void main() {
       expect(restored.prefersStepByStep, isFalse);
       expect(restored.spacedRepetitionEffectiveness, 0.8);
       expect(restored.methodEffectivenessScores['quiz'], 0.7);
+      expect(restored.methodObservationCounts['quiz'], 2);
+      expect(restored.methodObservationCounts['exercise'], 1);
       expect(restored.lastUpdated, updated);
       await box.close();
     });
@@ -71,6 +74,7 @@ void main() {
       expect(restored.prefersStepByStep, isTrue);
       expect(restored.spacedRepetitionEffectiveness, 0.0);
       expect(restored.methodEffectivenessScores, isEmpty);
+      expect(restored.methodObservationCounts, isEmpty);
       await box.close();
     });
   });

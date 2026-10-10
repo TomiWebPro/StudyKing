@@ -42,10 +42,12 @@ class LearningMethodAnalyticsService {
       final existing = box.get(studentId) ?? LearningPreference.empty(studentId);
 
       final scores = Map<String, double>.from(existing.methodEffectivenessScores);
+      final counts = Map<String, int>.from(existing.methodObservationCounts);
       final currentScore = scores[blockType] ?? 0.0;
-      final count = (currentScore * 100).round();
+      final count = counts[blockType] ?? 0;
       final newScore = ((currentScore * count) + quizScore) / (count + 1);
       scores[blockType] = newScore;
+      counts[blockType] = count + 1;
 
       final preferred = scores.entries.fold<MapEntry<String, double>?>(
         null,
@@ -57,6 +59,7 @@ class LearningMethodAnalyticsService {
         existing.copyWith(
           preferredBlockType: preferred?.key ?? existing.preferredBlockType,
           methodEffectivenessScores: scores,
+          methodObservationCounts: counts,
         ),
       );
     }, context: 'recordBlockTypeEngagement');
@@ -101,10 +104,12 @@ class LearningMethodAnalyticsService {
 
       final visualKey = 'visual_${usedSlides ? "slides" : "text"}';
       final scores = Map<String, double>.from(existing.methodEffectivenessScores);
+      final counts = Map<String, int>.from(existing.methodObservationCounts);
       final currentScore = scores[visualKey] ?? 0.0;
-      final count = (currentScore * 100).round();
+      final count = counts[visualKey] ?? 0;
       final newScore = ((currentScore * count) + quizScore) / (count + 1);
       scores[visualKey] = newScore;
+      counts[visualKey] = count + 1;
 
       final visualScore = scores['visual_slides'] ?? 0.0;
       final textScore = scores['visual_text'] ?? 0.0;
@@ -115,6 +120,7 @@ class LearningMethodAnalyticsService {
         existing.copyWith(
           prefersVisualExplanations: prefersVisual,
           methodEffectivenessScores: scores,
+          methodObservationCounts: counts,
         ),
       );
     }, context: 'recordVisualPreference');
@@ -131,16 +137,19 @@ class LearningMethodAnalyticsService {
 
       final srKey = 'sr_adherence';
       final scores = Map<String, double>.from(existing.methodEffectivenessScores);
+      final counts = Map<String, int>.from(existing.methodObservationCounts);
       final currentScore = scores[srKey] ?? 0.0;
-      final count = (currentScore * 100).round();
+      final count = counts[srKey] ?? 0;
       final newScore = ((currentScore * count) + retentionScore) / (count + 1);
       scores[srKey] = newScore;
+      counts[srKey] = count + 1;
 
       await box.put(
         studentId,
         existing.copyWith(
           spacedRepetitionEffectiveness: newScore,
           methodEffectivenessScores: scores,
+          methodObservationCounts: counts,
         ),
       );
     }, context: 'recordSpacedRepetitionEffectiveness');

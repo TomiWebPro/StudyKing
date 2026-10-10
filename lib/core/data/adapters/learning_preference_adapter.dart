@@ -23,6 +23,9 @@ class LearningPreferenceAdapter extends TypeAdapter<LearningPreference> {
       methodEffectivenessScores:
           (fields[6] as Map?)?.map((k, v) => MapEntry(k as String, (v as num).toDouble())) ??
               {},
+      methodObservationCounts:
+          (fields[8] as Map?)?.map((k, v) => MapEntry(k as String, (v as num).toInt())) ??
+              {},
       lastUpdated: fields[7] as DateTime? ?? DateTime.now(),
     );
   }
@@ -30,7 +33,7 @@ class LearningPreferenceAdapter extends TypeAdapter<LearningPreference> {
   @override
   void write(BinaryWriter writer, LearningPreference obj) {
     writer
-      ..writeByte(8)
+      ..writeByte(9)
       ..writeByte(0)
       ..write(obj.studentId)
       ..writeByte(1)
@@ -46,7 +49,9 @@ class LearningPreferenceAdapter extends TypeAdapter<LearningPreference> {
       ..writeByte(6)
       ..write(obj.methodEffectivenessScores)
       ..writeByte(7)
-      ..write(obj.lastUpdated);
+      ..write(obj.lastUpdated)
+      ..writeByte(8)
+      ..write(obj.methodObservationCounts);
   }
 
   @override

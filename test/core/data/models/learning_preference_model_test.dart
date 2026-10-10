@@ -24,6 +24,7 @@ void main() {
         prefersStepByStep: false,
         spacedRepetitionEffectiveness: 0.8,
         methodEffectivenessScores: {'quiz': 0.7},
+        methodObservationCounts: {'quiz': 2},
         lastUpdated: updated,
       );
       final map = pref.toMap();
@@ -35,6 +36,7 @@ void main() {
       expect(restored.prefersStepByStep, isFalse);
       expect(restored.spacedRepetitionEffectiveness, 0.8);
       expect(restored.methodEffectivenessScores['quiz'], 0.7);
+      expect(restored.methodObservationCounts['quiz'], 2);
       expect(restored.lastUpdated, updated);
     });
 
@@ -44,10 +46,12 @@ void main() {
         preferredBlockType: 'exercise',
         optimalSessionDurationMinutes: 50,
         prefersVisualExplanations: true,
+        methodObservationCounts: {'quiz': 3},
       );
       expect(updated.preferredBlockType, 'exercise');
       expect(updated.optimalSessionDurationMinutes, 50);
       expect(updated.prefersVisualExplanations, isTrue);
+      expect(updated.methodObservationCounts['quiz'], 3);
       expect(updated.studentId, 'stu1');
       expect(updated.lastUpdated.isAfter(pref.lastUpdated), isTrue);
     });
@@ -57,6 +61,7 @@ void main() {
       expect(restored.studentId, 'stu2');
       expect(restored.preferredBlockType, 'exercise');
       expect(restored.optimalSessionDurationMinutes, 25);
+      expect(restored.methodObservationCounts, isEmpty);
     });
   });
 }
