@@ -37,6 +37,7 @@ class FakeLlmService extends LlmService {
 
   String chatResponse = '{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}';
   String streamResponse = 'Mock tutor response';
+  List<String>? streamChunks;
   String summaryResponse = 'Lesson summary mock';
   bool shouldThrowOnChat = false;
   bool shouldThrowStream = false;
@@ -69,6 +70,12 @@ class FakeLlmService extends LlmService {
     String feature = 'general',
   }) async* {
     if (shouldThrowStream) throw Exception('Simulated stream error');
+    if (streamChunks != null) {
+      for (final chunk in streamChunks!) {
+        yield chunk;
+      }
+      return;
+    }
     yield streamResponse;
   }
 }
@@ -257,6 +264,17 @@ void main() {
         final chunks = await manager.sendMessage('Hello').toList();
 
         expect(chunks.isNotEmpty, isTrue);
+      });
+
+      test('yields each streamed byte exactly once across chunks', () async {
+        llmService.streamChunks = ['Hel', 'lo wo', 'rld'];
+
+        final chunks = await manager.sendMessage('Hello').toList();
+
+        expect(chunks.join(), equals('Hello world'));
+        expect(manager.messages.length, equals(2));
+        expect(manager.messages[1].role, equals(MessageRole.tutor));
+        expect(manager.messages[1].content, equals('Hello world'));
       });
 
       test('throws when LLM stream fails during sendMessage', () async {

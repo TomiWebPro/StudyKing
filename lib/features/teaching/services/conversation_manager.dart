@@ -252,6 +252,7 @@ class ConversationManager {
     }
 
     final buffer = StringBuffer();
+    var emittedLength = 0;
     final entry = _prompts.tutorMessage(
       subjectId: subjectId,
       topicTitle: topicTitle,
@@ -270,8 +271,12 @@ class ConversationManager {
         systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
       )) {
         buffer.write(chunk);
-        if (buffer.length > 0) {
-          yield* _buildAdaptiveChunks(buffer.toString());
+        final streamed = buffer.toString();
+        if (streamed.length > emittedLength) {
+          // Yield only the not-yet-emitted tail so consumers that append
+          // chunks (e.g. TutorScreen) render each byte exactly once.
+          yield* _buildAdaptiveChunks(streamed.substring(emittedLength));
+          emittedLength = streamed.length;
         }
       }
     } catch (e) {
