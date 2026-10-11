@@ -590,6 +590,149 @@ void main() {
       expect(result.isFailure, isTrue);
     });
   });
+
+  group('MasteryRecorder - persistence failures propagate', () {
+    late _FakeMasteryGraphSvc fakeMasteryGraph;
+    late _FakeSrEngine fakeEngine;
+    late _FakeAttemptRepo2 fakeAttemptRepo;
+    late _FakeQMasteryStateRepo fakeQMasteryRepo;
+    late _FakeQuestionRepo2 fakeQuestionRepo;
+    late _FakeLlmAnswerEvaluator fakeEvaluator;
+    late MasteryRecorder recorder;
+
+    Question buildQuestion() => Question(
+          id: 'q1',
+          text: 'Test?',
+          type: QuestionType.singleChoice,
+          subjectId: 'sub1',
+          topicId: 't1',
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        );
+
+    Question buildRichQuestion(QuestionType type) => Question(
+          id: 'q-rich',
+          text: 'Rich question',
+          type: type,
+          subjectId: 'sub1',
+          topicId: 't1',
+          markscheme: Markscheme(
+            questionId: 'q-rich',
+            correctAnswer: 'expected',
+          ),
+          createdAt: DateTime(2026, 1, 1),
+          updatedAt: DateTime(2026, 1, 1),
+        );
+
+    setUp(() {
+      fakeMasteryGraph = _FakeMasteryGraphSvc();
+      fakeEngine = _FakeSrEngine();
+      fakeAttemptRepo = _FakeAttemptRepo2();
+      fakeQMasteryRepo = _FakeQMasteryStateRepo();
+      fakeQuestionRepo = _FakeQuestionRepo2();
+      fakeEvaluator = _FakeLlmAnswerEvaluator();
+      recorder = MasteryRecorder(
+        masteryGraphService: fakeMasteryGraph,
+        srEngine: fakeEngine,
+        attemptRepo: fakeAttemptRepo,
+        questionMasteryRepo: fakeQMasteryRepo,
+        questionRepo: fakeQuestionRepo,
+        evaluator: fakeEvaluator,
+      );
+    });
+
+    test('recordAttempt returns failure when attempt creation fails',
+        () async {
+      await fakeQuestionRepo.save('q1', buildQuestion());
+      fakeAttemptRepo.shouldFailCreate = true;
+
+      final result = await recorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        topicId: 't1',
+        isCorrect: true,
+        timeSpentMs: 5000,
+        confidence: 4,
+        userAnswer: 'correct',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Attempt write failed'));
+      expect(fakeAttemptRepo.attempts, isEmpty);
+      expect(fakeMasteryGraph.lastIsCorrect, isNull);
+      expect(fakeQMasteryRepo.lastUpdatedState, isNull);
+      final saved = await fakeQuestionRepo.get('q1');
+      expect(saved.data?.nextReview, isNull);
+    });
+
+    test('recordAttempt returns failure when question save fails', () async {
+      await fakeQuestionRepo.save('q1', buildQuestion());
+      fakeQuestionRepo.shouldFailSave = true;
+
+      final result = await recorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        topicId: 't1',
+        isCorrect: true,
+        timeSpentMs: 5000,
+        confidence: 4,
+        userAnswer: 'correct',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Question save failed'));
+      expect(fakeAttemptRepo.attempts, hasLength(1));
+      expect(fakeQMasteryRepo.lastUpdatedState, isNull);
+    });
+
+    test('recordAttempt returns failure when question mastery update fails',
+        () async {
+      await fakeQuestionRepo.save('q1', buildQuestion());
+      fakeQMasteryRepo.shouldFailUpdate = true;
+
+      final result = await recorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        topicId: 't1',
+        isCorrect: true,
+        timeSpentMs: 5000,
+        confidence: 4,
+        userAnswer: 'correct',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('QM update failed'));
+      expect(fakeAttemptRepo.attempts, hasLength(1));
+      final saved = await fakeQuestionRepo.get('q1');
+      expect(saved.data?.nextReview, isNotNull);
+    });
+
+    test('recordRichAttempt propagates failure when attempt creation fails',
+        () async {
+      await fakeQuestionRepo.save('q-rich', buildRichQuestion(QuestionType.graphDrawing));
+      fakeAttemptRepo.shouldFailCreate = true;
+      fakeEvaluator.nextResult = const EvaluationResult(
+        isCorrect: true,
+        score: 0.9,
+        feedback: 'Looks good',
+      );
+
+      final result = await recorder.recordRichAttempt(
+        studentId: 's1',
+        question: buildRichQuestion(QuestionType.graphDrawing),
+        userAnswer: 'data',
+        timeSpentMs: 1000,
+        confidence: 4,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Attempt write failed'));
+      expect(fakeAttemptRepo.attempts, isEmpty);
+    });
+  });
 }
 
 class _FakeLlmAnswerEvaluator extends LlmAnswerEvaluator {
@@ -699,6 +842,7 @@ class _FakeSrEngine extends SpacedRepetitionEngine {
 
 class _FakeAttemptRepo2 extends AttemptRepository {
   final List<StudentAttempt> attempts = [];
+  bool shouldFailCreate = false;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -718,6 +862,7 @@ class _FakeAttemptRepo2 extends AttemptRepository {
 
   @override
   Future<Result<void>> create(StudentAttempt attempt) async {
+    if (shouldFailCreate) return Result.failure('Attempt write failed');
     attempts.add(attempt);
     return Result.success(null);
   }
@@ -725,6 +870,7 @@ class _FakeAttemptRepo2 extends AttemptRepository {
 
 class _FakeQMasteryStateRepo extends QuestionMasteryStateRepository {
   bool shouldFail = false;
+  bool shouldFailUpdate = false;
   QuestionMasteryState? lastUpdatedState;
 
   @override
@@ -747,6 +893,7 @@ class _FakeQMasteryStateRepo extends QuestionMasteryStateRepository {
   Future<Result<void>> updateQuestionMasteryState(
     QuestionMasteryState state,
   ) async {
+    if (shouldFailUpdate) return Result.failure('QM update failed');
     lastUpdatedState = state;
     return Result.success(null);
   }
@@ -754,6 +901,7 @@ class _FakeQMasteryStateRepo extends QuestionMasteryStateRepository {
 
 class _FakeQuestionRepo2 extends QuestionRepository {
   final Map<String, Question> _questions = {};
+  bool shouldFailSave = false;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -768,6 +916,7 @@ class _FakeQuestionRepo2 extends QuestionRepository {
 
   @override
   Future<Result<void>> save(String key, Question item) async {
+    if (shouldFailSave) return Result.failure('Question save failed');
     _questions[key] = item;
     return Result.success(null);
   }

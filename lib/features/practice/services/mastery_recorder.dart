@@ -203,7 +203,14 @@ class MasteryRecorder {
         timestamp: now,
         userAnswer: userAnswer,
       );
-      await _attemptRepo.create(attempt);
+      final attemptResult = await _attemptRepo.create(attempt);
+      if (attemptResult.isFailure) {
+        _logger.w(
+          'Failed to persist attempt for question $questionId',
+          attemptResult.error,
+        );
+        return Result.failure(attemptResult.error);
+      }
 
       final masteryResult = await _masteryGraphService.recordAttempt(
         studentId: studentId,
@@ -221,7 +228,17 @@ class MasteryRecorder {
         nextReview: srResult.nextReview,
         srDataJson: _serializeSrData(srResult.updatedData),
       );
-      await _questionRepo.save(questionId, updatedQuestion);
+      final questionSaveResult = await _questionRepo.save(
+        questionId,
+        updatedQuestion,
+      );
+      if (questionSaveResult.isFailure) {
+        _logger.w(
+          'Failed to update spaced-repetition data for question $questionId',
+          questionSaveResult.error,
+        );
+        return Result.failure(questionSaveResult.error);
+      }
 
       final questionMasteryResult = await _questionMasteryRepo.getQuestionMasteryState(
         studentId,
@@ -235,7 +252,15 @@ class MasteryRecorder {
           now: now,
           sm2NextReview: srResult.nextReview,
         );
-        await _questionMasteryRepo.updateQuestionMasteryState(updatedQM);
+        final qmUpdateResult =
+            await _questionMasteryRepo.updateQuestionMasteryState(updatedQM);
+        if (qmUpdateResult.isFailure) {
+          _logger.w(
+            'Failed to update question mastery state for question $questionId',
+            qmUpdateResult.error,
+          );
+          return Result.failure(qmUpdateResult.error);
+        }
       }
 
       return Result.success(null);
