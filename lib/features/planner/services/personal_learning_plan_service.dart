@@ -789,6 +789,11 @@ class PersonalLearningPlanService {
       final plan = planResult.data;
       if (plan == null) return Result.success(null);
 
+      if (plan.dailyPlans.isEmpty) {
+        return Result.failure(
+            'PersonalLearningPlanService.extendPlan: no daily plans to extend');
+      }
+
       final lastDay = plan.dailyPlans.last.date;
       final newPlans = <DailyPlan>[];
       var nextDayNumber = plan.dailyPlans.length + 1;

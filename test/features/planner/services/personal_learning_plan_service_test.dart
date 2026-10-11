@@ -1185,6 +1185,27 @@ void main() {
           expect(result.isSuccess, isTrue);
         });
 
+        test('returns failure when plan has no daily plans', () async {
+          // Regression: plan.dailyPlans.last threw 'Bad state: No element'
+          // when the plan had an empty dailyPlans list.
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now.subtract(const Duration(days: 1)),
+            dailyPlans: [],
+            summary: PlanSummary(totalQuestions: 0, totalMinutes: 0, newTopics: 0, reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: []),
+            recommendations: [],
+            planDurationDays: 3,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.extendPlan('student1', 2);
+          expect(result.isFailure, isTrue);
+          // The explicit guard must report the missing daily plans rather
+          // than surfacing a 'Bad state: No element' from .last.
+          expect(result.error, contains('no daily plans'));
+        });
+
         test('returns failure when error occurs', () async {
           final throwingSvc = PersonalLearningPlanService(
             planRepository: planRepo,
