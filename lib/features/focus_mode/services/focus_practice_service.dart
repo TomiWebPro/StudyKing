@@ -159,7 +159,12 @@ class FocusPracticeService {
         plannedDurationMinutes: durationMinutes,
         subjectId: subjectIds?.firstOrNull,
       );
-      await _sessionRepository.save(session.id, session);
+      final saveResult = await _sessionRepository.save(session.id, session);
+      if (saveResult.isFailure) {
+        _logger.w(
+            'Failed to persist started practice session: ${saveResult.error}');
+        return Result.failure(saveResult.error);
+      }
       return Result.success(session);
     } catch (e) {
       _logger.w('Failed to start practice session', e);

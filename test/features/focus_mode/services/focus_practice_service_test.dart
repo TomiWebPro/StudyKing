@@ -382,15 +382,15 @@ void main() {
     });
 
     group('startPracticeSession', () {
-      test('handles save failure gracefully', () async {
+      test('propagates failure when save fails', () async {
         fakeSessionRepo.shouldThrow = true;
 
         final result = await service.startPracticeSession(
           studentId: 'student-1',
         );
 
-        expect(result.isSuccess, isTrue);
-        expect(result.data!.studentId, 'student-1');
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'Save error');
       });
     });
 
@@ -503,16 +503,15 @@ void main() {
     });
 
     group('error-state: start/end practice session', () {
-      test('startPracticeSession returns session even when save fails', () async {
+      test('startPracticeSession propagates failure when save fails', () async {
         fakeSessionRepo.shouldThrow = true;
 
         final result = await service.startPracticeSession(
           studentId: 'student-1',
         );
 
-        expect(result.isSuccess, isTrue);
-        expect(result.data!.studentId, 'student-1');
-        expect(result.data!.id, isNotEmpty);
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'Save error');
       });
 
       test('endPracticeSession does not throw when save fails', () async {
