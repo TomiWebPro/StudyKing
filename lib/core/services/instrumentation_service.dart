@@ -122,7 +122,12 @@ class InstrumentationService {
         actualMinutes: actualMinutes,
         adherenceScore: score,
       );
-      await _adherenceRepository?.create(model);
+      final createResult = await _adherenceRepository?.create(model);
+      if (createResult != null && createResult.isFailure) {
+        _logger.w(
+            'Failed to persist plan adherence for $studentId', createResult.error);
+        return Result.failure(createResult.error);
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to record plan adherence for $studentId', e);

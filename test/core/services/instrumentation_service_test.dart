@@ -94,6 +94,10 @@ class FakeFailingPlanAdherenceRepository extends PlanAdherenceRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
+  Future<Result<void>> create(PlanAdherenceModel model) async =>
+      Result.failure('adherence write failed');
+
+  @override
   Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async =>
       Result.failure('adherence store unavailable');
 
@@ -653,6 +657,28 @@ void main() {
       expect(warnings.any((l) => l.contains('getAverageAdherence')), isTrue);
       expect(warnings.any((l) => l.contains('getWeekly')), isTrue);
       expect(warnings.any((l) => l.contains('getConsecutiveLowAdherenceDays')), isTrue);
+    });
+
+    test('recordPlanAdherence propagates create failure instead of masking success',
+        () async {
+      _installLogCapture();
+      addTearDown(_uninstallLogCapture);
+
+      final result = await service.recordPlanAdherence(
+        studentId: 'student1',
+        plannedQuestions: 10,
+        actualQuestions: 8,
+        plannedMinutes: 30,
+        actualMinutes: 25,
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'adherence write failed');
+      expect(
+        _capturedLogs
+            .any((l) => l.contains('[W]') && l.contains('Failed to persist plan adherence')),
+        isTrue,
+      );
     });
 
     test('getAdherenceHistory propagates failure from repo', () async {
