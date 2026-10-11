@@ -8,9 +8,9 @@ ARE versioned so every agent runs the same protocol.
 
 | State | Where | Meaning |
 |---|---|---|
-| open | `open/<slug>.md` | needs a fix, nobody working on it |
-| claimed | `open/<slug>.md` + `open/<slug>.md.lock` | one agent owns it (see lock JSON for owner + time) |
-| done | `closed/<slug>.md` | fixed, verified, lock released |
+| open | `open/<slug>.md` with `Status: open` (or no `Status:` line yet) | needs a fix, nobody working on it |
+| claimed | `open/<slug>.md` with `Status: claimed by <owner> at <time>` | one agent owns it |
+| done | `closed/<slug>.md` | fixed, verified |
 
 This mirrors the other project's `open → claimed → done` flow: **claim ONE
 issue per run**, solve it, close it with evidence.
@@ -33,9 +33,8 @@ issue per run**, solve it, close it with evidence.
 2. Only the lock owner may close that issue. `close` refuses otherwise, so a
    concurrent run can neither steal nor double-close your issue.
 3. Locks older than 2h are stale (max agent run is 90min) and may be taken
-   over; the previous owner is recorded in the new lock.
-4. Finders: skip slugs present in `open/` (claimed or not) or `closed/`;
-   never create, edit, or delete `*.lock` files; never touch `closed/`.
+   over; the takeover is recorded on the `Status:` line.
+4. Finders: every new issue file must carry a `Status: open` line right after
+   the title; skip slugs present in `open/` (claimed or not) or `closed/`;
+   never edit another issue's `Status:` line; never touch `closed/`.
 5. Never `git add`, `git mv`, or commit anything under `open/` or `closed/`.
-   Lock sidecars (`*.md.lock`) never match the `*.md` globs the automation
-   and `claim.py list` use, so they are invisible to existing tooling.

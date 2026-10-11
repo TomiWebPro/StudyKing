@@ -110,7 +110,11 @@ When the user changes their language in the Profile screen (`ref.read(localeProv
 ## Claiming Local Issues (Builders MUST do this)
 
 One agent owns ONE issue per run — `open → claimed → done`, same flow as the
-other project. A claim is a sidecar lock `issues/open/<slug>.md.lock`
+other project. The issue `.md` file itself is the single source of truth: a
+`Status:` line right after the title (`Status: open` vs
+`Status: claimed by <owner> at <time>`). There are no sidecar files, so there
+is nothing leftover to go stale. `claim.py` edits that line while holding an
+`flock` on the file, so racing claimants serialize and exactly one wins
 (see `issues/README.md` for the full protocol):
 
 - BEFORE editing any code, claim exactly one issue:
@@ -126,7 +130,7 @@ other project. A claim is a sidecar lock `issues/open/<slug>.md.lock`
 Issues are tracked ONLY locally under `issues/open/` and `issues/closed/`. Git is never used for issue tracking — only for code storage/commits. When you (a builder) finish fixing an issue AND have verified the reported bug no longer happens:
 
 1. Confirm the fix is real: the new/changed tests pass and the issue is actually resolved (do NOT treat "code changed" as "done").
-2. Move the file with the claim tool (plain local move + lock release) — never `git mv`, never commit the issue file:
+2. Move the file with the claim tool (plain local move; clears the Status claim) — never `git mv`, never commit the issue file:
    `python3 issues/claim.py close <slug> <owner>`
    Only the lock owner may close; `close` refuses otherwise.
 3. An issue left in `issues/open/` is considered NOT DONE. Never leave a verified fix sitting in open/. If no real change was made, leave it in open/ and report that.
