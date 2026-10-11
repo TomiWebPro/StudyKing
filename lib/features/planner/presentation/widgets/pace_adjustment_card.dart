@@ -52,8 +52,9 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
         : state.plan!.generatedAt;
 
     if (!hasMultipleSubjects) {
-      final currentHours = (state.plan!.targetMinutesPerDay / 60).clamp(0.5, 8.0);
-      _paceHours = currentHours.toDouble();
+      // _paceHours is seeded once by the _initialized guard above; rebuilding
+      // must not clobber it, or the slider snaps back to the persisted pace
+      // on every drag.
       final estEndDate = _estimateCompletionDate(firstPlanDate, _paceHours, state.plan!.summary.totalMinutes);
 
       return _buildPaceAdjustmentCard(
