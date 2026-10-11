@@ -168,6 +168,17 @@ class _FakeSessionRepo extends SessionRepository {
   Future<Result<List<Session>>> getByDate(DateTime date) async => Result.success([]);
 }
 
+/// Session repo stub whose [getTodayDurationMs] returns a fixed today-only
+/// duration, used to exercise the overwork nudge's daily signal.
+class _TodayDurationSessionRepo extends SessionRepository {
+  final int todayMs;
+
+  _TodayDurationSessionRepo(this.todayMs);
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async => Result.success(todayMs);
+}
+
 class _RecordingSessionRepo extends SessionRepository {
   final List<Session> _sessions;
   final List<Session> _saved = [];
@@ -268,18 +279,69 @@ void main() {
         expect(result.isSuccess, true);
         expect(result.data, isEmpty);
       });
-    });
 
-    group('overwork nudge hours propagation', () {
-      test('getOverworkNudge stores the raw study hours on the nudge', () async {
-        final esScheduler = EngagementScheduler(
-          tracker: _OverworkTracker(4.5),
+      test('returns empty when all-time hours exceed threshold but today does not', () async {
+        // Regression: the signal used to be the all-time cumulative
+        // totalStudyTimeHours, so any student over 4h lifetime got a
+        // "take a break" nudge every day, even on days with no study.
+        final allTimeScheduler = EngagementScheduler(
+          tracker: _OverworkTracker(87.4),
           masteryService: masteryService,
           notificationService: NotificationService(),
           nudgeRepository: nudgeRepo,
           adherenceRepository: adherenceRepo,
           planOrchestrator: planOrchestrator,
-          sessionRepository: _FakeSessionRepo(),
+          sessionRepository: _TodayDurationSessionRepo(0),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+        final result = await allTimeScheduler.getOverworkNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
+      });
+
+      test('fires only when today study time exceeds the threshold and reports today hours', () async {
+        final todayScheduler = EngagementScheduler(
+          tracker: _OverworkTracker(87.4),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _TodayDurationSessionRepo(5 * 3600000),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+        final result = await todayScheduler.getOverworkNudge('test-student');
+        expect(result.isSuccess, true);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.nudgeType, 'overwork');
+        // Reports today's 5 hours, not the 87.4h all-time cumulative.
+        expect(result.data!.first.hoursStudied, 5.0);
+        expect(result.data!.first.hoursStudied, isNot(87.4));
+      });
+    });
+
+    group('overwork nudge hours propagation', () {
+      test('getOverworkNudge stores the raw today hours on the nudge', () async {
+        final esScheduler = EngagementScheduler(
+          tracker: _OverworkTracker(87.4),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _TodayDurationSessionRepo((4.5 * 3600000).toInt()),
           config: const EngagementSchedulerConfig(
             checkHour: 9,
             checkMinute: 0,
@@ -291,6 +353,7 @@ void main() {
         final result = await esScheduler.getOverworkNudge('test-student');
         expect(result.isSuccess, true);
         expect(result.data, hasLength(1));
+        // Today's 4.5h wins over the 87.4h all-time cumulative.
         expect(result.data!.first.hoursStudied, 4.5);
         // The message is localized; in 'es' the hours render as "4,5".
         expect(result.data!.first.message, contains('4,5'));
@@ -299,13 +362,13 @@ void main() {
       test('notification receives the raw hours, not the value re-parsed from the localized message', () async {
         final notif = _FakeNotificationService();
         final esScheduler = EngagementScheduler(
-          tracker: _OverworkTracker(4.5),
+          tracker: _OverworkTracker(87.4),
           masteryService: masteryService,
           notificationService: notif,
           nudgeRepository: nudgeRepo,
           adherenceRepository: adherenceRepo,
           planOrchestrator: planOrchestrator,
-          sessionRepository: _FakeSessionRepo(),
+          sessionRepository: _TodayDurationSessionRepo((4.5 * 3600000).toInt()),
           config: const EngagementSchedulerConfig(
             checkHour: 9,
             checkMinute: 0,
@@ -318,7 +381,7 @@ void main() {
 
         // The 'es' message reads "…4,5 horas…". Re-parsing it (the old bug)
         // would strip the comma and inflate 4.5h into 45.0h. The notification
-        // must receive the raw 4.5 value carried on the nudge instead.
+        // must receive the raw 4.5 value carried on the nudge.
         expect(notif.overworkHoursStudied, hasLength(1));
         expect(notif.overworkHoursStudied.first, 4.5);
         expect(notif.overworkHoursStudied.first, isNot(45.0));

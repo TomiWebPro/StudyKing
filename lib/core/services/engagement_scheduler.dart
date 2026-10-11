@@ -415,35 +415,31 @@ class EngagementScheduler {
 
   Future<Result<List<EngagementNudgeModel>>> getOverworkNudge(String studentId) async {
     try {
-      double totalHours = 0;
-      final statsResult = await _tracker.getOverallStats(studentId);
-      if (statsResult.isSuccess) {
-        final stats = statsResult.data!;
-        totalHours = (stats['totalStudyTimeHours'] as num?)?.toDouble() ?? 0;
-      } else {
-        _logger.w('Failed to get overall stats for overwork nudge: ${statsResult.error}');
-      }
-
-      if (_sessionRepository != null) {
-        final todayResult = await _sessionRepository.getByDate(DateTime.now());
-        final todaySessions = todayResult.data ?? [];
-        final totalMs = todaySessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
-        final sessionHours = totalMs / 3600000;
-        if (sessionHours > totalHours) {
-          totalHours = sessionHours;
+      // The overwork signal must be TODAY's study time only. The all-time
+      // cumulative total in getOverallStats would make the daily check fire
+      // every day for any student over the threshold lifetime hours, and would
+      // report the lifetime total as "hours studied today".
+      double todayHours = 0;
+      final sessionRepo = _sessionRepository;
+      if (sessionRepo != null) {
+        final todayMsResult = await sessionRepo.getTodayDurationMs();
+        if (todayMsResult.isSuccess) {
+          todayHours = (todayMsResult.data ?? 0) / 3600000;
+        } else {
+          _logger.w('Failed to get today study duration for overwork nudge: ${todayMsResult.error}');
         }
       }
 
-      if (totalHours > Timeouts.overworkThresholdHours) {
+      if (todayHours > Timeouts.overworkThresholdHours) {
         final localeName = _l10n.localeName;
-        final hoursStr = formatDecimal(totalHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
+        final hoursStr = formatDecimal(todayHours, localeName, minFractionDigits: 1, maxFractionDigits: 1);
         return Result.success([EngagementNudgeModel(
           id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$studentId',
           studentId: studentId,
           nudgeType: NudgeType.overwork.name,
           message: _l10n.nudgeOverwork(hoursStr),
           severity: NudgeSeverity.medium.name,
-          hoursStudied: totalHours,
+          hoursStudied: todayHours,
         )]);
       }
       return Result.success([]);
