@@ -1305,6 +1305,69 @@ void main() {
       });
     });
 
+    group('_extractTopic leading whitespace', () {
+      test('extracts correct topic when message has two leading spaces', () async {
+        final service = createMentorService(llmService: FakeLlmService());
+        await service.chat('  schedule to learn calculus').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculus'));
+      });
+
+      test('extracts correct topic when message has a single leading space', () async {
+        final service = createMentorService(llmService: FakeLlmService());
+        await service.chat(' schedule to learn calculus').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculus'));
+      });
+
+      test('extracts correct topic without leading whitespace', () async {
+        final service = createMentorService(llmService: FakeLlmService());
+        await service.chat('schedule to learn calculus').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculus'));
+      });
+
+      test('preserves original topic casing with leading whitespace', () async {
+        final service = createMentorService(llmService: FakeLlmService());
+        await service.chat('  schedule to learn Calculus').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('Calculus'));
+      });
+
+      test('stops topic at trailing punctuation with leading whitespace', () async {
+        final service = createMentorService(llmService: FakeLlmService());
+        await service.chat('  schedule to learn calculus.').toList();
+        expect(service.pendingScheduleProposal, isNotNull);
+        expect(service.pendingScheduleProposal!.topicTitle, equals('calculus'));
+      });
+    });
+
+    group('chat - reschedule intent with leading whitespace', () {
+      test('targets the matching lesson when message has leading spaces', () async {
+        final llm = FakeLlmService();
+        final fakePlanner = FakePlannerService();
+        fakePlanner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
+          Session(id: 'session-2', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 4)), tutorMetadata: const TutorMetadata(topicTitle: 'Calculus')),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('  postpone review calculus').toList();
+        expect(service.pendingRescheduleSessionId, equals('session-2'));
+      });
+
+      test('targets the matching lesson without leading spaces', () async {
+        final llm = FakeLlmService();
+        final fakePlanner = FakePlannerService();
+        fakePlanner.setScheduledLessons([
+          Session(id: 'session-1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
+          Session(id: 'session-2', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 4)), tutorMetadata: const TutorMetadata(topicTitle: 'Calculus')),
+        ]);
+        final service = createMentorService(llmService: llm, plannerService: fakePlanner);
+        await service.chat('postpone review calculus').toList();
+        expect(service.pendingRescheduleSessionId, equals('session-2'));
+      });
+    });
+
     group('_extractPlanProposal', () {
       test('extracts days and goal from plan message', () async {
         final llm = FakeLlmService();

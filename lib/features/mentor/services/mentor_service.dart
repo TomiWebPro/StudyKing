@@ -282,11 +282,15 @@ class MentorService {
 
   String _extractTopic(String message) {
     final lower = message.normalized;
+    // `lower` is the trimmed + lowercased message, so keyword indices only
+    // align with the trimmed string. Slicing the original message with them
+    // corrupts the topic whenever the message has leading whitespace.
+    final trimmed = message.trim();
     final keywords = MentorKeywords.extractKeywordsByLocale[_localeName] ?? MentorKeywords.extractKeywordsByLocale['en']!;
     for (final kw in keywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
-        final after = message.substring(idx + kw.length).trim();
+        final after = trimmed.substring(idx + kw.length).trim();
         final end = after.indexOf(RegExp(r'[.,!?\n]'));
         return end != -1 ? after.substring(0, end).trim() : after;
       }
@@ -295,7 +299,7 @@ class MentorService {
     for (final kw in topicKeywords) {
       final idx = lower.indexOf(kw);
       if (idx != -1) {
-        final after = message.substring(idx + kw.length).trim();
+        final after = trimmed.substring(idx + kw.length).trim();
         final end = after.indexOf(RegExp(r'[.,!?\n]'));
         return end != -1 ? after.substring(0, end).trim() : after;
       }
