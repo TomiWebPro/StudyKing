@@ -192,12 +192,19 @@ class StudyProgressTracker {
       final correct = topicAttempts.where((a) => a.isCorrect).length;
       final totalTimeMs = topicAttempts.fold<int>(0, (sum, a) => sum + a.timeSpentMs);
 
+      // Hive stores attempts under keys '<questionId>_<timestamp>', so the
+      // repository returns them grouped by question ID, not by time. Pick the
+      // chronologically latest attempt explicitly rather than `.last`.
+      final latestAttempt = topicAttempts.reduce(
+        (a, b) => a.timestamp.isAfter(b.timestamp) ? a : b,
+      );
+
       return Result.success({
         'topicId': topicId,
         'attempts': topicAttempts.length,
         'accuracy': (correct / topicAttempts.length * 100).round(),
         'timeSpentMinutes': (totalTimeMs / msPerMinute).round(),
-        'lastAttempted': topicAttempts.last.timestamp.toIso8601String(),
+        'lastAttempted': latestAttempt.timestamp.toIso8601String(),
         'conceptsMastered': correct >= topicAttempts.length.ceil() / 2
             ? true
             : false,

@@ -500,6 +500,24 @@ void main() {
         expect(progress.data!['lastAttempted'], isNotNull);
       });
 
+      test('reports the chronologically latest attempt as lastAttempted', () async {
+        // Attempts are stored under keys '<questionId>_<timestamp>', so the
+        // repository returns them grouped by question ID, not by time. The
+        // chronologically latest attempt (10:00) belongs to the
+        // lexicographically smaller question ID, so a `.last` would wrongly
+        // report 09:00.
+        final t10 = DateTime(2024, 1, 1, 10, 0);
+        final t9 = DateTime(2024, 1, 1, 9, 0);
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q_a', isCorrect: true, timeSpentMs: 5000, timestamp: t10, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'topic1_q_b', isCorrect: false, timeSpentMs: 5000, timestamp: t9, subjectId: 'math'),
+        ]);
+
+        final progress = await tracker.getTopicProgress('student1', 'topic1');
+
+        expect(progress.data!['lastAttempted'], equals(t10.toIso8601String()));
+      });
+
       test('resolves topic attempts through the question repository (production IDs)', () async {
         // Production question IDs (IdGenerator.generate('q')) embed no topic
         // information, so attempts must be joined to their questions to find
