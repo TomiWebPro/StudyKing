@@ -136,6 +136,39 @@ class StudyProgressTracker {
     return topics.length;
   }
 
+  /// Selects the attempts whose questions belong to [topicId].
+  ///
+  /// Production question IDs (`q_<timestamp>_<counter>`) carry no topic
+  /// information, so the topic is resolved by joining attempts to their
+  /// questions through [QuestionRepository] — the same join used by
+  /// [_countDistinctTopicsStudied]. When no repository is wired (tests,
+  /// legacy call sites) or no question resolves (box not open, question
+  /// deleted), falls back to the question-ID substring heuristic.
+  Future<List<StudentAttempt>> _selectTopicAttempts(
+    List<StudentAttempt> attempts,
+    String topicId,
+  ) async {
+    if (_questionRepo == null) {
+      return attempts.where((a) => a.questionId.contains(topicId)).toList();
+    }
+    final matched = <StudentAttempt>[];
+    var resolvedAny = false;
+    for (final attempt in attempts) {
+      final result = await _questionRepo.get(attempt.questionId);
+      final question = result.data;
+      if (question != null) {
+        resolvedAny = true;
+        if (question.topicId == topicId) {
+          matched.add(attempt);
+        }
+      }
+    }
+    if (!resolvedAny) {
+      return attempts.where((a) => a.questionId.contains(topicId)).toList();
+    }
+    return matched;
+  }
+
   Future<Result<Map<String, dynamic>>> getTopicProgress(String studentId, String topicId) async {
     try {
       final attemptsResult = await _attemptRepo.getByStudent(studentId);
@@ -144,7 +177,7 @@ class StudyProgressTracker {
         return Result.failure(attemptsResult.error);
       }
       final attempts = attemptsResult.data ?? [];
-      final topicAttempts = attempts.where((a) => a.questionId.contains(topicId)).toList();
+      final topicAttempts = await _selectTopicAttempts(attempts, topicId);
 
       if (topicAttempts.isEmpty) {
         return Result.success({

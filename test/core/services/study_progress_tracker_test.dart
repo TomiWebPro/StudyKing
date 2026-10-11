@@ -499,6 +499,101 @@ void main() {
 
         expect(progress.data!['lastAttempted'], isNotNull);
       });
+
+      test('resolves topic attempts through the question repository (production IDs)', () async {
+        // Production question IDs (IdGenerator.generate('q')) embed no topic
+        // information, so attempts must be joined to their questions to find
+        // the topic's attempts.
+        final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000001_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000002_0', 'topic_geometry'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000001_0', isCorrect: false, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q_1700000000002_0', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final progress = await tracker.getTopicProgress('student1', 'topic_algebra');
+
+        expect(progress.data!['attempts'], equals(2));
+        expect(progress.data!['accuracy'], equals(50));
+        expect(progress.data!['timeSpentMinutes'], equals(2));
+      });
+
+      test('excludes attempts belonging to other topics', () async {
+        final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000002_0', 'topic_geometry'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000002_0', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final progress = await tracker.getTopicProgress('student1', 'topic_geometry');
+
+        expect(progress.data!['attempts'], equals(1));
+        expect(progress.data!['accuracy'], equals(100));
+      });
+
+      test('falls back to substring match when questions cannot be resolved', () async {
+        final now = DateTime.now();
+        // Repository is wired but holds none of the attempted questions.
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: FakeQuestionRepository(),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'topic1_q1', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final progress = await tracker.getTopicProgress('student1', 'topic1');
+
+        expect(progress.data!['attempts'], equals(1));
+      });
+
+      test('getTopicMasteryLevelEnum fallback uses joined topic stats', () async {
+        // No mastery-graph entry: the level must come from the joined
+        // topic stats — browsing (attempts >= 1), not novice.
+        final now = DateTime.now();
+        final questionRepo = FakeQuestionRepository();
+        questionRepo.addQuestion(_productionQuestion('q_1700000000000_0', 'topic_algebra'));
+        questionRepo.addQuestion(_productionQuestion('q_1700000000001_0', 'topic_algebra'));
+        tracker = StudyProgressTracker(
+          attemptRepo: mockRepo,
+          sessionRepo: mockSessionRepo,
+          masteryService: mockMasteryService,
+          questionRepo: questionRepo,
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q_1700000000000_0', isCorrect: true, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q_1700000000001_0', isCorrect: false, timeSpentMs: 60000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final level = await tracker.getTopicMasteryLevelEnum('topic_algebra', studentId: 'student1');
+
+        expect(level.data, equals(MasteryLevel.browsing));
+      });
     });
 
     group('getWeeklyTrend', () {
