@@ -315,18 +315,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
     return false;
   }
 
-  int _formatTimeMinutes(Duration duration) {
-    return duration.inMinutes;
-  }
-
   @override
   Widget build(BuildContext context) {
     super.build(context);
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final totalMinutes = _filteredSessions.fold<int>(
+    final totalMs = _filteredSessions.fold<int>(
       0,
-      (sum, s) => sum + _formatTimeMinutes(s.actualDuration),
+      (sum, s) => sum + s.actualDurationMs,
     );
 
     return Scaffold(
@@ -421,12 +417,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                     alignment: WrapAlignment.spaceEvenly,
                     children: [
                       _buildSummaryStat(context, l10n.sessionsLabel, formatDecimal(_filteredSessions.length.toDouble(), l10n.localeName), Icons.history),
-                      _buildSummaryStat(context, l10n.totalTime, formatDurationFromContext(context, Duration(minutes: totalMinutes)), Icons.access_time),
+                      _buildSummaryStat(context, l10n.totalTime, formatDurationFromContext(context, Duration(milliseconds: totalMs)), Icons.access_time),
                       _buildSummaryStat(
                         context,
                         l10n.average,
                         _filteredSessions.isNotEmpty
-                            ? formatDurationFromContext(context, Duration(minutes: totalMinutes ~/ _filteredSessions.length))
+                            ? formatDurationFromContext(context, Duration(milliseconds: totalMs ~/ _filteredSessions.length))
                             : formatDurationFromContext(context, Duration.zero),
                         Icons.schedule,
                       ),

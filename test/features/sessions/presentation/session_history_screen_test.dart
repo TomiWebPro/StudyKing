@@ -430,6 +430,68 @@ void main() {
     });
   });
 
+  group('SessionHistoryScreen - Sub-minute sessions in totals', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('sub-minute sessions count toward total and average time', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 40000,
+          type: SessionType.manual,
+        ),
+        Session(
+          id: 's2', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 40000,
+          type: SessionType.manual,
+        ),
+        Session(
+          id: 's3', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 40000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // 3 x 40s = 120s total (2m 0s): sub-minute durations must be summed
+      // in milliseconds first, not truncated to 0 whole minutes each.
+      expect(find.text('2m 0s'), findsOneWidget);
+      // Average: 120s / 3 = 40s (one metric value plus three list rows).
+      expect(find.text('40s'), findsNWidgets(4));
+    });
+
+    testWidgets('mixed sub-minute and full-minute sessions sum correctly', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 90000,
+          type: SessionType.manual,
+        ),
+        Session(
+          id: 's2', studentId: 'u1', subjectId: 'math',
+          startTime: now, actualDurationMs: 30000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // 90s + 30s = 120s total; average = 60s.
+      expect(find.text('2m 0s'), findsOneWidget);
+      expect(find.text('1m 0s'), findsOneWidget);
+    });
+  });
+
   group('SessionHistoryScreen - Filter by subject', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();
