@@ -125,6 +125,36 @@ void main() {
       expect(find.text(l10n.feedbackReportedBadge), findsOneWidget);
     });
 
+    testWidgets('shows an error message when submission fails',
+        (tester) async {
+      final fake = _FakeRepo()..open = false;
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            lessonFeedbackRepositoryProvider.overrideWithValue(fake),
+          ],
+          child: buildFeedbackTest(
+            const LessonFeedbackWidget(
+              studentId: 'test-student',
+              targetType: 'explanation',
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = AppLocalizations.of(
+          tester.element(find.byType(LessonFeedbackWidget)))!;
+      await tester.tap(find.text(l10n.feedbackSubmit));
+      await tester.pumpAndSettle();
+
+      expect(fake.stored, isEmpty);
+      expect(find.text(l10n.somethingWentWrong), findsOneWidget);
+      expect(find.text(l10n.feedbackThanks), findsNothing);
+      expect(
+          find.text(l10n.feedbackSectionTitle), findsOneWidget);
+    });
+
     testWidgets('optional comment is persisted when provided',
         (tester) async {
       final fake = _FakeRepo();

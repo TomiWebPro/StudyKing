@@ -64,7 +64,7 @@ class _LessonFeedbackWidgetState extends ConsumerState<LessonFeedbackWidget> {
         _logger.w('Failed to submit feedback: ${result.error}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.feedbackThanks)),
+            SnackBar(content: Text(l10n.somethingWentWrong)),
           );
         }
         return;
