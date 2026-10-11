@@ -12,16 +12,19 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnDelete = false})
-      : sessions = List<Session>.from(seed ?? []);
+  _FakeSessionRepository({
+    List<Session>? seed,
+    this.throwOnDelete = false,
+    this.failOnDelete = false,
+  }) : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnDelete;
+  final bool failOnDelete;
 
   @override
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
-  @override
   @override
   Future<Result<void>> save(String key, Session session) async {
     sessions.removeWhere((s) => s.id == session.id);
@@ -32,6 +35,7 @@ class _FakeSessionRepository extends SessionRepository {
   @override
   Future<Result<void>> delete(String id) async {
     if (throwOnDelete) throw Exception('delete failed');
+    if (failOnDelete) return Result.failure('delete failed');
     sessions.removeWhere((s) => s.id == id);
     return Result.success(null);
   }
@@ -696,6 +700,35 @@ void main() {
       await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
       await tester.pumpAndSettle();
 
+      expect(find.textContaining('Failed to delete session'), findsOneWidget);
+    });
+
+    testWidgets('delete returning failure keeps session and shows error snackbar', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(
+        failOnDelete: true,
+        seed: [
+          Session(
+            id: 's1', studentId: 'u1', subjectId: 'math',
+            startTime: now, actualDurationMs: 600000,
+            type: SessionType.manual,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      final tile = find.byKey(const Key('s1'));
+      await tester.drag(tile, const Offset(-600, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Repository.delete returns Result.failure (it never throws), so the
+      // failure must not remove the session or report success.
+      expect(find.byKey(const Key('s1')), findsOneWidget);
+      expect(find.text('Session deleted'), findsNothing);
       expect(find.textContaining('Failed to delete session'), findsOneWidget);
     });
   });

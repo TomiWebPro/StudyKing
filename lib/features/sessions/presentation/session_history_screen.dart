@@ -273,7 +273,16 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
 
     if (confirmed == true) {
       try {
-        await _sessionRepository.delete(session.id);
+        final deleteResult = await _sessionRepository.delete(session.id);
+        if (deleteResult.isFailure) {
+          _logger.w('Failed to delete session', deleteResult.error);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.failedToDeleteSession(l10n.somethingWentWrong))),
+            );
+          }
+          return false;
+        }
         if (mounted) {
           setState(() {
             _allSessions.remove(session);
