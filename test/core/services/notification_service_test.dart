@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/notification_service.dart';
@@ -31,6 +32,11 @@ void main() {
       TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
           .setMockMethodCallHandler(
         const MethodChannel('dexterous.com/flutter/local_notifications'),
+        null,
+      );
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('flutter_timezone'),
         null,
       );
     });
@@ -107,6 +113,144 @@ void main() {
       expect(result, isA<Result<void>>());
       expect(result.isFailure, isTrue);
       expect(result.error, contains('l10n not initialized'));
+    });
+
+    group('showDailyReminder scheduling semantics', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('flutter_timezone'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'getLocalTimezone') {
+              return 'Europe/Berlin';
+            }
+            return null;
+          },
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            switch (methodCall.method) {
+              case 'initialize':
+                return true;
+              default:
+                return null;
+            }
+          },
+        );
+      });
+
+      NotificationService serviceWithLocalizations() {
+        final service = NotificationService();
+        service.setAppLocalizations(AppLocalizationsEn());
+        return service;
+      }
+
+      test('schedules at the chosen time-of-day in the device zone',
+          () async {
+        final service = serviceWithLocalizations();
+
+        final result = await service.showDailyReminder(
+          id: 1,
+          title: 'T',
+          body: 'B',
+          remindAt: const TimeOfDay(hour: 9, minute: 30),
+          payload: 'daily_reminder',
+        );
+
+        expect(result.isSuccess, isTrue);
+        // The old 24h-interval path must not be used anymore.
+        expect(
+          notificationCalls.where((c) => c.method == 'periodicallyShow'),
+          isEmpty,
+        );
+        final zonedCalls = notificationCalls
+            .where((c) => c.method == 'zonedSchedule')
+            .toList();
+        expect(zonedCalls, hasLength(1));
+        final args = zonedCalls.single.arguments as Map<Object?, Object?>;
+        expect(args['timeZoneName'], 'Europe/Berlin');
+        final scheduled = DateTime.parse(args['scheduledDateTime'] as String);
+        expect(scheduled.hour, 9);
+        expect(scheduled.minute, 30);
+        expect(
+          scheduled.isAfter(DateTime.now()),
+          isTrue,
+          reason: 'scheduled date must be in the future',
+        );
+        expect(args['matchDateTimeComponents'], DateTimeComponents.time.index);
+        expect(args['payload'], 'daily_reminder');
+      });
+
+      test('rolls the alarm to tomorrow when the chosen time passed today',
+          () async {
+        final service = serviceWithLocalizations();
+
+        final result = await service.showDailyReminder(
+          id: 2,
+          title: 'T',
+          body: 'B',
+          remindAt: const TimeOfDay(hour: 0, minute: 0),
+        );
+
+        expect(result.isSuccess, isTrue);
+        final scheduled = DateTime.parse(
+          (notificationCalls
+              .singleWhere((c) => c.method == 'zonedSchedule')
+              .arguments as Map<Object?, Object?>)['scheduledDateTime']
+              as String,
+        );
+        expect(scheduled.hour, 0);
+        expect(scheduled.minute, 0);
+        expect(
+          scheduled.isAfter(DateTime.now()),
+          isTrue,
+          reason: 'a passed time-of-day must roll to the next day',
+        );
+      });
+
+      test('falls back to the daily interval when zonedSchedule is '
+          'unsupported', () async {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            if (methodCall.method == 'zonedSchedule') {
+              throw UnimplementedError(
+                'zonedSchedule() has not been implemented',
+              );
+            }
+            return methodCall.method == 'initialize' ? true : null;
+          },
+        );
+        final service = serviceWithLocalizations();
+
+        final result = await service.showDailyReminder(
+          id: 3,
+          title: 'T',
+          body: 'B',
+          remindAt: const TimeOfDay(hour: 9, minute: 30),
+        );
+
+        expect(result.isSuccess, isTrue);
+        expect(
+          notificationCalls.where((c) => c.method == 'zonedSchedule'),
+          hasLength(1),
+        );
+        final periodicCalls = notificationCalls
+            .where((c) => c.method == 'periodicallyShow')
+            .toList();
+        expect(periodicCalls, hasLength(1));
+        final periodicArgs =
+            periodicCalls.single.arguments as Map<Object?, Object?>;
+        expect(periodicArgs['repeatInterval'], RepeatInterval.daily.index);
+      });
     });
 
     test('showRevisionNudge returns success when l10n is set', () async {

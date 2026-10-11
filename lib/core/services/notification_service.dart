@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:intl/intl.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
 import '../errors/result.dart';
@@ -15,6 +18,7 @@ class NotificationService {
   @visibleForTesting
   FlutterLocalNotificationsPlugin plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  bool _timeZonesInitialized = false;
   Function(String?)? _onNotificationTap;
   AppLocalizations? _l10n;
 
@@ -122,6 +126,23 @@ class NotificationService {
     }
   }
 
+  /// Lazily initializes the embedded time zone database and resolves the
+  /// device's current time zone so scheduled alarms fire at the wall-clock
+  /// time the user picked (not 24 hours from "now").
+  Future<tz.Location> _resolveLocalLocation() async {
+    if (!_timeZonesInitialized) {
+      tz_data.initializeTimeZones();
+      _timeZonesInitialized = true;
+    }
+    try {
+      final timezone = await FlutterTimezone.getLocalTimezone();
+      return tz.getLocation(timezone.identifier);
+    } catch (e) {
+      _logger.w('Could not resolve device time zone, defaulting to UTC', e);
+      return tz.UTC;
+    }
+  }
+
   void _onNotificationResponse(NotificationResponse response) {
     _onNotificationTap?.call(response.payload);
   }
@@ -204,14 +225,36 @@ class NotificationService {
         scheduledDate = scheduledDate.add(Timeouts.day);
       }
 
-      await plugin.periodicallyShow(
-        id,
-        title,
-        body,
-        RepeatInterval.daily,
-        details,
-        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
-      );
+      try {
+        final local = await _resolveLocalLocation();
+        await plugin.zonedSchedule(
+          id,
+          title,
+          body,
+          tz.TZDateTime.from(scheduledDate, local),
+          details,
+          uiLocalNotificationDateInterpretation:
+              UILocalNotificationDateInterpretation.absoluteTime,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+          matchDateTimeComponents: DateTimeComponents.time,
+          payload: payload,
+        );
+      } catch (e) {
+        // Platforms without zonedSchedule support (e.g. Linux/Windows) keep the
+        // previous 24-hour interval behavior instead of losing the reminder.
+        _logger.w(
+          'zonedSchedule unavailable, falling back to daily interval',
+          e,
+        );
+        await plugin.periodicallyShow(
+          id,
+          title,
+          body,
+          RepeatInterval.daily,
+          details,
+          androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        );
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to show daily reminder $id', e);
