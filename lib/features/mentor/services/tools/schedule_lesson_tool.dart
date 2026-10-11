@@ -75,7 +75,7 @@ class ScheduleLessonTool extends AgentTool {
       topicTitle: args['topicTitle'] as String,
       subjectId: args['subjectId'] as String,
       scheduledTime: scheduledTime,
-      durationMinutes: (args['durationMinutes'] as num?)?.toInt() ?? 30,
+      durationMinutes: AgentTool.intArg(args, 'durationMinutes') ?? 30,
     );
     final success = successResult.data ?? false;
     return {

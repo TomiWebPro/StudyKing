@@ -55,4 +55,28 @@ void main() {
       expect(registry.toolNames.length, 1);
     });
   });
+
+  group('AgentTool.intArg', () {
+    test('parses a num argument to int', () {
+      expect(AgentTool.intArg({'days': 30}, 'days'), equals(30));
+      expect(AgentTool.intArg({'days': 30.7}, 'days'), equals(30));
+    });
+
+    test('parses a stringified numeric argument (LLM emits "30")', () {
+      expect(AgentTool.intArg({'days': '30'}, 'days'), equals(30));
+    });
+
+    test('returns null for a non-integer numeric string', () {
+      expect(AgentTool.intArg({'days': '30.7'}, 'days'), isNull);
+    });
+
+    test('returns null when the argument is absent', () {
+      expect(AgentTool.intArg({}, 'days'), isNull);
+    });
+
+    test('returns null when the argument is unparseable', () {
+      expect(AgentTool.intArg({'days': 'abc'}, 'days'), isNull);
+      expect(AgentTool.intArg({'days': ''}, 'days'), isNull);
+    });
+  });
 }

@@ -243,6 +243,9 @@ class FakePlannerService extends PlannerService {
   bool scheduleResult = true;
   int scheduleLessonCallCount = 0;
   DateTime? lastScheduledTime;
+  int? lastScheduledDurationMinutes;
+  int? lastGenerateDaysValue;
+  int? lastGenerateHoursValue;
 
   FakePlannerService([this.plan])
       : super(
@@ -255,8 +258,11 @@ class FakePlannerService extends PlannerService {
     required int daysValue,
     required int hoursValue,
     String? name,
-  }) async =>
-      Result.success(plan);
+  }) async {
+    lastGenerateDaysValue = daysValue;
+    lastGenerateHoursValue = hoursValue;
+    return Result.success(plan);
+  }
 
   @override
   Future<Result<void>> adjustPace(double newTargetMinutesPerDay,
@@ -288,6 +294,7 @@ class FakePlannerService extends PlannerService {
   }) async {
     scheduleLessonCallCount++;
     lastScheduledTime = scheduledTime;
+    lastScheduledDurationMinutes = durationMinutes;
     return Result.success(scheduleResult);
   }
 }

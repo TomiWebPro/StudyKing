@@ -102,11 +102,11 @@ class CreatePracticeSessionTool extends AgentTool {
 
     final subjectId = args['subjectId'] as String?;
     final topicId = args['topicId'] as String?;
-    final questionCount = (args['questionCount'] as num?)?.toInt() ?? 10;
-    final durationMinutes = (args['durationMinutes'] as num?)?.toInt();
-    final easyCount = (args['easyCount'] as num?)?.toInt();
-    final mediumCount = (args['mediumCount'] as num?)?.toInt();
-    final hardCount = (args['hardCount'] as num?)?.toInt();
+    final questionCount = AgentTool.intArg(args, 'questionCount') ?? 10;
+    final durationMinutes = AgentTool.intArg(args, 'durationMinutes');
+    final easyCount = AgentTool.intArg(args, 'easyCount');
+    final mediumCount = AgentTool.intArg(args, 'mediumCount');
+    final hardCount = AgentTool.intArg(args, 'hardCount');
 
     try {
       switch (mode) {

@@ -36,7 +36,7 @@ class GetAdherenceTrendsTool extends AgentTool {
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
-    final days = (args['days'] as num?)?.toInt() ?? 14;
+    final days = AgentTool.intArg(args, 'days') ?? 14;
     final studentId = _studentIdService.getStudentId().data ?? '';
 
     final repo = _orchestrator.adherenceRepository;

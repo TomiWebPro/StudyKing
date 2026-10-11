@@ -55,5 +55,47 @@ void main() {
       expect(result['planId'], equals(''));
       expect(result['message'], equals(l10n.toolCreatePlanFail));
     });
+
+    test('parses stringified numeric arguments without throwing',
+        () async {
+      final plan = sampleLearningPlan().copyWith(planId: 'plan-uuid-1');
+      final planner = FakePlannerService(plan);
+      final tool = CreatePlanTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final result = await tool.execute({
+        'course': 'Mathematics',
+        'daysValue': '7',
+        'hoursValue': '3',
+      });
+
+      // The LLM emitted numbers as strings; the parsed values
+      // must reach the planner service.
+      expect(result['success'], isTrue);
+      expect(planner.lastGenerateDaysValue, equals(7));
+      expect(planner.lastGenerateHoursValue, equals(3));
+    });
+
+    test('reports a validation failure when daysValue is unparseable',
+        () async {
+      final planner = FakePlannerService(sampleLearningPlan());
+      final tool = CreatePlanTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final result = await tool.execute({
+        'course': 'Mathematics',
+        'daysValue': 'not-a-number',
+      });
+
+      // Previously this threw a TypeError; now it degrades to a
+      // structured failure.
+      expect(result['success'], isFalse);
+      expect(result['error'], contains('daysValue'));
+      expect(planner.lastGenerateDaysValue, isNull);
+    });
   });
 }

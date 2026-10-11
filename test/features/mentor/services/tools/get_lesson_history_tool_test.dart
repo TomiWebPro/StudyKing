@@ -132,6 +132,27 @@ void main() {
       expect(lessons.first['id'], equals('l2'));
     });
 
+    test('parses stringified daysBack and limit arguments without throwing',
+        () async {
+      lessonRepo = FakeLessonRepository([
+        _lesson('l1', DateTime.now().subtract(const Duration(hours: 2))),
+        _lesson('l2', DateTime.now().subtract(const Duration(days: 10))),
+      ]);
+      final tool = GetLessonHistoryTool(
+        lessonRepository: lessonRepo,
+        tutorSessionRepository: sessionRepo,
+        studentIdService: studentIdService,
+      );
+
+      // The LLM emitted "1" as a string; the tool must honor the
+      // 1-day window instead of crashing on the downcast.
+      final result = await tool.execute({'daysBack': '1'});
+
+      expect(result['totalFound'], equals(1));
+      final lessons = result['lessons'] as List;
+      expect(lessons.first['id'], equals('l1'));
+    });
+
     test('degrades gracefully when no lessons match', () async {
       final tool = GetLessonHistoryTool(
         lessonRepository: lessonRepo,

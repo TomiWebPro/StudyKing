@@ -62,8 +62,8 @@ class GetLessonHistoryTool extends AgentTool {
     final studentId = _studentIdService.getStudentId().data ?? '';
     final subjectId = args['subjectId'] as String?;
     final topicId = args['topicId'] as String?;
-    final daysBack = (args['daysBack'] as num?)?.toInt() ?? 30;
-    final limit = (args['limit'] as num?)?.toInt() ?? 5;
+    final daysBack = AgentTool.intArg(args, 'daysBack') ?? 30;
+    final limit = AgentTool.intArg(args, 'limit') ?? 5;
     final includeContent = args['includeContent'] as bool? ?? false;
 
     final cutoff = DateTime.now().subtract(Duration(days: daysBack));

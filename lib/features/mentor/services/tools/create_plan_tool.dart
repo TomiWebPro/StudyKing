@@ -35,10 +35,19 @@ class CreatePlanTool extends AgentTool {
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
+    final daysValue = AgentTool.intArg(args, 'daysValue');
+    final hoursValue = AgentTool.intArg(args, 'hoursValue') ?? 2;
+    if (daysValue == null || daysValue <= 0) {
+      return {
+        'success': false,
+        'error': 'daysValue parameter is required and must be a positive integer',
+      };
+    }
+
     final result = await _plannerService.generatePlan(
       course: args['course'] as String,
-      daysValue: (args['daysValue'] as num).toInt(),
-      hoursValue: (args['hoursValue'] as num?)?.toInt() ?? 2,
+      daysValue: daysValue,
+      hoursValue: hoursValue,
     );
     final plan = result.data;
 
@@ -49,7 +58,7 @@ class CreatePlanTool extends AgentTool {
       'planId': plan?.planId ?? '',
       'totalDays': plan?.dailyPlans.length ?? 0,
       'message': plan != null
-          ? l10n.toolCreatePlanResult(args['course'] as String, (args['daysValue'] as num).toInt())
+          ? l10n.toolCreatePlanResult(args['course'] as String, daysValue)
           : l10n.toolCreatePlanFail,
     };
   }

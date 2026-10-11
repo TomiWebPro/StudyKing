@@ -87,6 +87,38 @@ void main() {
       expect(result['count'], equals(2));
     });
 
+    test('parses a stringified limit argument without throwing',
+        () async {
+      questionRepo.setQuestions([
+        _q('q1', 'a', 's1', 't1'),
+        _q('q2', 'b', 's1', 't1'),
+        _q('q3', 'c', 's1', 't1'),
+      ]);
+
+      final tool = SearchQuestionsTool(questionRepo: questionRepo);
+      final result = await tool.execute({'limit': '2'});
+
+      // The LLM emitted "2" as a string; it must cap results at 2.
+      expect(result['count'], equals(2));
+      final questions = result['questions'] as List;
+      expect(questions.first['id'], equals('q1'));
+    });
+
+    test('falls back to the default limit when the argument is unparseable',
+        () async {
+      questionRepo.setQuestions([
+        _q('q1', 'a', 's1', 't1'),
+        _q('q2', 'b', 's1', 't1'),
+      ]);
+
+      final tool = SearchQuestionsTool(questionRepo: questionRepo);
+      final result = await tool.execute({'limit': 'not-a-number'});
+
+      // Unparseable limit falls back to the default (10), so both
+      // questions are returned instead of the tool throwing.
+      expect(result['count'], equals(2));
+    });
+
     test('degrades gracefully with no matching questions', () async {
       questionRepo.setQuestions(const []);
 

@@ -37,7 +37,7 @@ class SearchQuestionsTool extends AgentTool {
     final subjectId = args['subjectId'] as String?;
     final topicId = args['topicId'] as String?;
     final keyword = args['keyword'] as String?;
-    final limit = (args['limit'] as num?)?.toInt() ?? 10;
+    final limit = AgentTool.intArg(args, 'limit') ?? 10;
 
     List<Question> questions = [];
     if (subjectId != null && subjectId.isNotEmpty) {

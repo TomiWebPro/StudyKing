@@ -17,6 +17,19 @@ PlanAdherenceModel _record(int dayOffset, double adherence) {
   );
 }
 
+PlanAdherenceModel _recordAt(String id, DateTime date, double adherence) {
+  return PlanAdherenceModel(
+    id: id,
+    studentId: 'student-1',
+    date: date,
+    plannedQuestions: 10,
+    actualQuestions: (adherence * 10).round(),
+    plannedMinutes: 60,
+    actualMinutes: (adherence * 60).round(),
+    adherenceScore: adherence,
+  );
+}
+
 void main() {
   group('GetAdherenceTrendsTool', () {
     late FakeStudentIdService studentIdService;
@@ -134,6 +147,61 @@ void main() {
       expect(result['totalDays'], equals(0));
       expect(result['perDayBreakdown'], equals([]));
       expect(result['recommendation'], contains('No adherence data'));
+    });
+
+    test('parses a stringified days argument without throwing',
+        () async {
+      final recent = _recordAt(
+        'recent',
+        DateTime.now().subtract(const Duration(hours: 3)),
+        0.9,
+      );
+      final older = _recordAt(
+        'older',
+        DateTime.now().subtract(const Duration(days: 5)),
+        0.5,
+      );
+      repo = FakePlanAdherenceRepository([recent, older]);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
+
+      final tool = GetAdherenceTrendsTool(
+        orchestrator: orchestrator,
+        studentIdService: studentIdService,
+      );
+
+      final result = await tool.execute({'days': '1'});
+
+      // Only the record inside the parsed 1-day window is counted:
+      // the string "1" must be honored, not crash the tool.
+      expect(result['totalDays'], equals(1));
+      expect(result['averageAdherence'], equals(0.9));
+    });
+
+    test('falls back to the default days when the argument is unparseable',
+        () async {
+      final recent = _recordAt(
+        'recent',
+        DateTime.now().subtract(const Duration(hours: 3)),
+        0.9,
+      );
+      final older = _recordAt(
+        'older',
+        DateTime.now().subtract(const Duration(days: 5)),
+        0.5,
+      );
+      repo = FakePlanAdherenceRepository([recent, older]);
+      orchestrator = FakePlanAdherenceOrchestrator(repo);
+
+      final tool = GetAdherenceTrendsTool(
+        orchestrator: orchestrator,
+        studentIdService: studentIdService,
+      );
+
+      // 'not-a-number' falls back to the documented default (14 days),
+      // so both records are in range instead of the tool throwing.
+      final result = await tool.execute({'days': 'not-a-number'});
+
+      expect(result['totalDays'], equals(2));
     });
   });
 }

@@ -54,6 +54,30 @@ void main() {
       expect(planner.scheduleLessonCallCount, 1);
     });
 
+    test('parses a stringified durationMinutes without throwing',
+        () async {
+      planner.scheduleResult = true;
+      final tool = ScheduleLessonTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final scheduledTime = DateTime.now();
+      final result = await tool.execute({
+        'topicId': 't1',
+        'topicTitle': 'Algebra',
+        'subjectId': 's1',
+        'scheduledTime': scheduledTime.toIso8601String(),
+        'durationMinutes': '45',
+      });
+
+      // The LLM emitted "45" as a string; the parsed value
+      // must reach the planner service.
+      expect(result['success'], isTrue);
+      expect(planner.scheduleLessonCallCount, 1);
+      expect(planner.lastScheduledDurationMinutes, equals(45));
+    });
+
     test('returns validation failure for a relative date string',
         () async {
       final tool = ScheduleLessonTool(

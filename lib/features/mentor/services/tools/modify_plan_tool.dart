@@ -97,7 +97,7 @@ class ModifyPlanTool extends AgentTool {
     Map<String, dynamic> args,
     AppLocalizations l10n,
   ) async {
-    final newTargetMinutes = (args['newTargetMinutesPerDay'] as num?)?.toInt();
+    final newTargetMinutes = AgentTool.intArg(args, 'newTargetMinutesPerDay');
     if (newTargetMinutes == null || newTargetMinutes <= 0) {
       return {
         'success': false,
@@ -129,7 +129,7 @@ class ModifyPlanTool extends AgentTool {
     Map<String, dynamic> args,
     AppLocalizations l10n,
   ) async {
-    final extendDays = (args['extendDays'] as num?)?.toInt();
+    final extendDays = AgentTool.intArg(args, 'extendDays');
     if (extendDays == null || extendDays <= 0) {
       return {
         'success': false,
@@ -170,7 +170,7 @@ class ModifyPlanTool extends AgentTool {
     Map<String, dynamic> args,
     AppLocalizations l10n,
   ) async {
-    final missedMinutes = (args['missedMinutes'] as num?)?.toInt();
+    final missedMinutes = AgentTool.intArg(args, 'missedMinutes');
     if (missedMinutes == null || missedMinutes <= 0) {
       return {
         'success': false,
@@ -204,8 +204,8 @@ class ModifyPlanTool extends AgentTool {
     Map<String, dynamic> args,
     AppLocalizations l10n,
   ) async {
-    final newDailyMinutes = (args['newDailyMinutes'] as num?)?.toInt();
-    final newDailyQuestions = (args['newDailyQuestions'] as num?)?.toInt();
+    final newDailyMinutes = AgentTool.intArg(args, 'newDailyMinutes');
+    final newDailyQuestions = AgentTool.intArg(args, 'newDailyQuestions');
 
     if (newDailyMinutes == null && newDailyQuestions == null) {
       return {

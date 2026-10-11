@@ -115,6 +115,61 @@ void main() {
       expect(result['success'], isFalse);
     });
 
+    test('parses stringified numeric arguments for every action',
+        () async {
+      final tool = ModifyPlanTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      final paceResult = await tool.execute({
+        'action': 'adjust_pace',
+        'newTargetMinutesPerDay': '45',
+      });
+      expect(paceResult['success'], isTrue);
+      expect(paceResult['newTargetMinutesPerDay'], equals(45));
+
+      final extendResult = await tool.execute({
+        'action': 'extend',
+        'extendDays': '3',
+      });
+      expect(extendResult['success'], isTrue);
+      expect(extendResult['addedDays'], equals(3));
+      expect(extendResult['newTotalDays'], equals(5));
+
+      final redistributeResult = await tool.execute({
+        'action': 'redistribute',
+        'missedMinutes': '120',
+      });
+      expect(redistributeResult['success'], isTrue);
+      expect(redistributeResult['missedMinutes'], equals(120));
+
+      final targetsResult = await tool.execute({
+        'action': 'change_targets',
+        'newDailyMinutes': '45',
+        'newDailyQuestions': '8',
+      });
+      expect(targetsResult['success'], isTrue);
+      expect(targetsResult['newDailyMinutes'], equals(45));
+      expect(targetsResult['newDailyQuestions'], equals(8));
+    });
+
+    test('reports a missing-param failure for unparseable numeric args',
+        () async {
+      final tool = ModifyPlanTool(
+        plannerService: planner,
+        localeName: 'en',
+      );
+
+      // 'abc' cannot be parsed, so the tool must treat the
+      // parameter as absent instead of throwing a TypeError.
+      final result = await tool.execute({
+        'action': 'adjust_pace',
+        'newTargetMinutesPerDay': 'abc',
+      });
+      expect(result['success'], isFalse);
+    });
+
     test('logs warning and preserves user-facing message on exception', () async {
       final throwingPlanner = _ThrowingPlannerService(sampleLearningPlan());
       final tool = ModifyPlanTool(

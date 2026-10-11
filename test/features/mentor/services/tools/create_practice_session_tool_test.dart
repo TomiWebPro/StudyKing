@@ -76,6 +76,71 @@ void main() {
       expect(result['error'], contains('subjectId is required'));
     });
 
+    test('parses a stringified questionCount without throwing',
+        () async {
+      final due = [
+        _q('q1', 's1', 't1', 1),
+        _q('q2', 's1', 't1', 2),
+        _q('q3', 's1', 't1', 3),
+      ];
+      final sr = FakeSpacedRepetitionService(due);
+      final tool = CreatePracticeSessionTool(
+        questionRepo: questionRepo,
+        srService: sr,
+        masteryService: mastery,
+        scorer: scorer,
+        examSessionService: examSession,
+        studentIdService: studentIdService,
+      );
+
+      // The LLM emitted "2" as a string; the parsed value
+      // must cap the session at 2 questions.
+      final result = await tool.execute({
+        'mode': 'spaced_repetition',
+        'subjectId': 's1',
+        'questionCount': '2',
+      });
+
+      expect(result['success'], isTrue);
+      expect(result['questionCount'], equals(2));
+      expect(result['questionIds'], equals(['q1', 'q2']));
+    });
+
+    test('parses stringified exam arguments without throwing',
+        () async {
+      questionRepo.setQuestions([
+        _q('q1', 's1', 't1', 1),
+        _q('q2', 's1', 't1', 2),
+        _q('q3', 's1', 't1', 3),
+      ]);
+      final tool = CreatePracticeSessionTool(
+        questionRepo: questionRepo,
+        srService: FakeSpacedRepetitionService(const []),
+        masteryService: mastery,
+        scorer: scorer,
+        examSessionService: examSession,
+        studentIdService: studentIdService,
+      );
+
+      final result = await tool.execute({
+        'mode': 'exam',
+        'subjectId': 's1',
+        'questionCount': '3',
+        'durationMinutes': '30',
+        'easyCount': '1',
+        'mediumCount': '1',
+        'hardCount': '1',
+      });
+
+      expect(result['success'], isTrue);
+      expect(result['questionCount'], equals(3));
+      expect(result['durationMinutes'], equals(30));
+      final breakdown = result['difficultyBreakdown'] as Map;
+      expect(breakdown['easy'], equals(1));
+      expect(breakdown['medium'], equals(1));
+      expect(breakdown['hard'], equals(1));
+    });
+
     test('weak_areas mode targets weak topics in the subject', () async {
       final weak = [
         MasteryState.initial(studentId: 'student-1', topicId: 't1')
