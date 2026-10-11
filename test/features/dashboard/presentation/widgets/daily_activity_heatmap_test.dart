@@ -67,6 +67,35 @@ void main() {
       expect(find.byType(Semantics), findsWidgets);
     });
 
+    testWidgets('semantic label announces rounded accuracy, not raw double',
+        (tester) async {
+      await initializeDateFormatting();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final trend = [
+        DailyTrendEntry(
+          date: today,
+          attempts: 10,
+          accuracy: 85.0,
+          focusSeconds: 300,
+          sessions: 2,
+          compositeScore: 0.8,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(DailyActivityHeatmap(dailyTrend: trend)));
+      await tester.pumpAndSettle();
+
+      final dateStr = DateFormat.yMMMd('en').format(today);
+      // The spoken label must use the rounded percent (85%), matching the
+      // tooltip — never the raw double (85.0%).
+      expect(
+        find.bySemanticsLabel('$dateStr: 10 Sessions, 85%'),
+        findsOneWidget,
+      );
+      expect(find.bySemanticsLabel(RegExp(r'85\.0%')), findsNothing);
+    });
+
     testWidgets('renders legend with color squares', (tester) async {
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);

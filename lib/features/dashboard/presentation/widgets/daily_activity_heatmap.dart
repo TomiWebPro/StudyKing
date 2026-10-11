@@ -269,7 +269,7 @@ class DailyActivityHeatmap extends StatelessWidget {
     if (entry.attempts == 0) {
       return '$dateStr: ${l10n.heatmapNoActivity}';
     }
-    return '$dateStr: ${entry.attempts} ${l10n.sessionsLabel}, ${entry.accuracy}%';
+    return '$dateStr: ${entry.attempts} ${l10n.sessionsLabel}, ${entry.accuracy.round()}%';
   }
 
   List<_MonthLabel> _computeMonthLabels(
