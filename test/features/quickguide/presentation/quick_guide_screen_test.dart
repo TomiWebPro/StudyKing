@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart'
     show selectedModelProvider, settingsProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmServiceProvider;
@@ -32,6 +33,33 @@ class _DelayedErrorLlmService extends FakeLlmService {
   }) async* {
     await Future<void>.delayed(errorDelay);
     throw Exception('Simulated stream error after delay');
+  }
+}
+
+/// Hand-written fake whose [chat] completes only after [chatDelay],
+/// so conversation-memory compression (which awaits the LLM-backed
+/// summarizer) stays in flight across a real event-loop gap — unlike
+/// a microtask, which would complete before the test could pop the
+/// screen.
+class _DelayedChatLlmService extends FakeLlmService {
+  _DelayedChatLlmService({required this.chatDelay});
+
+  final Duration chatDelay;
+  int chatCalls = 0;
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    chatCalls++;
+    await Future<void>.delayed(chatDelay);
+    return Result.failure('Simulated summarizer failure after delay');
   }
 }
 
@@ -1778,6 +1806,52 @@ void main() {
       // before the first await, not AppLocalizations.of(context)!.
       await tester.pump(const Duration(milliseconds: 100));
 
+      expect(tester.takeException(), isNull);
+    });
+
+    testWidgets(
+        'placeholder added after memory write is guarded when popped mid-await',
+        (tester) async {
+      final llm = _DelayedChatLlmService(
+        chatDelay: const Duration(milliseconds: 50),
+      );
+
+      await tester.pumpWidget(buildTestApp(
+        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Send enough messages to fill the conversation memory
+      // (maxTurns * 2 * 0.8 = 32) so the next user-message write
+      // triggers history compression, which awaits the LLM-backed
+      // summarizer — a real event-loop gap, not a microtask.
+      for (var i = 0; i < 16; i++) {
+        await tester.enterText(find.byType(TextField), 'Message $i');
+        await tester.tap(find.byIcon(Icons.send_rounded));
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      // The 17th send's addUserMessage crosses the compression
+      // threshold, so its memory write awaits the delayed chat call.
+      final chatCallsBefore = llm.chatCalls;
+      await tester.enterText(find.byType(TextField), 'Hello');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      expect(llm.chatCalls, chatCallsBefore + 1);
+
+      // Dispose the screen while the compression's LLM call is
+      // still in flight — before the streaming placeholder's
+      // setState runs.
+      await tester.pumpWidget(const SizedBox.shrink());
+      // Let the awaited write complete on the disposed State, then
+      // advance past the input's 100ms re-enable timer (which is
+      // itself mounted-guarded).
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // The post-await setState that adds the streaming placeholder
+      // must be mounted-guarded, like the later setState calls in
+      // _sendMessage.
       expect(tester.takeException(), isNull);
     });
   });
