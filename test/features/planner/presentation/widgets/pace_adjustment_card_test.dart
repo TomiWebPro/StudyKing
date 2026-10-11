@@ -234,6 +234,56 @@ void main() {
       expect(fake.adjustPaceTargets, isEmpty);
     });
 
+    testWidgets('per-subject sliders only offer whole-hour steps',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          const PaceAdjustmentCard(),
+          _FakePlannerService(plan: _twoSubjectPlan()),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      // SyllabusGoal.targetHoursPerDay is an int, so the slider must
+      // not offer values the model cannot represent exactly.
+      final sliders = find.byType(Slider);
+      expect(sliders, findsNWidgets(2));
+      for (final element in sliders.evaluate()) {
+        final config = element.widget as Slider;
+        expect(config.min, 1.0);
+        expect(config.max, 8.0);
+        expect(config.divisions, 7);
+        expect(config.value, config.value.round());
+      }
+    });
+
+    testWidgets('dragging a per-subject slider only produces '
+        'whole-hour goal values', (tester) async {
+      final fake = _FakePlannerService(plan: _twoSubjectPlan());
+      await tester.pumpWidget(buildApp(const PaceAdjustmentCard(), fake));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Slider).at(0), const Offset(150, 0));
+      await tester.pumpAndSettle();
+
+      expect(fake.updatedGoalHours, isNotEmpty);
+      // Half-hour values would round up to the next full hour on save
+      // (SyllabusGoal.targetHoursPerDay is an int), inflating the goal.
+      for (final hours in fake.updatedGoalHours) {
+        expect(hours, hours.round());
+      }
+    });
+
     testWidgets('apply persists the sum of per-subject hours, not the average',
         (tester) async {
       final fake = _FakePlannerService(plan: _twoSubjectPlan());

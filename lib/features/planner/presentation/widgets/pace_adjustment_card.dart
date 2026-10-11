@@ -132,11 +132,14 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
                     ),
                   ],
                 ),
+                // SyllabusGoal.targetHoursPerDay is an int, so the
+                // per-subject slider only offers whole-hour steps;
+                // half-hour steps would be rounded up on save.
                 Slider(
                   value: goalHours,
-                  min: 0.5,
+                  min: 1.0,
                   max: 8.0,
-                  divisions: 15,
+                  divisions: 7,
                   label: '${formatDecimal(goalHours, l10n.localeName, minFractionDigits: 1)} ${l10n.hoursPerDay}',
                   onChanged: (value) {
                     _updateSyllabusHours(goal, value);
