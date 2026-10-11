@@ -268,12 +268,16 @@ class PlanAdherenceOrchestrator {
     String? planId,
   }) async {
     try {
-      await _planService.recordDailyAdherence(
+      final result = await _planService.recordDailyAdherence(
         studentId: studentId,
         actualQuestions: actualQuestions,
         actualMinutes: actualMinutes,
         planId: planId,
       );
+      if (result.isFailure) {
+        _logger.w('recordActivity failed', result.error);
+        return Result.failure(result.error);
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('recordActivity failed', e);

@@ -334,6 +334,37 @@ void main() {
         final all = await adherenceRepo.getByStudent('student-1');
         expect(all.data!.first.actualQuestions, 0);
       });
+
+      test('propagates failure when plan service recordDailyAdherence fails', () async {
+        final failingAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FailingPlanService(),
+        );
+
+        final result = await failingAdapter.recordActivity(
+          studentId: 'student-1',
+          actualMinutes: 25,
+        );
+
+        expect(result.isFailure, true);
+        expect(result.error, 'adherence write failed');
+      });
+
+      test('does not persist adherence row when recordDailyAdherence fails', () async {
+        final failingAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FailingPlanService(),
+        );
+        await failingAdapter.recordActivity(
+          studentId: 'student-1',
+          actualMinutes: 25,
+        );
+
+        final all = await adherenceRepo.getByStudent('student-1');
+        expect(all.data, isEmpty);
+      });
     });
 
     group('suggestRegeneration', () {
@@ -728,5 +759,19 @@ class _FailingAdherenceRepository extends PlanAdherenceRepository {
   @override
   Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
     return Result.failure('adherence fetch failed');
+  }
+}
+
+class _FailingPlanService extends PersonalLearningPlanService {
+  _FailingPlanService() : super(adherenceRepository: _FakePlanAdherenceRepository());
+
+  @override
+  Future<Result<void>> recordDailyAdherence({
+    required String studentId,
+    required int actualQuestions,
+    required int actualMinutes,
+    String? planId,
+  }) async {
+    return Result.failure('adherence write failed');
   }
 }
