@@ -254,12 +254,17 @@ class _FakePlanRepository extends PlanRepository {
 
 class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final List<PlanAdherenceModel> _records = [];
+  bool failOnCreate = false;
+  String? createError;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(PlanAdherenceModel model) async {
+    if (failOnCreate) {
+      return Result.failure(createError ?? 'adherence write failed');
+    }
     _records.add(model);
     return Result.success(null);
   }
@@ -852,6 +857,58 @@ void main() {
           expect(result.isSuccess, isTrue);
           expect(adherenceRepo.records, hasLength(1));
           expect(adherenceRepo.records.first.planId, 'plan-explicit-77');
+        });
+
+        test('propagates adherence create failure instead of masking success',
+            () async {
+          final logs = <String>[];
+          final original = debugPrint;
+          debugPrint = (String? message, {int? wrapWidth}) {
+            if (message != null) logs.add(message);
+          };
+          addTearDown(() => debugPrint = original);
+
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now,
+            dailyPlans: [
+              DailyPlan(
+                date: now,
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 15,
+                targetMinutes: 30,
+                focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 15, totalMinutes: 30,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+          );
+          await planRepo.savePlan(plan);
+
+          adherenceRepo.failOnCreate = true;
+          final result = await svc.recordDailyAdherence(
+            studentId: 'student1',
+            actualQuestions: 15,
+            actualMinutes: 30,
+          );
+
+          expect(result.isFailure, isTrue);
+          expect(result.error, 'adherence write failed');
+          expect(adherenceRepo.records, isEmpty);
+          expect(
+            logs.any((l) =>
+                l.contains('[W]') &&
+                l.contains('Failed to persist daily adherence')),
+            isTrue,
+          );
         });
 
         test('records poor adherence and triggers redistribute', () async {

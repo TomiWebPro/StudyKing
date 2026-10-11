@@ -617,7 +617,13 @@ class PersonalLearningPlanService {
         planId: planId ?? plan.planId,
       );
 
-      await _adherenceRepository.create(model);
+      final createResult = await _adherenceRepository.create(model);
+      if (createResult.isFailure) {
+        _logger.w(
+            'Failed to persist daily adherence for $studentId',
+            createResult.error);
+        return Result.failure(createResult.error);
+      }
 
       if (adherenceScore < 0.3 && plannedMinutes > 0) {
         final missedMinutes = plannedMinutes - actualMinutes;
