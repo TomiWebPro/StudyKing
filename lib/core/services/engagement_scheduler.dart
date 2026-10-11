@@ -62,6 +62,12 @@ class EngagementScheduler {
   Timer? _lessonCheckTimer;
   bool _isInitialized = false;
   int _notificationIdCounter = 1000;
+  /// Lesson ids that already had an upcoming-lesson reminder shown for
+  /// the current 30-minute window. The 5-minute lesson check
+  /// re-evaluates the same window on every tick, so without this set
+  /// each tick would stack another notification for the same lesson.
+  /// Entries are cleared once the lesson starts or completes.
+  final Set<String> _notifiedLessonKeys = {};
   ({bool enabled, int hour, int minute})? _lastAppliedDailyReminder;
 
   EngagementScheduler({
@@ -299,18 +305,37 @@ class EngagementScheduler {
       final lessons = lessonsResult.data ?? [];
       final now = DateTime.now();
       for (final lesson in lessons) {
-        if (lesson.completed || lesson.endTime != null) continue;
+        final lessonKey = lesson.id;
+        if (lesson.completed || lesson.endTime != null) {
+          // The lesson is over; stop tracking it so a lesson that is
+          // rescheduled into a future window can be reminded about again.
+          _notifiedLessonKeys.remove(lessonKey);
+          continue;
+        }
         final diff = lesson.startTime.difference(now);
-        if (diff.inMinutes > 0 && diff.inMinutes <= 30) {
-          final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Lesson';
-          final notifResult = await _notificationService.showLessonReminder(
-            id: _notificationIdCounter++,
-            lessonTitle: title,
-            startTime: lesson.startTime,
-          );
-          if (notifResult.isFailure) {
-            _logger.w('Failed to show lesson reminder notification: ${notifResult.error}');
-          }
+        if (diff.inMinutes <= 0) {
+          // The reminder window has passed; drop the key so the
+          // tracked set does not grow without bound.
+          _notifiedLessonKeys.remove(lessonKey);
+          continue;
+        }
+        if (diff.inMinutes > 30) continue;
+        // Each lesson is reminded about at most once per window:
+        // every 5-minute tick matches the same lesson for up to 30
+        // minutes, so re-notifying would stack duplicates.
+        if (_notifiedLessonKeys.contains(lessonKey)) continue;
+        final title = lesson.tutorMetadata?.topicTitle ?? lesson.topicId ?? 'Lesson';
+        final notifResult = await _notificationService.showLessonReminder(
+          id: _notificationIdCounter++,
+          lessonTitle: title,
+          startTime: lesson.startTime,
+        );
+        if (notifResult.isSuccess) {
+          _notifiedLessonKeys.add(lessonKey);
+        } else {
+          // Leave the key untracked so a failed reminder is retried
+          // on the next tick while the lesson is still upcoming.
+          _logger.w('Failed to show lesson reminder notification: ${notifResult.error}');
         }
       }
     } catch (e) {

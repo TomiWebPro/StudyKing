@@ -11,6 +11,7 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
@@ -230,6 +231,55 @@ class _FakeNotificationService extends NotificationService {
   }) async {
     planAdjustmentLowDays.add(consecutiveLowDays);
     return Result.success(null);
+  }
+}
+
+/// Planner service stub whose scheduled lessons are controlled by the
+/// test, used to exercise the upcoming-lesson reminder check without
+/// any repository/Hive dependency.
+class _FakePlannerService extends PlannerService {
+  final List<Session> lessons = [];
+
+  @override
+  Future<Result<List<Session>>> getScheduledLessons() async {
+    return Result.success(lessons);
+  }
+}
+
+/// Notification service stub that records upcoming-lesson reminders
+/// instead of touching the platform channel, used to verify the
+/// per-lesson dedup of lesson reminders.
+class _LessonReminderRecordingNotificationService extends NotificationService {
+  final List<({int id, String lessonTitle, DateTime startTime})>
+      lessonReminders = [];
+
+  @override
+  Future<Result<void>> showLessonReminder({
+    required int id,
+    required String lessonTitle,
+    required DateTime startTime,
+  }) async {
+    lessonReminders.add(
+      (id: id, lessonTitle: lessonTitle, startTime: startTime),
+    );
+    return Result.success(null);
+  }
+}
+
+/// Notification service stub whose lesson reminders always fail, used to
+/// verify a failed reminder is retried on the next tick instead of
+/// being permanently suppressed.
+class _FailingLessonReminderNotificationService extends NotificationService {
+  int lessonReminderAttempts = 0;
+
+  @override
+  Future<Result<void>> showLessonReminder({
+    required int id,
+    required String lessonTitle,
+    required DateTime startTime,
+  }) async {
+    lessonReminderAttempts++;
+    return Result.failure('simulated notification failure');
   }
 }
 
@@ -892,6 +942,145 @@ void main() {
     group('runDailyChecksNow', () {
       test('runs nudge checks without throwing', () async {
         await expectLater(scheduler.runDailyChecksNow(), completes);
+      });
+    });
+
+    group('upcoming lesson reminder dedup', () {
+      EngagementScheduler lessonScheduler({
+        required PlannerService plannerService,
+        required NotificationService notificationService,
+      }) {
+        return EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notificationService,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator: _FakePlanAdherenceOrchestrator(
+            adherenceRepo: _FakeAdherenceRepo(),
+          ),
+          sessionRepository: _FakeSessionRepo(),
+          plannerService: plannerService,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+      }
+
+      Session upcomingLesson(String id, {int minutesFromNow = 25}) {
+        return Session(
+          id: id,
+          studentId: 'test-student',
+          topicId: id,
+          startTime: DateTime.now().add(Duration(minutes: minutesFromNow)),
+          status: SessionStatus.planned,
+        );
+      }
+
+      test('a lesson in the 30-minute window is notified at most once across repeated 5-minute ticks',
+          () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(upcomingLesson('lesson-1'));
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        // The immediate check on startup plus six 5-minute timer ticks.
+        // Without dedup the same lesson matches every tick and the user
+        // would see up to seven stacked notifications.
+        for (var tick = 0; tick < 7; tick++) {
+          await scheduler.runDailyChecksNow();
+        }
+
+        expect(notif.lessonReminders, hasLength(1));
+        expect(notif.lessonReminders.single.lessonTitle, 'lesson-1');
+        expect(
+          notif.lessonReminders.single.startTime,
+          planner.lessons.single.startTime,
+        );
+      });
+
+      test('each upcoming lesson in the window is notified exactly once',
+          () async {
+        final planner = _FakePlannerService()
+          ..lessons.addAll([
+            upcomingLesson('lesson-a'),
+            upcomingLesson('lesson-b'),
+          ]);
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        for (var tick = 0; tick < 3; tick++) {
+          await scheduler.runDailyChecksNow();
+        }
+
+        // Dedup is per lesson, not a global "already notified" flag.
+        expect(notif.lessonReminders, hasLength(2));
+        expect(
+          notif.lessonReminders.map((r) => r.lessonTitle).toList(),
+          containsAll(['lesson-a', 'lesson-b']),
+        );
+      });
+
+      test('a lesson further than 30 minutes away is not notified', () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(upcomingLesson('lesson-far', minutesFromNow: 45));
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        await scheduler.runDailyChecksNow();
+        await scheduler.runDailyChecksNow();
+
+        expect(notif.lessonReminders, isEmpty);
+      });
+
+      test('a completed lesson is never notified', () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(Session(
+            id: 'lesson-done',
+            studentId: 'test-student',
+            startTime: DateTime.now().add(const Duration(minutes: 20)),
+            completed: true,
+            status: SessionStatus.completed,
+          ));
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        await scheduler.runDailyChecksNow();
+
+        expect(notif.lessonReminders, isEmpty);
+      });
+
+      test('a failed lesson reminder is retried on the next tick', () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(upcomingLesson('lesson-retry'));
+        final notif = _FailingLessonReminderNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        for (var tick = 0; tick < 3; tick++) {
+          await scheduler.runDailyChecksNow();
+        }
+
+        // Only successful reminders are deduplicated; a failed one is
+        // retried while the lesson is still inside the window.
+        expect(notif.lessonReminderAttempts, 3);
       });
     });
 
