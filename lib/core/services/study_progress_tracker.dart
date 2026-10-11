@@ -238,10 +238,16 @@ class StudyProgressTracker {
 
       for (var i = 0; i < weeks; i++) {
         final weekStart = now.subtract(Duration(days: i * 7 + 6));
+        final windowStart = now.subtract(Duration(days: (i + 1) * 7));
+        final windowEnd = now.subtract(Duration(days: i * 7));
 
+        // Half-open (windowStart, windowEnd] windows keep consecutive
+        // weeks disjoint: an attempt on a boundary day lands in exactly
+        // one bucket, and future-dated attempts (clock skew) are never
+        // counted in the current week.
         final weekAttempts = allAttempts.where((a) {
-          return a.timestamp.isAfter(weekStart.subtract(Timeouts.day)) &&
-                 a.timestamp.isBefore(now.subtract(Duration(days: i * 7)).add(Timeouts.day));
+          return a.timestamp.isAfter(windowStart) &&
+                 !a.timestamp.isAfter(windowEnd);
         }).toList();
 
         final correct = weekAttempts.where((a) => a.isCorrect).length;

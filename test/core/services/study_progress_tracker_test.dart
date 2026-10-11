@@ -626,6 +626,35 @@ void main() {
         expect(trend.data!, isA<List>());
       });
 
+      test('counts boundary-band attempts in exactly one week (no double count)', () async {
+        final now = DateTime.now();
+        // 6.5 and 13.5 days ago sit inside the bands where the old
+        // ±1-day slop windows of adjacent weeks overlapped, so they
+        // used to be counted in two consecutive buckets at once.
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 6, hours: 12)), subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: false, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 13, hours: 12)), subjectId: 'math'),
+        ]);
+
+        final trend = await tracker.getWeeklyTrend(4, studentId: 'student1');
+
+        final counts = trend.data!.map((w) => w['attempts'] as int).toList();
+        expect(counts.where((c) => c > 0), hasLength(2));
+        expect(counts.reduce((a, b) => a + b), 2);
+      });
+
+      test('does not count future-dated attempts in the current week', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now.add(const Duration(hours: 1)), subjectId: 'math'),
+        ]);
+
+        final trend = await tracker.getWeeklyTrend(4, studentId: 'student1');
+
+        final counts = trend.data!.map((w) => w['attempts'] as int).toList();
+        expect(counts.reduce((a, b) => a + b), 0);
+      });
+
       test('returns empty list when no attempts', () async {
         mockRepo.setAttempts([]);
 
