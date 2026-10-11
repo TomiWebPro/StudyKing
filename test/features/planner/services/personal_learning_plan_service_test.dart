@@ -1028,6 +1028,68 @@ void main() {
           expect(result.isSuccess, isTrue);
         });
 
+        test('caps each day by half of its own target, not the first day\'s',
+            () async {
+          final now = DateTime.now();
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: now,
+            dailyPlans: [
+              DailyPlan(
+                date: now.add(const Duration(days: 1)),
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 5,
+                targetMinutes: 30, // per-day cap: ceil(30 * 0.5) = 15
+                focus: 'Study',
+              ),
+              DailyPlan(
+                date: now.add(const Duration(days: 2)),
+                dayNumber: 2,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 20,
+                targetMinutes: 120, // per-day cap: ceil(120 * 0.5) = 60
+                focus: 'Study',
+              ),
+              DailyPlan(
+                date: now.add(const Duration(days: 3)),
+                dayNumber: 3,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 20,
+                targetMinutes: 120,
+                focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 45, totalMinutes: 270,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+          );
+
+          // 90 missed minutes over 2 days -> baseExtraPerDay = 45.
+          // Day 1 can only absorb 15 (half of its 30-minute target);
+          // day 2 absorbs the full 45 (under its 60-minute cap).
+          final result = await svc.redistributeMissedWorkload(
+            'student1', 90, plan,
+            strategy: 'days:2',
+          );
+
+          expect(result.isSuccess, isTrue);
+          final saved = planRepo.storedPlan!;
+          expect(saved.dailyPlans[0].targetMinutes, 45); // 30 + 15
+          expect(saved.dailyPlans[1].targetMinutes, 165); // 120 + 45
+          // Day 3 is outside the 2-day redistribution window.
+          expect(saved.dailyPlans[2].targetMinutes, 120);
+        });
+
         test('returns success when no future non-rest days remain and student was away', () async {
           // Regression: daysSinceLastActivity.clamp(1, remainingDays)
           // threw ArgumentError when every remaining day was a rest day.

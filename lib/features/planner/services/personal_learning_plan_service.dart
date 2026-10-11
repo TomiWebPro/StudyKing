@@ -750,19 +750,20 @@ class PersonalLearningPlanService {
       }
 
       final baseExtraPerDay = (missedMinutes / redistributeDays).ceil();
-      final maxExtraPerDay = plan.dailyPlans
-          .where((d) => d.date.dateOnly.isAfter(todayStart) && !d.isRestDay)
-          .map((d) => (d.targetMinutes * 0.5).ceil().clamp(15, 9999))
-          .firstOrNull ?? 60;
-      final extraPerDay = baseExtraPerDay.clamp(0, maxExtraPerDay);
 
       final updatedPlans = plan.dailyPlans.map((day) {
         final dDay = day.date.dateOnly;
         if (dDay.isAfter(todayStart) &&
             dDay.difference(todayStart).inDays <= redistributeDays &&
             !day.isRestDay) {
+          // Each day can only absorb up to half of its own target,
+          // so the ceiling must be derived per day — taking it from
+          // the first future day under-redistributes the workload.
+          final maxExtraForDay =
+              (day.targetMinutes * 0.5).ceil().clamp(15, 9999);
+          final extraForDay = baseExtraPerDay.clamp(0, maxExtraForDay);
           return day.copyWith(
-            targetMinutes: day.targetMinutes + extraPerDay,
+            targetMinutes: day.targetMinutes + extraForDay,
           );
         }
         return day;
