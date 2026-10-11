@@ -4113,12 +4113,12 @@
   "@notifTitleTakeBreak": {
     "description": "Title for overwork warning notification"
   },
-  "notifBodyOverwork": "Ha estudiado {hours,plural,=1{1 hora} other{{hours} horas}} hoy. ¡Recuerde descansar!",
+  "notifBodyOverwork": "Ha estudiado {hours,select,1{1 hora} other{{hours} horas}} hoy. ¡Recuerde descansar!",
   "@notifBodyOverwork": {
     "description": "Body for overwork warning",
     "placeholders": {
       "hours": {
-        "type": "int"
+        "type": "String"
       }
     }
   },

@@ -9,6 +9,7 @@ import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
 import '../errors/result.dart';
 import '../utils/logger.dart';
+import '../utils/number_format_utils.dart';
 
 class NotificationService {
   static final _logger = const Logger('NotificationService');
@@ -295,7 +296,17 @@ class NotificationService {
       await showNotification(
         id: id,
         title: l10n.notifTitleTakeBreak,
-        body: l10n.notifBodyOverwork(hoursStudied.toInt()),
+        // Keep the fractional part (e.g. 4.5 h) and format it for the
+        // user's locale; the l10n placeholder is a String so the value
+        // survives plural/select handling.
+        body: l10n.notifBodyOverwork(
+          formatDecimal(
+            hoursStudied,
+            l10n.localeName,
+            minFractionDigits: 0,
+            maxFractionDigits: 1,
+          ),
+        ),
         payload: 'overwork_warning',
         channelId: NotificationChannelIds.wellbeing,
         channelName: l10n.notifChannelWellbeing,

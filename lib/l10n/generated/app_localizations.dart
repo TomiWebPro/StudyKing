@@ -5303,8 +5303,8 @@ abstract class AppLocalizations {
   /// Body for overwork warning
   ///
   /// In en, this message translates to:
-  /// **'You\'ve studied {hours,plural,=1{1 hour} other{{hours} hours}} today. Remember to rest!'**
-  String notifBodyOverwork(int hours);
+  /// **'You\'ve studied {hours,select,1{1 hour} other{{hours} hours}} today. Remember to rest!'**
+  String notifBodyOverwork(String hours);
 
   /// Title for plan adjustment notification
   ///

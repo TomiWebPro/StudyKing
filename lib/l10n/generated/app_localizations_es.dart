@@ -3133,13 +3133,11 @@ class AppLocalizationsEs extends AppLocalizations {
   String get notifTitleTakeBreak => 'Tome un Descanso';
 
   @override
-  String notifBodyOverwork(int hours) {
-    String _temp0 = intl.Intl.pluralLogic(
-      hours,
-      locale: localeName,
-      other: '$hours horas',
-      one: '1 hora',
-    );
+  String notifBodyOverwork(String hours) {
+    String _temp0 = intl.Intl.selectLogic(hours, {
+      '1': '1 hora',
+      'other': '$hours horas',
+    });
     return 'Ha estudiado $_temp0 hoy. ¡Recuerde descansar!';
   }
 

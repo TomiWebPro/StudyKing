@@ -325,7 +325,7 @@ void main() {
     });
 
     test('notifBodyOverwork', () {
-      expect(l10n.notifBodyOverwork(5),
+      expect(l10n.notifBodyOverwork('5'),
           'You\'ve studied 5 hours today. Remember to rest!');
     });
 
@@ -345,7 +345,7 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notifBodyOverwork(3),
+      expect(l10n.notifBodyOverwork('3'),
           'You\'ve studied 3 hours today. Remember to rest!');
     });
 
@@ -726,7 +726,7 @@ void main() {
     });
 
     test('notifBodyOverwork', () {
-      expect(l10n.notifBodyOverwork(5),
+      expect(l10n.notifBodyOverwork('5'),
           'Ha estudiado 5 horas hoy. ¡Recuerde descansar!');
     });
 
@@ -744,7 +744,7 @@ void main() {
     });
 
     test('notificationTakeABreakBody', () {
-      expect(l10n.notifBodyOverwork(3),
+      expect(l10n.notifBodyOverwork('3'),
           'Ha estudiado 3 horas hoy. ¡Recuerde descansar!');
     });
 

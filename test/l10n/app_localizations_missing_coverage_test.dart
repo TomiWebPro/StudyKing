@@ -1634,7 +1634,7 @@ void main() {
     test('noStepsFormat', () => expect(l10n.noStepsFormat('test'), isNotEmpty));
     test('noTopicsFoundForSubject', () => expect(l10n.noTopicsFoundForSubject('test'), isNotEmpty));
     test('notifBodyLowMastery', () => expect(l10n.notifBodyLowMastery('test'), isNotEmpty));
-    test('notifBodyOverwork', () => expect(l10n.notifBodyOverwork(3), isNotEmpty));
+    test('notifBodyOverwork', () => expect(l10n.notifBodyOverwork('3'), isNotEmpty));
     test('notifBodyPlanAdjustment', () => expect(l10n.notifBodyPlanAdjustment(3), isNotEmpty));
     test('notificationBadgeUnlockedBody', () => expect(l10n.notificationBadgeUnlockedBody('test', 'test'), isNotEmpty));
     test('notificationTimeToReviewBody', () => expect(l10n.notificationTimeToReviewBody(3, 'test'), isNotEmpty));
@@ -3401,7 +3401,7 @@ void main() {
     test('noStepsFormat', () => expect(l10n.noStepsFormat('test'), isNotEmpty));
     test('noTopicsFoundForSubject', () => expect(l10n.noTopicsFoundForSubject('test'), isNotEmpty));
     test('notifBodyLowMastery', () => expect(l10n.notifBodyLowMastery('test'), isNotEmpty));
-    test('notifBodyOverwork', () => expect(l10n.notifBodyOverwork(3), isNotEmpty));
+    test('notifBodyOverwork', () => expect(l10n.notifBodyOverwork('3'), isNotEmpty));
     test('notifBodyPlanAdjustment', () => expect(l10n.notifBodyPlanAdjustment(3), isNotEmpty));
     test('notificationBadgeUnlockedBody', () => expect(l10n.notificationBadgeUnlockedBody('test', 'test'), isNotEmpty));
     test('notificationTimeToReviewBody', () => expect(l10n.notificationTimeToReviewBody(3, 'test'), isNotEmpty));

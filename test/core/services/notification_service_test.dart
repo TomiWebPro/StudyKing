@@ -5,7 +5,9 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -271,6 +273,91 @@ void main() {
       );
       expect(result, isA<Result<void>>());
       expect(result.isSuccess, isTrue);
+    });
+
+    group('showOverworkWarning fractional hours rendering', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            return methodCall.method == 'initialize' ? true : null;
+          },
+        );
+      });
+
+      Map<Object?, Object?> showCallArguments() {
+        final showCalls = notificationCalls
+            .where((c) => c.method == 'show')
+            .toList();
+        expect(showCalls, hasLength(1));
+        return showCalls.single.arguments as Map<Object?, Object?>;
+      }
+
+      NotificationService serviceWithLocalizations(AppLocalizations l10n) {
+        final service = NotificationService();
+        service.setAppLocalizations(l10n);
+        return service;
+      }
+
+      test('keeps fractional hours in the body (en locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showOverworkWarning(
+          id: 1,
+          hoursStudied: 4.5,
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('4.5'));
+        expect(body, contains('4.5 hours'));
+      });
+
+      test('renders the fraction with the locale decimal separator '
+          '(es locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEs());
+
+        final result = await service.showOverworkWarning(
+          id: 1,
+          hoursStudied: 4.5,
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('4,5 horas'));
+      });
+
+      test('keeps singular wording for exactly one hour', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showOverworkWarning(
+          id: 1,
+          hoursStudied: 1.0,
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('1 hour'));
+        expect(body, isNot(contains('1.0')));
+      });
+
+      test('whole hours still render without a fraction', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showOverworkWarning(
+          id: 1,
+          hoursStudied: 5.0,
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('5 hours'));
+      });
     });
 
     test('showPlanAdjustmentSuggestion returns success when l10n is set',
