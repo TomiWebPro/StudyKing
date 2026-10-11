@@ -311,6 +311,35 @@ void main() {
       expect(result.isCorrect, isTrue);
     });
 
+    test('validateWithEvaluation step based fully matched scores full non-uniform points', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'steps',
+        evaluationType: EvaluationType.stepBased,
+        steps: [
+          EvaluationStep(stepNumber: '1', requiredAnswer: 'a', points: 2.0),
+          EvaluationStep(stepNumber: '2', requiredAnswer: 'b', points: 5.0),
+        ],
+      );
+      final result = service.validateWithEvaluation(evaluation, 'a b');
+      expect(result.isCorrect, isTrue);
+      expect(result.score, closeTo(7.0, 1e-9));
+    });
+
+    test('validateWithEvaluation step based partial match scores proportional points', () {
+      final evaluation = QuestionEvaluation(
+        questionId: 'q1', correctAnswer: 'steps',
+        evaluationType: EvaluationType.stepBased,
+        steps: [
+          EvaluationStep(stepNumber: '1', requiredAnswer: 'a', points: 2.0),
+          EvaluationStep(stepNumber: '2', requiredAnswer: 'b', points: 5.0),
+        ],
+      );
+      final result = service.validateWithEvaluation(evaluation, 'only a here');
+      expect(result.isCorrect, isFalse);
+      // 1 of 2 steps matched: (1/2) * (2.0 + 5.0) = 3.5
+      expect(result.score, closeTo(3.5, 1e-9));
+    });
+
     test('validateWithEvaluation with acceptable answer match', () {
       final evaluation = QuestionEvaluation(
         questionId: 'q1', correctAnswer: 'Paris',

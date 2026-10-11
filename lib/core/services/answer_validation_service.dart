@@ -219,7 +219,7 @@ class AnswerValidationService {
     }
     final totalPoints = steps.fold(0.0, (sum, step) => sum + step.points);
     if (totalPoints == 0) return matchedSteps / steps.length;
-    return (matchedSteps / steps.length) * (totalPoints / steps.length);
+    return (matchedSteps / steps.length) * totalPoints;
   }
 
   String _generateStepFeedback(List<EvaluationStep> steps, String userAnswer, {
