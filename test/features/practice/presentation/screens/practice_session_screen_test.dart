@@ -18,6 +18,7 @@ import 'package:studyking/features/subjects/providers/topic_repository_provider.
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
@@ -1132,6 +1133,73 @@ void main() {
       });
     });
 
+    group('auto-save failure handling', () {
+      testWidgets('shows error snackbar and stays on session when auto-save fails on completion', (tester) async {
+        final sessionRepo = _FailingSaveSessionRepository();
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          sessionRepo: sessionRepo,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        // Answer incorrectly so completion goes through the
+        // mistake-review auto-save path in _completeSession.
+        await tester.enterText(find.byType(TextField).first, 'wrong');
+        await tester.pump();
+        await tester.ensureVisible(find.text(_l10n.submitAnswer));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.submitAnswer));
+        await tester.pumpAndSettle();
+        await tester.ensureVisible(find.text(_l10n.next));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.next));
+        await tester.pumpAndSettle();
+
+        // The failed save surfaces an error snackbar ...
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(_l10n.somethingWentWrong), findsOneWidget);
+        // ... and the session is not finalized: no results screen,
+        // the practice session stays active.
+        expect(find.text(_l10n.practiceComplete), findsNothing);
+        expect(find.text('Q1'), findsOneWidget);
+      });
+
+      testWidgets('shows error snackbar and stays on session when auto-save fails on exit', (tester) async {
+        final sessionRepo = _FailingSaveSessionRepository();
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          sessionRepo: sessionRepo,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+
+        // The failed save surfaces an error snackbar ...
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(_l10n.somethingWentWrong), findsOneWidget);
+        // ... and the session is not finalized: no results screen,
+        // the practice session stays active.
+        expect(find.text(_l10n.practiceComplete), findsNothing);
+        expect(find.text('Q1'), findsOneWidget);
+      });
+    });
+
     group('additional coverage', () {
       group('ordered questions loading', () {
         testWidgets('loads ordered questions by IDs', (tester) async {
@@ -1683,6 +1751,17 @@ class _FailingQuestionRepository extends FakeQuestionRepository {
   Future<Result<List<Question>>> getBySubject(String subjectId) async {
     throw Exception('Unexpected error');
   }
+}
+
+class _FailingSaveSessionRepository extends SessionRepository {
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    return Result.failure('Hive write failed');
+  }
+
+  @override
+  Future<Result<List<Session>>> getByStudent(String studentId) async =>
+      Result.success(const []);
 }
 
 class _FailingSrService extends FakeSpacedRepetitionService {

@@ -427,10 +427,23 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       // Save session data before showing the review
       if (!_sessionAutoSaved) {
         _sessionAutoSaved = true;
-        await _sessionService.autoSaveSession(
+        final saveResult = await _sessionService.autoSaveSession(
           questionsAnswered: _questions.length,
           correctAnswers: _correctAnswers,
         );
+        if (saveResult.isFailure) {
+          _logger.w('Failed to auto-save practice session', saveResult.error);
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)!.somethingWentWrong),
+              ),
+            );
+          }
+          // Do not record adherence or show the mistake review for a
+          // session that was not persisted.
+          return;
+        }
       }
       await _recordAdherence();
 
@@ -445,7 +458,9 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       ));
     } else {
       await _finalizeSession();
-      if (!mounted) return;
+      // _finalizeSession only marks the session complete when the auto-save
+      // succeeded; a failed save must not navigate to the results screen.
+      if (!_isSessionComplete || !mounted) return;
       _navigateToResults();
     }
   }
@@ -554,10 +569,23 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     _sessionService.cancelTimer();
     if (!_sessionAutoSaved) {
       _sessionAutoSaved = true;
-      await _sessionService.autoSaveSession(
+      final saveResult = await _sessionService.autoSaveSession(
         questionsAnswered: _questions.length,
         correctAnswers: _correctAnswers,
       );
+      if (saveResult.isFailure) {
+        _logger.w('Failed to auto-save practice session', saveResult.error);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!.somethingWentWrong),
+            ),
+          );
+        }
+        // Do not record adherence or mark the session complete when the
+        // session was not persisted.
+        return;
+      }
     }
     _recordAdherence();
     if (mounted) {
