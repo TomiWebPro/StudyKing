@@ -426,7 +426,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     if (_mistakeQuestionIds.isNotEmpty) {
       // Save session data before showing the review
       if (!_sessionAutoSaved) {
-        _sessionAutoSaved = true;
         final saveResult = await _sessionService.autoSaveSession(
           questionsAnswered: _questions.length,
           correctAnswers: _correctAnswers,
@@ -441,9 +440,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             );
           }
           // Do not record adherence or show the mistake review for a
-          // session that was not persisted.
+          // session that was not persisted. Leave the guard unset so the
+          // next completion attempt retries the save.
           return;
         }
+        // Only mark the session as saved once it has been persisted.
+        _sessionAutoSaved = true;
       }
       await _recordAdherence();
 
@@ -568,7 +570,6 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     if (_isSessionComplete) return;
     _sessionService.cancelTimer();
     if (!_sessionAutoSaved) {
-      _sessionAutoSaved = true;
       final saveResult = await _sessionService.autoSaveSession(
         questionsAnswered: _questions.length,
         correctAnswers: _correctAnswers,
@@ -583,9 +584,12 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
           );
         }
         // Do not record adherence or mark the session complete when the
-        // session was not persisted.
+        // session was not persisted. Leave the guard unset so the next
+        // completion attempt retries the save.
         return;
       }
+      // Only mark the session as saved once it has been persisted.
+      _sessionAutoSaved = true;
     }
     _recordAdherence();
     if (mounted) {

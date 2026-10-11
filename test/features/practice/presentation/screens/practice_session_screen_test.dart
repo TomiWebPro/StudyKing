@@ -1198,6 +1198,87 @@ void main() {
         expect(find.text(_l10n.practiceComplete), findsNothing);
         expect(find.text('Q1'), findsOneWidget);
       });
+
+      testWidgets('does not finalize the session when the second exit attempt also fails to save', (tester) async {
+        final sessionRepo = _FailingSaveSessionRepository();
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          sessionRepo: sessionRepo,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // First exit attempt: the save fails and the session stays open.
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+
+        expect(sessionRepo.saveAttempts, 1);
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(_l10n.somethingWentWrong), findsOneWidget);
+        expect(find.text(_l10n.practiceComplete), findsNothing);
+
+        // Second exit attempt: the guard flag must not have been set by
+        // the failed save, so the save is retried (not skipped) and the
+        // session must still not be finalized.
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+
+        expect(sessionRepo.saveAttempts, 2);
+        expect(sessionRepo.sessions, isEmpty);
+        expect(find.byType(SnackBar), findsOneWidget);
+        expect(find.text(_l10n.practiceComplete), findsNothing);
+        expect(find.text('Q1'), findsOneWidget);
+      });
+
+      testWidgets('retries the auto-save on the next exit attempt after a failed auto-save', (tester) async {
+        final sessionRepo = _FailingSaveSessionRepository(failuresBeforeSuccess: 1);
+        final questions = [
+          question(id: 'q1', text: 'Q1', type: QuestionType.typedAnswer, markschemeText: 'a'),
+        ];
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          sessionRepo: sessionRepo,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // First exit attempt: the save fails and the session stays open.
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+
+        expect(sessionRepo.saveAttempts, 1);
+        expect(sessionRepo.sessions, isEmpty);
+        expect(find.text(_l10n.practiceComplete), findsNothing);
+
+        // Second exit attempt retries the save; it succeeds this time, so
+        // the session is persisted and the results screen is shown.
+        await tester.tap(find.byType(BackButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.tap(find.text('Exit'));
+        await tester.pumpAndSettle();
+
+        expect(sessionRepo.saveAttempts, 2);
+        expect(sessionRepo.sessions.length, 1);
+        expect(sessionRepo.sessions.first.subjectId, 'subject-a');
+        expect(find.text(_l10n.practiceComplete), findsOneWidget);
+      });
     });
 
     group('additional coverage', () {
@@ -1754,9 +1835,24 @@ class _FailingQuestionRepository extends FakeQuestionRepository {
 }
 
 class _FailingSaveSessionRepository extends SessionRepository {
+  _FailingSaveSessionRepository({this.failuresBeforeSuccess});
+
+  /// Number of leading [save] calls that fail; every call after that
+  /// succeeds. When null, every save fails.
+  final int? failuresBeforeSuccess;
+
+  int saveAttempts = 0;
+  final List<Session> sessions = [];
+
   @override
   Future<Result<void>> save(String key, Session session) async {
-    return Result.failure('Hive write failed');
+    saveAttempts++;
+    if (failuresBeforeSuccess == null ||
+        saveAttempts <= failuresBeforeSuccess!) {
+      return Result.failure('Hive write failed');
+    }
+    sessions.add(session);
+    return Result.success(null);
   }
 
   @override
