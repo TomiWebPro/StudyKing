@@ -121,6 +121,35 @@ void main() {
       expect(data.averageAdherence, 0.0);
       expect(data.totalDays, 0);
     });
+
+    test('bestStreak is not inflated by the current streak', () async {
+      final now = DateTime.now();
+      final service = _FakePlannerService();
+      // 4-day historical best (today-8..today-5), a low-adherence day
+      // (today-4), then a 4-day current streak (today-3..today).
+      service.setAdherenceRecords([
+        PlanAdherenceModel(id: 'a1', studentId: 'test-student', date: now.subtract(const Duration(days: 8)), adherenceScore: 0.8),
+        PlanAdherenceModel(id: 'a2', studentId: 'test-student', date: now.subtract(const Duration(days: 7)), adherenceScore: 0.8),
+        PlanAdherenceModel(id: 'a3', studentId: 'test-student', date: now.subtract(const Duration(days: 6)), adherenceScore: 0.8),
+        PlanAdherenceModel(id: 'a4', studentId: 'test-student', date: now.subtract(const Duration(days: 5)), adherenceScore: 0.8),
+        PlanAdherenceModel(id: 'a5', studentId: 'test-student', date: now.subtract(const Duration(days: 4)), adherenceScore: 0.2),
+        PlanAdherenceModel(id: 'a6', studentId: 'test-student', date: now.subtract(const Duration(days: 3)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a7', studentId: 'test-student', date: now.subtract(const Duration(days: 2)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a8', studentId: 'test-student', date: now.subtract(const Duration(days: 1)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a9', studentId: 'test-student', date: now, adherenceScore: 0.9),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.currentStreak, 4);
+      expect(data.bestStreak, 4);
+    });
   });
 
   group('todayAdherenceProvider', () {

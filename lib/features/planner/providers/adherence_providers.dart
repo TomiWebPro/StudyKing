@@ -70,6 +70,7 @@ final adherenceSummaryProvider =
       }
     }
 
+    tempStreak = 0;
     for (final record in sortedByDate) {
       if (record.adherenceScore >= 0.5) {
         tempStreak++;
