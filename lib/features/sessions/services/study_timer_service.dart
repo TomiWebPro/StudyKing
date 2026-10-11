@@ -3,6 +3,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/settings_service.dart';
@@ -12,6 +13,7 @@ class StudyTimerService {
   static final Logger _logger = const Logger('StudyTimerService');
   final SessionRepository _repository;
   final NotificationService? _notificationService;
+  final Clock _clock;
   Timer? _timer;
   Session? _currentSession;
   int _elapsedMs = 0;
@@ -23,8 +25,10 @@ class StudyTimerService {
   StudyTimerService({
     required SessionRepository repository,
     NotificationService? notificationService,
+    Clock? clock,
   })  : _repository = repository,
-        _notificationService = notificationService;
+        _notificationService = notificationService,
+        _clock = clock ?? SystemClock();
 
   SessionRepository get repository => _repository;
   Session? get currentSession => _currentSession;
@@ -52,6 +56,11 @@ class StudyTimerService {
   Result<void> reconcileElapsedMs(int expectedMs) {
     if (!hasActiveSession || _isPaused) return Result.success(null);
     _elapsedMs += expectedMs;
+    // Reset the tick clock so the next periodic tick measures only
+    // post-reconcile time. Without this, `_lastTickTime` still points
+    // at the tick before the (suspended) background period and the
+    // next tick re-adds up to 5 s of the gap already counted here.
+    _lastTickTime = _clock.now();
     final plannedSeconds = (_currentSession!.plannedDurationMinutes ?? 25) * 60;
     if (_elapsedMs ~/ msPerSecond >= plannedSeconds) {
       _timer?.cancel();
@@ -136,7 +145,7 @@ class StudyTimerService {
         await cancelSession();
       }
 
-      final now = DateTime.now();
+      final now = _clock.now();
       _currentSession = Session(
         id: '${type.name}_${now.millisecondsSinceEpoch}_${plannedDurationMinutes}m',
         studentId: studentId ?? '',
@@ -167,9 +176,9 @@ class StudyTimerService {
 
   void _startTimer() {
     _timer?.cancel();
-    _lastTickTime = DateTime.now();
+    _lastTickTime = _clock.now();
     _timer = Timer.periodic(Timeouts.second, (_) {
-      final now = DateTime.now();
+      final now = _clock.now();
       final diff = _lastTickTime != null ? now.difference(_lastTickTime!).inMilliseconds : msPerSecond;
       _lastTickTime = now;
 
@@ -200,7 +209,7 @@ class StudyTimerService {
   Result<void> resumeSession() {
     if (_currentSession == null) return Result.success(null);
     _isPaused = false;
-    _lastTickTime = DateTime.now();
+    _lastTickTime = _clock.now();
     _logger.i('Session resumed');
     return Result.success(null);
   }
@@ -211,7 +220,7 @@ class StudyTimerService {
     }
 
     _timer?.cancel();
-    final now = DateTime.now();
+    final now = _clock.now();
     _currentSession = _currentSession!.copyWith(
       endTime: now,
       actualDurationMs: _elapsedMs,
@@ -233,7 +242,7 @@ class StudyTimerService {
 
     if (elapsedMs > 0) {
       final notifResult = await _notificationService?.showNotification(
-        id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        id: _clock.now().millisecondsSinceEpoch.remainder(100000),
         title: 'Focus Session Complete',
         body: 'Great focus! You completed ${elapsedMs ~/ msPerMinute} minutes.',
       );
@@ -256,7 +265,7 @@ class StudyTimerService {
     }
 
     _timer?.cancel();
-    final now = DateTime.now();
+    final now = _clock.now();
     _currentSession = _currentSession!.copyWith(
       endTime: now,
       actualDurationMs: _elapsedMs,

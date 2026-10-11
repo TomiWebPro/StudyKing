@@ -1,8 +1,10 @@
+import 'package:fake_async/fake_async.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 
 class FakeSessionRepository extends SessionRepository {
@@ -362,6 +364,37 @@ void main() {
         await Future<void>.delayed(Duration.zero);
         final storedResult = await repository.get(sessionId);
         expect(storedResult.data!.completed, isTrue);
+      });
+
+      test('does not double-count a background gap on the next tick', () {
+        final clock = _FakeClock(DateTime(2026, 1, 1, 10, 0, 0));
+        final svc = StudyTimerService(repository: repository, clock: clock);
+        fakeAsync((async) {
+          svc.startSession(plannedDurationMinutes: 25);
+          async.flushMicrotasks();
+          expect(svc.hasActiveSession, isTrue);
+
+          // First tick: one second of true elapsed time.
+          clock.advance(const Duration(seconds: 1));
+          async.elapse(const Duration(seconds: 1));
+          expect(svc.elapsedMs, 1000);
+
+          // Simulate the app backgrounded: the event loop (and the
+          // periodic timer) is suspended while 60 seconds pass, then
+          // the screen reconciles the gap on resume.
+          clock.advance(const Duration(seconds: 60));
+          svc.reconcileElapsedMs(60000);
+          expect(svc.elapsedMs, 61000);
+
+          // The next tick must measure only post-resume time, not
+          // re-add the background gap via the stale tick (which
+          // would clamp to 5000 ms of extra elapsed time).
+          clock.advance(const Duration(seconds: 1));
+          async.elapse(const Duration(seconds: 1));
+          expect(svc.elapsedMs, 62000);
+
+          svc.dispose();
+        });
       });
     });
 
@@ -1166,5 +1199,17 @@ class _FakeNotificationService extends NotificationService {
   }) async {
     showNotificationCalls++;
     return Result.success(null);
+  }
+}
+
+class _FakeClock implements Clock {
+  DateTime _now;
+  _FakeClock(this._now);
+
+  @override
+  DateTime now() => _now;
+
+  void advance(Duration duration) {
+    _now = _now.add(duration);
   }
 }
