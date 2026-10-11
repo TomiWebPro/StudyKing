@@ -92,6 +92,40 @@ void main() {
       expect(result['newDailyQuestions'], equals(8));
     });
 
+    test('reports the plan\'s own planId (not studentId) for every action',
+        () async {
+      // A persisted plan carries a planId (UUID) distinct from its
+      // studentId; the tool must echo the plan's own id, never the
+      // student's.
+      final plan = sampleLearningPlan().copyWith(planId: 'plan-uuid-42');
+      final planner = FakePlannerService(plan);
+      final tool = ModifyPlanTool(plannerService: planner, localeName: 'en');
+
+      final paceResult = await tool.execute({
+        'action': 'adjust_pace',
+        'newTargetMinutesPerDay': 40,
+      });
+      expect(paceResult['success'], isTrue);
+      expect(paceResult['planId'], equals('plan-uuid-42'));
+      expect(paceResult['planId'], isNot(equals(plan.studentId)));
+
+      final extendResult = await tool.execute({
+        'action': 'extend',
+        'extendDays': 3,
+      });
+      expect(extendResult['success'], isTrue);
+      expect(extendResult['planId'], equals('plan-uuid-42'));
+      expect(extendResult['planId'], isNot(equals(plan.studentId)));
+
+      final targetsResult = await tool.execute({
+        'action': 'change_targets',
+        'newDailyMinutes': 45,
+      });
+      expect(targetsResult['success'], isTrue);
+      expect(targetsResult['planId'], equals('plan-uuid-42'));
+      expect(targetsResult['planId'], isNot(equals(plan.studentId)));
+    });
+
     test('reports failure for an invalid action', () async {
       final tool = ModifyPlanTool(
         plannerService: planner,

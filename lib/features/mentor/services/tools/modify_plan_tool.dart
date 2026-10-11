@@ -118,7 +118,7 @@ class ModifyPlanTool extends AgentTool {
 
     return {
       'success': true,
-      'planId': plan?.studentId ?? '',
+      'planId': plan?.planId ?? '',
       'newTargetMinutesPerDay': newTargetMinutes,
       'totalDays': plan?.dailyPlans.length ?? 0,
       'message': l10n.toolModifyPlanPaceAdjusted(newTargetMinutes),
@@ -158,7 +158,7 @@ class ModifyPlanTool extends AgentTool {
 
     return {
       'success': true,
-      'planId': plan.studentId,
+      'planId': plan.planId,
       'previousDays': plan.dailyPlans.length,
       'addedDays': extendDays,
       'newTotalDays': newTotalDays,
@@ -229,7 +229,7 @@ class ModifyPlanTool extends AgentTool {
 
     return {
       'success': true,
-      'planId': plan?.studentId ?? '',
+      'planId': plan?.planId ?? '',
       'newDailyMinutes': newDailyMinutes ?? plan?.targetMinutesPerDay.round(),
       'newDailyQuestions': newDailyQuestions ?? plan?.targetQuestionsPerDay,
       'message': l10n.toolModifyPlanTargetsChanged,
