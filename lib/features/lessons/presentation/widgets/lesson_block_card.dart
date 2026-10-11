@@ -300,7 +300,7 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
                 ..._buildQuizOptions(context),
               const SizedBox(height: 12),
               FilledButton(
-                onPressed: _quizAnswer.isEmpty ? null : _submitQuiz,
+                onPressed: _quizAnswer.trim().isEmpty ? null : _submitQuiz,
                 child: Text(l10n.submitAnswer),
               ),
             ] else ...[
@@ -356,14 +356,17 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
     final answer = _quizAnswer.trim();
     final answerKey = widget.block.answerKey;
     bool correct;
-    if (answerKey.isNotEmpty) {
+    if (answer.normalized.isEmpty) {
+      // A blank answer can never be correct; every string contains ''.
+      correct = false;
+    } else if (answerKey.isNotEmpty) {
       final keys = answerKey.split('||').map((k) => k.normalized);
-      correct = keys.any((k) => answer.normalized == k);
+      correct = keys.any((k) => k.isNotEmpty && answer.normalized == k);
     } else {
       final content = widget.block.content.normalized;
       final ansLower = answer.normalized;
       final idx = content.indexOf('answer:');
-      correct = idx >= 0 && content.substring(idx).contains(ansLower);
+      correct = idx >= 0 && ansLower.isNotEmpty && content.substring(idx).contains(ansLower);
     }
     setState(() {
       _quizSubmitted = true;

@@ -106,6 +106,65 @@ void main() {
       expect(submitBtn.onPressed, isNull);
     });
 
+    testWidgets('submit button is disabled for whitespace-only answer', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(type: LessonBlockType.quiz, content: 'What is 2+2?')),
+      ));
+
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.pump();
+
+      final submitBtn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Submit Answer'),
+      );
+      expect(submitBtn.onPressed, isNull);
+    });
+
+    testWidgets('whitespace-only answer is never marked correct (fallback scoring)', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(block: block(
+          type: LessonBlockType.quiz,
+          content: 'What is the capital of France?\nanswer: Paris',
+        )),
+      ));
+
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.pump();
+
+      final submitBtn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Submit Answer'),
+      );
+      expect(submitBtn.onPressed, isNull);
+
+      // Tapping the disabled button must not submit a blank answer.
+      await tester.tap(find.widgetWithText(FilledButton, 'Submit Answer'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Correct'), findsNothing);
+      expect(find.text('Incorrect answer'), findsNothing);
+    });
+
+    testWidgets('submit button is disabled for whitespace-only answer with empty answerKey alternative', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: LessonBlock(
+            id: 'q-blank', subjectId: 's1', lessonId: 'l1',
+            type: LessonBlockType.quiz,
+            content: 'What is 2+2?',
+            answerKey: '4||',
+          ),
+        ),
+      ));
+
+      await tester.enterText(find.byType(TextField), '   ');
+      await tester.pump();
+
+      final submitBtn = tester.widget<FilledButton>(
+        find.widgetWithText(FilledButton, 'Submit Answer'),
+      );
+      expect(submitBtn.onPressed, isNull);
+    });
+
     testWidgets('scores correct answer with answerKey (short answer)', (tester) async {
       await tester.pumpWidget(buildApp(
         LessonBlockCard(
