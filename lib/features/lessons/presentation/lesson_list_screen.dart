@@ -73,11 +73,19 @@ class _LessonListScreenState extends ConsumerState<LessonListScreen> {
       final result = await repo.getByStudent(studentId);
       final sessions = result.data ?? [];
       for (final session in sessions) {
-        final lessonId = session.topicId ?? '';
+        final LessonStatusDisplay? status;
         if (session.completed) {
-          _statusCache[lessonId] = LessonStatusDisplay.completed;
+          status = LessonStatusDisplay.completed;
         } else if (session.type == SessionType.tutoring && !session.completed && session.endTime == null) {
-          _statusCache[lessonId] = LessonStatusDisplay.inProgress;
+          status = LessonStatusDisplay.inProgress;
+        } else {
+          continue;
+        }
+        // Key by the lesson ids the session actually covered. `topicId` is a
+        // topic id and never matches a lesson's own id, so a topic-keyed cache
+        // is always empty at read time.
+        for (final lessonId in session.lessonIds) {
+          _statusCache[lessonId] = status;
         }
       }
       if (mounted) setState(() {});

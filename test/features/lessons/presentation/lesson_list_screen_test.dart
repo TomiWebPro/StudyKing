@@ -194,7 +194,8 @@ void main() {
           id: 's1',
           studentId: 'test-student',
           subjectId: 's1',
-          topicId: 'l1',
+          topicId: 't1',
+          lessonIds: ['l1'],
           type: SessionType.tutoring,
           startTime: now,
           endTime: now.add(const Duration(minutes: 30)),
@@ -221,7 +222,8 @@ void main() {
           id: 's1',
           studentId: 'test-student',
           subjectId: 's1',
-          topicId: 'l1',
+          topicId: 't1',
+          lessonIds: ['l1'],
           type: SessionType.tutoring,
           startTime: now,
           endTime: null,
@@ -233,6 +235,96 @@ void main() {
 
       expect(find.byIcon(Icons.play_circle_filled), findsOneWidget);
       expect(find.text('In Progress'), findsOneWidget);
+    });
+
+    testWidgets('keys status cache by session.lessonIds even when topicId matches no lesson id', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Lesson 1',
+          topicId: 't1', blocks: [],
+          createdAt: now,
+        ),
+      ], sessions: [
+        Session(
+          id: 's1',
+          studentId: 'test-student',
+          subjectId: 's1',
+          topicId: 't1',
+          lessonIds: ['l1'],
+          type: SessionType.tutoring,
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 30)),
+          completed: true,
+          status: SessionStatus.completed,
+        ),
+      ]));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      expect(find.text('Completed'), findsOneWidget);
+    });
+
+    testWidgets('marks every lesson listed in session.lessonIds', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Lesson 1',
+          topicId: 't1', blocks: [],
+          createdAt: now,
+        ),
+        Lesson(
+          id: 'l2', subjectId: 's1', title: 'Lesson 2',
+          topicId: 't1', blocks: [],
+          createdAt: now,
+        ),
+      ], sessions: [
+        Session(
+          id: 's1',
+          studentId: 'test-student',
+          subjectId: 's1',
+          topicId: 't1',
+          lessonIds: ['l1', 'l2'],
+          type: SessionType.tutoring,
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 30)),
+          completed: true,
+          status: SessionStatus.completed,
+        ),
+      ]));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsAtLeastNWidgets(2));
+      expect(find.text('Completed'), findsAtLeastNWidgets(2));
+    });
+
+    testWidgets('does not mark lessons absent from session.lessonIds', (tester) async {
+      final now = DateTime.now();
+      await tester.pumpWidget(_buildTestApp(lessons: [
+        Lesson(
+          id: 'l1', subjectId: 's1', title: 'Lesson 1',
+          topicId: 't1', blocks: [],
+          createdAt: now,
+        ),
+      ], sessions: [
+        Session(
+          id: 's1',
+          studentId: 'test-student',
+          subjectId: 's1',
+          topicId: 't1',
+          lessonIds: ['other-lesson'],
+          type: SessionType.tutoring,
+          startTime: now,
+          endTime: now.add(const Duration(minutes: 30)),
+          completed: true,
+          status: SessionStatus.completed,
+        ),
+      ]));
+      await tester.pumpAndSettle();
+
+      expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.text('Completed'), findsNothing);
+      expect(find.byIcon(Icons.book), findsOneWidget);
     });
 
     testWidgets('shows AI Tutoring icon button in app bar when lessons exist', (tester) async {
