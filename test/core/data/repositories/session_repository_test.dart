@@ -1,8 +1,13 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/sessions/data/adapters/session_adapter.dart';
 
 class _FakeClock implements Clock {
   final DateTime fixed;
@@ -58,9 +63,9 @@ class InMemorySessionRepository extends SessionRepository {
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final start = DateTime(date.year, date.month, date.day);
-    final end = start.add(const Duration(hours: 24));
+    final end = DateTime(start.year, start.month, start.day + 1);
     final filtered = _store.values.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        !s.startTime.isBefore(start) &&
         s.startTime.isBefore(end)).toList();
     return Result.success(filtered);
   }
@@ -137,9 +142,9 @@ class InMemorySessionRepository extends SessionRepository {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final now = _clock.now();
     final start = DateTime(now.year, now.month, now.day);
-    final end = start.add(const Duration(hours: 24));
+    final end = DateTime(start.year, start.month, start.day + 1);
     final today = _store.values.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        !s.startTime.isBefore(start) &&
         s.startTime.isBefore(end)).toList();
     return Result.success(today.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
   }
@@ -175,9 +180,9 @@ class InMemorySessionRepository extends SessionRepository {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final now = _clock.now();
     final start = DateTime(now.year, now.month, now.day);
-    final end = start.add(const Duration(hours: 24));
+    final end = DateTime(start.year, start.month, start.day + 1);
     final today = _store.values.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        !s.startTime.isBefore(start) &&
         s.startTime.isBefore(end)).toList();
     return Result.success(today.length);
   }
@@ -187,9 +192,9 @@ class InMemorySessionRepository extends SessionRepository {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final now = _clock.now();
     final start = DateTime(now.year, now.month, now.day);
-    final end = start.add(const Duration(hours: 24));
+    final end = DateTime(start.year, start.month, start.day + 1);
     final today = _store.values.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        !s.startTime.isBefore(start) &&
         s.startTime.isBefore(end) && s.completed).toList();
     return Result.success(today.length);
   }
@@ -210,9 +215,9 @@ class InMemorySessionRepository extends SessionRepository {
     if (_failNextOperations) return Result.failure('Simulated failure');
     final now = _clock.now();
     final start = DateTime(now.year, now.month, now.day);
-    final end = start.add(const Duration(hours: 24));
+    final end = DateTime(start.year, start.month, start.day + 1);
     final sessions = _store.values.where((s) =>
-        s.startTime.isAfter(start.subtract(const Duration(seconds: 1))) &&
+        !s.startTime.isBefore(start) &&
         s.startTime.isBefore(end)).toList();
     final totalMs = sessions.fold<int>(0, (sum, s) => sum + s.actualDurationMs);
     final completed = sessions.where((s) => s.completed).length;
@@ -773,6 +778,85 @@ void main() {
         final result = await repo.getStaleOrphaned();
         expect(result.isFailure, isTrue);
       });
+    });
+  });
+
+  group('SessionRepository.getByDate (Hive-backed, calendar days)', () {
+    late SessionRepository repository;
+
+    setUpAll(() {
+      Hive.registerAdapter(SessionAdapter());
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('session_repo_test_');
+      Hive.init(dir.path);
+      repository = SessionRepository();
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk(HiveBoxNames.sessionsTyped);
+    });
+
+    test('fall-back day: a session in the final local hour belongs to that day only',
+        () async {
+      // 2025-10-26 is 25 hours long in DST-observing zones (EU fall-back).
+      // A fixed 24h span would end at 23:00 local and drop this session
+      // from every day's query.
+      await repository.save(
+        'late',
+        createSession(id: 'late', startTime: DateTime(2025, 10, 26, 23, 30)),
+      );
+
+      final ownDay = await repository.getByDate(DateTime(2025, 10, 26));
+      expect(ownDay.isSuccess, isTrue);
+      expect(ownDay.data!.map((s) => s.id), ['late']);
+
+      final nextDay = await repository.getByDate(DateTime(2025, 10, 27));
+      expect(nextDay.data, isEmpty);
+    });
+
+    test('spring-forward day: a session in the next day\'s first hour is not double-counted',
+        () async {
+      // 2025-03-30 is 23 hours long in DST-observing zones (EU spring-forward).
+      // A fixed 24h span would end at 01:00 local on 2025-03-31 and count
+      // this session in both days.
+      await repository.save(
+        'early',
+        createSession(id: 'early', startTime: DateTime(2025, 3, 31, 0, 30)),
+      );
+
+      final transitionDay = await repository.getByDate(DateTime(2025, 3, 30));
+      expect(transitionDay.data, isEmpty);
+
+      final ownDay = await repository.getByDate(DateTime(2025, 3, 31));
+      expect(ownDay.data!.map((s) => s.id), ['early']);
+    });
+
+    test('each session is attributed to exactly one calendar day', () async {
+      await repository.save(
+        'a',
+        createSession(id: 'a', startTime: DateTime(2025, 10, 26, 1, 0)),
+      );
+      await repository.save(
+        'b',
+        createSession(id: 'b', startTime: DateTime(2025, 10, 26, 23, 30)),
+      );
+      await repository.save(
+        'c',
+        createSession(id: 'c', startTime: DateTime(2025, 10, 27, 0, 30)),
+      );
+      await repository.save(
+        'd',
+        createSession(id: 'd', startTime: DateTime(2025, 10, 27, 12, 0)),
+      );
+
+      final day1 = await repository.getByDate(DateTime(2025, 10, 26));
+      final day2 = await repository.getByDate(DateTime(2025, 10, 27));
+      expect(day1.data!.map((s) => s.id).toSet(), {'a', 'b'});
+      expect(day2.data!.map((s) => s.id).toSet(), {'c', 'd'});
     });
   });
 }

@@ -37,10 +37,12 @@ class SessionRepository extends Repository<Session> {
   Future<Result<List<Session>>> getByDate(DateTime date) async {
     return Result.capture(() async {
       final start = date.dateOnly;
-      final end = start.add(Timeouts.day);
+      // Calendar-day bound: DST-transition days are 23h/25h long, so a fixed
+      // 24h span (`start.add(Timeouts.day)`) is not the next local midnight.
+      final end = DateTime(start.year, start.month, start.day + 1);
       final all = box.values.toList();
       final filtered = all.where((s) =>
-          s.startTime.isAfter(start.subtract(Timeouts.second)) &&
+          !s.startTime.isBefore(start) &&
           s.startTime.isBefore(end)).toList();
       return filtered;
     }, context: 'getByDate');
