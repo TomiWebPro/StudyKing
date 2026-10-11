@@ -1,6 +1,31 @@
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/study_utils.dart';
+import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
+
+/// Per-day adherence aggregate. Adherence records are created per finished
+/// session (see `PersonalLearningPlanService.recordDailyAdherence`), so a day
+/// can have several records; all metrics must be derived from one entry per
+/// calendar day to avoid weighting multi-session days multiple times.
+class _DayAdherence {
+  final DateTime date;
+  final int plannedQuestions;
+  final int actualQuestions;
+  final int plannedMinutes;
+  final int actualMinutes;
+  final double adherence;
+
+  const _DayAdherence({
+    required this.date,
+    required this.plannedQuestions,
+    required this.actualQuestions,
+    required this.plannedMinutes,
+    required this.actualMinutes,
+    required this.adherence,
+  });
+}
 
 class GetAdherenceTrendsTool extends AgentTool {
   final PlanAdherenceOrchestrator _orchestrator;
@@ -60,28 +85,30 @@ class GetAdherenceTrendsTool extends AgentTool {
       };
     }
 
-    final avgAdherence = records.fold<double>(0.0, (s, m) => s + m.adherenceScore) /
-        records.length;
+    final dailySummaries = _aggregateByDay(records);
 
-    final lowAdherenceDays = records
-        .where((m) => m.adherenceScore < 0.5)
-        .map((m) => _formatDate(m.date))
+    final avgAdherence = dailySummaries.fold<double>(0.0, (s, d) => s + d.adherence) /
+        dailySummaries.length;
+
+    final lowAdherenceDays = dailySummaries
+        .where((d) => d.adherence < 0.5)
+        .map((d) => _formatDate(d.date))
         .toList();
 
-    final missedDays = records.where((m) => m.adherenceScore == 0.0).length;
+    final missedDays = dailySummaries.where((d) => d.adherence == 0.0).length;
 
-    final perDayBreakdown = records.reversed.map((m) => {
-          'date': _formatDate(m.date),
-          'plannedMinutes': m.plannedMinutes,
-          'actualMinutes': m.actualMinutes,
-          'plannedQuestions': m.plannedQuestions,
-          'actualQuestions': m.actualQuestions,
-          'adherence': m.adherenceScore,
+    final perDayBreakdown = dailySummaries.reversed.map((d) => {
+          'date': _formatDate(d.date),
+          'plannedMinutes': d.plannedMinutes,
+          'actualMinutes': d.actualMinutes,
+          'plannedQuestions': d.plannedQuestions,
+          'actualQuestions': d.actualQuestions,
+          'adherence': double.parse(d.adherence.toStringAsFixed(2)),
         }).toList();
 
-    final weeklyAdherence = _computeWeeklyBuckets(records);
+    final weeklyAdherence = _computeWeeklyBuckets(dailySummaries);
 
-    final trend = _computeTrend(records);
+    final trend = _computeTrend(dailySummaries);
 
     final recommendation = _buildRecommendation(trend, avgAdherence, lowAdherenceDays.length, missedDays);
 
@@ -90,47 +117,110 @@ class GetAdherenceTrendsTool extends AgentTool {
       'trend': trend,
       'lowAdherenceDays': lowAdherenceDays,
       'missedDays': missedDays,
-      'totalDays': records.length,
+      'totalDays': dailySummaries.length,
       'perDayBreakdown': perDayBreakdown,
       'weeklyAdherence': weeklyAdherence,
       'recommendation': recommendation,
     };
   }
 
+  /// Collapses the raw records into one entry per calendar day. Same-day
+  /// sessions are summed so a day's adherence reflects the day's total
+  /// effort against that day's plan targets (each day counts once).
+  static List<_DayAdherence> _aggregateByDay(List<PlanAdherenceModel> records) {
+    final byDay = <DateTime, List<PlanAdherenceModel>>{};
+    for (final record in records) {
+      final day = record.date.dateOnly;
+      byDay.putIfAbsent(day, () => []).add(record);
+    }
+
+    final days = byDay.entries.map((entry) {
+      final dayRecords = entry.value;
+      // Plan targets are constant within a day; the latest record
+      // carries the day's final snapshot. Actuals are summed across
+      // the day's sessions.
+      final plannedQuestions = dayRecords.last.plannedQuestions;
+      final plannedMinutes = dayRecords.last.plannedMinutes;
+      final actualQuestions = dayRecords.fold<int>(
+        0,
+        (sum, m) => sum + m.actualQuestions,
+      );
+      final actualMinutes = dayRecords.fold<int>(
+        0,
+        (sum, m) => sum + m.actualMinutes,
+      );
+      return _DayAdherence(
+        date: entry.key,
+        plannedQuestions: plannedQuestions,
+        actualQuestions: actualQuestions,
+        plannedMinutes: plannedMinutes,
+        actualMinutes: actualMinutes,
+        adherence: calculateAdherenceScore(
+          plannedQuestions: plannedQuestions,
+          actualQuestions: actualQuestions,
+          plannedMinutes: plannedMinutes,
+          actualMinutes: actualMinutes,
+        ),
+      );
+    }).toList();
+
+    days.sort((a, b) => a.date.compareTo(b.date));
+    return days;
+  }
+
   static String _formatDate(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
   }
 
-  static List<double> _computeWeeklyBuckets(List<dynamic> records) {
-    if (records.isEmpty) return [];
+  /// Averages one calendar week per bucket (weeks start on Monday,
+  /// matching the rest of the app) instead of chunks of 7 records,
+  /// so a bucket never straddles two calendar weeks.
+  static List<double> _computeWeeklyBuckets(List<_DayAdherence> days) {
+    if (days.isEmpty) return [];
 
-    final sorted = [...records]..sort((a, b) => a.date.compareTo(b.date));
+    final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
     final buckets = <double>[];
-    const bucketSize = 7;
+    DateTime? currentWeekStart;
+    var sum = 0.0;
+    var count = 0;
 
-    for (var i = 0; i < sorted.length; i += bucketSize) {
-      final end = (i + bucketSize).clamp(0, sorted.length);
-      final chunk = sorted.sublist(i, end);
-      final avg = chunk.fold<double>(0.0, (s, m) => s + m.adherenceScore) /
-          chunk.length;
-      buckets.add(double.parse(avg.toStringAsFixed(2)));
+    for (final day in sorted) {
+      final weekStart = _startOfWeek(day.date);
+      if (currentWeekStart == null) {
+        currentWeekStart = weekStart;
+      } else if (!weekStart.isAtSameMomentAs(currentWeekStart)) {
+        buckets.add(double.parse((sum / count).toStringAsFixed(2)));
+        currentWeekStart = weekStart;
+        sum = 0.0;
+        count = 0;
+      }
+      sum += day.adherence;
+      count++;
+    }
+    if (count > 0) {
+      buckets.add(double.parse((sum / count).toStringAsFixed(2)));
     }
     return buckets;
   }
 
-  static String _computeTrend(List<dynamic> records) {
-    if (records.length < 4) return 'insufficient_data';
+  static DateTime _startOfWeek(DateTime date) {
+    final day = date.dateOnly;
+    return day.subtract(Duration(days: day.weekday - DateTime.monday));
+  }
 
-    final sorted = [...records]..sort((a, b) => a.date.compareTo(b.date));
+  static String _computeTrend(List<_DayAdherence> days) {
+    if (days.length < 4) return 'insufficient_data';
+
+    final sorted = [...days]..sort((a, b) => a.date.compareTo(b.date));
     final mid = sorted.length ~/ 2;
     final firstHalf = sorted.sublist(0, mid);
     final secondHalf = sorted.sublist(mid);
 
     final firstAvg =
-        firstHalf.fold<double>(0.0, (s, m) => s + m.adherenceScore) /
+        firstHalf.fold<double>(0.0, (s, d) => s + d.adherence) /
             firstHalf.length;
     final secondAvg =
-        secondHalf.fold<double>(0.0, (s, m) => s + m.adherenceScore) /
+        secondHalf.fold<double>(0.0, (s, d) => s + d.adherence) /
             secondHalf.length;
 
     final diff = secondAvg - firstAvg;
