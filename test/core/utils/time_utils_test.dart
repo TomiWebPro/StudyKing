@@ -116,6 +116,33 @@ void main() {
       expect(formatDate(yesterday), 'Yesterday');
     });
 
+    test('returns Yesterday when midnights are 23h apart (DST spring-forward)', () {
+      // On a DST spring-forward day, consecutive local midnights are 23h
+      // apart, so DateTime.difference never equals Duration(days: 1).
+      // Simulate that elapsed time explicitly so the regression is
+      // deterministic in any test timezone.
+      final today = DateTime(2025, 3, 31); // Monday after the transition
+      final session = today.subtract(const Duration(hours: 23)); // 2025-03-30 01:00
+      final l10n = AppLocalizationsEn();
+      expect(formatDate(session, l10n: l10n, now: today), l10n.yesterday);
+    });
+
+    test('returns Yesterday for exactly one calendar day before a given now', () {
+      final today = DateTime(2025, 11, 3);
+      final session = DateTime(2025, 11, 2);
+      final l10n = AppLocalizationsEn();
+      expect(formatDate(session, l10n: l10n, now: today), l10n.yesterday);
+    });
+
+    test('returns formatted date for two calendar days before a given now', () {
+      final today = DateTime(2025, 3, 31);
+      final session = today.subtract(const Duration(hours: 47)); // 2025-03-29 01:00
+      final l10n = AppLocalizationsEn();
+      final formatted = formatDate(session, l10n: l10n, now: today);
+      expect(formatted, isNot(l10n.yesterday));
+      expect(formatted, contains('2025'));
+    });
+
     test('returns formatted date for older dates', () {
       final date = DateTime(2025, 6, 15);
       expect(formatDate(date), '6/15/2025');

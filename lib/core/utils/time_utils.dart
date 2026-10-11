@@ -1,6 +1,5 @@
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
-import 'package:studyking/core/constants/app_constants.dart';
 import '../../l10n/generated/app_localizations.dart';
 
 String _getDurationDays(int count, AppLocalizations l10n) {
@@ -59,18 +58,21 @@ String _durationPart(int count, AppLocalizations? l10n, String Function(int, App
   return '$count$fallback';
 }
 
-String formatDate(DateTime? date, {AppLocalizations? l10n}) {
+String formatDate(DateTime? date, {AppLocalizations? l10n, DateTime? now}) {
   // covariant: l10n is always non-null in production (AppLocalizations.of(context) is called upstream)
   final unknown = l10n?.unknown ?? 'Unknown';
   if (date == null) return unknown;
-  final now = DateTime.now();
-  final today = now.dateOnly;
+  final today = (now ?? DateTime.now()).dateOnly;
   final sessionDate = date.dateOnly;
   if (sessionDate.isSameDay(today)) {
     return l10n?.today ?? 'Today';
   }
-  final diff = today.difference(sessionDate);
-  if (diff == Timeouts.day) {
+  // Compare calendar days, not elapsed time: on DST-transition days
+  // consecutive local midnights are 23h/25h apart, so difference()
+  // never equals exactly Duration(days: 1) and an elapsed-time check
+  // would miss a session that is exactly one calendar day old.
+  final yesterday = DateTime(today.year, today.month, today.day - 1);
+  if (sessionDate.isSameDay(yesterday)) {
     return l10n?.yesterday ?? 'Yesterday';
   }
   final l10nLocale = l10n != null ? l10n.localeName : 'en';
