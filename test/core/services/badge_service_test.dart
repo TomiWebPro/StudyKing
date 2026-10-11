@@ -15,6 +15,7 @@ class _FakeBadgeRepository implements BadgeRepository {
   bool failGetBadgeMap = false;
   bool failHasBadge = false;
   bool failGetBadgeCount = false;
+  bool failCreate = false;
 
   @override
   bool get isOpen => true;
@@ -35,9 +36,11 @@ class _FakeBadgeRepository implements BadgeRepository {
   }
 
   @override
-  Future<void> create(BadgeModel badge) async {
+  Future<Result<void>> create(BadgeModel badge) async {
+    if (failCreate) return Result.failure('create failed');
     _badges.add(badge);
     _badgeMap = {for (final b in _badges) b.id: b};
+    return Result.success(null);
   }
 
   @override
@@ -166,6 +169,58 @@ void main() {
         mockRepo.failGetBadgeMap = true;
         final result = await service.checkAndUnlockBadges('student1');
         expect(result.isFailure, isTrue);
+      });
+    });
+
+    group('checkAndUnlockBadges persistence', () {
+      Future<Result<Map<String, dynamic>>> satisfyingStats(String studentId) async =>
+          Result.success({
+            'totalAttempts': 1,
+            'correctAttempts': 1,
+            'accuracy': 50,
+            'totalStudyTimeHours': 1.0,
+            'weeklyActivity': 1,
+            'dailyActivity': 1,
+            'topicsStudied': 1,
+          });
+
+      test('does not report badge unlocked when the write fails', () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+
+        mockRepo.failCreate = true;
+        final failingService = BadgeService(
+          repository: mockRepo,
+          getStats: satisfyingStats,
+          notificationService: null,
+        );
+
+        final result = await failingService.checkAndUnlockBadges('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+        expect(
+          _capturedLogs.any(
+            (l) => l.contains('[W]') && l.contains('Failed to persist badge'),
+          ),
+          isTrue,
+        );
+      });
+
+      test('reports badge unlocked and persists it when the write succeeds',
+          () async {
+        final okService = BadgeService(
+          repository: mockRepo,
+          getStats: satisfyingStats,
+          notificationService: null,
+        );
+
+        final result = await okService.checkAndUnlockBadges('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.id, startsWith('first_attempt'));
+        expect(mockRepo._badges, hasLength(1));
       });
     });
 

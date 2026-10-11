@@ -69,7 +69,13 @@ class BadgeService {
             },
           );
 
-          await _repository.create(badge);
+          final createResult = await _repository.create(badge);
+          if (createResult.isFailure) {
+            _logger.w(
+              'Failed to persist badge ${badge.id}: ${createResult.error}',
+            );
+            continue;
+          }
           newlyUnlocked.add(badge);
 
           final notifResult = await _notificationService.showBadgeUnlocked(

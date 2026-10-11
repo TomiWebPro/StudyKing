@@ -193,6 +193,13 @@ void main() {
         await repository.create(createTestBadge(id: 'badge-1', name: 'Updated'));
         expect((await repository.get('badge-1')).data?.name, 'Updated');
       });
+
+      test('returns Result.success when the save succeeds', () async {
+        final badge = createTestBadge();
+        final result = await repository.create(badge);
+        expect(result.isSuccess, isTrue);
+        expect(result.error, isNull);
+      });
     });
 
     group('get', () {
@@ -460,6 +467,14 @@ void main() {
       final badge = createTestBadge();
       await repository.create(badge);
       expect((await repository.get(badge.id)).isFailure, isTrue);
+    });
+
+    test('create with throwing box returns failure Result', () async {
+      final badge = createTestBadge();
+      final result = await repository.create(badge);
+      expect(result.isFailure, isTrue);
+      expect(result.error, isNotNull);
+      expect(result.error, contains('Failed to put'));
     });
 
     test('get with throwing box returns failure', () async {

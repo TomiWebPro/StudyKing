@@ -13,8 +13,12 @@ class BadgeRepository extends Repository<BadgeModel> {
     await openBox(HiveBoxNames.badges);
   }
 
-  Future<void> create(BadgeModel badge) async {
-    await save(badge.id, badge);
+  Future<Result<void>> create(BadgeModel badge) async {
+    final result = await save(badge.id, badge);
+    if (result.isFailure) {
+      _logger.w('Failed to create badge ${badge.id}', result.error);
+    }
+    return result;
   }
 
   Future<Result<List<BadgeModel>>> getByStudent(String studentId) async {
