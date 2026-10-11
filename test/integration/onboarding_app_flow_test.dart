@@ -120,8 +120,8 @@ void main() {
       await tester.tap(find.text('Skip'));
       await tester.pumpAndSettle();
 
-      expect(observer.pushedRoutes.length, greaterThanOrEqualTo(1));
-      expect(observer.pushedRoutes.last.settings.name, AppRoutes.dashboard);
+      expect(observer.navigatedRoutes.length, greaterThanOrEqualTo(1));
+      expect(observer.navigatedRoutes.last.settings.name, AppRoutes.dashboard);
       expect(find.text('Dashboard'), findsOneWidget);
       final result = await service.isOnboardingNeeded();
       expect(result.data, isFalse);
@@ -175,10 +175,17 @@ void main() {
 }
 
 class TestNavigatorObserver extends NavigatorObserver {
-  final List<Route> pushedRoutes = [];
+  final List<Route> navigatedRoutes = [];
 
   @override
   void didPush(Route route, Route? previousRoute) {
-    pushedRoutes.add(route);
+    navigatedRoutes.add(route);
+  }
+
+  @override
+  void didReplace({Route? newRoute, Route? oldRoute}) {
+    if (newRoute != null) {
+      navigatedRoutes.add(newRoute);
+    }
   }
 }

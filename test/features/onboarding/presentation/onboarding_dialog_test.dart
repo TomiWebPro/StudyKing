@@ -108,6 +108,53 @@ Future<void> pumpShowDialog(WidgetTester tester, Widget child) async {
   await tester.pump();
 }
 
+/// Pumps the production first-launch layout: a home screen with the
+/// onboarding dialog shown via [showDialog] (`barrierDismissible: false`)
+/// on the root navigator, mirroring `main.dart` `_handleFirstLaunch`.
+Future<void> pumpOnboardingDialogOverHome(
+  WidgetTester tester,
+  OnboardingDialog dialog,
+) async {
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        settingsProvider.overrideWith((ref) => _FakeSettingsController()),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        locale: const Locale('en'),
+        home: Builder(
+          builder: (context) => Scaffold(
+            body: Column(
+              children: [
+                const Text('Home'),
+                ElevatedButton(
+                  onPressed: () => showDialog<void>(
+                    context: context,
+                    barrierDismissible: false,
+                    builder: (_) => dialog,
+                  ),
+                  child: const Text('Show onboarding'),
+                ),
+              ],
+            ),
+          ),
+        ),
+        routes: {
+          AppRoutes.dashboard: (_) => const Scaffold(
+                body: Center(child: Text('Dashboard')),
+              ),
+        },
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.tap(find.text('Show onboarding'));
+  await tester.pump();
+  await tester.pumpAndSettle();
+}
+
 /// Navigates to a specific page index by tapping the Next button
 /// [targetPage] times. Uses the FilledButton (locale-agnostic) rather than
 /// the localized "Next" label.
@@ -489,6 +536,68 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
         expect(find.text('Dashboard'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'Get Started replaces the dialog route — back from Dashboard '
+      'returns to home, not the dialog',
+      (tester) async {
+        await pumpOnboardingDialogOverHome(
+          tester,
+          OnboardingDialog(
+            service: OnboardingService(
+              storage: InMemoryOnboardingStorage(),
+            ),
+          ),
+        );
+        expect(find.byType(OnboardingDialog), findsOneWidget);
+        await navigateToLastPage(tester);
+        await tester.pump();
+        await tester.tap(find.text('Get Started'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Dashboard replaced the dialog route; the dialog is gone.
+        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.byType(OnboardingDialog), findsNothing);
+
+        // Simulate the Android back button: it must land on Home.
+        // Before the fix, the dialog route lingered under Dashboard
+        // and back returned to the (non-dismissible) dialog.
+        tester.state<NavigatorState>(find.byType(Navigator)).pop();
+        await tester.pumpAndSettle();
+        expect(find.text('Home'), findsOneWidget);
+        expect(find.byType(OnboardingDialog), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Skip replaces the dialog route — back from Dashboard '
+      'returns to home, not the dialog',
+      (tester) async {
+        await pumpOnboardingDialogOverHome(
+          tester,
+          OnboardingDialog(
+            service: OnboardingService(
+              storage: InMemoryOnboardingStorage(),
+            ),
+          ),
+        );
+        expect(find.byType(OnboardingDialog), findsOneWidget);
+        await tester.tap(find.text('Skip'));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // Dashboard replaced the dialog route; the dialog is gone.
+        expect(find.text('Dashboard'), findsOneWidget);
+        expect(find.byType(OnboardingDialog), findsNothing);
+
+        // Back from Dashboard lands on Home, never the leaked dialog.
+        tester.state<NavigatorState>(find.byType(Navigator)).pop();
+        await tester.pumpAndSettle();
+        expect(find.text('Home'), findsOneWidget);
+        expect(find.byType(OnboardingDialog), findsNothing);
       },
     );
 

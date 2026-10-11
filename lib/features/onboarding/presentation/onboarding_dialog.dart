@@ -130,7 +130,12 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                         : () async {
                             await _completeOnboarding();
                             if (!context.mounted) return;
-                            Navigator.pushNamed(context, AppRoutes.dashboard);
+                            // The dialog route is the top route here;
+                            // replacing it (instead of pushing on top)
+                            // keeps the dialog from lingering under
+                            // Dashboard.
+                            Navigator.pushReplacementNamed(
+                                context, AppRoutes.dashboard);
                           },
                     child: _isSaving
                         ? SizedBox(
@@ -157,7 +162,11 @@ class _OnboardingDialogState extends ConsumerState<OnboardingDialog> {
                               : () async {
                                   await _completeOnboarding();
                                   if (!context.mounted) return;
-                                  Navigator.pushNamed(
+                                  // The dialog route is the top route
+                                  // here; replacing it (instead of
+                                  // pushing on top) keeps the dialog
+                                  // from lingering under Dashboard.
+                                  Navigator.pushReplacementNamed(
                                     context,
                                     AppRoutes.dashboard,
                                   );
