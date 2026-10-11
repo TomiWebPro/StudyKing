@@ -75,7 +75,7 @@ class ConversationMemory {
         await _dropOldestMessages();
       }
 
-      _persistMessage(msg);
+      await _persistMessage(msg);
       unawaited(_trimRepository());
     }, context: 'addMessage');
   }
@@ -105,7 +105,7 @@ class ConversationMemory {
 
       messages.removeRange(0, countToSummarise);
       messages.insert(0, summaryMsg);
-      _persistMessage(summaryMsg);
+      await _persistMessage(summaryMsg);
 
       _logger.i('Compressed ${toSummarise.length} messages into summary');
     } catch (e) {
@@ -131,7 +131,7 @@ class ConversationMemory {
       );
       messages.removeRange(0, kept);
       messages.insert(0, summaryMsg);
-      _persistMessage(summaryMsg);
+      await _persistMessage(summaryMsg);
       _logger.i('Summarised ${toDrop.length} dropped messages into summary');
     } else {
       messages.removeRange(0, kept);
@@ -146,7 +146,7 @@ class ConversationMemory {
           timestamp: DateTime.now(),
         );
         messages.add(truncMsg);
-        _persistMessage(truncMsg);
+        await _persistMessage(truncMsg);
       }
     }
   }
@@ -162,10 +162,16 @@ class ConversationMemory {
     }
   }
 
-  void _persistMessage(ConversationMessage msg) {
+  Future<void> _persistMessage(ConversationMessage msg) async {
     final repo = _repository;
     if (repo == null) return;
-    repo.saveMessage(msg);
+    final result = await repo.saveMessage(msg);
+    if (result.isFailure) {
+      _logger.w(
+        'Failed to persist conversation message ${msg.id}',
+        result.error,
+      );
+    }
   }
 
   Future<Result<void>> addUserMessage(String content) => addMessage('user', content);

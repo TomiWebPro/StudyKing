@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/conversation_memory.dart';
@@ -17,6 +18,21 @@ class _FakeConversationRepository extends ConversationRepository {
   @override
   Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
     return Result.success(getSessionMessagesResult ?? []);
+  }
+}
+
+class _FailingConversationRepository extends ConversationRepository {
+  final List<ConversationMessage> saveAttempts = [];
+
+  @override
+  Future<Result<void>> saveMessage(ConversationMessage msg) async {
+    saveAttempts.add(msg);
+    return Result.failure('Hive box not open');
+  }
+
+  @override
+  Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
+    return Result.success([]);
   }
 }
 
@@ -206,6 +222,94 @@ void main() {
       test('does not persist when repository is null', () async {
         final memory = ConversationMemory(sessionId: 'sess1');
         await memory.addUserMessage('no persist');
+      });
+
+      test('persists summary message via repository', () async {
+        final repo = _FakeConversationRepository();
+        final summaries = <List<ConversationMessage>>[];
+        Future<String?> summarizer(List<ConversationMessage> msgs) async {
+          summaries.add(msgs);
+          return 'Summary of ${msgs.length} messages';
+        }
+
+        final memory = ConversationMemory(
+          maxTurns: 5,
+          repository: repo,
+          summarizer: summarizer,
+        );
+
+        for (var i = 0; i < 12; i++) {
+          await memory.addUserMessage('msg$i');
+        }
+
+        expect(summaries, isNotEmpty);
+        expect(
+          repo._saved.any((m) => m.content.contains('[Earlier conversation summary]')),
+          isTrue,
+        );
+      });
+    });
+
+    group('persistence failure handling', () {
+      final originalDebugPrint = debugPrint;
+      final logs = <String>[];
+
+      setUp(() {
+        logs.clear();
+        debugPrint = (String? message, {int? wrapWidth}) {
+          logs.add(message ?? '');
+        };
+      });
+
+      tearDown(() {
+        debugPrint = originalDebugPrint;
+      });
+
+      test('logs a warning when repository save fails', () async {
+        final repo = _FailingConversationRepository();
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+        );
+
+        final result = await memory.addUserMessage('persist me');
+
+        expect(result.isSuccess, isTrue);
+        expect(repo.saveAttempts, hasLength(1));
+        expect(repo.saveAttempts.first.content, equals('persist me'));
+        expect(
+          logs.join('\n'),
+          contains('Failed to persist conversation message'),
+        );
+      });
+
+      test('keeps the message in memory when persistence fails', () async {
+        final repo = _FailingConversationRepository();
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+        );
+
+        await memory.addUserMessage('still in memory');
+
+        expect(memory.messages, hasLength(1));
+        expect(memory.messages.first.content, equals('still in memory'));
+      });
+
+      test('does not log a persistence warning when save succeeds', () async {
+        final repo = _FakeConversationRepository();
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+        );
+
+        await memory.addUserMessage('saved fine');
+
+        expect(repo._saved, hasLength(1));
+        expect(
+          logs.where((l) => l.contains('Failed to persist')),
+          isEmpty,
+        );
       });
     });
 
