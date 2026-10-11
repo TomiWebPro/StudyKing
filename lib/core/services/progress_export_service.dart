@@ -132,7 +132,7 @@ class ProgressExportService {
       buffer.writeln(
           'Topic ID,Total Attempts,Correct,Accuracy (%),Mastery Level,Last Practiced,Review Urgency (%)');
       for (final ms in masteryStates) {
-        final level = _masteryLevelLabel(ms.masteryLevel, l10n);
+        final level = _masteryLevelLabelEn(ms.masteryLevel);
         buffer.writeln(
             '${ms.topicId},${ms.totalAttempts},${ms.correctAttempts},${(ms.accuracy * 100).toStringAsFixed(1)}%,$level,${ms.lastAttempt.toIso8601String()},${(ms.reviewUrgency * 100).toStringAsFixed(0)}%');
       }
@@ -168,12 +168,17 @@ class ProgressExportService {
     }, context: 'exportComprehensiveCSV');
   }
 
-  String _masteryLevelLabel(MasteryLevel level, AppLocalizations? l10n) {    return switch (level) {
-      MasteryLevel.novice => l10n?.masteryLevelNovice ?? 'Novice',
-      MasteryLevel.browsing => l10n?.masteryLevelBrowsing ?? 'Browsing',
-      MasteryLevel.developing => l10n?.masteryLevelDeveloping ?? 'Developing',
-      MasteryLevel.proficient => l10n?.masteryLevelProficient ?? 'Proficient',
-      MasteryLevel.expert => l10n?.masteryLevelExpert ?? 'Expert',
+  /// Invariant English mastery-level labels for CSV exports.
+  ///
+  /// CSV is data, not display, so it must stay locale-independent
+  /// (AGENTS.md i18n convention) — never localize this column.
+  String _masteryLevelLabelEn(MasteryLevel level) {
+    return switch (level) {
+      MasteryLevel.novice => 'Novice',
+      MasteryLevel.browsing => 'Browsing',
+      MasteryLevel.developing => 'Developing',
+      MasteryLevel.proficient => 'Proficient',
+      MasteryLevel.expert => 'Expert',
     };
   }
 

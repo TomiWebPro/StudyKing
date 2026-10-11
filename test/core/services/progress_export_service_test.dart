@@ -368,10 +368,12 @@ void main() {
     late _FakeAttemptRepository mockAttemptRepo;
     late ProgressExportService service;
     late AppLocalizations l10n;
+    late AppLocalizations esL10n;
 
     setUpAll(() async {
       await initializeDateFormatting();
       l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      esL10n = await AppLocalizations.delegate.load(const Locale('es'));
     });
 
     setUp(() {
@@ -422,6 +424,42 @@ void main() {
         expect(csv.isSuccess, isTrue);
         expect(csv.data, contains('2026-W41'));
         expect(csv.data, isNot(contains('2026-W10')));
+      });
+
+      test('mastery level column stays invariant English for es locale',
+          () async {
+        mockTracker.overallStats = {
+          'totalAttempts': 10, 'correctAttempts': 7, 'accuracy': 0.7,
+          'avgTimePerQuestion': 30.0, 'totalStudyTimeHours': 5.0,
+          'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
+        };
+        mockMastery.states = [
+          MasteryState(
+            studentId: 'student1',
+            topicId: 'topic-1',
+            lastAttempt: DateTime(2026, 1, 1),
+            lastUpdated: DateTime(2026, 1, 1),
+            masteryLevel: MasteryLevel.novice,
+            accuracy: 0.4,
+          ),
+          MasteryState(
+            studentId: 'student1',
+            topicId: 'topic-2',
+            lastAttempt: DateTime(2026, 1, 2),
+            lastUpdated: DateTime(2026, 1, 2),
+            masteryLevel: MasteryLevel.proficient,
+            accuracy: 0.8,
+          ),
+        ];
+        final csv = await service.exportComprehensiveCSV('student1',
+            l10n: esL10n);
+        expect(csv.isSuccess, isTrue);
+        // CSV is data and must stay locale-independent even though an
+        // es AppLocalizations was passed (AGENTS.md CSV invariant rule).
+        expect(csv.data, contains('Novice'));
+        expect(csv.data, contains('Proficient'));
+        expect(csv.data, isNot(contains('Novato')));
+        expect(csv.data, isNot(contains('Competente')));
       });
     });
 
