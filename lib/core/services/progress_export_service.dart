@@ -207,7 +207,7 @@ class ProgressExportService {
     if (overallStatsResult.isFailure) {
       _logger.w('getOverallStats failed for $studentId: ${overallStatsResult.error}');
     }
-    final overallStats = overallStatsResult.data ?? <String, dynamic>{};
+    final overallStats = overallStatsResult.data ?? _defaultOverallStats;
     final masteryResult = await _masteryService.getAllTopicMastery(studentId);
     if (masteryResult.isFailure) {
       _logger.w('getAllTopicMastery failed for $studentId: ${masteryResult.error}');

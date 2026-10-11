@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -364,6 +367,33 @@ void _uninstallLogCapture() {
   debugPrint = debugPrintThrottled;
 }
 
+/// Extracts the text strings rendered into a PDF document's content
+/// streams so unit tests can assert on what the export actually drew.
+/// The `pdf` package deflates every content stream, so each stream is
+/// inflated before its `(string)` operands are collected.
+List<String> _extractPdfStrings(List<int> pdfBytes) {
+  final raw = latin1.decode(pdfBytes);
+  final strings = <String>[];
+  final streamRegex = RegExp(r'stream\r?\n(.*?)\r?\nendstream', dotAll: true);
+  for (final match in streamRegex.allMatches(raw)) {
+    final segment = match.group(1)!;
+    try {
+      final content = latin1.decode(zlib.decode(latin1.encode(segment)));
+      for (final m in RegExp(r'\(((?:[^()\\]|\\.)*)\)').allMatches(content)) {
+        strings.add(m.group(1)!
+            .replaceAll(r'\(', '(')
+            .replaceAll(r'\)', ')')
+            .replaceAll(r'\\', '\\'));
+      }
+    } catch (e) {
+      // Streams that are not zlib-deflated (e.g. metadata) carry no
+      // rendered text; skip them.
+      debugPrint('Skipping non-deflate PDF stream: $e');
+    }
+  }
+  return strings;
+}
+
 void main() {
   group('ProgressExportService', () {
     late _FakeStudyProgressTracker mockTracker;
@@ -504,6 +534,26 @@ void main() {
         final bytes = await service.exportComprehensivePDF("student1", l10n);
         expect(bytes.isSuccess, isTrue);
         expect(bytes.data, isNotEmpty);
+      });
+
+      test('overall statistics fall back to zeroed defaults on failure',
+          () async {
+        // Regression: the PDF export used to fall back to an empty map
+        // when getOverallStats failed, rendering literal "null" (and
+        // "nulls" for avg time) cells in the Overall Statistics table
+        // instead of the zeroed defaults the JSON/CSV exports use.
+        final bytes = await ProgressExportService(
+          tracker: _FailingStudyProgressTracker(),
+          masteryService: _FailingMasteryGraphService(),
+          attemptRepo: _FailingAttemptRepository(),
+        ).exportComprehensivePDF('student1', l10n);
+
+        expect(bytes.isSuccess, isTrue);
+        final rendered = _extractPdfStrings(bytes.data!);
+        expect(rendered.where((s) => s.contains('null')), isEmpty);
+        expect(rendered, contains('Total'));
+        expect(rendered, contains('Attempts'));
+        expect(rendered, contains('0'));
       });
     });
 
