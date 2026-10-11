@@ -18,6 +18,7 @@ class FakeLlmService extends LlmService {
 
   String chatResponse = '{}';
   bool shouldFail = false;
+  bool shouldThrow = false;
 
   @override
   Future<Result<String>> chat({
@@ -29,6 +30,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    if (shouldThrow) throw Exception('Simulated LLM transport error');
     if (shouldFail) return Result.failure('Simulated LLM failure');
     return Result.success(chatResponse);
   }
@@ -198,6 +200,24 @@ void main() {
       // derived recap uses session topics when LLM gives nothing usable
       expect(recap.topicsCovered, contains('mitosis'));
       expect(recap.homework, isEmpty);
+    });
+
+    test('generateAndStoreRecap recovers with derived recap when the LLM throws',
+        () async {
+      llm.shouldThrow = true;
+      final result = await service.generateAndStoreRecap(
+        session: makeSession(asked: 2, correct: 1),
+        messages: makeMessages(),
+      );
+
+      // the outer catch is an expected, recovered path: a fallback recap
+      // is derived, stored, and returned as success (logged at .w())
+      expect(result.isSuccess, isTrue);
+      final recap = result.data!;
+      expect(recap.summary, contains('Cell Division'));
+      expect(recap.accuracy, closeTo(0.5, 0.001));
+      final stored = await repo.getBySession('sess-1');
+      expect(stored.data, isNotNull);
     });
 
     test('getRecapForLesson returns the stored recap by lessonId', () async {

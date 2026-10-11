@@ -193,7 +193,7 @@ class LessonRecapService {
       }
       return Result.success(recap);
     } catch (e) {
-      _logger.e('Unexpected error generating lesson recap', e);
+      _logger.w('Unexpected error generating lesson recap', e);
       try {
         final fallback = _deriveFallbackRecap(
             session: session, messages: messages, id: id);
