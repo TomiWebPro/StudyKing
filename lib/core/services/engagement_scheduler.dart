@@ -194,13 +194,16 @@ class EngagementScheduler {
       if (lastRun != null) {
         final missedDays = now.difference(lastRun).inDays;
         if (missedDays >= 2) {
-          await _nudgeRepository.create(EngagementNudgeModel(
+          final createResult = await _nudgeRepository.create(EngagementNudgeModel(
             id: 'missed_backfill_${now.millisecondsSinceEpoch}_${_config.studentId}',
             studentId: _config.studentId,
             nudgeType: NudgeType.planAdjustment.name,
             message: _l10n.welcomeBackDays(missedDays),
             severity: missedDays >= 7 ? NudgeSeverity.high.name : NudgeSeverity.medium.name,
           ));
+          if (createResult.isFailure) {
+            _logger.w('Failed to persist welcome-back nudge', createResult.error);
+          }
         }
       }
 
@@ -332,7 +335,11 @@ class EngagementScheduler {
       final nudgesResult = await getOverworkNudge(studentId);
       final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
-        await _nudgeRepository.create(nudge);
+        final createResult = await _nudgeRepository.create(nudge);
+        if (createResult.isFailure) {
+          _logger.w('Failed to persist overwork nudge', createResult.error);
+          continue;
+        }
         final notifResult = await _notificationService.showOverworkWarning(
           id: _notificationIdCounter++,
           hoursStudied: nudge.hoursStudied ?? 0.0,
@@ -355,7 +362,11 @@ class EngagementScheduler {
       final nudgesResult = await getRevisionNudges(studentId);
       final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
-        await _nudgeRepository.create(nudge);
+        final createResult = await _nudgeRepository.create(nudge);
+        if (createResult.isFailure) {
+          _logger.w('Failed to persist revision nudge', createResult.error);
+          continue;
+        }
         if (nudge.topicId != null) {
           final days = _extractInt(nudge.message) ?? 3;
           final notifResult = await _notificationService.showRevisionNudge(
@@ -382,7 +393,11 @@ class EngagementScheduler {
       final nudgesResult = await getPlanAdjustmentNudge(studentId);
       final nudges = nudgesResult.data ?? [];
       for (final nudge in nudges) {
-        await _nudgeRepository.create(nudge);
+        final createResult = await _nudgeRepository.create(nudge);
+        if (createResult.isFailure) {
+          _logger.w('Failed to persist plan adjustment nudge', createResult.error);
+          continue;
+        }
         final days = _extractInt(nudge.message) ?? 3;
         final notifResult = await _notificationService.showPlanAdjustmentSuggestion(
           id: _notificationIdCounter++,
@@ -424,7 +439,7 @@ class EngagementScheduler {
     try {
       final deviation = await orchestrator.checkAdherence(studentId);
       if (deviation.isSuccess && deviation.data!.requiresRegeneration) {
-        await _nudgeRepository.create(EngagementNudgeModel(
+        final createResult = await _nudgeRepository.create(EngagementNudgeModel(
           id: 'adp_reg_${DateTime.now().millisecondsSinceEpoch}_$studentId',
           studentId: studentId,
           nudgeType: NudgeType.autoRegeneration.name,
@@ -433,6 +448,9 @@ class EngagementScheduler {
               ? NudgeSeverity.high.name
               : NudgeSeverity.medium.name,
         ));
+        if (createResult.isFailure) {
+          _logger.w('Failed to persist auto-regeneration nudge', createResult.error);
+        }
       }
     } catch (e) {
       _logger.w('Failed to check plan adherence: $e');
@@ -457,7 +475,14 @@ class EngagementScheduler {
             ),
             completed: false,
           );
-          await _sessionRepository!.save(finalized.id, finalized);
+          final saveResult = await _sessionRepository!.save(finalized.id, finalized);
+          if (saveResult.isFailure) {
+            _logger.w(
+              'Failed to persist auto-finalized stale session ${session.id}',
+              saveResult.error,
+            );
+            continue;
+          }
           _logger.w('Auto-finalized stale session: ${session.id}');
         }
       }

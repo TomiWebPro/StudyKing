@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/notification_ids.dart';
@@ -200,6 +201,8 @@ class _RecordingSessionRepo extends SessionRepository {
 
 class _FakeNotificationService extends NotificationService {
   final List<double> overworkHoursStudied = [];
+  final List<String> revisionTopicNames = [];
+  final List<int> planAdjustmentLowDays = [];
 
   @override
   Future<Result<void>> showOverworkWarning({
@@ -209,6 +212,75 @@ class _FakeNotificationService extends NotificationService {
     overworkHoursStudied.add(hoursStudied);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<void>> showRevisionNudge({
+    required int id,
+    required String topicName,
+    required int daysSinceLastPractice,
+  }) async {
+    revisionTopicNames.add(topicName);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> showPlanAdjustmentSuggestion({
+    required int id,
+    required int consecutiveLowDays,
+  }) async {
+    planAdjustmentLowDays.add(consecutiveLowDays);
+    return Result.success(null);
+  }
+}
+
+/// Nudge repository stub whose writes always fail, used to verify the
+/// scheduler does not notify about nudges it could not persist.
+class _FailingNudgeRepository extends EngagementNudgeRepository {
+  final List<EngagementNudgeModel> createAttempts = [];
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<void>> create(EngagementNudgeModel model) async {
+    createAttempts.add(model);
+    return Result.failure('simulated write failure');
+  }
+
+  @override
+  Future<Result<List<EngagementNudgeModel>>> getByStudent(String studentId) async =>
+      Result.success([]);
+}
+
+/// Session repository stub whose [save] always fails, used to verify
+/// stale-session finalization surfaces the write failure instead of
+/// reporting success.
+class _FailingSessionRepo extends SessionRepository {
+  final List<Session> _sessions;
+  final List<Session> saveAttempts = [];
+
+  _FailingSessionRepo(this._sessions);
+
+  @override
+  Future<Result<List<Session>>> getAll() async => Result.success(_sessions);
+
+  @override
+  Future<Result<void>> save(String key, Session item) async {
+    saveAttempts.add(item);
+    return Result.failure('simulated write failure');
+  }
+}
+
+List<String> _capturedLogs = [];
+void _installLogCapture() {
+  _capturedLogs.clear();
+  debugPrint = (String? message, {int? wrapWidth}) {
+    if (message != null) _capturedLogs.add(message);
+  };
+}
+
+void _uninstallLogCapture() {
+  debugPrint = debugPrintThrottled;
 }
 
 class _OverworkTracker extends StudyProgressTracker {
@@ -428,6 +500,187 @@ void main() {
             .toList();
         expect(stored, hasLength(1));
         expect(stored.first.hoursStudied, 4.5);
+      });
+    });
+
+    group('nudge persistence failures are not masked', () {
+      EngagementScheduler failingWriteScheduler({
+        required _FakeNotificationService notif,
+        required _FailingNudgeRepository nudgeRepo,
+        required SessionRepository sessionRepo,
+      }) {
+        return EngagementScheduler(
+          tracker: _OverworkTracker(87.4),
+          masteryService: masteryService,
+          notificationService: notif,
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: sessionRepo,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+      }
+
+      test('overwork notification is skipped when the nudge cannot be persisted',
+          () async {
+        final notif = _FakeNotificationService();
+        final failingNudgeRepo = _FailingNudgeRepository();
+        final scheduler = failingWriteScheduler(
+          notif: notif,
+          nudgeRepo: failingNudgeRepo,
+          // 5h of study time today trips the overwork threshold.
+          sessionRepo: _TodayDurationSessionRepo(5 * 3600000),
+        );
+
+        final result = await scheduler.runDailyChecksNow();
+
+        // The daily check still completes even though the write failed…
+        expect(result.isSuccess, true);
+        // …the nudge was attempted…
+        expect(failingNudgeRepo.createAttempts, hasLength(1));
+        expect(failingNudgeRepo.createAttempts.single.nudgeType, 'overwork');
+        // …but no notification is shown for a nudge that was never persisted.
+        expect(notif.overworkHoursStudied, isEmpty);
+      });
+
+      test('revision notification is skipped when the nudge cannot be persisted',
+          () async {
+        masteryService.topicsNeedingReview.add(MasteryState(
+          studentId: 'test-student',
+          topicId: 'topic-stale',
+          lastAttempt: DateTime.now().subtract(const Duration(days: 5)),
+          lastUpdated: DateTime.now().subtract(const Duration(days: 5)),
+        ));
+        final notif = _FakeNotificationService();
+        final failingNudgeRepo = _FailingNudgeRepository();
+        final scheduler = failingWriteScheduler(
+          notif: notif,
+          nudgeRepo: failingNudgeRepo,
+          sessionRepo: _FakeSessionRepo(),
+        );
+
+        final result = await scheduler.runDailyChecksNow();
+
+        expect(result.isSuccess, true);
+        expect(failingNudgeRepo.createAttempts, hasLength(1));
+        expect(failingNudgeRepo.createAttempts.single.nudgeType, 'revision');
+        expect(notif.revisionTopicNames, isEmpty);
+      });
+
+      test('plan adjustment notification is skipped when the nudge cannot be persisted',
+          () async {
+        for (var i = 0; i < 3; i++) {
+          adherenceRepo.addRecord(PlanAdherenceModel(
+            id: 'adh_pa_fail_$i',
+            studentId: 'test-student',
+            date: DateTime.now().subtract(Duration(days: i)),
+            adherenceScore: 0.3,
+          ));
+        }
+        final notif = _FakeNotificationService();
+        final failingNudgeRepo = _FailingNudgeRepository();
+        final scheduler = failingWriteScheduler(
+          notif: notif,
+          nudgeRepo: failingNudgeRepo,
+          sessionRepo: _FakeSessionRepo(),
+        );
+
+        final result = await scheduler.runDailyChecksNow();
+
+        expect(result.isSuccess, true);
+        // 3 low days also trip the auto-regeneration nudge, so filter by type.
+        expect(
+          failingNudgeRepo.createAttempts
+              .where((n) => n.nudgeType == 'planAdjustment'),
+          hasLength(1),
+        );
+        expect(notif.planAdjustmentLowDays, isEmpty);
+      });
+
+      test('auto-regeneration nudge failure is logged, not silently dropped',
+          () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+        for (var i = 0; i < 7; i++) {
+          adherenceRepo.addRecord(PlanAdherenceModel(
+            id: 'adh_reg_fail_$i',
+            studentId: 'test-student',
+            date: DateTime.now().subtract(Duration(days: i)),
+            adherenceScore: 0.1,
+          ));
+        }
+        final notif = _FakeNotificationService();
+        final failingNudgeRepo = _FailingNudgeRepository();
+        final scheduler = failingWriteScheduler(
+          notif: notif,
+          nudgeRepo: failingNudgeRepo,
+          sessionRepo: _FakeSessionRepo(),
+        );
+
+        final result = await scheduler.runDailyChecksNow();
+
+        expect(result.isSuccess, true);
+        expect(
+          failingNudgeRepo.createAttempts
+              .where((n) => n.nudgeType == 'autoRegeneration'),
+          hasLength(1),
+        );
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(
+          warnings.any((l) => l.contains('Failed to persist auto-regeneration nudge')),
+          isTrue,
+        );
+      });
+
+      test('stale-session finalization logs the write failure instead of claiming success',
+          () async {
+        _installLogCapture();
+        addTearDown(_uninstallLogCapture);
+        final staleSession = Session(
+          id: 'stale-fail-1',
+          studentId: 'test-student',
+          startTime: DateTime.now().subtract(const Duration(hours: 25)),
+          plannedDurationMinutes: 45,
+          status: SessionStatus.inProgress,
+        );
+        final failingSessionRepo = _FailingSessionRepo([staleSession]);
+        final finalizeScheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: failingSessionRepo,
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+        final result = await finalizeScheduler.init();
+
+        expect(result.isSuccess, true);
+        expect(failingSessionRepo.saveAttempts, hasLength(1));
+        final warnings = _capturedLogs.where((l) => l.contains('[W]')).toList();
+        expect(
+          warnings.any(
+            (l) => l.contains('Failed to persist auto-finalized stale session stale-fail-1'),
+          ),
+          isTrue,
+        );
+        // The unconditional success message must not be logged for a failed write.
+        expect(
+          warnings.any((l) => l.contains('Auto-finalized stale session: stale-fail-1')),
+          isFalse,
+        );
       });
     });
 
