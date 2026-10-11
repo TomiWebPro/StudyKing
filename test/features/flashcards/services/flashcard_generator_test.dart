@@ -28,6 +28,9 @@ class _FakeLlmService extends LlmService {
 
 class _FakeFlashcardRepository extends FlashcardRepository {
   final Map<String, Flashcard> _storage = {};
+  bool failAllSaves = false;
+  int? failAtIndex;
+  int _saveCount = 0;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -48,6 +51,12 @@ class _FakeFlashcardRepository extends FlashcardRepository {
 
   @override
   Future<Result<void>> create(Flashcard flashcard) async {
+    if (failAllSaves ||
+        (failAtIndex != null && _saveCount == failAtIndex)) {
+      _saveCount++;
+      return Result.failure('Hive write failed');
+    }
+    _saveCount++;
     _storage[flashcard.id] = flashcard;
     return Result.success(null);
   }
@@ -234,6 +243,72 @@ void main() {
         expect(card.topicId, 'topic_test');
         expect(card.subjectId, 'sub_test');
       }
+    });
+
+    test('returns failure when every card save fails (no unsaved cards reported)',
+        () async {
+      final flashcardsJson = '''[
+        {"front": "Q1", "back": "A1", "tags": []},
+        {"front": "Q2", "back": "A2", "tags": []}
+      ]''';
+
+      repo.failAllSaves = true;
+      final llm = _FakeLlmService(responseJson: flashcardsJson);
+      final generator = FlashcardGenerator(
+        llmService: llm,
+        flashcardRepository: repo,
+      );
+
+      final result = await generator.generateFlashcards(
+        content: 'Content.',
+        sourceId: 'src_1',
+        topicId: 'topic_1',
+        subjectId: 'sub_1',
+        modelId: 'test-model',
+      );
+
+      expect(result.isFailure, isTrue,
+          reason: 'save failures must not be masked as success');
+      expect(result.data, isNull);
+      expect(result.error, contains('Hive write failed'));
+
+      final persisted = await repo.getAll();
+      expect(persisted.data, isEmpty,
+          reason: 'failed writes must not leave cards in the repository');
+    });
+
+    test('returns failure when a later card save fails (partial failure)',
+        () async {
+      final flashcardsJson = '''[
+        {"front": "Q1", "back": "A1", "tags": []},
+        {"front": "Q2", "back": "A2", "tags": []},
+        {"front": "Q3", "back": "A3", "tags": []}
+      ]''';
+
+      repo.failAtIndex = 1; // second save fails
+      final llm = _FakeLlmService(responseJson: flashcardsJson);
+      final generator = FlashcardGenerator(
+        llmService: llm,
+        flashcardRepository: repo,
+      );
+
+      final result = await generator.generateFlashcards(
+        content: 'Content.',
+        sourceId: 'src_1',
+        topicId: 'topic_1',
+        subjectId: 'sub_1',
+        modelId: 'test-model',
+      );
+
+      expect(result.isFailure, isTrue,
+          reason: 'a partial save failure must fail the whole result');
+      expect(result.data, isNull,
+          reason: 'the result must not carry cards that were not all saved');
+      expect(result.error, contains('Hive write failed'));
+
+      final persisted = await repo.getAll();
+      expect(persisted.data?.length, 1,
+          reason: 'only the card saved before the failure is persisted');
     });
   });
 }

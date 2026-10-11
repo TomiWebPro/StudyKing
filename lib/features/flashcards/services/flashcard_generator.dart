@@ -53,15 +53,15 @@ class FlashcardGenerator {
         return Result.failure('No valid flashcards could be generated');
       }
 
-      final savedIds = <String>[];
       for (final card in flashcards) {
         final saveResult = await _flashcardRepository.create(card);
-        if (saveResult.isSuccess) {
-          savedIds.add(card.id);
+        if (saveResult.isFailure) {
+          _logger.w('Failed to save flashcard ${card.id}: ${saveResult.error}');
+          return Result.failure(saveResult.error!);
         }
       }
 
-      _logger.d('Generated ${savedIds.length} flashcards for source $sourceId');
+      _logger.d('Generated ${flashcards.length} flashcards for source $sourceId');
       return Result.success(flashcards);
     } catch (e) {
       _logger.w('Flashcard generation failed', e);
