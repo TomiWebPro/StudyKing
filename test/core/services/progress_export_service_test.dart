@@ -92,11 +92,14 @@ class _FakeMasteryGraphService implements MasteryGraphService {
 }
 
 class _FakeAttemptRepository implements AttemptRepository {
+  List<StudentAttempt> attempts = [];
+
   @override
   bool get isOpen => true;
 
   @override
-  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async => Result.success([]);
+  Future<Result<List<StudentAttempt>>> getByStudent(String studentId) async =>
+      Result.success(attempts);
 
   @override
   Future<Result<List<StudentAttempt>>> getByStudentAndSubject(String studentId, String subjectId) async => Result.success([]);
@@ -473,6 +476,70 @@ void main() {
         final bytes = await service.exportComprehensivePDF("student1", l10n);
         expect(bytes.isSuccess, isTrue);
         expect(bytes.data, isNotEmpty);
+      });
+
+      test('recent activity renders attempts in the PDF without error',
+          () async {
+        mockTracker.overallStats = {
+          'totalAttempts': 10, 'correctAttempts': 7, 'accuracy': 0.7,
+          'avgTimePerQuestion': 30.0, 'totalStudyTimeHours': 5.0,
+          'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
+        };
+        mockAttemptRepo.attempts = [
+          StudentAttempt(
+            id: 'q1_1',
+            studentId: 'student1',
+            questionId: 'q1',
+            subjectId: 's1',
+            timestamp: DateTime(2026, 1, 1),
+          ),
+          StudentAttempt(
+            id: 'q2_2',
+            studentId: 'student1',
+            questionId: 'q2',
+            subjectId: 's1',
+            timestamp: DateTime(2026, 1, 10),
+          ),
+        ];
+        final bytes = await service.exportComprehensivePDF("student1", l10n);
+        expect(bytes.isSuccess, isTrue);
+        expect(bytes.data, isNotEmpty);
+      });
+    });
+
+    group('dateRangeLabel', () {
+      final oldestFirst = [
+        StudentAttempt(
+          id: 'q1_1',
+          studentId: 'student1',
+          questionId: 'q1',
+          subjectId: 's1',
+          timestamp: DateTime(2026, 1, 1),
+        ),
+        StudentAttempt(
+          id: 'q2_2',
+          studentId: 'student1',
+          questionId: 'q2',
+          subjectId: 's1',
+          timestamp: DateTime(2026, 1, 10),
+        ),
+      ];
+
+      test('renders the range oldest to newest', () async {
+        // Regression: the PDF used to pass attempts.last (newest) as
+        // the range start, producing "Date range: Jan 10 to Jan 1".
+        expect(
+          ProgressExportService.dateRangeLabel(oldestFirst, l10n),
+          'Date range: 1/1/2026 to 1/10/2026',
+        );
+      });
+
+      test('sorts attempts before rendering, newest-first input included',
+          () async {
+        expect(
+          ProgressExportService.dateRangeLabel(oldestFirst.reversed.toList(), l10n),
+          'Date range: 1/1/2026 to 1/10/2026',
+        );
       });
     });
 

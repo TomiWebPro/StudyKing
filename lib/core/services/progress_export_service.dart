@@ -14,6 +14,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class ProgressExportService {
@@ -180,6 +181,21 @@ class ProgressExportService {
       MasteryLevel.proficient => 'Proficient',
       MasteryLevel.expert => 'Expert',
     };
+  }
+
+  /// Renders the "Recent Activity" date range for the comprehensive PDF,
+  /// oldest → newest. Attempts are sorted by timestamp first so the label
+  /// stays correct even if the repository changes its iteration order.
+  static String dateRangeLabel(
+    List<StudentAttempt> attempts,
+    AppLocalizations l10n,
+  ) {
+    final sorted = List<StudentAttempt>.of(attempts)
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return l10n.pdfDateRange(
+      DateFormat.yMd(l10n.localeName).format(sorted.first.timestamp.toLocal()),
+      DateFormat.yMd(l10n.localeName).format(sorted.last.timestamp.toLocal()),
+    );
   }
 
   Future<Result<List<int>>> exportComprehensivePDF(
@@ -367,10 +383,7 @@ class ProgressExportService {
           if (attempts.isNotEmpty) ...[
             pw.SizedBox(height: 4),
             pw.Text(
-              l10n.pdfDateRange(
-                DateFormat.yMd(l10n.localeName).format(attempts.last.timestamp.toLocal()),
-                DateFormat.yMd(l10n.localeName).format(attempts.first.timestamp.toLocal()),
-              ),
+              dateRangeLabel(attempts, l10n),
               style: const pw.TextStyle(fontSize: 11, color: PdfColors.grey600),
             ),
             pw.SizedBox(height: 4),
