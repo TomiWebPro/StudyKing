@@ -258,4 +258,78 @@ void main() {
       expect(spy.errorMessages.first, contains('VALIDATION'));
     });
   });
+
+  group('AppErrorHandler - null l10n fallbacks', () {
+    test('convertToAppException uses English fallback for network errors', () {
+      final error = Exception('SocketException: timeout');
+      final result = AppErrorHandler.convertToAppException(error, null);
+      expect(result.type, ExceptionType.network);
+      expect(
+        result.message,
+        equals(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        ),
+      );
+    });
+
+    test('convertToAppException uses English fallback for invalid API key errors', () {
+      final error = Exception('401 unauthorized');
+      final result = AppErrorHandler.convertToAppException(error, null);
+      expect(result.type, ExceptionType.invalidApiKey);
+      expect(
+        result.message,
+        equals('Invalid API key. Please check your credentials in Settings.'),
+      );
+    });
+
+    test('convertToAppException uses English fallback for database errors', () {
+      final error = StateError('Bad state: no element');
+      final result = AppErrorHandler.convertToAppException(error, null);
+      expect(result.type, ExceptionType.database);
+      expect(
+        result.message,
+        equals('A database error occurred. Please try again.'),
+      );
+    });
+
+    test('convertToAppException uses English fallback for unknown errors', () {
+      final result = AppErrorHandler.convertToAppException(Exception('boom'), null);
+      expect(result.type, ExceptionType.unknown);
+      expect(
+        result.message,
+        equals('An unexpected error occurred. Please try again.'),
+      );
+    });
+
+    test('getRetryText uses English fallbacks for every retry variant', () {
+      expect(
+        AppErrorHandler.getRetryText(
+          const AppException(message: 't', type: ExceptionType.network),
+          null,
+        ),
+        equals('Retry Connection'),
+      );
+      expect(
+        AppErrorHandler.getRetryText(
+          const AppException(message: 't', type: ExceptionType.apiRateLimit),
+          null,
+        ),
+        equals('Retry After Wait'),
+      );
+      expect(
+        AppErrorHandler.getRetryText(
+          const AppException(message: 't', type: ExceptionType.apiInternalServer),
+          null,
+        ),
+        equals('Try again'),
+      );
+      expect(
+        AppErrorHandler.getRetryText(
+          const AppException(message: 't', type: ExceptionType.unknown),
+          null,
+        ),
+        equals('Retry'),
+      );
+    });
+  });
 }

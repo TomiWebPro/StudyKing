@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'shared_test_helpers.dart';
 
 void main() {
@@ -1857,6 +1858,158 @@ void main() {
       await tester.pump();
       final snackBar = tester.widget<SnackBar>(find.byType(SnackBar));
       expect(snackBar.content, isA<Text>());
+    });
+  });
+
+  group('AppErrorHandler - context without AppLocalizations', () {
+    Future<BuildContext> captureContextWithoutLocalizations(
+      WidgetTester tester,
+    ) async {
+      BuildContext? context;
+      await tester.pumpWidget(
+        MaterialApp(
+          // Deliberately without AppLocalizations.localizationsDelegates,
+          // so AppLocalizations.of(context) returns null.
+          home: Scaffold(
+            body: Builder(
+              builder: (c) {
+                context = c;
+                return const SizedBox();
+              },
+            ),
+          ),
+        ),
+      );
+      return context!;
+    }
+
+    testWidgets('handleError does not throw and shows English fallback message',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      await AppErrorHandler.handleError(
+        context,
+        AppException(message: 'boom', type: ExceptionType.unknown),
+        'test',
+      );
+      await tester.pump();
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text('An unexpected error occurred. Please try again.'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('handleError with retry shows English fallback retry button',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      await AppErrorHandler.handleError(
+        context,
+        AppException(message: 'network error', type: ExceptionType.network),
+        'test',
+        retry: true,
+        retryCallback: () {},
+      );
+      await tester.pump();
+      expect(find.byType(SnackBar), findsOneWidget);
+      expect(
+        find.text(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        ),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.refresh), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+    });
+
+    testWidgets('handleError shows English fallback for every exception type',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      final cases = <(ExceptionType, String)>[
+        (ExceptionType.apiKeyMissing, 'API key is required. Please configure it in Settings.'),
+        (ExceptionType.invalidApiKey, 'Invalid API key. Please check your credentials in Settings.'),
+        (ExceptionType.apiRateLimit, 'Too many requests. Please wait a moment and try again.'),
+        (ExceptionType.apiAuth, 'Authentication failed. Please check your API credentials.'),
+        (ExceptionType.apiNotFound, 'The requested resource was not found.'),
+        (ExceptionType.apiInternalServer, 'The server encountered an error. Please try again later.'),
+        (ExceptionType.database, 'A database error occurred. Please try again.'),
+        (ExceptionType.pdfParse, 'Unable to parse the PDF file. Please ensure it is a valid PDF.'),
+        (ExceptionType.contentGeneration, 'Failed to generate content. Please try again.'),
+        (ExceptionType.llm, 'The AI service is temporarily unavailable. Please try again.'),
+      ];
+
+      for (final (type, message) in cases) {
+        await AppErrorHandler.handleError(
+          context,
+          AppException(message: 'e', type: type),
+          'test',
+        );
+        await tester.pump();
+        expect(find.text(message), findsOneWidget);
+        ScaffoldMessenger.of(context).clearSnackBars();
+        await tester.pumpAndSettle();
+      }
+    });
+
+    testWidgets('handleError shows validation fallback with the exception message',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      await AppErrorHandler.handleError(
+        context,
+        AppException(message: 'Field X is required', type: ExceptionType.validation),
+        'test',
+      );
+      await tester.pump();
+      expect(find.text('Validation failed: Field X is required'), findsOneWidget);
+    });
+
+    testWidgets('safely returns the default value without throwing',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      final result = await AppErrorHandler.safely<int>(
+        context,
+        () async => throw Exception('SocketException'),
+        defaultValue: 0,
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(result, equals(0));
+      expect(
+        find.text(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('safelySync returns the default value without throwing',
+        (tester) async {
+      final context = await captureContextWithoutLocalizations(tester);
+      expect(AppLocalizations.of(context), isNull);
+
+      final result = AppErrorHandler.safelySync<String>(
+        context,
+        () => throw Exception('SocketException'),
+        defaultValue: 'FALLBACK',
+        contextName: 'test',
+      );
+      await tester.pump();
+      expect(result, equals('FALLBACK'));
+      expect(
+        find.text(
+          'Unable to connect to the server. Please check your internet connection and try again.',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }
