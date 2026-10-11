@@ -374,7 +374,9 @@ class NotificationService {
       final l10n = _l10n;
       if (l10n == null) return Result.failure('l10n not initialized');
       final topicList = weakTopics.take(3).join(', ');
-      final suffix = weakTopics.length > 3 ? ' and ${weakTopics.length - 3} more' : '';
+      final suffix = weakTopics.length > 3
+          ? l10n.andMoreCount(weakTopics.length - 3)
+          : '';
       await showNotification(
         id: id,
         title: l10n.notifTitleTopicsNeedAttention,
@@ -442,13 +444,15 @@ class NotificationService {
     required String body,
   }) async {
     try {
+      final l10n = _l10n;
+      if (l10n == null) return Result.failure('l10n not initialized');
       await showNotification(
         id: id,
         title: title,
         body: body,
         payload: 'open_mentor',
         channelId: NotificationChannelIds.mentor,
-        channelName: _l10n?.notifChannelMentor ?? 'Mentor Messages',
+        channelName: l10n.notifChannelMentor,
       );
       return Result.success(null);
     } catch (e) {

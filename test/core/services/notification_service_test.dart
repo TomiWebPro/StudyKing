@@ -402,6 +402,161 @@ void main() {
       expect(result.isSuccess, isTrue);
     });
 
+    group('showLowMasteryWarning body localization', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            return methodCall.method == 'initialize' ? true : null;
+          },
+        );
+      });
+
+      Map<Object?, Object?> showCallArguments() {
+        final showCalls = notificationCalls
+            .where((c) => c.method == 'show')
+            .toList();
+        expect(showCalls, hasLength(1));
+        return showCalls.single.arguments as Map<Object?, Object?>;
+      }
+
+      NotificationService serviceWithLocalizations(AppLocalizations l10n) {
+        final service = NotificationService();
+        service.setAppLocalizations(l10n);
+        return service;
+      }
+
+      test('localizes the and-more suffix (en locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showLowMasteryWarning(
+          id: 1,
+          weakTopics: ['Algebra', 'Geometry', 'Calculus', 'Physics', 'Chemistry'],
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('Low mastery detected in: Algebra, Geometry, Calculus'));
+        expect(body, contains('... and 2 more'));
+      });
+
+      test('localizes the and-more suffix (es locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEs());
+
+        final result = await service.showLowMasteryWarning(
+          id: 1,
+          weakTopics: ['Álgebra', 'Geometría', 'Cálculo', 'Física', 'Química'],
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(
+          body,
+          contains('Bajo dominio detectado en: Álgebra, Geometría, Cálculo'),
+        );
+        expect(body, contains('... y 2 más'));
+        expect(body, isNot(contains(' and ')));
+      });
+
+      test('uses the singular form for exactly one additional topic',
+          () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showLowMasteryWarning(
+          id: 1,
+          weakTopics: ['Algebra', 'Geometry', 'Calculus', 'Physics'],
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, contains('... and 1 more'));
+      });
+
+      test('omits the suffix when at most three topics are weak', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showLowMasteryWarning(
+          id: 1,
+          weakTopics: ['Algebra', 'Geometry', 'Calculus'],
+        );
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, 'Low mastery detected in: Algebra, Geometry, Calculus');
+        expect(body, isNot(contains('more')));
+      });
+    });
+
+    group('showMentorMessage', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            return methodCall.method == 'initialize' ? true : null;
+          },
+        );
+      });
+
+      Map<Object?, Object?> showCallArguments() {
+        final showCalls = notificationCalls
+            .where((c) => c.method == 'show')
+            .toList();
+        expect(showCalls, hasLength(1));
+        return showCalls.single.arguments as Map<Object?, Object?>;
+      }
+
+      NotificationService serviceWithLocalizations(AppLocalizations l10n) {
+        final service = NotificationService();
+        service.setAppLocalizations(l10n);
+        return service;
+      }
+
+      test('returns failure when l10n is not set', () async {
+        final service = NotificationService();
+        final result = await service.showMentorMessage(
+          id: 1, title: 'T', body: 'B',
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('l10n not initialized'));
+      });
+
+      test('uses the localized mentor channel name (en locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showMentorMessage(
+          id: 1, title: 'T', body: 'B',
+        );
+
+        expect(result.isSuccess, isTrue);
+        final specifics =
+            showCallArguments()['platformSpecifics'] as Map<Object?, Object?>;
+        expect(specifics['channelName'], 'Mentor Messages');
+      });
+
+      test('uses the localized mentor channel name (es locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEs());
+
+        final result = await service.showMentorMessage(
+          id: 1, title: 'T', body: 'B',
+        );
+
+        expect(result.isSuccess, isTrue);
+        final specifics =
+            showCallArguments()['platformSpecifics'] as Map<Object?, Object?>;
+        expect(specifics['channelName'], 'Mensajes del Mentor');
+      });
+    });
+
     test('showBadgeUnlocked returns success when l10n is set', () async {
       final service = NotificationService();
       service.setAppLocalizations(AppLocalizationsEn());
