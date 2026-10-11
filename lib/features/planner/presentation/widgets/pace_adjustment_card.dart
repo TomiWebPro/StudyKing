@@ -191,8 +191,9 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
   }
 
   void _updateSyllabusHours(SyllabusGoal goal, double newHours) {
-    ref.read(plannerProvider.notifier).adjustPace(
-      (newHours * 60).toDouble(),
+    ref.read(plannerProvider.notifier).updateSyllabusGoalHours(
+      goal.subjectId,
+      newHours,
       AppLocalizations.of(context)!,
     );
   }
@@ -204,9 +205,9 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
         return sum + (goal.targetHoursPerDay * 60);
       },
     );
-    final avgMinutes = state.plan!.syllabusGoals.isNotEmpty
-        ? newTotalMinutes / state.plan!.syllabusGoals.length
-        : state.plan!.targetMinutesPerDay;
-    ref.read(plannerProvider.notifier).adjustPace(avgMinutes, l10n);
+    ref.read(plannerProvider.notifier).adjustPace(
+      newTotalMinutes.toDouble(),
+      l10n,
+    );
   }
 }

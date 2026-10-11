@@ -657,6 +657,21 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     }
   }
 
+  Future<void> updateSyllabusGoalHours(
+    String subjectId,
+    double targetHoursPerDay,
+    AppLocalizations l10n,
+  ) async {
+    try {
+      await _service.updateSyllabusGoalHours(subjectId, targetHoursPerDay);
+      await loadExistingPlan();
+      state = state.copyWith(successMessage: l10n.planAdjusted);
+    } catch (e) {
+      _logger.w('Failed to update syllabus goal hours', e);
+      state = state.copyWith(error: l10n.failedToAdjustPlan);
+    }
+  }
+
   Future<void> addSubjectToPlan(SyllabusGoal newGoal, AppLocalizations l10n) async {
     try {
       final existingPlan = state.plan;

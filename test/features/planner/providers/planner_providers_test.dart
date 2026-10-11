@@ -437,6 +437,7 @@ class _FakeErrorPlannerService extends PlannerService {
   final bool throwOnDismissPendingAction;
   final bool throwOnRedistribute;
   final bool throwOnAdjustPace;
+  final bool throwOnUpdateSyllabusGoalHours;
 
   _FakeErrorPlannerService({
     required PlanRepository super.planRepo,
@@ -454,6 +455,7 @@ class _FakeErrorPlannerService extends PlannerService {
     this.throwOnDismissPendingAction = false,
     this.throwOnRedistribute = false,
     this.throwOnAdjustPace = false,
+    this.throwOnUpdateSyllabusGoalHours = false,
   });
 
   @override
@@ -496,6 +498,17 @@ class _FakeErrorPlannerService extends PlannerService {
       newTargetMinutesPerDay,
       recalculateDuration: recalculateDuration,
     );
+  }
+
+  @override
+  Future<Result<void>> updateSyllabusGoalHours(
+    String subjectId,
+    double targetHoursPerDay,
+  ) async {
+    if (throwOnUpdateSyllabusGoalHours) {
+      throw Exception('update syllabus goal hours error');
+    }
+    return super.updateSyllabusGoalHours(subjectId, targetHoursPerDay);
   }
 
   Future<Result<void>> redistributeWorkload(int missedMinutes, {String strategy = 'days:3'}) async {
@@ -565,6 +578,7 @@ _FakeErrorPlannerService _createErrorService({
   bool throwOnDismissPendingAction = false,
   bool throwOnRedistribute = false,
   bool throwOnAdjustPace = false,
+  bool throwOnUpdateSyllabusGoalHours = false,
 }) {
   return _FakeErrorPlannerService(
     planRepo: planRepo ?? _FakePlanRepository(),
@@ -583,6 +597,7 @@ _FakeErrorPlannerService _createErrorService({
     throwOnDismissPendingAction: throwOnDismissPendingAction,
     throwOnRedistribute: throwOnRedistribute,
     throwOnAdjustPace: throwOnAdjustPace,
+    throwOnUpdateSyllabusGoalHours: throwOnUpdateSyllabusGoalHours,
   );
 }
 
@@ -1604,6 +1619,94 @@ void main() {
         final logOutput = logs.join('\n');
         expect(logOutput, contains('Failed to adjust plan pace'));
         expect(logOutput, contains('adjust pace error'));
+      });
+    });
+
+    group('updateSyllabusGoalHours', () {
+      PersonalLearningPlan twoSubjectPlan() {
+        final now = DateTime(2026, 1, 1);
+        return PersonalLearningPlan(
+          studentId: 'test-student',
+          planId: 'plan-1',
+          generatedAt: now,
+          dailyPlans: [
+            DailyPlan(
+              date: now,
+              dayNumber: 1,
+              priorityTopics: [
+                PlannedTopic(topicId: 't1', topicTitle: 'T1', priority: 0.5, reason: '', readinessScore: 0.5, reviewUrgency: 0, estimatedQuestions: 5, estimatedMinutes: 15, subjectId: 's1', reasons: []),
+              ],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 15,
+              targetMinutes: 180,
+            ),
+          ],
+          summary: PlanSummary(totalQuestions: 30, totalMinutes: 360, newTopics: 2, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+          recommendations: [],
+          targetMinutesPerDay: 180,
+          targetQuestionsPerDay: 15,
+          metadata: {
+            'syllabus_goals': [
+              {
+                'subjectId': 'math',
+                'subjectTitle': 'Math',
+                'targetDays': 30,
+                'targetHoursPerDay': 2,
+              },
+              {
+                'subjectId': 'physics',
+                'subjectTitle': 'Physics',
+                'targetDays': 30,
+                'targetHoursPerDay': 1,
+              },
+            ],
+          },
+        );
+      }
+
+      test('sets success message and reloads the updated plan', () async {
+        planRepo.setPlan(twoSubjectPlan());
+
+        await notifier.updateSyllabusGoalHours('math', 4.0, l10n);
+
+        expect(notifier.currentState.successMessage, l10n.planAdjusted);
+        expect(notifier.currentState.error, isNull);
+        // Behavioral: the reloaded plan has the updated per-subject
+        // goal and the global target recomputed as the sum of goals.
+        final plan = notifier.currentState.plan;
+        expect(plan, isNotNull);
+        final goals = plan!.syllabusGoals;
+        expect(goals.firstWhere((g) => g.subjectId == 'math').targetHoursPerDay, 4);
+        expect(goals.firstWhere((g) => g.subjectId == 'physics').targetHoursPerDay, 1);
+        expect(plan.targetMinutesPerDay, 300.0);
+      });
+
+      test('sets error and logs exception when service throws', () async {
+        final logs = <String>[];
+        final originalPrint = debugPrint;
+        debugPrint = (message, {wrapWidth}) => logs.add(message ?? '');
+        addTearDown(() => debugPrint = originalPrint);
+
+        final throwingService = _createErrorService(
+          planRepo: planRepo,
+          masteryRepo: masteryRepo,
+          topicRepo: topicRepo,
+          roadmapRepo: roadmapRepo,
+          sessionRepo: sessionRepo,
+          pendingActionRepo: pendingActionRepo,
+          planOrchestrator: planOrchestrator,
+          throwOnUpdateSyllabusGoalHours: true,
+        );
+        final throwingNotifier = PlannerNotifier(throwingService);
+
+        await throwingNotifier.updateSyllabusGoalHours('math', 4.0, l10n);
+
+        expect(throwingNotifier.currentState.error, l10n.failedToAdjustPlan);
+        expect(throwingNotifier.currentState.successMessage, isNull);
+        final logOutput = logs.join('\n');
+        expect(logOutput, contains('Failed to update syllabus goal hours'));
+        expect(logOutput, contains('update syllabus goal hours error'));
       });
     });
 

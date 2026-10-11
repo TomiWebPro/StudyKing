@@ -460,6 +460,116 @@ void main() {
     });
   });
 
+  group('updateSyllabusGoalHours', () {
+    PersonalLearningPlan twoSubjectPlan() {
+      final now = DateTime(2026, 1, 1);
+      return PersonalLearningPlan(
+        studentId: 'test-student',
+        planId: 'plan-1',
+        generatedAt: now,
+        dailyPlans: [
+          DailyPlan(
+            date: now,
+            dayNumber: 1,
+            priorityTopics: [
+              PlannedTopic(topicId: 't1', topicTitle: 'T1', priority: 0.5, reason: '', readinessScore: 0.5, reviewUrgency: 0, estimatedQuestions: 5, estimatedMinutes: 15, subjectId: 's1', reasons: []),
+            ],
+            reviewQuestionIds: [],
+            stretchGoalQuestionIds: [],
+            targetQuestions: 15,
+            targetMinutes: 180,
+          ),
+        ],
+        summary: PlanSummary(totalQuestions: 30, totalMinutes: 360, newTopics: 2, reviewTopics: 0, estimatedCoverage: 0.5, focusAreas: []),
+        recommendations: [],
+        targetMinutesPerDay: 180,
+        targetQuestionsPerDay: 15,
+        metadata: {
+          'syllabus_goals': [
+            {
+              'subjectId': 'math',
+              'subjectTitle': 'Math',
+              'targetDays': 30,
+              'targetHoursPerDay': 2,
+            },
+            {
+              'subjectId': 'physics',
+              'subjectTitle': 'Physics',
+              'targetDays': 30,
+              'targetHoursPerDay': 1,
+            },
+          ],
+        },
+      );
+    }
+
+    test('updates the matching goal and recomputes the global target as the sum of goals',
+        () async {
+      await planRepo.savePlan(twoSubjectPlan());
+
+      final result = await service.updateSyllabusGoalHours('math', 4.0);
+      expect(result.isSuccess, isTrue);
+
+      final loaded = await service.loadExistingPlan();
+      expect(loaded.isSuccess, isTrue);
+      final plan = loaded.data!;
+      final goals = plan.syllabusGoals;
+      expect(goals.length, 2);
+      expect(goals.firstWhere((g) => g.subjectId == 'math').targetHoursPerDay, 4);
+      expect(goals.firstWhere((g) => g.subjectId == 'physics').targetHoursPerDay, 1);
+      // Global target is the SUM of per-subject hours: (4 + 1) h = 300 min.
+      expect(plan.targetMinutesPerDay, 300.0);
+    });
+
+    test('rescales daily plans when the global target changes', () async {
+      final plan = twoSubjectPlan();
+      await planRepo.savePlan(plan);
+
+      final result = await service.updateSyllabusGoalHours('math', 4.0);
+      expect(result.isSuccess, isTrue);
+
+      final loaded = await service.loadExistingPlan();
+      final day = loaded.data!.dailyPlans.first;
+      // Old target 180 -> new target 300, ratio 5/3: 180 * 5/3 = 300.
+      expect(day.targetMinutes, 300);
+    });
+
+    test('returns failure when no plan exists', () async {
+      final result = await service.updateSyllabusGoalHours('math', 4.0);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns failure for an unknown subject', () async {
+      await planRepo.savePlan(twoSubjectPlan());
+
+      final result = await service.updateSyllabusGoalHours('biology', 4.0);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns failure when the plan has no syllabus goals', () async {
+      final now = DateTime(2026, 1, 1);
+      final plan = PersonalLearningPlan(
+        studentId: 'test-student',
+        planId: 'plan-2',
+        generatedAt: now,
+        dailyPlans: [],
+        summary: PlanSummary(totalQuestions: 0, totalMinutes: 0, newTopics: 0, reviewTopics: 0, estimatedCoverage: 0.0, focusAreas: []),
+        recommendations: [],
+        targetMinutesPerDay: 180,
+      );
+      await planRepo.savePlan(plan);
+
+      final result = await service.updateSyllabusGoalHours('math', 4.0);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns failure when planRepo throws', () async {
+      planRepo.throwOnLoad = true;
+      final result = await service.updateSyllabusGoalHours('math', 4.0);
+      expect(result.isFailure, isTrue);
+    });
+  });
+
   group('catch block coverage', () {
     test('loadExistingPlan returns failure when planRepo throws', () async {
       planRepo.throwOnLoad = true;

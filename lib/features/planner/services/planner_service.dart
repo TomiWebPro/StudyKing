@@ -822,6 +822,62 @@ class PlannerService {
     }
   }
 
+  /// Updates a single [SyllabusGoal.targetHoursPerDay] for [subjectId] and
+  /// recomputes the plan's global daily target as the sum of all per-subject
+  /// goals (the same convention used at plan creation), rescaling daily plans
+  /// through the shared pace-adjustment path.
+  Future<Result<void>> updateSyllabusGoalHours(
+    String subjectId,
+    double targetHoursPerDay,
+  ) async {
+    try {
+      await planRepo.init();
+      final result = await planRepo.loadPlan(studentId);
+      final plan = result.data;
+      if (plan == null) {
+        return Result.failure('No plan found for student $studentId');
+      }
+
+      final goals = plan.syllabusGoals;
+      if (goals.isEmpty) {
+        return Result.failure('Plan ${plan.planId} has no syllabus goals');
+      }
+
+      var matched = false;
+      final updatedGoals = goals.map((goal) {
+        if (goal.subjectId != subjectId) return goal;
+        matched = true;
+        return SyllabusGoal(
+          subjectId: goal.subjectId,
+          subjectTitle: goal.subjectTitle,
+          syllabusCode: goal.syllabusCode,
+          targetDays: goal.targetDays,
+          targetHoursPerDay: targetHoursPerDay.round(),
+        );
+      }).toList();
+
+      if (!matched) {
+        return Result.failure('No syllabus goal for subject $subjectId');
+      }
+
+      final totalMinutes = updatedGoals.fold<double>(
+        0,
+        (sum, goal) => sum + goal.targetHoursPerDay * 60,
+      );
+
+      final metadata = Map<String, dynamic>.from(plan.metadata ?? {});
+      metadata['syllabus_goals'] = updatedGoals.map((g) => g.toJson()).toList();
+      await planRepo.savePlan(plan.copyWith(metadata: metadata));
+
+      // Recompute the global pace as the sum of all per-subject goals
+      // and rescale daily plans proportionally.
+      return await adjustPace(totalMinutes);
+    } catch (e) {
+      _logger.w('updateSyllabusGoalHours failed', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<void>> extendPlan(int extraDays) async {
     return planService.extendPlan(studentId, extraDays);
   }

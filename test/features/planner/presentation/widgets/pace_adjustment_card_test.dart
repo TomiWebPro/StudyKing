@@ -13,11 +13,18 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class _FakePlannerService extends PlannerService {
-  _FakePlannerService() : super(lessonAgentService: null, localeName: 'en');
+  _FakePlannerService({PersonalLearningPlan? plan})
+      : _plan = plan,
+        super(lessonAgentService: null, localeName: 'en');
+
+  final PersonalLearningPlan? _plan;
+  final List<double> adjustPaceTargets = [];
+  final List<String> updatedGoalSubjectIds = [];
+  final List<double> updatedGoalHours = [];
 
   @override
   Future<Result<PersonalLearningPlan?>> loadExistingPlan() async {
-    return Result.success(null);
+    return Result.success(_plan);
   }
 
   @override
@@ -49,12 +56,77 @@ class _FakePlannerService extends PlannerService {
   Future<Result<List<PlanAdherenceModel>>> getAdherenceRecords() async {
     return Result.success([]);
   }
+
+  @override
+  Future<Result<void>> adjustPace(
+    double newTargetMinutesPerDay, {
+    bool recalculateDuration = false,
+  }) async {
+    adjustPaceTargets.add(newTargetMinutesPerDay);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> updateSyllabusGoalHours(
+    String subjectId,
+    double targetHoursPerDay,
+  ) async {
+    updatedGoalSubjectIds.add(subjectId);
+    updatedGoalHours.add(targetHoursPerDay);
+    return Result.success(null);
+  }
 }
 
-Widget buildApp(Widget widget) {
+PersonalLearningPlan _twoSubjectPlan() {
+  return PersonalLearningPlan(
+    studentId: 'student-1',
+    planId: 'plan-1',
+    generatedAt: DateTime(2026, 1, 1),
+    dailyPlans: [
+      DailyPlan(
+        date: DateTime(2026, 1, 1),
+        dayNumber: 1,
+        priorityTopics: [],
+        reviewQuestionIds: [],
+        stretchGoalQuestionIds: [],
+        targetQuestions: 15,
+        targetMinutes: 180,
+      ),
+    ],
+    summary: PlanSummary(
+      totalQuestions: 30,
+      totalMinutes: 360,
+      newTopics: 2,
+      reviewTopics: 0,
+      estimatedCoverage: 0.5,
+      focusAreas: [],
+    ),
+    recommendations: [],
+    targetMinutesPerDay: 180.0,
+    targetQuestionsPerDay: 15,
+    metadata: {
+      'syllabus_goals': [
+        {
+          'subjectId': 'math',
+          'subjectTitle': 'Math',
+          'targetDays': 30,
+          'targetHoursPerDay': 2,
+        },
+        {
+          'subjectId': 'physics',
+          'subjectTitle': 'Physics',
+          'targetDays': 30,
+          'targetHoursPerDay': 1,
+        },
+      ],
+    },
+  );
+}
+
+Widget buildApp(Widget widget, PlannerService service) {
   return ProviderScope(
     overrides: [
-      plannerServiceProvider.overrideWithValue(_FakePlannerService()),
+      plannerServiceProvider.overrideWithValue(service),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -68,16 +140,76 @@ Widget buildApp(Widget widget) {
 void main() {
   group('PaceAdjustmentCard', () {
     testWidgets('shows no plan message when plan is null', (tester) async {
-      await tester.pumpWidget(buildApp(const PaceAdjustmentCard()));
+      await tester.pumpWidget(buildApp(const PaceAdjustmentCard(), _FakePlannerService()));
 
       expect(find.text('No study plan yet'), findsOneWidget);
       expect(find.byIcon(Icons.rocket_launch), findsOneWidget);
     });
 
     testWidgets('renders without error', (tester) async {
-      await tester.pumpWidget(buildApp(const PaceAdjustmentCard()));
+      await tester.pumpWidget(buildApp(const PaceAdjustmentCard(), _FakePlannerService()));
 
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('renders one slider per syllabus goal for multi-subject plans',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(const PaceAdjustmentCard(), _FakePlannerService(plan: _twoSubjectPlan())),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      expect(find.text('Math'), findsOneWidget);
+      expect(find.text('Physics'), findsOneWidget);
+      expect(find.byType(Slider), findsNWidgets(2));
+    });
+
+    testWidgets('dragging a per-subject slider updates that subject goal, '
+        'not the global pace', (tester) async {
+      final fake = _FakePlannerService(plan: _twoSubjectPlan());
+      await tester.pumpWidget(buildApp(const PaceAdjustmentCard(), fake));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      await tester.drag(find.byType(Slider).at(0), const Offset(150, 0));
+      await tester.pumpAndSettle();
+
+      // The dragged subject's goal is updated through the per-goal path
+      // (a drag fires onChanged multiple times)...
+      expect(fake.updatedGoalSubjectIds, isNotEmpty);
+      expect(fake.updatedGoalSubjectIds.toSet(), {'math'});
+      expect(fake.updatedGoalHours, isNotEmpty);
+      // ...and the global pace is NOT overwritten with the single
+      // subject's hours (the old bug called adjustPace with goal*60).
+      expect(fake.adjustPaceTargets, isEmpty);
+    });
+
+    testWidgets('apply persists the sum of per-subject hours, not the average',
+        (tester) async {
+      final fake = _FakePlannerService(plan: _twoSubjectPlan());
+      await tester.pumpWidget(buildApp(const PaceAdjustmentCard(), fake));
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(OutlinedButton, 'Study pace adjusted successfully'));
+      await tester.pumpAndSettle();
+
+      // Math 2h + Physics 1h = 3h = 180 min (the sum), not 90 min (average).
+      expect(fake.adjustPaceTargets, [180.0]);
+      expect(fake.updatedGoalSubjectIds, isEmpty);
     });
   });
 }
