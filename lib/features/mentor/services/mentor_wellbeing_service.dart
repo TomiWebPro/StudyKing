@@ -38,11 +38,12 @@ class MentorWellbeingService {
     final todayMinutes = await _getTodayStudyMinutes();
     final dailyCap = SettingsService.getDailyCapMinutes();
 
-    if (dailyCap > 0) {
-      final todayNudgesResult = await _nudgeRepo.getTodayCount(_studentId);
-      final todayNudges = todayNudgesResult.data ?? 0;
-      if (todayNudges >= _maxNudgesPerDay) return messages;
-    }
+    // The per-day nudge throttle must run for every configuration: only
+    // _checkOverwork compares study minutes against the cap, while the
+    // _maxNudgesPerDay limit is a global safety net (dailyCap defaults to 0).
+    final todayNudgesResult = await _nudgeRepo.getTodayCount(_studentId);
+    final todayNudges = todayNudgesResult.data ?? 0;
+    if (todayNudges >= _maxNudgesPerDay) return messages;
 
     await _checkOverwork(todayMinutes, dailyCap, messages);
     await _checkLateNight(messages);

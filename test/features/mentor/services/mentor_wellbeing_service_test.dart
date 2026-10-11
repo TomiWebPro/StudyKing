@@ -284,6 +284,70 @@ void main() {
       });
 
       group('nudge cap limit', () {
+        test('prevents additional nudges at max per day with default settings', () async {
+          // Default configuration: no daily study cap configured, so
+          // getDailyCapMinutes() == 0. The throttle must still apply.
+          Hive.init(Directory.systemTemp.path);
+          final box = await Hive.openBox(HiveBoxNames.settings);
+          await box.delete('dailyCapMinutes');
+
+          final now = DateTime.now();
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setTodaySessions([
+            Session(
+              id: 'late-1',
+              studentId: 'test-student',
+              startTime: DateTime(now.year, now.month, now.day, 23, 0),
+            ),
+          ]);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          nudgeRepo.setTodayCount(5);
+
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.data, isEmpty);
+          expect(nudgeRepo.createdNudges, isEmpty);
+
+          await box.clear();
+          await box.close();
+        });
+
+        test('still creates nudges under the limit with default settings', () async {
+          Hive.init(Directory.systemTemp.path);
+          final box = await Hive.openBox(HiveBoxNames.settings);
+          await box.delete('dailyCapMinutes');
+
+          final now = DateTime.now();
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setTodaySessions([
+            Session(
+              id: 'late-1',
+              studentId: 'test-student',
+              startTime: DateTime(now.year, now.month, now.day, 23, 0),
+            ),
+          ]);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          nudgeRepo.setTodayCount(3);
+
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.data, isNotEmpty);
+          expect(nudgeRepo.createdNudges, isNotEmpty);
+
+          await box.clear();
+          await box.close();
+        });
+
         test('prevents additional nudges when at max per day', () async {
           Hive.init(Directory.systemTemp.path);
           final box = await Hive.openBox(HiveBoxNames.settings);
