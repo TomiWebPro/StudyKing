@@ -14,7 +14,11 @@ void main() {
 
     test('returns success with plan metadata when a plan is generated',
         () async {
-      final planner = FakePlannerService(sampleLearningPlan());
+      // Persisted plans get a fresh UUID planId distinct from studentId
+      // (PlannerService._persistGeneratedPlan), so the tool must report
+      // the plan's own id, not the student's.
+      final plan = sampleLearningPlan().copyWith(planId: 'plan-uuid-1');
+      final planner = FakePlannerService(plan);
       final tool = CreatePlanTool(
         plannerService: planner,
         localeName: 'en',
@@ -27,7 +31,8 @@ void main() {
       });
 
       expect(result['success'], isTrue);
-      expect(result['planId'], equals('student-1'));
+      expect(result['planId'], equals(plan.planId));
+      expect(result['planId'], isNot(equals(plan.studentId)));
       expect(result['totalDays'], equals(2));
       expect(result['message'], isA<String>());
       expect(result['message'], isNotEmpty);

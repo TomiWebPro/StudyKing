@@ -46,7 +46,7 @@ class CreatePlanTool extends AgentTool {
 
     return {
       'success': plan != null,
-      'planId': plan?.studentId ?? '',
+      'planId': plan?.planId ?? '',
       'totalDays': plan?.dailyPlans.length ?? 0,
       'message': plan != null
           ? l10n.toolCreatePlanResult(args['course'] as String, (args['daysValue'] as num).toInt())
