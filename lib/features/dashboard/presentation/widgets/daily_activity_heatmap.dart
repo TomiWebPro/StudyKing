@@ -52,7 +52,14 @@ class DailyActivityHeatmap extends StatelessWidget {
 
     final today = DateTime.now().dateOnly;
     final endDate = today;
-    final startDate = sorted.first.date.dateOnly;
+    // Align the grid to the start of the week (Monday) containing the
+    // first activity so the fixed row labels (row 0 = Monday) match the
+    // actual weekday of every row, GitHub-style. Cells before the first
+    // activity have no entry and render empty.
+    final firstActivity = sorted.first.date.dateOnly;
+    final startDate = firstActivity.subtract(
+      Duration(days: firstActivity.weekday - DateTime.monday),
+    );
 
     final totalDays = endDate.difference(startDate).inDays + 1;
     final weeksCount = (totalDays / 7).ceil();
