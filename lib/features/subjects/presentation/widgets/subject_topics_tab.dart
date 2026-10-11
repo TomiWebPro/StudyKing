@@ -78,7 +78,18 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
 
     try {
       final topicRepo = ref.read(topicRepositoryProvider);
-      await topicRepo.create(result);
+      final createResult = await topicRepo.create(result);
+      if (createResult.isFailure) {
+        _logger.w('Topic creation failed: ${createResult.error}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.topicCreateFailed(l10n.somethingWentWrong)),
+            ),
+          );
+        }
+        return;
+      }
 
       final subjectRepoResult = await ref.read(subjectsRepositoryProvider.future);
       await subjectRepoResult.addTopicToSubject(widget.subjectId, result.id);
@@ -114,7 +125,18 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
 
     try {
       final topicRepo = ref.read(topicRepositoryProvider);
-      await topicRepo.create(result);
+      final createResult = await topicRepo.create(result);
+      if (createResult.isFailure) {
+        _logger.w('Topic update failed: ${createResult.error}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.topicUpdateFailed(l10n.somethingWentWrong)),
+            ),
+          );
+        }
+        return;
+      }
       await _loadTopics();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -275,14 +297,29 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
   }
 
   Future<void> _saveTopicOrder() async {
+    var failed = false;
     try {
       final topicRepo = ref.read(topicRepositoryProvider);
       for (var i = 0; i < _topics.length; i++) {
         final updated = _topics[i].copyWith(sortOrder: i);
-        await topicRepo.create(updated);
+        final result = await topicRepo.create(updated);
+        if (result.isFailure) {
+          failed = true;
+          _logger.w(
+              'Failed to persist topic order for ${updated.id}: ${result.error}');
+        }
       }
     } catch (e) {
+      failed = true;
       _logger.w('Failed to save topic order: $e');
+    }
+    if (failed && mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.topicUpdateFailed(l10n.somethingWentWrong)),
+        ),
+      );
     }
   }
 

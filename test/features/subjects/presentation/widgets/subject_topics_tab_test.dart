@@ -23,6 +23,7 @@ class _FakeTopicRepository extends TopicRepository {
   bool throwOnGetBySubject = false;
   bool throwOnCreate = false;
   bool throwOnDelete = false;
+  bool createReturnsFailure = false;
 
   void seed(Topic topic) => _storage[topic.id] = topic;
   bool hasKey(String id) => _storage.containsKey(id);
@@ -39,6 +40,7 @@ class _FakeTopicRepository extends TopicRepository {
   @override
   Future<Result<void>> create(Topic topic) async {
     if (throwOnCreate) throw Exception('Create failed');
+    if (createReturnsFailure) return Result.failure('write failed');
     _storage[topic.id] = topic;
     return Result.success(null);
   }
@@ -72,6 +74,7 @@ class _FakeTopicRepository extends TopicRepository {
 class _FakeSubjectRepository extends SubjectRepository {
   final Map<String, Subject> _storage = {};
   bool throwOnAddTopic = false;
+  final List<String> addTopicCalls = [];
 
   void seed(Subject subject) => _storage[subject.id] = subject;
 
@@ -83,6 +86,7 @@ class _FakeSubjectRepository extends SubjectRepository {
   @override
   Future<Result<void>> addTopicToSubject(String subjectId, String topicId) async {
     if (throwOnAddTopic) return Result.failure('Add topic failed');
+    addTopicCalls.add(topicId);
     final subject = _storage[subjectId];
     if (subject != null) {
       _storage[subjectId] = subject.copyWith(
@@ -462,6 +466,119 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Failed to create'), findsOneWidget);
+    });
+
+    testWidgets('add topic shows failure snackbar and skips subject link when create returns failure',
+        (tester) async {
+      fakeTopicRepo.createReturnsFailure = true;
+
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: fakeTopicRepo,
+        subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.add_circle_outline));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'New Topic');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // Failure is surfaced, not masked as success.
+      expect(find.textContaining('Failed to create topic'), findsOneWidget);
+      expect(find.textContaining('Topic "New Topic" created'), findsNothing);
+      // Downstream subject-topic link was never created.
+      expect(fakeSubjectRepo.addTopicCalls, isEmpty);
+      // The topic was never persisted.
+      final all = await fakeTopicRepo.getAll();
+      expect(all.data, isEmpty);
+    });
+
+    testWidgets('edit topic shows failure snackbar and keeps persisted title when update fails',
+        (tester) async {
+      fakeTopicRepo.seed(Topic(
+        id: 't-1',
+        subjectId: 'sub-1',
+        title: 'Algebra',
+        description: 'Desc',
+        syllabusText: 'Syllabus',
+      ));
+      fakeTopicRepo.createReturnsFailure = true;
+
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: fakeTopicRepo,
+        subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit Topic'));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).first, 'Algebra II');
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Save'));
+      await tester.pumpAndSettle();
+
+      // Failure is surfaced, not masked as success.
+      expect(find.textContaining('Failed to update topic'), findsOneWidget);
+      expect(find.textContaining('Topic "Algebra II" updated'), findsNothing);
+      // The persisted topic keeps its original title.
+      final stored = await fakeTopicRepo.get('t-1');
+      expect(stored.data?.title, 'Algebra');
+    });
+
+    testWidgets('reorder shows failure snackbar and does not persist new order when create fails',
+        (tester) async {
+      fakeTopicRepo.seedAll([
+        Topic(
+          id: 't-1',
+          subjectId: 'sub-1',
+          title: 'Algebra',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+        ),
+        Topic(
+          id: 't-2',
+          subjectId: 'sub-1',
+          title: 'Geometry',
+          description: 'Desc',
+          syllabusText: 'Syllabus',
+        ),
+      ]);
+      fakeTopicRepo.createReturnsFailure = true;
+
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: fakeTopicRepo,
+        subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      // Drag the second topic above the first to trigger a reorder.
+      final handle = find.byIcon(Icons.drag_handle).last;
+      final handleCenter = tester.getRect(handle).center;
+      final gesture = await tester.startGesture(handleCenter);
+      await tester.pump();
+      await gesture.moveBy(const Offset(0, -130));
+      await tester.pump();
+      await gesture.up();
+      await tester.pumpAndSettle();
+
+      // The failed persistence is surfaced instead of silently lost.
+      expect(find.textContaining('Failed to update topic'), findsOneWidget);
+      // Stored sortOrder values are untouched by the failed reorder.
+      final t1 = await fakeTopicRepo.get('t-1');
+      final t2 = await fakeTopicRepo.get('t-2');
+      expect(t1.data?.sortOrder, 0);
+      expect(t2.data?.sortOrder, 0);
     });
   });
 }
