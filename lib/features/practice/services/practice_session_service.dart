@@ -81,7 +81,12 @@ class PracticeSessionService {
         subjectId: subjectId,
         type: SessionType.practice,
       );
-      await _sessionRepo.save(session.id, session);
+      final saveResult =
+          await _sessionRepo.save(session.id, session);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to auto-save practice session', saveResult.error);
+        return Result.failure(saveResult.error);
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to auto-save session', e);

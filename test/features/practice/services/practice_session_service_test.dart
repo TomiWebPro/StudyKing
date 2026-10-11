@@ -215,12 +215,15 @@ void main() {
         expect(sessionRepo.sessions[0].id, isNot(sessionRepo.sessions[1].id));
       });
 
-      test('handles errors gracefully when session save fails', () async {
+      test('propagates failure when session save returns Result.failure',
+          () async {
         sessionRepo.shouldThrowOnSave = true;
-        await service.autoSaveSession(
+        final result = await service.autoSaveSession(
           questionsAnswered: 10,
           correctAnswers: 7,
         );
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'Session save error');
         expect(sessionRepo.saveCalled, isFalse);
       });
     });
