@@ -26,19 +26,29 @@ class _FakeSessionRepository extends SessionRepository {
 }
 
 class _FakeTopicRepository extends TopicRepository {
+  final List<Topic> _topics;
+
+  _FakeTopicRepository([this._topics = const []]);
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<Topic>>> getBySubject(String subjectId) async => Result.success([]);
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async =>
+      Result.success(_topics.where((t) => t.subjectId == subjectId).toList());
 }
 
 class _FakeMasteryStateRepository extends MasteryStateRepository {
+  final List<MasteryState> _states;
+
+  _FakeMasteryStateRepository([this._states = const []]);
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async => Result.success([]);
+  Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async =>
+      Result.success(_states.where((s) => s.studentId == studentId).toList());
 }
 
 class _FakeStudentIdService extends StudentIdService {
@@ -49,12 +59,17 @@ class _FakeStudentIdService extends StudentIdService {
   Result<String> getStudentId() => Result.success('test-student-id');
 }
 
-SubjectStatsTab _createTab(String subjectId, SessionRepository repo) {
+SubjectStatsTab _createTab(
+  String subjectId,
+  SessionRepository repo, {
+  List<Topic> topics = const [],
+  List<MasteryState> masteryStates = const [],
+}) {
   return SubjectStatsTab(
     subjectId: subjectId,
     sessionRepository: repo,
-    topicRepository: _FakeTopicRepository(),
-    masteryStateRepository: _FakeMasteryStateRepository(),
+    topicRepository: _FakeTopicRepository(topics),
+    masteryStateRepository: _FakeMasteryStateRepository(masteryStates),
     studentIdService: _FakeStudentIdService(),
   );
 }
@@ -85,6 +100,31 @@ Widget _buildTestApp(Widget child) {
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(body: child),
+  );
+}
+
+Topic _topic(String id, String subjectId) {
+  return Topic(
+    id: id,
+    subjectId: subjectId,
+    title: 'Topic $id',
+    description: 'description',
+    syllabusText: 'syllabus',
+  );
+}
+
+MasteryState _masteryState({
+  required String studentId,
+  required String topicId,
+  MasteryLevel masteryLevel = MasteryLevel.novice,
+}) {
+  final now = DateTime(2024, 6, 15);
+  return MasteryState(
+    studentId: studentId,
+    topicId: topicId,
+    lastAttempt: now,
+    lastUpdated: now,
+    masteryLevel: masteryLevel,
   );
 }
 
@@ -603,6 +643,123 @@ void main() {
 
       expect(find.text('Sessions'), findsOneWidget);
       expect(find.text('0.0%'), findsAtLeast(1));
+    });
+
+    testWidgets('syllabus progress ignores mastered topics from other subjects', (tester) async {
+      final repo = _FakeSessionRepository([]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          _createTab(
+            testSubjectId,
+            repo,
+            topics: [
+              _topic('topic-1', testSubjectId),
+              _topic('topic-2', testSubjectId),
+            ],
+            masteryStates: [
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-1',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-2',
+                masteryLevel: MasteryLevel.expert,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'topic-1',
+                masteryLevel: MasteryLevel.developing,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mastered 0 / 2'), findsOneWidget);
+      expect(find.text('0%'), findsOneWidget);
+    });
+
+    testWidgets('syllabus progress counts proficient topics within the subject', (tester) async {
+      final repo = _FakeSessionRepository([]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          _createTab(
+            testSubjectId,
+            repo,
+            topics: [
+              _topic('topic-1', testSubjectId),
+              _topic('topic-2', testSubjectId),
+            ],
+            masteryStates: [
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'topic-1',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-1',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mastered 1 / 2'), findsOneWidget);
+      expect(find.text('50%'), findsOneWidget);
+    });
+
+    testWidgets('syllabus progress never exceeds 100% when other subjects have mastered topics', (tester) async {
+      final repo = _FakeSessionRepository([]);
+      await tester.pumpWidget(
+        _buildTestApp(
+          _createTab(
+            testSubjectId,
+            repo,
+            topics: [
+              _topic('topic-1', testSubjectId),
+              _topic('topic-2', testSubjectId),
+            ],
+            masteryStates: [
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'topic-1',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'topic-2',
+                masteryLevel: MasteryLevel.expert,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-1',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-2',
+                masteryLevel: MasteryLevel.proficient,
+              ),
+              _masteryState(
+                studentId: 'test-student-id',
+                topicId: 'other-topic-3',
+                masteryLevel: MasteryLevel.expert,
+              ),
+            ],
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mastered 2 / 2'), findsOneWidget);
+      expect(find.text('100%'), findsOneWidget);
+      expect(find.text('250%'), findsNothing);
     });
   });
 }

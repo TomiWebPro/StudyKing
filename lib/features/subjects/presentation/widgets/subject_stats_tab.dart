@@ -76,7 +76,12 @@ class _SubjectStatsTabState extends State<SubjectStatsTab> {
       final masteryResult = await masteryRepo.getAllMasteryStates(studentId);
       final states = masteryResult.data ?? [];
 
-      final subjectMasteryStates = states.where((s) => s.topicId.isNotEmpty).toList();
+      final subjectTopicIds = allTopics.map((t) => t.id).toSet();
+      final subjectMasteryStates = states
+          .where(
+            (s) => s.topicId.isNotEmpty && subjectTopicIds.contains(s.topicId),
+          )
+          .toList();
       final masteredCount = subjectMasteryStates
           .where((s) => s.masteryLevel.index >= MasteryLevel.proficient.index)
           .length;
