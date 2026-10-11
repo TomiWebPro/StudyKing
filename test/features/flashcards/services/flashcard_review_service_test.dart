@@ -7,6 +7,10 @@ import 'package:studyking/features/flashcards/services/flashcard_review_service.
 class _FakeFlashcardRepository extends FlashcardRepository {
   final Map<String, Flashcard> _storage = {};
 
+  /// When non-null, [save] fails with this error without persisting,
+  /// simulating a failed Hive write (e.g. box not open / disk full).
+  String? saveFailure;
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
@@ -22,6 +26,9 @@ class _FakeFlashcardRepository extends FlashcardRepository {
 
   @override
   Future<Result<void>> save(String key, Flashcard item) async {
+    if (saveFailure != null) {
+      return Result.failure(saveFailure);
+    }
     _storage[key] = item;
     return Result.success(null);
   }
@@ -183,6 +190,37 @@ void main() {
           grade: 3,
         );
         expect(result.isFailure, isTrue);
+      });
+
+      test('propagates save failure instead of masking it as success',
+          () async {
+        await repo.create(_createFlashcard(id: 'fc_1'));
+        repo.saveFailure = 'Failed to put: box not open';
+
+        final result = await service.recordReview(
+          flashcardId: 'fc_1',
+          grade: 4,
+        );
+
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('box not open'));
+      });
+
+      test('does not persist SR state when the save fails', () async {
+        await repo.create(_createFlashcard(id: 'fc_1'));
+        final before = (await repo.get('fc_1')).data!;
+
+        repo.saveFailure = 'Failed to put: disk full';
+        final result = await service.recordReview(
+          flashcardId: 'fc_1',
+          grade: 5,
+        );
+
+        expect(result.isFailure, isTrue);
+        final after = (await repo.get('fc_1')).data!;
+        expect(after.nextReview, before.nextReview);
+        expect(after.srDataJson, before.srDataJson);
+        expect(after.mastery, before.mastery);
       });
 
       test('maps grade 5 to mastery 1.0', () async {

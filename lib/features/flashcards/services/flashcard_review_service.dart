@@ -69,7 +69,13 @@ class FlashcardReviewService {
         updatedAt: DateTime.now(),
       );
 
-      await _flashcardRepository.save(flashcardId, updated);
+      final saveResult = await _flashcardRepository.save(flashcardId, updated);
+      if (saveResult.isFailure) {
+        _logger.w(
+          'Failed to persist flashcard review for $flashcardId: ${saveResult.error}',
+        );
+        return Result.failure(saveResult.error!);
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to record flashcard review', e);
