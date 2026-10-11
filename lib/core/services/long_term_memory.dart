@@ -127,7 +127,7 @@ class LongTermMemory {
         'and what should be followed up on.';
   }
 
-  Future<void> addActionItem(String studentId, String actionType,
+  Future<Result<void>> addActionItem(String studentId, String actionType,
       {String topicTitle = '',
       String? sessionId,
       Map<String, dynamic> payload = const {}}) async {
@@ -139,7 +139,11 @@ class LongTermMemory {
       sessionId: sessionId,
       payload: payload,
     );
-    await _pendingActionRepo.create(action);
+    final result = await _pendingActionRepo.create(action);
+    if (result.isFailure) {
+      _logger.w('Failed to add pending action for $studentId', result.error);
+    }
+    return result;
   }
 
   Future<Result<List<PendingActionModel>>> getPendingActionItems(

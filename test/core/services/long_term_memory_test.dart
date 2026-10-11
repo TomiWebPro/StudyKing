@@ -274,6 +274,16 @@ void main() {
   });
 
   group('LongTermMemory - failure propagation', () {
+    test('addActionItem propagates create Result.failure', () async {
+      final failCreateLtm = LongTermMemory(
+        store: _FakeAgentMemoryStore(),
+        pendingActionRepo: _FailingCreatePendingActionRepository(),
+      );
+      final result = await failCreateLtm.addActionItem('student1', 'review');
+      expect(result.isFailure, isTrue);
+      expect(result.error, equals('pending action create failed'));
+    });
+
     test('getPendingActionItems propagates inner Result.failure', () async {
       final failingRepo = _FailingPendingActionRepository();
       final ltmFail = LongTermMemory(
@@ -304,6 +314,21 @@ void main() {
       expect(context, contains('LONG-TERM MEMORY CONTEXT'));
     });
   });
+}
+
+class _FailingCreatePendingActionRepository extends PendingActionRepository {
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<void>> create(PendingActionModel action) async {
+    return Result.failure('pending action create failed');
+  }
+
+  @override
+  Future<Result<List<PendingActionModel>>> getPending(String studentId) async {
+    return Result.success(<PendingActionModel>[]);
+  }
 }
 
 class _FailingPendingActionRepository extends PendingActionRepository {
