@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
@@ -703,6 +704,41 @@ void main() {
       await tester.tap(find.text('JSON'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('failed export shows error snackbar, not success', (tester) async {
+      // Simulate unavailable storage: the path_provider channel returns
+      // null, so getTemporaryDirectory() throws and the CSV write fails.
+      const pathChannel = MethodChannel('plugins.flutter.io/path_provider');
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(pathChannel, (_) async => null);
+      addTearDown(() {
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(pathChannel, null);
+      });
+
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Export CSV'));
+      await tester.pumpAndSettle();
+
+      // The write fails, so the export must fail closed: the error
+      // snackbar is shown and the success snackbar never is.
+      expect(find.text('Session history exported to CSV'), findsNothing);
+      expect(find.text('Export failed: Something went wrong'), findsAtLeastNWidgets(1));
     });
   });
 

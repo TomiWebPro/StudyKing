@@ -254,90 +254,129 @@ class SessionExportService {
     }
   }
 
-  static Future<void> shareCSV(
+  static Future<Result<void>> shareCSV(
     List<Session> sessions,
     String filename, {
     required AppLocalizations l10n,
+    @visibleForTesting Directory? directory,
   }) async {
     if (kIsWeb) {
-      final csv = sessionsToCSV(sessions);
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv'),
-          ],
-          text: l10n.shareSessionsText,
-        ),
-      );
-    } else {
-      final result = await writeCSVFile(sessions, filename);
-      if (result.isSuccess) {
+      try {
+        final csv = sessionsToCSV(sessions);
         await SharePlus.instance.share(
-          ShareParams(files: [XFile(result.data!.path)], text: l10n.shareSessionsText),
+          ShareParams(
+            files: [
+              XFile.fromData(Uint8List.fromList(utf8.encode(csv)), name: '$filename.csv', mimeType: 'text/csv'),
+            ],
+            text: l10n.shareSessionsText,
+          ),
         );
+        return Result.success(null);
+      } catch (e) {
+        _logger.w('Failed to share CSV on web', e);
+        return Result.failure(e.toString());
       }
+    }
+    final writeResult = await writeCSVFile(sessions, filename, directory: directory);
+    if (writeResult.isFailure) {
+      return Result.failure(writeResult.error);
+    }
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(writeResult.data!.path)], text: l10n.shareSessionsText),
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to share CSV file', e);
+      return Result.failure(e.toString());
     }
   }
 
-  static Future<void> shareJSON(
+  static Future<Result<void>> shareJSON(
     List<Session> sessions,
     String filename, {
     required AppLocalizations l10n,
+    @visibleForTesting Directory? directory,
   }) async {
     if (kIsWeb) {
-      final json = jsonEncode(sessionsToJSON(sessions));
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile.fromData(
-              Uint8List.fromList(utf8.encode(json)),
-              name: '$filename.json',
-              mimeType: 'application/json',
-            ),
-          ],
-          text: l10n.shareSessionsText,
-        ),
-      );
-    } else {
-      final result = await writeJSONFile(sessions, filename);
-      if (result.isSuccess) {
+      try {
+        final json = jsonEncode(sessionsToJSON(sessions));
         await SharePlus.instance.share(
-          ShareParams(files: [XFile(result.data!.path)], text: l10n.shareSessionsText),
+          ShareParams(
+            files: [
+              XFile.fromData(
+                Uint8List.fromList(utf8.encode(json)),
+                name: '$filename.json',
+                mimeType: 'application/json',
+              ),
+            ],
+            text: l10n.shareSessionsText,
+          ),
         );
+        return Result.success(null);
+      } catch (e) {
+        _logger.w('Failed to share JSON on web', e);
+        return Result.failure(e.toString());
       }
+    }
+    final writeResult = await writeJSONFile(sessions, filename, directory: directory);
+    if (writeResult.isFailure) {
+      return Result.failure(writeResult.error);
+    }
+    try {
+      await SharePlus.instance.share(
+        ShareParams(files: [XFile(writeResult.data!.path)], text: l10n.shareSessionsText),
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to share JSON file', e);
+      return Result.failure(e.toString());
     }
   }
 
-  static Future<void> sharePDF(
+  static Future<Result<void>> sharePDF(
     List<Session> sessions,
     String filename,
     AppLocalizations l10n, {
     AppLocalizations? shareL10n,
+    @visibleForTesting Directory? directory,
   }) async {
     if (kIsWeb) {
-      final pdfBytes = await sessionsToPDF(sessions, l10n);
-      await SharePlus.instance.share(
-        ShareParams(
-          files: [
-            XFile.fromData(
-              Uint8List.fromList(pdfBytes),
-              name: '$filename.pdf',
-              mimeType: 'application/pdf',
-            ),
-          ],
-          text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
-        ),
-      );
-    } else {
-      final result = await writePDFFile(sessions, filename, l10n);
-      if (result.isSuccess) {
+      try {
+        final pdfBytes = await sessionsToPDF(sessions, l10n);
         await SharePlus.instance.share(
           ShareParams(
-            files: [XFile(result.data!.path)],
+            files: [
+              XFile.fromData(
+                Uint8List.fromList(pdfBytes),
+                name: '$filename.pdf',
+                mimeType: 'application/pdf',
+              ),
+            ],
             text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
           ),
         );
+        return Result.success(null);
+      } catch (e) {
+        _logger.w('Failed to share PDF on web', e);
+        return Result.failure(e.toString());
       }
+    }
+    final writeResult = await writePDFFile(sessions, filename, l10n, directory: directory);
+    if (writeResult.isFailure) {
+      return Result.failure(writeResult.error);
+    }
+    try {
+      await SharePlus.instance.share(
+        ShareParams(
+          files: [XFile(writeResult.data!.path)],
+          text: shareL10n?.shareSessionsText ?? l10n.shareSessionsText,
+        ),
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to share PDF file', e);
+      return Result.failure(e.toString());
     }
   }
 }

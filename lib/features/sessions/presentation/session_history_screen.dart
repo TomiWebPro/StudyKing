@@ -124,25 +124,43 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       final filename = 'session_history_${DateTime.now().millisecondsSinceEpoch}';
       switch (format) {
         case 'csv':
-          await SessionExportService.shareCSV(sessions, filename, l10n: l10n);
+          final csvResult = await SessionExportService.shareCSV(sessions, filename, l10n: l10n);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
-            );
+            if (csvResult.isSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.sessionHistoryExportedCsv)),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
+              );
+            }
           }
         case 'pdf':
-          await SessionExportService.sharePDF(sessions, filename, l10n);
+          final pdfResult = await SessionExportService.sharePDF(sessions, filename, l10n);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.sessionHistoryExportedPdf)),
-            );
+            if (pdfResult.isSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.sessionHistoryExportedPdf)),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
+              );
+            }
           }
         case 'json':
-          await SessionExportService.shareJSON(sessions, filename, l10n: l10n);
+          final jsonResult = await SessionExportService.shareJSON(sessions, filename, l10n: l10n);
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(l10n.sessionHistoryExportedJson)),
-            );
+            if (jsonResult.isSuccess) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.sessionHistoryExportedJson)),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
+              );
+            }
           }
         case 'comprehensive':
         case 'comprehensive_pdf':

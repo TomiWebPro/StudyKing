@@ -558,5 +558,52 @@ void main() {
         expect(json.first['subjectId'], isNull);
       });
     });
+
+    group('share methods propagate write failures as Result', () {
+      final l10n = AppLocalizationsEn();
+
+      test('shareCSV returns failure when the CSV write fails', () async {
+        final sessions = [
+          createSession(start: startTime, end: endTime),
+        ];
+        final result = await SessionExportService.shareCSV(
+          sessions,
+          'test_export',
+          l10n: l10n,
+          directory: Directory('/nonexistent/path/that/does/not/exist'),
+        );
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+
+      test('shareJSON returns failure when the JSON write fails', () async {
+        final sessions = [
+          createSession(start: startTime, end: endTime),
+        ];
+        final result = await SessionExportService.shareJSON(
+          sessions,
+          'test_export',
+          l10n: l10n,
+          directory: Directory('/nonexistent/path/that/does/not/exist'),
+        );
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+
+      test('sharePDF returns failure when the PDF write fails', () async {
+        final session = _createExportSession();
+        final result = await SessionExportService.sharePDF(
+          [session],
+          'test_export',
+          l10n,
+          directory: Directory('/nonexistent/path/that/does/not/exist'),
+        );
+        expect(result.isSuccess, isFalse);
+        expect(result.isFailure, isTrue);
+        expect(result.error, isNotEmpty);
+      });
+    });
   });
 }
