@@ -217,7 +217,16 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final source = _source;
     if (source == null || topicId == null) return;
     final updated = source.copyWith(topicId: topicId);
-    await _sourceRepo.save(widget.sourceId, updated);
+    final saveResult = await _sourceRepo.save(widget.sourceId, updated);
+    if (saveResult.isFailure) {
+      _logger.w('Failed to update topic for source ${widget.sourceId}', saveResult.error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.somethingWentWrong)),
+        );
+      }
+      return;
+    }
     if (mounted) setState(() => _source = updated);
   }
 

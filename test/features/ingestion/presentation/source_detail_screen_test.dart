@@ -18,10 +18,12 @@ import '../../../helpers/navigator_observer_helper.dart';
 class _FakeSourceRepo extends SourceRepository {
   final Map<String, Source> _sources;
   bool _shouldThrow = false;
+  bool _failOnSave = false;
 
   _FakeSourceRepo(this._sources);
 
   void setThrowOnGet(bool shouldThrow) => _shouldThrow = shouldThrow;
+  void setFailOnSave(bool fail) => _failOnSave = fail;
 
   @override
   Future<void> init() async {}
@@ -37,6 +39,7 @@ class _FakeSourceRepo extends SourceRepository {
 
   @override
   Future<Result<void>> save(String key, Source item) async {
+    if (_failOnSave) return Result.failure('Save failed');
     _sources[key] = item;
     return Result.success(null);
   }
@@ -60,14 +63,18 @@ class _FakeSubjectRepo extends SubjectRepository {
 }
 
 class _FakeTopicRepo extends TopicRepository {
+  final List<Topic> _topics;
+
+  _FakeTopicRepo([this._topics = const []]);
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<Topic>>> getAll() async => Result.success([]);
+  Future<Result<List<Topic>>> getAll() async => Result.success(_topics);
 
   @override
-  Future<Result<List<Topic>>> getBySubject(String subjectId) async => Result.success([]);
+  Future<Result<List<Topic>>> getBySubject(String subjectId) async => Result.success(_topics);
 }
 
 class _FakeQuestionRepo extends QuestionRepository {
@@ -255,6 +262,103 @@ void main() {
       await tester.pump(const Duration(milliseconds: 300));
 
       expect(navigatorObserver.poppedRoutes, isNotEmpty);
+    });
+
+    testWidgets('updates topic chip when topic change save succeeds', (tester) async {
+      final mechanics = Topic(
+        id: 't1',
+        subjectId: 'sub1',
+        title: 'Mechanics',
+        description: '',
+        syllabusText: '',
+      );
+      final thermodynamics = Topic(
+        id: 't2',
+        subjectId: 'sub1',
+        title: 'Thermodynamics',
+        description: '',
+        syllabusText: '',
+      );
+      final sourceWithTopic = Source(
+        id: 'src1',
+        title: 'Physics Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        topicId: 't1',
+        createdAt: DateTime(2024, 1, 15),
+      );
+      final sourceRepo = _FakeSourceRepo({'src1': sourceWithTopic});
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: sourceRepo,
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo([mechanics, thermodynamics]),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Mechanics'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.edit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thermodynamics'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Thermodynamics'), findsOneWidget);
+      expect(find.text('Mechanics'), findsNothing);
+    });
+
+    testWidgets('topic change save failure shows error snackbar and keeps original topic', (tester) async {
+      final mechanics = Topic(
+        id: 't1',
+        subjectId: 'sub1',
+        title: 'Mechanics',
+        description: '',
+        syllabusText: '',
+      );
+      final thermodynamics = Topic(
+        id: 't2',
+        subjectId: 'sub1',
+        title: 'Thermodynamics',
+        description: '',
+        syllabusText: '',
+      );
+      final sourceWithTopic = Source(
+        id: 'src1',
+        title: 'Physics Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        topicId: 't1',
+        createdAt: DateTime(2024, 1, 15),
+      );
+      final sourceRepo = _FakeSourceRepo({'src1': sourceWithTopic});
+      sourceRepo.setFailOnSave(true);
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: sourceRepo,
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo([mechanics, thermodynamics]),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Mechanics'), findsOneWidget);
+
+      await tester.tap(find.byIcon(Icons.edit));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Thermodynamics'));
+      await tester.pumpAndSettle();
+
+      // Failure is surfaced, and the failed write is not applied to the UI.
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Thermodynamics'), findsNothing);
+      expect(find.text('Mechanics'), findsOneWidget);
     });
   });
 }
