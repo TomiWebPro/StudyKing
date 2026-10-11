@@ -127,7 +127,7 @@ class QuestionVariantService {
 
       return Result.success(generated);
     } catch (e) {
-      _logger.e('Unexpected error generating variants for ${source.id}', e);
+      _logger.w('Unexpected error generating variants for ${source.id}', e);
       return Result.failure('QuestionVariantService.generateVariants: $e');
     }
   }
@@ -162,7 +162,7 @@ class QuestionVariantService {
 
       return Result.success(variant);
     } catch (e) {
-      _logger.e('Unexpected error selecting retry variant for ${question.id}', e);
+      _logger.w('Unexpected error selecting retry variant for ${question.id}', e);
       return Result.failure('QuestionVariantService.selectVariantForRetry: $e');
     }
   }
@@ -178,7 +178,7 @@ class QuestionVariantService {
       }
       return await _questionRepo.getVariantFamily(question.id);
     } catch (e) {
-      _logger.e('Unexpected error loading variant family for ${question.id}', e);
+      _logger.w('Unexpected error loading variant family for ${question.id}', e);
       return Result.failure('QuestionVariantService.getVariantFamily: $e');
     }
   }

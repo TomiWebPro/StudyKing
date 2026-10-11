@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
@@ -88,6 +89,37 @@ class FakeLlmService extends LlmService {
     final response = queuedResponses[callCount];
     callCount++;
     return response;
+  }
+}
+
+/// Hand-written fake of [QuestionRepository] whose storage methods throw,
+/// used to exercise the service's caught-and-handled error paths.
+class ThrowingQuestionRepository extends QuestionRepository {
+  ThrowingQuestionRepository() : super();
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    throw StateError('create failed');
+  }
+
+  @override
+  Future<Result<Question?>> get(String key) async {
+    throw StateError('get failed');
+  }
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    throw StateError('save failed');
+  }
+
+  @override
+  Future<Result<List<Question>>> getByVariantGroupId(String groupId) async {
+    throw StateError('getByVariantGroupId failed');
+  }
+
+  @override
+  Future<Result<List<Question>>> getVariantFamily(String questionId) async {
+    throw StateError('getVariantFamily failed');
   }
 }
 
@@ -377,6 +409,91 @@ void main() {
         familyResult.data!.map((q) => q.id),
         contains(source.id),
       );
+    });
+  });
+
+  group('QuestionVariantService handled-error paths', () {
+    /// Runs [run] while capturing every [debugPrint] line so tests can
+    /// assert on the log level the service actually used.
+    Future<List<String>> captureDebugPrint(Future<void> Function() run) async {
+      final captured = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        captured.add(message ?? '');
+      };
+      try {
+        await run();
+      } finally {
+        debugPrint = original;
+      }
+      return captured;
+    }
+
+    test('generateVariants returns failure and logs at warn level when storage throws',
+        () async {
+      final service = QuestionVariantService(
+        questionRepo: ThrowingQuestionRepository(),
+        llmService: FakeLlmService(
+          queuedResponses: [Result.success(validVariantJson)],
+        ),
+        modelId: 'model-x',
+      );
+
+      Result<List<Question>>? result;
+      final logs = (await captureDebugPrint(() async {
+        result = await service.generateVariants(buildSourceQuestion());
+      })).join('\n');
+
+      expect(result!.isFailure, isTrue);
+      expect(result!.error, contains('QuestionVariantService.generateVariants'));
+      // Handled error paths must log at warning level, never error level.
+      expect(logs, contains('[W][QuestionVariantService]'));
+      expect(logs, isNot(contains('[E][QuestionVariantService]')));
+    });
+
+    test('selectVariantForRetry returns failure and logs at warn level when storage throws',
+        () async {
+      final service = QuestionVariantService(
+        questionRepo: ThrowingQuestionRepository(),
+        llmService: FakeLlmService(),
+        modelId: 'model-x',
+      );
+
+      Result<Question>? result;
+      final logs = (await captureDebugPrint(() async {
+        result = await service.selectVariantForRetry(
+          buildSourceQuestion().copyWith(variantIds: ['v1']),
+        );
+      })).join('\n');
+
+      expect(result!.isFailure, isTrue);
+      expect(
+        result!.error,
+        contains('QuestionVariantService.selectVariantForRetry'),
+      );
+      expect(logs, contains('[W][QuestionVariantService]'));
+      expect(logs, isNot(contains('[E][QuestionVariantService]')));
+    });
+
+    test('getVariantFamily returns failure and logs at warn level when storage throws',
+        () async {
+      final service = QuestionVariantService(
+        questionRepo: ThrowingQuestionRepository(),
+        llmService: FakeLlmService(),
+        modelId: 'model-x',
+      );
+
+      Result<List<Question>>? result;
+      final logs = (await captureDebugPrint(() async {
+        result = await service.getVariantFamily(
+          buildSourceQuestion().copyWith(variantGroupId: 'vq-1'),
+        );
+      })).join('\n');
+
+      expect(result!.isFailure, isTrue);
+      expect(result!.error, contains('QuestionVariantService.getVariantFamily'));
+      expect(logs, contains('[W][QuestionVariantService]'));
+      expect(logs, isNot(contains('[E][QuestionVariantService]')));
     });
   });
 }
