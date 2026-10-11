@@ -80,6 +80,10 @@ class FakeMasteryStateRepository extends MasteryStateRepository {
 }
 
 class FakeMasteryGraphRepository extends MasteryGraphRepository {
+  /// Mastery states returned by [getAllMasteryStates]; when null the
+  /// default two-topic fixture below is used.
+  List<MasteryState>? injectedMasteryStates;
+
   @override
   Future<Result<void>> init() async => Result.success(null);
 
@@ -98,6 +102,10 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
 
   @override
   Future<Result<List<MasteryState>>> getAllMasteryStates(String studentId) async {
+    final states = injectedMasteryStates;
+    if (states != null) {
+      return Result.success(states);
+    }
     return Result.success([
       MasteryState.initial(studentId: studentId, topicId: 'topic1').copyWith(accuracy: 0.9),
       MasteryState.initial(studentId: studentId, topicId: 'topic2').copyWith(accuracy: 0.7),
@@ -453,6 +461,48 @@ void main() {
         expect(result.data!.summary, isNotNull);
         expect(result.data!.summary.totalQuestions, greaterThanOrEqualTo(0));
         expect(result.data!.summary.totalMinutes, greaterThanOrEqualTo(0));
+      });
+
+      test('summary counts unstudied topics as new and weak/overdue topics as review, not mastered topics', () async {
+        mockRepo.injectedMasteryStates = [
+          // Mastered topic (readiness > 0.8) classifies as 'stretch' —
+          // it must count as neither a new nor a review topic.
+          MasteryState.initial(studentId: 'student1', topicId: 'mastered').copyWith(
+            accuracy: 0.95,
+            currentStreak: 10,
+            readinessScore: 0.95,
+            reviewUrgency: 0.1,
+            masteryLevel: MasteryLevel.expert,
+          ),
+          // Topic still below developing mastery classifies as
+          // 'foundational' — genuinely new to the student.
+          MasteryState.initial(studentId: 'student1', topicId: 'fresh').copyWith(
+            accuracy: 0.7,
+            readinessScore: 0.5,
+            reviewUrgency: 0.2,
+            masteryLevel: MasteryLevel.novice,
+          ),
+          // Low accuracy classifies as 'weakness' — needs review.
+          MasteryState.initial(studentId: 'student1', topicId: 'weak').copyWith(
+            accuracy: 0.4,
+            readinessScore: 0.4,
+            reviewUrgency: 0.2,
+            masteryLevel: MasteryLevel.developing,
+          ),
+          // High forgetting risk classifies as 'review_urgent' — review.
+          MasteryState.initial(studentId: 'student1', topicId: 'overdue').copyWith(
+            accuracy: 0.7,
+            readinessScore: 0.5,
+            reviewUrgency: 0.9,
+            masteryLevel: MasteryLevel.developing,
+          ),
+        ];
+
+        final result = await service.generatePlan('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.summary.newTopics, equals(1));
+        expect(result.data!.summary.reviewTopics, equals(2));
       });
 
       test('generates plan successfully without l10n (no null-check crash)',

@@ -1044,8 +1044,21 @@ class PersonalLearningPlanService {
       }
     }
 
-    final existingTopics = recommendations.where((r) => r.recommendationType != 'stretch').length;
-    final newTopics = recommendations.where((r) => r.recommendationType == 'stretch').length;
+    // New topics are the ones the student has not yet studied: unstudied
+    // syllabus topics ('syllabus') and topics still below developing mastery
+    // ('foundational'). Mastered 'stretch' topics are neither new nor review;
+    // the remaining types need review/practice.
+    final newTopics = recommendations
+        .where((r) =>
+            r.recommendationType == 'syllabus' ||
+            r.recommendationType == 'foundational')
+        .length;
+    final reviewTopics = recommendations
+        .where((r) =>
+            r.recommendationType == 'review_urgent' ||
+            r.recommendationType == 'weakness' ||
+            r.recommendationType == 'practice')
+        .length;
 
     final focusAreas = recommendations
         .take(3)
@@ -1056,7 +1069,7 @@ class PersonalLearningPlanService {
       totalQuestions: totalQuestions,
       totalMinutes: totalMinutes,
       newTopics: newTopics,
-      reviewTopics: existingTopics,
+      reviewTopics: reviewTopics,
       estimatedCoverage: _calculateCoverage(uniqueTopics.length, totalSyllabusTopics),
       focusAreas: focusAreas,
     );
