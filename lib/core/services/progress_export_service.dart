@@ -152,7 +152,7 @@ class ProgressExportService {
           'Week,Attempts,Accuracy (%),Improvement (%)');
       for (final t in trend) {
         buffer.writeln(
-            '${t['week']}-W${t['month']},${t['attempts']},${t['accuracy']},${t['improvement']}');
+            '${t['week']}-W${t['weekNumber']},${t['attempts']},${t['accuracy']},${t['improvement']}');
       }
 
       buffer.writeln();

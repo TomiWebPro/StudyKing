@@ -397,6 +397,32 @@ void main() {
         expect(csv.data, contains('Overall Statistics'));
         expect(csv.data, contains('10'));
       });
+
+      test('weekly trend section labels rows with the ISO week number, not the month', () async {
+        mockTracker.overallStats = {
+          'totalAttempts': 10, 'correctAttempts': 7, 'accuracy': 0.7,
+          'avgTimePerQuestion': 30.0, 'totalStudyTimeHours': 5.0,
+          'weeklyActivity': 3, 'dailyActivity': 1, 'topicsStudied': 2,
+        };
+        // A week starting 2026-10-05 is in calendar month 10 but ISO
+        // week 41. The old export rendered the month number as the week
+        // ("2026-W10"), mislabeling the Week column.
+        mockTracker.trend = [
+          {
+            'week': 2026,
+            'month': 10,
+            'weekNumber': 41,
+            'attempts': 5,
+            'accuracy': 80,
+            'improvement': 0.0,
+            'isGap': false,
+          },
+        ];
+        final csv = await service.exportComprehensiveCSV('student1');
+        expect(csv.isSuccess, isTrue);
+        expect(csv.data, contains('2026-W41'));
+        expect(csv.data, isNot(contains('2026-W10')));
+      });
     });
 
     group('exportComprehensivePDF', () {

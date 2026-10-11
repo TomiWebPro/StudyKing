@@ -213,6 +213,20 @@ class FakeMasteryGraphService extends MasteryGraphService {
   Future<Result<void>> init() async => Result.success(null);
 }
 
+/// Independent ISO 8601 week-number computation (day-of-year
+/// formula) used to cross-check the production implementation.
+int _referenceIsoWeekNumber(DateTime date) {
+  final dayOfYear = date.difference(DateTime(date.year, 1, 1)).inDays + 1;
+  final week = (dayOfYear - date.weekday + 10) ~/ 7;
+  if (week < 1) {
+    return _referenceIsoWeekNumber(DateTime(date.year - 1, 12, 31));
+  }
+  if (week > 52 && DateTime(date.year, 12, 31).weekday < DateTime.thursday) {
+    return 1;
+  }
+  return week;
+}
+
 void main() {
   late String hivePath;
 
@@ -643,6 +657,22 @@ void main() {
         expect(counts.reduce((a, b) => a + b), 2);
       });
 
+      test('labels each week with its ISO week number, not the calendar month', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final trend = await tracker.getWeeklyTrend(4, studentId: 'student1');
+
+        for (var i = 0; i < trend.data!.length; i++) {
+          final entry = trend.data![i];
+          final weekStart = now.subtract(Duration(days: i * 7 + 6));
+          expect(entry['weekNumber'], equals(_referenceIsoWeekNumber(weekStart)));
+          expect(entry['weekNumber'], inInclusiveRange(1, 53));
+        }
+      });
+
       test('does not count future-dated attempts in the current week', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([
@@ -801,6 +831,19 @@ void main() {
         expect(csv.data!, contains('Metric'));
         expect(csv.data!, contains('Value'));
         expect(csv.data!, contains('student1'));
+      });
+
+      test('weekly trend rows use the ISO week number in the Week column', () async {
+        final now = DateTime.now();
+        mockRepo.setAttempts([
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now, subjectId: 'math'),
+        ]);
+
+        final csv = await tracker.exportProgressCSV('student1');
+
+        final weekStart = now.subtract(const Duration(days: 6));
+        final expectedRow = '"student1",${weekStart.year}-W${_referenceIsoWeekNumber(weekStart)},"1"';
+        expect(csv.data, contains(expectedRow));
       });
     });
 

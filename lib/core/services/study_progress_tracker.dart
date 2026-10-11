@@ -258,6 +258,7 @@ class StudyProgressTracker {
         trend.add({
           'week': weekStart.year,
           'month': weekStart.month,
+          'weekNumber': _isoWeekNumber(weekStart),
           'attempts': weekAttempts.length,
           'accuracy': (accuracy * 100).round(),
           'improvement': _calculateImprovement(weekAttempts, trend.isNotEmpty ? trend.first : {}),
@@ -393,6 +394,19 @@ class StudyProgressTracker {
     final previousAccuracy = (previousWeek['accuracy'] as num).toDouble();
     final previousRatio = previousAccuracy / 100.0;
     return ((currentAccuracy - previousRatio) * 100).roundToDouble();
+  }
+
+  /// ISO 8601 week number (1-53) of the week containing [date].
+  ///
+  /// Weeks run Monday-Sunday and week 1 contains the year's first
+  /// Thursday, so the week number is unambiguous across years and
+  /// never confused with the calendar month (1-12).
+  int _isoWeekNumber(DateTime date) {
+    final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
+    final firstJan = DateTime(thursday.year, 1, 1);
+    final firstThursday =
+        firstJan.add(Duration(days: DateTime.thursday - firstJan.weekday));
+    return 1 + thursday.difference(firstThursday).inDays ~/ 7;
   }
 
   Future<Result<List<Map<String, dynamic>>>> getRecommendations(String studentId) async {
@@ -583,7 +597,7 @@ class StudyProgressTracker {
 
       csvLines.add('"Weekly Trend","Week","Attempts","Accuracy"');
       for (var item in trend) {
-        csvLines.add('"$studentId",${item['week']}-W${item['month']},"${item['attempts']}" ,"${item['accuracy']}%"');
+        csvLines.add('"$studentId",${item['week']}-W${item['weekNumber']},"${item['attempts']}" ,"${item['accuracy']}%"');
       }
 
       csvLines.add('"Badges","Badge Name","Date Unlocked"');
