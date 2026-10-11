@@ -89,6 +89,33 @@ class FakeQuestionRepository extends QuestionRepository {
   Map<dynamic, Question> get _storage => _box._storage;
 }
 
+/// Repository whose writes always fail (box not open / disk full),
+/// while reads still succeed — used to assert that write failures
+/// are propagated instead of being masked as success.
+class _FailingWriteQuestionRepository extends QuestionRepository {
+  final _FakeBox<Question> _box = _FakeBox<Question>();
+
+  Map<dynamic, Question> get _storage => _box._storage;
+
+  @override
+  Future<Result<Question?>> get(String key) async {
+    return Result.success(_box.get(key));
+  }
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    return Result.failure('questions box not writable');
+  }
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    return Result.failure('questions box not writable');
+  }
+
+  @override
+  Box<Question> get box => _box;
+}
+
 class FakeAttemptRepository extends AttemptRepository {
   final _FakeBox<StudentAttempt> _box = _FakeBox<StudentAttempt>();
 
@@ -264,6 +291,49 @@ void main() {
       final result = await service.removeDueQuestions('q1');
       expect(result.isSuccess, isTrue);
       expect(questionRepo._storage.containsKey('q1'), isFalse);
+    });
+  });
+
+  group('SpacedRepetitionService write-failure propagation', () {
+    test(
+        'updateNextReviewDate propagates a failed save instead of masking it as success',
+        () async {
+      final questionRepo = _FailingWriteQuestionRepository();
+      questionRepo._storage['q1'] = _makeQuestion('q1');
+      final spyEngine = _SpyEngine();
+      final service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+        srEngine: spyEngine,
+      );
+
+      final result = await service.updateNextReviewDate('q1', 0.95);
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('not writable'));
+      // The SM-2 schedule was computed but nothing was persisted:
+      // the stored question keeps its pre-update state.
+      expect(spyEngine.scheduleCalled, isTrue);
+      expect(questionRepo._storage['q1']!.nextReview, isNull);
+      expect(questionRepo._storage['q1']!.srDataJson, isNull);
+    });
+
+    test(
+        'removeDueQuestions propagates a failed delete instead of masking it as success',
+        () async {
+      final questionRepo = _FailingWriteQuestionRepository();
+      questionRepo._storage['q1'] = _makeQuestion('q1');
+      final service = SpacedRepetitionService(
+        questionRepo: questionRepo,
+        attemptRepo: FakeAttemptRepository(),
+      );
+
+      final result = await service.removeDueQuestions('q1');
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('not writable'));
+      // The failed delete must not have removed the question.
+      expect(questionRepo._storage.containsKey('q1'), isTrue);
     });
   });
 

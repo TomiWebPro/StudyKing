@@ -624,6 +624,19 @@ class _FakeQuestionRepo extends QuestionRepository {
   @override
   Future<Result<Question?>> get(String key) async =>
       Result.success(_questions.where((q) => q.id == key).firstOrNull);
+
+  @override
+  Future<Result<void>> save(String key, Question item) async {
+    _questions.removeWhere((q) => q.id == key);
+    _questions.add(item);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    _questions.removeWhere((q) => q.id == key);
+    return Result.success(null);
+  }
 }
 
 class _FailingQuestionRepo extends QuestionRepository {

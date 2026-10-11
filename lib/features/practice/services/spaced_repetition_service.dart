@@ -114,7 +114,13 @@ class SpacedRepetitionService {
         nextReview: srResult.nextReview,
         srDataJson: _serializeSrData(srResult.updatedData),
       );
-      await _questionRepo.save(questionId, updated);
+      final saveResult = await _questionRepo.save(questionId, updated);
+      if (saveResult.isFailure) {
+        _logger.w(
+            'Failed to persist next-review date for $questionId',
+            saveResult.error);
+        return Result.failure(saveResult.error);
+      }
 
       return Result.success(null);
     } catch (e) {
@@ -226,7 +232,12 @@ class SpacedRepetitionService {
   /// Remove questions that are due for review (after completion)
   Future<Result<void>> removeDueQuestions(String questionId) async {
     try {
-      await _questionRepo.delete(questionId);
+      final deleteResult = await _questionRepo.delete(questionId);
+      if (deleteResult.isFailure) {
+        _logger.w(
+            'Failed to remove due question $questionId', deleteResult.error);
+        return Result.failure(deleteResult.error);
+      }
       return Result.success(null);
     } catch (e) {
       _logger.w('Error removing question', e);
