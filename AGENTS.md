@@ -107,11 +107,26 @@ When the user changes their language in the Profile screen (`ref.read(localeProv
 - Always read `l10n` inside the `build` method or use `Consumer`/`ConsumerWidget` that re-reads on every build.
 - If stale text is observed after a locale switch, refactor to ensure `context` is fresh (e.g., via `Navigator.pushAndRemoveUntil` or by using `ref.watch(localeProvider)` at the widget root).
 
+## Claiming Local Issues (Builders MUST do this)
+
+One agent owns ONE issue per run — `open → claimed → done`, same flow as the
+other project. A claim is a sidecar lock `issues/open/<slug>.md.lock`
+(see `issues/README.md` for the full protocol):
+
+- BEFORE editing any code, claim exactly one issue:
+  `python3 issues/claim.py claim <slug> <owner>`
+  Exit 1 means another agent holds it — pick a different issue, never work an
+  issue you have not claimed.
+- If you stop without fixing, release it:
+  `python3 issues/claim.py release <slug> <owner>`
+- Locks older than 2h are stale and may be taken over (max run is 90min).
+
 ## Closing Local Issues (Builders MUST do this)
 
 Issues are tracked ONLY locally under `issues/open/` and `issues/closed/`. Git is never used for issue tracking — only for code storage/commits. When you (a builder) finish fixing an issue AND have verified the reported bug no longer happens:
 
 1. Confirm the fix is real: the new/changed tests pass and the issue is actually resolved (do NOT treat "code changed" as "done").
-2. Move the file with a plain local move — never `git mv`, never commit the issue file:
-   `mv issues/open/<slug>.md issues/closed/<slug>.md`
+2. Move the file with the claim tool (plain local move + lock release) — never `git mv`, never commit the issue file:
+   `python3 issues/claim.py close <slug> <owner>`
+   Only the lock owner may close; `close` refuses otherwise.
 3. An issue left in `issues/open/` is considered NOT DONE. Never leave a verified fix sitting in open/. If no real change was made, leave it in open/ and report that.
