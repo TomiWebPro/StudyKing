@@ -35,6 +35,11 @@ import 'feedback_analyzer.dart';
 
 class TutorService {
   static final Logger _logger = const Logger('TutorService');
+
+  /// Difficulty stored on questions persisted from tutor exercises.
+  /// The exercise carries no intrinsic difficulty metadata, so a neutral
+  /// default is used instead of deriving it from the student's score.
+  static const int _defaultQuestionDifficulty = 3;
   final DatabaseService _database;
   final LlmService _llmService;
   final MasteryGraphService _masteryService;
@@ -572,7 +577,7 @@ class TutorService {
       id: qId,
       text: questionText,
       type: questionType,
-      difficulty: (evalResult.score * 5).round().clamp(1, 5),
+      difficulty: _defaultQuestionDifficulty,
       subjectId: session.subjectId,
       topicId: session.topicId,
       sourceIds: ['tutor_${session.id}'],

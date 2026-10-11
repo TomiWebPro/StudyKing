@@ -124,7 +124,9 @@ class FakeLlmService extends LlmService {
 }
 
 class FakeExerciseEvaluator extends ExerciseEvaluator {
-  FakeExerciseEvaluator()
+  double score;
+
+  FakeExerciseEvaluator({this.score = 0.8})
       : super(
           llmService: FakeLlmService(),
           modelId: 'test-model',
@@ -140,7 +142,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
     String? systemPrompt,
     String? userPrompt,
   }) async {
-    return Result.success(EvaluationResult(score: 0.8, explanation: 'Good job.'));
+    return Result.success(EvaluationResult(score: score, explanation: 'Good job.'));
   }
 }
 
@@ -503,6 +505,41 @@ void main() {
         // The old bug would produce confidence = 100 when there were 0 questions,
         // or with our test setup, the confidence should never exceed 5
         expect(recordedConfidence, lessThanOrEqualTo(5));
+      });
+
+      test('persists tutor exercise with default difficulty independent of eval score', () async {
+        // Perfect answer: the old bug stored difficulty 5 (hardest).
+        exerciseEvaluator.score = 1.0;
+        var manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        manager.transitionToExercise();
+        await manager.sendMessage('Solve: x + 1 = 2').toList();
+        await tutorService.endLesson();
+
+        // Struggling answer: the old bug stored difficulty 1 (easiest).
+        exerciseEvaluator.score = 0.0;
+        manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        manager.transitionToExercise();
+        await manager.sendMessage('Solve: x + 2 = 3').toList();
+        await tutorService.endLesson();
+
+        expect(fakeQuestionRepo.createdQuestions.length, equals(2));
+        for (final question in fakeQuestionRepo.createdQuestions) {
+          // Difficulty is a property of the question itself, not of the
+          // student's performance, so it must not vary with the eval score.
+          expect(question.difficulty, equals(3));
+        }
       });
 
       test('clears current manager', () async {
