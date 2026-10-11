@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/sessions/services/study_timer_service.dart';
 
 class FakeSessionRepository extends SessionRepository {
@@ -938,6 +939,77 @@ void main() {
         expect(result.data, isEmpty);
       });
     });
+
+    group('persistence failure propagation', () {
+      late _SaveFailingRepository failingSaveRepo;
+      late _FakeNotificationService fakeNotifications;
+      late StudyTimerService failingSaveService;
+
+      setUp(() {
+        failingSaveRepo = _SaveFailingRepository();
+        fakeNotifications = _FakeNotificationService();
+        failingSaveService = StudyTimerService(
+          repository: failingSaveRepo,
+          notificationService: fakeNotifications,
+        );
+      });
+
+      tearDown(() async {
+        await failingSaveService.dispose();
+      });
+
+      test('startSession returns failure when save fails', () async {
+        failingSaveRepo.failOnSave = true;
+        final result = await failingSaveService.startSession(
+          plannedDurationMinutes: 25,
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'save failed');
+      });
+
+      test('completeSession returns failure when save fails', () async {
+        await failingSaveService.startSession(plannedDurationMinutes: 25);
+        failingSaveRepo.failOnSave = true;
+        final result = await failingSaveService.completeSession();
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'save failed');
+      });
+
+      test('cancelSession returns failure when save fails', () async {
+        await failingSaveService.startSession(plannedDurationMinutes: 25);
+        failingSaveRepo.failOnSave = true;
+        final result = await failingSaveService.cancelSession();
+        expect(result.isFailure, isTrue);
+        expect(result.error, 'save failed');
+      });
+
+      test('completeSession does not fire onSessionComplete callbacks when save fails',
+          () async {
+        final calls = <Session>[];
+        failingSaveService.addOnSessionComplete((s) => calls.add(s));
+        await failingSaveService.startSession(plannedDurationMinutes: 25);
+        failingSaveRepo.failOnSave = true;
+        await failingSaveService.completeSession();
+        expect(calls, isEmpty);
+      });
+
+      test('completeSession does not show notification when save fails',
+          () async {
+        await failingSaveService.startSession(plannedDurationMinutes: 25);
+        failingSaveService.reconcileElapsedMs(60000);
+        failingSaveRepo.failOnSave = true;
+        await failingSaveService.completeSession();
+        expect(fakeNotifications.showNotificationCalls, 0);
+      });
+
+      test('completeSession shows notification after a successful save',
+          () async {
+        await failingSaveService.startSession(plannedDurationMinutes: 25);
+        failingSaveService.reconcileElapsedMs(60000);
+        await failingSaveService.completeSession();
+        expect(fakeNotifications.showNotificationCalls, 1);
+      });
+    });
   });
 }
 
@@ -1042,4 +1114,57 @@ class _FailingResultRepository extends SessionRepository {
 
   @override
   Future<Result<Session?>> get(String id) async => Result.success(null);
+}
+
+class _SaveFailingRepository extends SessionRepository {
+  bool failOnSave = false;
+  final Map<String, Session> _store = {};
+
+  @override
+  Future<Result<void>> save(String key, Session session) async {
+    if (failOnSave) return Result.failure('save failed');
+    _store[session.id] = session;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String id) async => Result.success(_store[id]);
+
+  @override
+  Future<Result<List<Session>>> getAll() async =>
+      Result.success(_store.values.toList());
+
+  @override
+  Future<Result<int>> getTodayDurationMs() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getWeeklyDurationMs() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getTodaySessionCount() async => Result.success(0);
+
+  @override
+  Future<Result<int>> getTodayCompletedSessionCount() async =>
+      Result.success(0);
+
+  @override
+  Future<Result<Map<String, dynamic>>> getTodayStats() async =>
+      Result.success({});
+}
+
+class _FakeNotificationService extends NotificationService {
+  int showNotificationCalls = 0;
+
+  @override
+  Future<Result<void>> showNotification({
+    required int id,
+    required String title,
+    required String body,
+    String? payload,
+    String? channelId,
+    String? channelName,
+  }) async {
+    showNotificationCalls++;
+    return Result.success(null);
+  }
 }

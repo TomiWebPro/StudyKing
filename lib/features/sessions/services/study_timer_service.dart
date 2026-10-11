@@ -151,7 +151,12 @@ class StudyTimerService {
       _isPaused = false;
       _startTimer();
 
-      await _repository.save(_currentSession!.id, _currentSession!);
+      final saveResult =
+          await _repository.save(_currentSession!.id, _currentSession!);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to persist started session', saveResult.error);
+        return Result.failure(saveResult.error);
+      }
       _logger.i('Session started: ${_currentSession!.id} type: ${type.name}');
       return Result.success(_currentSession!);
     } catch (e) {
@@ -213,22 +218,29 @@ class StudyTimerService {
       completed: true,
     );
 
-    if (_elapsedMs > 0) {
+    final saveResult =
+        await _repository.save(_currentSession!.id, _currentSession!);
+    if (saveResult.isFailure) {
+      _logger.w('Failed to persist completed session', saveResult.error);
+      return Result.failure(saveResult.error);
+    }
+
+    final completed = _currentSession!;
+    final elapsedMs = _elapsedMs;
+    _currentSession = null;
+    _elapsedMs = 0;
+    _isPaused = false;
+
+    if (elapsedMs > 0) {
       final notifResult = await _notificationService?.showNotification(
         id: DateTime.now().millisecondsSinceEpoch.remainder(100000),
         title: 'Focus Session Complete',
-        body: 'Great focus! You completed ${_elapsedMs ~/ msPerMinute} minutes.',
+        body: 'Great focus! You completed ${elapsedMs ~/ msPerMinute} minutes.',
       );
       if (notifResult?.isFailure ?? true) {
         _logger.w('Failed to show session complete notification');
       }
     }
-
-    await _repository.save(_currentSession!.id, _currentSession!);
-    final completed = _currentSession!;
-    _currentSession = null;
-    _elapsedMs = 0;
-    _isPaused = false;
 
     for (final cb in _onSessionComplete) {
       cb(completed);
@@ -251,7 +263,13 @@ class StudyTimerService {
       completed: false,
     );
 
-    await _repository.save(_currentSession!.id, _currentSession!);
+    final saveResult =
+        await _repository.save(_currentSession!.id, _currentSession!);
+    if (saveResult.isFailure) {
+      _logger.w('Failed to persist cancelled session', saveResult.error);
+      return Result.failure(saveResult.error);
+    }
+
     final cancelled = _currentSession!;
     _currentSession = null;
     _elapsedMs = 0;
