@@ -648,6 +648,13 @@ void main() {
         final day = DateFormat('E', 'en').format(asOf.subtract(Duration(days: i)));
         expect(find.byKey(ValueKey('bar_$day')), findsOneWidget);
       }
+
+      // Sessions 15 and 29 days ago fall on the same weekday; the bar must
+      // accumulate both instead of keeping only the oldest date's count.
+      final chart = tester.widget<AnimatedBarChart>(find.byType(AnimatedBarChart));
+      expect(chart.data['Tue'], 2);
+      // The session today (Wed) must not be overwritten by later Wednesdays.
+      expect(chart.data['Wed'], 1);
     });
 
     testWidgets('handles daysToShow=1 with no sessions', (tester) async {
@@ -660,6 +667,34 @@ void main() {
       ));
 
       expect(find.byType(AnimatedBarChart), findsOneWidget);
+    });
+
+    testWidgets('accumulates same-weekday sessions across the whole window', (tester) async {
+      // asOf is a Wednesday; sessions 7 and 14 days ago are Wednesdays too.
+      final sessions = [
+        buildSession(id: '1', start: asOf, timeSpentMs: 3600000),
+        buildSession(id: '2', start: asOf.subtract(const Duration(days: 7)), timeSpentMs: 1800000),
+        buildSession(id: '3', start: asOf.subtract(const Duration(days: 14)), timeSpentMs: 900000),
+        buildSession(id: '4', start: asOf.subtract(const Duration(days: 1)), timeSpentMs: 600000),
+        buildSession(id: '5', start: asOf.subtract(const Duration(days: 8)), timeSpentMs: 600000),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 3,
+          daysToShow: 30,
+          asOf: asOf,
+        ),
+      ));
+
+      final chart = tester.widget<AnimatedBarChart>(find.byType(AnimatedBarChart));
+      // All three Wednesdays (0, 7, 14 days ago) must be summed into one bar.
+      expect(chart.data['Wed'], 3);
+      // Both Tuesdays (1 and 8 days ago) must be summed into one bar.
+      expect(chart.data['Tue'], 2);
+      // Weekdays with no sessions in the window must read as zero, not drop.
+      expect(chart.data['Thu'], 0);
     });
   });
 
