@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/syllabus_breakdown_card.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 
-Widget _buildTestApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
+Widget _buildTestApp(Widget child,
+    {TestNavigatorObserver? navigatorObserver, Locale locale = const Locale('en')}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
+    locale: locale,
     navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
     theme: ThemeData(useMaterial3: true, colorSchemeSeed: Colors.blue),
     home: Scaffold(body: child),
@@ -82,6 +84,43 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('75%'), findsWidgets);
+    });
+
+    testWidgets('completion metric uses locale-aware percent formatting',
+        (tester) async {
+      const completion = 0.75;
+      await tester.pumpWidget(
+        _buildTestApp(
+          SyllabusBreakdownCard(
+            breakdowns: [
+              _breakdown(
+                subjectId: 's1',
+                subjectTitle: 'Mathematics',
+                completionPercent: completion,
+              ),
+            ],
+          ),
+          locale: const Locale('es'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final localized = formatPercent(
+        completion * 100,
+        'es',
+        minFractionDigits: 0,
+        maxFractionDigits: 0,
+      );
+      // es renders the percent sign with a (non-breaking) space
+      // before it per CLDR; raw interpolation
+      // ('${(completion * 100).round()}%') would render '75%'
+      // regardless of locale. So don't compare against a literal
+      // — compare against the helper's own output.
+      expect(localized, isNot('${(completion * 100).round()}%'));
+      expect(localized, contains('%'));
+      // Header figure and metric tile both use the locale-aware value.
+      expect(find.text(localized), findsWidgets);
+      expect(find.text('${(completion * 100).round()}%'), findsNothing);
     });
 
     testWidgets('shows accuracy, weak count and study time metrics',

@@ -90,8 +90,12 @@ class SyllabusBreakdownCard extends StatelessWidget {
             spacing: 16,
             runSpacing: 4,
             children: [
-              _metric(context, l10n.syllabusCompletion,
-                  '${(completion * 100).round()}%'),
+              _metric(
+                context,
+                l10n.syllabusCompletion,
+                formatPercent(completion * 100, l10n.localeName,
+                    minFractionDigits: 0, maxFractionDigits: 0),
+              ),
               _metric(
                 context,
                 l10n.accuracy,
