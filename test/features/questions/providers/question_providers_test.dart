@@ -91,9 +91,10 @@ class _FakeSourceRepo extends SourceRepository {
   }
 
   @override
-  Future<void> create(Source source) async {
+  Future<Result<void>> create(Source source) async {
     if (shouldThrow) throw Exception('storage error');
     _sources.add(source);
+    return Result.success(null);
   }
 
   @override

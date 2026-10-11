@@ -114,7 +114,11 @@ class ContentPipeline {
         contentHash: contentHash,
       );
 
-      await _sourceRepository.create(source);
+      final createResult = await _sourceRepository.create(source);
+      if (createResult.isFailure) {
+        _logger.w('Failed to save source ${source.id}', createResult.error);
+        return Result.failure(createResult.error);
+      }
       _logger.d('Source saved: ${source.id}');
       return Result.success(source);
     } catch (e) {

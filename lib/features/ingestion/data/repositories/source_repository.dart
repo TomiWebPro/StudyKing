@@ -18,9 +18,13 @@ class SourceRepository extends Repository<Source> {
     if (!isOpen) await init();
   }
 
-  Future<void> create(Source source) async {
+  Future<Result<void>> create(Source source) async {
     await _ensureReady();
-    await save(source.id, source);
+    final result = await save(source.id, source);
+    if (result.isFailure) {
+      _logger.w('Failed to create source ${source.id}', result.error);
+    }
+    return result;
   }
 
   Future<Result<List<Source>>> getBySubject(String subjectId) async {

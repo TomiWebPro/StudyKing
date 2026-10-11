@@ -180,6 +180,12 @@ class FakeSourceRepository extends SourceRepository {
   Source? getStored(String id) => _store[id];
 }
 
+class FailingCreateSourceRepository extends FakeSourceRepository {
+  @override
+  Future<Result<void>> create(Source source) async =>
+      Result.failure('simulated create failure');
+}
+
 class FakeTopicRepository extends TopicRepository {
   final List<Topic> _topics;
   FakeTopicRepository(this._topics) : super();
@@ -261,6 +267,34 @@ void main() {
       final src = result.data!;
       expect(src.id, isNotEmpty);
       expect(sourceRepo.getStored(src.id), isNotNull);
+    });
+
+    test('returns failure when source creation fails', () async {
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(text: '', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FailingCreateSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processUpload(
+        title: 'T',
+        content: 'hello world content',
+        type: SourceType.pdf,
+        studentId: 's1',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated create failure');
     });
 
     test('detects duplicates by content hash', () async {

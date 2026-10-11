@@ -15,8 +15,9 @@ class InMemorySourceRepository extends SourceRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(Source source) async {
+  Future<Result<void>> create(Source source) async {
     _store[source.id] = source;
+    return Result.success(null);
   }
 
   @override
@@ -80,6 +81,17 @@ class InMemorySourceRepository extends SourceRepository {
   Future<Result<List<Source>>> getCompleted() async {
     return getByStatus(ProcessingStatus.completed);
   }
+}
+
+class FailingSaveSourceRepository extends SourceRepository {
+  FailingSaveSourceRepository();
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<void>> save(String key, Source item) async =>
+      Result.failure('simulated write failure');
 }
 
 Source createTestSource({
@@ -409,6 +421,26 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
       });
+    });
+  });
+
+  group('SourceRepository.create result propagation', () {
+    test('create returns success when the underlying save succeeds', () async {
+      final repo = InMemorySourceRepository();
+      final result = await repo.create(
+        Source(id: 's1', title: 'Test', type: SourceType.pdf),
+      );
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('create propagates save failure instead of masking it as success',
+        () async {
+      final repo = FailingSaveSourceRepository();
+      final result = await repo.create(
+        Source(id: 's1', title: 'Test', type: SourceType.pdf),
+      );
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated write failure');
     });
   });
 

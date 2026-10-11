@@ -45,7 +45,7 @@ class _FakeSourceRepo extends SourceRepository {
   Future<void> init() async {}
 
   @override
-  Future<void> create(Source source) async {}
+  Future<Result<void>> create(Source source) async => Result.success(null);
 
   @override
   Future<Result<void>> save(String key, Source item) async {
