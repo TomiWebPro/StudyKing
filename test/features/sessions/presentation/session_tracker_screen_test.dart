@@ -22,11 +22,12 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false})
+  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false, this.failOnSave = false})
       : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnSave;
+  final bool failOnSave;
 
   @override
   Future<Result<List<Session>>> getAll() async {
@@ -37,6 +38,11 @@ class _FakeSessionRepository extends SessionRepository {
   Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) {
       throw Exception('save failed');
+    }
+    // Mirrors the real Repository.save, which catches Hive errors
+    // internally and returns Result.failure instead of throwing.
+    if (failOnSave) {
+      return Result.failure('Hive write failed');
     }
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
@@ -284,6 +290,48 @@ void main() {
               l.contains('[W]') && l.contains('Failed to save manual session')),
           isNotEmpty,
         );
+      } finally {
+        debugPrint = original;
+      }
+    });
+
+    testWidgets('shows snackbar when save returns failure result',
+        (tester) async {
+      final logs = <String>[];
+      final original = debugPrint;
+      debugPrint = (String? message, {int? wrapWidth}) {
+        if (message != null) logs.add(message);
+      };
+      try {
+        final repo = _FakeSessionRepository(failOnSave: true);
+        await tester.pumpWidget(_buildTestApp(repo));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'Start'));
+        await tester.pump();
+
+        await tester.tap(find.widgetWithText(ElevatedButton, 'End'));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(
+            find.widgetWithText(TextField, 'Questions Answered'), '5');
+        await tester.enterText(
+            find.widgetWithText(TextField, 'Correct Answers'), '2');
+        await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+        await tester.pumpAndSettle();
+
+        // Repository.save reports write failures as Result.failure (it
+        // does not throw), so the error SnackBar must be driven by the
+        // checked save result — not by the unreachable catch block.
+        expect(find.textContaining('Failed to save session'), findsOneWidget);
+        expect(find.textContaining('Hive write failed'), findsOneWidget);
+        expect(
+          logs.where((l) =>
+              l.contains('[W]') && l.contains('Failed to save manual session')),
+          isNotEmpty,
+        );
+        // The failed session must not be counted as persisted.
+        expect(repo.sessions, isEmpty);
       } finally {
         debugPrint = original;
       }

@@ -209,7 +209,25 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
         subjectId: _selectedSubjectId,
         type: SessionType.manual,
       );
-      await _sessionRepository.save(session.id, session);
+      final saveResult =
+          await _sessionRepository.save(session.id, session);
+      if (saveResult.isFailure) {
+        // Repository.save reports write failures as Result.failure (it does
+        // not throw), so the checked result — not the catch below — is the
+        // realistic failure path.
+        _logger.w('Failed to save manual session', saveResult.error);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)!
+                  .failedToSaveSession(saveResult.error ?? '')),
+            ),
+          );
+        }
+        // Skip adherence/mastery tracking for the session that was not
+        // persisted.
+        return;
+      }
     } catch (e) {
       _logger.w('Failed to save manual session', e);
       if (mounted) {
@@ -217,6 +235,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
           SnackBar(content: Text(AppLocalizations.of(context)!.failedToSaveSession(''))),
         );
       }
+      return;
     }
 
     // Track plan adherence via InstrumentationService
