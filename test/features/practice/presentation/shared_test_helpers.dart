@@ -259,6 +259,7 @@ Widget sessionApp({
   bool isSpacedRepetition = false,
   List<String>? orderedQuestionIds,
   QuestionRepository? questionRepository,
+  QuestionVariantService? variantService,
 }) {
   return ProviderScope(
     overrides: [
@@ -271,7 +272,9 @@ Widget sessionApp({
       studentIdServiceProvider.overrideWithValue(FakeStudentIdService()),
       masteryRecorderProvider.overrideWithValue(masteryRecorder ?? FakeMasteryRecorder()),
       mistakeReviewServiceProvider.overrideWithValue(FakeMistakeReviewService()),
-      questionVariantServiceProvider.overrideWithValue(FakeQuestionVariantService()),
+      questionVariantServiceProvider.overrideWithValue(
+        variantService ?? FakeQuestionVariantService(),
+      ),
       voiceServiceProvider.overrideWithValue(FakeVoiceService()),
       attemptRepositoryProvider.overrideWithValue(FakeAttemptRepository()),
       sessionRepositoryProvider.overrideWithValue(sessionRepo ?? FakeSessionRepository()),

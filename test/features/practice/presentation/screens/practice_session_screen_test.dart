@@ -10,6 +10,8 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
+import 'package:studyking/features/questions/services/question_variant_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/providers/service_providers.dart' show studentIdServiceProvider, voiceServiceProvider;
@@ -1823,6 +1825,89 @@ void main() {
       expect(find.byIcon(Icons.star), findsOneWidget);
     });
   });
+
+  group('retry variant positioning', () {
+    testWidgets(
+      'inserts retry variant immediately after the answered question when navigating during the async lookup',
+      (tester) async {
+        final variantService = _ControllableQuestionVariantService();
+        final questions = [
+          question(
+            id: 'q1',
+            text: 'First',
+            type: QuestionType.typedAnswer,
+            markschemeText: 'a',
+          ).copyWith(variantIds: ['v1']),
+          question(
+            id: 'q2',
+            text: 'Second',
+            type: QuestionType.typedAnswer,
+            markschemeText: 'b',
+          ),
+        ];
+        final variant = question(
+          id: 'v1',
+          text: 'Retry variant',
+          type: QuestionType.typedAnswer,
+          markschemeText: 'a',
+        );
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          orderedQuestionIds: ['q1', 'q2'],
+          variantService: variantService,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Answer q1 incorrectly; the retry-variant lookup starts but
+        // stays pending until the test resolves it.
+        await tester.enterText(find.byType(TextField).first, 'wrong');
+        await tester.pump();
+        await tester.ensureVisible(find.text(_l10n.submitAnswer));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.submitAnswer));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Navigate to q2 before the variant lookup completes.
+        await tester.ensureVisible(find.text(_l10n.next));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.next));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.text('Second'), findsOneWidget);
+
+        // The lookup completes after the navigation. The variant must
+        // land at the position captured at call time (immediately
+        // after q1), so it becomes the current question — it must not
+        // be queued after q2.
+        variantService.completeWith(Result.success(variant));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Retry variant'), findsOneWidget);
+        expect(find.text('Second'), findsNothing);
+
+        // q2 is still reachable, right after the variant.
+        await tester.enterText(find.byType(TextField).first, 'wrong');
+        await tester.pump();
+        await tester.ensureVisible(find.text(_l10n.submitAnswer));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.submitAnswer));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.ensureVisible(find.text(_l10n.next));
+        await tester.pumpAndSettle();
+        await tester.tap(find.text(_l10n.next));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Second'), findsOneWidget);
+      },
+    );
+  });
 }
 
 class _FailingQuestionRepository extends FakeQuestionRepository {
@@ -1998,4 +2083,32 @@ class _SrServiceWithData extends FakeSpacedRepetitionService {
   Future<Result<List<Question>>> getPracticeQuestions(String subjectId) async {
     return Result.success(_questions);
   }
+}
+
+/// Hand-written fake whose [selectVariantForRetry] future only
+/// completes when the test explicitly resolves it, so a test can
+/// navigate while the variant lookup is still in flight.
+class _ControllableQuestionVariantService extends QuestionVariantService {
+  final Completer<Result<Question>> _completer = Completer<Result<Question>>();
+
+  _ControllableQuestionVariantService()
+      : super(
+          questionRepo: FakeQuestionRepository(Result.success([])),
+          llmService: _NoopLlmService(),
+          modelId: 'test',
+        );
+
+  void completeWith(Result<Question> result) => _completer.complete(result);
+
+  @override
+  Future<Result<Question>> selectVariantForRetry(
+    Question question, {
+    String? excludeVariantId,
+  }) =>
+      _completer.future;
+}
+
+class _NoopLlmService implements LlmService {
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

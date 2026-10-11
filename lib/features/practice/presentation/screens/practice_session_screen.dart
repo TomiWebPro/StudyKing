@@ -381,9 +381,11 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
   /// it never triggers LLM generation inline.
   Future<void> _maybeQueueRetryVariant(Question question) async {
     if (question.variantIds.isEmpty) return;
-    if (_currentIndex >= _questions.length - 1) {
-      // Nothing follows; queue after the last question.
-    }
+    // Capture the insert position before the async gap: the student may
+    // navigate (Next/Back) while the variant lookup is in flight, and the
+    // variant must still land immediately after [question], not after
+    // whatever question is current when the lookup completes.
+    final insertAt = _currentIndex + 1;
     final result = await _variantService.selectVariantForRetry(question);
     if (result.isFailure || !mounted) return;
     final variant = result.data!;
@@ -391,7 +393,7 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
     if (_queuedVariantIds.contains(variant.id)) return;
     setState(() {
       _queuedVariantIds.add(variant.id);
-      _questions.insert(_currentIndex + 1, variant);
+      _questions.insert(insertAt.clamp(0, _questions.length), variant);
     });
   }
 
