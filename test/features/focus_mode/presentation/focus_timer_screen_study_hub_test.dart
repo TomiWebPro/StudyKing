@@ -408,6 +408,22 @@ class _FakeFocusSessionRepository extends FocusSessionRepository {
   }
 }
 
+class _FailingFocusSessionRepository extends FocusSessionRepository {
+  int saveAttempts = 0;
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<FocusSession?>> getLatest() async => Result.success(null);
+
+  @override
+  Future<Result<void>> save(FocusSession session) async {
+    saveAttempts++;
+    return Result.failure('Hive write failed');
+  }
+}
+
 class _FakeBadgeService extends BadgeService {
   _FakeBadgeService() : super();
 
@@ -943,6 +959,35 @@ void main() {
 
       expect(find.text('t1: +30.0%'), findsOneWidget);
       expect(find.text('t1: +80.0%'), findsNothing);
+    });
+
+    testWidgets('inline practice completion surfaces session save failure',
+        (tester) async {
+      final focusSessionRepo = _FailingFocusSessionRepository();
+      await pumpScreen(tester, _buildApp(
+        child: const FocusTimerScreen(),
+        subjectRepo: _FakeSubjectRepository([Subject(id: 's1', name: 'Math')]),
+        masteryGraphService: _FakeMasteryGraphService([halfAccuracyTopic()]),
+        focusPracticeService: _FakeFocusPracticeService([singleChoiceQuestion()]),
+        focusSessionRepo: focusSessionRepo,
+      ));
+
+      // Start inline practice.
+      await tester.tap(find.text('Math'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.widgetWithText(ListTile, 'Quick Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(InlinePracticeWidget), findsOneWidget);
+
+      await answerAndCompleteInlinePractice(tester);
+
+      // The save was attempted but failed; the user is told instead of
+      // the session being silently lost.
+      expect(focusSessionRepo.saveAttempts, 1);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
   });
 }

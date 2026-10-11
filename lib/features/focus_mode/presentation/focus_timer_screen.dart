@@ -1091,7 +1091,16 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
       try {
         final repo = await ref.read(focusSessionRepositoryProvider.future);
-        await repo.save(focusSession);
+        final saveResult = await repo.save(focusSession);
+        if (saveResult.isFailure) {
+          _logger.w('Failed to persist focus session', saveResult.error);
+          if (mounted) {
+            final l10n = AppLocalizations.of(context)!;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(l10n.somethingWentWrong)),
+            );
+          }
+        }
       } catch (e) {
         _logger.w('Failed to persist focus session', e);
       }
