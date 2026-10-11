@@ -3,6 +3,9 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
 
 Question _createQuestion({
@@ -426,6 +429,199 @@ void main() {
       });
     });
   });
+
+  group('ReadinessScorer - mastery refresh', () {
+    test('refreshes topic mastery from the service on every call', () async {
+      final now = DateTime.now();
+      final questions = [_createQ(id: 'q1', topicId: 't1')];
+      final mastery = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            lastAttempt: now,
+            lastUpdated: now,
+            readinessScore: 0.9,
+            reviewUrgency: 0.1,
+            accuracy: 0.8,
+          ),
+        ],
+      );
+      final scorer = ReadinessScorer(
+        masteryService: mastery,
+        studentIdService: _FakeStudentIdService('s1'),
+      );
+
+      final first = await scorer.scoreQuestions(questions);
+      final firstScore = first.first.score;
+      expect(first.first.topicMastery?.readinessScore, 0.9);
+
+      // A completed session updates mastery inside the service (Hive).
+      mastery.allMastery = [
+        MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: now,
+          lastUpdated: now,
+          readinessScore: 0.1,
+          reviewUrgency: 0.9,
+          accuracy: 0.2,
+        ),
+      ];
+
+      final second = await scorer.scoreQuestions(questions);
+      // The updated mastery must be picked up without an app restart.
+      expect(second.first.topicMastery?.readinessScore, 0.1);
+      expect(second.first.score, greaterThan(firstScore));
+      // Each scoring pass re-reads the service (no permanent cache latch).
+      expect(mastery.initCalls, greaterThan(1));
+    });
+
+    test('drops topic mastery entries the service no longer returns',
+        () async {
+      final now = DateTime.now();
+      final questions = [_createQ(id: 'q1', topicId: 't1')];
+      final mastery = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            lastAttempt: now,
+            lastUpdated: now,
+            readinessScore: 0.9,
+            reviewUrgency: 0.1,
+            accuracy: 0.8,
+          ),
+        ],
+      );
+      final scorer = ReadinessScorer(
+        masteryService: mastery,
+        studentIdService: _FakeStudentIdService('s1'),
+      );
+
+      final first = await scorer.scoreQuestions(questions);
+      expect(first.first.topicMastery, isNotNull);
+
+      // The topic's mastery record is gone on the next read.
+      mastery.allMastery = [];
+      final second = await scorer.scoreQuestions(questions);
+      expect(second.first.topicMastery, isNull);
+    });
+
+    test('refreshes question mastery between calls', () async {
+      final now = DateTime.now();
+      final questions = [_createQ(id: 'q1', topicId: 't1')];
+      final mastery = _FakeMasteryGraphService(
+        allQuestionMastery: [
+          QuestionMasteryState(
+            studentId: 's1',
+            questionId: 'q1',
+            lastAttempt: now,
+            masteryLevel: 0.9,
+            confidenceHistory: const [5, 5, 5],
+          ),
+        ],
+      );
+      final scorer = ReadinessScorer(
+        masteryService: mastery,
+        studentIdService: _FakeStudentIdService('s1'),
+      );
+
+      final first = await scorer.scoreQuestions(questions);
+      final firstScore = first.first.score;
+      expect(first.first.questionMastery?.confidenceHistory, [5, 5, 5]);
+
+      // The student struggled on a later attempt: low confidence, stale.
+      mastery.allQuestionMastery = [
+        QuestionMasteryState(
+          studentId: 's1',
+          questionId: 'q1',
+          lastAttempt: now.subtract(const Duration(days: 30)),
+          masteryLevel: 0.2,
+          confidenceHistory: const [1, 1, 1],
+        ),
+      ];
+
+      final second = await scorer.scoreQuestions(questions);
+      expect(second.first.questionMastery?.confidenceHistory, [1, 1, 1]);
+      expect(second.first.score, greaterThan(firstScore));
+    });
+
+    test('keeps the last good snapshot when a reload fails', () async {
+      final now = DateTime.now();
+      final questions = [_createQ(id: 'q1', topicId: 't1')];
+      final mastery = _FakeMasteryGraphService(
+        allMastery: [
+          MasteryState(
+            studentId: 's1',
+            topicId: 't1',
+            lastAttempt: now,
+            lastUpdated: now,
+            readinessScore: 0.9,
+            reviewUrgency: 0.1,
+            accuracy: 0.8,
+          ),
+        ],
+      );
+      final scorer = ReadinessScorer(
+        masteryService: mastery,
+        studentIdService: _FakeStudentIdService('s1'),
+      );
+
+      final first = await scorer.scoreQuestions(questions);
+      final firstScore = first.first.score;
+
+      // The next reload fails (e.g. box not open): scoring still works
+      // against the last good snapshot instead of losing all mastery data.
+      mastery.failAllMastery = true;
+      final second = await scorer.scoreQuestions(questions);
+      expect(second.first.topicMastery?.readinessScore, 0.9);
+      expect(second.first.score, closeTo(firstScore, 1e-9));
+    });
+  });
+}
+
+class _FakeMasteryGraphService extends MasteryGraphService {
+  List<MasteryState> allMastery;
+  List<QuestionMasteryState> allQuestionMastery;
+  bool failAllMastery = false;
+  int initCalls = 0;
+
+  _FakeMasteryGraphService({
+    this.allMastery = const [],
+    this.allQuestionMastery = const [],
+  }) : super();
+
+  @override
+  Future<Result<void>> init() async {
+    initCalls++;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<MasteryState>>> getAllTopicMastery(
+    String studentId,
+  ) async {
+    if (failAllMastery) return Result.failure('box not open');
+    return Result.success(allMastery);
+  }
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(
+    String studentId,
+  ) async {
+    if (failAllMastery) return Result.failure('box not open');
+    return Result.success(allQuestionMastery);
+  }
+}
+
+class _FakeStudentIdService extends StudentIdService {
+  final String _id;
+
+  _FakeStudentIdService(this._id);
+
+  @override
+  Result<String> getStudentId() => Result.success(_id);
 }
 
 Question _createQ({

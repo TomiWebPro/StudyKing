@@ -23,7 +23,11 @@ class ReadinessScorer {
   static final Logger _logger = const Logger('ReadinessScorer');
   Map<String, MasteryState> _topicMasteryMap = {};
   Map<String, QuestionMasteryState> _questionMasteryMap = {};
-  bool _dataLoaded = false;
+
+  /// True when mastery maps were injected through the constructor.
+  /// Injected maps are authoritative — the mastery service is never
+  /// consulted in that case.
+  bool _mapsInjected = false;
 
   final MasteryGraphService? _masteryService;
   final StudentIdService? _studentIdService;
@@ -54,18 +58,22 @@ class ReadinessScorer {
         _studentIdService = studentIdService {
     if (topicMasteryMap != null) {
       _topicMasteryMap = topicMasteryMap;
-      _dataLoaded = true;
+      _mapsInjected = true;
     }
     if (questionMasteryMap != null) {
       _questionMasteryMap = questionMasteryMap;
-      _dataLoaded = true;
+      _mapsInjected = true;
     }
   }
 
   bool _loading = false;
 
+  /// Loads the current mastery snapshot from the service. Called on every
+  /// [scoreQuestions] invocation so that mastery updates recorded during the
+  /// app run (via MasteryGraphService.recordAttempt) are reflected without
+  /// requiring an app restart. Constructor-injected maps skip this entirely.
   Future<void> _ensureDataLoaded() async {
-    if (_dataLoaded || _loading) return;
+    if (_mapsInjected || _loading) return;
     if (_masteryService == null || _studentIdService == null) return;
     _loading = true;
 
@@ -75,19 +83,18 @@ class ReadinessScorer {
 
       final topicResult = await _masteryService.getAllTopicMastery(studentId);
       if (topicResult.isSuccess && topicResult.data != null) {
-        for (final state in topicResult.data!) {
-          _topicMasteryMap[state.topicId] = state;
-        }
+        _topicMasteryMap = {
+          for (final state in topicResult.data!) state.topicId: state,
+        };
       }
 
       final questionResult =
           await _masteryService.getAllQuestionMastery(studentId);
       if (questionResult.isSuccess && questionResult.data != null) {
-        for (final state in questionResult.data!) {
-          _questionMasteryMap[state.questionId] = state;
-        }
+        _questionMasteryMap = {
+          for (final state in questionResult.data!) state.questionId: state,
+        };
       }
-      _dataLoaded = true;
     } catch (e) {
       _logger.w('Error loading mastery data', e);
     } finally {
