@@ -46,6 +46,7 @@ void main() {
         updatedAt: now,
         nextReview: DateTime(2026, 8, 1),
         mastery: 0.5,
+        srDataJson: '{"r":2,"ef":2.6,"pi":86400000,"lr":1785000000000}',
       );
       await box.put('fc1', card);
       final restored = box.get('fc1')!;
@@ -54,6 +55,29 @@ void main() {
       expect(restored.tags, ['tag']);
       expect(restored.mastery, 0.5);
       expect(restored.nextReview, DateTime(2026, 8, 1));
+      expect(
+        restored.srDataJson,
+        '{"r":2,"ef":2.6,"pi":86400000,"lr":1785000000000}',
+      );
+      await box.close();
+    });
+
+    test('round-trip preserves null srDataJson', () async {
+      final box = await Hive.openBox<Flashcard>('fc_rt_null');
+      final now = DateTime(2026, 7, 23);
+      final card = Flashcard(
+        id: 'fc2',
+        sourceId: 's1',
+        topicId: 't1',
+        subjectId: 'sub1',
+        front: 'Q?',
+        back: 'A',
+        createdAt: now,
+        updatedAt: now,
+      );
+      await box.put('fc2', card);
+      final restored = box.get('fc2')!;
+      expect(restored.srDataJson, isNull);
       await box.close();
     });
   });

@@ -35,6 +35,7 @@ class Flashcard extends HiveObject {
   @HiveField(10, defaultValue: 0)
   final double mastery;
 
+  @HiveField(11)
   final String? srDataJson;
 
   Flashcard({

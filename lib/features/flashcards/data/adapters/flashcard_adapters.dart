@@ -26,12 +26,13 @@ class FlashcardAdapter extends TypeAdapter<Flashcard> {
       updatedAt: fields[8] as DateTime,
       nextReview: fields[9] as DateTime?,
       mastery: (fields[10] as num?)?.toDouble() ?? 0.0,
+      srDataJson: fields[11] as String?,
     );
   }
 
   @override
   void write(BinaryWriter writer, Flashcard obj) {
-    writer.writeByte(11);
+    writer.writeByte(12);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -54,6 +55,8 @@ class FlashcardAdapter extends TypeAdapter<Flashcard> {
     writer.write(obj.nextReview);
     writer.writeByte(10);
     writer.write(obj.mastery);
+    writer.writeByte(11);
+    writer.write(obj.srDataJson);
   }
 }
 
