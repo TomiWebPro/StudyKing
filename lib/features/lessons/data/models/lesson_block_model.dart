@@ -69,22 +69,27 @@ class LessonBlock extends HiveObject {
     'slideType': slideType?.index,
   };
 
-  factory LessonBlock.fromJson(Map<String, dynamic> json) => LessonBlock(
-    id: json['id'],
-    subjectId: json['subjectId'],
-    lessonId: json['lessonId'],
-    type: LessonBlockType.values[json['type']],
-    content: json['content'],
-    order: json['order'] ?? 0,
-    answerKey: json['answerKey'] ?? '',
-    chapterTitle: json['chapterTitle'],
-    sectionTitle: json['sectionTitle'],
-    chapterOrder: json['chapterOrder'],
-    sectionOrder: json['sectionOrder'],
-    slideType: json['slideType'] != null
-        ? SlideType.values[json['slideType'] as int]
-        : null,
-  );
+  factory LessonBlock.fromJson(Map<String, dynamic> json) {
+    final slideIndex = json['slideType'];
+    return LessonBlock(
+      id: json['id'],
+      subjectId: json['subjectId'],
+      lessonId: json['lessonId'],
+      type: LessonBlockType.values[json['type']],
+      content: json['content'],
+      order: json['order'] ?? 0,
+      answerKey: json['answerKey'] ?? '',
+      chapterTitle: json['chapterTitle'],
+      sectionTitle: json['sectionTitle'],
+      chapterOrder: json['chapterOrder'],
+      sectionOrder: json['sectionOrder'],
+      slideType: slideIndex is int &&
+              slideIndex >= 0 &&
+              slideIndex < SlideType.values.length
+          ? SlideType.values[slideIndex]
+          : null,
+    );
+  }
 
   LessonBlock copyWith({
     String? id,

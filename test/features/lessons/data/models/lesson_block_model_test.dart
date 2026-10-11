@@ -402,6 +402,83 @@ void main() {
       });
     });
 
+    group('fromJson slideType defensive decoding', () {
+      test('deserializes a valid slideType index', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C', 'slideType': 2,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, SlideType.definition);
+      });
+
+      test('deserializes every SlideType index without throwing', () {
+        for (final slideType in SlideType.values) {
+          final json = {
+            'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+            'type': 0, 'content': 'C', 'slideType': slideType.index,
+          };
+          final block = LessonBlock.fromJson(json);
+          expect(block.slideType, slideType);
+        }
+      });
+
+      test('tolerates a string-valued slideType without throwing', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C', 'slideType': '2',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, isNull);
+      });
+
+      test('tolerates an out-of-range slideType index without throwing', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C', 'slideType': 99,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, isNull);
+      });
+
+      test('tolerates a negative slideType index without throwing', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C', 'slideType': -1,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, isNull);
+      });
+
+      test('tolerates a non-int slideType without throwing', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C', 'slideType': 2.5,
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, isNull);
+      });
+
+      test('deserializes a missing slideType key as null', () {
+        final json = {
+          'id': 'b1', 'subjectId': 's1', 'lessonId': 'l1',
+          'type': 0, 'content': 'C',
+        };
+        final block = LessonBlock.fromJson(json);
+        expect(block.slideType, isNull);
+      });
+
+      test('roundtrip preserves slideType', () {
+        final original = LessonBlock(
+          id: 'b1', subjectId: 's1', lessonId: 'l1',
+          type: LessonBlockType.slide, content: 'C',
+          slideType: SlideType.quiz,
+        );
+        final restored = LessonBlock.fromJson(original.toJson());
+        expect(restored.slideType, SlideType.quiz);
+      });
+    });
+
     group('equality', () {
       test('uses identity-based equality', () {
         final a = LessonBlock(
