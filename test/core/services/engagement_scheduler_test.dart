@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/constants/notification_ids.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/engagement_scheduler.dart';
@@ -239,6 +240,42 @@ class _OverworkTracker extends StudyProgressTracker {
   @override
   Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async {
     return Result.success([]);
+  }
+}
+
+/// Notification service stub that records daily-reminder
+/// schedule/cancel calls instead of touching the platform
+/// channel, used to verify the alarm sync wiring.
+class _RecordingNotificationService extends NotificationService {
+  final List<({int id, int hour, int minute, String? payload})>
+      dailyReminders = [];
+  final List<int> cancelledIds = [];
+  int initCount = 0;
+
+  @override
+  Future<Result<void>> init({Function(String?)? onNotificationTap}) async {
+    initCount++;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> showDailyReminder({
+    required int id,
+    required String title,
+    required String body,
+    required TimeOfDay remindAt,
+    String? payload,
+  }) async {
+    dailyReminders.add(
+      (id: id, hour: remindAt.hour, minute: remindAt.minute, payload: payload),
+    );
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> cancelNotification(int id) async {
+    cancelledIds.add(id);
+    return Result.success(null);
   }
 }
 
@@ -602,6 +639,130 @@ void main() {
     group('runDailyChecksNow', () {
       test('runs nudge checks without throwing', () async {
         await expectLater(scheduler.runDailyChecksNow(), completes);
+      });
+    });
+
+    group('daily reminder schedule sync', () {
+      EngagementScheduler reminderScheduler(NotificationService notif) {
+        return EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notif,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator:
+              _FakePlanAdherenceOrchestrator(adherenceRepo: _FakeAdherenceRepo()),
+          sessionRepository: _FakeSessionRepo(),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+      }
+
+      test('enabling daily reminders registers the alarm at the persisted time-of-day',
+          () async {
+        final notif = _RecordingNotificationService();
+        final scheduler = reminderScheduler(notif);
+
+        await scheduler.updateSettings(SettingsBox(
+          dailyReminderEnabled: true,
+          dailyReminderHour: 7,
+          dailyReminderMinute: 30,
+        ));
+
+        expect(notif.initCount, greaterThan(0));
+        expect(notif.dailyReminders, hasLength(1));
+        final call = notif.dailyReminders.single;
+        expect(call.id, NotificationIds.dailyReminder);
+        expect(call.hour, 7);
+        expect(call.minute, 30);
+        expect(call.payload, 'daily_reminder');
+        expect(notif.cancelledIds, isEmpty);
+      });
+
+      test('disabling daily reminders cancels the alarm with the shared id',
+          () async {
+        final notif = _RecordingNotificationService();
+        final scheduler = reminderScheduler(notif);
+        await scheduler.updateSettings(SettingsBox(
+          dailyReminderEnabled: true,
+          dailyReminderHour: 9,
+          dailyReminderMinute: 0,
+        ));
+        notif.dailyReminders.clear();
+
+        await scheduler.updateSettings(SettingsBox(
+          dailyReminderEnabled: false,
+          dailyReminderHour: 9,
+          dailyReminderMinute: 0,
+        ));
+
+        expect(notif.cancelledIds, [NotificationIds.dailyReminder]);
+        expect(notif.dailyReminders, isEmpty);
+      });
+
+      test('re-applying the same reminder settings does not re-register the alarm',
+          () async {
+        final notif = _RecordingNotificationService();
+        final scheduler = reminderScheduler(notif);
+        final settings = SettingsBox(
+          dailyReminderEnabled: true,
+          dailyReminderHour: 8,
+          dailyReminderMinute: 15,
+        );
+
+        await scheduler.updateSettings(settings);
+        await scheduler.updateSettings(settings);
+        // Unrelated settings updates flow through
+        // updateSettings too; the alarm must only be
+        // registered once.
+        await scheduler.updateSettings(settings.copyWith(fontSize: 18));
+
+        expect(notif.dailyReminders, hasLength(1));
+        expect(notif.cancelledIds, isEmpty);
+      });
+
+      test('changing the reminder time re-registers the alarm at the new time',
+          () async {
+        final notif = _RecordingNotificationService();
+        final scheduler = reminderScheduler(notif);
+        await scheduler.updateSettings(SettingsBox(
+          dailyReminderEnabled: true,
+          dailyReminderHour: 8,
+          dailyReminderMinute: 0,
+        ));
+
+        await scheduler.updateSettings(SettingsBox(
+          dailyReminderEnabled: true,
+          dailyReminderHour: 6,
+          dailyReminderMinute: 45,
+        ));
+
+        expect(notif.dailyReminders, hasLength(2));
+        final last = notif.dailyReminders.last;
+        expect(last.hour, 6);
+        expect(last.minute, 45);
+      });
+
+      test('a disabled reminder stays cancelled across unrelated updates',
+          () async {
+        final notif = _RecordingNotificationService();
+        final scheduler = reminderScheduler(notif);
+        final settings = SettingsBox(
+          dailyReminderEnabled: false,
+          dailyReminderHour: 9,
+          dailyReminderMinute: 0,
+        );
+
+        await scheduler.updateSettings(settings);
+        notif.cancelledIds.clear();
+        await scheduler.updateSettings(settings.copyWith(fontSize: 20));
+
+        expect(notif.cancelledIds, isEmpty);
+        expect(notif.dailyReminders, isEmpty);
       });
     });
   });

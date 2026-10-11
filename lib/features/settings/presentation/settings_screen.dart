@@ -9,6 +9,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/constants/notification_ids.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -807,10 +808,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
     );
     if (picked != null) {
       await ref.read(settingsProvider.notifier).updateSettings(SettingsUpdate(dailyReminderHour: picked.hour, dailyReminderMinute: picked.minute));
+      // The reminder-time tile is only offered while daily reminders
+      // are enabled, but re-check the persisted setting so an alarm can
+      // never be registered while the feature is switched off.
+      if (!ref.read(settingsProvider).dailyReminderEnabled) return;
       final notifService = NotificationService();
+      notifService.setAppLocalizations(l10n);
       await notifService.init();
       final reminderResult = await notifService.showDailyReminder(
-        id: 9999,
+        id: NotificationIds.dailyReminder,
         title: l10n.dailyReminderNotificationTitle,
         body: l10n.dailyReminderNotificationBody,
         remindAt: picked,

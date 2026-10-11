@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/constants/notification_ids.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import '../utils/logger.dart';
 import '../errors/result.dart';
@@ -60,6 +62,7 @@ class EngagementScheduler {
   Timer? _lessonCheckTimer;
   bool _isInitialized = false;
   int _notificationIdCounter = 1000;
+  ({bool enabled, int hour, int minute})? _lastAppliedDailyReminder;
 
   EngagementScheduler({
     required StudyProgressTracker tracker,
@@ -89,7 +92,62 @@ class EngagementScheduler {
 
   Future<Result<void>> updateSettings(SettingsBox settingsBox) async {
     _settingsBox = settingsBox;
+    await _syncDailyReminderSchedule();
     return Result.success(null);
+  }
+
+  /// Keeps the OS daily-reminder alarm in sync with the persisted
+  /// settings: registers the alarm at the persisted time-of-day when
+  /// daily reminders are enabled and cancels it when they are disabled.
+  ///
+  /// Settings flow through [updateSettings] both at app startup
+  /// (re-registering the alarm after a reboot cleared it) and on every
+  /// settings change (so flipping the toggle on or off takes effect
+  /// immediately). The last-applied reminder spec is tracked so
+  /// unrelated settings updates do not re-register the alarm.
+  Future<void> _syncDailyReminderSchedule() async {
+    final settings = _settingsBox;
+    if (settings == null) return;
+    final spec = (
+      enabled: settings.dailyReminderEnabled,
+      hour: settings.dailyReminderHour,
+      minute: settings.dailyReminderMinute,
+    );
+    if (spec == _lastAppliedDailyReminder) return;
+    _lastAppliedDailyReminder = spec;
+    try {
+      _notificationService.setAppLocalizations(_l10n);
+      final initResult = await _notificationService.init();
+      if (initResult.isFailure) {
+        _logger.w('NotificationService init failed: ${initResult.error}');
+        return;
+      }
+      if (spec.enabled) {
+        final scheduleResult = await _notificationService.showDailyReminder(
+          id: NotificationIds.dailyReminder,
+          title: _l10n.dailyReminderNotificationTitle,
+          body: _l10n.dailyReminderNotificationBody,
+          remindAt: TimeOfDay(hour: spec.hour, minute: spec.minute),
+          payload: 'daily_reminder',
+        );
+        if (scheduleResult.isFailure) {
+          _logger.w(
+            'Failed to schedule daily reminder: ${scheduleResult.error}',
+          );
+        }
+      } else {
+        final cancelResult = await _notificationService.cancelNotification(
+          NotificationIds.dailyReminder,
+        );
+        if (cancelResult.isFailure) {
+          _logger.w(
+            'Failed to cancel daily reminder: ${cancelResult.error}',
+          );
+        }
+      }
+    } catch (e) {
+      _logger.w('Failed to sync daily reminder schedule', e);
+    }
   }
 
   Future<Result<void>> updateLocalization(AppLocalizations l10n) async {
