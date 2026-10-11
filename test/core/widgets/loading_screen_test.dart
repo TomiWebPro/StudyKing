@@ -77,5 +77,21 @@ void main() {
       expect(indicator.strokeWidth, 5);
       expect(indicator.color, Colors.red);
     });
+
+    testWidgets('builds without localizations and falls back to English label',
+        (tester) async {
+      // No localizationsDelegates: AppLocalizations.of(context) is null.
+      // The widget must not throw (no force-unwrap) and must fall back
+      // to the English semantics label, matching shimmer_widget and
+      // splash_screen's l10n?.key ?? fallback pattern.
+      await tester.pumpWidget(const MaterialApp(
+        home: Scaffold(
+          body: LoadingScreen(),
+        ),
+      ));
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(find.bySemanticsLabel('Loading'), findsOneWidget);
+    });
   });
 }
