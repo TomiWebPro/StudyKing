@@ -2,10 +2,19 @@ import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/planner/data/adapters/plan_adherence_model_adapter.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/errors/result.dart';
+
+class _FixedClock implements Clock {
+  final DateTime fixed;
+  _FixedClock(this.fixed);
+
+  @override
+  DateTime now() => fixed;
+}
 
 class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
   final Map<String, PlanAdherenceModel> _storage = {};
@@ -88,10 +97,10 @@ class _FakePlanAdherenceRepository extends PlanAdherenceRepository {
     if (!_isReady) return Result.success(null);
     final today = DateTime.now();
     final startOfDay = DateTime(today.year, today.month, today.day);
-    final endOfDay = startOfDay.add(const Duration(days: 1));
+    final endOfDay = DateTime(startOfDay.year, startOfDay.month, startOfDay.day + 1);
     final todayMetrics = _storage.values.where((m) =>
         m.studentId == studentId &&
-        m.date.isAfter(startOfDay) &&
+        !m.date.isBefore(startOfDay) &&
         m.date.isBefore(endOfDay));
     return Result.success(todayMetrics.isNotEmpty ? todayMetrics.first : null);
   }
@@ -507,6 +516,54 @@ void main() {
       expect((await repository.get('ds1')).data, isNull);
       expect((await repository.get('ds2')).data, isNull);
       expect((await repository.get('ds3')).data, isNotNull);
+    });
+  });
+
+  group('PlanAdherenceRepository.getToday (Hive-backed, calendar days)', () {
+    late PlanAdherenceRepository repository;
+
+    setUpAll(() {
+      if (!Hive.isAdapterRegistered(33)) {
+        Hive.registerAdapter(PlanAdherenceModelAdapter());
+      }
+    });
+
+    setUp(() async {
+      final dir = await Directory.systemTemp.createTemp('adherence_clock_test_');
+      Hive.init(dir.path);
+      // 2025-10-26 is the EU fall-back day (25h long in DST-observing
+      // zones); a fixed 24h span would end at 23:00 local and drop
+      // metrics recorded in the final local hour.
+      repository = PlanAdherenceRepository(
+          clock: _FixedClock(DateTime(2025, 10, 26, 23, 30)));
+      await repository.init();
+    });
+
+    tearDown(() async {
+      await repository.box.close();
+      await Hive.deleteBoxFromDisk('plan_adherence');
+    });
+
+    test('fall-back day: a metric in the final local hour is today',
+        () async {
+      await repository.create(createTestAdherence(
+        id: 'late', studentId: 's1', date: DateTime(2025, 10, 26, 23, 30)));
+      final result = await repository.getToday('s1');
+      expect(result.data, isNotNull);
+      expect(result.data!.id, 'late');
+    });
+
+    test('a metric on the next calendar day is not today', () async {
+      await repository.create(createTestAdherence(
+        id: 'next', studentId: 's1', date: DateTime(2025, 10, 27, 0, 30)));
+      expect((await repository.getToday('s1')).data, isNull);
+    });
+
+    test('a metric before today\'s midnight is not today', () async {
+      await repository.create(createTestAdherence(
+        id: 'yesterday', studentId: 's1',
+        date: DateTime(2025, 10, 25, 23, 59)));
+      expect((await repository.getToday('s1')).data, isNull);
     });
   });
 }
