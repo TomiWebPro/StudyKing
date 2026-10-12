@@ -527,7 +527,11 @@ class PlannerService {
         tutorMetadata: TutorMetadata(topicTitle: topicTitle),
       );
       final result = await sessionRepo.save(session.id, session);
-      if (result.isSuccess && lessonAgentService != null && topicId.isNotEmpty) {
+      if (!result.isSuccess) {
+        return Result.success(false);
+      }
+      var lessonStateSaved = true;
+      if (lessonAgentService != null && topicId.isNotEmpty) {
         try {
           final lesson = await lessonAgentService!.generateLesson(
             subjectId: subjectId,
@@ -535,27 +539,40 @@ class PlannerService {
             topicTitle: topicTitle,
             localeName: _localeName,
           );
-          if (lesson != null) {
-            final sessionWithLesson = session.copyWith(
-              lessonIds: [lesson.id],
-              lessonReady: true,
-            );
-            await sessionRepo.save(session.id, sessionWithLesson);
-          } else {
-            final failedSession = session.copyWith(lessonReady: false);
-            await sessionRepo.save(session.id, failedSession);
-          }
+          final lessonSession = lesson != null
+              ? session.copyWith(
+                  lessonIds: [lesson.id],
+                  lessonReady: true,
+                )
+              : session.copyWith(lessonReady: false);
+          lessonStateSaved = await _persistLessonState(
+            session.id,
+            lessonSession,
+          );
         } catch (e) {
           _logger.w('Lesson generation failed', e);
-          final failedSession = session.copyWith(lessonReady: false);
-          await sessionRepo.save(session.id, failedSession);
+          lessonStateSaved = await _persistLessonState(
+            session.id,
+            session.copyWith(lessonReady: false),
+          );
         }
       }
-      return Result.success(result.isSuccess);
+      return Result.success(lessonStateSaved);
     } catch (e) {
       _logger.w('Failed to schedule lesson', e);
       return Result.failure(e.toString());
     }
+  }
+
+  Future<bool> _persistLessonState(String sessionId, Session session) async {
+    final saveResult = await sessionRepo.save(sessionId, session);
+    if (saveResult.isFailure) {
+      _logger.w(
+        'Failed to save lesson state for session $sessionId',
+        saveResult.error,
+      );
+    }
+    return saveResult.isSuccess;
   }
 
   Future<Result<bool>> cancelLesson(String sessionId) async {
@@ -641,7 +658,14 @@ class PlannerService {
       final missed = missedResult.data!;
       for (final session in missed) {
         final dismissed = session.copyWith(completed: true);
-        await sessionRepo.save(dismissed.id, dismissed);
+        final saveResult = await sessionRepo.save(dismissed.id, dismissed);
+        if (saveResult.isFailure) {
+          _logger.w(
+            'Failed to dismiss missed lesson ${dismissed.id}',
+            saveResult.error,
+          );
+          return Result.failure(saveResult.error);
+        }
       }
       return Result.success(null);
     } catch (e) {

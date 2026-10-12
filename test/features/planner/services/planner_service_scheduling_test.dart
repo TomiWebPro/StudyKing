@@ -426,6 +426,84 @@ void main() {
       );
       expect(agentCalled, isFalse);
     });
+
+    test('reports failure when the lesson-ready save fails', () async {
+      final lesson = Lesson(
+        id: 'lesson-1',
+        subjectId: 'sub_physics',
+        title: 'Kinematics Lesson',
+        topicId: 'topic-1',
+        createdAt: DateTime.now(),
+      );
+      sessionRepo2.failSaveFromCall = 2;
+      svcWithAgent = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => lesson),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isFalse);
+      final saved = (await sessionRepo2.getAll()).data!;
+      expect(saved, hasLength(1));
+      expect(saved.first.lessonIds, isEmpty);
+    });
+
+    test('reports failure when the no-lesson state save fails', () async {
+      sessionRepo2.failSaveFromCall = 2;
+      svcWithAgent = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        lessonAgentService: StubLessonAgentService((s, t, tt, l) async => null),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isFalse);
+    });
+
+    test('reports failure when the catch-path save fails after generation throws', () async {
+      sessionRepo2.failSaveFromCall = 2;
+      svcWithAgent = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo2,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        adherenceRepo: fakeAdherenceRepo,
+        lessonAgentService: StubLessonAgentService(
+          (s, t, tt, l) async => throw Exception('gen failed'),
+        ),
+      );
+      final result = await svcWithAgent.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+      expect(result.data, isFalse);
+    });
   });
 
   group('hasSchedulingConflict', () {
@@ -618,6 +696,22 @@ void main() {
 
     test('completes when no missed lessons', () async {
       await service.dismissAllMissed();
+    });
+
+    test('returns failure when a save returns Result.failure', () async {
+      final now = DateTime.now();
+      await service.scheduleLesson(
+        topicId: 'dismiss-fail-topic',
+        topicTitle: 'Dismiss Fail',
+        subjectId: 'sub_physics',
+        scheduledTime: now.subtract(const Duration(hours: 3)),
+        durationMinutes: 30,
+      );
+      sessionRepo.returnFailureOnSave = true;
+      final result = await service.dismissAllMissed();
+      expect(result.isFailure, isTrue);
+      final missed = (await service.getMissedLessons()).data!;
+      expect(missed.where((m) => m.topicId == 'dismiss-fail-topic'), isNotEmpty);
     });
   });
 }

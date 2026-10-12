@@ -162,6 +162,9 @@ class FakeSessionRepository extends SessionRepository {
   bool throwOnSave = false;
   bool throwOnGetAll = false;
   bool returnFailureOnGetAll = false;
+  bool returnFailureOnSave = false;
+  int failSaveFromCall = 0;
+  int _saveCallCount = 0;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -169,6 +172,11 @@ class FakeSessionRepository extends SessionRepository {
   @override
   Future<Result<void>> save(String key, Session session) async {
     if (throwOnSave) throw Exception('save session error');
+    _saveCallCount++;
+    if (returnFailureOnSave ||
+        (failSaveFromCall > 0 && _saveCallCount >= failSaveFromCall)) {
+      return Result.failure('save session failure');
+    }
     _sessions[session.id] = session;
     return Result.success(null);
   }
