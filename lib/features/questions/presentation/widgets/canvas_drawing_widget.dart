@@ -191,7 +191,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    '${(_recognitionConfidence * 100).round()}% confidence',
+                                    '${(_recognitionConfidence * 100).round()}% ${l10n.confidence}',
                                     style: TextStyle(
                                       fontSize: 10,
                                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -211,7 +211,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                           child: Text(
                             _effectiveInputMode == CanvasInputMode.draw
                                 ? l10n.drawHere
-                                : 'Write here',
+                                : l10n.writeHere,
                             style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant, fontSize: 16),
                           ),
                         ),

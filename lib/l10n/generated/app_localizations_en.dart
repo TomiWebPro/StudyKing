@@ -1268,6 +1268,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get drawHere => 'Draw here...';
 
   @override
+  String get writeHere => 'Write here';
+
+  @override
   String get undoLastStroke => 'Undo last stroke';
 
   @override

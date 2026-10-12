@@ -1636,6 +1636,10 @@
   "@drawHere": {
     "description": "Placeholder text for empty canvas"
   },
+  "writeHere": "Escriba aquí",
+  "@writeHere": {
+    "description": "Placeholder text for empty canvas in handwriting input mode"
+  },
   "undoLastStroke": "Deshacer último trazo",
   "@undoLastStroke": {
     "description": "Semantic label for undo button"

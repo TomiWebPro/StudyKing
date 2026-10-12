@@ -2264,6 +2264,12 @@ abstract class AppLocalizations {
   /// **'Draw here...'**
   String get drawHere;
 
+  /// Placeholder text for empty canvas in handwriting input mode
+  ///
+  /// In en, this message translates to:
+  /// **'Write here'**
+  String get writeHere;
+
   /// Semantic label for undo button
   ///
   /// In en, this message translates to:

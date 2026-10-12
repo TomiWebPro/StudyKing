@@ -1282,6 +1282,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get drawHere => 'Dibuje aquí...';
 
   @override
+  String get writeHere => 'Escriba aquí';
+
+  @override
   String get undoLastStroke => 'Deshacer último trazo';
 
   @override
