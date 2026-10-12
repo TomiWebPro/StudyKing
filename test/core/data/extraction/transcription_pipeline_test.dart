@@ -409,6 +409,54 @@ void main() {
       pipeline.dispose();
     });
 
+    test('YouTube fallback does not duplicate the failed extractor call', () async {
+      var chatCalls = 0;
+      final requestedUris = <Uri>[];
+      final llm = _FakeLlmService(
+        onChat: () async {
+          chatCalls++;
+          return Result.success('hallucinated transcript');
+        },
+      );
+      final mockClient = _MockHttpClient((uri) async {
+        requestedUris.add(uri);
+        return http.Response('', 404);
+      });
+
+      final extractor = TranscriptionExtractor(
+        llmService: llm,
+        modelId: 'test-model',
+        localeName: 'en',
+        httpClient: mockClient,
+      );
+      final pipeline = TranscriptionPipeline(
+        extractor: extractor,
+        llmService: llm,
+      );
+
+      final result = await pipeline.transcribe(
+        rawContent: 'https://youtube.com/watch?v=abc123',
+      );
+
+      // Caption-less video: empty result, no hallucinated LLM transcript.
+      expect(result.text, '');
+      expect(result.extractionMethod, 'youtube_no_transcript');
+      // The LLM is never consulted for video URLs.
+      expect(chatCalls, 0);
+      // A single extractor pass queries the transcript API twice
+      // (its two endpoint attempts) and the video page once. A
+      // duplicate fallback call would double these counts.
+      final transcriptApiCalls = requestedUris
+          .where((uri) => uri.host == 'youtubetranscript.com')
+          .length;
+      final pageFetches = requestedUris
+          .where((uri) => uri.host == 'www.youtube.com' && uri.path == '/watch')
+          .length;
+      expect(transcriptApiCalls, 2);
+      expect(pageFetches, 1);
+      pipeline.dispose();
+    });
+
     test('uses sourceUrl when provided', () async {
       final asrEngine = _FakeAsrEngine(
         available: true,

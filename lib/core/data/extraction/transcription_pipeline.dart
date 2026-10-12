@@ -58,9 +58,15 @@ class TranscriptionPipeline {
       return transcriptResult;
     }
 
+    // The extractor's YouTube path already handles caption-less videos
+    // (`youtube_no_transcript`), and an LLM cannot transcribe a video
+    // from a URL alone — so there is no LLM fallback to apply here.
+    // Re-calling the extractor with identical arguments would only
+    // duplicate the failed network round trip.
     if (_llmService != null) {
-      _logger.d('Pipeline: YouTube transcript unavailable, falling back to LLM');
-      return _extractor.transcribeVideo(rawContent: url, sourceUrl: null);
+      _logger.d(
+        'Pipeline: YouTube transcript unavailable; LLM cannot transcribe video from URL alone',
+      );
     }
 
     return transcriptResult;
