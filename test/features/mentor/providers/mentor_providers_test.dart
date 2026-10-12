@@ -8,7 +8,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

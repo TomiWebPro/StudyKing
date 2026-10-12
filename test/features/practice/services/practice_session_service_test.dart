@@ -8,7 +8,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../../helpers/fakes.dart';
 

@@ -22,7 +22,7 @@ import 'package:studyking/features/focus_mode/presentation/widgets/session_summa
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/data/repositories/plan_adherence_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider, spacedRepetitionServiceProvider, readinessScorerProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart'

@@ -2,11 +2,12 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/repositories/question_lookup.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
-class QuestionRepository extends Repository<Question> {
+class QuestionRepository extends Repository<Question> implements QuestionLookup {
   QuestionRepository() : super(boxName: HiveBoxNames.questions);
   static final Logger _logger = const Logger('QuestionRepository');
 

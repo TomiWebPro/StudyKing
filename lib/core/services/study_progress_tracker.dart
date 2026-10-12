@@ -5,7 +5,7 @@ import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../errors/result.dart';
@@ -13,21 +13,21 @@ import 'mastery_graph_service.dart';
 import 'student_id_service.dart';
 import '../utils/logger.dart';
 import 'badge_service.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import '../data/repositories/question_lookup.dart';
 
 class StudyProgressTracker {
   static final Logger _logger = const Logger('StudyProgressTracker');
   final AttemptRepository _attemptRepo;
   final MasteryGraphService _masteryService;
   final SessionRepository? _sessionRepo;
-  final QuestionRepository? _questionRepo;
+  final QuestionLookup? _questionRepo;
   AppLocalizations _l10n;
 
   StudyProgressTracker({
     required AttemptRepository attemptRepo,
     MasteryGraphService? masteryService,
     SessionRepository? sessionRepo,
-    QuestionRepository? questionRepo,
+    QuestionLookup? questionRepo,
     required AppLocalizations l10n,
   })  : _attemptRepo = attemptRepo,
         _masteryService = masteryService ?? MasteryGraphService(),
@@ -113,7 +113,7 @@ class StudyProgressTracker {
   ///
   /// Production question IDs (`q_<timestamp>_<counter>`) carry no topic
   /// information, so the topic is resolved by joining attempts to their
-  /// questions through [QuestionRepository]. When no repository is wired
+  /// questions through [QuestionLookup]. When no repository is wired
   /// (tests, legacy call sites) or no question resolves (box not open,
   /// question deleted), falls back to the question-ID prefix heuristic.
   Future<int> _countDistinctTopicsStudied(List<StudentAttempt> attempts) async {
@@ -140,7 +140,7 @@ class StudyProgressTracker {
   ///
   /// Production question IDs (`q_<timestamp>_<counter>`) carry no topic
   /// information, so the topic is resolved by joining attempts to their
-  /// questions through [QuestionRepository] — the same join used by
+  /// questions through [QuestionLookup] — the same join used by
   /// [_countDistinctTopicsStudied]. When no repository is wired (tests,
   /// legacy call sites) or no question resolves (box not open, question
   /// deleted), falls back to the question-ID substring heuristic.

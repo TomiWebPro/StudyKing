@@ -11,7 +11,7 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 
 import 'package:studyking/core/services/mastery_graph_service.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_screen.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';

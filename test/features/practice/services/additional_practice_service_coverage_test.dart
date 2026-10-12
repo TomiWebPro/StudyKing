@@ -11,7 +11,7 @@ import 'package:studyking/features/practice/services/spaced_repetition_service.d
 import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/features/practice/services/mastery_recorder.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';

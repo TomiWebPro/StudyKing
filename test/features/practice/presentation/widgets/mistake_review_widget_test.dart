@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/practice/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/features/practice/presentation/widgets/mistake_review_widget.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';

@@ -2,7 +2,7 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'adapters/mastery_state_adapter.dart';
 import 'adapters/mastery_improvement_adapter.dart';
 import 'adapters/question_mastery_state_adapter.dart';
-import 'models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 
 void registerPracticeAdapters() {
   if (!Hive.isAdapterRegistered(16)) {
