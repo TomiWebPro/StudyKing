@@ -105,6 +105,63 @@ class _SlowStreamLlmService extends LlmService {
   }
 }
 
+/// LLM whose chat stream succeeds for the initial greeting (first
+/// call) and then fails mid-stream with a provider connection error
+/// on the next call — the errors `_sendText`'s catch exists for.
+///
+/// [beforeFailure], when provided, is awaited after the partial
+/// chunk and before the stream throws, so tests can dispose the
+/// screen while the stream is still open.
+class _MidStreamFailureLlmService extends LlmService {
+  _MidStreamFailureLlmService({Future<void>? beforeFailure})
+      : _beforeFailure = beforeFailure,
+        super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  final Future<void>? _beforeFailure;
+  int _streamCalls = 0;
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    return Result.success('{"goals":["goal1"],"sections":[{"title":"intro","duration":10,"type":"explanation"}],"checkpoints":["cp1"],"estimatedDifficulty":2}');
+  }
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    _streamCalls++;
+    if (_streamCalls == 1) {
+      // Initial greeting stream.
+      yield 'Welcome to the lesson!';
+      return;
+    }
+    yield 'partial tutor reply';
+    if (_beforeFailure != null) {
+      await _beforeFailure;
+    }
+    throw Exception('Connection refused');
+  }
+}
+
 class _FakeExerciseEvaluator extends ExerciseEvaluator {
   _FakeExerciseEvaluator()
       : super(
@@ -282,6 +339,73 @@ class _FakeTutorService extends TutorService {
 
   @override
   Future<void> endLesson() async {}
+}
+
+/// ConversationManager whose `addAssistantMessage` — the error-path
+/// persist `TutorScreen._sendText` awaits — parks on a gate until the
+/// test releases it, so the screen can be disposed while the persist
+/// is in flight.
+class _GatedPersistConversationManager extends ConversationManager {
+  _GatedPersistConversationManager({
+    required super.llmService,
+    required Completer<void> persistGate,
+    required Completer<void> persistStarted,
+  })  : _persistGate = persistGate,
+        _persistStarted = persistStarted,
+        super(
+          modelId: 'test-model',
+          sessionId: 'test-session',
+          studentId: 'test-student-id',
+          topicTitle: 'Algebra',
+          subjectId: 'math',
+          topicId: '',
+          exerciseEvaluator: _FakeExerciseEvaluator(),
+          localeName: 'en',
+        );
+
+  final Completer<void> _persistGate;
+  final Completer<void> _persistStarted;
+
+  @override
+  Future<void> addAssistantMessage(String content) async {
+    _persistStarted.complete();
+    await _persistGate.future;
+    await super.addAssistantMessage(content);
+  }
+}
+
+/// TutorService that builds a [_GatedPersistConversationManager] so
+/// the error-path persist can be parked mid-flight.
+class _GatedPersistTutorService extends _FakeTutorService {
+  _GatedPersistTutorService({
+    required super.llmService,
+    required Completer<void> persistGate,
+    required Completer<void> persistStarted,
+  })  : _persistGate = persistGate,
+        _persistStarted = persistStarted;
+
+  final Completer<void> _persistGate;
+  final Completer<void> _persistStarted;
+
+  @override
+  Future<ConversationManager> startLesson({
+    required String studentId,
+    required String subjectId,
+    required String topicId,
+    required String topicTitle,
+    int durationMinutes = 45,
+    String? scheduledSessionId,
+    String localeName = 'en',
+  }) async {
+    final manager = _GatedPersistConversationManager(
+      llmService: llm,
+      persistGate: _persistGate,
+      persistStarted: _persistStarted,
+    );
+    await manager.initialize();
+    lastManager = manager;
+    return manager;
+  }
 }
 
 Widget _wrapApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
@@ -698,5 +822,96 @@ void main() {
       );
       expect(tester.takeException(), isNull);
     });
+
+    testWidgets(
+      'error path does not setState after dispose when the error persist completes after the route is popped',
+      (tester) async {
+        final persistGate = Completer<void>();
+        final persistStarted = Completer<void>();
+        final tutorService = _GatedPersistTutorService(
+          llmService: _MidStreamFailureLlmService(),
+          persistGate: persistGate,
+          persistStarted: persistStarted,
+        );
+        await tester.pumpWidget(_wrapApp(
+          TutorScreen(
+            topicId: '',
+            topicTitle: 'Algebra',
+            subjectId: 'math',
+            tutorService: tutorService,
+          ),
+        ));
+        await tester.pump();
+        // Lesson start + greeting stream (first stream call succeeds).
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(seconds: 2));
+
+        // Send a message; the reply streams one chunk, then the
+        // provider stream fails (connection refused).
+        await tester.enterText(find.byType(TextField), 'Hello tutor');
+        await tester.tap(find.byIcon(Icons.send_rounded));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        expect(find.text('partial tutor reply'), findsOneWidget);
+
+        // The catch block is now parked inside the error-message
+        // persist (addAssistantMessage).
+        await persistStarted.future;
+
+        // The screen is disposed (session exit) while the persist
+        // is still in flight.
+        await tester.pumpWidget(const SizedBox());
+
+        // The persist completes after the dispose.
+        persistGate.complete();
+        await tester.pump();
+
+        // Pre-fix, the catch block ran setState on the disposed
+        // State ("setState() called after dispose()").
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'error path skips the context lookup when the route is popped before the stream fails',
+      (tester) async {
+        final failureGate = Completer<void>();
+        final tutorService = _FakeTutorService(
+          llmService: _MidStreamFailureLlmService(
+            beforeFailure: failureGate.future,
+          ),
+        );
+        await tester.pumpWidget(_wrapApp(
+          TutorScreen(
+            topicId: '',
+            topicTitle: 'Algebra',
+            subjectId: 'math',
+            tutorService: tutorService,
+          ),
+        ));
+        await tester.pump();
+        // Lesson start + greeting stream (first stream call succeeds).
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(seconds: 2));
+
+        await tester.enterText(find.byType(TextField), 'Hello tutor');
+        await tester.tap(find.byIcon(Icons.send_rounded));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        // The stream is open and paused before failing.
+        expect(find.text('partial tutor reply'), findsOneWidget);
+
+        // The screen is disposed while the stream is still open.
+        await tester.pumpWidget(const SizedBox());
+
+        // Now the provider stream fails.
+        failureGate.complete();
+        await tester.pump();
+
+        // Pre-fix, the catch block looked up AppLocalizations on the
+        // deactivated context and called setState after dispose.
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

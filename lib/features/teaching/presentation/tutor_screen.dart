@@ -259,10 +259,14 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       }
       _finishStreamingExchange();
     } catch (e) {
+      _logger.w('Stream failed', e);
+      // The route can be popped while the stream is failing (back →
+      // confirm exit in _handleBackNavigation); stop before touching
+      // the context or the UI.
+      if (!mounted) return;
       // ignore: use_build_context_synchronously
       final l10n = AppLocalizations.of(context)!;
       final errorStr = e.toString();
-      _logger.w('Stream failed', e);
       final providerName = _manager!.providerName;
       String userMessage;
       if (errorStr.contains('timed out')) {
@@ -273,6 +277,7 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
         userMessage = l10n.responseInterrupted;
       }
       await _manager!.addAssistantMessage(userMessage);
+      if (!mounted) return;
       _finishStreamingExchange();
       _retryMessage = text;
       setState(() {});
@@ -423,6 +428,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         await _manager!.addAssistantMessage(l10n.errorWithResponse);
+        // The persist above can outlive the route (back → confirm
+        // exit); do not touch the UI once the State is disposed.
+        if (!mounted) return;
         _finishStreamingExchange();
         setState(() {});
       }
@@ -480,6 +488,9 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         await _manager!.addAssistantMessage(l10n.errorWithResponse);
+        // The persist above can outlive the route (back → confirm
+        // exit); do not touch the UI once the State is disposed.
+        if (!mounted) return;
         _finishStreamingExchange();
         setState(() {});
       }
