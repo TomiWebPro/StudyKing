@@ -1,7 +1,10 @@
-import 'package:crypto/crypto.dart' show sha256;
+import 'dart:async' show TimeoutException;
 import 'dart:convert' show utf8;
+import 'package:crypto/crypto.dart' show sha256;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_extractor.dart';
@@ -115,6 +118,29 @@ class FakeDocumentExtractor extends DocumentExtractor {
   }) async {
     extractTextCalled = true;
     return resultToReturn;
+  }
+
+  @override
+  void dispose() {}
+}
+
+class ThrowingDocumentExtractor extends DocumentExtractor {
+  ThrowingDocumentExtractor()
+      : super(
+          modelId: 'm',
+          localeName: 'en',
+          ocrExtractor: FakeOcrExtractor(),
+          pdfExtractor: FakePdfExtractor(),
+          transcriptionExtractor: FakeTranscriptionExtractor(),
+        );
+
+  @override
+  Future<ExtractionResult> extractText({
+    required String rawContent,
+    required SourceType sourceType,
+    String? sourceUrl,
+  }) async {
+    throw TimeoutException('timed out');
   }
 
   @override
@@ -237,11 +263,12 @@ class FakeWebScraper extends WebScraper {
 }
 
 ContentPipeline buildPipeline({
-  required FakeDocumentExtractor docExtractor,
+  required DocumentExtractor docExtractor,
   required FakeChunkedContentProcessor chunked,
   required FakeSourceRepository sourceRepo,
   required FakeTopicRepository topicRepo,
   required FakeWebScraper webScraper,
+  String localeName = 'en',
 }) {
   return ContentPipeline(
     llmService: FakeLlmService(),
@@ -252,7 +279,7 @@ ContentPipeline buildPipeline({
     webScraper: webScraper,
     chunkedProcessor: chunked,
     modelId: 'm',
-    localeName: 'en',
+    localeName: localeName,
   );
 }
 
@@ -595,6 +622,180 @@ void main() {
 
       expect(result.isSuccess, isTrue);
       expect(result.data, 'scraped content');
+    });
+  });
+
+  group('ContentPipeline localization', () {
+    ContentPipeline pipelineFor({String localeName = 'en', DocumentExtractor? docExtractor}) {
+      return buildPipeline(
+        docExtractor: docExtractor ??
+            FakeDocumentExtractor(ExtractionResult(text: '', extractionMethod: 'x')),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        localeName: localeName,
+      );
+    }
+
+    test('userFriendlyError returns localized English messages', () {
+      final pipeline = pipelineFor();
+      final l10n = lookupAppLocalizations(const Locale('en'));
+
+      expect(pipeline.userFriendlyError(TimeoutException('timed out')),
+          l10n.pipelineErrorTimeout);
+      expect(pipeline.userFriendlyError(Exception('429 Too many requests')),
+          l10n.pipelineErrorRateLimited);
+      expect(pipeline.userFriendlyError(Exception('401 API key invalid')),
+          l10n.pipelineErrorInvalidApiKey);
+      expect(pipeline.userFriendlyError(Exception('404 Model not found')),
+          l10n.pipelineErrorModelNotFound);
+      expect(pipeline.userFriendlyError(FormatException('JSON parse error')),
+          l10n.pipelineErrorMalformedResponse);
+      expect(pipeline.userFriendlyError(Exception('Could not read pdf')),
+          l10n.pipelineErrorUnreadableFile);
+      // Unknown errors pass through unchanged.
+      expect(pipeline.userFriendlyError(Exception('boom')), 'Exception: boom');
+    });
+
+    test('userFriendlyError returns localized Spanish messages', () {
+      final pipeline = pipelineFor(localeName: 'es');
+      final l10n = lookupAppLocalizations(const Locale('es'));
+
+      expect(pipeline.userFriendlyError(TimeoutException('timed out')),
+          l10n.pipelineErrorTimeout);
+      expect(pipeline.userFriendlyError(Exception('429 Too many requests')),
+          l10n.pipelineErrorRateLimited);
+      expect(pipeline.userFriendlyError(Exception('401 API key invalid')),
+          l10n.pipelineErrorInvalidApiKey);
+      expect(pipeline.userFriendlyError(Exception('404 Model not found')),
+          l10n.pipelineErrorModelNotFound);
+      expect(pipeline.userFriendlyError(FormatException('JSON parse error')),
+          l10n.pipelineErrorMalformedResponse);
+      expect(pipeline.userFriendlyError(Exception('Could not read pdf')),
+          l10n.pipelineErrorUnreadableFile);
+    });
+
+    test('reports localized progress stage descriptions', () async {
+      final stages = <String>[];
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+        generateQuestions: true,
+        onProgress: (status, description) => stages.add(description),
+      );
+
+      final l10n = lookupAppLocalizations(const Locale('en'));
+      expect(stages, contains(l10n.pipelineStageExtracting));
+      expect(stages, contains(l10n.pipelineStageSummarizing));
+      expect(stages, contains(l10n.pipelineStageGeneratingQuestions));
+      expect(stages, contains(l10n.pipelineStageValidatingQuestions));
+      expect(stages, contains(l10n.pipelineStageComplete));
+    });
+
+    test('reports Spanish progress stage descriptions for the es locale',
+        () async {
+      final stages = <String>[];
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        localeName: 'es',
+      );
+
+      await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+        generateQuestions: true,
+        onProgress: (status, description) => stages.add(description),
+      );
+
+      expect(stages, contains('Extrayendo texto del contenido...'));
+      expect(stages, contains('Generando resumen...'));
+      expect(stages, contains('Generando preguntas del contenido...'));
+      expect(stages, contains('Proceso completado'));
+      // English-only stage descriptions no longer leak through.
+      expect(stages, isNot(contains('Extracting text from content...')));
+      expect(stages, isNot(contains('Generating summary...')));
+      expect(stages, isNot(contains('Pipeline complete')));
+    });
+
+    test('persists and returns the localized failure message', () async {
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: ThrowingDocumentExtractor(),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        localeName: 'es',
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+      );
+
+      final l10n = lookupAppLocalizations(const Locale('es'));
+      expect(result.isFailure, isTrue);
+      expect(result.error, l10n.pipelineErrorTimeout);
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, ProcessingStatus.failed.name);
+      expect(stored.errorMessage, l10n.pipelineErrorTimeout);
     });
   });
 }

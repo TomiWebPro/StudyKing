@@ -10382,6 +10382,102 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count,plural, =1{1 subject} other{{count} subjects}}'**
   String subjectsCount(int count);
+
+  /// Content pipeline error: AI request timed out
+  ///
+  /// In en, this message translates to:
+  /// **'The AI service timed out. Check your internet connection or try a different model.'**
+  String get pipelineErrorTimeout;
+
+  /// Content pipeline error: rate limited by the AI provider
+  ///
+  /// In en, this message translates to:
+  /// **'You\'ve been rate-limited. Please wait a moment and try again.'**
+  String get pipelineErrorRateLimited;
+
+  /// Content pipeline error: invalid or expired API key
+  ///
+  /// In en, this message translates to:
+  /// **'Your API key is invalid or expired. Update it in Settings.'**
+  String get pipelineErrorInvalidApiKey;
+
+  /// Content pipeline error: selected model not found
+  ///
+  /// In en, this message translates to:
+  /// **'The selected model wasn\'t found. Try a different model.'**
+  String get pipelineErrorModelNotFound;
+
+  /// Content pipeline error: malformed AI response
+  ///
+  /// In en, this message translates to:
+  /// **'The AI response was malformed. Try reprocessing.'**
+  String get pipelineErrorMalformedResponse;
+
+  /// Content pipeline error: unreadable source file
+  ///
+  /// In en, this message translates to:
+  /// **'Could not read this file. Make sure it\'s a valid PDF or document.'**
+  String get pipelineErrorUnreadableFile;
+
+  /// Content pipeline progress stage: extracting text
+  ///
+  /// In en, this message translates to:
+  /// **'Extracting text from content...'**
+  String get pipelineStageExtracting;
+
+  /// Content pipeline progress stage: classifying topic
+  ///
+  /// In en, this message translates to:
+  /// **'Classifying content topic...'**
+  String get pipelineStageClassifyingTopic;
+
+  /// Content pipeline progress stage: extracting topics from a syllabus
+  ///
+  /// In en, this message translates to:
+  /// **'Extracting topics from syllabus...'**
+  String get pipelineStageExtractingSyllabusTopics;
+
+  /// Content pipeline progress stage: generating summary
+  ///
+  /// In en, this message translates to:
+  /// **'Generating summary...'**
+  String get pipelineStageSummarizing;
+
+  /// Content pipeline progress stage: generating questions
+  ///
+  /// In en, this message translates to:
+  /// **'Generating questions from content...'**
+  String get pipelineStageGeneratingQuestions;
+
+  /// Content pipeline progress stage: validating questions
+  ///
+  /// In en, this message translates to:
+  /// **'Validating generated questions...'**
+  String get pipelineStageValidatingQuestions;
+
+  /// Content pipeline progress stage: generating a lesson
+  ///
+  /// In en, this message translates to:
+  /// **'Generating lesson from content...'**
+  String get pipelineStageGeneratingLesson;
+
+  /// Content pipeline progress stage: generating a slide deck
+  ///
+  /// In en, this message translates to:
+  /// **'Generating slide deck from content...'**
+  String get pipelineStageGeneratingSlideDeck;
+
+  /// Content pipeline progress stage: generating flashcards
+  ///
+  /// In en, this message translates to:
+  /// **'Generating flashcards from content...'**
+  String get pipelineStageGeneratingFlashcards;
+
+  /// Content pipeline progress stage: processing complete
+  ///
+  /// In en, this message translates to:
+  /// **'Pipeline complete'**
+  String get pipelineStageComplete;
 }
 
 class _AppLocalizationsDelegate

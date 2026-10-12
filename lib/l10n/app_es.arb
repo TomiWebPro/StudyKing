@@ -8291,5 +8291,69 @@
     "placeholders": {
       "count": { "type": "int" }
     }
+  },
+  "pipelineErrorTimeout": "El servicio de IA superó el tiempo de espera. Compruebe su conexión a internet o pruebe con otro modelo.",
+  "@pipelineErrorTimeout": {
+    "description": "Content pipeline error: AI request timed out"
+  },
+  "pipelineErrorRateLimited": "Ha superado el límite de solicitudes. Espere un momento e inténtelo de nuevo.",
+  "@pipelineErrorRateLimited": {
+    "description": "Content pipeline error: rate limited by the AI provider"
+  },
+  "pipelineErrorInvalidApiKey": "Su clave de API no es válida o expiró. Actualícela en Ajustes.",
+  "@pipelineErrorInvalidApiKey": {
+    "description": "Content pipeline error: invalid or expired API key"
+  },
+  "pipelineErrorModelNotFound": "No se encontró el modelo seleccionado. Pruebe con otro modelo.",
+  "@pipelineErrorModelNotFound": {
+    "description": "Content pipeline error: selected model not found"
+  },
+  "pipelineErrorMalformedResponse": "La respuesta de la IA tenía un formato incorrecto. Intente reprocesarla.",
+  "@pipelineErrorMalformedResponse": {
+    "description": "Content pipeline error: malformed AI response"
+  },
+  "pipelineErrorUnreadableFile": "No se pudo leer este archivo. Asegúrese de que sea un PDF o documento válido.",
+  "@pipelineErrorUnreadableFile": {
+    "description": "Content pipeline error: unreadable source file"
+  },
+  "pipelineStageExtracting": "Extrayendo texto del contenido...",
+  "@pipelineStageExtracting": {
+    "description": "Content pipeline progress stage: extracting text"
+  },
+  "pipelineStageClassifyingTopic": "Clasificando el tema del contenido...",
+  "@pipelineStageClassifyingTopic": {
+    "description": "Content pipeline progress stage: classifying topic"
+  },
+  "pipelineStageExtractingSyllabusTopics": "Extrayendo temas del programa...",
+  "@pipelineStageExtractingSyllabusTopics": {
+    "description": "Content pipeline progress stage: extracting topics from a syllabus"
+  },
+  "pipelineStageSummarizing": "Generando resumen...",
+  "@pipelineStageSummarizing": {
+    "description": "Content pipeline progress stage: generating summary"
+  },
+  "pipelineStageGeneratingQuestions": "Generando preguntas del contenido...",
+  "@pipelineStageGeneratingQuestions": {
+    "description": "Content pipeline progress stage: generating questions"
+  },
+  "pipelineStageValidatingQuestions": "Validando las preguntas generadas...",
+  "@pipelineStageValidatingQuestions": {
+    "description": "Content pipeline progress stage: validating questions"
+  },
+  "pipelineStageGeneratingLesson": "Generando lección del contenido...",
+  "@pipelineStageGeneratingLesson": {
+    "description": "Content pipeline progress stage: generating a lesson"
+  },
+  "pipelineStageGeneratingSlideDeck": "Generando presentación del contenido...",
+  "@pipelineStageGeneratingSlideDeck": {
+    "description": "Content pipeline progress stage: generating a slide deck"
+  },
+  "pipelineStageGeneratingFlashcards": "Generando tarjetas de repaso del contenido...",
+  "@pipelineStageGeneratingFlashcards": {
+    "description": "Content pipeline progress stage: generating flashcards"
+  },
+  "pipelineStageComplete": "Proceso completado",
+  "@pipelineStageComplete": {
+    "description": "Content pipeline progress stage: processing complete"
   }
 }

@@ -6329,4 +6329,64 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get pipelineErrorTimeout =>
+      'The AI service timed out. Check your internet connection or try a different model.';
+
+  @override
+  String get pipelineErrorRateLimited =>
+      'You\'ve been rate-limited. Please wait a moment and try again.';
+
+  @override
+  String get pipelineErrorInvalidApiKey =>
+      'Your API key is invalid or expired. Update it in Settings.';
+
+  @override
+  String get pipelineErrorModelNotFound =>
+      'The selected model wasn\'t found. Try a different model.';
+
+  @override
+  String get pipelineErrorMalformedResponse =>
+      'The AI response was malformed. Try reprocessing.';
+
+  @override
+  String get pipelineErrorUnreadableFile =>
+      'Could not read this file. Make sure it\'s a valid PDF or document.';
+
+  @override
+  String get pipelineStageExtracting => 'Extracting text from content...';
+
+  @override
+  String get pipelineStageClassifyingTopic => 'Classifying content topic...';
+
+  @override
+  String get pipelineStageExtractingSyllabusTopics =>
+      'Extracting topics from syllabus...';
+
+  @override
+  String get pipelineStageSummarizing => 'Generating summary...';
+
+  @override
+  String get pipelineStageGeneratingQuestions =>
+      'Generating questions from content...';
+
+  @override
+  String get pipelineStageValidatingQuestions =>
+      'Validating generated questions...';
+
+  @override
+  String get pipelineStageGeneratingLesson =>
+      'Generating lesson from content...';
+
+  @override
+  String get pipelineStageGeneratingSlideDeck =>
+      'Generating slide deck from content...';
+
+  @override
+  String get pipelineStageGeneratingFlashcards =>
+      'Generating flashcards from content...';
+
+  @override
+  String get pipelineStageComplete => 'Pipeline complete';
 }

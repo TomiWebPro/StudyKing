@@ -45,6 +45,8 @@ class ContentPipeline {
   final String _localeName;
   static final Logger _logger = const Logger('ContentPipeline');
 
+  AppLocalizations get _l10n => lookupAppLocalizations(Locale(_localeName));
+
   ContentPipeline({
     required LlmService llmService,
     required SourceRepository sourceRepository,
@@ -145,25 +147,26 @@ class ContentPipeline {
     return null;
   }
 
-  static String userFriendlyError(dynamic error) {
+  String userFriendlyError(dynamic error) {
+    final l10n = _l10n;
     final msg = error.toString();
     if (msg.contains('TimeoutException') || msg.contains('timed out')) {
-      return 'The AI service timed out. Check your internet connection or try a different model.';
+      return l10n.pipelineErrorTimeout;
     }
     if (msg.contains('429') || msg.contains('rate limit') || msg.contains('Too many requests')) {
-      return "You've been rate-limited. Please wait a moment and try again.";
+      return l10n.pipelineErrorRateLimited;
     }
     if (msg.contains('401') || msg.contains('API key') || msg.contains('auth')) {
-      return 'Your API key is invalid or expired. Update it in Settings.';
+      return l10n.pipelineErrorInvalidApiKey;
     }
     if (msg.contains('404') || msg.contains('not found') || msg.contains('Model not found')) {
-      return "The selected model wasn't found. Try a different model.";
+      return l10n.pipelineErrorModelNotFound;
     }
     if (msg.contains('FormatException') || msg.contains('JSON') || msg.contains('parse')) {
-      return 'The AI response was malformed. Try reprocessing.';
+      return l10n.pipelineErrorMalformedResponse;
     }
     if (msg.contains('pdf') || msg.contains('Could not read')) {
-      return "Could not read this file. Make sure it's a valid PDF or document.";
+      return l10n.pipelineErrorUnreadableFile;
     }
     return msg;
   }
@@ -238,7 +241,7 @@ class ContentPipeline {
       Source updated = source;
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
-      onProgress?.call(ProcessingStatus.extracting, 'Extracting text from content...');
+      onProgress?.call(ProcessingStatus.extracting, _l10n.pipelineStageExtracting);
       updated = _updateStatus(updated, ProcessingStatus.extracting);
       final extractionResult = await _documentExtractor.extractText(
         rawContent: content,
@@ -269,7 +272,7 @@ class ContentPipeline {
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (possibleTopics.isNotEmpty) {
-        onProgress?.call(ProcessingStatus.classifying, 'Classifying content topic...');
+        onProgress?.call(ProcessingStatus.classifying, _l10n.pipelineStageClassifyingTopic);
         updated = _updateStatus(updated, ProcessingStatus.classifying);
 
         String matchedTopicId;
@@ -304,7 +307,7 @@ class ContentPipeline {
         }
         _logger.d('Stage 2 complete: topic classified');
       } else if (subjectId.isNotEmpty && type == SourceType.syllabus) {
-        onProgress?.call(ProcessingStatus.classifying, 'Extracting topics from syllabus...');
+        onProgress?.call(ProcessingStatus.classifying, _l10n.pipelineStageExtractingSyllabusTopics);
         updated = _updateStatus(updated, ProcessingStatus.classifying);
         final extractedTopicIds = await _extractTopicsFromSyllabus(
           textToClassify,
@@ -322,7 +325,7 @@ class ContentPipeline {
       }
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
-      onProgress?.call(ProcessingStatus.summarizing, 'Generating summary...');
+      onProgress?.call(ProcessingStatus.summarizing, _l10n.pipelineStageSummarizing);
       updated = _updateStatus(updated, ProcessingStatus.summarizing);
 
       String summary = '';
@@ -351,7 +354,7 @@ class ContentPipeline {
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateQuestions) {
-        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating questions from content...');
+        onProgress?.call(ProcessingStatus.generatingQuestions, _l10n.pipelineStageGeneratingQuestions);
         updated = _updateStatus(updated, ProcessingStatus.generatingQuestions);
 
         if (oldQuestionIds.isNotEmpty) {
@@ -399,7 +402,7 @@ class ContentPipeline {
         );
 
         if (_cancelled) return Result.failure('Pipeline cancelled');
-        onProgress?.call(ProcessingStatus.validating, 'Validating generated questions...');
+        onProgress?.call(ProcessingStatus.validating, _l10n.pipelineStageValidatingQuestions);
         updated = _updateStatus(updated, ProcessingStatus.validating);
         final validationResults = _validateGeneratedQuestions(
           updated,
@@ -417,7 +420,7 @@ class ContentPipeline {
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateLessons && _lessonAgentService != null && updated.topicId.isNotEmpty) {
-        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating lesson from content...');
+        onProgress?.call(ProcessingStatus.generatingQuestions, _l10n.pipelineStageGeneratingLesson);
         final textForLesson = updated.extractedText.isNotEmpty ? updated.extractedText : content;
         await _lessonAgentService.generateLessonFromSource(
           subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
@@ -431,7 +434,7 @@ class ContentPipeline {
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateSlideDecks && _slideDeckGenerator != null && updated.topicId.isNotEmpty) {
-        onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating slide deck from content...');
+        onProgress?.call(ProcessingStatus.generatingQuestions, _l10n.pipelineStageGeneratingSlideDeck);
         final textForSlideDeck = updated.extractedText.isNotEmpty ? updated.extractedText : content;
         final slideDeckResult = await _slideDeckGenerator.generateSlideDeck(
           subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
@@ -452,7 +455,7 @@ class ContentPipeline {
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
       if (generateFlashcards && _flashcardGenerator != null && updated.topicId.isNotEmpty) {
-        onProgress?.call(ProcessingStatus.generatingFlashcards, 'Generating flashcards from content...');
+        onProgress?.call(ProcessingStatus.generatingFlashcards, _l10n.pipelineStageGeneratingFlashcards);
         updated = _updateStatus(updated, ProcessingStatus.generatingFlashcards);
         final textForFlashcards = updated.extractedText.isNotEmpty ? updated.extractedText : content;
         final flashcardResult = await _flashcardGenerator.generateFlashcards(
@@ -475,7 +478,7 @@ class ContentPipeline {
       }
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
-      onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
+      onProgress?.call(ProcessingStatus.completed, _l10n.pipelineStageComplete);
       updated = _updateStatus(updated, ProcessingStatus.completed);
       final completionSave = await _saveSource(updated);
       if (completionSave.isFailure) {

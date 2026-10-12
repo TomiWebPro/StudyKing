@@ -6399,4 +6399,65 @@ class AppLocalizationsEs extends AppLocalizations {
     );
     return '$_temp0';
   }
+
+  @override
+  String get pipelineErrorTimeout =>
+      'El servicio de IA superó el tiempo de espera. Compruebe su conexión a internet o pruebe con otro modelo.';
+
+  @override
+  String get pipelineErrorRateLimited =>
+      'Ha superado el límite de solicitudes. Espere un momento e inténtelo de nuevo.';
+
+  @override
+  String get pipelineErrorInvalidApiKey =>
+      'Su clave de API no es válida o expiró. Actualícela en Ajustes.';
+
+  @override
+  String get pipelineErrorModelNotFound =>
+      'No se encontró el modelo seleccionado. Pruebe con otro modelo.';
+
+  @override
+  String get pipelineErrorMalformedResponse =>
+      'La respuesta de la IA tenía un formato incorrecto. Intente reprocesarla.';
+
+  @override
+  String get pipelineErrorUnreadableFile =>
+      'No se pudo leer este archivo. Asegúrese de que sea un PDF o documento válido.';
+
+  @override
+  String get pipelineStageExtracting => 'Extrayendo texto del contenido...';
+
+  @override
+  String get pipelineStageClassifyingTopic =>
+      'Clasificando el tema del contenido...';
+
+  @override
+  String get pipelineStageExtractingSyllabusTopics =>
+      'Extrayendo temas del programa...';
+
+  @override
+  String get pipelineStageSummarizing => 'Generando resumen...';
+
+  @override
+  String get pipelineStageGeneratingQuestions =>
+      'Generando preguntas del contenido...';
+
+  @override
+  String get pipelineStageValidatingQuestions =>
+      'Validando las preguntas generadas...';
+
+  @override
+  String get pipelineStageGeneratingLesson =>
+      'Generando lección del contenido...';
+
+  @override
+  String get pipelineStageGeneratingSlideDeck =>
+      'Generando presentación del contenido...';
+
+  @override
+  String get pipelineStageGeneratingFlashcards =>
+      'Generando tarjetas de repaso del contenido...';
+
+  @override
+  String get pipelineStageComplete => 'Proceso completado';
 }
