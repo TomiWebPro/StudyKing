@@ -548,7 +548,16 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
     );
     if (confirmed == true && mounted) {
       final dismissed = session.copyWith(completed: true);
-      await _sessionRepository.save(dismissed.id, dismissed);
+      final saveResult = await _sessionRepository.save(dismissed.id, dismissed);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to dismiss stale session', saveResult.error);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.somethingWentWrong)),
+          );
+        }
+        return;
+      }
       _loadSessions();
     }
   }

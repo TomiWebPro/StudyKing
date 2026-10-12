@@ -17,17 +17,20 @@ class _FakeSessionRepository extends SessionRepository {
     List<Session>? seed,
     this.throwOnDelete = false,
     this.failOnDelete = false,
+    this.failOnSave = false,
   }) : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnDelete;
   final bool failOnDelete;
+  final bool failOnSave;
 
   @override
   Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
 
   @override
   Future<Result<void>> save(String key, Session session) async {
+    if (failOnSave) return Result.failure('save failed');
     sessions.removeWhere((s) => s.id == session.id);
     sessions.add(session);
     return Result.success(null);
@@ -828,6 +831,69 @@ void main() {
       expect(find.byKey(const Key('s1')), findsOneWidget);
       expect(find.text('Session deleted'), findsNothing);
       expect(find.textContaining('Failed to delete session'), findsOneWidget);
+    });
+  });
+
+  group('SessionHistoryScreen - Stale session dismissal', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    // Stale: no endTime, not completed, started before the
+    // recent-session window (Timeouts.recentSessionWindow, 1 hour).
+    Session staleSession() {
+      return Session(
+        id: 's1', studentId: 'u1', subjectId: 'math',
+        startTime: DateTime.now().subtract(const Duration(hours: 2)),
+        actualDurationMs: 600000,
+        type: SessionType.manual,
+      );
+    }
+
+    testWidgets('failed save keeps stale banner and shows error snackbar', (tester) async {
+      final repo = _FakeSessionRepository(failOnSave: true, seed: [staleSession()]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // The stale session shows its banner and the dismiss affordance.
+      expect(find.text('Not completed'), findsOneWidget);
+      expect(find.widgetWithText(TextButton, 'Dismiss All Missed'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Dismiss All Missed'));
+      await tester.pumpAndSettle();
+
+      // Confirm the dismissal dialog (ElevatedButton "Cancel").
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      // Repository.save returned Result.failure: the session must still be
+      // flagged stale (no silent dismissal) and the error must be surfaced.
+      expect(find.byKey(const Key('s1')), findsOneWidget);
+      expect(find.text('Not completed'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsOneWidget);
+    });
+
+    testWidgets('successful save clears the stale banner', (tester) async {
+      final repo = _FakeSessionRepository(seed: [staleSession()]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Not completed'), findsOneWidget);
+
+      await tester.tap(find.widgetWithText(TextButton, 'Dismiss All Missed'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Cancel'));
+      await tester.pumpAndSettle();
+
+      // The save succeeded and the session was marked completed, so the
+      // stale banner is gone after the reload (session itself remains).
+      expect(find.text('Not completed'), findsNothing);
+      expect(find.byKey(const Key('s1')), findsOneWidget);
     });
   });
 
