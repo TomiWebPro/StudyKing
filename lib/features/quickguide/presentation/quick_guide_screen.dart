@@ -55,6 +55,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
 
   List<ConversationMessage> _messages = [];
   List<String> _suggestedPrompts = [];
+  String? _initializedLocaleName;
   bool _isStreaming = false;
   bool _hasInteracted = false;
   bool _showSuggestions = true;
@@ -62,8 +63,17 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_messages.isEmpty) {
-      final l10n = AppLocalizations.of(context)!;
+    final l10n = AppLocalizations.of(context)!;
+    // The State survives tab switches (per-tab Navigators), so the
+    // pristine greeting and prompts must be re-resolved when the
+    // locale changes (i18n Locale Switching Gotcha). Only the
+    // pre-interaction content is touched — an in-progress
+    // conversation keeps the user's messages.
+    final localeChanged =
+        _initializedLocaleName != null &&
+        _initializedLocaleName != l10n.localeName;
+    if (_messages.isEmpty || (localeChanged && !_hasInteracted)) {
+      _initializedLocaleName = l10n.localeName;
       _messages = [
         ConversationMessage(
           id: _uuid.v4(),
@@ -278,6 +288,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
   void _clearConversation() {
     setState(() {
       final l10n = AppLocalizations.of(context)!;
+      _initializedLocaleName = l10n.localeName;
       _messages = [
         ConversationMessage(
           id: _uuid.v4(),

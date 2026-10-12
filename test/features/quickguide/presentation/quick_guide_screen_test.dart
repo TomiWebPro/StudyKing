@@ -1855,4 +1855,113 @@ void main() {
       expect(tester.takeException(), isNull);
     });
   });
+
+  group('QuickGuideScreen - locale switch', ()
+  {
+    testWidgets('welcome message re-resolves after locale switch',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: false),
+        locale: const Locale('en'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.textContaining('Hello! I\'m StudyKing\'s Quick Guide'),
+        findsOneWidget,
+      );
+
+      // Simulate the Profile-screen language change: MaterialApp
+      // rebuilds with the new locale while the screen's State
+      // survives (per-tab Navigators keep the route mounted).
+      await tester.pumpWidget(buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: false),
+        locale: const Locale('es'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(
+        find.textContaining('Hello! I\'m StudyKing\'s Quick Guide'),
+        findsNothing,
+      );
+      expect(
+        find.textContaining('¡Hola! Soy la Guía Rápida de StudyKing'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('suggested prompts re-resolve after locale switch',
+        (tester) async {
+      await tester.pumpWidget(buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: false),
+        locale: const Locale('en'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Explain photosynthesis'), findsOneWidget);
+      expect(find.text('Quiz me on history'), findsOneWidget);
+      expect(find.text('Help with math problems'), findsOneWidget);
+
+      await tester.pumpWidget(buildTestApp(
+        screen: const QuickGuideScreen(showModeNavigation: false),
+        locale: const Locale('es'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.text('Explain photosynthesis'), findsNothing);
+      expect(find.text('Explica la fotosíntesis'), findsOneWidget);
+      expect(find.text('Examíname de historia'), findsOneWidget);
+      expect(
+        find.text('Ayuda con problemas de matemáticas'),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('in-progress conversation survives a locale switch',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Respuesta');
+
+      await tester.pumpWidget(buildTestApp(
+        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+        locale: const Locale('en'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Explain fractions');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Explain fractions'), findsOneWidget);
+
+      await tester.pumpWidget(buildTestApp(
+        screen: QuickGuideScreen(llmService: llm, showModeNavigation: false),
+        llmService: llm,
+        locale: const Locale('es'),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Re-resolution on a locale switch must only touch the
+      // pristine pre-interaction content; an ongoing conversation
+      // keeps the user's messages.
+      expect(find.text('Explain fractions'), findsOneWidget);
+      expect(
+        find.textContaining('Hello! I\'m StudyKing\'s Quick Guide'),
+        findsOneWidget,
+      );
+      expect(
+        find.textContaining('¡Hola! Soy la Guía Rápida de StudyKing'),
+        findsNothing,
+      );
+    });
+  });
 }
