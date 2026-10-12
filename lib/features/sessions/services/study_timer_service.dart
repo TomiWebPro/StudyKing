@@ -240,11 +240,13 @@ class StudyTimerService {
     _elapsedMs = 0;
     _isPaused = false;
 
-    if (elapsedMs > 0) {
-      final notifResult = await _notificationService?.showNotification(
+    // Sub-minute completions are not announced: the localized
+    // body only carries whole minutes, so anything shorter would
+    // render as "0 minutes".
+    if (elapsedMs >= msPerMinute) {
+      final notifResult = await _notificationService?.showSessionComplete(
         id: _clock.now().millisecondsSinceEpoch.remainder(100000),
-        title: 'Focus Session Complete',
-        body: 'Great focus! You completed ${elapsedMs ~/ msPerMinute} minutes.',
+        minutes: elapsedMs ~/ msPerMinute,
       );
       if (notifResult?.isFailure ?? true) {
         _logger.w('Failed to show session complete notification');

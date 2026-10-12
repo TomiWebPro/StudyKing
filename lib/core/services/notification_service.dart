@@ -438,6 +438,27 @@ class NotificationService {
     }
   }
 
+  Future<Result<void>> showSessionComplete({
+    required int id,
+    required int minutes,
+  }) async {
+    try {
+      final l10n = _l10n;
+      if (l10n == null) return Result.failure('l10n not initialized');
+      await showNotification(
+        id: id,
+        title: l10n.sessionComplete,
+        body: l10n.sessionCompleted(minutes),
+        channelId: NotificationChannelIds.general,
+        channelName: l10n.notifChannelGeneral,
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to show session complete notification $id', e);
+      return Result.failure(e.toString());
+    }
+  }
+
   Future<Result<void>> showMentorMessage({
     required int id,
     required String title,

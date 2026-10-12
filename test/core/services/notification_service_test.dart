@@ -557,6 +557,91 @@ void main() {
       });
     });
 
+    test('showSessionComplete returns failure when l10n is not set',
+        () async {
+      final service = NotificationService();
+      final result = await service.showSessionComplete(id: 1, minutes: 25);
+      expect(result, isA<Result<void>>());
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('l10n not initialized'));
+    });
+
+    test('showSessionComplete returns success when l10n is set',
+        () async {
+      final service = NotificationService();
+      service.setAppLocalizations(AppLocalizationsEn());
+      final result = await service.showSessionComplete(id: 1, minutes: 25);
+      expect(result, isA<Result<void>>());
+      expect(result.isSuccess, isTrue);
+    });
+
+    group('showSessionComplete localization', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            return methodCall.method == 'initialize' ? true : null;
+          },
+        );
+      });
+
+      Map<Object?, Object?> showCallArguments() {
+        final showCalls = notificationCalls
+            .where((c) => c.method == 'show')
+            .toList();
+        expect(showCalls, hasLength(1));
+        return showCalls.single.arguments as Map<Object?, Object?>;
+      }
+
+      NotificationService serviceWithLocalizations(AppLocalizations l10n) {
+        final service = NotificationService();
+        service.setAppLocalizations(l10n);
+        return service;
+      }
+
+      test('uses the localized title and body (en locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showSessionComplete(id: 1, minutes: 25);
+
+        expect(result.isSuccess, isTrue);
+        final args = showCallArguments();
+        expect(args['title'], 'Session Complete');
+        expect(args['body'], 'Session completed: 25m');
+        final specifics = args['platformSpecifics'] as Map<Object?, Object?>;
+        expect(specifics['channelName'], 'StudyKing Notifications');
+      });
+
+      test('uses the localized title and body (es locale)', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEs());
+
+        final result = await service.showSessionComplete(id: 1, minutes: 25);
+
+        expect(result.isSuccess, isTrue);
+        final args = showCallArguments();
+        expect(args['title'], 'Sesión Completada');
+        expect(args['body'], 'Sesión completada: 25m');
+        final specifics = args['platformSpecifics'] as Map<Object?, Object?>;
+        expect(specifics['channelName'], 'Notificaciones de StudyKing');
+      });
+
+      test('renders the passed minute count in the body', () async {
+        final service = serviceWithLocalizations(AppLocalizationsEn());
+
+        final result = await service.showSessionComplete(id: 1, minutes: 7);
+
+        expect(result.isSuccess, isTrue);
+        final body = showCallArguments()['body'] as String;
+        expect(body, 'Session completed: 7m');
+        expect(body, isNot(contains('0 minutes')));
+      });
+    });
+
     test('showBadgeUnlocked returns success when l10n is set', () async {
       final service = NotificationService();
       service.setAppLocalizations(AppLocalizationsEn());
@@ -602,6 +687,7 @@ void main() {
       expect(service.showLessonReminder, isA<Function>());
       expect(service.showLowMasteryWarning, isA<Function>());
       expect(service.showBadgeUnlocked, isA<Function>());
+      expect(service.showSessionComplete, isA<Function>());
       expect(service.cancelNotification, isA<Function>());
       expect(service.cancelAll, isA<Function>());
       expect(service.setAppLocalizations, isA<Function>());

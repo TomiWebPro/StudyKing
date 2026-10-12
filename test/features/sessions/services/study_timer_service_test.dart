@@ -298,6 +298,47 @@ void main() {
         expect(service.elapsedMs, 0);
         expect(service.isPaused, isFalse);
       });
+      test('shows the session-complete notification with the elapsed minutes',
+          () async {
+        final fakeNotifications = _FakeNotificationService();
+        final svc = StudyTimerService(
+          repository: repository,
+          notificationService: fakeNotifications,
+        );
+        addTearDown(svc.dispose);
+        await svc.startSession(plannedDurationMinutes: 25);
+        svc.reconcileElapsedMs(120000); // 2 minutes elapsed
+        await svc.completeSession();
+        expect(fakeNotifications.showSessionCompleteCalls, 1);
+        expect(fakeNotifications.lastSessionCompleteMinutes, 2);
+      });
+
+      test('does not show the session-complete notification for sub-minute sessions',
+          () async {
+        final fakeNotifications = _FakeNotificationService();
+        final svc = StudyTimerService(
+          repository: repository,
+          notificationService: fakeNotifications,
+        );
+        addTearDown(svc.dispose);
+        await svc.startSession(plannedDurationMinutes: 25);
+        svc.reconcileElapsedMs(30000); // 30 seconds elapsed
+        await svc.completeSession();
+        expect(fakeNotifications.showSessionCompleteCalls, 0);
+      });
+
+      test('does not show the session-complete notification when nothing elapsed',
+          () async {
+        final fakeNotifications = _FakeNotificationService();
+        final svc = StudyTimerService(
+          repository: repository,
+          notificationService: fakeNotifications,
+        );
+        addTearDown(svc.dispose);
+        await svc.startSession(plannedDurationMinutes: 25);
+        await svc.completeSession();
+        expect(fakeNotifications.showSessionCompleteCalls, 0);
+      });
     });
 
     group('cancelSession', () {
@@ -1032,7 +1073,7 @@ void main() {
         failingSaveService.reconcileElapsedMs(60000);
         failingSaveRepo.failOnSave = true;
         await failingSaveService.completeSession();
-        expect(fakeNotifications.showNotificationCalls, 0);
+        expect(fakeNotifications.showSessionCompleteCalls, 0);
       });
 
       test('completeSession shows notification after a successful save',
@@ -1040,7 +1081,8 @@ void main() {
         await failingSaveService.startSession(plannedDurationMinutes: 25);
         failingSaveService.reconcileElapsedMs(60000);
         await failingSaveService.completeSession();
-        expect(fakeNotifications.showNotificationCalls, 1);
+        expect(fakeNotifications.showSessionCompleteCalls, 1);
+        expect(fakeNotifications.lastSessionCompleteMinutes, 1);
       });
     });
   });
@@ -1187,6 +1229,8 @@ class _SaveFailingRepository extends SessionRepository {
 
 class _FakeNotificationService extends NotificationService {
   int showNotificationCalls = 0;
+  int showSessionCompleteCalls = 0;
+  int? lastSessionCompleteMinutes;
 
   @override
   Future<Result<void>> showNotification({
@@ -1198,6 +1242,16 @@ class _FakeNotificationService extends NotificationService {
     String? channelName,
   }) async {
     showNotificationCalls++;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> showSessionComplete({
+    required int id,
+    required int minutes,
+  }) async {
+    showSessionCompleteCalls++;
+    lastSessionCompleteMinutes = minutes;
     return Result.success(null);
   }
 }
