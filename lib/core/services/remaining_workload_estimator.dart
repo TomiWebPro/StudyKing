@@ -52,16 +52,6 @@ class RemainingWorkloadEstimator {
   // Assumed number of questions needed per lesson for workload estimation
   static const int questionsPerLesson = 8;
 
-  double _computeTopicMasteryLevel({
-    required int masteredCount,
-    required int atRiskCount,
-    required int unattemptedCount,
-    required int totalCount,
-  }) {
-    if (totalCount == 0) return 1.0;
-    return (masteredCount + (atRiskCount * 0.3)) / totalCount;
-  }
-
   double _lessonsFromCount(int count) {
     return count / questionsPerLesson;
   }
@@ -83,20 +73,17 @@ class RemainingWorkloadEstimator {
       final topicId = entry.key;
       final topicTitle = topicTitles[topicId] ?? topicId;
       final total = entry.value;
-      final masteryLevel = topicMasteryLevels[topicId] ?? 0.0;
+      final masteryLevel =
+          (topicMasteryLevels[topicId] ?? 0.0).clamp(0.0, 1.0).toDouble();
 
-      final mastered = masteryLevel >= masteryThreshold ? total : 0;
-      final effectiveAtRisk = masteryLevel >= atRiskThreshold && masteryLevel < masteryThreshold
-          ? total - mastered
-          : (masteryLevel < atRiskThreshold ? total : 0);
-      final unattempted = total - mastered - effectiveAtRisk;
-
-      final topicMastery = _computeTopicMasteryLevel(
-        masteredCount: mastered,
-        atRiskCount: effectiveAtRisk,
-        unattemptedCount: unattempted,
-        totalCount: total,
-      );
+      // Bucket counts follow the actual mastery proportionally instead of
+      // all-or-nothing thresholds, so the estimate varies continuously
+      // with mastery (no cliff at the thresholds) and the reported
+      // mastery level matches the input data.
+      final mastered = (total * masteryLevel).round();
+      final remaining = total - mastered;
+      final effectiveAtRisk = masteryLevel < atRiskThreshold ? remaining : 0;
+      final unattempted = remaining - effectiveAtRisk;
 
       final lessonsRemaining = _lessonsFromCount(effectiveAtRisk + unattempted);
 
@@ -107,7 +94,7 @@ class RemainingWorkloadEstimator {
         masteredQuestions: mastered,
         atRiskQuestions: effectiveAtRisk,
         unattemptedQuestions: unattempted,
-        masteryLevel: topicMastery,
+        masteryLevel: masteryLevel,
         estimatedLessonsRemaining: lessonsRemaining,
       ));
 
