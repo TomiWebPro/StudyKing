@@ -95,14 +95,19 @@ class _FakeTopicRepo extends TopicRepository {
 
 class _FakePendingActionRepo extends PendingActionRepository {
   final List<PendingActionModel> _actions = [];
+  Result<void>? _createResult;
 
   List<PendingActionModel> get createdActions => List.unmodifiable(_actions);
+
+  void setCreateResult(Result<void> result) => _createResult = result;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<void>> create(PendingActionModel action) async {
+    final forced = _createResult;
+    if (forced != null) return forced;
     _actions.add(action);
     return Result.success(null);
   }
@@ -270,6 +275,45 @@ void main() {
         expect(action.sessionId, equals('session-1'));
         expect(result.isSuccess, isTrue);
         expect(result.data, contains('Algebra'));
+      });
+
+      test('returns failure when pending action create fails', () async {
+        final tutorRepo = _FakeTutorSessionRepo();
+        tutorRepo.addSession(TutorSession(
+          id: 'session-1',
+          studentId: 'test-student',
+          subjectId: 'math',
+          topicId: 't1',
+          topicTitle: 'Algebra',
+          startTime: DateTime.now(),
+        ));
+        final fakePending = _FakePendingActionRepo();
+        fakePending.setCreateResult(
+          Result.failure('Failed to put: box is not open'),
+        );
+        final db = DatabaseService(
+          topicRepository: TopicRepository(),
+          questionRepository: QuestionRepository(),
+          attemptRepository: AttemptRepository(),
+          lessonRepository: LessonRepository(),
+          sessionRepository: _FakeSessionRepo(),
+          subjectRepository: SubjectRepository(),
+          conversationRepository: ConversationRepository(),
+          tutorSessionRepository: tutorRepo,
+        );
+        final planner = _FakePlannerService();
+        planner.setHasConflict(false);
+        final handler = _createHandler(
+          database: db,
+          pendingActionRepo: fakePending,
+          plannerService: planner,
+        );
+
+        final result = await handler.suggestReschedule('session-1');
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('box is not open'));
+        expect(result.data, isNull);
+        expect(fakePending.createdActions, isEmpty);
       });
 
       test('returns not found for missing session', () async {

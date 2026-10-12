@@ -224,7 +224,14 @@ class MentorScheduleHandler {
       },
     );
     await _pendingActionRepo.init();
-    await _pendingActionRepo.create(action);
+    final createResult = await _pendingActionRepo.create(action);
+    if (createResult.isFailure) {
+      _logger.w(
+        'Failed to record reschedule pending action for session $sessionId',
+        createResult.error,
+      );
+      return Result.failure(createResult.error);
+    }
 
     final msg = lookupAppLocalizations(Locale(_localeName)).mentorReschedulePending(
       session.topicTitle,
