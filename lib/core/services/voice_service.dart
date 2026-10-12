@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:speech_to_text/speech_recognition_error.dart'
+    show SpeechRecognitionError;
 import 'package:flutter_tts/flutter_tts.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -22,6 +24,7 @@ class VoiceService {
   bool _isSpeaking = false;
   bool _isAvailable = false;
   bool _initialized = false;
+  bool _isDisposed = false;
   final TargetPlatform _platform;
 
   Stream<String> get transcribedText => _transcriptionController.stream;
@@ -80,54 +83,90 @@ class VoiceService {
         return;
       }
       final available = await _speech!.initialize(
-        onError: (error) {
-          _isAvailable = false;
-          _errorController.add('Speech recognition error');
-        },
-        onStatus: (status) {
-          if (status == 'notListening' || status == 'done') {
-            _isListening = false;
-            _listeningStateController.add(false);
-          }
-        },
+        onError: _handleSpeechError,
+        onStatus: _handleSpeechStatus,
       );
       _isAvailable = available;
       if (!available) {
-        _errorController.add('Microphone permission is required.');
+        _emitError('Microphone permission is required.');
       }
     } catch (e) {
       _logger.w('Failed to check speech availability', e);
-      _errorController.add('Failed to initialize speech recognition');
+      _emitError('Failed to initialize speech recognition');
       _isAvailable = false;
     }
   }
 
+  /// Shared speech recognition callbacks, registered on every
+  /// [stt.SpeechToText.initialize] call. speech_to_text replaces
+  /// its listeners with whatever the call provides, so every
+  /// initialize call (including the [requestPermission] retry)
+  /// must pass these along or recognition status updates are
+  /// silently dropped.
+  void _handleSpeechError(SpeechRecognitionError error) {
+    _isAvailable = false;
+    _emitError('Speech recognition error');
+  }
+
+  void _handleSpeechStatus(String status) {
+    if (status == 'notListening' || status == 'done') {
+      _isListening = false;
+      _emitListeningState(false);
+    }
+  }
+
+  /// Stream emission helpers. Once [dispose] has run, late plugin
+  /// callbacks (a final status event after stop(), an error, or a
+  /// partial transcription) must not add to closed controllers.
+  void _emitError(String message) {
+    if (_isDisposed) return;
+    _errorController.add(message);
+  }
+
+  void _emitListeningState(bool listening) {
+    if (_isDisposed) return;
+    _listeningStateController.add(listening);
+  }
+
+  void _emitTranscription(String text) {
+    if (_isDisposed) return;
+    _transcriptionController.add(text);
+  }
+
   Future<bool> requestPermission() async {
     if (_speech == null) {
-      _errorController.add('Speech engine not available');
+      _emitError('Speech engine not available');
       return false;
     }
     try {
-      final hasPermission = await _speech!.initialize();
+      // speech_to_text replaces its status/error listeners with
+      // whatever is passed to initialize(); omitting them here
+      // would wipe the listeners registered in [_checkAvailability]
+      // and silently drop every recognition status update (including
+      // the "notListening" event that resets the listening state).
+      final hasPermission = await _speech!.initialize(
+        onError: _handleSpeechError,
+        onStatus: _handleSpeechStatus,
+      );
       _isAvailable = hasPermission;
       if (!hasPermission) {
-        _errorController.add('Microphone permission denied. Grant access in Settings.');
+        _emitError('Microphone permission denied. Grant access in Settings.');
       }
       return hasPermission;
     } catch (e) {
       _logger.w('Failed to request speech permission', e);
-      _errorController.add('Failed to request microphone permission');
+      _emitError('Failed to request microphone permission');
       return false;
     }
   }
 
   Future<Result<void>> startListening({String? localeName}) async {
     if (_speech == null) {
-      _errorController.add('Speech engine not available');
+      _emitError('Speech engine not available');
       return Result.failure('Speech engine not available');
     }
     if (!_isAvailable) {
-      _errorController.add('Microphone permission is required. Please grant access.');
+      _emitError('Microphone permission is required. Please grant access.');
       return Result.failure('Microphone permission is required');
     }
     if (_isListening) return Result.success(null);
@@ -140,7 +179,7 @@ class VoiceService {
       await _speech!.listen(
         onResult: (result) {
           if (result.recognizedWords.isNotEmpty) {
-            _transcriptionController.add(result.recognizedWords);
+            _emitTranscription(result.recognizedWords);
           }
         },
         listenFor: Timeouts.voiceListen,
@@ -151,13 +190,13 @@ class VoiceService {
         localeId: _localeForSpeech(localeName),
       );
       _isListening = true;
-      _listeningStateController.add(true);
+      _emitListeningState(true);
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to start listening', e);
-      _errorController.add('Failed to start listening');
+      _emitError('Failed to start listening');
       _isListening = false;
-      _listeningStateController.add(false);
+      _emitListeningState(false);
       return Result.failure(e.toString());
     }
   }
@@ -205,7 +244,7 @@ class VoiceService {
       _logger.w('Failed to stop listening', e);
     }
     _isListening = false;
-    _listeningStateController.add(false);
+    _emitListeningState(false);
   }
 
   Future<void> speak(String text, {String? localeName}) async {
@@ -252,6 +291,8 @@ class VoiceService {
   }
 
   void dispose() {
+    if (_isDisposed) return;
+    _isDisposed = true;
     stopAll();
     _transcriptionController.close();
     _listeningStateController.close();
