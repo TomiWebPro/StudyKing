@@ -148,108 +148,14 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
   }
 
   void _showSlideFullScreenDialog(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
     final blocks = widget.allBlocks ?? [widget.block];
     final startIndex = widget.blockIndex ?? 0;
-    final pageController = PageController(initialPage: startIndex);
 
     Navigator.of(context).push(
       PageRouteBuilder(
-        pageBuilder: (ctx, animation, secondaryAnimation) => Scaffold(
-          appBar: AppBar(
-            title: Text(l10n.blockTypeSlide),
-            leading: IconButton(
-              icon: const Icon(Icons.close),
-              tooltip: l10n.close,
-              onPressed: () => Navigator.pop(ctx),
-            ),
-          ),
-          body: Column(
-            children: [
-              Expanded(
-                child: PageView.builder(
-                  controller: pageController,
-                  itemCount: blocks.length,
-                  itemBuilder: (context, i) {
-                    final block = blocks[i];
-                    return InteractiveViewer(
-                      minScale: 1.0,
-                      maxScale: 4.0,
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.all(32),
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        child: Column(
-                          children: [
-                            Text(
-                              l10n.pageIndicator(i + 1, blocks.length),
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.onSurfaceVariant,
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            RichContentRenderer(
-                              content: block.content,
-                              textStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                fontWeight: FontWeight.bold,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
-              if (blocks.length > 1)
-                SafeArea(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        IconButton(
-                          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
-                          onPressed: () {
-                            final current = pageController.page?.round() ?? 0;
-                            if (current > 0) {
-                              pageController.previousPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          },
-                        ),
-                        const SizedBox(width: 16),
-                        ListenableBuilder(
-                          listenable: pageController,
-                          builder: (context, _) {
-                            final current = (pageController.page?.round() ?? 0) + 1;
-                            return Text(
-                              l10n.pageIndicator(current, blocks.length),
-                              style: Theme.of(context).textTheme.bodyMedium,
-                            );
-                          },
-                        ),
-                        const SizedBox(width: 16),
-                        IconButton(
-                          icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
-                          onPressed: () {
-                            final current = pageController.page?.round() ?? 0;
-                            if (current < blocks.length - 1) {
-                              pageController.nextPage(
-                                duration: const Duration(milliseconds: 300),
-                                curve: Curves.easeInOut,
-                              );
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
+        pageBuilder: (ctx, animation, secondaryAnimation) => _SlideFullScreenView(
+          blocks: blocks,
+          startIndex: startIndex,
         ),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
@@ -551,6 +457,135 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Fullscreen slide viewer pushed by [_showSlideFullScreenDialog].
+///
+/// A raw [PageRouteBuilder] has no lifecycle of its own, so the
+/// [PageController] must be owned by a [State] to be disposed in
+/// [State.dispose] — otherwise every open/close leaks a controller
+/// (with its scroll position and listeners).
+class _SlideFullScreenView extends StatefulWidget {
+  const _SlideFullScreenView({required this.blocks, required this.startIndex});
+
+  final List<LessonBlock> blocks;
+  final int startIndex;
+
+  @override
+  State<_SlideFullScreenView> createState() => _SlideFullScreenViewState();
+}
+
+class _SlideFullScreenViewState extends State<_SlideFullScreenView> {
+  late final PageController _pageController =
+      PageController(initialPage: widget.startIndex);
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final blocks = widget.blocks;
+    return Scaffold(
+      appBar: AppBar(
+        title: Text(l10n.blockTypeSlide),
+        leading: IconButton(
+          icon: const Icon(Icons.close),
+          tooltip: l10n.close,
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: PageView.builder(
+              controller: _pageController,
+              itemCount: blocks.length,
+              itemBuilder: (context, i) {
+                final block = blocks[i];
+                return InteractiveViewer(
+                  minScale: 1.0,
+                  maxScale: 4.0,
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(32),
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
+                        Text(
+                          l10n.pageIndicator(i + 1, blocks.length),
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        RichContentRenderer(
+                          content: block.content,
+                          textStyle: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                            fontWeight: FontWeight.bold,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          if (blocks.length > 1)
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    IconButton(
+                      icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_right : Icons.chevron_left),
+                      onPressed: () {
+                        final current = _pageController.page?.round() ?? 0;
+                        if (current > 0) {
+                          _pageController.previousPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    ListenableBuilder(
+                      listenable: _pageController,
+                      builder: (context, _) {
+                        final current = (_pageController.page?.round() ?? 0) + 1;
+                        return Text(
+                          l10n.pageIndicator(current, blocks.length),
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        );
+                      },
+                    ),
+                    const SizedBox(width: 16),
+                    IconButton(
+                      icon: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
+                      onPressed: () {
+                        final current = _pageController.page?.round() ?? 0;
+                        if (current < blocks.length - 1) {
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

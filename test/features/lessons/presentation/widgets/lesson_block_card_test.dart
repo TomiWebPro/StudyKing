@@ -605,6 +605,43 @@ void main() {
       expect(find.byIcon(Icons.close), findsNothing);
     });
 
+    testWidgets('full screen dialog disposes its PageController on close', (tester) async {
+      await tester.pumpWidget(buildApp(
+        LessonBlockCard(
+          block: block(type: LessonBlockType.slide, content: 'First slide'),
+          allBlocks: [
+            LessonBlock(id: 's1', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.slide, content: 'First slide', order: 0),
+            LessonBlock(id: 's2', subjectId: 's1', lessonId: 'l1',
+                type: LessonBlockType.slide, content: 'Second slide', order: 1),
+          ],
+          blockIndex: 0,
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(InkWell));
+      await tester.pumpAndSettle();
+
+      // While the dialog is open, the PageView is attached to the controller.
+      final PageController controller =
+          tester.widget<PageView>(find.byType(PageView)).controller!;
+      expect(controller.hasClients, isTrue);
+
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pumpAndSettle();
+
+      // The route popped, so the Scrollable detached its position.
+      expect(controller.hasClients, isFalse);
+      // The controller itself must have been disposed: in debug builds,
+      // using a disposed ChangeNotifier reports an error. A leaked
+      // (never-disposed) controller would silently accept the listener.
+      expect(
+        () => controller.addListener(() {}),
+        throwsA(isA<FlutterError>()),
+      );
+    });
+
     testWidgets('navigating back to previous slide shows first slide', (tester) async {
       await tester.pumpWidget(buildApp(
         LessonBlockCard(
