@@ -2312,6 +2312,12 @@ abstract class AppLocalizations {
   /// **'Save Drawing'**
   String get saveDrawing;
 
+  /// Button label to submit a text answer entered in canvas input mode
+  ///
+  /// In en, this message translates to:
+  /// **'Submit Text'**
+  String get submitText;
+
   /// Success message for drawing save
   ///
   /// In en, this message translates to:

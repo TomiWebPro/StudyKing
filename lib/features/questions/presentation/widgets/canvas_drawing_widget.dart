@@ -257,7 +257,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                     ? ResponsiveUtils.loaderInTouchTarget(size: 16)
                     : Text(_effectiveInputMode == CanvasInputMode.draw
                         ? l10n.saveDrawing
-                        : 'Submit Text'),
+                        : l10n.submitText),
               ),
             ),
             if (_saveMessage != null) ...[

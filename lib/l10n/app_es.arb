@@ -1673,6 +1673,10 @@
   "@saveDrawing": {
     "description": "Button label to save drawing"
   },
+  "submitText": "Enviar texto",
+  "@submitText": {
+    "description": "Button label to submit a text answer entered in canvas input mode"
+  },
   "drawingSaved": "Dibujo guardado.",
   "@drawingSaved": {
     "description": "Success message for drawing save"

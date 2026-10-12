@@ -1300,6 +1300,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get saveDrawing => 'Save Drawing';
 
   @override
+  String get submitText => 'Submit Text';
+
+  @override
   String get drawingSaved => 'Drawing saved.';
 
   @override

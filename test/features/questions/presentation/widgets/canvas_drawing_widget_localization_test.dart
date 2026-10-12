@@ -104,5 +104,44 @@ void main() {
 
       expect(find.text('50% ${enL10n.confidence}'), findsOneWidget);
     });
+
+    testWidgets('submit text button label is localized in es', (tester) async {
+      await tester.pumpWidget(
+        buildLocalizedCanvasWidget(
+          locale: esLocale,
+          inputMode: CanvasInputMode.handwriteText,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(esL10n.submitText), findsOneWidget);
+      expect(find.text('Submit Text'), findsNothing);
+    });
+
+    testWidgets('submit text button label is localized in en', (tester) async {
+      await tester.pumpWidget(
+        buildLocalizedCanvasWidget(
+          locale: enLocale,
+          inputMode: CanvasInputMode.handwriteText,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(enL10n.submitText), findsOneWidget);
+    });
+
+    testWidgets('save drawing button label stays localized in es draw mode',
+        (tester) async {
+      await tester.pumpWidget(
+        buildLocalizedCanvasWidget(
+          locale: esLocale,
+          inputMode: CanvasInputMode.draw,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text(esL10n.saveDrawing), findsOneWidget);
+      expect(find.text(esL10n.submitText), findsNothing);
+    });
   });
 }

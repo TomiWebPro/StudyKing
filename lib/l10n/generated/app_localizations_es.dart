@@ -1314,6 +1314,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get saveDrawing => 'Guardar Dibujo';
 
   @override
+  String get submitText => 'Enviar texto';
+
+  @override
   String get drawingSaved => 'Dibujo guardado.';
 
   @override
