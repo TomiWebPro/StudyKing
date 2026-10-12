@@ -69,6 +69,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
 
   bool _inlinePracticeActive = false;
   Subject? _inlinePracticeSubject;
+  DateTime? _inlinePracticeStartedAt;
   FocusSession? _lastFocusSession;
   int _inlinePracticeQuestionCount = 10;
 
@@ -1019,6 +1020,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     setState(() {
       _inlinePracticeActive = true;
       _inlinePracticeSubject = subject;
+      _inlinePracticeStartedAt = DateTime.now();
     });
   }
 
@@ -1028,6 +1030,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     setState(() {
       _inlinePracticeActive = true;
       _inlinePracticeSubject = null;
+      _inlinePracticeStartedAt = DateTime.now();
       if (_inlinePracticeQuestionCount < 50) {
         _inlinePracticeQuestionCount = 50;
       }
@@ -1037,7 +1040,6 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
   Future<void> _onInlinePracticeComplete(int correct, int total, Map<String, TopicAccuracy> perTopic) async {
     final studentId = ref.read(studentIdValueProvider);
     final now = DateTime.now();
-    final topicIds = perTopic.keys.toList();
     final accuracy = total > 0 ? correct / total : 0.0;
 
     Map<String, double> masteryChanges = {};
@@ -1075,16 +1077,22 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     _masteryBeforeValues = {};
 
     if (mounted) {
+      // Persist the real inline-practice window (start captured when
+      // practice began) and the practiced subject — never a hardcoded
+      // 5-minute duration or topic IDs in the subject field.
+      final startedAt = _inlinePracticeStartedAt ?? now;
       final focusSession = FocusSession(
         id: 'focus_${now.millisecondsSinceEpoch}',
         studentId: studentId,
-        startTime: now.subtract(const Duration(minutes: 5)),
+        startTime: startedAt,
         endTime: now,
-        durationMinutes: 5,
+        durationMinutes: now.difference(startedAt).inMinutes,
         questionsAnswered: total,
         correctAnswers: correct,
         accuracy: accuracy,
-        subjectIds: topicIds,
+        subjectIds: _inlinePracticeSubject != null
+            ? <String>[_inlinePracticeSubject!.id]
+            : const <String>[],
         masteryChanges: masteryChanges,
         sessionType: _sessionType,
         topicBreakdown: topicBreakdown,
@@ -1110,6 +1118,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
         setState(() {
           _inlinePracticeActive = false;
           _inlinePracticeSubject = null;
+          _inlinePracticeStartedAt = null;
           _lastFocusSession = focusSession;
         });
       }
@@ -1234,6 +1243,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
                   onPressed: () => setState(() {
                     _inlinePracticeActive = false;
                     _inlinePracticeSubject = null;
+                    _inlinePracticeStartedAt = null;
                   }),
                 ),
               ],

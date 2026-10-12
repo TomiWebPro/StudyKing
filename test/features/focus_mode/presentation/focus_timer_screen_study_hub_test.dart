@@ -989,5 +989,55 @@ void main() {
       expect(focusSessionRepo.saveAttempts, 1);
       expect(find.text('Something went wrong'), findsOneWidget);
     });
+
+    testWidgets('inline practice completion saves the real elapsed window and subject ids',
+        (tester) async {
+      final focusSessionRepo = _FakeFocusSessionRepository();
+      await pumpScreen(tester, _buildApp(
+        child: const FocusTimerScreen(),
+        subjectRepo: _FakeSubjectRepository([Subject(id: 's1', name: 'Math')]),
+        masteryGraphService: _FakeMasteryGraphService([halfAccuracyTopic()]),
+        focusPracticeService: _FakeFocusPracticeService([singleChoiceQuestion()]),
+        focusSessionRepo: focusSessionRepo,
+      ));
+
+      // Start inline practice.
+      await tester.tap(find.text('Math'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.widgetWithText(ListTile, 'Quick Practice'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(find.byType(InlinePracticeWidget), findsOneWidget);
+
+      // Keep the real wall-clock window the practice ran in.
+      final started = DateTime.now();
+      await answerAndCompleteInlinePractice(tester);
+      final finished = DateTime.now();
+
+      final latest = await focusSessionRepo.getLatest();
+      expect(latest.data, isNotNull);
+      final session = latest.data!;
+      // The persisted window must be the actual practice window, not a
+      // hardcoded 5 minutes: startTime is recent and durationMinutes is
+      // derived from it.
+      expect(
+        session.startTime.isAfter(started.subtract(const Duration(seconds: 1))),
+        isTrue,
+      );
+      expect(
+        finished.difference(session.startTime) < const Duration(minutes: 1),
+        isTrue,
+      );
+      expect(
+        session.durationMinutes,
+        session.endTime!.difference(session.startTime).inMinutes,
+      );
+      // The subject field holds the practiced subject id, never the
+      // per-topic ids the breakdown was built from.
+      expect(session.subjectIds, ['s1']);
+      expect(session.subjectIds, isNot(contains('t1')));
+    });
   });
 }
