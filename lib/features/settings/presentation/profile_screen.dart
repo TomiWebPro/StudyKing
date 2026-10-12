@@ -31,6 +31,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
   String? _avatarIconKey;
   bool _isLoading = true;
   String? _error;
+  bool _errorIsLocalized = false;
   bool _isSaving = false;
   String _profileId = 'default_profile';
   bool _notificationsEnabled = true;
@@ -46,6 +47,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
     setState(() {
       _isLoading = true;
       _error = null;
+      _errorIsLocalized = false;
     });
     try {
       final repository = ref.read(settingsRepositoryProvider);
@@ -57,6 +59,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
           setState(() {
             _isLoading = false;
             _error = profileResult.error;
+            _errorIsLocalized = false;
             _avatarIconKey = 'Icons.person';
           });
         }
@@ -86,7 +89,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = AppLocalizations.of(context)!.somethingWentWrong;
+          _errorIsLocalized = true;
         });
       }
     }
@@ -289,7 +292,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
       return const Scaffold(body: LoadingScreen());
     }
 
-    if (_error != null) {
+    if (_error != null || _errorIsLocalized) {
       return Scaffold(
         appBar: AppBar(title: Text(l10n.profile)),
         body: Center(
@@ -306,7 +309,7 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
-                  _error!,
+                  _errorIsLocalized ? l10n.somethingWentWrong : _error!,
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   textAlign: TextAlign.center,
                 ),

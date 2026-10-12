@@ -94,6 +94,36 @@ Future<void> pumpProfileScreen(WidgetTester tester, {
   await tester.pumpAndSettle();
 }
 
+/// Harness that wires `MaterialApp.locale` to `localeProvider` the way
+/// `main.dart` does, so changing the provider actually switches the
+/// effective locale (and therefore `AppLocalizations.of(context)`).
+Widget buildLocaleAwareProfileScreen({SettingsRepository? repo}) {
+  return ProviderScope(
+    overrides: [
+      localeProvider.overrideWith((ref) => const Locale('en')),
+      if (repo != null) settingsRepositoryProvider.overrideWithValue(repo),
+    ],
+    child: Consumer(
+      builder: (context, ref, _) {
+        return MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: ref.watch(localeProvider),
+          home: const ProfileScreen(),
+        );
+      },
+    ),
+  );
+}
+
+Future<void> pumpLocaleAwareProfileScreen(WidgetTester tester,
+    {SettingsRepository? repo}) async {
+  tester.view.devicePixelRatio = 1.0;
+  tester.view.physicalSize = const Size(800, 2000);
+  await tester.pumpWidget(buildLocaleAwareProfileScreen(repo: repo));
+  await tester.pumpAndSettle();
+}
+
 void main() {
   late _FakeSettingsRepository fakeRepo;
 
@@ -1384,6 +1414,56 @@ void main() {
 
         expect(find.byType(ProfileScreen), findsOneWidget);
       });
+    });
+  });
+
+  group('ProfileScreen - Locale-Aware Error Text', () {
+    testWidgets('localized load error re-resolves after a locale switch',
+        (tester) async {
+      fakeRepo.setThrowOnGet(true);
+
+      await pumpLocaleAwareProfileScreen(tester, repo: fakeRepo);
+
+      // Error state: both the heading and the detail render the localized
+      // "something went wrong" message.
+      expect(find.text('Something went wrong'), findsAtLeastNWidgets(2));
+
+      // Switch the app language the way the Profile dropdown does.
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ProfileScreen)),
+        listen: false,
+      );
+      container.read(localeProvider.notifier).state = const Locale('es');
+      await tester.pumpAndSettle();
+
+      // The stored error must follow the new locale, not stay in English.
+      expect(find.text('Algo salió mal'), findsAtLeastNWidgets(2));
+      expect(find.text('Something went wrong'), findsNothing);
+    });
+
+    testWidgets('repository error detail is data and survives a locale '
+        'switch while the heading re-resolves', (tester) async {
+      fakeRepo.setReturnFailure(true);
+
+      await pumpLocaleAwareProfileScreen(tester, repo: fakeRepo);
+
+      // Heading is localized; the detail is the raw repository error string.
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Test failure'), findsOneWidget);
+
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(ProfileScreen)),
+        listen: false,
+      );
+      container.read(localeProvider.notifier).state = const Locale('es');
+      await tester.pumpAndSettle();
+
+      // Heading re-resolves against the new locale...
+      expect(find.text('Algo salió mal'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsNothing);
+      // ...while the repository-provided detail (data, not a localized
+      // string) is unchanged.
+      expect(find.text('Test failure'), findsOneWidget);
     });
   });
 }
