@@ -8,6 +8,7 @@ import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/ocr_provider.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
+import 'package:studyking/features/ingestion/services/page_metadata.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
@@ -66,7 +67,10 @@ final documentExtractorProvider = Provider<DocumentExtractor>((ref) {
 });
 
 final webScraperProvider = Provider<WebScraper>((ref) {
-  return WebScraper();
+  return WebScraper(
+    cache: HiveScrapeCache(ttl: const Duration(hours: 24)),
+    politenessDelay: const Duration(seconds: 1),
+  );
 });
 
 final ingestionSourceRepositoryProvider = Provider<SourceRepository>((ref) {

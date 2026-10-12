@@ -16,6 +16,10 @@ class WebScraper {
 
   DateTime? _lastFetch;
 
+  /// The scrape cache wired into this scraper, if any. Exposed so
+  /// wiring can be verified (e.g. in provider tests).
+  ScrapeCache? get cache => _cache;
+
   WebScraper({
     http.Client? httpClient,
     ScrapeCache? cache,

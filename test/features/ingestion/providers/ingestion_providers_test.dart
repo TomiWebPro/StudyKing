@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hive/hive.dart';
 import 'package:http/http.dart' as http;
+import 'dart:io' show Directory;
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -11,6 +13,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
+import 'package:studyking/features/ingestion/services/page_metadata.dart';
 import 'package:studyking/features/ingestion/services/web_scraper.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -261,6 +264,44 @@ void main() {
         expect(result.isFailure, isTrue);
         expect(result.error, contains('500'));
       });
+
+      test('behavioral: provider enables a non-zero politeness delay', () {
+        final container = ProviderContainer();
+        addTearDown(container.dispose);
+
+        final scraper = container.read(webScraperProvider);
+
+        expect(scraper.politenessDelay, greaterThan(Duration.zero));
+      });
+
+      test(
+        'behavioral: provider wires a scrape cache that serves fetches '
+        'without network',
+        () async {
+          final dir = await Directory.systemTemp.createTemp();
+          addTearDown(() async => dir.delete(recursive: true));
+          Hive.init(dir.path);
+          final container = ProviderContainer();
+          addTearDown(container.dispose);
+
+          final scraper = container.read(webScraperProvider);
+          final cache = scraper.cache;
+          expect(cache, isA<HiveScrapeCache>());
+
+          // Seed the wired cache; the fetch below must be served from it
+          // (a cache hit short-circuits any HTTP call).
+          await cache!.put('https://example.com', const ScrapedPage(
+            content: 'cached page content',
+            metadata: PageMetadata(title: 'Cached Page'),
+          ));
+          final result = await scraper.fetchPageContent('https://example.com');
+
+          expect(result.isSuccess, isTrue);
+          expect(result.data!.fromCache, isTrue);
+          expect(result.data!.content, 'cached page content');
+          expect(result.data!.metadata.title, 'Cached Page');
+        },
+      );
     });
 
     group('ingestionSourceRepositoryProvider', () {
