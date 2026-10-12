@@ -508,6 +508,29 @@ void main() {
         expect(bytes.data, isNotEmpty);
       });
 
+      test('avg time per question uses the locale decimal separator',
+          () async {
+        mockTracker.overallStats = {
+          'totalAttempts': 10,
+          'correctAttempts': 7,
+          'accuracy': 0.7,
+          'avgTimePerQuestion': 12.5,
+          'totalStudyTimeHours': 5.0,
+          'weeklyActivity': 3,
+          'dailyActivity': 1,
+          'topicsStudied': 2,
+        };
+        // Regression: the avg-time cell used raw string interpolation,
+        // which always emits a period separator ("12.5s") regardless of
+        // locale. PDF exports are user-facing and must use the user's
+        // locale (AGENTS.md i18n convention), so es renders "12,5s".
+        final bytes = await service.exportComprehensivePDF('student1', esL10n);
+        expect(bytes.isSuccess, isTrue);
+        final rendered = _extractPdfStrings(bytes.data!);
+        expect(rendered.any((s) => s.contains('12,5')), isTrue);
+        expect(rendered.any((s) => s.contains('12.5')), isFalse);
+      });
+
       test('recent activity renders attempts in the PDF without error',
           () async {
         mockTracker.overallStats = {

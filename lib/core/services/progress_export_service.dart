@@ -265,7 +265,7 @@ class ProgressExportService {
               [l10n.csvColTotalAttempts, '${overallStats['totalAttempts']}'],
               [l10n.correctAnswers, '${overallStats['correctAttempts']}'],
               [l10n.accuracy, formatPercent(double.tryParse('${overallStats['accuracy']}') ?? 0, l10n.localeName, minFractionDigits: 0, maxFractionDigits: 0)],
-              [l10n.avgTime, '${overallStats['avgTimePerQuestion']}s'],
+              [l10n.avgTime, '${formatDecimal(_toDouble(overallStats['avgTimePerQuestion']), l10n.localeName, minFractionDigits: 0, maxFractionDigits: 1)}s'],
               [l10n.totalStudyTime, '${formatDecimal(_toDouble(overallStats['totalStudyTimeHours']), l10n.localeName, minFractionDigits: 1, maxFractionDigits: 1)}h'],
               [l10n.csvColWeeklyActivity, '${overallStats['weeklyActivity']}'],
               [l10n.csvColDailyActivity, '${overallStats['dailyActivity']}'],
