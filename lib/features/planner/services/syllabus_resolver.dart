@@ -251,16 +251,119 @@ class SyllabusResolver {
     return levels;
   }
 
+  /// Base minutes per topic used when a topic has no dependency record
+  /// carrying its own `estimatedMinutes`.
+  static const double _baseMinutesPerTopic = 45.0;
+
+  /// Question volume above which the practice-time factor stops growing.
+  static const int _questionCountCap = 40;
+
+  /// Estimates the plan feasibility ratio (available minutes / needed
+  /// minutes, clamped to 0..3) for a syllabus.
+  ///
+  /// When [topics] (the output of [resolveSyllabus]) is provided, the
+  /// per-topic minutes are weighted by the data the flat 45-minute
+  /// placeholder ignored: the dependency's own `estimatedMinutes` and
+  /// `syllabusWeight` (difficulty), prerequisite depth, question volume
+  /// ([questionCounts] or `TopicDependency.estimatedQuestions`), and
+  /// current mastery (`MasteryState.accuracy` reduces remaining work).
+  /// Without [topics] the flat base estimate is kept for compatibility.
   double estimateWorkload({
     required int totalTopics,
     required int targetDays,
     required int hoursPerDay,
+    List<SyllabusTopicNode> topics = const [],
+    Map<String, int> questionCounts = const {},
   }) {
     if (targetDays <= 0) return 0;
     final minutesPerDay = hoursPerDay * 60.0;
-    final minutesPerTopic = 45.0;
-    final totalMinutesNeeded = totalTopics * minutesPerTopic;
     final totalMinutesAvailable = targetDays * minutesPerDay;
+
+    double minutesPerTopic;
+    if (topics.isEmpty) {
+      minutesPerTopic = _baseMinutesPerTopic;
+    } else {
+      final depths = _prerequisiteDepths(topics);
+      var totalMinutes = 0.0;
+      for (final node in topics) {
+        totalMinutes += _estimatedTopicMinutes(
+          node,
+          questionCount: questionCounts[node.topic.id] ??
+              node.dependency?.estimatedQuestions ??
+              0,
+          prerequisiteDepth: depths[node.topic.id] ?? 0,
+        );
+      }
+      minutesPerTopic = totalMinutes / topics.length;
+    }
+
+    final totalMinutesNeeded = totalTopics * minutesPerTopic;
     return (totalMinutesAvailable / totalMinutesNeeded).clamp(0.0, 3.0);
+  }
+
+  /// Weighted minutes for a single topic.
+  double _estimatedTopicMinutes(
+    SyllabusTopicNode node, {
+    required int questionCount,
+    required int prerequisiteDepth,
+  }) {
+    final dependency = node.dependency;
+    final baseMinutes = (dependency != null && dependency.estimatedMinutes > 0)
+        ? dependency.estimatedMinutes.toDouble()
+        : _baseMinutesPerTopic;
+    // Difficulty: the syllabus weight of the topic (1.0 = average).
+    final difficultyFactor =
+        (dependency?.syllabusWeight ?? 1.0).clamp(0.25, 3.0);
+    // Dependency depth: topics deeper in a prerequisite chain build on
+    // more accumulated context and need proportionally more time.
+    final depthFactor = (1.0 + 0.1 * prerequisiteDepth).clamp(1.0, 1.5);
+    // Practice volume: more questions means more practice time.
+    final questionFactor = (1.0 +
+        (questionCount.clamp(0, _questionCountCap) / _questionCountCap))
+        .clamp(1.0, 2.0);
+    // Mastery: the more the student already masters the topic, the less
+    // work remains (floored so a mastered topic still costs review time).
+    final accuracy = (node.mastery?.accuracy ?? 0.0).clamp(0.0, 1.0);
+    final masteryFactor = (1.0 - 0.75 * accuracy).clamp(0.25, 1.0);
+
+    return baseMinutes *
+        difficultyFactor *
+        depthFactor *
+        questionFactor *
+        masteryFactor;
+  }
+
+  /// Longest prerequisite-chain depth for each topic in [topics],
+  /// counting only prerequisites that are part of [topics] itself.
+  /// Cyclic prerequisite lists (rejected by [resolveSyllabus]) are
+  /// guarded against so this always terminates.
+  Map<String, int> _prerequisiteDepths(List<SyllabusTopicNode> topics) {
+    final nodesById = {for (final n in topics) n.topic.id: n};
+    final depths = <String, int>{};
+    final visiting = <String>{};
+
+    int depthOf(SyllabusTopicNode node) {
+      final cached = depths[node.topic.id];
+      if (cached != null) return cached;
+      if (visiting.contains(node.topic.id)) return 0;
+      visiting.add(node.topic.id);
+      var maxPrereqDepth = 0;
+      for (final prereqId in node.prerequisiteTopicIds) {
+        final prereq = nodesById[prereqId];
+        if (prereq == null) continue;
+        final prereqDepth = 1 + depthOf(prereq);
+        if (prereqDepth > maxPrereqDepth) {
+          maxPrereqDepth = prereqDepth;
+        }
+      }
+      visiting.remove(node.topic.id);
+      depths[node.topic.id] = maxPrereqDepth;
+      return maxPrereqDepth;
+    }
+
+    for (final node in topics) {
+      depthOf(node);
+    }
+    return depths;
   }
 }

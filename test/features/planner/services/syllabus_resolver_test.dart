@@ -91,6 +91,41 @@ class _FailingMasteryRepository extends _FakeMasteryRepository {
       Result.failure('Failed to get dependencies');
 }
 
+SyllabusTopicNode _weightedNode({
+  required String id,
+  List<String> prerequisiteTopicIds = const [],
+  TopicDependency? dependency,
+  double accuracy = 0.0,
+}) {
+  return SyllabusTopicNode(
+    topic: Topic(
+      id: id,
+      subjectId: 'sub_physics',
+      title: id,
+      description: '',
+      syllabusText: '',
+    ),
+    dependency: dependency,
+    mastery: MasteryState.initial(studentId: 'student-1', topicId: id)
+        .copyWith(accuracy: accuracy),
+    prerequisiteTopicIds: prerequisiteTopicIds,
+  );
+}
+
+TopicDependency _dependency(
+  String topicId, {
+  double syllabusWeight = 1.0,
+  int estimatedMinutes = 45,
+  int estimatedQuestions = 0,
+}) {
+  return TopicDependency(
+    topicId: topicId,
+    syllabusWeight: syllabusWeight,
+    estimatedMinutes: estimatedMinutes,
+    estimatedQuestions: estimatedQuestions,
+  );
+}
+
 void main() {
   group('SyllabusResolver', () {
     late _FakeTopicRepository topicRepo;
@@ -364,6 +399,228 @@ void main() {
           hoursPerDay: 8,
         );
         expect(workload, 3.0);
+      });
+
+      test('falls back to the flat 45-minute estimate without topic data',
+          () {
+        // 2 topics * 45 min = 90 needed; 1 day * 1 hour = 60 available.
+        final workload = resolver.estimateWorkload(
+          totalTopics: 2,
+          targetDays: 1,
+          hoursPerDay: 1,
+        );
+        expect(workload, closeTo(60 / 90, 1e-9));
+      });
+    });
+
+    group('estimateWorkload weighted estimation', () {
+      test('hard syllabus estimates a lower ratio than an easy one '
+          'with the same topic count', () {
+        const targetDays = 10;
+        const hoursPerDay = 2;
+        const available = targetDays * hoursPerDay * 60.0; // 1200 min
+
+        final easyTopics = List.generate(
+          10,
+          (i) => _weightedNode(id: 'easy-$i'),
+        );
+        final easy = resolver.estimateWorkload(
+          totalTopics: 10,
+          targetDays: targetDays,
+          hoursPerDay: hoursPerDay,
+          topics: easyTopics,
+        );
+        // 10 plain topics * 45 min = 450 needed -> 1200/450.
+        expect(easy, closeTo(available / 450, 1e-9));
+
+        final hardTopics = List.generate(
+          10,
+          (i) => _weightedNode(
+            id: 'hard-$i',
+            dependency: _dependency(
+              'hard-$i',
+              syllabusWeight: 2.0,
+              estimatedMinutes: 60,
+              estimatedQuestions: 20,
+            ),
+          ),
+        );
+        final hard = resolver.estimateWorkload(
+          totalTopics: 10,
+          targetDays: targetDays,
+          hoursPerDay: hoursPerDay,
+          topics: hardTopics,
+        );
+        // Per hard topic: 60 min * 2.0 (weight) * 1.5 (20 questions)
+        // = 180 min -> 1800 needed -> 1200/1800.
+        expect(hard, closeTo(available / 1800, 1e-9));
+        expect(hard, lessThan(easy));
+      });
+
+      test('high mastery lowers the estimated minutes per topic', () {
+        final fresh = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          topics: [
+            _weightedNode(
+              id: 't1',
+              dependency: _dependency('t1'),
+              accuracy: 0.0,
+            ),
+          ],
+        );
+        // 45 min needed vs 120 available -> 120/45.
+        expect(fresh, closeTo(120 / 45, 1e-9));
+
+        final mastered = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          topics: [
+            _weightedNode(
+              id: 't1',
+              dependency: _dependency('t1'),
+              accuracy: 1.0,
+            ),
+          ],
+        );
+        // Mastery factor 0.25 -> 11.25 min needed -> 120/11.25 > 3,
+        // clamped to the maximum.
+        expect(mastered, 3.0);
+        expect(mastered, greaterThan(fresh));
+      });
+
+      test('deeper prerequisite chains increase the estimate', () {
+        // Chain: c depends on b depends on a (depths 0, 1, 2).
+        final chain = [
+          _weightedNode(id: 'a', dependency: _dependency('a')),
+          _weightedNode(
+            id: 'b',
+            prerequisiteTopicIds: ['a'],
+            dependency: _dependency('b'),
+          ),
+          _weightedNode(
+            id: 'c',
+            prerequisiteTopicIds: ['b'],
+            dependency: _dependency('c'),
+          ),
+        ];
+        final chainRatio = resolver.estimateWorkload(
+          totalTopics: 3,
+          targetDays: 3,
+          hoursPerDay: 2,
+          topics: chain,
+        );
+        // Minutes: 45 + 45*1.1 + 45*1.2 = 148.5 -> 360/148.5.
+        expect(chainRatio, closeTo(360 / 148.5, 1e-9));
+
+        final flat = resolver.estimateWorkload(
+          totalTopics: 3,
+          targetDays: 3,
+          hoursPerDay: 2,
+          topics: [
+            _weightedNode(id: 'a', dependency: _dependency('a')),
+            _weightedNode(id: 'b', dependency: _dependency('b')),
+            _weightedNode(id: 'c', dependency: _dependency('c')),
+          ],
+        );
+        // No depth: 3 * 45 = 135 -> 360/135.
+        expect(flat, closeTo(360 / 135, 1e-9));
+        expect(chainRatio, lessThan(flat));
+      });
+
+      test('question counts raise the estimate, capped at the ceiling',
+          () {
+        final noQuestions = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          topics: [
+            _weightedNode(id: 't1', dependency: _dependency('t1')),
+          ],
+        );
+        expect(noQuestions, closeTo(120 / 45, 1e-9));
+
+        // Explicit counts take precedence over the dependency default.
+        final withCounts = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          questionCounts: {'t1': 40},
+          topics: [
+            _weightedNode(id: 't1', dependency: _dependency('t1')),
+          ],
+        );
+        // 45 min * 2.0 (40 questions) = 90 needed -> 120/90.
+        expect(withCounts, closeTo(120 / 90, 1e-9));
+
+        // Counts above the cap behave like the cap itself.
+        final capped = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          questionCounts: {'t1': 4000},
+          topics: [
+            _weightedNode(id: 't1', dependency: _dependency('t1')),
+          ],
+        );
+        expect(capped, closeTo(120 / 90, 1e-9));
+
+        // Dependency-declared question estimates are used as fallback.
+        final withDeclared = resolver.estimateWorkload(
+          totalTopics: 1,
+          targetDays: 1,
+          hoursPerDay: 2,
+          topics: [
+            _weightedNode(
+              id: 't1',
+              dependency: _dependency('t1', estimatedQuestions: 40),
+            ),
+          ],
+        );
+        expect(withDeclared, closeTo(120 / 90, 1e-9));
+      });
+
+      test('terminates on cyclic prerequisite lists', () {
+        final cyclic = [
+          _weightedNode(
+            id: 'a',
+            prerequisiteTopicIds: ['b'],
+            dependency: _dependency('a'),
+          ),
+          _weightedNode(
+            id: 'b',
+            prerequisiteTopicIds: ['a'],
+            dependency: _dependency('b'),
+          ),
+        ];
+        // Cycle guard: b resolves depth 1, a resolves depth 2.
+        // Minutes: 45*1.2 + 45*1.1 = 103.5 -> 120/103.5.
+        final workload = resolver.estimateWorkload(
+          totalTopics: 2,
+          targetDays: 1,
+          hoursPerDay: 2,
+          topics: cyclic,
+        );
+        expect(workload, closeTo(120 / 103.5, 1e-9));
+      });
+
+      test('weighted estimate matches the flat path for unweighted topics',
+          () {
+        final flat = resolver.estimateWorkload(
+          totalTopics: 4,
+          targetDays: 7,
+          hoursPerDay: 3,
+        );
+        final weighted = resolver.estimateWorkload(
+          totalTopics: 4,
+          targetDays: 7,
+          hoursPerDay: 3,
+          topics: List.generate(4, (i) => _weightedNode(id: 't$i')),
+        );
+        // 4 plain nodes average to the same 45 min/topic.
+        expect(weighted, closeTo(flat, 1e-9));
       });
     });
 
