@@ -53,6 +53,7 @@ class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
     if (_isRecording) {
       try {
         final path = await _audioRecorder.stop();
+        if (!mounted) return;
         _amplitudeSubscription?.cancel();
         _amplitudeSubscription = null;
         setState(() => _isRecording = false);
@@ -62,13 +63,17 @@ class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
         }
       } catch (e) {
         _logger.w('Failed to stop audio recording', e);
-        setState(() => _isRecording = false);
+        if (mounted) {
+          setState(() => _isRecording = false);
+        }
       }
     } else {
       try {
         if (await _audioRecorder.hasPermission()) {
+          if (!mounted) return;
           final path = '${Directory.systemTemp.path}/recording_${DateTime.now().millisecondsSinceEpoch}.m4a';
           await _audioRecorder.start(const RecordConfig(), path: path);
+          if (!mounted) return;
           setState(() => _isRecording = true);
           _amplitudeSubscription = _audioRecorder.onAmplitudeChanged(const Duration(milliseconds: 100)).listen(
             (amplitude) {
@@ -78,7 +83,9 @@ class _AudioRecordingWidgetState extends State<AudioRecordingWidget> {
         }
       } catch (e) {
         _logger.w('Failed to start audio recording', e);
-        setState(() => _isRecording = false);
+        if (mounted) {
+          setState(() => _isRecording = false);
+        }
       }
     }
   }

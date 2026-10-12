@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -77,6 +80,35 @@ Question _questionWithOptions({
     difficulty: difficulty,
     options: options,
   );
+}
+
+/// Hand-written fake that keeps the platform pick in flight until the
+/// test completes it, so tests can dispose the widget mid-pick.
+///
+/// Extends (not implements) [FilePickerPlatform] so the platform
+/// interface token check passes.
+class FakePendingFilePickerPlatform extends FilePickerPlatform {
+  final Completer<FilePickerResult?> _pickFiles =
+      Completer<FilePickerResult?>();
+
+  void completePick(FilePickerResult? result) => _pickFiles.complete(result);
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+    bool cancelUploadOnWindowBlur = true,
+  }) =>
+      _pickFiles.future;
 }
 
 void main() {
@@ -1575,6 +1607,54 @@ void main() {
 
         expect(find.byIcon(Icons.undo), findsOneWidget);
         expect(find.byIcon(Icons.delete_outline), findsOneWidget);
+      });
+    });
+
+    group('vision upload dispose mid-flight', () {
+      testWidgets('skips setState when disposed while image pick is in flight',
+          (tester) async {
+        final logs = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) {
+            logs.add(message);
+          }
+        };
+        final previousPlatform = FilePickerPlatform.instance;
+        final fakePicker = FakePendingFilePickerPlatform();
+        FilePickerPlatform.instance = fakePicker;
+        try {
+          final question =
+              _defaultQuestion().copyWith(type: QuestionType.canvas);
+          await tester.pumpWidget(buildWidget(question: question));
+          await tester.pumpAndSettle();
+
+          final button = find.widgetWithText(
+            OutlinedButton,
+            'Upload a photo of your work',
+          );
+          await tester.ensureVisible(button);
+          await tester.pumpAndSettle();
+          await tester.tap(button);
+          await tester.pump();
+
+          // Dispose the widget while the image pick is still in flight.
+          await tester.pumpWidget(const SizedBox());
+
+          // The pick is cancelled (returns null) after the widget is gone.
+          fakePicker.completePick(null);
+          await tester.pump();
+
+          expect(
+            logs.where(
+              (message) => message.contains('setState() called after dispose'),
+            ),
+            isEmpty,
+          );
+        } finally {
+          FilePickerPlatform.instance = previousPlatform;
+          debugPrint = previousDebugPrint;
+        }
       });
     });
   });

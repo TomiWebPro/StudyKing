@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/questions/presentation/widgets/file_upload_widget.dart';
@@ -10,6 +13,35 @@ Widget buildApp(Widget widget) {
     locale: const Locale('en'),
     home: Scaffold(body: widget),
   );
+}
+
+/// Hand-written fake that keeps the platform pick in flight until the test
+/// completes it, so tests can dispose the widget mid-pick.
+///
+/// Extends (not implements) [FilePickerPlatform] so the platform
+/// interface token check passes.
+class FakePendingFilePickerPlatform extends FilePickerPlatform {
+  final Completer<FilePickerResult?> _pickFiles =
+      Completer<FilePickerResult?>();
+
+  void completePick(FilePickerResult? result) => _pickFiles.complete(result);
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+    bool cancelUploadOnWindowBlur = true,
+  }) =>
+      _pickFiles.future;
 }
 
 void main() {
@@ -144,6 +176,61 @@ void main() {
 
         expect(find.text('File attached'), findsOneWidget);
         expect(find.text('image.png'), findsOneWidget);
+      });
+    });
+
+    group('dispose mid-flight', () {
+      testWidgets('skips setState and answer callback when disposed while pick is in flight',
+          (tester) async {
+        final logs = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) {
+            logs.add(message);
+          }
+        };
+        final previousPlatform = FilePickerPlatform.instance;
+        final fakePicker = FakePendingFilePickerPlatform();
+        FilePickerPlatform.instance = fakePicker;
+        try {
+          String? changedAnswer;
+          await tester.pumpWidget(
+            buildApp(
+              FileUploadWidget(
+                currentAnswer: null,
+                isSubmitted: false,
+                onAnswerChanged: (value) => changedAnswer = value,
+              ),
+            ),
+          );
+
+          await tester.tap(find.widgetWithText(OutlinedButton, 'Upload file'));
+          await tester.pump();
+
+          // Dispose the widget while the platform pick is still in flight.
+          await tester.pumpWidget(const SizedBox());
+
+          // The pick completes after the widget is gone.
+          fakePicker.completePick(
+            FilePickerResult(
+              <PlatformFile>[
+                PlatformFile(name: 'notes.txt', path: '/tmp/notes.txt', size: 42),
+              ],
+            ),
+          );
+          await tester.pump();
+
+          expect(changedAnswer, isNull);
+          expect(
+            logs.where(
+              (message) => message.contains('setState() called after dispose'),
+            ),
+            isEmpty,
+          );
+        } finally {
+          FilePickerPlatform.instance = previousPlatform;
+          debugPrint = previousDebugPrint;
+        }
       });
     });
   });
