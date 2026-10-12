@@ -268,12 +268,14 @@ class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision
         type: FileType.image,
         withData: true,
       );
+      if (!mounted) return;
       final bytes = picked?.files.first.bytes;
       if (bytes == null || bytes.isEmpty) {
         setState(() => _isInterpreting = false);
         return;
       }
       final result = await ref.read(visionInterpretationServiceProvider).interpretImage(bytes);
+      if (!mounted) return;
       if (result.isSuccess) {
         final text = result.data!;
         setState(() {

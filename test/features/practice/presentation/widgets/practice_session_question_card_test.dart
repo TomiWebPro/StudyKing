@@ -1,11 +1,18 @@
-import 'dart:typed_data';
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/providers/service_providers.dart'
+    show visionInterpretationServiceProvider;
+import 'package:studyking/core/services/vision_interpretation_service.dart';
 import 'package:studyking/features/practice/presentation/widgets/practice_session_question_card.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/graph_drawing_widget.dart';
@@ -13,13 +20,26 @@ import 'package:studyking/features/questions/presentation/widgets/single_answer_
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+/// Hand-written fake that parks [interpretImage] on a caller-controlled
+/// future so widget tests can dispose the card mid-interpretation.
+class FakeVisionInterpretationService extends VisionInterpretationService {
+  FakeVisionInterpretationService(this._interpretation)
+      : super(ocrExtractor: OcrExtractor(modelId: 'test-model', localeName: 'en'));
+
+  final Future<Result<String>> _interpretation;
+
+  @override
+  Future<Result<String>> interpretImage(Uint8List image) => _interpretation;
+}
+
 void main() {
-  Widget buildApp(Widget widget) {
+  Widget buildApp(Widget widget, {List<Override> overrides = const []}) {
     return ProviderScope(
       overrides: [
         settingsProvider.overrideWith(
           (ref) => SettingsController(SettingsRepository()),
         ),
+        ...overrides,
       ],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -457,5 +477,121 @@ void main() {
       await tester.enterText(find.byType(TextField), 'my essay');
       expect(captured, 'my essay');
     });
+
+    // The file_picker platform channel the canvas answer's image
+    // upload goes through.
+    const pickerChannel = MethodChannel('miguelruivo.flutter.plugins.filepicker');
+
+    testWidgets(
+      'does not setState after dispose when the file picker resolves after the card is disposed',
+      (tester) async {
+        final logs = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) logs.add(message);
+        };
+        addTearDown(() {
+          tester.binding.defaultBinaryMessenger
+              .setMockMethodCallHandler(pickerChannel, null);
+        });
+        try {
+          final pick = Completer<List<Map<Object?, Object?>?>?>();
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            pickerChannel,
+            (call) => pick.future,
+          );
+          await tester.pumpWidget(buildApp(
+            PracticeSessionQuestionCard(
+              question: question(type: QuestionType.canvas),
+              currentAnswer: null,
+              isSubmitted: false,
+              isFeedbackVisible: false,
+              onAnswerSelected: (_) {},
+            ),
+          ));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Upload a photo of your work'));
+          await tester.pump();
+
+          // The user leaves the practice session while the native
+          // picker is still in flight, then cancels it.
+          await tester.pumpWidget(const SizedBox());
+          logs.clear();
+          pick.complete(null);
+          await tester.pump();
+
+          expect(
+            logs.where((line) => line.contains('CanvasAnswerWithVision')),
+            isEmpty,
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          debugPrint = previousDebugPrint;
+        }
+      },
+    );
+
+    testWidgets(
+      'does not setState after dispose when image interpretation completes after the card is disposed',
+      (tester) async {
+        final logs = <String>[];
+        final previousDebugPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) logs.add(message);
+        };
+        addTearDown(() {
+          tester.binding.defaultBinaryMessenger
+              .setMockMethodCallHandler(pickerChannel, null);
+        });
+        try {
+          final interpretation = Completer<Result<String>>();
+          tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+            pickerChannel,
+            (call) async => <Map<Object?, Object?>>[
+              <Object?, Object?>{
+                'name': 'work.png',
+                'path': '/work.png',
+                'bytes': Uint8List.fromList(<int>[1, 2, 3]),
+                'size': 3,
+              },
+            ],
+          );
+          await tester.pumpWidget(buildApp(
+            PracticeSessionQuestionCard(
+              question: question(type: QuestionType.canvas),
+              currentAnswer: null,
+              isSubmitted: false,
+              isFeedbackVisible: false,
+              onAnswerSelected: (_) {},
+            ),
+            overrides: [
+              visionInterpretationServiceProvider.overrideWithValue(
+                FakeVisionInterpretationService(interpretation.future),
+              ),
+            ],
+          ));
+          await tester.pumpAndSettle();
+
+          await tester.tap(find.text('Upload a photo of your work'));
+          await tester.pump();
+
+          // The OCR/LLM interpretation is still running when the card
+          // is disposed (session exit), then it completes.
+          await tester.pumpWidget(const SizedBox());
+          logs.clear();
+          interpretation.complete(Result.success('4'));
+          await tester.pump();
+
+          expect(
+            logs.where((line) => line.contains('CanvasAnswerWithVision')),
+            isEmpty,
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          debugPrint = previousDebugPrint;
+        }
+      },
+    );
   });
 }
