@@ -462,7 +462,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
   SourceRepository get _sourceRepo => widget.sourceRepository ?? SourceRepository();
   List<_SourceItem> _items = [];
   bool _isLoading = true;
-  String? _error;
+  bool _loadFailed = false;
 
   @override
   void initState() {
@@ -471,13 +471,13 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
   }
 
   Future<void> _load() async {
-    setState(() { _isLoading = true; _error = null; });
+    setState(() { _isLoading = true; _loadFailed = false; });
     try {
       await _sourceRepo.init();
       final sourcesResult = await _sourceRepo.getBySubject(widget.subjectId);
       if (sourcesResult.isFailure) {
         _logger.w('Failed to load sources: ${sourcesResult.error}');
-        if (mounted) setState(() { _isLoading = false; _error = AppLocalizations.of(context)!.somethingWentWrong; });
+        if (mounted) setState(() { _isLoading = false; _loadFailed = true; });
         return;
       }
       final sources = sourcesResult.data ?? [];
@@ -495,7 +495,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
       }
     } catch (e) {
       _logger.w('Failed to load sources', e);
-      if (mounted) setState(() { _isLoading = false; _error = AppLocalizations.of(context)!.somethingWentWrong; });
+      if (mounted) setState(() { _isLoading = false; _loadFailed = true; });
     }
   }
 
@@ -506,7 +506,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
 
     if (_isLoading) return const LoadingScreen();
 
-    if (_error != null) {
+    if (_loadFailed) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -518,7 +518,7 @@ class _SubjectSourcesTabState extends ConsumerState<_SubjectSourcesTab> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
               child: Text(
-                _error!,
+                l10n.somethingWentWrong,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

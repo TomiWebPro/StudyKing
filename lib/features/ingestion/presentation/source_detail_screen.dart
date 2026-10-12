@@ -52,7 +52,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
   List<Topic> _topics = [];
   List<Question> _questions = [];
   bool _isLoading = true;
-  String? _error;
+  _SourceLoadError? _error;
   bool _isReprocessing = false;
   String _reprocessingStage = '';
   bool _keepOldQuestions = false;
@@ -91,8 +91,10 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       final source = sourceResult.data;
       if (source == null) {
         if (mounted) {
-          final l10n = AppLocalizations.of(context);
-          setState(() { _isLoading = false; _error = l10n?.sourceNotFound ?? 'Source not found'; });
+          setState(() {
+            _isLoading = false;
+            _error = _SourceLoadError.sourceNotFound;
+          });
         }
         return;
       }
@@ -127,7 +129,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       }
     } catch (e) {
       _logger.w('_load failed', e);
-      if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
+      if (mounted) setState(() { _error = _SourceLoadError.somethingWentWrong; _isLoading = false; });
     }
   }
 
@@ -279,7 +281,9 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         appBar: AppBar(title: Text(l10n.sourceDetail)),
         body: Center(
           child: ErrorRetryWidget(
-            message: _error ?? l10n.sourceNotFound,
+            message: _error == _SourceLoadError.somethingWentWrong
+                ? l10n.somethingWentWrong
+                : l10n.sourceNotFound,
             onRetry: _load,
           ),
         ),
@@ -711,5 +715,7 @@ class _SectionHeader extends StatelessWidget {
     );
   }
 }
+
+enum _SourceLoadError { sourceNotFound, somethingWentWrong }
 
 

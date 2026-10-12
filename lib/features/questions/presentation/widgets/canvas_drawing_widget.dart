@@ -51,7 +51,7 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   final List<List<Stroke>> _redoStack = <List<Stroke>>[];
   bool _isDrawing = false;
   bool _isSaving = false;
-  String? _saveMessage;
+  bool? _saveSucceeded;
   String _recognizedText = '';
   double _recognitionConfidence = 0.0;
 
@@ -260,9 +260,9 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
                         : l10n.submitText),
               ),
             ),
-            if (_saveMessage != null) ...[
+            if (_saveSucceeded != null) ...[
               const SizedBox(width: 8),
-              Expanded(child: Text(_saveMessage!, style: Theme.of(context).textTheme.bodySmall)),
+              Expanded(child: Text(_saveSucceeded! ? l10n.drawingSaved : l10n.failedToSaveDrawing, style: Theme.of(context).textTheme.bodySmall)),
             ],
           ],
         ),
@@ -572,10 +572,9 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
   }
 
   Future<void> _handleSave() async {
-    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
-      _saveMessage = null;
+      _saveSucceeded = null;
     });
     try {
       if (_effectiveInputMode == CanvasInputMode.draw) {
@@ -592,14 +591,14 @@ class _CanvasDrawingWidgetState extends State<CanvasDrawingWidget> {
       }
       if (mounted) {
         setState(() {
-          _saveMessage = l10n.drawingSaved;
+          _saveSucceeded = true;
         });
       }
     } catch (e) {
       _logger.w('Failed to save drawing', e);
       if (mounted) {
         setState(() {
-          _saveMessage = l10n.failedToSaveDrawing;
+          _saveSucceeded = false;
         });
       }
     } finally {

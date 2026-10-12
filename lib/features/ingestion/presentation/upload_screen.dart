@@ -46,8 +46,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   String? _selectedSubjectId;
   List<Subject> _subjects = [];
   bool _isUploading = false;
-  String? _error;
-  String? _success;
+  _UploadError? _error;
+  String _errorDetail = '';
+  bool _uploadSucceeded = false;
   bool _useUrlInput = false;
   bool _useFilePicker = false;
   bool _generateQuestions = true;
@@ -90,6 +91,21 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       }
     } catch (e) {
       _logger.w('Failed to load subjects: $e');
+    }
+  }
+
+  /// Resolves the current upload error against [l10n] at build time so the
+  /// message follows a locale switch instead of caching the old translation.
+  String _errorMessage(AppLocalizations l10n) {
+    switch (_error) {
+      case _UploadError.fillRequiredFields:
+        return l10n.fillRequiredFields;
+      case _UploadError.modelNotConfigured:
+        return l10n.modelNotConfigured;
+      case _UploadError.uploadFailed:
+        return l10n.uploadFailed(_errorDetail);
+      case null:
+        return '';
     }
   }
 
@@ -210,7 +226,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     if (title.isEmpty ||
         (!_useFilePicker && content.isEmpty) ||
         (_useFilePicker && _selectedFilePath == null)) {
-      setState(() => _error = AppLocalizations.of(context)!.fillRequiredFields);
+      setState(() => _error = _UploadError.fillRequiredFields);
       return;
     }
 
@@ -221,7 +237,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       _processingStageIndex = 0;
       _processingTotalStages = 6;
       _error = null;
-      _success = null;
+      _uploadSucceeded = false;
       _lastSourceId = null;
     });
     _processingStopwatch
@@ -244,7 +260,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             : ref.read(selectedModelProvider);
         if ((_generateQuestions || _generateLessons) && resolvedModelId.isEmpty) {
           setState(() {
-            _error = l10n.modelNotConfigured;
+            _error = _UploadError.modelNotConfigured;
             _isUploading = false;
           });
           return;
@@ -337,7 +353,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         if (!mounted) return;
         if (result.isFailure) {
           setState(() {
-            _error = l10n.uploadFailed(result.error ?? '');
+            _error = _UploadError.uploadFailed;
+            _errorDetail = result.error ?? '';
             _isUploading = false;
           });
           _processingStopwatch.stop();
@@ -362,7 +379,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         if (!mounted) return;
         if (result.isFailure) {
           setState(() {
-            _error = l10n.uploadFailed(result.error ?? '');
+            _error = _UploadError.uploadFailed;
+            _errorDetail = result.error ?? '';
             _isUploading = false;
           });
           _processingStopwatch.stop();
@@ -376,7 +394,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       if (!mounted) return;
       _processingStopwatch.stop();
       setState(() {
-        _success = l10n.contentUploadedSuccessfully;
+        _uploadSucceeded = true;
         _isUploading = false;
         _processingStage = null;
         _processingStageDescription = '';
@@ -391,7 +409,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         final sourceId = _lastSourceId;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(_success!),
+            content: Text(l10n.contentUploadedSuccessfully),
             duration: Timeouts.snackbarSuccess,
             action: SnackBarAction(
               label: l10n.contentLibrary,
@@ -420,14 +438,15 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
             ),
           );
         }
-        setState(() => _success = null);
+        setState(() => _uploadSucceeded = false);
       }
     } catch (e) {
       _logger.w('Upload failed', e);
       _processingStopwatch.stop();
       if (!mounted) return;
       setState(() {
-        _error = AppLocalizations.of(context)!.uploadFailed('');
+        _error = _UploadError.uploadFailed;
+        _errorDetail = '';
         _isUploading = false;
         _processingStage = null;
         _processingStageDescription = '';
@@ -724,7 +743,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                             color: Theme.of(context).colorScheme.error),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(_error!,
+                          child: Text(_errorMessage(l10n),
                               style:
                                   TextStyle(color: Theme.of(context).colorScheme.error)),
                         ),
@@ -732,7 +751,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                     ),
                   ),
                 ),
-              if (_success != null)
+              if (_uploadSucceeded)
                 Semantics(
                   liveRegion: true,
                   label: l10n.uploaded,
@@ -751,7 +770,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                             color: Theme.of(context).colorScheme.primary),
                         const SizedBox(width: 8),
                         Expanded(
-                          child: Text(_success!,
+                          child: Text(l10n.contentUploadedSuccessfully,
                               style:
                                   TextStyle(color: Theme.of(context).colorScheme.primary)),
                         ),
@@ -759,7 +778,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                     ),
                   ),
                 ),
-              if (_error != null || _success != null)
+              if (_error != null || _uploadSucceeded)
                 const SizedBox(height: 16),
 
               FocusTraversalOrder(
@@ -866,3 +885,5 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     );
   }
 }
+
+enum _UploadError { fillRequiredFields, modelNotConfigured, uploadFailed }

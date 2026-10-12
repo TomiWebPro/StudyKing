@@ -254,14 +254,13 @@ class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision
   static final Logger _logger = const Logger('CanvasAnswerWithVision');
   bool _isInterpreting = false;
   String? _recognizedPreview;
-  String? _visionError;
+  bool _visionFailed = false;
 
   Future<void> _pickAndInterpretImage() async {
     if (widget.isSubmitted || _isInterpreting) return;
-    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isInterpreting = true;
-      _visionError = null;
+      _visionFailed = false;
     });
     try {
       final picked = await FilePicker.pickFiles(
@@ -285,7 +284,7 @@ class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision
         widget.onAnswerSelected(text);
       } else {
         setState(() {
-          _visionError = l10n.visionInterpretationFailed;
+          _visionFailed = true;
           _isInterpreting = false;
         });
       }
@@ -293,7 +292,7 @@ class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision
       _logger.w('Image vision interpretation failed', e);
       if (mounted) {
         setState(() {
-          _visionError = AppLocalizations.of(context)!.visionInterpretationFailed;
+          _visionFailed = true;
           _isInterpreting = false;
         });
       }
@@ -334,11 +333,11 @@ class _CanvasAnswerWithVisionState extends ConsumerState<_CanvasAnswerWithVision
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
-        if (_visionError != null)
+        if (_visionFailed)
           Padding(
             padding: const EdgeInsets.only(top: 8),
             child: Text(
-              _visionError!,
+              l10n.visionInterpretationFailed,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: Theme.of(context).colorScheme.error,
                   ),

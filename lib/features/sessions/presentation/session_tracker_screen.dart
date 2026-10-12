@@ -45,7 +45,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   Timer? _timer;
   int _elapsedSeconds = 0;
   bool _isLoading = true;
-  String? _error;
+  bool _hasError = false;
   List<Subject> _subjects = [];
   String _selectedSubjectId = '';
 
@@ -110,7 +110,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
   Future<void> _loadSessions() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _hasError = false;
     });
     try {
       final sessionsResult = await _sessionRepository.getAll();
@@ -129,7 +129,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = AppLocalizations.of(context)!.somethingWentWrong;
+          _hasError = true;
         });
       }
     }
@@ -312,7 +312,7 @@ class _SessionTrackerScreenState extends ConsumerState<SessionTrackerScreen> wit
       );
     }
 
-    if (_error != null) {
+    if (_hasError) {
       return Scaffold(
         appBar: AppBar(
           title: Text(l10n.studySessionTracker),

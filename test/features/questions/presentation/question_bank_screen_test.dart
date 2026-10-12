@@ -20,6 +20,7 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeQuestionRepo extends QuestionRepository {
@@ -1221,6 +1222,38 @@ void main() {
       // Failed recreate: the question stays deleted and an error is shown.
       expect(find.text('What is Newton\'s first law?'), findsNothing);
       expect(find.text('Something went wrong'), findsOneWidget);
+    });
+  });
+
+  group('QuestionBankScreen - locale switch', () {
+    testWidgets('error message follows locale switch', (tester) async {
+      final questionRepo = _FakeQuestionRepo([]);
+      questionRepo.setShouldThrow(true);
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          overrides: [
+            questionRepositoryProvider.overrideWithValue(questionRepo),
+            subjectRepositoryProvider.overrideWithValue(_FakeSubjectRepo([])),
+            topicRepositoryProvider.overrideWithValue(_FakeTopicRepo([])),
+            sourceRepositoryProvider.overrideWithValue(_FakeSourceRepo([])),
+          ],
+          child: const QuestionBankScreen(),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algo salió mal'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsNothing);
     });
   });
 }

@@ -41,7 +41,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
   final List<SyllableEntry> _syllabusEntries = [];
   bool _useMultiSyllabus = false;
   List<Subject> _allSubjects = [];
-  String? _subjectsError;
+  bool _subjectsLoadFailed = false;
 
   @override
   void initState() {
@@ -68,7 +68,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
       if (mounted) {
         setState(() {
           _allSubjects = result.data ?? [];
-          _subjectsError = null;
+          _subjectsLoadFailed = false;
           if (_allSubjects.isNotEmpty && _selectedSubjectId == null) {
             _selectedSubjectId = _allSubjects.first.id;
           }
@@ -77,7 +77,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
     } catch (e) {
       _logger.w('Failed to load subjects', e);
       if (mounted) {
-        setState(() => _subjectsError = AppLocalizations.of(context)!.somethingWentWrong);
+        setState(() => _subjectsLoadFailed = true);
       }
     }
   }
@@ -232,7 +232,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
               const MissedLessonsSection(),
               SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
             ],
-            if (_subjectsError != null)
+            if (_subjectsLoadFailed)
               Container(
                 width: double.infinity,
                 padding: ResponsiveUtils.cardPadding(context),
@@ -241,7 +241,7 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
                   color: Theme.of(context).colorScheme.errorContainer,
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: Text(_subjectsError!, style: TextStyle(color: Theme.of(context).colorScheme.error)),
+                child: Text(l10n.somethingWentWrong, style: TextStyle(color: Theme.of(context).colorScheme.error)),
               ),
             Row(
               children: [

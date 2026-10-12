@@ -19,18 +19,25 @@ import 'package:studyking/features/settings/data/repositories/settings_repositor
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
-  _FakeSessionRepository({List<Session>? seed, this.throwOnSave = false, this.failOnSave = false})
-      : sessions = List<Session>.from(seed ?? []);
+  _FakeSessionRepository({
+    List<Session>? seed,
+    this.throwOnSave = false,
+    this.failOnSave = false,
+    this.throwOnGetAll = false,
+  }) : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnSave;
   final bool failOnSave;
+  final bool throwOnGetAll;
 
   @override
   Future<Result<List<Session>>> getAll() async {
+    if (throwOnGetAll) throw Exception('load failed');
     return Result.success(List<Session>.from(sessions));
   }
 
@@ -654,6 +661,35 @@ void main() {
       expect(find.widgetWithText(ElevatedButton, 'Start'), findsOneWidget);
       expect(find.widgetWithText(TextButton, 'View All'), findsOneWidget);
       expect(find.byType(SessionAnalyticsWidget), findsOneWidget);
+    });
+  });
+
+  group('SessionTrackerScreen - locale switch', () {
+    testWidgets('error state text follows locale switch', (tester) async {
+      final repo = _FakeSessionRepository(throwOnGetAll: true);
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          overrides: [
+            settingsProvider.overrideWith((ref) => SettingsController(_FakeSettingsRepository())),
+            subjectRepositoryProvider.overrideWithValue(_FakeSubjectRepository()),
+            studentIdServiceProvider.overrideWithValue(_FakeStudentIdService()),
+          ],
+          child: SessionTrackerScreen(sessionRepository: repo, fixedStudentId: 'test-student'),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ocurrió un error. Intente de nuevo.'), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsNothing);
     });
   });
 }

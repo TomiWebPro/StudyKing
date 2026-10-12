@@ -10,6 +10,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/subjects/data/adapters/subject_adapter.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSessionRepository extends SessionRepository {
@@ -18,15 +19,20 @@ class _FakeSessionRepository extends SessionRepository {
     this.throwOnDelete = false,
     this.failOnDelete = false,
     this.failOnSave = false,
+    this.throwOnGetAll = false,
   }) : sessions = List<Session>.from(seed ?? []);
 
   final List<Session> sessions;
   final bool throwOnDelete;
   final bool failOnDelete;
   final bool failOnSave;
+  final bool throwOnGetAll;
 
   @override
-  Future<Result<List<Session>>> getAll() async => Result.success(List<Session>.from(sessions));
+  Future<Result<List<Session>>> getAll() async {
+    if (throwOnGetAll) throw Exception('load failed');
+    return Result.success(List<Session>.from(sessions));
+  }
 
   @override
   Future<Result<void>> save(String key, Session session) async {
@@ -1292,5 +1298,35 @@ void main() {
         expect(tester.takeException(), isNull);
       },
     );
+  });
+
+  group('SessionHistoryScreen - locale switch', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('error state text follows locale switch', (tester) async {
+      final repo = _FakeSessionRepository(throwOnGetAll: true);
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: SessionHistoryScreen(sessionRepository: repo),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+      expect(find.widgetWithText(FilledButton, 'Retry'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ocurrió un error. Intente de nuevo.'), findsOneWidget);
+      expect(find.text('An error occurred. Please try again.'), findsNothing);
+    });
   });
 }

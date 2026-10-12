@@ -6,6 +6,7 @@ import 'package:studyking/features/questions/presentation/widgets/canvas_drawing
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'package:studyking/l10n/generated/app_localizations_es.dart';
+import '../../../../helpers/locale_switch_harness.dart';
 
 Widget buildLocalizedCanvasWidget({
   required Locale locale,
@@ -142,6 +143,45 @@ void main() {
 
       expect(find.text(esL10n.saveDrawing), findsOneWidget);
       expect(find.text(esL10n.submitText), findsNothing);
+    });
+
+    testWidgets('save message follows locale switch', (tester) async {
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: Scaffold(
+          body: CanvasDrawingWidget(
+            onDrawingComplete: (_) {},
+            inputMode: CanvasInputMode.draw,
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      await drawDiagonalStroke(tester);
+
+      final saveButton = find.widgetWithText(ElevatedButton, 'Save Drawing');
+      await tester.ensureVisible(saveButton);
+      await tester.pumpAndSettle();
+
+      // RepaintBoundary.toImage rasterizes on the real event
+      // loop, so the save flow runs outside the fake clock.
+      await tester.runAsync(() async {
+        await tester.tap(saveButton);
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+        await Future.delayed(const Duration(milliseconds: 500));
+        await tester.pump();
+      });
+      await tester.pump();
+
+      expect(find.text('Drawing saved.'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Dibujo guardado.'), findsOneWidget);
+      expect(find.text('Drawing saved.'), findsNothing);
     });
   });
 }

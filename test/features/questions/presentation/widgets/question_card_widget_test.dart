@@ -1,16 +1,23 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:file_picker/file_picker.dart';
 import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/providers/service_providers.dart'
+    show visionInterpretationServiceProvider;
+import 'package:studyking/core/services/vision_interpretation_service.dart';
 import 'package:studyking/features/questions/presentation/widgets/question_card_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/features/questions/presentation/widgets/canvas_drawing_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/locale_switch_harness.dart';
 
 Widget buildWidget({
   Question? question,
@@ -20,8 +27,10 @@ Widget buildWidget({
   ValueChanged<String?>? onAnswerSubmitted,
   ValueChanged<String?>? onAnswerChanged,
   VoidCallback? onNext,
+  List<Override> overrides = const [],
 }) {
   return ProviderScope(
+    overrides: overrides,
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
@@ -109,6 +118,18 @@ class FakePendingFilePickerPlatform extends FilePickerPlatform {
     bool cancelUploadOnWindowBlur = true,
   }) =>
       _pickFiles.future;
+}
+
+/// Hand-written fake that parks [interpretImage] on a caller-controlled
+/// future so widget tests can drive the vision flow deterministically.
+class FakeVisionInterpretationService extends VisionInterpretationService {
+  FakeVisionInterpretationService(this._interpretation)
+      : super(ocrExtractor: OcrExtractor(modelId: 'test-model', localeName: 'en'));
+
+  final Future<Result<String>> _interpretation;
+
+  @override
+  Future<Result<String>> interpretImage(Uint8List image) => _interpretation;
 }
 
 void main() {
@@ -1656,6 +1677,88 @@ void main() {
           debugPrint = previousDebugPrint;
         }
       });
+    });
+  });
+
+  group('QuestionCardWidget - locale switch', () {
+    testWidgets('vision error message follows locale switch',
+        (tester) async {
+      final previousPlatform = FilePickerPlatform.instance;
+      final fakePicker = FakePendingFilePickerPlatform();
+      FilePickerPlatform.instance = fakePicker;
+      final interpretation = Completer<Result<String>>();
+      try {
+        final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+        await tester.pumpWidget(LocaleSwitchHarness(
+          key: harnessKey,
+          // The harness provides the MaterialApp (with the
+          // switchable locale), so the card is placed under
+          // a ProviderScope directly instead of buildWidget,
+          // which would nest a second, fixed-locale MaterialApp.
+          child: ProviderScope(
+            overrides: [
+              visionInterpretationServiceProvider.overrideWithValue(
+                FakeVisionInterpretationService(interpretation.future),
+              ),
+            ],
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: QuestionCardWidget(
+                  question:
+                      _defaultQuestion().copyWith(type: QuestionType.canvas),
+                  currentAnswer: null,
+                  isSubmitted: false,
+                  isFeedbackVisible: false,
+                  onAnswerSubmitted: (_) {},
+                  onAnswerChanged: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final button = find.widgetWithText(
+          OutlinedButton,
+          'Upload a photo of your work',
+        );
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        await tester.tap(button);
+        await tester.pump();
+
+        // The image pick resolves with bytes; interpretation fails.
+        fakePicker.completePick(FilePickerResult([
+          PlatformFile(name: 'work.png', bytes: Uint8List(16), size: 16),
+        ]));
+        interpretation.complete(Result.failure('vision unavailable'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Could not read the image. Please try again or type your answer.',
+          ),
+          findsOneWidget,
+        );
+
+        harnessKey.currentState!.switchLocale(const Locale('es'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'No se pudo leer la imagen. Inténtalo de nuevo o escribe tu respuesta.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'Could not read the image. Please try again or type your answer.',
+          ),
+          findsNothing,
+        );
+      } finally {
+        FilePickerPlatform.instance = previousPlatform;
+      }
     });
   });
 }

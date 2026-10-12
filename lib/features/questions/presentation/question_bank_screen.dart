@@ -52,7 +52,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   List<Topic> _allTopics = [];
   List<Source> _allSources = [];
   bool _isLoading = true;
-  String? _error;
+  bool _loadFailed = false;
 
   String _subjectFilter = '';
   String _typeFilter = '';
@@ -96,7 +96,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _loadFailed = false;
     });
     try {
       await _questionRepo.init();
@@ -132,7 +132,7 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       }
     } catch (e) {
       _logger.w('Failed to load questions', e);
-      if (mounted) setState(() { _error = AppLocalizations.of(context)!.somethingWentWrong; _isLoading = false; });
+      if (mounted) setState(() { _loadFailed = true; _isLoading = false; });
     }
   }
 
@@ -1294,8 +1294,8 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       ),
       body: _isLoading
           ? const LoadingScreen()
-          : _error != null
-              ? ErrorRetryWidget(message: _error!, onRetry: _load)
+          : _loadFailed
+              ? ErrorRetryWidget(message: l10n.somethingWentWrong, onRetry: _load)
               : Column(
                   children: [
                     _buildSearchAndFilter(l10n),

@@ -1,4 +1,6 @@
 import 'dart:async';
+import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -19,6 +21,31 @@ import 'package:studyking/features/questions/presentation/widgets/graph_drawing_
 import 'package:studyking/features/questions/presentation/widgets/single_answer_widget.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../../helpers/locale_switch_harness.dart';
+
+/// Hand-written fake whose [pickFiles] resolves immediately with
+/// image bytes, so vision-pick flows run without the platform
+/// channel.
+class _FakeImageFilePickerPlatform extends FilePickerPlatform {
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+    bool cancelUploadOnWindowBlur = true,
+  }) async =>
+      FilePickerResult([
+        PlatformFile(name: 'work.png', bytes: Uint8List(16), size: 16),
+      ]);
+}
 
 /// Hand-written fake that parks [interpretImage] on a caller-controlled
 /// future so widget tests can dispose the card mid-interpretation.
@@ -593,5 +620,79 @@ void main() {
         }
       },
     );
+  });
+
+  group('PracticeSessionQuestionCard - locale switch', () {
+    testWidgets('vision error message follows locale switch',
+        (tester) async {
+      final previousPlatform = FilePickerPlatform.instance;
+      FilePickerPlatform.instance = _FakeImageFilePickerPlatform();
+      final interpretation = Completer<Result<String>>();
+      try {
+        final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+        await tester.pumpWidget(LocaleSwitchHarness(
+          key: harnessKey,
+          child: ProviderScope(
+            overrides: [
+              settingsProvider.overrideWith(
+                (ref) => SettingsController(SettingsRepository()),
+              ),
+              visionInterpretationServiceProvider.overrideWithValue(
+                FakeVisionInterpretationService(interpretation.future),
+              ),
+            ],
+            child: Scaffold(
+              body: SingleChildScrollView(
+                child: PracticeSessionQuestionCard(
+                  question: question(type: QuestionType.canvas),
+                  currentAnswer: null,
+                  isSubmitted: false,
+                  isFeedbackVisible: false,
+                  onAnswerSelected: (_) {},
+                ),
+              ),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        final button = find.widgetWithText(
+          OutlinedButton,
+          'Upload a photo of your work',
+        );
+        await tester.ensureVisible(button);
+        await tester.pumpAndSettle();
+        await tester.tap(button);
+        await tester.pump();
+
+        interpretation.complete(Result.failure('vision unavailable'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'Could not read the image. Please try again or type your answer.',
+          ),
+          findsOneWidget,
+        );
+
+        harnessKey.currentState!.switchLocale(const Locale('es'));
+        await tester.pumpAndSettle();
+
+        expect(
+          find.text(
+            'No se pudo leer la imagen. Inténtalo de nuevo o escribe tu respuesta.',
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.text(
+            'Could not read the image. Please try again or type your answer.',
+          ),
+          findsNothing,
+        );
+      } finally {
+        FilePickerPlatform.instance = previousPlatform;
+      }
+    });
   });
 }

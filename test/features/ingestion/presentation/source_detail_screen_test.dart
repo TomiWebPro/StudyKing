@@ -13,6 +13,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSourceRepo extends SourceRepository {
@@ -359,6 +360,64 @@ void main() {
       expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('Thermodynamics'), findsNothing);
       expect(find.text('Mechanics'), findsOneWidget);
+    });
+  });
+
+  group('SourceDetailScreen - locale switch', () {
+    testWidgets('source-not-found message follows locale switch',
+        (tester) async {
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          child: SourceDetailScreen(
+            sourceId: 'nonexistent',
+            sourceRepo: _FakeSourceRepo({}),
+            subjectRepo: _FakeSubjectRepo(),
+            topicRepo: _FakeTopicRepo(),
+            questionRepo: _FakeQuestionRepo(),
+          ),
+        ),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Source not found'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fuente no encontrada'), findsOneWidget);
+      expect(find.text('Source not found'), findsNothing);
+    });
+
+    testWidgets('unexpected-error message follows locale switch',
+        (tester) async {
+      final sourceRepo = _FakeSourceRepo({'src1': mockSource});
+      sourceRepo.setThrowOnGet(true);
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          child: SourceDetailScreen(
+            sourceId: 'src1',
+            sourceRepo: sourceRepo,
+            subjectRepo: _FakeSubjectRepo(),
+            topicRepo: _FakeTopicRepo(),
+            questionRepo: _FakeQuestionRepo(),
+          ),
+        ),
+      ));
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algo salió mal'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsNothing);
     });
   });
 }

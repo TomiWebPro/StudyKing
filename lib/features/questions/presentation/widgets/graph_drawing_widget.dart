@@ -33,7 +33,7 @@ class _GraphDrawingWidgetState extends State<GraphDrawingWidget> {
   final List<List<Stroke>> _redoStack = <List<Stroke>>[];
   bool _isDrawing = false;
   bool _isSaving = false;
-  String? _saveMessage;
+  bool? _saveSucceeded;
 
   DrawingTool _currentTool = DrawingTool.freehand;
   Color _currentColor = Colors.black;
@@ -146,9 +146,9 @@ class _GraphDrawingWidgetState extends State<GraphDrawingWidget> {
                     : Text(l10n.saveDrawing),
               ),
             ),
-            if (_saveMessage != null) ...[
+            if (_saveSucceeded != null) ...[
               const SizedBox(width: 8),
-              Expanded(child: Text(_saveMessage!, style: Theme.of(context).textTheme.bodySmall)),
+              Expanded(child: Text(_saveSucceeded! ? l10n.drawingSaved : l10n.failedToSaveDrawing, style: Theme.of(context).textTheme.bodySmall)),
             ],
           ],
         ),
@@ -387,24 +387,23 @@ class _GraphDrawingWidgetState extends State<GraphDrawingWidget> {
   }
 
   Future<void> _handleSave() async {
-    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _isSaving = true;
-      _saveMessage = null;
+      _saveSucceeded = null;
     });
     try {
       final data = await _generateDrawingData();
       widget.onDrawingComplete(data);
       if (mounted) {
         setState(() {
-          _saveMessage = l10n.drawingSaved;
+          _saveSucceeded = true;
         });
       }
     } catch (e) {
       _logger.w('Failed to save drawing', e);
       if (mounted) {
         setState(() {
-          _saveMessage = l10n.failedToSaveDrawing;
+          _saveSucceeded = false;
         });
       }
     } finally {

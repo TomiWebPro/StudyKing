@@ -13,6 +13,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/subjects/presentation/subject_detail_screen.dart';
 import 'package:studyking/features/subjects/presentation/widgets/subject_stats_tab.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSubjectRepository extends SubjectRepository {
@@ -806,6 +807,44 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Something went wrong'), findsOneWidget);
+    });
+  });
+
+  group('SubjectDetailScreen - locale switch', () {
+    testWidgets('sources tab error text follows locale switch',
+        (tester) async {
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(
+              () => _FakeSubjectsNotifier(_FakeSubjectRepository()),
+            ),
+          ],
+          child: SubjectDetailScreen(
+            subject: _testSubject,
+            sourceRepository: _FakeSourceRepository(true),
+          ),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      // Switch to the Sources tab, whose load failure renders the
+      // error title and subtitle from State fields.
+      final sourcesTab = find.text('Sources');
+      await tester.ensureVisible(sourcesTab);
+      await tester.pumpAndSettle();
+      await tester.tap(sourcesTab);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Something went wrong'), findsWidgets);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algo salió mal'), findsWidgets);
+      expect(find.text('Something went wrong'), findsNothing);
     });
   });
 }

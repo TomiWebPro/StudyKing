@@ -18,6 +18,7 @@ import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show whisperAsrEngineProvider;
 import 'package:studyking/core/providers/ocr_provider.dart' show ocrModeProvider;
+import '../../../helpers/locale_switch_harness.dart';
 
 class _FakeLlmService extends LlmService {
   _FakeLlmService()
@@ -744,6 +745,45 @@ void main() {
         // when not uploading (canPop: !_isUploading).
         expect(find.byType(UploadScreen), findsOneWidget);
       });
+    });
+  });
+
+  group('UploadScreen - locale switch', () {
+    testWidgets('validation error message follows locale switch',
+        (tester) async {
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          overrides: [
+            whisperAsrEngineProvider.overrideWithValue(NoopAsrEngine()),
+            ocrModeProvider.overrideWith((ref) => OcrMode.hybrid),
+          ],
+          child: const UploadScreen(
+            fixedModelId: 'test-model',
+            fixedStudentId: 'test-student',
+          ),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      final uploadButton = find.widgetWithText(FilledButton, 'Upload & Analyze');
+      await tester.ensureVisible(uploadButton);
+      await tester.pump();
+      await tester.tap(uploadButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Please fill in all required fields.'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text('Por favor complete todos los campos requeridos.'),
+        findsOneWidget,
+      );
+      expect(find.text('Please fill in all required fields.'), findsNothing);
     });
   });
 }

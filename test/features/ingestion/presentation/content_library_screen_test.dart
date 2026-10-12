@@ -13,6 +13,7 @@ import 'package:studyking/features/questions/providers/question_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
 class _FakeSubjectRepo extends SubjectRepository {
@@ -280,6 +281,37 @@ void main() {
       // Failed recreate: the source stays deleted and an error is shown.
       expect(find.text('Physics Textbook'), findsNothing);
       expect(find.text('Something went wrong'), findsOneWidget);
+    });
+  });
+
+  group('ContentLibraryScreen - locale switch', () {
+    testWidgets('error message follows locale switch', (tester) async {
+      final sourceRepo = _FakeSourceRepo([]);
+      sourceRepo.setThrowOnGetAll(true);
+      final harnessKey = GlobalKey<LocaleSwitchHarnessState>();
+      await tester.pumpWidget(LocaleSwitchHarness(
+        key: harnessKey,
+        child: ProviderScope(
+          overrides: [
+            sourceRepositoryProvider.overrideWithValue(sourceRepo),
+            questionRepositoryProvider.overrideWithValue(_FakeQuestionRepo()),
+            subjectRepositoryProvider.overrideWithValue(_FakeSubjectRepo(subjects)),
+          ],
+          child: const ContentLibraryScreen(),
+        ),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
+
+      harnessKey.currentState!.switchLocale(const Locale('es'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Algo salió mal'), findsOneWidget);
+      expect(find.text('Something went wrong'), findsNothing);
     });
   });
 }

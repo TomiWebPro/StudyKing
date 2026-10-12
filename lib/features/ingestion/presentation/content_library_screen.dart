@@ -37,7 +37,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   List<Source> _sources = [];
   List<Subject> _subjects = [];
   bool _isLoading = true;
-  String? _error;
+  bool _loadFailed = false;
 
   String _subjectFilter = '';
   Set<String> _typeFilters = {};
@@ -61,7 +61,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
   Future<void> _load() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _loadFailed = false;
     });
     try {
       await _sourceRepo.init();
@@ -81,7 +81,7 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       _logger.w('Failed to load sources', e);
       if (mounted) {
         setState(() {
-          _error = AppLocalizations.of(context)!.somethingWentWrong;
+          _loadFailed = true;
           _isLoading = false;
         });
       }
@@ -279,8 +279,8 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
       ),
       body: _isLoading
           ? const LoadingScreen()
-          : _error != null
-              ? ErrorRetryWidget(message: _error!, onRetry: _load)
+          : _loadFailed
+              ? ErrorRetryWidget(message: l10n.somethingWentWrong, onRetry: _load)
               : Column(
                   children: [
                     _buildFilterBar(l10n),

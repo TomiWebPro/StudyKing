@@ -37,7 +37,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
   DateTime? _selectedDate;
   String? _selectedSubject;
   bool _isLoading = true;
-  String? _error;
+  bool _hasError = false;
 
   @override
   bool get wantKeepAlive => true;
@@ -57,7 +57,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
   Future<void> _loadSessions() async {
     setState(() {
       _isLoading = true;
-      _error = null;
+      _hasError = false;
     });
     try {
       final sessionsResult = await _sessionRepository.getAll();
@@ -75,7 +75,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       if (mounted) {
         setState(() {
           _isLoading = false;
-          _error = AppLocalizations.of(context)!.somethingWentWrong;
+          _hasError = true;
         });
       }
     }
@@ -365,7 +365,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       ),
       body: _isLoading
           ? const LoadingScreen()
-          : _error != null
+          : _hasError
               ? _buildErrorState(theme)
               : FocusTraversalGroup(
             child: Column(
