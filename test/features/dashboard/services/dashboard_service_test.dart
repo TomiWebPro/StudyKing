@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/session_model.dart';
@@ -172,6 +174,21 @@ void main() {
           topicRepo: _FakeTopicRepo(),
         );
         expect(service, isNotNull);
+      });
+    });
+
+    group('architecture boundary', () {
+      test('service does not import other features', () {
+        // Regression guard for the feature→feature import rule enforced by
+        // test/architecture/architectural_constraints_test.dart:
+        // DashboardService may only depend on core and its own feature.
+        final source =
+            File('lib/features/dashboard/services/dashboard_service.dart')
+                .readAsStringSync();
+        final featureImports = RegExp(
+          r"""import ['"]package:studyking/features/(\w+)/""",
+        ).allMatches(source);
+        expect(featureImports, isEmpty);
       });
     });
 

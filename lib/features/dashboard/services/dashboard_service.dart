@@ -10,7 +10,6 @@ import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/data/models/mastery_state_model.dart';
 import '../../../core/data/repositories/session_repository.dart';
 import '../../../core/data/repositories/plan_adherence_repository.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import '../../../core/data/repositories/topic_repository.dart';
 import '../../../core/data/repositories/attempt_repository.dart';
 import '../data/models/dashboard_models.dart';
@@ -28,7 +27,6 @@ class DashboardService {
   final SessionRepository _sessionRepo;
   final PlanAdherenceRepository _adherenceRepo;
   final TopicRepository _topicRepo;
-  final QuestionRepository _questionRepo;
 
   DashboardService({
     MasteryGraphService? masteryService,
@@ -37,7 +35,6 @@ class DashboardService {
     SessionRepository? sessionRepo,
     PlanAdherenceRepository? adherenceRepo,
     TopicRepository? topicRepo,
-    QuestionRepository? questionRepo,
     AppLocalizations? l10n,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _progressTracker = progressTracker ??
@@ -45,15 +42,13 @@ class DashboardService {
               attemptRepo: AttemptRepository(),
               masteryService: MasteryGraphService(),
               sessionRepo: sessionRepo,
-              questionRepo: questionRepo ?? QuestionRepository(),
               l10n: l10n ?? _dashboardServiceDefaultL10n(),
             ),
         _planOrchestrator = planOrchestrator ??
             PlanAdherenceOrchestrator(l10n: l10n ?? _dashboardServiceDefaultL10n()),
         _sessionRepo = sessionRepo ?? SessionRepository(),
         _adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
-        _topicRepo = topicRepo ?? TopicRepository(),
-        _questionRepo = questionRepo ?? QuestionRepository();
+        _topicRepo = topicRepo ?? TopicRepository();
 
   Future<Result<void>> init() async {
     try {
@@ -62,7 +57,6 @@ class DashboardService {
         _planOrchestrator.adherenceRepository.init(),
         _topicRepo.init(),
         _sessionRepo.init(),
-        _questionRepo.init(),
       ]);
       return Result.success(null);
     } catch (e) {
