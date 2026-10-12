@@ -342,7 +342,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
           ),
         );
         if (confirmed != true) {
-          setState(() => _isScheduling = false);
+          // The finally block below resets _isScheduling with a mounted guard.
           return;
         }
       }

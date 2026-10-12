@@ -697,6 +697,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
     );
 
     if (picked != null) {
+      if (!mounted) return;
       setState(() {
         _selectedDate = picked;
       });
@@ -748,6 +749,7 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       ),
     );
 
+    if (!mounted) return;
     setState(() {
       _selectedSubject = selected;
     });

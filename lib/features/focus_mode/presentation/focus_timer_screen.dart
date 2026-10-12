@@ -536,6 +536,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
     );
     if (result == true) {
       await _service.cancelSession();
+      if (!mounted) return true;
       setState(() {});
       await _loadStats();
     }
@@ -1197,6 +1198,7 @@ class _FocusTimerScreenState extends ConsumerState<FocusTimerScreen> with Widget
               },
               onCancel: () async {
                 await _service.cancelSession();
+                if (!mounted) return;
                 setState(() {});
                 _loadStats();
               },

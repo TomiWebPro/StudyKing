@@ -466,6 +466,70 @@ void main() {
         expect(find.text('11:00 AM'), findsOneWidget);
       },
     );
+
+    testWidgets(
+      'cancelling the reschedule dialog after the sheet is removed does not setState after dispose',
+      (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => MediaQuery(
+                      data: const MediaQueryData(size: Size(400, 800)),
+                      child: LessonBookingSheet(
+                        topicId: 'topic-1',
+                        topicTitle: 'Algebra Basics',
+                        subjectId: 'subj-1',
+                        initialDate: DateTime(2026, 1, 10, 10, 0),
+                        excludeSessionId: 'session-1',
+                        onSchedule: _fakeSchedule,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ));
+
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Scheduling an existing session opens the reschedule
+        // confirmation dialog. Discrete pumps: the scheduling button
+        // shows an indeterminate spinner while _isScheduling is true.
+        await tester.tap(find.text('Schedule Lesson').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Reschedule lesson'), findsOneWidget);
+
+        // The sheet's route is removed programmatically while the
+        // confirmation dialog is open, disposing the sheet State.
+        final sheetContext = tester.element(find.byType(LessonBookingSheet));
+        final navigator = Navigator.of(sheetContext);
+        navigator.removeRoute(ModalRoute.of(sheetContext)!);
+        await tester.pump();
+        expect(find.byType(LessonBookingSheet), findsNothing);
+
+        // Cancelling completes the dialog future after disposal. The
+        // finally block still resets _isScheduling, but only when
+        // mounted — no "setState() called after dispose()".
+        await tester.tap(find.widgetWithText(TextButton, 'Cancel'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }
 

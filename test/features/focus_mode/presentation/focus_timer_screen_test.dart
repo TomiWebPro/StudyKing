@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -205,6 +207,28 @@ class FakeStudyTimerService extends StudyTimerService {
 
   @override
   Future<Result<void>> dispose() async => Result.success(null);
+}
+
+/// Keeps the cancelSession future pending until the test completes it,
+/// so tests can dispose the screen while the cancellation is in flight.
+class _DelayedCancelService extends FakeStudyTimerService {
+  final Completer<Result<Session>> cancelCompleter;
+  _DelayedCancelService({required this.cancelCompleter});
+
+  @override
+  bool get hasActiveSession => true;
+
+  @override
+  Session? get currentSession => Session(
+        id: 'delayed_session',
+        studentId: '',
+        type: SessionType.focus,
+        startTime: DateTime.now(),
+        plannedDurationMinutes: 25,
+      );
+
+  @override
+  Future<Result<Session>> cancelSession() => cancelCompleter.future;
 }
 
 class _FakeCapReachedService extends FakeStudyTimerService {
@@ -889,5 +913,86 @@ void main() {
 
       expect(observer.poppedRoutes, isEmpty);
     });
+  });
+
+  group('FocusTimerScreen - post-await dispose guards', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(800, 2000);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets(
+      'end-session completion after the screen is disposed does not setState after dispose',
+      (tester) async {
+        final cancelCompleter = Completer<Result<Session>>();
+        final service =
+            _DelayedCancelService(cancelCompleter: cancelCompleter);
+        await tester.pumpWidget(
+            _wrapApp(const FocusTimerScreen(), serviceOverride: service));
+        // The active-session view runs a repeating pulse animation, so
+        // discrete pumps are used instead of pumpAndSettle.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // The active-session view renders the End affordance.
+        await tester.ensureVisible(find.widgetWithText(OutlinedButton, 'End'));
+        await tester.tap(find.widgetWithText(OutlinedButton, 'End'));
+        await tester.pump();
+
+        // The screen is popped (State disposed) while cancelSession is
+        // still in flight.
+        await tester.pumpWidget(const SizedBox());
+
+        // The cancellation completes after disposal. Without the mounted
+        // guard this throws "setState() called after dispose()".
+        cancelCompleter.complete(Result.success(service.currentSession!));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'exit-confirmation completion after the screen is disposed does not setState after dispose',
+      (tester) async {
+        final cancelCompleter = Completer<Result<Session>>();
+        final service =
+            _DelayedCancelService(cancelCompleter: cancelCompleter);
+        await tester.pumpWidget(
+            _wrapApp(const FocusTimerScreen(), serviceOverride: service));
+        // The active-session view runs a repeating pulse animation, so
+        // discrete pumps are used instead of pumpAndSettle.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // The back gesture consults PopScope: with an active session
+        // _onWillPop raises the exit confirmation dialog.
+        final navigator =
+            Navigator.of(tester.element(find.byType(FocusTimerScreen)));
+        await navigator.maybePop();
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+        expect(find.text('End focus session?'), findsOneWidget);
+
+        // Confirming ends the session: the dialog completes while
+        // cancelSession is still in flight.
+        await tester.tap(find.widgetWithText(TextButton, 'End Session'));
+        await tester.pump();
+
+        await tester.pumpWidget(const SizedBox());
+        cancelCompleter.complete(Result.success(service.currentSession!));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

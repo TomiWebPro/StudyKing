@@ -1203,4 +1203,94 @@ void main() {
       expect(hasSemanticsWithHint, findsAtLeast(1));
     });
   });
+
+  group('SessionHistoryScreen - post-await dispose guards', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets(
+      'picking a date after the screen route was removed does not setState after dispose',
+      (tester) async {
+        final repo = _FakeSessionRepository(seed: [
+          Session(
+            id: 's1',
+            studentId: 'u1',
+            subjectId: 'math',
+            startTime: DateTime.now(),
+            questionsAnswered: 10,
+            correctAnswers: 8,
+            actualDurationMs: 1800000,
+            type: SessionType.manual,
+          ),
+        ]);
+        await tester.pumpWidget(_buildTestApp(repo));
+        await tester.pumpAndSettle();
+
+        // Open the date filter picker.
+        await tester.tap(find.text('Filter by Date'));
+        await tester.pumpAndSettle();
+        expect(find.byType(DatePickerDialog), findsOneWidget);
+
+        // The screen's route is removed programmatically while the
+        // picker is open (deep-link / programmatic navigation),
+        // disposing the State.
+        final screenContext = tester.element(find.byType(SessionHistoryScreen));
+        final navigator = Navigator.of(screenContext);
+        navigator.removeRoute(ModalRoute.of(screenContext)!);
+        await tester.pump();
+        expect(find.byType(SessionHistoryScreen), findsNothing);
+
+        // Confirming the pick completes the picker future after
+        // disposal. Without the mounted guard this throws
+        // "setState() called after dispose()".
+        await tester.tap(find.text('OK'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'selecting a subject after the screen route was removed does not setState after dispose',
+      (tester) async {
+        final repo = _FakeSessionRepository(seed: [
+          Session(
+            id: 's1',
+            studentId: 'u1',
+            subjectId: 'math',
+            startTime: DateTime.now(),
+            questionsAnswered: 10,
+            correctAnswers: 8,
+            actualDurationMs: 1800000,
+            type: SessionType.manual,
+          ),
+        ]);
+        await tester.pumpWidget(_buildTestApp(repo));
+        await tester.pumpAndSettle();
+
+        // Open the subject filter dialog.
+        await tester.tap(find.text('Filter by Subject'));
+        await tester.pumpAndSettle();
+        expect(find.widgetWithText(ListTile, 'math'), findsOneWidget);
+
+        final screenContext = tester.element(find.byType(SessionHistoryScreen));
+        final navigator = Navigator.of(screenContext);
+        navigator.removeRoute(ModalRoute.of(screenContext)!);
+        await tester.pump();
+        expect(find.byType(SessionHistoryScreen), findsNothing);
+
+        // Tapping a subject completes the dialog future after
+        // disposal. Without the mounted guard this throws
+        // "setState() called after dispose()".
+        await tester.tap(find.widgetWithText(ListTile, 'math'));
+        await tester.pumpAndSettle();
+
+        expect(tester.takeException(), isNull);
+      },
+    );
+  });
 }
