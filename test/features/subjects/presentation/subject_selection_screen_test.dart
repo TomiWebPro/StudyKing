@@ -1,8 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
+import 'package:studyking/features/subjects/data/adapters.dart';
+import 'package:studyking/features/subjects/data/curriculum_seed_data.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/features/subjects/providers/subjects_repository_provider.dart';
 import 'package:studyking/features/subjects/presentation/subject_selection_screen.dart';
@@ -55,6 +63,20 @@ class _SlowSubjectRepository extends SubjectRepository {
   @override
   Future<Result<void>> create(Subject subject) async {
     await Future<void>.delayed(const Duration(milliseconds: 50));
+    return Result.success(null);
+  }
+}
+
+/// Fake that also captures the screen's `put` call (used to persist the
+/// updated subject carrying its seeded topic IDs) into the in-memory box,
+/// so assertions can inspect the final subject state without a real
+/// subjects Hive box.
+class _RecordingSubjectRepository extends _FakeSubjectRepository {
+  _RecordingSubjectRepository(super.box);
+
+  @override
+  Future<Result<void>> put(String id, Subject value) async {
+    await _box.put(id, value);
     return Result.success(null);
   }
 }
@@ -569,6 +591,101 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(observer.poppedRoutes, isEmpty);
+    });
+
+    group('seed topic creation', () {
+      setUpAll(() async {
+        Hive.init(Directory.systemTemp.createTempSync('subject_selection_').path);
+        registerSubjectsAdapters();
+        await TopicRepository().init();
+      });
+
+      int seedRecordCount(CurriculumSeedEntry entry) => entry.topics
+          .fold(0, (sum, topic) => sum + 1 + topic.subtopics.length);
+
+      Future<void> saveSeededSubject(WidgetTester tester, _RecordingSubjectRepository repo, String name) async {
+        // The save flow pops the screen after the upload
+        // prompt is dismissed, which leaves the (now empty)
+        // NavigatorState preserved across pumpWidget. A
+        // fresh root key forces a new element tree so the
+        // next subject's screen builds its form fields.
+        await tester.pumpWidget(KeyedSubtree(
+          key: ValueKey('seed-$name'),
+          child: _buildTestApp(repo),
+        ));
+        await tester.pumpAndSettle();
+
+        await tester.enterText(find.byType(TextFormField).first, name);
+        await tester.pump();
+
+        await tester.tap(find.text('Save'));
+        await tester.pump();
+        // The seed flow performs many sequential Hive writes. Real
+        // I/O futures only complete while the real event loop runs
+        // (tester.runAsync), and dialogs only render on pumped
+        // frames, so interleave both until the dialog appears.
+        for (var i = 0; i < 300; i++) {
+          if (find.text('Topics Created').evaluate().isNotEmpty) break;
+          await tester.pump(const Duration(milliseconds: 10));
+          await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 10)));
+        }
+
+        // Seed flow shows the "Topics Created" dialog.
+        expect(find.text('Topics Created'), findsOneWidget);
+        await tester.tap(find.text('OK'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Then the upload prompt for the new subject.
+        expect(find.text('Subject created successfully'), findsOneWidget);
+        await tester.tap(find.text('No thanks'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+      }
+
+      testWidgets('seeded topics and subtopics get unique IDs and every record is persisted', (tester) async {
+        final box = _FakeSubjectBox();
+        final repo = _RecordingSubjectRepository(box);
+
+        final chemistryCount = seedRecordCount(findSeedEntry('IB Chemistry')!);
+        final physicsCount = seedRecordCount(findSeedEntry('IB Physics')!);
+
+        // Seed two subjects back-to-back; their topic/subtopic
+        // IDs must not collide with each other or within a
+        // single seed.
+        await tester.runAsync(() => Hive.box<Topic>(HiveBoxNames.topics).clear());
+        await saveSeededSubject(tester, repo, 'IB Chemistry');
+        await saveSeededSubject(tester, repo, 'IB Physics');
+
+        // Every seeded topic/subtopic was persisted exactly once
+        // (no ID overwrites in the topics box).
+        final savedTopics = Hive.box<Topic>(HiveBoxNames.topics).values.toList();
+        expect(savedTopics, hasLength(chemistryCount + physicsCount));
+
+        final ids = savedTopics.map((t) => t.id).toList();
+        expect(ids.toSet().length, ids.length, reason: 'topic IDs must be unique');
+        for (final id in ids) {
+          expect(id.startsWith('topic_'), isTrue);
+        }
+
+        // Subtopics are linked to an existing parent topic of the same subject.
+        final byId = {for (final t in savedTopics) t.id: t};
+        for (final topic in savedTopics) {
+          if (topic.parentId != null) {
+            expect(byId[topic.parentId], isNotNull);
+            expect(byId[topic.parentId]!.subjectId, topic.subjectId);
+          }
+        }
+
+        // Each subject records the full, duplicate-free topic ID list.
+        final subjects = await repo.getAll();
+        expect(subjects.data, hasLength(2));
+        final byName = {for (final s in subjects.data!) s.name: s};
+        expect(byName['IB Chemistry']!.topicIds, hasLength(chemistryCount));
+        expect(byName['IB Chemistry']!.topicIds.toSet().length, chemistryCount);
+        expect(byName['IB Physics']!.topicIds, hasLength(physicsCount));
+        expect(byName['IB Physics']!.topicIds.toSet().length, physicsCount);
+      });
     });
   });
 }
