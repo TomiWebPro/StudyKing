@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -45,6 +47,23 @@ void main() {
 
     setUp(() {
       studentIdService = FakeStudentIdService('student-1');
+    });
+
+    group('architecture boundary', () {
+      test('tool does not import other features', () {
+        // Regression guard for the feature→feature import rule enforced by
+        // test/architecture/architectural_constraints_test.dart:
+        // the adherence-trends tool may only depend on core and its own
+        // feature. Records are read through the core
+        // PlanAdherenceOrchestrator and projected into a private snapshot.
+        final source = File(
+          'lib/features/mentor/services/tools/get_adherence_trends_tool.dart',
+        ).readAsStringSync();
+        final featureImports = RegExp(
+          r"""import ['"]package:studyking/features/(\w+)/""",
+        ).allMatches(source);
+        expect(featureImports, isEmpty);
+      });
     });
 
     test('returns structured output with correct fields for real data',

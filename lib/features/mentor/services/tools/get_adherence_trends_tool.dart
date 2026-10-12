@@ -3,7 +3,6 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
 /// Per-day adherence aggregate. Adherence records are created per finished
 /// session (see `PersonalLearningPlanService.recordDailyAdherence`), so a day
@@ -24,6 +23,26 @@ class _DayAdherence {
     required this.plannedMinutes,
     required this.actualMinutes,
     required this.adherence,
+  });
+}
+
+/// Plain projection of an adherence record with exactly the fields the
+/// trend aggregation needs. Records are read through the core
+/// [PlanAdherenceOrchestrator] and projected here so this tool stays
+/// decoupled from the planner feature's model (feature→feature rule).
+class _AdherenceSnapshot {
+  final DateTime date;
+  final int plannedQuestions;
+  final int actualQuestions;
+  final int plannedMinutes;
+  final int actualMinutes;
+
+  const _AdherenceSnapshot({
+    required this.date,
+    required this.plannedQuestions,
+    required this.actualQuestions,
+    required this.plannedMinutes,
+    required this.actualMinutes,
   });
 }
 
@@ -85,7 +104,17 @@ class GetAdherenceTrendsTool extends AgentTool {
       };
     }
 
-    final dailySummaries = _aggregateByDay(records);
+    final dailySummaries = _aggregateByDay(
+      records.map(
+        (record) => _AdherenceSnapshot(
+          date: record.date,
+          plannedQuestions: record.plannedQuestions,
+          plannedMinutes: record.plannedMinutes,
+          actualQuestions: record.actualQuestions,
+          actualMinutes: record.actualMinutes,
+        ),
+      ).toList(),
+    );
 
     final avgAdherence = dailySummaries.fold<double>(0.0, (s, d) => s + d.adherence) /
         dailySummaries.length;
@@ -127,8 +156,8 @@ class GetAdherenceTrendsTool extends AgentTool {
   /// Collapses the raw records into one entry per calendar day. Same-day
   /// sessions are summed so a day's adherence reflects the day's total
   /// effort against that day's plan targets (each day counts once).
-  static List<_DayAdherence> _aggregateByDay(List<PlanAdherenceModel> records) {
-    final byDay = <DateTime, List<PlanAdherenceModel>>{};
+  static List<_DayAdherence> _aggregateByDay(List<_AdherenceSnapshot> records) {
+    final byDay = <DateTime, List<_AdherenceSnapshot>>{};
     for (final record in records) {
       final day = record.date.dateOnly;
       byDay.putIfAbsent(day, () => []).add(record);
