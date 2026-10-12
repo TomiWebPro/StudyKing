@@ -70,19 +70,65 @@ class EmbeddingService {
         headers: _headers,
         body: jsonEncode({
           'model': modelId,
-          'input': text,
+          // Ollama's legacy /api/embeddings endpoint expects the text
+          // under "prompt"; OpenAI-compatible APIs use "input".
+          if (provider == LlmProvider.ollama)
+            'prompt': text
+          else
+            'input': text,
         }),
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final embedding = data['data'][0]['embedding'] as List;
-        return Result.success(embedding.map((e) => (e as num).toDouble()).toList());
+        final embedding = _extractEmbedding(data);
+        if (embedding == null) {
+          return Result.failure(
+            'Embedding API Error: unrecognized response shape',
+          );
+        }
+        return Result.success(embedding);
       }
       return Result.failure('Embedding API Error: ${response.statusCode}');
     } catch (e) {
       _logger.w('Embedding error', e);
       return Result.failure(e.toString());
+    }
+  }
+
+  /// Parses the embedding vector from the provider-specific response
+  /// shapes: OpenAI-compatible (`data[0].embedding`), Ollama legacy
+  /// (`embedding`), and Ollama newer (`embeddings[0]`).
+  List<double>? _extractEmbedding(dynamic body) {
+    if (body is! Map) return null;
+
+    final dataList = body['data'] as List?;
+    if (dataList != null && dataList.isNotEmpty) {
+      final first = dataList.first;
+      if (first is Map) {
+        final embedding = first['embedding'] as List?;
+        if (embedding != null) return _toDoubleList(embedding);
+      }
+    }
+
+    final direct = body['embedding'] as List?;
+    if (direct != null) return _toDoubleList(direct);
+
+    final batch = body['embeddings'] as List?;
+    if (batch != null && batch.isNotEmpty) {
+      final first = batch.first;
+      if (first is List) return _toDoubleList(first);
+    }
+
+    return null;
+  }
+
+  List<double>? _toDoubleList(List values) {
+    try {
+      return values.map((e) => (e as num).toDouble()).toList();
+    } catch (e) {
+      _logger.w('Failed to convert embedding values', e);
+      return null;
     }
   }
 }

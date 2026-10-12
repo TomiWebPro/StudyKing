@@ -158,6 +158,113 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, [0.5]);
       });
+
+      test('sends prompt field for Ollama legacy endpoint', () async {
+        final client = _FakeHttpClient();
+        client.handler = (request) async {
+          final body = jsonDecode(request.body) as Map<String, dynamic>;
+          expect(body['model'], 'nomic-embed-text');
+          expect(body['prompt'], 'Hello Ollama');
+          expect(body.containsKey('input'), isFalse);
+          return http.Response(
+            jsonEncode({'embedding': [1.0, 2.0, 3.0]}),
+            200,
+            headers: {'Content-Type': 'application/json'},
+          );
+        };
+
+        final service = EmbeddingService(
+          apiKey: '',
+          provider: LlmProvider.ollama,
+          httpClient: client,
+        );
+        final result = await service.embed(
+          text: 'Hello Ollama',
+          modelId: 'nomic-embed-text',
+        );
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [1.0, 2.0, 3.0]);
+      });
+
+      test('parses Ollama legacy top-level embedding response', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response(
+          jsonEncode({
+            'model': 'nomic-embed-text',
+            'embedding': [0.25, 0.5, 0.75],
+          }),
+          200,
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        final service = EmbeddingService(
+          apiKey: '',
+          provider: LlmProvider.ollama,
+          httpClient: client,
+        );
+        final result = await service.embed(text: 'Test', modelId: 'm');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.25, 0.5, 0.75]);
+      });
+
+      test('parses Ollama newer embeddings array response', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response(
+          jsonEncode({
+            'model': 'm',
+            'embeddings': [
+              [0.4, 0.6]
+            ],
+          }),
+          200,
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        final service = EmbeddingService(
+          apiKey: '',
+          provider: LlmProvider.ollama,
+          httpClient: client,
+        );
+        final result = await service.embed(text: 'Test', modelId: 'm');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, [0.4, 0.6]);
+      });
+
+      test('fails gracefully on unrecognized Ollama response shape',
+          () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response(
+          jsonEncode({'model': 'm'}),
+          200,
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        final service = EmbeddingService(
+          apiKey: '',
+          provider: LlmProvider.ollama,
+          httpClient: client,
+        );
+        final result = await service.embed(text: 'Test', modelId: 'm');
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('unrecognized response shape'));
+      });
+
+      test('fails gracefully on empty OpenAI data array', () async {
+        final client = _FakeHttpClient();
+        client.handler = (_) async => http.Response(
+          jsonEncode({'data': []}),
+          200,
+          headers: {'Content-Type': 'application/json'},
+        );
+
+        final service = EmbeddingService(
+          apiKey: 'key',
+          httpClient: client,
+        );
+        final result = await service.embed(text: 'Hi', modelId: 'm');
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('unrecognized response shape'));
+      });
     });
 
     group('OpenAI provider', () {
