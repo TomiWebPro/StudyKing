@@ -170,5 +170,66 @@ void main() {
       );
       expect(result.matched, isFalse);
     });
+
+    test('does not false-positive on "because" containing "use"', () {
+      final result = SyllabusSwitchParser.parse(
+        'I enjoy Math because it is fun',
+        availableTitles: available,
+      );
+      expect(result.matched, isFalse);
+    });
+
+    test('does not false-positive on "reopened" containing "open"', () {
+      final result = SyllabusSwitchParser.parse(
+        'I reopened my Science notes',
+        availableTitles: available,
+      );
+      expect(result.matched, isFalse);
+    });
+
+    test('does not false-positive on "exchange" containing "change"', () {
+      final result = SyllabusSwitchParser.parse(
+        'let us exchange Math notes',
+        availableTitles: available,
+      );
+      expect(result.matched, isFalse);
+    });
+
+    test('does not match a title embedded in a longer word', () {
+      const titles = ['Art'];
+      final result = SyllabusSwitchParser.parse(
+        'open the parts of speech worksheets',
+        availableTitles: titles,
+      );
+      expect(result.matched, isFalse);
+    });
+
+    test('prefers the longest matching title', () {
+      const titles = ['Math', 'Math Advanced'];
+      final result = SyllabusSwitchParser.parse(
+        'switch to Math Advanced',
+        availableTitles: titles,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Math Advanced');
+    });
+
+    test('matches whole-word switch verb', () {
+      final result = SyllabusSwitchParser.parse(
+        'I will use Math from now on',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Math');
+    });
+
+    test('matches "go to" phrasing with a known title', () {
+      final result = SyllabusSwitchParser.parse(
+        'go to Science',
+        availableTitles: available,
+      );
+      expect(result.matched, isTrue);
+      expect(result.syllabusTitle, 'Science');
+    });
   });
 }

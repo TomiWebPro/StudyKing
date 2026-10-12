@@ -88,10 +88,14 @@ class SyllabusSwitchParser {
     }
 
     // There is a known title mentioned.  Confirm switch intent via one of:
+    //   • Explicit verbs: switch / change / select / use / open / go to
     //   • Command-style:  "to [title]", "with [title]", "[title] syllabus"
-    //   • Explicit verbs: switch / change / select / use
+    //
+    // Verbs must match as whole words: raw substring matching would turn
+    // "because" into "use", "reopened" into "open", and "exchange" into
+    // "change", none of which express switch intent.
     final hasExplicitVerb =
-        _switchKeywords.any((k) => normalized.contains(k));
+        _switchKeywords.any((k) => _matchesWholeWord(normalized, k));
 
     if (hasExplicitVerb) {
       return SyllabusSwitchResult(matched: true, syllabusTitle: matchedTitle);
@@ -104,10 +108,11 @@ class SyllabusSwitchParser {
     // is escaped from its normalized form because the haystack
     // (`normalized`) is lowercased and RegExp is case-sensitive.
     final normalizedTitle = matchedTitle.normalized;
+    final titleToken = _tokenPattern(normalizedTitle);
     final patterns = [
-      RegExp('\\b(to|with|for|about)\\s+${_escapedMatchPattern(normalizedTitle)}\\b'),
-      RegExp('${_escapedMatchPattern(normalizedTitle)}\\s+(syllabus|subject|topic)'),
-      RegExp('${_escapedMatchPattern(normalizedTitle)}\\s+(please|now|thanks)'),
+      RegExp('\\b(to|with|for|about)\\s+$titleToken'),
+      RegExp('$titleToken\\s+(syllabus|subject|topic)'),
+      RegExp('$titleToken\\s+(please|now|thanks)'),
     ];
 
     for (final pattern in patterns) {
@@ -128,13 +133,36 @@ class SyllabusSwitchParser {
     );
   }
 
+  /// Regex fragment matching [title] as a standalone token sequence: it
+  /// must not be preceded or followed by an ASCII letter or digit. This
+  /// keeps "Math" from matching inside "Mathew" or "MathAdvanced", while
+  /// titles containing punctuation (e.g. "C++", "Math 101 (Honors)")
+  /// still match.
+  static String _tokenPattern(String title) {
+    return '(?<![a-z0-9])${_escapedMatchPattern(title)}(?![a-z0-9])';
+  }
+
+  /// Whether [keyword] occurs in [text] as a whole word or phrase, not as
+  /// a substring of a longer word (e.g. "use" inside "because").
+  static bool _matchesWholeWord(String text, String keyword) {
+    return RegExp('\\b${_escapedMatchPattern(keyword)}\\b').hasMatch(text);
+  }
+
   static String? _matchTitle(String text, List<String> availableTitles) {
+    // Match titles as standalone tokens (not inside longer words) and
+    // prefer the longest match so "Math Advanced" wins over "Math" when
+    // both are available syllabi and the student names the longer one.
+    String? bestMatch;
+    var bestLength = -1;
     for (final title in availableTitles) {
       final normalizedTitle = title.normalized;
-      if (normalizedTitle.isNotEmpty && text.contains(normalizedTitle)) {
-        return title;
+      if (normalizedTitle.isEmpty) continue;
+      if (!RegExp(_tokenPattern(normalizedTitle)).hasMatch(text)) continue;
+      if (normalizedTitle.length > bestLength) {
+        bestMatch = title;
+        bestLength = normalizedTitle.length;
       }
     }
-    return null;
+    return bestMatch;
   }
 }
