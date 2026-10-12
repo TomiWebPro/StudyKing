@@ -6294,4 +6294,39 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get slideGridTooltip => 'Slide grid';
+
+  @override
+  String get subjectAlreadyInPlan => 'Subject already in plan';
+
+  @override
+  String get subjectAddedToPlan => 'Subject added to plan';
+
+  @override
+  String get noProgressYet => 'No progress yet';
+
+  @override
+  String subjectNotPracticedYet(String subjectTitle) {
+    return 'You haven\'t practiced $subjectTitle yet. Start by uploading materials or scheduling a lesson.';
+  }
+
+  @override
+  String moveLessonConfirm(String topicTitle, String oldTime, String newTime) {
+    return 'Move $topicTitle lesson from $oldTime to $newTime?\n\nThis will update your schedule.';
+  }
+
+  @override
+  String estimatedFinish(String date) {
+    return '→ Estimated finish: $date';
+  }
+
+  @override
+  String subjectsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count subjects',
+      one: '1 subject',
+    );
+    return '$_temp0';
+  }
 }

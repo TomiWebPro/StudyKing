@@ -21,10 +21,10 @@ class RoadmapCard extends StatelessWidget {
     this.onDelete,
   });
 
-  String _formatTopicNames(List<String> topicIds) {
+  String _formatTopicNames(List<String> topicIds, AppLocalizations l10n) {
     if (topicIds.isEmpty) return '';
     if (topicIds.length <= 2) return topicIds.join(', ');
-    return '${topicIds.take(2).join(', ')}, +${topicIds.length - 2} more';
+    return '${topicIds.take(2).join(', ')}${l10n.andMoreCount(topicIds.length - 2)}';
   }
 
   @override
@@ -168,7 +168,7 @@ class RoadmapCard extends StatelessWidget {
                           )),
                       subtitle: milestone.topicsCovered.isNotEmpty
                           ? Text(
-                              _formatTopicNames(milestone.topicsCovered),
+                              _formatTopicNames(milestone.topicsCovered, l10n),
                               style: theme.textTheme.bodySmall?.copyWith(
                                 color: theme.colorScheme.onSurfaceVariant,
                               ),

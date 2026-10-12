@@ -59,11 +59,11 @@ class ProgressOverlayWidget extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    '${l10n.planned}: ${data.plannedMinutesToday} min',
+                    '${l10n.planned}: ${l10n.minutesValue(data.plannedMinutesToday)}',
                     style: theme.textTheme.bodySmall,
                   ),
                   Text(
-                    '${l10n.actual}: ${data.actualMinutesToday} min',
+                    '${l10n.actual}: ${l10n.minutesValue(data.actualMinutesToday)}',
                     style: theme.textTheme.bodySmall,
                   ),
                 ],
@@ -140,7 +140,7 @@ class ProgressOverlayWidget extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
                       Semantics(
-                        label: '${l10n.actual} ${day.actualMinutes} min',
+                        label: '${l10n.actual} ${l10n.minutesValue(day.actualMinutes)}',
                         child: Container(
                           width: 12,
                           height: actualH,
@@ -152,7 +152,7 @@ class ProgressOverlayWidget extends StatelessWidget {
                       ),
                       const SizedBox(height: 2),
                       Semantics(
-                        label: '${l10n.planned} ${day.plannedMinutes} min',
+                        label: '${l10n.planned} ${l10n.minutesValue(day.plannedMinutes)}',
                         child: Container(
                           width: 12,
                           height: plannedH,

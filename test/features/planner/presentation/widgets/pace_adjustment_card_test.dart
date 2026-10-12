@@ -164,7 +164,8 @@ PersonalLearningPlan _twoSubjectPlan() {
   );
 }
 
-Widget buildApp(Widget widget, PlannerService service) {
+Widget buildApp(Widget widget, PlannerService service,
+    {Locale locale = const Locale('en')}) {
   return ProviderScope(
     overrides: [
       plannerServiceProvider.overrideWithValue(service),
@@ -172,7 +173,7 @@ Widget buildApp(Widget widget, PlannerService service) {
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       home: Scaffold(body: widget),
     ),
   );
@@ -208,6 +209,28 @@ void main() {
       expect(find.text('Math'), findsOneWidget);
       expect(find.text('Physics'), findsOneWidget);
       expect(find.byType(Slider), findsNWidgets(2));
+    });
+
+    testWidgets('localizes the estimated finish label for the es locale',
+        (tester) async {
+      await tester.pumpWidget(
+        buildApp(
+          const PaceAdjustmentCard(),
+          _FakePlannerService(plan: _singleSubjectPlan()),
+          locale: const Locale('es'),
+        ),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      expect(
+        find.textContaining('Estimación de finalización'),
+        findsOneWidget,
+      );
     });
 
     testWidgets('dragging a per-subject slider updates that subject goal, '

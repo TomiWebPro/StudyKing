@@ -10340,6 +10340,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Slide grid'**
   String get slideGridTooltip;
+
+  /// Error when adding a subject that is already in the study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Subject already in plan'**
+  String get subjectAlreadyInPlan;
+
+  /// Success message after adding a subject to the study plan
+  ///
+  /// In en, this message translates to:
+  /// **'Subject added to plan'**
+  String get subjectAddedToPlan;
+
+  /// Shown on the syllabus progress card before any topic is mastered
+  ///
+  /// In en, this message translates to:
+  /// **'No progress yet'**
+  String get noProgressYet;
+
+  /// Hint on the syllabus progress card when no topic is mastered yet
+  ///
+  /// In en, this message translates to:
+  /// **'You haven\'t practiced {subjectTitle} yet. Start by uploading materials or scheduling a lesson.'**
+  String subjectNotPracticedYet(String subjectTitle);
+
+  /// Reschedule confirmation dialog content
+  ///
+  /// In en, this message translates to:
+  /// **'Move {topicTitle} lesson from {oldTime} to {newTime}?\n\nThis will update your schedule.'**
+  String moveLessonConfirm(String topicTitle, String oldTime, String newTime);
+
+  /// Pace adjustment card label for the estimated completion date
+  ///
+  /// In en, this message translates to:
+  /// **'→ Estimated finish: {date}'**
+  String estimatedFinish(String date);
+
+  /// Number of subjects in the plan summary
+  ///
+  /// In en, this message translates to:
+  /// **'{count,plural, =1{1 subject} other{{count} subjects}}'**
+  String subjectsCount(int count);
 }
 
 class _AppLocalizationsDelegate

@@ -131,7 +131,7 @@ class SyllabusProgressCard extends StatelessWidget {
                 Expanded(
                   child: Text(
                     masteredCount == 0
-                        ? 'No progress yet'
+                        ? l10n.noProgressYet
                         : '${l10n.mastered} $masteredCount / $totalTopics',
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
@@ -160,8 +160,7 @@ class SyllabusProgressCard extends StatelessWidget {
             if (masteredCount == 0 && totalTopics > 0) ...[
               const SizedBox(height: 12),
               Text(
-                'You haven\'t practiced ${goal.subjectTitle} yet. '
-                'Start by uploading materials or scheduling a lesson.',
+                l10n.subjectNotPracticedYet(goal.subjectTitle),
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),

@@ -6,11 +6,13 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 
 void main() {
-  Widget buildApp(Widget widget, {TestNavigatorObserver? navigatorObserver}) {
+  Widget buildApp(Widget widget,
+      {TestNavigatorObserver? navigatorObserver,
+      Locale locale = const Locale('en')}) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       home: Scaffold(body: widget),
     );
@@ -69,6 +71,29 @@ void main() {
 
       expect(find.text('8 new'), findsOneWidget);
       expect(find.text('4 review'), findsOneWidget);
+    });
+
+    testWidgets('localizes the subject count for the es locale',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        PlanSummaryCard(
+          summary: PlanSummary(
+            totalQuestions: 50,
+            totalMinutes: 300,
+            newTopics: 5,
+            reviewTopics: 3,
+            estimatedCoverage: 0.85,
+            focusAreas: [],
+          ),
+          syllabusGoals: const [
+            SyllabusGoal(subjectId: 'math', subjectTitle: 'Math'),
+            SyllabusGoal(subjectId: 'physics', subjectTitle: 'Physics'),
+          ],
+        ),
+        locale: const Locale('es'),
+      ));
+
+      expect(find.text('2 materias'), findsOneWidget);
     });
 
     testWidgets('shows estimated coverage percentage', (tester) async {

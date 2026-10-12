@@ -82,7 +82,7 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
               ],
             ),
             Text(
-              '→ Estimated finish: ${DateFormat.yMd(l10n.localeName).format(estEndDate)}',
+              l10n.estimatedFinish(DateFormat.yMd(l10n.localeName).format(estEndDate)),
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),

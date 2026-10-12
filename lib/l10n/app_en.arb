@@ -8270,5 +8270,47 @@
   "slideGridTooltip": "Slide grid",
   "@slideGridTooltip": {
     "description": "Tooltip for toggling the slide thumbnail grid"
+  },
+  "subjectAlreadyInPlan": "Subject already in plan",
+  "@subjectAlreadyInPlan": {
+    "description": "Error when adding a subject that is already in the study plan"
+  },
+  "subjectAddedToPlan": "Subject added to plan",
+  "@subjectAddedToPlan": {
+    "description": "Success message after adding a subject to the study plan"
+  },
+  "noProgressYet": "No progress yet",
+  "@noProgressYet": {
+    "description": "Shown on the syllabus progress card before any topic is mastered"
+  },
+  "subjectNotPracticedYet": "You haven't practiced {subjectTitle} yet. Start by uploading materials or scheduling a lesson.",
+  "@subjectNotPracticedYet": {
+    "description": "Hint on the syllabus progress card when no topic is mastered yet",
+    "placeholders": {
+      "subjectTitle": { "type": "String" }
+    }
+  },
+  "moveLessonConfirm": "Move {topicTitle} lesson from {oldTime} to {newTime}?\n\nThis will update your schedule.",
+  "@moveLessonConfirm": {
+    "description": "Reschedule confirmation dialog content",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "oldTime": { "type": "String" },
+      "newTime": { "type": "String" }
+    }
+  },
+  "estimatedFinish": "→ Estimated finish: {date}",
+  "@estimatedFinish": {
+    "description": "Pace adjustment card label for the estimated completion date",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "subjectsCount": "{count,plural, =1{1 subject} other{{count} subjects}}",
+  "@subjectsCount": {
+    "description": "Number of subjects in the plan summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   }
 }

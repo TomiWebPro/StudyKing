@@ -20,11 +20,11 @@ void main() {
     subjectTitle: 'Mathematics',
   );
 
-  Widget buildApp(Widget widget) {
+  Widget buildApp(Widget widget, {Locale locale = const Locale('en')}) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       home: Scaffold(body: widget),
     );
   }
@@ -124,6 +124,28 @@ void main() {
 
       expect(find.text('No progress yet'), findsOneWidget);
       expect(find.text('0%'), findsOneWidget);
+    });
+
+    testWidgets('localizes the empty-progress text for the es locale',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        SyllabusProgressCard(
+          studentId: 'student-1',
+          goal: goal,
+          masteryStatesOverride: [],
+          totalTopicsOverride: 2,
+        ),
+        locale: const Locale('es'),
+      ));
+
+      expect(find.text('Sin progreso aún'), findsOneWidget);
+      expect(
+        find.text(
+          'Aún no has practicado Mathematics. '
+          'Empieza subiendo materiales o programando una lección.',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('shows partial progress when some topics mastered', (tester) async {

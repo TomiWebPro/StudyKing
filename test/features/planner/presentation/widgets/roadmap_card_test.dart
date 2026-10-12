@@ -7,11 +7,11 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 
 void main() {
 
-  Widget buildApp(Widget widget) {
+  Widget buildApp(Widget widget, {Locale locale = const Locale('en')}) {
     return MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       home: Scaffold(body: SingleChildScrollView(child: widget)),
     );
   }
@@ -39,6 +39,7 @@ void main() {
     String title = 'Milestone 1',
     bool isCompleted = false,
     int order = 1,
+    List<String> topicsCovered = const ['topic-1'],
   }) {
     return MilestoneModel(
       id: id,
@@ -46,7 +47,7 @@ void main() {
       deadline: DateTime.now().add(Duration(days: 30 * order)),
       isCompleted: isCompleted,
       order: order,
-      topicsCovered: ['topic-1'],
+      topicsCovered: topicsCovered,
     );
   }
 
@@ -94,6 +95,23 @@ void main() {
       ));
 
       expect(find.text('Milestone 1'), findsOneWidget);
+    });
+
+    testWidgets('localizes the truncated topic list for the es locale',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        RoadmapCard(
+          roadmap: roadmap(milestones: [
+            milestone(
+              topicsCovered: ['topic-1', 'topic-2', 'topic-3', 'topic-4'],
+            ),
+          ]),
+          onToggleMilestone: (_, __, ___) {},
+        ),
+        locale: const Locale('es'),
+      ));
+
+      expect(find.text('topic-1, topic-2... y 2 más'), findsOneWidget);
     });
 
     testWidgets('target completion date is shown', (tester) async {

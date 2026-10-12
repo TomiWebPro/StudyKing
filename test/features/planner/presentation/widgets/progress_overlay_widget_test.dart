@@ -4,11 +4,11 @@ import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/presentation/widgets/progress_overlay_widget.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
-Widget buildApp(Widget widget) {
+Widget buildApp(Widget widget, {Locale locale = const Locale('en')}) {
   return MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
+    locale: locale,
     home: Scaffold(body: widget),
   );
 }
@@ -31,11 +31,31 @@ void main() {
       ));
 
       expect(find.text('Progress Overview'), findsOneWidget);
-      expect(find.text('Planned: 60 min'), findsOneWidget);
-      expect(find.text('Actual: 45 min'), findsOneWidget);
+      expect(find.text('Planned: 60 minutes'), findsOneWidget);
+      expect(find.text('Actual: 45 minutes'), findsOneWidget);
       expect(find.text('75%'), findsOneWidget);
       expect(find.textContaining('15/30'), findsOneWidget);
       expect(find.textContaining('50%'), findsOneWidget);
+    });
+
+    testWidgets('localizes planned and actual minutes for the es locale',
+        (tester) async {
+      await tester.pumpWidget(buildApp(
+        const ProgressOverlayWidget(
+          data: PlanProgressData(
+            plannedMinutesToday: 60,
+            actualMinutesToday: 45,
+            todayProgress: 0.75,
+            totalPlanDays: 30,
+            completedDays: 15,
+            cumulativeProgress: 0.5,
+          ),
+        ),
+        locale: const Locale('es'),
+      ));
+
+      expect(find.text('Planificado: 60 minutos'), findsOneWidget);
+      expect(find.text('Real: 45 minutos'), findsOneWidget);
     });
 
     testWidgets('displays chart icon', (tester) async {

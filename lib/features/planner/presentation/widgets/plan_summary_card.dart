@@ -55,7 +55,7 @@ class PlanSummaryCard extends StatelessWidget {
                           style: Theme.of(context).textTheme.titleMedium),
                       if (hasMultipleSubjects)
                         Text(
-                          '${syllabusGoals!.length} subjects',
+                          l10n.subjectsCount(syllabusGoals!.length),
                           style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: Theme.of(context).colorScheme.onSurfaceVariant,
                           ),

@@ -326,8 +326,7 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
           builder: (ctx) => AlertDialog(
             title: Text(l10n.rescheduleLesson),
             content: Text(
-              'Move ${widget.topicTitle} lesson from $oldTime to $newTime?\n\n'
-              'This will update your schedule.',
+              l10n.moveLessonConfirm(widget.topicTitle, oldTime, newTime),
             ),
             actions: [
               TextButton(

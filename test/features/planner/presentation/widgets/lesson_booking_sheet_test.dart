@@ -9,11 +9,12 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../../helpers/navigator_observer_helper.dart';
 
-Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet) async {
+Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet,
+    {Locale locale = const Locale('en')}) async {
   await tester.pumpWidget(MaterialApp(
     localizationsDelegates: AppLocalizations.localizationsDelegates,
     supportedLocales: AppLocalizations.supportedLocales,
-    locale: const Locale('en'),
+    locale: locale,
     home: Scaffold(
       body: Center(
         child: Builder(
@@ -464,6 +465,41 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         expect(find.text('11:00 AM'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'localizes the reschedule confirmation dialog for the es locale',
+      (tester) async {
+        await _showSheet(
+          tester,
+          LessonBookingSheet(
+            topicId: 'topic-1',
+            topicTitle: 'Algebra Basics',
+            subjectId: 'subj-1',
+            initialDate: DateTime(2026, 1, 10, 10, 0),
+            excludeSessionId: 'session-1',
+            onSchedule: _fakeSchedule,
+          ),
+          locale: const Locale('es'),
+        );
+
+        await tester.tap(find.text('Programar Lección').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('Reprogramar lección'), findsOneWidget);
+        expect(
+          find.textContaining('¿Mover la lección de Algebra Basics de'),
+          findsOneWidget,
+        );
+        expect(find.textContaining('Esto actualizará tu horario.'), findsOneWidget);
+
+        await tester.tap(find.widgetWithText(TextButton, 'Cancelar'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(tester.takeException(), isNull);
       },
     );
 

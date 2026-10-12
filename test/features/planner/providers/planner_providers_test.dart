@@ -25,6 +25,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 class _FakePlanRepository extends PlanRepository {
   PersonalLearningPlan? _plan;
@@ -1710,6 +1711,93 @@ void main() {
       });
     });
 
+    group('addSubjectToPlan', () {
+      PersonalLearningPlan planWithGoal(String subjectId) {
+        return PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime(2026, 1, 1),
+          dailyPlans: const [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: const [],
+          ),
+          recommendations: const [],
+          metadata: {
+            'syllabus_goals': [
+              {
+                'subjectId': subjectId,
+                'subjectTitle': 'Math',
+                'syllabusCode': '',
+                'targetDays': 30,
+                'targetHoursPerDay': 1,
+              },
+            ],
+          },
+        );
+      }
+
+      test('sets the localized error when the subject is already in the plan',
+          () async {
+        notifier.currentState =
+            notifier.currentState.copyWith(plan: planWithGoal('subj-1'));
+
+        await notifier.addSubjectToPlan(
+          const SyllabusGoal(subjectId: 'subj-1', subjectTitle: 'Math'),
+          l10n,
+        );
+
+        expect(notifier.currentState.error, l10n.subjectAlreadyInPlan);
+        expect(notifier.currentState.error, 'Subject already in plan');
+        expect(notifier.currentState.successMessage, isNull);
+      });
+
+      test('localizes the duplicate-subject error for the es locale',
+          () async {
+        notifier.currentState =
+            notifier.currentState.copyWith(plan: planWithGoal('subj-1'));
+
+        await notifier.addSubjectToPlan(
+          const SyllabusGoal(subjectId: 'subj-1', subjectTitle: 'Math'),
+          AppLocalizationsEs(),
+        );
+
+        expect(notifier.currentState.error, 'La materia ya está en el plan');
+      });
+
+      test('sets the localized success message when a new subject is added',
+          () async {
+        final container = _createContainer(service: service);
+        final containerNotifier = container.read(plannerProvider.notifier);
+        containerNotifier.currentState =
+            containerNotifier.currentState.copyWith(plan: planWithGoal('subj-1'));
+
+        final states = <PlannerState>[];
+        container.listen<PlannerState>(plannerProvider, (prev, next) {
+          states.add(next);
+        });
+
+        await containerNotifier.addSubjectToPlan(
+          const SyllabusGoal(subjectId: 'subj-2', subjectTitle: 'Physics'),
+          l10n,
+        );
+
+        // The success message is set before the trailing loadExistingPlan()
+        // refresh, so capture it from the state transitions the snack bar
+        // listener would observe.
+        expect(
+          states.where((s) => s.successMessage == l10n.subjectAddedToPlan),
+          isNotEmpty,
+        );
+        expect(
+          states.any((s) => s.successMessage == 'Subject added to plan'),
+          isTrue,
+        );
+      });
+    });
   });
 
   group('plannerServiceProvider', () {

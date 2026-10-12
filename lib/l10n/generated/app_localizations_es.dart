@@ -6364,4 +6364,39 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get slideGridTooltip => 'Cuadrícula de diapositivas';
+
+  @override
+  String get subjectAlreadyInPlan => 'La materia ya está en el plan';
+
+  @override
+  String get subjectAddedToPlan => 'Materia añadida al plan';
+
+  @override
+  String get noProgressYet => 'Sin progreso aún';
+
+  @override
+  String subjectNotPracticedYet(String subjectTitle) {
+    return 'Aún no has practicado $subjectTitle. Empieza subiendo materiales o programando una lección.';
+  }
+
+  @override
+  String moveLessonConfirm(String topicTitle, String oldTime, String newTime) {
+    return '¿Mover la lección de $topicTitle de $oldTime a $newTime?\n\nEsto actualizará tu horario.';
+  }
+
+  @override
+  String estimatedFinish(String date) {
+    return '→ Estimación de finalización: $date';
+  }
+
+  @override
+  String subjectsCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count materias',
+      one: '1 materia',
+    );
+    return '$_temp0';
+  }
 }

@@ -682,7 +682,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
 
       final existingGoals = existingPlan.syllabusGoals;
       if (existingGoals.any((g) => g.subjectId == newGoal.subjectId)) {
-        state = state.copyWith(error: 'Subject already in plan');
+        state = state.copyWith(error: l10n.subjectAlreadyInPlan);
         return;
       }
 
@@ -698,7 +698,7 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
         state = state.copyWith(
           plan: updatedPlan,
           isGenerating: false,
-          successMessage: 'Subject added to plan',
+          successMessage: l10n.subjectAddedToPlan,
         );
         _ref?.invalidate(plansProvider);
         _ref?.invalidate(planProgressProvider);

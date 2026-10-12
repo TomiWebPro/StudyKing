@@ -8249,5 +8249,47 @@
   "slideGridTooltip": "Cuadrícula de diapositivas",
   "@slideGridTooltip": {
     "description": "Tooltip for toggling the slide thumbnail grid"
+  },
+  "subjectAlreadyInPlan": "La materia ya está en el plan",
+  "@subjectAlreadyInPlan": {
+    "description": "Error when adding a subject that is already in the study plan"
+  },
+  "subjectAddedToPlan": "Materia añadida al plan",
+  "@subjectAddedToPlan": {
+    "description": "Success message after adding a subject to the study plan"
+  },
+  "noProgressYet": "Sin progreso aún",
+  "@noProgressYet": {
+    "description": "Shown on the syllabus progress card before any topic is mastered"
+  },
+  "subjectNotPracticedYet": "Aún no has practicado {subjectTitle}. Empieza subiendo materiales o programando una lección.",
+  "@subjectNotPracticedYet": {
+    "description": "Hint on the syllabus progress card when no topic is mastered yet",
+    "placeholders": {
+      "subjectTitle": { "type": "String" }
+    }
+  },
+  "moveLessonConfirm": "¿Mover la lección de {topicTitle} de {oldTime} a {newTime}?\n\nEsto actualizará tu horario.",
+  "@moveLessonConfirm": {
+    "description": "Reschedule confirmation dialog content",
+    "placeholders": {
+      "topicTitle": { "type": "String" },
+      "oldTime": { "type": "String" },
+      "newTime": { "type": "String" }
+    }
+  },
+  "estimatedFinish": "→ Estimación de finalización: {date}",
+  "@estimatedFinish": {
+    "description": "Pace adjustment card label for the estimated completion date",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "subjectsCount": "{count,plural, =1{1 materia} other{{count} materias}}",
+  "@subjectsCount": {
+    "description": "Number of subjects in the plan summary",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   }
 }
