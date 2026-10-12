@@ -4455,6 +4455,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get backupBoxLlmUsageRecords => 'Registros de Uso del LLM';
 
   @override
+  String get backupBoxAgentMemory => 'Memoria del agente';
+
+  @override
+  String get backupBoxExamResults => 'Resultados de examen';
+
+  @override
+  String get backupBoxStudentId => 'ID del estudiante';
+
+  @override
+  String get backupBoxDashboardLayout => 'Diseño del panel';
+
+  @override
+  String get backupBoxDbVersion => 'Versión de la BD';
+
+  @override
   String get apiKeyPlaintextWarning =>
       'Tus claves API serán legibles como texto plano en el archivo de respaldo. Cualquier persona con acceso a este archivo puede usar tus claves API.';
 

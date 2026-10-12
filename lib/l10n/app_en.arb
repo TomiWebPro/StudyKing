@@ -5890,6 +5890,26 @@
   "@backupBoxLlmUsageRecords": {
     "description": "Backup box display name for LLM usage records"
   },
+  "backupBoxAgentMemory": "Agent Memory",
+  "@backupBoxAgentMemory": {
+    "description": "Backup box display name for agent memory"
+  },
+  "backupBoxExamResults": "Exam Results",
+  "@backupBoxExamResults": {
+    "description": "Backup box display name for exam results"
+  },
+  "backupBoxStudentId": "Student ID",
+  "@backupBoxStudentId": {
+    "description": "Backup box display name for student ID"
+  },
+  "backupBoxDashboardLayout": "Dashboard Layout",
+  "@backupBoxDashboardLayout": {
+    "description": "Backup box display name for dashboard layout preferences"
+  },
+  "backupBoxDbVersion": "DB Version",
+  "@backupBoxDbVersion": {
+    "description": "Backup box display name for database version"
+  },
   "apiKeyPlaintextWarning": "Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.",
   "@apiKeyPlaintextWarning": {
     "description": "Warning when exporting backup with sensitive data included"

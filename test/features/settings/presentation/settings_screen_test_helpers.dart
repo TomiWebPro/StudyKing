@@ -210,6 +210,7 @@ Widget buildSettingsScreen({
   DataBackupService? backupService,
   bool useThrowingNotifier = false,
   TestNavigatorObserver? navigatorObserver,
+  Locale locale = const Locale('en'),
 }) {
   if (initialSettings != null) {
     fakeRepo.settings = initialSettings;
@@ -234,7 +235,7 @@ Widget buildSettingsScreen({
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
       supportedLocales: AppLocalizations.supportedLocales,
-      locale: const Locale('en'),
+      locale: locale,
       navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
       onGenerateRoute: (settings) => MaterialPageRoute(
         builder: (_) => Scaffold(body: Text('Route: ${settings.name}')),
@@ -255,6 +256,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
   DataBackupService? backupService,
   bool useThrowingNotifier = false,
   TestNavigatorObserver? navigatorObserver,
+  Locale locale = const Locale('en'),
 }) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(800, 3500);
@@ -268,6 +270,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
     backupService: backupService,
     useThrowingNotifier: useThrowingNotifier,
     navigatorObserver: navigatorObserver,
+    locale: locale,
   ));
   await tester.pumpAndSettle();
 }

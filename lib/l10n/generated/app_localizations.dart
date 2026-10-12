@@ -7368,6 +7368,36 @@ abstract class AppLocalizations {
   /// **'LLM Usage Records'**
   String get backupBoxLlmUsageRecords;
 
+  /// Backup box display name for agent memory
+  ///
+  /// In en, this message translates to:
+  /// **'Agent Memory'**
+  String get backupBoxAgentMemory;
+
+  /// Backup box display name for exam results
+  ///
+  /// In en, this message translates to:
+  /// **'Exam Results'**
+  String get backupBoxExamResults;
+
+  /// Backup box display name for student ID
+  ///
+  /// In en, this message translates to:
+  /// **'Student ID'**
+  String get backupBoxStudentId;
+
+  /// Backup box display name for dashboard layout preferences
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard Layout'**
+  String get backupBoxDashboardLayout;
+
+  /// Backup box display name for database version
+  ///
+  /// In en, this message translates to:
+  /// **'DB Version'**
+  String get backupBoxDbVersion;
+
   /// Warning when exporting backup with sensitive data included
   ///
   /// In en, this message translates to:

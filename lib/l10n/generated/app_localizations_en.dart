@@ -4410,6 +4410,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupBoxLlmUsageRecords => 'LLM Usage Records';
 
   @override
+  String get backupBoxAgentMemory => 'Agent Memory';
+
+  @override
+  String get backupBoxExamResults => 'Exam Results';
+
+  @override
+  String get backupBoxStudentId => 'Student ID';
+
+  @override
+  String get backupBoxDashboardLayout => 'Dashboard Layout';
+
+  @override
+  String get backupBoxDbVersion => 'DB Version';
+
+  @override
   String get apiKeyPlaintextWarning =>
       'Your API keys will be readable as plaintext in the backup file. Anyone with access to this file can use your API keys.';
 

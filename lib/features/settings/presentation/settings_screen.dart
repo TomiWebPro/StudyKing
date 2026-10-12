@@ -1277,11 +1277,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
       case HiveBoxNames.roadmaps: return l10n.backupBoxRoadmaps;
       case HiveBoxNames.llmTasks: return l10n.backupBoxLlmTasks;
       case HiveBoxNames.llmUsageRecords: return l10n.backupBoxLlmUsageRecords;
-      case HiveBoxNames.agentMemory: return 'Agent Memory';
-      case HiveBoxNames.examResults: return 'Exam Results';
-      case HiveBoxNames.studentId: return 'Student ID';
-      case HiveBoxNames.dashboardLayoutPrefs: return 'Dashboard Layout';
-      case HiveBoxNames.dbVersion: return 'DB Version';
+      case HiveBoxNames.agentMemory: return l10n.backupBoxAgentMemory;
+      case HiveBoxNames.examResults: return l10n.backupBoxExamResults;
+      case HiveBoxNames.studentId: return l10n.backupBoxStudentId;
+      case HiveBoxNames.dashboardLayoutPrefs: return l10n.backupBoxDashboardLayout;
+      case HiveBoxNames.dbVersion: return l10n.backupBoxDbVersion;
       default: return boxName;
     }
   }
