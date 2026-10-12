@@ -33,6 +33,10 @@ class _FakeQuestionRepo extends QuestionRepository {
 
   set saveShouldFail(bool v) => _saveShouldFail = v;
 
+  bool _createShouldFail = false;
+
+  set createShouldFail(bool v) => _createShouldFail = v;
+
   @override
   Future<void> init() async {}
 
@@ -61,6 +65,13 @@ class _FakeQuestionRepo extends QuestionRepository {
   @override
   Future<Result<void>> delete(String key) async {
     _questions.removeWhere((q) => q.id == key);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    if (_createShouldFail) return Result.failure('Hive write failed');
+    _questions.add(question);
     return Result.success(null);
   }
 }
@@ -1137,6 +1148,79 @@ void main() {
         expect(find.text(l10n.detailsLabel), findsWidgets);
         expect(find.text('badrow'), findsOneWidget);
       });
+    });
+
+    testWidgets('delete question then undo restores it to the list', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: _FakeQuestionRepo(List.of(mockQuestions)),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      // Open the popup menu on the first question's card.
+      final card = find.ancestor(
+        of: find.text('What is Newton\'s first law?'),
+        matching: find.byType(Card),
+      ).first;
+      await tester.tap(find.descendant(
+        of: card,
+        matching: find.byType(PopupMenuButton<String>),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Confirm the delete dialog.
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsNothing);
+      expect(find.text('Question deleted'), findsOneWidget);
+
+      // Undo recreates the question and adds it back to the list.
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+    });
+
+    testWidgets('undo does not restore question when recreate write fails', (tester) async {
+      final repo = _FakeQuestionRepo(List.of(mockQuestions));
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      final card = find.ancestor(
+        of: find.text('What is Newton\'s first law?'),
+        matching: find.byType(Card),
+      ).first;
+      await tester.tap(find.descendant(
+        of: card,
+        matching: find.byType(PopupMenuButton<String>),
+      ));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(PopupMenuItem<String>, 'Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsNothing);
+
+      // Simulate a failed Hive write for the recreate.
+      repo.createShouldFail = true;
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      // Failed recreate: the question stays deleted and an error is shown.
+      expect(find.text('What is Newton\'s first law?'), findsNothing);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
   });
 }

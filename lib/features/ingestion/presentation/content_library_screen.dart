@@ -227,7 +227,16 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
-              await _sourceRepo.create(source);
+              final recreateResult = await _sourceRepo.create(source);
+              if (recreateResult.isFailure) {
+                _logger.w('Failed to restore deleted source ${source.id}', recreateResult.error);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.somethingWentWrong)),
+                  );
+                }
+                return;
+              }
               if (mounted) {
                 setState(() {
                   _sources.add(source);

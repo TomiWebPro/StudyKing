@@ -39,18 +39,29 @@ class _FakeSourceRepo extends SourceRepository {
 
   void setThrowOnGetAll(bool shouldThrow) => _shouldThrow = shouldThrow;
 
+  bool _createShouldFail = false;
+
+  set createShouldFail(bool v) => _createShouldFail = v;
+
   @override
   Future<void> init() async {}
 
   @override
   Future<Result<List<Source>>> getAll() async {
     if (_shouldThrow) throw Exception('Source repo failed');
-    return Result.success(_sources);
+    return Result.success(List.from(_sources));
   }
 
   @override
   Future<Result<void>> delete(String key) async {
     _sources.removeWhere((s) => s.id == key);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> create(Source source) async {
+    if (_createShouldFail) return Result.failure('Hive write failed');
+    _sources.add(source);
     return Result.success(null);
   }
 
@@ -207,6 +218,68 @@ void main() {
       expect(navigatorObserver.pushedRoutes, isNotEmpty);
       final hasDetail = navigatorObserver.pushedRoutes.any((r) => r.settings.name == AppRoutes.sourceDetail);
       expect(hasDetail, isTrue);
+    });
+
+    testWidgets('delete source then undo restores it to the list', (tester) async {
+      await tester.pumpWidget(_buildWidget(
+        sourceRepo: _FakeSourceRepo(List.of(mockSources)),
+        subjectRepo: _FakeSubjectRepo(subjects),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Physics Textbook'), findsOneWidget);
+
+      // Swipe the first source tile (src1) to trigger delete.
+      await tester.drag(find.byKey(const ValueKey('src1')), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+
+      // Confirm the Dismissible's delete dialog.
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Confirm the screen's delete dialog.
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics Textbook'), findsNothing);
+      expect(find.text('Source deleted'), findsOneWidget);
+
+      // Undo recreates the source and adds it back to the list.
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics Textbook'), findsOneWidget);
+    });
+
+    testWidgets('undo does not restore source when recreate write fails', (tester) async {
+      final sourceRepo = _FakeSourceRepo(List.of(mockSources));
+      await tester.pumpWidget(_buildWidget(
+        sourceRepo: sourceRepo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.drag(find.byKey(const ValueKey('src1')), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Physics Textbook'), findsNothing);
+
+      // Simulate a failed Hive write for the recreate.
+      sourceRepo.createShouldFail = true;
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      // Failed recreate: the source stays deleted and an error is shown.
+      expect(find.text('Physics Textbook'), findsNothing);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
   });
 }

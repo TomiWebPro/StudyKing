@@ -195,7 +195,16 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
-              await _questionRepo.create(question);
+              final recreateResult = await _questionRepo.create(question);
+              if (recreateResult.isFailure) {
+                _logger.w('Failed to restore deleted question ${question.id}', recreateResult.error);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.somethingWentWrong)),
+                  );
+                }
+                return;
+              }
               if (mounted) setState(() => _allQuestions.add(question));
             },
           ),
