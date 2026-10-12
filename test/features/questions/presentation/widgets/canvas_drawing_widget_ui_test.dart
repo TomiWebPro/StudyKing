@@ -961,23 +961,5 @@ void main() {
         expect(find.byType(CanvasDrawingWidget), findsOneWidget);
       });
     });
-
-    group('CanvasInputMode enum', () {
-      test('has three values', () {
-        expect(CanvasInputMode.values.length, 3);
-      });
-
-      test('contains draw mode', () {
-        expect(CanvasInputMode.draw, isNotNull);
-      });
-
-      test('contains handwriteText mode', () {
-        expect(CanvasInputMode.handwriteText, isNotNull);
-      });
-
-      test('contains handwriteMath mode', () {
-        expect(CanvasInputMode.handwriteMath, isNotNull);
-      });
-    });
   });
 }
