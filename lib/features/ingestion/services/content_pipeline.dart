@@ -218,10 +218,15 @@ class ContentPipeline {
         createdAt: DateTime.now(),
         contentHash: contentHash,
       );
-      if (existingSourceId != null) {
-        await _sourceRepository.save(sourceId, source);
-      } else {
-        await _sourceRepository.create(source);
+      final persistResult = existingSourceId != null
+          ? await _sourceRepository.save(sourceId, source)
+          : await _sourceRepository.create(source);
+      if (persistResult.isFailure) {
+        _logger.w(
+          'Failed to persist source ${source.id}',
+          persistResult.error,
+        );
+        return Result.failure(persistResult.error);
       }
       _logger.d('Source created: ${source.id}');
     } catch (e) {
@@ -246,7 +251,10 @@ class ContentPipeline {
         chunks: extractionResult.chunksToJson(),
         extractionMeta: jsonEncode(extractionResult.toMetaJson()),
       );
-      await _sourceRepository.save(updated.id, updated);
+      final extractionSave = await _saveSource(updated);
+      if (extractionSave.isFailure) {
+        return Result.failure(extractionSave.error);
+      }
       _logger.d('Stage 1 complete: text extracted (${extractionResult.text.length} chars) via ${extractionResult.extractionMethod}');
 
       final textToClassify = extractionResult.text.isNotEmpty
@@ -289,7 +297,10 @@ class ContentPipeline {
 
         if (matchedTopicId.isNotEmpty) {
           updated = updated.copyWith(topicId: matchedTopicId);
-          await _sourceRepository.save(updated.id, updated);
+          final topicSave = await _saveSource(updated);
+          if (topicSave.isFailure) {
+            return Result.failure(topicSave.error);
+          }
         }
         _logger.d('Stage 2 complete: topic classified');
       } else if (subjectId.isNotEmpty && type == SourceType.syllabus) {
@@ -302,7 +313,10 @@ class ContentPipeline {
         );
         if (extractedTopicIds.isNotEmpty) {
           updated = updated.copyWith(topicId: extractedTopicIds.first);
-          await _sourceRepository.save(updated.id, updated);
+          final syllabusSave = await _saveSource(updated);
+          if (syllabusSave.isFailure) {
+            return Result.failure(syllabusSave.error);
+          }
           _logger.d('Stage 2 alternative: ${extractedTopicIds.length} topics extracted from syllabus');
         }
       }
@@ -328,7 +342,10 @@ class ContentPipeline {
 
       if (summary.isNotEmpty) {
         updated = updated.copyWith(summary: summary);
-        await _sourceRepository.save(updated.id, updated);
+        final summarySave = await _saveSource(updated);
+        if (summarySave.isFailure) {
+          return Result.failure(summarySave.error);
+        }
       }
       _logger.d('Stage 3 complete: summary generated');
 
@@ -372,7 +389,10 @@ class ContentPipeline {
           updated = updated.copyWith(
             generatedQuestionIds: questionIds,
           );
-          await _sourceRepository.save(updated.id, updated);
+          final questionsSave = await _saveSource(updated);
+          if (questionsSave.isFailure) {
+            return Result.failure(questionsSave.error);
+          }
         }
         _logger.d(
           'Stage 4 complete: ${questionIds.length} questions generated',
@@ -446,7 +466,10 @@ class ContentPipeline {
         if (flashcardResult.isSuccess) {
           final flashcardIds = flashcardResult.data!.map((f) => f.id).toList();
           updated = updated.copyWith(generatedFlashcardIds: flashcardIds);
-          await _sourceRepository.save(updated.id, updated);
+          final flashcardsSave = await _saveSource(updated);
+          if (flashcardsSave.isFailure) {
+            return Result.failure(flashcardsSave.error);
+          }
         }
         _logger.d('Stage 7 complete: ${flashcardResult.data?.length ?? 0} flashcards generated from source');
       }
@@ -454,7 +477,10 @@ class ContentPipeline {
       if (_cancelled) return Result.failure('Pipeline cancelled');
       onProgress?.call(ProcessingStatus.completed, 'Pipeline complete');
       updated = _updateStatus(updated, ProcessingStatus.completed);
-      await _sourceRepository.save(updated.id, updated);
+      final completionSave = await _saveSource(updated);
+      if (completionSave.isFailure) {
+        return Result.failure(completionSave.error);
+      }
       _logger.d('Pipeline complete for source: ${updated.id}');
 
       return Result.success(updated);
@@ -466,7 +492,7 @@ class ContentPipeline {
           processingStatus: ProcessingStatus.failed.name,
           errorMessage: userMsg,
         );
-        await _sourceRepository.save(failed.id, failed);
+        await _saveSource(failed);
         return Result.failure(userMsg);
       } catch (e2) {
         _logger.w('Failed to save failed source', e2);
@@ -533,6 +559,14 @@ class ContentPipeline {
 
   Source _updateStatus(Source source, ProcessingStatus status) {
     return source.copyWith(processingStatus: status.name);
+  }
+
+  Future<Result<void>> _saveSource(Source source) async {
+    final result = await _sourceRepository.save(source.id, source);
+    if (result.isFailure) {
+      _logger.w('Failed to save source ${source.id}', result.error);
+    }
+    return result;
   }
 
   Future<String> _resolveClassifiedTopic(

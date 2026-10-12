@@ -158,11 +158,13 @@ class FakeChunkedContentProcessor extends ChunkedContentProcessor {
 
 class FakeSourceRepository extends SourceRepository {
   final Map<String, Source> _store = {};
+  String? lastCreatedId;
 
   FakeSourceRepository() : super();
 
   @override
   Future<Result<void>> create(Source source) async {
+    lastCreatedId = source.id;
     _store[source.id] = source;
     return Result.success(null);
   }
@@ -184,6 +186,24 @@ class FailingCreateSourceRepository extends FakeSourceRepository {
   @override
   Future<Result<void>> create(Source source) async =>
       Result.failure('simulated create failure');
+}
+
+class FailingSaveSourceRepository extends FakeSourceRepository {
+  @override
+  Future<Result<void>> save(String key, Source item) async =>
+      Result.failure('simulated save failure');
+}
+
+/// Fails only the final "completed"-status save so the completion gate can be
+/// exercised in isolation; every intermediate stage save still succeeds.
+class FailCompletedSaveSourceRepository extends FakeSourceRepository {
+  @override
+  Future<Result<void>> save(String key, Source item) async {
+    if (item.processingStatus == ProcessingStatus.completed.name) {
+      return Result.failure('simulated final save failure');
+    }
+    return super.save(key, item);
+  }
 }
 
 class FakeTopicRepository extends TopicRepository {
@@ -389,6 +409,124 @@ void main() {
       expect(src.topicId, 'topic-1');
       expect(src.summary, 'fake summary');
       expect(src.processingStatus, 'completed');
+    });
+
+    test('returns failure when the initial source creation fails', () async {
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(
+          ExtractionResult(text: 't', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FailingCreateSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated create failure');
+    });
+
+    test('returns failure when a stage save fails', () async {
+      final sourceRepo = FailingSaveSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(
+          ExtractionResult(text: 'extracted', extractionMethod: 'x'),
+        ),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated save failure');
+      // The created source must not be reported as completed when a save fails.
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, ProcessingStatus.pending.name);
+    });
+
+    test('returns failure when the final completed save fails', () async {
+      final sourceRepo = FailCompletedSaveSourceRepository();
+      final docExtractor = FakeDocumentExtractor(ExtractionResult(
+        text: 'extracted text',
+        extractionMethod: 'pdf_text_direct',
+        chunks: [
+          SourceChunk(chunkIndex: 0, text: 'chunk one text'),
+          SourceChunk(chunkIndex: 1, text: 'chunk two text'),
+        ],
+      ));
+      final topicRepo = FakeTopicRepository([
+        Topic(
+          id: 'topic-1',
+          subjectId: '',
+          title: 'Biology',
+          description: '',
+          syllabusText: '',
+        ),
+      ]);
+      final chunked = FakeChunkedContentProcessor(
+        ClassificationResult(topicId: 'Biology', confidence: 1.0),
+      );
+      final pipeline = buildPipeline(
+        docExtractor: docExtractor,
+        chunked: chunked,
+        sourceRepo: sourceRepo,
+        topicRepo: topicRepo,
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        modelId: 'm',
+        possibleTopics: ['Biology'],
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated final save failure');
+      // Every intermediate stage save succeeded, but the source must not carry a
+      // 'completed' status because the final save failed.
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, isNot(ProcessingStatus.completed.name));
     });
 
     test('returns DUPLICATE failure when a matching source already exists',
