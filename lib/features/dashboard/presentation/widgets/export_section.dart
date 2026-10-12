@@ -282,8 +282,15 @@ class ExportSection extends ConsumerWidget {
     if (!confirmed || !context.mounted) return;
     try {
       final csvResult = await tracker.exportProgressCSV(studentId);
-      if (!context.mounted) return;
-      final csv = csvResult.data ?? '';
+      if (csvResult.isFailure) {
+        if (!context.mounted) return;
+        _logger.w('Progress CSV export failed', csvResult.error);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
+        );
+        return;
+      }
+      final csv = csvResult.data!;
       await SharePlus.instance.share(
         ShareParams(
           files: [

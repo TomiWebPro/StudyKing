@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
@@ -55,6 +56,19 @@ class _FakeProgressTracker extends StudyProgressTracker {
       Result.success('session,history,csv');
 }
 
+class _FailingProgressTracker extends StudyProgressTracker {
+  _FailingProgressTracker()
+      : super(
+          attemptRepo: _FakeAttemptRepo(),
+          masteryService: _FakeMasteryGraphService(),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+
+  @override
+  Future<Result<String>> exportProgressCSV(String studentId) async =>
+      Result.failure('simulated stats query failure');
+}
+
 class _FakeExportService extends ProgressExportService {
   _FakeExportService()
       : super(
@@ -79,11 +93,11 @@ class _FakeExportService extends ProgressExportService {
       Result.success('{}');
 }
 
-Widget _buildTestApp(Widget child) {
+Widget _buildTestApp(Widget child, {StudyProgressTracker? tracker}) {
   return ProviderScope(
     overrides: [
       dashboardStudyProgressTrackerProvider.overrideWithValue(
-        _FakeProgressTracker(),
+        tracker ?? _FakeProgressTracker(),
       ),
       dashboardInstrumentationServiceProvider.overrideWithValue(
         _FakeInstrumentation(),
@@ -181,6 +195,47 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.backup), findsOneWidget);
+    });
+
+    testWidgets(
+        'progress CSV export failure shows error SnackBar and does not share',
+        (tester) async {
+      tester.view.physicalSize = const Size(1200, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      final shareCalls = <MethodCall>[];
+      const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+      tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        shareChannel,
+        (call) async {
+          shareCalls.add(call);
+          return 'dev.fluttercommunity.plus/share/success';
+        },
+      );
+      addTearDown(() => tester.binding.defaultBinaryMessenger
+          .setMockMethodCallHandler(shareChannel, null));
+
+      await tester.pumpWidget(_buildTestApp(
+        const ExportSection(studentId: 'test-student'),
+        tracker: _FailingProgressTracker(),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Export Progress CSV'));
+      await tester.pumpAndSettle();
+
+      // Confirm the export in the confirmation dialog (dialog confirm is a
+      // FilledButton; the section's own backup button is a TextButton).
+      await tester.tap(find.widgetWithText(FilledButton, 'Export Backup'));
+      await tester.pumpAndSettle();
+
+      // The share sheet must not open and the error SnackBar must be shown.
+      expect(shareCalls, isEmpty);
+      expect(find.text('Export failed: Something went wrong'), findsOneWidget);
     });
   });
 }
