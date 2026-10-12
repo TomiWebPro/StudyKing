@@ -421,6 +421,27 @@ void main() {
           throwsA(isA<Exception>()),
         );
       });
+
+      test('rolls back session to cancelled and propagates error when LLM chat fails', () async {
+        llmService.setThrowOnChat();
+        await expectLater(
+          tutorService.startLesson(
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            topicTitle: 'Algebra',
+            durationMinutes: 30,
+            localeName: 'en',
+          ),
+          throwsA(isA<Exception>()),
+        );
+        // A failed lesson start must roll back: the last persisted
+        // tutor session state is cancelled, not left inProgress.
+        expect(
+          tutorSessionRepo._sessions.last.status,
+          equals(SessionStatus.cancelled),
+        );
+      });
     });
 
     group('endLesson', () {
