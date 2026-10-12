@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
@@ -406,6 +408,44 @@ class _GatedPersistTutorService extends _FakeTutorService {
     lastManager = manager;
     return manager;
   }
+}
+
+/// XFile whose `readAsBytes` — the file read `TutorScreen._pickImage`
+/// awaits after the pick — parks on a gate until the test releases it,
+/// so the screen can be disposed while the read is in flight.
+class _GatedReadXFile extends XFile {
+  _GatedReadXFile({
+    required Completer<void> readGate,
+    required Completer<void> readStarted,
+  })  : _readGate = readGate,
+        _readStarted = readStarted,
+        super('gated-image.jpg');
+
+  final Completer<void> _readGate;
+  final Completer<void> _readStarted;
+
+  @override
+  Future<Uint8List> readAsBytes() async {
+    _readStarted.complete();
+    await _readGate.future;
+    return Uint8List(4);
+  }
+}
+
+/// ImagePickerPlatform whose pick returns a [_GatedReadXFile] so the
+/// post-pick byte read can be parked mid-flight.
+class _GatedReadImagePickerPlatform extends ImagePickerPlatform {
+  _GatedReadImagePickerPlatform({required XFile? pickedFile})
+      : _pickedFile = pickedFile;
+
+  final XFile? _pickedFile;
+
+  @override
+  Future<XFile?> getImageFromSource({
+    required ImageSource source,
+    ImagePickerOptions options = const ImagePickerOptions(),
+  }) async =>
+      _pickedFile;
 }
 
 Widget _wrapApp(Widget child, {TestNavigatorObserver? navigatorObserver}) {
@@ -910,6 +950,60 @@ void main() {
 
         // Pre-fix, the catch block looked up AppLocalizations on the
         // deactivated context and called setState after dispose.
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'image pick does not setState after dispose when the byte read completes after the route is popped',
+      (tester) async {
+        final readGate = Completer<void>();
+        final readStarted = Completer<void>();
+        final previousPlatform = ImagePickerPlatform.instance;
+        ImagePickerPlatform.instance = _GatedReadImagePickerPlatform(
+          pickedFile: _GatedReadXFile(
+            readGate: readGate,
+            readStarted: readStarted,
+          ),
+        );
+        addTearDown(() {
+          ImagePickerPlatform.instance = previousPlatform;
+        });
+
+        await tester.pumpWidget(_wrapApp(
+          TutorScreen(
+            topicId: '',
+            topicTitle: 'Algebra',
+            subjectId: 'math',
+            tutorService: _FakeTutorService(),
+          ),
+        ));
+        await tester.pump();
+        // Lesson start + greeting stream.
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(seconds: 2));
+
+        // Open the image source dialog and pick from the gallery.
+        await tester.tap(find.byIcon(Icons.image_outlined));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('Gallery'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        // The picker returned the gated file; the byte read is in flight.
+        await readStarted.future;
+
+        // The screen is disposed (session exit) while the read is open.
+        await tester.pumpWidget(const SizedBox());
+
+        // The byte read completes after the dispose.
+        readGate.complete();
+        await tester.pump();
+
+        // Pre-fix, the post-await path ran _beginStreamingExchange and
+        // setState on the disposed State ("setState() called after
+        // dispose()").
         expect(tester.takeException(), isNull);
       },
     );

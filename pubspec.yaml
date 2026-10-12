@@ -87,6 +87,7 @@ dev_dependencies:
   coverage: ^1.15.0
   path_provider_platform_interface: ^2.1.1
   plugin_platform_interface: ^2.1.7
+  image_picker_platform_interface: ^2.11.2
 
 flutter:
   uses-material-design: true

@@ -407,6 +407,11 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
     setState(() => _isSending = true);
 
     final bytes = await pickedFile.readAsBytes();
+    // The byte read is file I/O and can outlive a route pop
+    // (back → confirm exit); guard the post-await UI mutation
+    // like the other async paths do.
+    if (!mounted) return;
+
     final base64Image = base64Encode(bytes);
 
     _beginStreamingExchange();
