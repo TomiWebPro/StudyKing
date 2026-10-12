@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import '../../../../l10n/generated/app_localizations.dart';
@@ -17,6 +18,7 @@ class LessonBookingSheet extends StatefulWidget {
   final DateTime? initialDate;
   final int? initialDuration;
   final String? excludeSessionId;
+  final Clock? clock;
 
   const LessonBookingSheet({
     super.key,
@@ -28,6 +30,7 @@ class LessonBookingSheet extends StatefulWidget {
     this.initialDate,
     this.initialDuration,
     this.excludeSessionId,
+    this.clock,
   });
 
   @override
@@ -36,11 +39,8 @@ class LessonBookingSheet extends StatefulWidget {
 
 class _LessonBookingSheetState extends State<LessonBookingSheet> {
   static final Logger _logger = const Logger('LessonBookingSheet');
-  TimeOfDay _selectedTime = TimeOfDay(
-    hour: DateTime.now().hour + 1,
-    minute: 0,
-  );
-  DateTime _selectedDate = DateTime.now();
+  late final TimeOfDay _selectedTime;
+  late final DateTime _selectedDate;
   int _durationMinutes = 30;
   bool _isScheduling = false;
   bool _hasConflict = false;
@@ -49,10 +49,22 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
   @override
   void initState() {
     super.initState();
+    final now = (widget.clock ?? SystemClock()).now();
+    var date = now;
+    // Default to one hour from now, wrapping past midnight so the hour stays
+    // within 0–23. TimeOfDay performs no validation, so hour 24 would render
+    // as "12:00 PM" in 12-hour locales and "24:00" in 24-hour locales even
+    // though the scheduled time is actually midnight.
+    var time = TimeOfDay(
+      hour: (now.hour + 1) % TimeOfDay.hoursPerDay,
+      minute: 0,
+    );
     if (widget.initialDate != null) {
-      _selectedDate = widget.initialDate!;
-      _selectedTime = TimeOfDay.fromDateTime(widget.initialDate!);
+      date = widget.initialDate!;
+      time = TimeOfDay.fromDateTime(widget.initialDate!);
     }
+    _selectedDate = date;
+    _selectedTime = time;
     if (widget.initialDuration != null) {
       _durationMinutes = widget.initialDuration!;
     }

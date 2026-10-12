@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -371,7 +372,110 @@ void main() {
 
       expect(find.byType(Container), findsWidgets);
     });
+
+    testWidgets(
+      'default time wraps past midnight (23:30 shows 12:00 AM, schedules at midnight)',
+      (tester) async {
+        DateTime? scheduledAt;
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => MediaQuery(
+                      data: const MediaQueryData(size: Size(400, 800)),
+                      child: LessonBookingSheet(
+                        topicId: 'topic-1',
+                        topicTitle: 'Algebra Basics',
+                        subjectId: 'subj-1',
+                        clock: _FakeClock(DateTime(2026, 10, 12, 23, 30)),
+                        onSchedule: (time, duration) async {
+                          scheduledAt = time;
+                        },
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ));
+
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // One hour from 23:30 is hour 0, which renders as "12:00 AM" —
+        // not "12:00 PM" (the old hour-24 behavior).
+        expect(find.text('12:00 AM'), findsOneWidget);
+        expect(find.text('12:00 PM'), findsNothing);
+
+        await tester.tap(find.text('Schedule Lesson').last);
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // The scheduled DateTime must match the displayed midnight time on the
+        // same day, not the next-day normalization of an invalid hour 24.
+        expect(scheduledAt, DateTime(2026, 10, 12, 0, 0));
+      },
+    );
+
+    testWidgets(
+      'default time is one hour from now before midnight',
+      (tester) async {
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => MediaQuery(
+                      data: const MediaQueryData(size: Size(400, 800)),
+                      child: LessonBookingSheet(
+                        topicId: 'topic-1',
+                        topicTitle: 'Algebra Basics',
+                        subjectId: 'subj-1',
+                        clock: _FakeClock(DateTime(2026, 10, 12, 10, 30)),
+                        onSchedule: _fakeSchedule,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ));
+
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(find.text('11:00 AM'), findsOneWidget);
+      },
+    );
   });
+}
+
+class _FakeClock implements Clock {
+  final DateTime fixed;
+
+  _FakeClock(this.fixed);
+
+  @override
+  DateTime now() => fixed;
 }
 
 Future<void> _fakeSchedule(DateTime time, int duration) async {}
