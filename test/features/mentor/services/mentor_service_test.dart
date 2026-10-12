@@ -73,11 +73,18 @@ class FakeSessionRepository extends SessionRepository {
 
 class FakeSubjectRepository extends SubjectRepository {
   final List<Subject> _subjects = [];
+  bool _throwOnGetAll = false;
 
   void addSubject(Subject subject) => _subjects.add(subject);
+  void setThrowOnGetAll() => _throwOnGetAll = true;
 
   @override
-  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+  Future<Result<List<Subject>>> getAll() async {
+    if (_throwOnGetAll) {
+      return Result.failure('Simulated subject read failure');
+    }
+    return Result.success(_subjects);
+  }
 }
 
 class FakeLlmService extends LlmService {
@@ -183,6 +190,7 @@ class FakePlannerService extends PlannerService {
   List<RoadmapModel> _roadmaps = [];
   List<PendingActionModel> _pendingActions = [];
   List<Session> _scheduledLessons = [];
+  Result<List<Session>>? _scheduledLessonsResult;
   bool _hasConflict = false;
   bool _scheduleResult = true;
   int scheduleCallCount = 0;
@@ -191,7 +199,7 @@ class FakePlannerService extends PlannerService {
 
   FakePlannerService()
       : super(
-          planOrchestrator: _FakePlanAdherenceOrchestrator(),
+           planOrchestrator: _FakePlanAdherenceOrchestrator(),
           fixedStudentId: 'test-student',
         );
 
@@ -199,6 +207,8 @@ class FakePlannerService extends PlannerService {
   void setRoadmaps(List<RoadmapModel> roadmaps) => _roadmaps = roadmaps;
   void setPendingActions(List<PendingActionModel> actions) => _pendingActions = actions;
   void setScheduledLessons(List<Session> lessons) => _scheduledLessons = lessons;
+  void setScheduledLessonsResult(Result<List<Session>> result) =>
+      _scheduledLessonsResult = result;
   void setHasConflict(bool v) => _hasConflict = v;
   void setScheduleResult(bool v) => _scheduleResult = v;
 
@@ -212,7 +222,8 @@ class FakePlannerService extends PlannerService {
   Future<Result<List<PendingActionModel>>> loadPendingActions() async => Result.success(_pendingActions);
 
   @override
-  Future<Result<List<Session>>> getScheduledLessons() async => Result.success(_scheduledLessons);
+  Future<Result<List<Session>>> getScheduledLessons() async =>
+      _scheduledLessonsResult ?? Result.success(_scheduledLessons);
 
   @override
   Future<Result<List<Session>>> getMissedLessons() async => Result.success([]);
@@ -252,6 +263,7 @@ class FakeProgressTracker extends StudyProgressTracker {
   };
   List<Map<String, dynamic>> _recommendations = [];
   List<Map<String, dynamic>> _badges = [];
+  Result<List<Map<String, dynamic>>>? _recommendationsResult;
 
   FakeProgressTracker({
     AttemptRepository? attemptRepo,
@@ -264,6 +276,8 @@ class FakeProgressTracker extends StudyProgressTracker {
   void setStats(Map<String, dynamic> stats) => _stats = stats;
   void setRecommendations(List<Map<String, dynamic>> recs) =>
       _recommendations = recs;
+  void setRecommendationsResult(Result<List<Map<String, dynamic>>> result) =>
+      _recommendationsResult = result;
   void setBadges(List<Map<String, dynamic>> badges) => _badges = badges;
 
   @override
@@ -274,7 +288,8 @@ class FakeProgressTracker extends StudyProgressTracker {
 
   @override
   Future<Result<List<Map<String, dynamic>>>> getRecommendations(
-      String studentId) async => Result.success(_recommendations);
+      String studentId) async =>
+      _recommendationsResult ?? Result.success(_recommendations);
 
   @override
   Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async =>
@@ -331,6 +346,10 @@ MentorService createMentorService({
 
 class _FakeNudgeRepo extends EngagementNudgeRepository {
   final List<EngagementNudgeModel> _nudges = [];
+  Result<List<EngagementNudgeModel>>? _recentResult;
+
+  void setRecentResult(Result<List<EngagementNudgeModel>> result) =>
+      _recentResult = result;
 
   @override
   Future<void> init() async {}
@@ -344,7 +363,9 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   @override
   Future<Result<List<EngagementNudgeModel>>> getRecentByStudent(
       String studentId, {int limit = 10}) async {
-    return Result.success(_nudges.where((n) => n.studentId == studentId).take(limit).toList());
+    return _recentResult ??
+        Result.success(
+            _nudges.where((n) => n.studentId == studentId).take(limit).toList());
   }
 
   @override
@@ -609,14 +630,16 @@ void main() {
         ]);
         final service = createMentorService(progressTracker: tracker);
 
-        final action = await service.suggestNextAction();
-        expect(action.message, equals('Focus on reviewing fundamentals'));
+        final actionResult = await service.suggestNextAction();
+        expect(actionResult.isSuccess, isTrue);
+        expect(actionResult.data!.message, equals('Focus on reviewing fundamentals'));
       });
 
       test('returns subject setup message when no subjects', () async {
         final service = createMentorService();
-        final action = await service.suggestNextAction();
-        expect(action.message, contains("added any subjects"));
+        final actionResult = await service.suggestNextAction();
+        expect(actionResult.isSuccess, isTrue);
+        expect(actionResult.data!.message, contains("added any subjects"));
       });
 
       test('returns generic message when recommendations and subjects exist',
@@ -638,8 +661,41 @@ void main() {
         );
         final service = createMentorService(database: db);
 
-        final action = await service.suggestNextAction();
-        expect(action.message, contains("doing well"));
+        final actionResult = await service.suggestNextAction();
+        expect(actionResult.isSuccess, isTrue);
+        expect(actionResult.data!.message, contains("doing well"));
+      });
+
+      test('returns failure Result when recommendations query fails',
+          () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setRecommendationsResult(
+            Result.failure('Tracker unavailable'));
+        final service = createMentorService(progressTracker: tracker);
+
+        final result = await service.suggestNextAction();
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Tracker unavailable'));
+      });
+
+      test('returns failure Result when subjects query fails', () async {
+        final subjectRepo = FakeSubjectRepository();
+        subjectRepo.setThrowOnGetAll();
+        final db = DatabaseService(
+          topicRepository: TopicRepository(),
+          questionRepository: QuestionRepository(),
+          attemptRepository: AttemptRepository(),
+          lessonRepository: LessonRepository(),
+          sessionRepository: FakeSessionRepository(),
+          subjectRepository: subjectRepo,
+          conversationRepository: ConversationRepository(),
+          tutorSessionRepository: FakeTutorSessionRepository(),
+        );
+        final service = createMentorService(database: db);
+
+        final result = await service.suggestNextAction();
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Simulated subject read failure'));
       });
     });
 
@@ -1007,8 +1063,9 @@ void main() {
       test('returns Spanish suggestNextAction message when localeName is es',
           () async {
         final service = createMentorService(localeName: 'es');
-        final action = await service.suggestNextAction();
-        expect(action.message, contains('materia'));
+        final actionResult = await service.suggestNextAction();
+        expect(actionResult.isSuccess, isTrue);
+        expect(actionResult.data!.message, contains('materia'));
       });
 
       test('returns Spanish generic message with es locale', () async {
@@ -1032,8 +1089,9 @@ void main() {
           localeName: 'es',
         );
 
-        final action = await service.suggestNextAction();
-        expect(action.message, contains('bien'));
+        final actionResult = await service.suggestNextAction();
+        expect(actionResult.isSuccess, isTrue);
+        expect(actionResult.data!.message, contains('bien'));
       });
     });
 
@@ -1183,8 +1241,19 @@ void main() {
     group('getRecentNudges', () {
       test('returns empty list when no nudges exist', () async {
         final service = createMentorService();
-        final nudges = await service.getRecentNudges();
-        expect(nudges, isEmpty);
+        final nudgesResult = await service.getRecentNudges();
+        expect(nudgesResult.isSuccess, isTrue);
+        expect(nudgesResult.data, isEmpty);
+      });
+
+      test('returns failure Result when nudge query fails', () async {
+        final nudgeRepo = _FakeNudgeRepo();
+        nudgeRepo.setRecentResult(Result.failure('Nudge storage unavailable'));
+        final service = createMentorService(nudgeRepo: nudgeRepo);
+
+        final result = await service.getRecentNudges();
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Nudge storage unavailable'));
       });
     });
 
@@ -1522,8 +1591,9 @@ void main() {
     group('getUpcomingLessons', () {
       test('returns empty list when no lessons', () async {
         final service = createMentorService();
-        final lessons = await service.getUpcomingLessons();
-        expect(lessons, isEmpty);
+        final lessonsResult = await service.getUpcomingLessons();
+        expect(lessonsResult.isSuccess, isTrue);
+        expect(lessonsResult.data, isEmpty);
       });
 
       test('returns lessons from planner service', () async {
@@ -1532,9 +1602,21 @@ void main() {
           Session(id: 's1', studentId: 'test-student', startTime: DateTime.now().add(const Duration(hours: 2))),
         ]);
         final service = createMentorService(plannerService: planner);
-        final lessons = await service.getUpcomingLessons();
-        expect(lessons.length, equals(1));
-        expect(lessons.first.id, equals('s1'));
+        final lessonsResult = await service.getUpcomingLessons();
+        expect(lessonsResult.isSuccess, isTrue);
+        expect(lessonsResult.data!.length, equals(1));
+        expect(lessonsResult.data!.first.id, equals('s1'));
+      });
+
+      test('returns failure Result when planner query fails', () async {
+        final planner = FakePlannerService();
+        planner.setScheduledLessonsResult(
+            Result.failure('Planner unavailable'));
+        final service = createMentorService(plannerService: planner);
+
+        final result = await service.getUpcomingLessons();
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Planner unavailable'));
       });
     });
 

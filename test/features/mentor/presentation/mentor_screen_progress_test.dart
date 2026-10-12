@@ -133,6 +133,13 @@ void main() {
 
     testWidgets('progress report shows error snackbar on failure', (tester) async {
       final progressTracker = FakeProgressTracker();
+      progressTracker.setRecommendations([
+        {
+          'type': 'review',
+          'priority': 'high',
+          'message': 'Focus on reviewing fundamentals',
+        },
+      ]);
       progressTracker.setThrowOnReport(true);
 
       await tester.pumpWidget(buildMentorTestApp(progressTracker: progressTracker));

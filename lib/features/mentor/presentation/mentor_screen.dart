@@ -73,7 +73,15 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Future<void> _loadUnreadNudges() async {
     try {
-      final recentNudges = await _mentorService.getRecentNudges(limit: 5);
+      final recentNudgesResult = await _mentorService.getRecentNudges(limit: 5);
+      if (recentNudgesResult.isFailure) {
+        _logger.w(
+          'Failed to load pending messages',
+          recentNudgesResult.error,
+        );
+        return;
+      }
+      final recentNudges = recentNudgesResult.data ?? [];
       if (recentNudges.isNotEmpty && mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
@@ -232,11 +240,16 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
 
   Future<void> _loadSuggestedAction() async {
     try {
-      final action = await _mentorService.suggestNextAction();
+      final actionResult = await _mentorService.suggestNextAction();
       if (mounted) {
         setState(() {
-          _suggestedAction = action;
-          _suggestedActionError = false;
+          if (actionResult.isFailure) {
+            _suggestedAction = null;
+            _suggestedActionError = true;
+          } else {
+            _suggestedAction = actionResult.data;
+            _suggestedActionError = false;
+          }
         });
       }
     } catch (e) {
@@ -251,10 +264,10 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
     if (!mounted) return;
     setState(() => _isLoadingUpcoming = true);
     try {
-      final lessons = await _mentorService.getUpcomingLessons();
+      final lessonsResult = await _mentorService.getUpcomingLessons();
       if (mounted) {
         setState(() {
-          _upcomingLessons = lessons;
+          _upcomingLessons = lessonsResult.data ?? [];
           _isLoadingUpcoming = false;
         });
       }

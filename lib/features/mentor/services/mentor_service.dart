@@ -440,40 +440,60 @@ class MentorService {
     }, context: 'getProgressReport');
   }
 
-  Future<MentorAction> suggestNextAction() async {
+  Future<Result<MentorAction>> suggestNextAction() async {
     final recommendationsResult = await _progressTracker.getRecommendations(_studentId);
+    if (recommendationsResult.isFailure) {
+      _logger.w(
+        'Failed to load recommendations for suggested action',
+        recommendationsResult.error,
+      );
+      return Result.failure(recommendationsResult.error);
+    }
     final recommendations = recommendationsResult.data ?? [];
     if (recommendations.isNotEmpty) {
-      return MentorAction(
+      return Result.success(MentorAction(
         message: recommendations.first['message'] as String,
         type: recommendations.first['type'] as String,
-      );
+      ));
     }
 
     final l10n = lookupAppLocalizations(Locale(_localeName));
     final subjectsResult = await _database.subjectRepository.getAll();
+    if (subjectsResult.isFailure) {
+      _logger.w(
+        'Failed to load subjects for suggested action',
+        subjectsResult.error,
+      );
+      return Result.failure(subjectsResult.error);
+    }
     final subjects = subjectsResult.data ?? [];
     if (subjects.isEmpty) {
-      return MentorAction(
+      return Result.success(MentorAction(
         message: l10n.mentorNoSubjects,
         type: 'setup',
-      );
+      ));
     }
 
-    return MentorAction(
+    return Result.success(MentorAction(
       message: l10n.mentorDoingWell,
       type: 'generic',
-    );
+    ));
   }
 
-  Future<List<EngagementNudgeModel>> getRecentNudges({int limit = 10}) async {
+  Future<Result<List<EngagementNudgeModel>>> getRecentNudges({int limit = 10}) async {
     final result = await _nudgeRepo.getRecentByStudent(_studentId, limit: limit);
-    return result.data ?? [];
+    if (result.isFailure) {
+      _logger.w('Failed to load recent nudges', result.error);
+    }
+    return result;
   }
 
-  Future<List<Session>> getUpcomingLessons() async {
+  Future<Result<List<Session>>> getUpcomingLessons() async {
     final result = await _contextBuilder.loadUpcomingLessons();
-    return result.data ?? [];
+    if (result.isFailure) {
+      _logger.w('Failed to load upcoming lessons', result.error);
+    }
+    return result;
   }
 
   static Future<String?> _summarizeMessages(

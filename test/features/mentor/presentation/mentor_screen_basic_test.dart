@@ -9,9 +9,18 @@ import 'package:studyking/features/planner/providers/planner_providers.dart' sho
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorEngagementNudgeRepoProvider, mentorSessionRepositoryProvider, mentorProgressTrackerProvider;
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/mentor/presentation/mentor_screen.dart';
 import 'mentor_screen_test_helpers.dart';
 import '../../../helpers/navigator_observer_helper.dart';
+
+class _FailingRecommendationsTracker extends FakeProgressTracker {
+  @override
+  Future<Result<List<Map<String, dynamic>>>> getRecommendations(
+      String studentId) async {
+    return Result.failure('Tracker unavailable');
+  }
+}
 
 void main() {
   group('MentorScreen - Basic', () {
@@ -525,6 +534,17 @@ void main() {
 
       expect(find.text('Reduce motion test'), findsOneWidget);
       expect(find.text('Mentor response'), findsOneWidget);
+    });
+
+    testWidgets('shows suggested action error card when recommendations query fails',
+        (tester) async {
+      final tracker = _FailingRecommendationsTracker();
+
+      await tester.pumpWidget(buildMentorTestApp(progressTracker: tracker));
+      await tester.pumpAndSettle();
+
+      expect(find.text('An error occurred. Please try again.'), findsOneWidget);
+      expect(find.text('Retry'), findsOneWidget);
     });
   });
 }

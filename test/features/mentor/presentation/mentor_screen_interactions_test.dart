@@ -381,18 +381,34 @@ void main() {
 
   group('MentorScreen - Suggested Actions', () {
     testWidgets('suggested action card appears after initialization', (tester) async {
-      await tester.pumpWidget(buildMentorTestApp());
+      final tracker = FakeProgressTracker();
+      tracker.setRecommendations([
+        {
+          'type': 'review',
+          'priority': 'high',
+          'message': 'Focus on reviewing fundamentals',
+        },
+      ]);
+      await tester.pumpWidget(buildMentorTestApp(progressTracker: tracker));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
       expect(
-        find.textContaining("You haven't added any subjects yet"),
+        find.textContaining('Focus on reviewing fundamentals'),
         findsOneWidget,
       );
     });
 
     testWidgets('suggested action card can be dismissed', (tester) async {
-      await tester.pumpWidget(buildMentorTestApp());
+      final tracker = FakeProgressTracker();
+      tracker.setRecommendations([
+        {
+          'type': 'review',
+          'priority': 'high',
+          'message': 'Focus on reviewing fundamentals',
+        },
+      ]);
+      await tester.pumpWidget(buildMentorTestApp(progressTracker: tracker));
       await tester.pumpAndSettle();
 
       expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
