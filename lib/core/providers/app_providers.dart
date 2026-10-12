@@ -104,10 +104,16 @@ final badgeRepositoryProvider = Provider<BadgeRepository>((ref) {
 });
 
 final badgeServiceProvider = Provider<BadgeService>((ref) {
-  return BadgeService(
+  final l10n = ref.watch(l10nProvider);
+  final service = BadgeService(
     repository: ref.watch(badgeRepositoryProvider),
     notificationService: ref.watch(notificationServiceProvider),
+    l10n: l10n ?? lookupAppLocalizations(const Locale('en')),
   );
+  ref.listen(l10nProvider, (_, next) {
+    if (next != null) service.updateLocalization(next);
+  });
+  return service;
 });
 
 

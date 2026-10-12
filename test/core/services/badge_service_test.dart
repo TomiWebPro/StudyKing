@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive/hive.dart';
-import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/badge_service.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
+import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 class _FakeBadgeRepository implements BadgeRepository {
   final List<BadgeModel> _badges = [];
@@ -90,6 +93,20 @@ void _installLogCapture() {
   debugPrint = (String? message, {int? wrapWidth}) {
     if (message != null) _capturedLogs.add(message);
   };
+}
+
+class _FakeNotificationService extends NotificationService {
+  final List<({int id, String name, String description})> unlocked = [];
+
+  @override
+  Future<Result<void>> showBadgeUnlocked({
+    required int id,
+    required String badgeName,
+    required String badgeDescription,
+  }) async {
+    unlocked.add((id: id, name: badgeName, description: badgeDescription));
+    return Result.success(null);
+  }
 }
 
 void _uninstallLogCapture() {
@@ -351,6 +368,78 @@ void main() {
         expect(
           _capturedLogs.any((l) => l.contains('[W]') && l.contains('getStats')),
           isTrue,
+        );
+      });
+    });
+
+    group('checkAndUnlockBadges notification localization', () {
+      Future<Result<Map<String, dynamic>>> firstQuestionStats(String studentId) async =>
+          Result.success({
+            'totalAttempts': 1,
+            'correctAttempts': 1,
+            'accuracy': 50,
+            'totalStudyTimeHours': 0.5,
+            'weeklyActivity': 1,
+            'dailyActivity': 1,
+            'topicsStudied': 1,
+          });
+
+      test('passes localized name and description to the notification',
+          () async {
+        final notif = _FakeNotificationService();
+        final localizedService = BadgeService(
+          repository: mockRepo,
+          getStats: firstQuestionStats,
+          notificationService: notif,
+          l10n: AppLocalizationsEs(),
+        );
+
+        final result = await localizedService.checkAndUnlockBadges('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, hasLength(1));
+        expect(notif.unlocked, hasLength(1));
+        expect(notif.unlocked.first.name, equals('Primer Paso'));
+        expect(
+          notif.unlocked.first.description,
+          equals('¡Respondió su primera pregunta!'),
+        );
+      });
+
+      test('falls back to English definitions when no l10n is set', () async {
+        final notif = _FakeNotificationService();
+        final englishService = BadgeService(
+          repository: mockRepo,
+          getStats: firstQuestionStats,
+          notificationService: notif,
+        );
+
+        await englishService.checkAndUnlockBadges('student1');
+
+        expect(notif.unlocked, hasLength(1));
+        expect(notif.unlocked.first.name, equals('First Step'));
+        expect(
+          notif.unlocked.first.description,
+          equals('Answered your first question!'),
+        );
+      });
+
+      test('updateLocalization switches the notification language', () async {
+        final notif = _FakeNotificationService();
+        final switchingService = BadgeService(
+          repository: mockRepo,
+          getStats: firstQuestionStats,
+          notificationService: notif,
+          l10n: AppLocalizationsEs(),
+        )..updateLocalization(AppLocalizationsEn());
+
+        await switchingService.checkAndUnlockBadges('student1');
+
+        expect(notif.unlocked, hasLength(1));
+        expect(notif.unlocked.first.name, equals('First Step'));
+        expect(
+          notif.unlocked.first.description,
+          equals('Answered your first question!'),
         );
       });
     });

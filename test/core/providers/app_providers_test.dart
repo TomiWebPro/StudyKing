@@ -1,14 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/app_providers.dart';
+import 'package:studyking/core/services/badge_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/notification_service.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
+import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
 import 'package:studyking/features/settings/data/models/settings_update.dart';
 import 'package:studyking/features/settings/data/repositories/settings_repository.dart';
 import 'package:studyking/features/settings/data/models/user_profile_model.dart';
+import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
 void main() {
   group('defaultModelForProvider', () {
@@ -90,6 +96,47 @@ void main() {
       addTearDown(() => container.dispose());
       final locale = container.read(localeProvider);
       expect(locale.languageCode, anyOf('en', 'en_US', 'en_GB'));
+    });
+  });
+
+  group('badgeServiceProvider', () {
+    test('behavioral: uses the repository injected via override', () async {
+      final repo = _FakeBadgeRepository();
+      repo._badges.add(BadgeModel(
+        id: 'b1', studentId: 's1', name: 'First Step', description: 'd',
+      ));
+      final container = ProviderContainer(
+        overrides: [
+          badgeRepositoryProvider.overrideWithValue(repo),
+          notificationServiceProvider
+              .overrideWithValue(_FakeNotificationService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final result = await container.read(badgeServiceProvider).getBadges('s1');
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(1));
+      expect(result.data!.first.id, equals('b1'));
+    });
+
+    test('rebuilds when l10nProvider changes so badges localize', () {
+      final container = ProviderContainer(
+        overrides: [
+          badgeRepositoryProvider.overrideWithValue(_FakeBadgeRepository()),
+          notificationServiceProvider
+              .overrideWithValue(_FakeNotificationService()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final en = container.read(badgeServiceProvider);
+      container.read(l10nProvider.notifier).state = AppLocalizationsEs();
+      final es = container.read(badgeServiceProvider);
+
+      expect(en, isA<BadgeService>());
+      expect(es, isNot(same(en)));
     });
   });
 
@@ -253,4 +300,76 @@ class _FakeSettingsRepository implements SettingsRepository {
   }
 
   SettingsBox get currentSettings => _settings;
+}
+
+class _FakeBadgeRepository implements BadgeRepository {
+  final List<BadgeModel> _badges = [];
+  Map<String, BadgeModel> _badgeMap = {};
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  Future<void> init() async {}
+
+  @override
+  Future<Result<List<BadgeModel>>> getByStudent(String studentId) async =>
+      Result.success(List<BadgeModel>.from(_badges));
+
+  @override
+  Future<Result<Map<String, BadgeModel>>> getBadgeMap(String studentId) async =>
+      Result.success(Map<String, BadgeModel>.from(_badgeMap));
+
+  @override
+  Future<Result<void>> create(BadgeModel badge) async {
+    _badges.add(badge);
+    _badgeMap = {for (final b in _badges) b.id: b};
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<bool>> hasBadge(String studentId, String badgeId) async =>
+      Result.success(false);
+
+  @override
+  Future<Result<int>> getBadgeCount(String studentId) async =>
+      Result.success(_badges.length);
+
+  @override
+  Future<void> openBox(String boxName) async {}
+
+  @override
+  void attachBox(Box<BadgeModel> box) {}
+
+  @override
+  Future<Result<void>> save(String key, BadgeModel item) async =>
+      Result.success(null);
+
+  @override
+  Future<Result<BadgeModel?>> get(String key) async => Result.success(null);
+
+  @override
+  Future<Result<List<BadgeModel>>> getAll() async => Result.success([]);
+
+  @override
+  Future<Result<void>> delete(String key) async => Result.success(null);
+
+  @override
+  List<BadgeModel> filterBy<K>(K Function(BadgeModel) getter, K value) => [];
+
+  @override
+  Future<Result<void>> put(String key, BadgeModel item) async =>
+      Result.success(null);
+
+  @override
+  Box<BadgeModel> get box => throw UnimplementedError();
+}
+
+class _FakeNotificationService extends NotificationService {
+  @override
+  Future<Result<void>> showBadgeUnlocked({
+    required int id,
+    required String badgeName,
+    required String badgeDescription,
+  }) async => Result.success(null);
 }

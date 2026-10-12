@@ -1,7 +1,9 @@
 import 'package:studyking/features/dashboard/data/repositories/badge_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/dashboard/data/models/badge_model.dart';
+import 'package:studyking/core/utils/localization_helpers.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'notification_service.dart';
 
 class BadgeService {
@@ -9,14 +11,21 @@ class BadgeService {
   final BadgeRepository _repository;
   final Future<Result<Map<String, dynamic>>> Function(String)? _getStats;
   final NotificationService _notificationService;
+  AppLocalizations? _l10n;
 
   BadgeService({
     BadgeRepository? repository,
     Future<Result<Map<String, dynamic>>> Function(String)? getStats,
     NotificationService? notificationService,
+    AppLocalizations? l10n,
   })  : _repository = repository ?? BadgeRepository(),
         _getStats = getStats,
-        _notificationService = notificationService ?? NotificationService();
+        _notificationService = notificationService ?? NotificationService(),
+        _l10n = l10n;
+
+  void updateLocalization(AppLocalizations l10n) {
+    _l10n = l10n;
+  }
 
   Future<Result<List<BadgeModel>>> getBadges(String studentId) async {
     try {
@@ -78,10 +87,20 @@ class BadgeService {
           }
           newlyUnlocked.add(badge);
 
+          // Resolve the badge name/description through l10n so the
+          // notification body is fully localized; fall back to the
+          // English definitions when no localization is available yet.
+          final l10n = _l10n;
+          final unlockedName =
+              l10n != null ? badgeName(definition.id, l10n) : definition.name;
+          final unlockedDescription = l10n != null
+              ? badgeDescription(definition.id, l10n)
+              : definition.description;
+
           final notifResult = await _notificationService.showBadgeUnlocked(
             id: DateTime.now().millisecondsSinceEpoch,
-            badgeName: definition.name,
-            badgeDescription: definition.description,
+            badgeName: unlockedName,
+            badgeDescription: unlockedDescription,
           );
           if (notifResult.isFailure) {
             _logger.w('Failed to show badge notification: ${notifResult.error}');
