@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/widgets/animated_bar_chart.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 Widget wrapApp(Widget child) {
   return MaterialApp(
+    home: Scaffold(
+      body: child,
+    ),
+  );
+}
+
+Widget wrapAppLocalized(Locale locale, Widget child) {
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     home: Scaffold(
       body: child,
     ),
@@ -280,6 +292,51 @@ void main() {
       expect(labels, contains('Mon: 10 sessions'));
       expect(labels, contains('Tue: 20 sessions'));
       expect(labels, contains('Wed: 15 sessions'));
+    });
+
+    testWidgets('localizes default Semantics label and value under a non-English locale', (tester) async {
+      await tester.pumpWidget(wrapAppLocalized(
+        const Locale('es'),
+        const AnimatedBarChart(
+          data: {'Mon': 10, 'Tue': 0},
+          accentColor: Colors.blue,
+          gapWeeks: {'Tue'},
+        ),
+      ));
+
+      final semanticsNodes = find
+          .byWidgetPredicate((w) => w is Semantics && (w.properties.label ?? '').isNotEmpty)
+          .evaluate()
+          .map((e) => e.widget as Semantics)
+          .toList();
+      final labels = semanticsNodes.map((s) => s.properties.label).toList();
+      final values = semanticsNodes.map((s) => s.properties.value).toList();
+
+      expect(labels, contains('Mon: 10 Sesiones'));
+      expect(labels, contains('Sin actividad — estuvo ausente esta semana.'));
+      expect(values, contains('Sin actividad — estuvo ausente esta semana.'));
+      expect(values, contains('10'));
+    });
+
+    testWidgets('localizes Semantics value for gap weeks even with a custom label builder', (tester) async {
+      await tester.pumpWidget(wrapAppLocalized(
+        const Locale('es'),
+        AnimatedBarChart(
+          data: {'Lun': 0},
+          accentColor: Colors.blue,
+          gapWeeks: {'Lun'},
+          semanticsLabelBuilder: (day, count) => 'custom $day',
+        ),
+      ));
+
+      final semantics = find
+          .byWidgetPredicate((w) => w is Semantics && (w.properties.label ?? '').isNotEmpty)
+          .evaluate()
+          .single
+          .widget as Semantics;
+
+      expect(semantics.properties.label, 'custom Lun');
+      expect(semantics.properties.value, 'Sin actividad — estuvo ausente esta semana.');
     });
   });
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/utils/responsive.dart';
+import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class AnimatedBarChart extends StatefulWidget {
   final Map<String, int> data;
@@ -115,6 +116,7 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final accentColor = widget.accentColor ?? theme.colorScheme.primary;
     final rawMax = widget.data.values.isNotEmpty
@@ -156,11 +158,14 @@ class _AnimatedBarChartState extends State<AnimatedBarChart> {
                       (count / maxCount * (widget.maxBarHeight - widget.minBarHeight));
 
                   final isGapWeek = widget.gapWeeks.contains(day);
+                  final gapLabel = l10n?.noActivity ?? 'No activity';
                   return Semantics(
                     label: widget.semanticsLabelBuilder != null
                         ? widget.semanticsLabelBuilder!(day, count)
-                        : isGapWeek ? 'No activity' : '$day: $count sessions',
-                    value: isGapWeek ? 'No activity' : '$count',
+                        : isGapWeek
+                              ? gapLabel
+                              : '$day: $count ${l10n?.sessionsLabel ?? 'sessions'}',
+                    value: isGapWeek ? gapLabel : '$count',
                     child: Column(
                       key: ValueKey('bar_$day'),
                       mainAxisSize: MainAxisSize.min,
