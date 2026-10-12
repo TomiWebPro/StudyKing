@@ -173,7 +173,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
         });
       }
     } catch (e) {
-      _logger.e('Mentor initialization failed', e);
+      _logger.w('Mentor initialization failed', e);
       if (mounted) {
         final l10n = AppLocalizations.of(context)!;
         setState(() {
