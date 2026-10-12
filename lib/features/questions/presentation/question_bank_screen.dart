@@ -794,7 +794,18 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
             : null,
         updatedAt: DateTime.now(),
       );
-      await _questionRepo.save(question.id, updated);
+      final saveResult = await _questionRepo.save(question.id, updated);
+      if (saveResult.isFailure) {
+        _logger.w('Failed to save edited question ${question.id}', saveResult.error);
+        if (mounted) {
+          await Future<void>.delayed(Duration.zero);
+          if (!mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context)!.somethingWentWrong)),
+          );
+        }
+        return;
+      }
       if (mounted) {
         await Future<void>.delayed(Duration.zero);
         if (!mounted) return;

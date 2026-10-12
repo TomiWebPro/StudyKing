@@ -25,10 +25,13 @@ import '../../../helpers/navigator_observer_helper.dart';
 class _FakeQuestionRepo extends QuestionRepository {
   final List<Question> _questions;
   bool _shouldThrow = false;
+  bool _saveShouldFail = false;
 
   _FakeQuestionRepo(this._questions);
 
   void setShouldThrow(bool v) => _shouldThrow = v;
+
+  set saveShouldFail(bool v) => _saveShouldFail = v;
 
   @override
   Future<void> init() async {}
@@ -45,6 +48,7 @@ class _FakeQuestionRepo extends QuestionRepository {
 
   @override
   Future<Result<void>> save(String key, Question item) async {
+    if (_saveShouldFail) return Result.failure('Hive write failed');
     final index = _questions.indexWhere((q) => q.id == key);
     if (index != -1) {
       _questions[index] = item;
@@ -464,6 +468,41 @@ void main() {
 
       expect(find.text('What is Newton\'s third law?'), findsOneWidget);
       expect(find.text('What is Newton\'s first law?'), findsNothing);
+    });
+
+    testWidgets('edit question keeps original and shows error when save fails', (tester) async {
+      final repo = _FakeQuestionRepo(List.from(mockQuestions));
+      repo.saveShouldFail = true;
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('What is Newton\'s first law?'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Edit Question'), findsOneWidget);
+
+      final textField = find.byWidgetPredicate(
+        (w) => w is TextField && w.decoration?.labelText == 'Question text',
+      );
+      expect(textField, findsOneWidget);
+      await tester.enterText(textField, 'What is Newton\'s third law?');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      await tester.pumpAndSettle();
+
+      // Save failed: the edited text never reaches the list.
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('What is Newton\'s third law?'), findsNothing);
+      // The failure is surfaced to the user instead of being silent.
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
 
     testWidgets('popup menu shows edit and delete options', (tester) async {
