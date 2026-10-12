@@ -118,8 +118,89 @@ void main() {
       expect(cache.ttlForFeature('lesson_plan'), equals(const Duration(hours: 1)));
       expect(cache.ttlForFeature('tutor'), equals(const Duration(minutes: 5)));
       expect(cache.ttlForFeature('chat'), equals(const Duration(minutes: 5)));
+      expect(cache.ttlForFeature('evaluation'), equals(const Duration(hours: 1)));
+      expect(cache.ttlForFeature('generation'), equals(const Duration(hours: 24)));
+      expect(cache.ttlForFeature('summarization'), equals(const Duration(hours: 1)));
       expect(cache.ttlForFeature('general'), equals(const Duration(minutes: 10)));
       expect(cache.ttlForFeature('unknown_feature'), equals(const Duration(minutes: 10)));
+    });
+
+    test('ttlForFeature maps real call-site feature strings to their TTLs', () {
+      // Classification call sites.
+      expect(
+        cache.ttlForFeature('content_classification'),
+        equals(const Duration(hours: 24)),
+      );
+      // Lesson planning / lesson content call sites.
+      expect(
+        cache.ttlForFeature('teaching_lesson_plan'),
+        equals(const Duration(hours: 1)),
+      );
+      expect(
+        cache.ttlForFeature('lesson_agent'),
+        equals(const Duration(hours: 1)),
+      );
+      // Conversational call sites.
+      expect(cache.ttlForFeature('mentor'), equals(const Duration(minutes: 5)));
+      // Evaluation call sites.
+      expect(
+        cache.ttlForFeature('teaching_evaluation'),
+        equals(const Duration(hours: 1)),
+      );
+      // Generation call sites.
+      for (final feature in [
+        'question_generation',
+        'question_variant_generation',
+        'flashcard_generation',
+        'concept_map_generation',
+        'study_guide_generation',
+        'slide_deck_structure',
+        'slide_deck_chapter',
+      ]) {
+        expect(cache.ttlForFeature(feature), equals(const Duration(hours: 24)),
+            reason: feature);
+      }
+      // Summarization call sites.
+      for (final feature in [
+        'content_summarization',
+        'teaching_summary',
+        'teaching_lesson_recap',
+        'long_term_memory_summary',
+        'conversation_memory_compression',
+      ]) {
+        expect(cache.ttlForFeature(feature), equals(const Duration(hours: 1)),
+            reason: feature);
+      }
+    });
+
+    test('ttlForFeature normalizes case and surrounding whitespace', () {
+      expect(
+        cache.ttlForFeature('  Content_Classification '),
+        equals(const Duration(hours: 24)),
+      );
+      expect(
+        cache.ttlForFeature('LESSON_PLAN'),
+        equals(const Duration(hours: 1)),
+      );
+      expect(
+        cache.ttlForFeature('Tutor'),
+        equals(const Duration(minutes: 5)),
+      );
+    });
+
+    test('ttlForFeature falls back to default TTL for unmapped features', () {
+      for (final feature in [
+        'transcription',
+        'ocr_extraction',
+        'idle_executor',
+        'planner_advisor_plan_generation',
+        'planner_advisor_plan_adaptation',
+        'general',
+        'agent',
+      ]) {
+        expect(cache.ttlForFeature(feature), equals(const Duration(minutes: 10)),
+            reason: feature);
+      }
     });
 
     test('overwrites existing entry for same key', () {

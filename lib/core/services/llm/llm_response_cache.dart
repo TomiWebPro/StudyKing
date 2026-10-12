@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:studyking/core/constants/app_runtime_config.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 class LlmResponseCache {
   static final Logger _logger = const Logger('LlmResponseCache');
@@ -71,10 +72,36 @@ class LlmResponseCache {
   int get size => _box?.length ?? 0;
 
   Duration ttlForFeature(String feature) {
-    return switch (feature) {
-      'classification' => CacheConfig.classificationCacheTtl,
-      'lesson_plan' || 'lessonPlan' => CacheConfig.lessonPlanCacheTtl,
-      'tutor' || 'chat' => CacheConfig.tutorCacheTtl,
+    final normalized = feature.normalized;
+    return switch (normalized) {
+      // Classification results are stable per source document.
+      'classification' || 'content_classification' =>
+        CacheConfig.classificationCacheTtl,
+      // Lesson planning and lesson content generation.
+      'lesson_plan' ||
+      'lessonplan' ||
+      'teaching_lesson_plan' ||
+      'lesson_agent' => CacheConfig.lessonPlanCacheTtl,
+      // Conversational features.
+      'tutor' || 'chat' || 'mentor' => CacheConfig.tutorCacheTtl,
+      // Answer evaluation is stable per question and answer.
+      'evaluation' || 'teaching_evaluation' => CacheConfig.evaluationCacheTtl,
+      // Generated artifacts are deterministic for a given source and prompt.
+      'generation' ||
+      'question_generation' ||
+      'question_variant_generation' ||
+      'flashcard_generation' ||
+      'concept_map_generation' ||
+      'study_guide_generation' ||
+      'slide_deck_structure' ||
+      'slide_deck_chapter' => CacheConfig.generationCacheTtl,
+      // Summaries and compression of stable content.
+      'summarization' ||
+      'content_summarization' ||
+      'teaching_summary' ||
+      'teaching_lesson_recap' ||
+      'long_term_memory_summary' ||
+      'conversation_memory_compression' => CacheConfig.summarizationCacheTtl,
       _ => CacheConfig.defaultCacheTtl,
     };
   }

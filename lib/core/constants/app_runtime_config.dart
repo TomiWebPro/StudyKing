@@ -22,5 +22,8 @@ class CacheConfig {
   static const Duration classificationCacheTtl = Duration(hours: 24);
   static const Duration lessonPlanCacheTtl = Duration(hours: 1);
   static const Duration tutorCacheTtl = Duration(minutes: 5);
+  static const Duration evaluationCacheTtl = Duration(hours: 1);
+  static const Duration generationCacheTtl = Duration(hours: 24);
+  static const Duration summarizationCacheTtl = Duration(hours: 1);
   static const Duration defaultCacheTtl = Duration(minutes: 10);
 }
