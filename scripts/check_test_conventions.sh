@@ -37,8 +37,11 @@ fi
 echo "--- 2. Checking for mixed test() + testWidgets() files ---"
 MIXED=0
 while IFS= read -r f; do
-  has_test=$(grep -cE '\btest\(' "$f" 2>/dev/null || echo 0)
-  has_widget=$(grep -cE '\btestWidgets\(' "$f" 2>/dev/null || echo 0)
+  # grep -c already prints 0 on no-match; `|| true` keeps that single 0 in the
+  # captured output while making the substitution exit 0 so `set -euo pipefail`
+  # does not abort the loop on files with no matches.
+  has_test=$(grep -cE '\btest\(' "$f" 2>/dev/null || true)
+  has_widget=$(grep -cE '\btestWidgets\(' "$f" 2>/dev/null || true)
   if [ "$has_test" -gt 0 ] && [ "$has_widget" -gt 0 ]; then
     echo "  Mixed: $f ($has_test test(), $has_widget testWidgets())"
     MIXED=$((MIXED + 1))
