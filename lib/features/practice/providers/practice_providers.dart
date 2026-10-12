@@ -12,6 +12,11 @@ import 'package:studyking/features/practice/services/exam_session_service.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/providers/service_providers.dart';
+import 'package:studyking/core/providers/llm_providers.dart'
+    show llmServiceProvider, modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
+import 'package:studyking/features/ingestion/providers/ingestion_providers.dart'
+    show whisperAsrEngineProvider;
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
 import 'package:studyking/core/services/llm_answer_evaluator.dart';
@@ -61,9 +66,16 @@ final masteryGraphServiceProvider = Provider<MasteryGraphService>((ref) {
 });
 
 final llmAnswerEvaluatorProvider = Provider<LlmAnswerEvaluator>((ref) {
+  final llmService = ref.watch(llmServiceProvider);
+  final modelId =
+      ref.watch(modelRouterProvider).resolve(LlmTaskType.evaluation);
+  final asrEngine = ref.watch(whisperAsrEngineProvider);
   return LlmAnswerEvaluator(
-    llmClient: UnavailableMultimodalLlmClient(),
-    transcriptionService: UnavailableTranscriptionService(),
+    llmClient: LlmGradingMultimodalClient(
+      llmService: llmService,
+      modelId: modelId,
+    ),
+    transcriptionService: WhisperTranscriptionService(asrEngine: asrEngine),
     messages: ValidationMessagesForEvaluator.english,
   );
 });

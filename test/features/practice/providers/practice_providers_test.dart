@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hive/hive.dart';
+import 'package:http/http.dart' as http;
+import 'package:studyking/core/data/extraction/asr_engine.dart';
+import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/core/data/repositories/question_mastery_state_repository.dart';
@@ -17,7 +21,9 @@ import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
@@ -28,6 +34,7 @@ import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/providers/service_providers.dart';
+import 'package:studyking/core/providers/llm_providers.dart';
 import '../../../helpers/fakes.dart';
 
 void main() {
@@ -607,6 +614,124 @@ void main() {
       expect(result.updatedData.repetitions, 1);
       expect(result.updatedData.easeFactor, greaterThan(2.5));
     });
+
+    test('llmAnswerEvaluatorProvider auto-grades graph drawings through the configured LLM service', () async {
+      final httpClient = _FakeChatHttpClient(
+        responseBody: jsonEncode({
+          'choices': [
+            {
+              'message': {
+                'content': jsonEncode({
+                  'isCorrect': true,
+                  'score': 0.9,
+                  'feedback': 'Slope and intercept are correct',
+                  'confidence': 0.95,
+                }),
+              },
+            },
+          ],
+          'usage': {'prompt_tokens': 10, 'completion_tokens': 5},
+        }),
+      );
+      final llmService = LlmService(
+        config: LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'test-key',
+        ),
+        httpClient: httpClient,
+      );
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(llmService),
+          whisperAsrEngineProvider.overrideWithValue(_FakeAsrEngine(
+            available: false,
+            result: const TranscriptionResult(
+              text: '',
+              extractionMethod: 'noop',
+            ),
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final evaluator = container.read(llmAnswerEvaluatorProvider);
+      final result = await evaluator.evaluateGraphDrawing(
+        'base64png',
+        Markscheme(questionId: 'q1', correctAnswer: 'y=2x'),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+      expect(result.data!.needsManualReview, isFalse);
+      expect(result.data!.feedback, 'Slope and intercept are correct');
+    });
+
+    test('llmAnswerEvaluatorProvider transcribes audio answers through the configured ASR engine', () async {
+      final asrEngine = _FakeAsrEngine(
+        result: const TranscriptionResult(
+          text: ' photosynthesis ',
+          extractionMethod: 'whisper_api',
+        ),
+      );
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(LlmService(
+            config: LlmConfiguration(
+              provider: LlmProvider.openRouter,
+              apiKey: 'unused',
+            ),
+            httpClient: _FakeChatHttpClient(responseBody: '{}'),
+          )),
+          whisperAsrEngineProvider.overrideWithValue(asrEngine),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final evaluator = container.read(llmAnswerEvaluatorProvider);
+      final result = await evaluator.evaluateAudioRecording(
+        '/tmp/recording.m4a',
+        Markscheme(questionId: 'q1', correctAnswer: 'photosynthesis'),
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.isCorrect, isTrue);
+      expect(result.data!.needsManualReview, isFalse);
+      expect(asrEngine.lastFilePath, '/tmp/recording.m4a');
+    });
+
+    test('llmAnswerEvaluatorProvider flags manual review when no LLM key is configured', () async {
+      final container = ProviderContainer(
+        overrides: [
+          llmServiceProvider.overrideWithValue(LlmService(
+            config: LlmConfiguration(
+              provider: LlmProvider.openRouter,
+              apiKey: '',
+            ),
+            httpClient: _FakeChatHttpClient(responseBody: '{}'),
+          )),
+          whisperAsrEngineProvider.overrideWithValue(_FakeAsrEngine(
+            available: false,
+            result: const TranscriptionResult(
+              text: '',
+              extractionMethod: 'noop',
+            ),
+          )),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final evaluator = container.read(llmAnswerEvaluatorProvider);
+      final result = await evaluator.evaluateGraphDrawing(
+        'base64png',
+        Markscheme(questionId: 'q1', correctAnswer: 'y=2x'),
+      );
+
+      // Graceful degradation: an unconfigured provider degrades to
+      // manual review, never a silent auto-grade.
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.needsManualReview, isTrue);
+      expect(result.data!.isCorrect, isFalse);
+    });
   });
 }
 
@@ -791,5 +916,45 @@ class FakeAttemptRepositoryWithSeed extends AttemptRepository {
   Future<Result<List<StudentAttempt>>> getByStudentAndSubject(
       String studentId, String subjectId) async {
     return Result.success(_attempts);
+  }
+}
+
+class _FakeChatHttpClient extends http.BaseClient {
+  final String responseBody;
+
+  _FakeChatHttpClient({required this.responseBody});
+
+  @override
+  Future<http.StreamedResponse> send(http.BaseRequest request) async {
+    return http.StreamedResponse(
+      Stream.value(utf8.encode(responseBody)),
+      200,
+    );
+  }
+}
+
+class _FakeAsrEngine extends AsrEngine {
+  final bool available;
+  final TranscriptionResult result;
+
+  int callCount = 0;
+  String? lastFilePath;
+
+  _FakeAsrEngine({
+    this.available = true,
+    required this.result,
+  });
+
+  @override
+  bool get isAvailable => available;
+
+  @override
+  Future<TranscriptionResult> transcribeFile({
+    required String filePath,
+    String? language,
+  }) async {
+    callCount++;
+    lastFilePath = filePath;
+    return result;
   }
 }

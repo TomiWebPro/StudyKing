@@ -7,6 +7,7 @@ import 'package:studyking/core/providers/app_providers.dart' show localeProvider
 import 'package:studyking/core/providers/llm_providers.dart'
     show llmServiceProvider, modelRouterProvider;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/ocr_provider.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
@@ -19,8 +20,23 @@ import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/flashcards/services/flashcard_generator.dart';
 import 'package:studyking/features/flashcards/data/repositories/flashcard_repository.dart';
 
+final _ingestionProvidersLogger = const Logger('IngestionProviders');
+
 final whisperAsrEngineProvider = Provider<AsrEngine>((ref) {
-  final whisperApiKey = AppConstants.instance.secrets.whisperApiKey;
+  final String? whisperApiKey;
+  try {
+    whisperApiKey = AppConstants.instance.secrets.whisperApiKey;
+  } catch (e) {
+    // Config is not initialized (e.g. providers exercised in
+    // isolation by tests). Degrade to the no-op engine — the same
+    // behavior as a missing API key — instead of breaking every
+    // provider that transitively depends on this one.
+    _ingestionProvidersLogger.w(
+      'AppConstants not initialized; ASR engine disabled',
+      e,
+    );
+    return NoopAsrEngine();
+  }
   if (whisperApiKey != null && whisperApiKey.isNotEmpty) {
     return WhisperApiAsrEngine(apiKey: whisperApiKey);
   }

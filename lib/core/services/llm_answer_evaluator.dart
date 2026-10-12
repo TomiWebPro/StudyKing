@@ -1,5 +1,9 @@
+import 'dart:convert';
+
+import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
 
@@ -66,6 +70,178 @@ class UnavailableTranscriptionService extends TranscriptionService {
   @override
   Future<Result<String>> transcribe(String audioData) async {
     return Result.failure('Transcription service is not configured');
+  }
+}
+
+/// A [MultimodalLlmClient] backed by the configured [LlmService].
+///
+/// Follows the same pattern the teaching conversation uses for
+/// image analysis: the student's media is embedded in the user
+/// message as a data URL so vision-capable models can grade it.
+/// The response must be a JSON object with `isCorrect`, `score`,
+/// `feedback` and `confidence`; anything else is reported as a
+/// failure so the evaluator flags the answer for manual review
+/// instead of silently auto-grading it.
+class LlmGradingMultimodalClient extends MultimodalLlmClient {
+  static final Logger _logger = const Logger('LlmGradingMultimodalClient');
+
+  final LlmService _llmService;
+  final String _modelId;
+  final String localeName;
+
+  LlmGradingMultimodalClient({
+    required LlmService llmService,
+    required String modelId,
+    this.localeName = 'en',
+  })  : _llmService = llmService,
+        _modelId = modelId;
+
+  /// System prompt for grading calls. LLM-facing, so it stays
+  /// `en` invariant per the i18n conventions.
+  static const String gradingSystemPrompt =
+      'You are a strict, fair grader for student practice answers. '
+      'Respond with ONLY a JSON object, no markdown and no prose, '
+      'of the form {"isCorrect": <bool>, "score": <number between '
+      '0.0 and 1.0>, "feedback": <string>, "confidence": <number '
+      'between 0.0 and 1.0>}.';
+
+  @override
+  Future<Result<LlmEvaluation>> evaluate({
+    required String prompt,
+    required String mediaBase64,
+    required String mediaType,
+  }) async {
+    if (mediaBase64.trim().isEmpty) {
+      return Result.failure('No media provided for evaluation');
+    }
+    final message = '$prompt\n\n'
+        'Student submission (media data URL): '
+        'data:$mediaType;base64,$mediaBase64';
+    try {
+      final chatResult = await _llmService.chat(
+        message: message,
+        modelId: _modelId,
+        systemPrompt: gradingSystemPrompt,
+        localeName: localeName,
+        feature: 'evaluation',
+      );
+      if (chatResult.isFailure) {
+        _logger.w('Grading LLM call failed', chatResult.error);
+        return Result.failure(chatResult.error ?? 'Grading LLM call failed');
+      }
+      final evaluation = parseGradingResponse(chatResult.data!);
+      if (evaluation == null) {
+        _logger.w('Grading LLM response was not valid grading JSON');
+        return Result.failure(
+          'Grading LLM response could not be parsed as grading JSON',
+        );
+      }
+      return Result.success(evaluation);
+    } catch (e) {
+      _logger.w('Grading LLM evaluation threw unexpectedly', e);
+      return Result.failure('Grading LLM evaluation failed: $e');
+    }
+  }
+}
+
+/// Logger for the grading-response parsing helpers below.
+/// Top-level (like the provider files) because the helpers
+/// are library-level functions, not class members.
+final _gradingParserLogger = const Logger('GradingResponseParser');
+
+/// Parses a grading LLM response into an [LlmEvaluation].
+///
+/// Accepts responses that embed the JSON object in surrounding
+/// prose. Returns `null` — which callers map to a failure — when
+/// the response contains no parseable object or when required
+/// fields are missing or out of range, so a malformed answer can
+/// never produce a partial or fabricated grade.
+LlmEvaluation? parseGradingResponse(String content) {
+  final start = content.indexOf('{');
+  final end = content.lastIndexOf('}');
+  if (start < 0 || end <= start) return null;
+  try {
+    final map = jsonDecode(content.substring(start, end + 1))
+        as Map<String, dynamic>;
+    final isCorrect = _parseBoolField(map['isCorrect']);
+    final score = _parseClampedField(map['score']);
+    final confidence = _parseClampedField(map['confidence']);
+    if (isCorrect == null || score == null || confidence == null) {
+      return null;
+    }
+    final feedback = map['feedback'];
+    return LlmEvaluation(
+      isCorrect: isCorrect,
+      score: score,
+      feedback: feedback is String ? feedback : '',
+      confidence: confidence,
+    );
+  } catch (e) {
+    _gradingParserLogger.w('Failed to parse grading LLM response', e);
+    return null;
+  }
+}
+
+bool? _parseBoolField(dynamic value) {
+  if (value is bool) return value;
+  if (value is num) return value == 1;
+  if (value is String) {
+    switch (value.normalized) {
+      case 'true':
+      case 'yes':
+      case '1':
+        return true;
+      case 'false':
+      case 'no':
+      case '0':
+        return false;
+    }
+  }
+  return null;
+}
+
+double? _parseClampedField(dynamic value) {
+  final number =
+      value is num ? value.toDouble() : (value is String ? double.tryParse(value) : null);
+  if (number == null || number.isNaN || number.isInfinite) return null;
+  return number.clamp(0.0, 1.0);
+}
+
+/// A [TranscriptionService] backed by the configured [AsrEngine]
+/// (e.g. the Whisper API engine). Audio answers are recorded to a
+/// local file whose path is the answer string, which maps directly
+/// onto [AsrEngine.transcribeFile]. When no ASR engine is
+/// configured the failure surfaces to the evaluator, which flags
+/// the answer for manual review.
+class WhisperTranscriptionService extends TranscriptionService {
+  static final Logger _logger = const Logger('WhisperTranscriptionService');
+
+  final AsrEngine _asrEngine;
+
+  WhisperTranscriptionService({required AsrEngine asrEngine})
+      : _asrEngine = asrEngine;
+
+  @override
+  Future<Result<String>> transcribe(String audioData) async {
+    if (audioData.trim().isEmpty) {
+      return Result.failure('No audio provided for transcription');
+    }
+    if (!_asrEngine.isAvailable) {
+      return Result.failure('ASR engine is not configured');
+    }
+    try {
+      final result = await _asrEngine.transcribeFile(filePath: audioData);
+      final text = result.text.trim();
+      if (text.isEmpty) {
+        return Result.failure(
+          'Transcription produced no text (${result.extractionMethod})',
+        );
+      }
+      return Result.success(text);
+    } catch (e) {
+      _logger.w('Whisper transcription failed', e);
+      return Result.failure('Whisper transcription failed: $e');
+    }
   }
 }
 
