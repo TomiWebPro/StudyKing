@@ -35,10 +35,10 @@ class HandwritingRecognitionService {
 
   RecognitionResult recognizeStrokes(List<Stroke> strokes, RecognitionMode mode) {
     if (strokes.isEmpty) {
-      return const RecognitionResult(
+      return RecognitionResult(
         recognizedText: '',
         confidence: 0.0,
-        mode: RecognitionMode.text,
+        mode: mode,
       );
     }
 
@@ -157,7 +157,10 @@ class HandwritingRecognitionService {
       return _CharRecognition('s', 0.5);
     }
 
-    return _CharRecognition('e', 0.4);
+    // No geometric rule matched: the stroke is unrecognized. Emitting a
+    // fabricated fallback character here would push garbage text into
+    // answer validation, so report nothing for this stroke instead.
+    return null;
   }
 
   _CharRecognition? _recognizeMathToken(Stroke stroke) {
@@ -206,7 +209,10 @@ class HandwritingRecognitionService {
       return _CharRecognition('=', 0.5);
     }
 
-    return _CharRecognition('x', 0.4);
+    // No geometric rule matched: the stroke is unrecognized. Emitting a
+    // fabricated fallback token here would push garbage text into answer
+    // validation, so report nothing for this stroke instead.
+    return null;
   }
 
   List<Stroke> combineStrokes(List<Stroke> strokes) {
