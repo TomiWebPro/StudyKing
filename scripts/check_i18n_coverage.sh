@@ -31,7 +31,7 @@ for locale_file in "$ARB_DIR"/app_*.arb; do
   MISSING=0
   while IFS= read -r key; do
     [ -z "$key" ] && continue
-    if ! echo "$LOCALE_KEYS" | grep -qxF "$key"; then
+    if ! grep -qxF "$key" <<< "$LOCALE_KEYS"; then
       echo "  MISSING: $key"
       MISSING=$((MISSING + 1))
     fi
@@ -144,7 +144,7 @@ while IFS= read -r key; do
     @*) continue ;;
   esac
   # Count references in .dart files (l10n.keyName or l10n[keyName] or "keyName" in ARB context)
-  ref_count=$(grep -r "l10n\.$key\b" lib/ 2>/dev/null | wc -l)
+  ref_count=$(grep -r "l10n\.$key\b" lib/ 2>/dev/null | wc -l || true)
   if [ "$ref_count" -eq 0 ]; then
     echo "  UNUSED: $key (no l10n.$key reference in lib/)"
     DEAD_KEYS=true
