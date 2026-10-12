@@ -97,6 +97,20 @@ class TestableStudyTimerService extends StudyTimerService {
   Future<Result<int>> getDailyCapMinutes() async => Result.success(_dailyCapMinutes);
 }
 
+/// A point in time [ago] before now, clamped to the current calendar
+/// day. Fixtures that model "already studied today" must keep their
+/// startTime within today, otherwise [FakeSessionRepository.getByDate]
+/// drops them from today's stats when the suite runs shortly after
+/// midnight (e.g. `now - 100 minutes` at 00:30 lands on yesterday).
+DateTime _todayAgo(Duration ago) {
+  final now = DateTime.now();
+  final todayStart = DateTime(now.year, now.month, now.day);
+  final candidate = now.subtract(ago);
+  return candidate.isBefore(todayStart)
+      ? todayStart.add(const Duration(seconds: 1))
+      : candidate;
+}
+
 void main() {
   group('StudyTimerService', () {
     late FakeSessionRepository repository;
@@ -454,7 +468,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
+          startTime: _todayAgo(const Duration(minutes: 5)),
           actualDurationMs: 600000,
           completed: true,
           type: SessionType.focus,
@@ -470,7 +484,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
+          startTime: _todayAgo(const Duration(minutes: 5)),
           actualDurationMs: 600000,
           completed: true,
           type: SessionType.focus,
@@ -484,7 +498,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 100)),
+          startTime: _todayAgo(const Duration(minutes: 100)),
           actualDurationMs: 6000000, // 100 minutes already studied today
           completed: true,
           type: SessionType.focus,
@@ -501,7 +515,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 100)),
+          startTime: _todayAgo(const Duration(minutes: 100)),
           actualDurationMs: 6000000, // 100 minutes already studied today
           completed: true,
           type: SessionType.focus,
@@ -529,7 +543,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
+          startTime: _todayAgo(const Duration(minutes: 5)),
           actualDurationMs: 1800000,
           completed: true,
           type: SessionType.focus,
@@ -544,7 +558,7 @@ void main() {
         final existing = Session(
           id: 'existing',
           studentId: 'student-1',
-          startTime: DateTime.now().subtract(const Duration(minutes: 5)),
+          startTime: _todayAgo(const Duration(minutes: 5)),
           actualDurationMs: 3600000,
           completed: true,
           type: SessionType.focus,
