@@ -259,6 +259,12 @@ class _ExamSessionScreenState extends ConsumerState<ExamSessionScreen> {
       userAnswer: _currentAnswer!,
     );
 
+    // The mastery write performs several sequential repository
+    // writes, so the screen may be disposed (parent pop, routed
+    // navigation) while it is in flight. Guard the post-await
+    // UI mutation like the other async paths do.
+    if (!mounted) return;
+
     setState(() {
       _isSubmitted = true;
       _isFeedbackVisible = true;
