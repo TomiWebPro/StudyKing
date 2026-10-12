@@ -25,6 +25,10 @@ import 'dart:io';
 import 'package:hive/hive.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/main.dart' show MainScreen;
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/features/onboarding/providers/onboarding_providers.dart';
+import 'package:studyking/features/onboarding/services/onboarding_service.dart';
+import 'package:studyking/features/onboarding/services/onboarding_storage.dart';
 import 'package:studyking/core/data/hive_initializer.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -173,9 +177,11 @@ class _FakeStudyProgressTracker extends StudyProgressTracker {
   }
 }
 
-Widget _buildTestApp() {
+Widget _buildTestApp({OnboardingService? onboardingService}) {
   return ProviderScope(
     overrides: [
+      if (onboardingService != null)
+        onboardingServiceProvider.overrideWithValue(onboardingService),
       subjectsRepositoryProvider.overrideWith(
         () => _FakeSubjectsRepositoryNotifier(_FakeSubjectRepository()),
       ),
@@ -333,5 +339,79 @@ void main() {
       final navBar = tester.widget<NavigationBar>(find.byType(NavigationBar));
       expect(navBar.selectedIndex, isNonNegative);
     });
+
+    testWidgets(
+      'first-launch check does not setState after dispose during settings box open',
+      (tester) async {
+        // Capture debugPrint: _handleFirstLaunch swallows the
+        // dispose error in its own catch (logging it via the
+        // Logger, which uses debugPrint), so takeException
+        // alone cannot see the bug.
+        final logged = <String>[];
+        final originalDebugPrint = debugPrint;
+        debugPrint = (String? message, {int? wrapWidth}) {
+          if (message != null) {
+            logged.add(message);
+          }
+        };
+        try {
+          // The real OnboardingService opens the settings box
+          // itself (HiveOnboardingStorage), which would shrink
+          // the box-open race window at main.dart:536 to a
+          // microtask. The in-memory storage reports onboarding
+          // as completed so no dialog is shown and the
+          // first-launch check proceeds straight to the settings
+          // box open. Delete the box (real I/O, so runAsync) to
+          // restore the async race window.
+          await tester.runAsync(
+            () => Hive.deleteBoxFromDisk(HiveBoxNames.settings),
+          );
+
+          await tester.pumpWidget(_buildTestApp(
+            onboardingService: OnboardingService(
+              storage: InMemoryOnboardingStorage({
+                OnboardingService.onboardingKey: true,
+              }),
+            ),
+          ));
+          // The first frame's postframe callback runs
+          // _handleFirstLaunch; it reaches
+          // `await Hive.openBox(HiveBoxNames.settings)`, which
+          // performs real async file I/O.
+          await tester.pump();
+
+          // Session exit (root route replaced) disposes
+          // MainScreen while the settings box open is still in
+          // flight.
+          await tester.pumpWidget(const Placeholder());
+
+          // Drive the in-flight box open to completion: in this
+          // environment real I/O events only fire while the real
+          // event loop runs (runAsync), and the async chain's
+          // continuations only run when pump flushes microtasks.
+          // Pre-fix, the chain then called setState on the
+          // disposed State ("setState() called after dispose()").
+          for (var i = 0;
+              i < 100 && !Hive.isBoxOpen(HiveBoxNames.settings);
+              i++) {
+            await tester.runAsync(
+              () => Future<void>.delayed(const Duration(milliseconds: 10)),
+            );
+            await tester.pump();
+          }
+          // Flush the chain's final continuation (the banner
+          // setState).
+          await tester.pump();
+
+          expect(
+            logged.where((m) => m.contains('setState() called after dispose')),
+            isEmpty,
+          );
+          expect(tester.takeException(), isNull);
+        } finally {
+          debugPrint = originalDebugPrint;
+        }
+      },
+    );
   });
 }

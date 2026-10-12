@@ -534,6 +534,7 @@ class _MainScreenState extends ConsumerState<MainScreen> {
 
       if (mounted) {
         final settingsBox = await Hive.openBox(HiveBoxNames.settings);
+        if (!mounted) return;
         final apiKey = settingsBox.get('apiKey', defaultValue: '') as String;
         final permanentlyDismissed = settingsBox.get(_bannerPermanentlyDismissedKey, defaultValue: false) as bool;
         final dismissedTime = settingsBox.get(_bannerDismissedTimeKey) as int?;
