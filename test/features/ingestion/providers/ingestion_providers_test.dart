@@ -19,6 +19,7 @@ import 'package:studyking/features/questions/data/repositories/question_reposito
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show TaskModelConfig;
 import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
 import 'package:studyking/core/providers/shared_providers.dart' show initSettingsRepository;
 import 'package:studyking/core/constants/app_config.dart';
@@ -112,6 +113,36 @@ class _FailingLlmService extends LlmService {
   }
 }
 
+/// Hand-written fake that records the model ID and feature of every
+/// chat call so tests can assert which model a provider actually used.
+class _ModelCapturingLlmService extends LlmService {
+  final List<String> capturedModelIds = [];
+  final List<String> capturedFeatures = [];
+
+  _ModelCapturingLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    capturedModelIds.add(modelId);
+    capturedFeatures.add(feature);
+    return Result.success('transcribed');
+  }
+}
+
 class _FakeSettingsRepository extends SettingsRepository {
   final SettingsBox _box = SettingsBox();
 
@@ -180,11 +211,15 @@ void main() {
         expect(result, same(fakeExtractor));
       });
 
-      test('behavioral: selectedModelProvider propagates modelId to extractor', () {
-        const customModelId = 'custom-extractor-model';
+      test('behavioral: taskModelConfig transcriptionModelId propagates to extractor', () {
+        // The router only honors a transcription model it recognizes
+        // as multimodal-capable, so the ID carries the 'vision' keyword.
+        const customModelId = 'custom-vision-model';
         final container = ProviderContainer(
           overrides: [
-            selectedModelProvider.overrideWith((ref) => customModelId),
+            taskModelConfigProvider.overrideWith(
+              (ref) => const TaskModelConfig(transcriptionModelId: customModelId),
+            ),
             llmServiceProvider.overrideWithValue(
               LlmService(
                 config: const LlmConfiguration(
@@ -199,6 +234,60 @@ void main() {
 
         final extractor = container.read(documentExtractorProvider);
         expect(extractor.modelId, equals(customModelId));
+      });
+    });
+
+    group('transcriptionExtractorProvider', () {
+      test('behavioral: per-task transcription model is used for the LLM fallback call', () async {
+        // The router only honors a transcription model it recognizes
+        // as multimodal-capable, so the ID carries the 'vision' keyword.
+        const transcriptionModel = 'per-task-vision-model';
+        final fakeLlm = _ModelCapturingLlmService();
+        final container = ProviderContainer(
+          overrides: [
+            taskModelConfigProvider.overrideWith(
+              (ref) => const TaskModelConfig(
+                transcriptionModelId: transcriptionModel,
+              ),
+            ),
+            llmServiceProvider.overrideWithValue(fakeLlm),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final extractor = container.read(transcriptionExtractorProvider);
+        final result = await extractor.transcribeAudio(
+          rawContent: 'raw audio payload long enough for the LLM path',
+          sourceUrl: null,
+        );
+
+        expect(result.isError, isFalse);
+        expect(result.text, equals('transcribed'));
+        expect(fakeLlm.capturedModelIds, equals([transcriptionModel]));
+        expect(fakeLlm.capturedFeatures, equals(['transcription']));
+      });
+
+      test('behavioral: transcription model no longer falls back to the global selected model', () async {
+        final fakeLlm = _ModelCapturingLlmService();
+        final container = ProviderContainer(
+          overrides: [
+            selectedModelProvider.overrideWith((ref) => 'global-selected-model'),
+            llmServiceProvider.overrideWithValue(fakeLlm),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final extractor = container.read(transcriptionExtractorProvider);
+        await extractor.transcribeAudio(
+          rawContent: 'raw audio payload long enough for the LLM path',
+          sourceUrl: null,
+        );
+
+        // The router resolves a multimodal-capable default for the
+        // transcription task instead of the globally selected model.
+        expect(fakeLlm.capturedModelIds, hasLength(1));
+        expect(fakeLlm.capturedModelIds.first, isNotEmpty);
+        expect(fakeLlm.capturedModelIds.first, isNot('global-selected-model'));
       });
     });
 
@@ -495,7 +584,7 @@ void main() {
           sourceRepository: SourceRepository(),
           topicRepository: TopicRepository(),
           questionRepository: QuestionRepository(),
-          modelId: 'test-model-id',
+          transcriptionModelId: 'test-model-id',
           localeName: 'en',
         );
         final container = ProviderContainer(

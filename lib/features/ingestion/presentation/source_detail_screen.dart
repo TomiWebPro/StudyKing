@@ -4,7 +4,10 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
-import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/providers/llm_providers.dart'
+    show modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart'
+    show LlmTaskType;
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -180,19 +183,22 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
 
     try {
       final pipeline = ref.read(contentPipelineProvider);
-      final modelId = ref.read(selectedModelProvider);
-      if (modelId.isEmpty) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.modelNotConfigured)),
-          );
-        }
-        return;
-      }
+      // Per-task model routing: classification, summarization and
+      // generation each resolve through the model router (honoring
+      // any per-task configuration) instead of the global model.
+      final router = ref.read(modelRouterProvider);
+      final classificationModelId =
+          router.resolve(LlmTaskType.classification);
+      final summarizationModelId =
+          router.resolve(LlmTaskType.summarization);
+      final generationModelId =
+          router.resolve(LlmTaskType.generation);
       final oldIds = _keepOldQuestions ? <String>[] : List<String>.from(source.generatedQuestionIds);
       final result = await pipeline.reprocessSource(
         source,
-        modelId: modelId,
+        classificationModelId: classificationModelId,
+        summarizationModelId: summarizationModelId,
+        generationModelId: generationModelId,
         generateQuestions: source.generatedQuestionIds.isNotEmpty,
         onProgress: (status, description) {
           if (mounted) setState(() { _reprocessingStage = description; });
@@ -238,22 +244,25 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
 
     final pipeline = ref.read(contentPipelineProvider);
     final topicTitles = _topics.map((t) => t.title).toList();
-    final modelId = ref.read(selectedModelProvider);
-
-    if (modelId.isEmpty) {
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.modelNotConfigured)));
-      }
-      return;
-    }
+    // Per-task model routing: classification resolves through the
+    // model router (honoring any per-task configuration) instead
+    // of the global model.
+    final router = ref.read(modelRouterProvider);
+    final classificationModelId =
+        router.resolve(LlmTaskType.classification);
+    final summarizationModelId =
+        router.resolve(LlmTaskType.summarization);
+    final generationModelId =
+        router.resolve(LlmTaskType.generation);
 
     setState(() => _isReprocessing = true);
 
     try {
       await pipeline.reprocessSource(
         source,
-        modelId: modelId,
+        classificationModelId: classificationModelId,
+        summarizationModelId: summarizationModelId,
+        generationModelId: generationModelId,
         possibleTopics: topicTitles,
         generateQuestions: false,
         onProgress: (status, description) {

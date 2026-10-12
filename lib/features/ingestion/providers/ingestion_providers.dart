@@ -3,8 +3,10 @@ import 'package:studyking/core/constants/app_config.dart';
 import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
-import 'package:studyking/core/providers/app_providers.dart' show localeProvider, selectedModelProvider;
-import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/app_providers.dart' show localeProvider;
+import 'package:studyking/core/providers/llm_providers.dart'
+    show llmServiceProvider, modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/providers/ocr_provider.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
@@ -28,7 +30,11 @@ final whisperAsrEngineProvider = Provider<AsrEngine>((ref) {
 final transcriptionExtractorProvider = Provider<TranscriptionExtractor>((ref) {
   final llmService = ref.watch(llmServiceProvider);
   final locale = ref.watch(localeProvider);
-  final modelId = ref.watch(selectedModelProvider);
+  // Transcription LLM fallback resolves through the model router so a
+  // per-task `transcriptionModelId` (multimodal-capable) is honored
+  // instead of always using the globally selected model.
+  final modelId =
+      ref.watch(modelRouterProvider).resolve(LlmTaskType.transcription);
   final asrEngine = ref.watch(whisperAsrEngineProvider);
   return TranscriptionExtractor(
     llmService: llmService,
@@ -52,7 +58,11 @@ final transcriptionPipelineProvider = Provider<TranscriptionPipeline>((ref) {
 final documentExtractorProvider = Provider<DocumentExtractor>((ref) {
   final llmService = ref.watch(llmServiceProvider);
   final locale = ref.watch(localeProvider);
-  final modelId = ref.watch(selectedModelProvider);
+  // OCR/transcription extraction resolves through the model router so a
+  // per-task `transcriptionModelId` is honored instead of always using
+  // the globally selected model.
+  final modelId =
+      ref.watch(modelRouterProvider).resolve(LlmTaskType.transcription);
   final asrEngine = ref.watch(whisperAsrEngineProvider);
   final transcriptionPipeline = ref.watch(transcriptionPipelineProvider);
   final ocrMode = ref.watch(ocrModeProvider);
@@ -106,7 +116,12 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
   final documentExtractor = ref.watch(documentExtractorProvider);
   final webScraper = ref.watch(webScraperProvider);
   final locale = ref.watch(localeProvider);
-  final modelId = ref.watch(selectedModelProvider);
+  // The default document extractor (OCR/transcription) resolves through
+  // the model router so the per-task `transcriptionModelId` is honored.
+  // Classification/summarization/generation models are resolved per call
+  // by the screens via `modelRouterProvider`.
+  final transcriptionModelId =
+      ref.watch(modelRouterProvider).resolve(LlmTaskType.transcription);
   return ContentPipeline(
     llmService: llmService,
     sourceRepository: sourceRepository,
@@ -116,7 +131,7 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
     flashcardGenerator: ref.watch(flashcardGeneratorProvider),
     documentExtractor: documentExtractor,
     webScraper: webScraper,
-    modelId: modelId,
+    transcriptionModelId: transcriptionModelId,
     localeName: locale.languageCode,
   );
 });

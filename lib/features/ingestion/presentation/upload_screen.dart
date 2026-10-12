@@ -7,7 +7,8 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/core/providers/app_providers.dart' show selectedModelProvider;
+import 'package:studyking/core/providers/llm_providers.dart' show modelRouterProvider;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/providers/ocr_provider.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/routes/app_router.dart';
@@ -255,10 +256,23 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       final sourceType = _isSyllabus ? SourceType.syllabus : inferredType;
 
       if (fullPipeline || _generateQuestions || _generateLessons) {
-        final resolvedModelId = widget.fixedModelId != null
-            ? widget.fixedModelId!
-            : ref.read(selectedModelProvider);
-        if ((_generateQuestions || _generateLessons) && resolvedModelId.isEmpty) {
+        // Per-task model routing: classification, summarization and
+        // generation each resolve through the model router (honoring
+        // any per-task configuration) instead of always using the
+        // globally selected model. `fixedModelId` (test hook) pins
+        // all three to a single model when provided.
+        final router = ref.read(modelRouterProvider);
+        final fixedModelId = widget.fixedModelId;
+        final classificationModelId =
+            fixedModelId ?? router.resolve(LlmTaskType.classification);
+        final summarizationModelId =
+            fixedModelId ?? router.resolve(LlmTaskType.summarization);
+        final generationModelId =
+            fixedModelId ?? router.resolve(LlmTaskType.generation);
+        if ((_generateQuestions || _generateLessons) &&
+            (classificationModelId.isEmpty ||
+                summarizationModelId.isEmpty ||
+                generationModelId.isEmpty)) {
           setState(() {
             _error = _UploadError.modelNotConfigured;
             _isUploading = false;
@@ -277,7 +291,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         final ocrDependsOnAi = ref.read(ocrModeProvider) == OcrMode.accurate;
         final shouldWarn =
             (isImage && ocrDependsOnAi) || (isAudioOrVideo && !hasAsrEngine);
-        if (shouldWarn && resolvedModelId.isNotEmpty && mounted) {
+        if (shouldWarn && classificationModelId.isNotEmpty && mounted) {
           final proceed = await showDialog<bool>(
             context: context,
             builder: (ctx) => AlertDialog(
@@ -333,7 +347,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           content: actualContent,
           type: sourceType,
           studentId: widget.fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? ''),
-          modelId: resolvedModelId,
+          classificationModelId: classificationModelId,
+          summarizationModelId: summarizationModelId,
+          generationModelId: generationModelId,
           subjectId: _selectedSubjectId ?? '',
           sourceUrl: _useUrlInput ? content : '',
           possibleTopics: possibleTopics,

@@ -58,7 +58,7 @@ class ContentPipeline {
     DocumentExtractor? documentExtractor,
     WebScraper? webScraper,
     ChunkedContentProcessor? chunkedProcessor,
-    required String modelId,
+    required String transcriptionModelId,
     required String localeName,
     AsrEngine? asrEngine,
   })  : _llmService = llmService,
@@ -69,7 +69,7 @@ class ContentPipeline {
         _slideDeckGenerator = slideDeckGenerator,
         _flashcardGenerator = flashcardGenerator,
         _documentExtractor =
-            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: modelId, localeName: localeName, asrEngine: asrEngine),
+            documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: transcriptionModelId, localeName: localeName, asrEngine: asrEngine),
         _webScraper = webScraper ?? WebScraper(),
         _chunkedProcessor = chunkedProcessor ?? ChunkedContentProcessor(llmService: llmService, localeName: localeName),
         _localeName = localeName;
@@ -176,7 +176,9 @@ class ContentPipeline {
     required String content,
     required SourceType type,
     required String studentId,
-    required String modelId,
+    required String classificationModelId,
+    required String summarizationModelId,
+    required String generationModelId,
     String subjectId = '',
     String topicId = '',
     String syllabusId = '',
@@ -280,7 +282,7 @@ class ContentPipeline {
           final classificationResult = await _chunkedProcessor.classifyChunks(
             chunks: chunks,
             possibleTopics: possibleTopics,
-            modelId: modelId,
+            modelId: classificationModelId,
             subjectId: subjectId,
           );
           matchedTopicId = await _resolveClassifiedTopic(
@@ -293,7 +295,7 @@ class ContentPipeline {
           matchedTopicId = await _classifyTopic(
             textToClassify,
             possibleTopics,
-            modelId,
+            classificationModelId,
             subjectId,
           );
         }
@@ -312,7 +314,7 @@ class ContentPipeline {
         final extractedTopicIds = await _extractTopicsFromSyllabus(
           textToClassify,
           subjectId,
-          modelId,
+          classificationModelId,
         );
         if (extractedTopicIds.isNotEmpty) {
           updated = updated.copyWith(topicId: extractedTopicIds.first);
@@ -332,7 +334,7 @@ class ContentPipeline {
       if (chunks.length > 1) {
         final summaryResult = await _chunkedProcessor.generateConsolidatedSummary(
           chunks: chunks,
-          modelId: modelId,
+          modelId: summarizationModelId,
         );
         if (summaryResult.isFailure) {
           _logger.w('Failed to generate consolidated summary: ${summaryResult.error}');
@@ -340,7 +342,7 @@ class ContentPipeline {
           summary = summaryResult.data ?? '';
         }
       } else {
-        summary = await _generateSummary(textToClassify, modelId);
+        summary = await _generateSummary(textToClassify, summarizationModelId);
       }
 
       if (summary.isNotEmpty) {
@@ -371,7 +373,7 @@ class ContentPipeline {
             topicId: updated.topicId,
             sourceId: sourceId,
             studentId: studentId,
-            modelId: modelId,
+            generationModelId: generationModelId,
             validator: validator,
             allowedTypes: allowedQuestionTypes,
           );
@@ -382,7 +384,7 @@ class ContentPipeline {
             updated.topicId,
             sourceId,
             studentId,
-            modelId,
+            generationModelId,
             validator: validator,
             allowedTypes: allowedQuestionTypes,
           );
@@ -463,7 +465,7 @@ class ContentPipeline {
           sourceId: sourceId,
           topicId: updated.topicId,
           subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
-          modelId: modelId,
+          modelId: generationModelId,
           localeName: _localeName,
         );
         if (flashcardResult.isSuccess) {
@@ -506,7 +508,9 @@ class ContentPipeline {
 
   Future<Result<Source>> reprocessSource(
     Source source, {
-    required String modelId,
+    required String classificationModelId,
+    required String summarizationModelId,
+    required String generationModelId,
     List<String> possibleTopics = const [],
     bool generateQuestions = false,
     bool generateLessons = false,
@@ -527,7 +531,9 @@ class ContentPipeline {
       content: textToProcess,
       type: source.type,
       studentId: source.studentId.isNotEmpty ? source.studentId : '',
-      modelId: modelId,
+      classificationModelId: classificationModelId,
+      summarizationModelId: summarizationModelId,
+      generationModelId: generationModelId,
       subjectId: source.subjectId,
       sourceUrl: source.sourceUrl,
       language: source.language,
@@ -622,7 +628,7 @@ class ContentPipeline {
     required String topicId,
     required String sourceId,
     required String studentId,
-    required String modelId,
+    required String generationModelId,
     QuestionValidator? validator,
     List<String> allowedTypes = _defaultAllowedTypes,
   }) async {
@@ -630,7 +636,7 @@ class ContentPipeline {
     try {
         final chunkResults = await _chunkedProcessor.generateQuestionsFromChunks(
           chunks: chunks,
-          modelId: modelId,
+          modelId: generationModelId,
           questionParser: QuestionParser(),
         );
 
@@ -691,7 +697,7 @@ class ContentPipeline {
         topicId,
         sourceId,
         studentId,
-        modelId,
+        generationModelId,
         validator: validator,
         allowedTypes: allowedTypes,
       );
@@ -702,7 +708,7 @@ class ContentPipeline {
   Future<String> _classifyTopic(
     String content,
     List<String> possibleTopics,
-    String modelId,
+    String classificationModelId,
     String subjectId,
   ) async {
     if (possibleTopics.isEmpty) return '';
@@ -712,7 +718,7 @@ class ContentPipeline {
 
       final result = await _llmService.chat(
         message: prompt,
-        modelId: modelId,
+        modelId: classificationModelId,
         systemPrompt: l10n.classifySystemPrompt,
         feature: 'content_classification',
       );
@@ -764,7 +770,7 @@ class ContentPipeline {
   Future<List<String>> _extractTopicsFromSyllabus(
     String content,
     String subjectId,
-    String modelId,
+    String classificationModelId,
   ) async {
     try {
       final prompt = 'Extract a list of topic names from the following syllabus content. '
@@ -773,7 +779,7 @@ class ContentPipeline {
 
       final result = await _llmService.chat(
         message: prompt,
-        modelId: modelId,
+        modelId: classificationModelId,
         systemPrompt: 'You are a syllabus parser. Extract topic names as a JSON array of strings.',
         feature: 'syllabus_topic_extraction',
       );
@@ -832,7 +838,7 @@ class ContentPipeline {
 
   Future<String> _generateSummary(
     String content,
-    String modelId,
+    String summarizationModelId,
   ) async {
     try {
       final l10n = lookupAppLocalizations(Locale(_localeName));
@@ -840,7 +846,7 @@ class ContentPipeline {
 
       final result = await _llmService.chat(
         message: prompt,
-        modelId: modelId,
+        modelId: summarizationModelId,
         systemPrompt: l10n.summarizeSystemPrompt,
         feature: 'content_summarization',
       );
@@ -880,7 +886,7 @@ class ContentPipeline {
     String topicId,
     String sourceId,
     String studentId,
-    String modelId, {
+    String generationModelId, {
     QuestionValidator? validator,
     List<String> allowedTypes = _defaultAllowedTypes,
   }) async {
@@ -891,7 +897,7 @@ class ContentPipeline {
 
       final result = await _llmService.chat(
         message: prompt,
-        modelId: modelId,
+        modelId: generationModelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
         feature: 'question_generation',
       );

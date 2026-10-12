@@ -48,6 +48,28 @@ class FakeLlmService extends LlmService {
   }
 }
 
+/// Hand-written fake that records the model ID and feature of every
+/// chat call so tests can assert per-task model routing.
+class ModelCapturingLlmService extends FakeLlmService {
+  final List<String> capturedModelIds = [];
+  final List<String> capturedFeatures = [];
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    capturedModelIds.add(modelId);
+    capturedFeatures.add(feature);
+    return Result.success('llm-response');
+  }
+}
+
 class FakeOcrEngine implements OcrEngine {
   @override
   String get name => 'fake';
@@ -278,7 +300,7 @@ ContentPipeline buildPipeline({
     documentExtractor: docExtractor,
     webScraper: webScraper,
     chunkedProcessor: chunked,
-    modelId: 'm',
+    transcriptionModelId: 'm',
     localeName: localeName,
   );
 }
@@ -424,7 +446,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
         possibleTopics: ['Biology'],
       );
 
@@ -436,6 +460,66 @@ void main() {
       expect(src.topicId, 'topic-1');
       expect(src.summary, 'fake summary');
       expect(src.processingStatus, 'completed');
+    });
+
+    test('routes per-task models to classification, summarization and generation', () async {
+      final fakeLlm = ModelCapturingLlmService();
+      final docExtractor = FakeDocumentExtractor(ExtractionResult(
+        text: 'extracted text',
+        extractionMethod: 'pdf_text_direct',
+      ));
+      final topicRepo = FakeTopicRepository([
+        Topic(
+          id: 'topic-1',
+          subjectId: '',
+          title: 'Biology',
+          description: '',
+          syllabusText: '',
+        ),
+      ]);
+      final pipeline = ContentPipeline(
+        llmService: fakeLlm,
+        sourceRepository: FakeSourceRepository(),
+        topicRepository: topicRepo,
+        questionRepository: FakeQuestionRepository(),
+        documentExtractor: docExtractor,
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        chunkedProcessor: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        transcriptionModelId: 'transcription-model',
+        localeName: 'en',
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'classification-model',
+        summarizationModelId: 'summarization-model',
+        generationModelId: 'generation-model',
+        possibleTopics: ['Biology'],
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+
+      String modelFor(String feature) {
+        final idx = fakeLlm.capturedFeatures.indexOf(feature);
+        return idx < 0 ? '' : fakeLlm.capturedModelIds[idx];
+      }
+
+      // Each pipeline stage must call the LLM with its own
+      // per-task model instead of one global model.
+      expect(modelFor('content_classification'), equals('classification-model'));
+      expect(modelFor('content_summarization'), equals('summarization-model'));
+      expect(modelFor('question_generation'), equals('generation-model'));
     });
 
     test('returns failure when the initial source creation fails', () async {
@@ -461,7 +545,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
       );
 
       expect(result.isFailure, isTrue);
@@ -492,7 +578,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
       );
 
       expect(result.isFailure, isTrue);
@@ -543,7 +631,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
         possibleTopics: ['Biology'],
       );
 
@@ -591,7 +681,9 @@ void main() {
         content: content,
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
       );
 
       expect(result.isFailure, isTrue);
@@ -708,7 +800,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
         generateQuestions: true,
         onProgress: (status, description) => stages.add(description),
       );
@@ -748,7 +842,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
         generateQuestions: true,
         onProgress: (status, description) => stages.add(description),
       );
@@ -786,7 +882,9 @@ void main() {
         content: 'some content',
         type: SourceType.pdf,
         studentId: 's1',
-        modelId: 'm',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
       );
 
       final l10n = lookupAppLocalizations(const Locale('es'));
