@@ -2,8 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/exceptions.dart';
 import 'package:studyking/core/errors/handlers.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'shared_test_helpers.dart';
+
+class _WarnSpyLogger extends Logger {
+  final List<String> warnMessages = [];
+  final List<String> errorMessages = [];
+
+  _WarnSpyLogger() : super('AppErrorHandler');
+
+  @override
+  void w(String message, [Object? error, StackTrace? stack]) {
+    warnMessages.add(message);
+  }
+
+  @override
+  void e(String message, [Object? error, StackTrace? stack]) {
+    errorMessages.add(message);
+  }
+}
 
 void main() {
   group('AppErrorHandler - SyllabusException', () {
@@ -819,6 +837,82 @@ void main() {
         contextName: 'test',
       );
       expect(result, isNull);
+    });
+  });
+
+  group('AppErrorHandler.safely - log level', () {
+    testWidgets('safely logs handled errors at warn level, not error level',
+        (tester) async {
+      final context = await captureContext(tester);
+      final spy = _WarnSpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+      try {
+        final result = await AppErrorHandler.safely<int>(
+          context,
+          () async => throw AppException(
+            message: 'network error',
+            type: ExceptionType.network,
+          ),
+          defaultValue: 0,
+          contextName: 'TEST_OP',
+        );
+        expect(result, equals(0));
+        expect(spy.warnMessages, isNotEmpty);
+        expect(spy.warnMessages.first, contains('TEST_OP'));
+        expect(spy.warnMessages.first, contains('network error'));
+        expect(spy.errorMessages, isEmpty);
+      } finally {
+        AppErrorHandler.logger = originalLogger;
+      }
+    });
+
+    testWidgets('safelySync logs handled errors at warn level, not error level',
+        (tester) async {
+      final context = await captureContext(tester);
+      final spy = _WarnSpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+      try {
+        final result = AppErrorHandler.safelySync<int>(
+          context,
+          () => throw AppException(
+            message: 'bad input',
+            type: ExceptionType.validation,
+          ),
+          defaultValue: -1,
+          contextName: 'SYNC_OP',
+        );
+        expect(result, equals(-1));
+        expect(spy.warnMessages, isNotEmpty);
+        expect(spy.warnMessages.first, contains('SYNC_OP'));
+        expect(spy.warnMessages.first, contains('bad input'));
+        expect(spy.errorMessages, isEmpty);
+      } finally {
+        AppErrorHandler.logger = originalLogger;
+      }
+    });
+
+    testWidgets('handleError logs handled errors at warn level, not error level',
+        (tester) async {
+      final context = await captureContext(tester);
+      final spy = _WarnSpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+      try {
+        await AppErrorHandler.handleError(
+          context,
+          AppException(message: 'llm error', type: ExceptionType.llm),
+          'HANDLE_OP',
+        );
+        await tester.pump();
+        expect(spy.warnMessages, isNotEmpty);
+        expect(spy.warnMessages.first, contains('HANDLE_OP'));
+        expect(spy.warnMessages.first, contains('llm error'));
+        expect(spy.errorMessages, isEmpty);
+      } finally {
+        AppErrorHandler.logger = originalLogger;
+      }
     });
   });
 

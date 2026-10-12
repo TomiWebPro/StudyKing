@@ -5,9 +5,15 @@ import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 
 class _SpyLogger extends Logger {
+  final List<String> warnMessages = [];
   final List<String> errorMessages = [];
 
   _SpyLogger() : super('AppErrorHandler');
+
+  @override
+  void w(String message, [Object? error, StackTrace? stack]) {
+    warnMessages.add(message);
+  }
 
   @override
   void e(String message, [Object? error, StackTrace? stack]) {
@@ -228,7 +234,7 @@ void main() {
   });
 
   group('AppErrorHandler.logError (via logger spy)', () {
-    test('logs error with correct tag and message', () {
+    test('logs handled error at warn level with correct tag and message', () {
       final spy = _SpyLogger();
       final originalLogger = AppErrorHandler.logger;
       AppErrorHandler.logger = spy;
@@ -240,9 +246,24 @@ void main() {
 
       AppErrorHandler.logger = originalLogger;
 
-      expect(spy.errorMessages, isNotEmpty);
-      expect(spy.errorMessages.first, contains('TEST_OP'));
-      expect(spy.errorMessages.first, contains('connection failed'));
+      expect(spy.warnMessages, isNotEmpty);
+      expect(spy.warnMessages.first, contains('TEST_OP'));
+      expect(spy.warnMessages.first, contains('connection failed'));
+    });
+
+    test('does not log handled errors at error level', () {
+      final spy = _SpyLogger();
+      final originalLogger = AppErrorHandler.logger;
+      AppErrorHandler.logger = spy;
+
+      AppErrorHandler.logError(
+        AppException(message: 'connection failed', type: ExceptionType.network),
+        'TEST_OP',
+      );
+
+      AppErrorHandler.logger = originalLogger;
+
+      expect(spy.errorMessages, isEmpty);
     });
 
     test('logs correct context name for different operations', () {
@@ -254,8 +275,8 @@ void main() {
 
       AppErrorHandler.logger = originalLogger;
 
-      expect(spy.errorMessages, isNotEmpty);
-      expect(spy.errorMessages.first, contains('VALIDATION'));
+      expect(spy.warnMessages, isNotEmpty);
+      expect(spy.warnMessages.first, contains('VALIDATION'));
     });
   });
 

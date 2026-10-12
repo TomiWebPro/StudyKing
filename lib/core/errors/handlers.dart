@@ -186,7 +186,11 @@ class AppErrorHandler {
   }
 
   static void _logError(Object error, String context) {
-    logger.e('[$context] Error: $error', StackTrace.current);
+    // Handled, expected error paths (every caller shows a graceful
+    // SnackBar/retry UI) log at warning level per AGENTS.md Logger
+    // Conventions; `.e()` is reserved for unexpected exceptions that
+    // require immediate investigation.
+    logger.w('[$context] Error: $error');
   }
 
   @visibleForTesting
