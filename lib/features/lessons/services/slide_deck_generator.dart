@@ -79,11 +79,13 @@ class SlideDeckGenerator {
           final createResult = await _lessonRepository.create(chapter);
           if (createResult.isFailure) {
             _logger.w('Failed to save chapter lesson: ${createResult.error}');
+            return Result.failure(createResult.error);
           }
         }
         final tocResult = await _lessonRepository.create(tocLesson);
         if (tocResult.isFailure) {
           _logger.w('Failed to save table of contents: ${tocResult.error}');
+          return Result.failure(tocResult.error);
         }
         return Result.success([tocLesson, ...singleLessons]);
       }
@@ -114,12 +116,14 @@ class SlideDeckGenerator {
         final createResult = await _lessonRepository.create(chapter);
         if (createResult.isFailure) {
           _logger.w('Failed to save chapter lesson: ${createResult.error}');
+          return Result.failure(createResult.error);
         }
       }
 
       final tocResult = await _lessonRepository.create(tocLesson);
       if (tocResult.isFailure) {
         _logger.w('Failed to save table of contents: ${tocResult.error}');
+        return Result.failure(tocResult.error);
       }
 
       return Result.success([tocLesson, ...chapters]);

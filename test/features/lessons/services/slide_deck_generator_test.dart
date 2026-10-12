@@ -65,11 +65,15 @@ class _FakeLlmService extends LlmService {
 class _FakeLessonRepository extends LessonRepository {
   final Map<String, Lesson> _storage = {};
   bool throwOnCreate = false;
+  bool failOnlyToc = false;
   int createCallCount = 0;
 
   @override
   Future<Result<void>> create(Lesson lesson) async {
     if (throwOnCreate) return Result.failure('Create failed');
+    if (failOnlyToc && lesson.title.startsWith('Table of Contents')) {
+      return Result.failure('TOC create failed');
+    }
     _storage[lesson.id] = lesson;
     createCallCount++;
     return Result.success(null);
@@ -316,7 +320,7 @@ void main() {
         expect(chapterLesson.blocks.first.chapterOrder, 0);
       });
 
-      test('handles repository failure gracefully', () async {
+      test('propagates repository save failure instead of reporting success', () async {
         fakeLlm.setHandler(({
           required String message,
           required String modelId,
@@ -355,10 +359,86 @@ void main() {
           sourceContent: 'Content',
           localeName: 'en',
         );
-        expect(result.isSuccess, isTrue);
-        final lessons = result.data!;
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Create failed'));
+        expect(fakeLessonRepo.createCallCount, 0);
+      });
 
-        expect(lessons.length, 2);
+      test('propagates table of contents save failure', () async {
+        fakeLlm.setHandler(({
+          required String message,
+          required String modelId,
+          String? systemPrompt,
+          String localeName = 'en',
+          ConversationMemory? memory,
+          List<Map<String, String>>? history,
+          String feature = 'general',
+        }) async {
+          if (feature == 'slide_deck_structure') {
+            return Result.success(jsonEncode({
+              'chapters': [
+                {
+                  'title': 'Chapter 1',
+                  'sections': [],
+                  'startIndex': 0,
+                  'endIndex': 100,
+                },
+              ],
+            }));
+          }
+          if (feature == 'slide_deck_chapter') {
+            return Result.success(jsonEncode([
+              {'slideType': 'title', 'content': 'Title', 'sectionTitle': '', 'sectionOrder': 0},
+            ]));
+          }
+          return Result.success('');
+        });
+
+        fakeLessonRepo.failOnlyToc = true;
+
+        final result = await generator.generateSlideDeck(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Test',
+          sourceContent: 'Content',
+          localeName: 'en',
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('TOC create failed'));
+      });
+
+      test('propagates save failure in single-chapter fallback path', () async {
+        fakeLlm.setHandler(({
+          required String message,
+          required String modelId,
+          String? systemPrompt,
+          String localeName = 'en',
+          ConversationMemory? memory,
+          List<Map<String, String>>? history,
+          String feature = 'general',
+        }) async {
+          if (feature == 'slide_deck_structure') {
+            return Result.success('[]');
+          }
+          if (feature == 'slide_deck_chapter') {
+            return Result.success(jsonEncode([
+              {'slideType': 'title', 'content': 'Title', 'sectionTitle': '', 'sectionOrder': 0},
+            ]));
+          }
+          return Result.success('');
+        });
+
+        fakeLessonRepo.throwOnCreate = true;
+
+        final result = await generator.generateSlideDeck(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Simple Topic',
+          sourceContent: 'Content',
+          localeName: 'en',
+        );
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('Create failed'));
       });
 
       test('parses various slide types correctly', () async {

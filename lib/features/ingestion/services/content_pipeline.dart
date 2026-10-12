@@ -413,14 +413,21 @@ class ContentPipeline {
       if (generateSlideDecks && _slideDeckGenerator != null && updated.topicId.isNotEmpty) {
         onProgress?.call(ProcessingStatus.generatingQuestions, 'Generating slide deck from content...');
         final textForSlideDeck = updated.extractedText.isNotEmpty ? updated.extractedText : content;
-        await _slideDeckGenerator.generateSlideDeck(
+        final slideDeckResult = await _slideDeckGenerator.generateSlideDeck(
           subjectId: updated.subjectId.isNotEmpty ? updated.subjectId : subjectId,
           topicId: updated.topicId,
           topicTitle: title,
           sourceContent: textForSlideDeck,
           localeName: _localeName,
         );
-        _logger.d('Stage 6 complete: slide deck generated from source');
+        if (slideDeckResult.isSuccess) {
+          _logger.d('Stage 6 complete: slide deck generated from source');
+        } else {
+          _logger.w(
+            'Stage 6 failed: slide deck was not persisted: '
+            '${slideDeckResult.error}',
+          );
+        }
       }
 
       if (_cancelled) return Result.failure('Pipeline cancelled');
