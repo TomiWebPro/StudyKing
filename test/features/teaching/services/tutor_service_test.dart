@@ -576,7 +576,8 @@ void main() {
     group('getLessonHistory', () {
       test('returns empty list when no sessions exist', () async {
         final history = await tutorService.getLessonHistory('nonexistent');
-        expect(history, isEmpty);
+        expect(history.isSuccess, isTrue);
+        expect(history.data, isEmpty);
       });
 
       test('returns sessions for the given student', () async {
@@ -589,15 +590,16 @@ void main() {
         );
 
         final history = await tutorService.getLessonHistory('student-1');
-        expect(history.isNotEmpty, isTrue);
-        expect(history.first.studentId, equals('student-1'));
+        expect(history.data!.isNotEmpty, isTrue);
+        expect(history.data!.first.studentId, equals('student-1'));
       });
     });
 
     group('getSessionMessages', () {
       test('returns empty list when no messages exist', () async {
         final messages = await tutorService.getSessionMessages('session-1');
-        expect(messages, isEmpty);
+        expect(messages.isSuccess, isTrue);
+        expect(messages.data, isEmpty);
       });
     });
 
@@ -612,8 +614,8 @@ void main() {
         );
 
         final stats = await tutorService.getStats('student-1');
-        expect(stats['totalSessions'], greaterThan(0));
-        expect(stats, containsPair('completedSessions', 0));
+        expect(stats.data!['totalSessions'], greaterThan(0));
+        expect(stats.data, containsPair('completedSessions', 0));
       });
     });
 
@@ -628,7 +630,8 @@ void main() {
           timestamp: DateTime.now(),
         );
 
-        await tutorService.saveMessage(message);
+        final saveResult = await tutorService.saveMessage(message);
+        expect(saveResult.isSuccess, isTrue);
 
         expect(conversationRepo._messages.length, equals(1));
         expect(conversationRepo._messages.first.id, equals('msg-1'));
@@ -638,7 +641,8 @@ void main() {
     group('getActiveSession', () {
       test('returns null when no active sessions', () async {
         final session = await tutorService.getActiveSession();
-        expect(session, isNull);
+        expect(session.isSuccess, isTrue);
+        expect(session.data, isNull);
       });
 
       test('returns active session when one exists', () async {
@@ -651,8 +655,8 @@ void main() {
         );
 
         final session = await tutorService.getActiveSession();
-        expect(session, isNotNull);
-        expect(session!.status, equals(SessionStatus.inProgress));
+        expect(session.data, isNotNull);
+        expect(session.data!.status, equals(SessionStatus.inProgress));
       });
     });
 

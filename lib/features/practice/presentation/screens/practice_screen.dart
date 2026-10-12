@@ -106,10 +106,17 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
 
   Future<void> _loadSubjects() async {
     try {
-      final subjects = await _dataService.fetchSubjects();
+      final result = await _dataService.fetchSubjects();
       if (!mounted) return;
+      if (result.isFailure) {
+        setState(() {
+          _isLoading = false;
+          _loadError = AppLocalizations.of(context)!.somethingWentWrong;
+        });
+        return;
+      }
       setState(() {
-        _subjects = subjects;
+        _subjects = result.data ?? [];
         _isLoading = false;
         _loadError = null;
       });

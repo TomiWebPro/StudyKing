@@ -11,6 +11,7 @@ import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/models/tutor_session_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -184,9 +185,16 @@ class TutorService {
         (error) => _logger.w('Failed to build tutor feedback context', error),
       );
 
-      final lessonPlan = await manager.generateLessonPlan(
+      final lessonPlanResult = await manager.generateLessonPlan(
         durationMinutes: actualDuration,
       );
+      // generateLessonPlan falls back to a default plan on LLM failure, so
+      // a failure here means no plan could be built at all; the catch below
+      // rolls the session back.
+      if (lessonPlanResult.isFailure) {
+        throw StateError(lessonPlanResult.error ?? 'Lesson plan generation failed');
+      }
+      final lessonPlan = lessonPlanResult.data!;
 
       await _database.tutorSessionRepository.saveSession(
         session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
@@ -622,34 +630,56 @@ class TutorService {
     return QuestionType.typedAnswer;
   }
 
-  Future<List<TutorSession>> getLessonHistory(String studentId) async {
+  Future<Result<List<TutorSession>>> getLessonHistory(String studentId) async {
     final result =
         await _database.tutorSessionRepository.getStudentSessions(studentId);
-    return result.data ?? [];
+    if (result.isFailure) {
+      _logger.w('Failed to load lesson history for $studentId', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(result.data ?? []);
   }
 
-  Future<List<ConversationMessage>> getSessionMessages(
+  Future<Result<List<ConversationMessage>>> getSessionMessages(
       String sessionId) async {
     final result =
         await _database.conversationRepository.getSessionMessages(sessionId);
-    return result.data ?? [];
+    if (result.isFailure) {
+      _logger.w('Failed to load session messages for $sessionId', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(result.data ?? []);
   }
 
-  Future<Map<String, dynamic>> getStats(String studentId) async {
+  Future<Result<Map<String, dynamic>>> getStats(String studentId) async {
     final result =
         await _database.tutorSessionRepository.getSessionStats(studentId);
-    return result.data ?? {};
+    if (result.isFailure) {
+      _logger.w('Failed to load tutor stats for $studentId', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(result.data ?? {});
   }
 
-  Future<void> saveMessage(ConversationMessage message) async {
-    await _database.conversationRepository.saveMessage(message);
+  Future<Result<void>> saveMessage(ConversationMessage message) async {
+    final result =
+        await _database.conversationRepository.saveMessage(message);
+    if (result.isFailure) {
+      _logger.w('Failed to save conversation message', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(null);
   }
 
-  Future<TutorSession?> getActiveSession() async {
+  Future<Result<TutorSession?>> getActiveSession() async {
     final result =
         await _database.tutorSessionRepository.getActiveSessions();
+    if (result.isFailure) {
+      _logger.w('Failed to load active session', result.error);
+      return Result.failure(result.error);
+    }
     final sessions = result.data ?? [];
-    return sessions.isNotEmpty ? sessions.first : null;
+    return Result.success(sessions.isNotEmpty ? sessions.first : null);
   }
 
   Future<void> cancelActiveSession() async {

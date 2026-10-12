@@ -1,12 +1,15 @@
 import 'package:studyking/core/data/models/question_model.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
-import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 
 class PracticeDataService {
+  static final Logger _logger = const Logger('PracticeDataService');
   final SpacedRepetitionService _srService;
   final QuestionRepository _questionRepo;
   final SubjectRepository _subjectRepo;
@@ -22,9 +25,13 @@ class PracticeDataService {
         _subjectRepo = subjectRepo,
         _studentIdService = studentIdService;
 
-  Future<List<Subject>> fetchSubjects() async {
+  Future<Result<List<Subject>>> fetchSubjects() async {
     final result = await _subjectRepo.getAll();
-    return result.data ?? [];
+    if (result.isFailure) {
+      _logger.w('Failed to fetch subjects', result.error);
+      return Result.failure(result.error);
+    }
+    return Result.success(result.data ?? []);
   }
 
   Future<Map<String, int>> loadDueCounts(List<Subject> subjects) async {

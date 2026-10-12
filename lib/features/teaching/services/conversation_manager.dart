@@ -134,7 +134,7 @@ class ConversationManager {
     }
   }
 
-  Future<LessonPlan> generateLessonPlan({
+  Future<Result<LessonPlan>> generateLessonPlan({
     required int durationMinutes,
   }) async {
     final entry = _prompts.lessonPlan(
@@ -150,7 +150,7 @@ class ConversationManager {
       feature: 'teaching_lesson_plan',
     );
 
-    Future<LessonPlan> buildDefaultPlan() async {
+    Future<Result<LessonPlan>> buildDefaultPlan() async {
       final l10n = lookupAppLocalizations(Locale(localeName));
       final plan = LessonPlan.defaultPlan(
         durationMinutes,
@@ -163,7 +163,7 @@ class ConversationManager {
         checkpointCompleted: l10n.checkpointPracticeCompleted,
       );
       lessonPlan = plan;
-      return plan;
+      return Result.success(plan);
     }
 
     if (result.isFailure) {
@@ -175,7 +175,7 @@ class ConversationManager {
     final plan = LessonPlan.fromJson(response);
     if (plan != null) {
       lessonPlan = plan;
-      return plan;
+      return Result.success(plan);
     }
     return buildDefaultPlan();
   }

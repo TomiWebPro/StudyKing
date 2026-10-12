@@ -41,10 +41,13 @@ class _FakeSpacedRepetitionService extends SpacedRepetitionService {
 
 class _FakeSubjectRepository extends SubjectRepository {
   final List<Subject> _subjects;
-  _FakeSubjectRepository(this._subjects);
+  final String? _error;
+
+  _FakeSubjectRepository(this._subjects, {String? error}) : _error = error;
 
   @override
-  Future<Result<List<Subject>>> getAll() async => Result.success(_subjects);
+  Future<Result<List<Subject>>> getAll() async =>
+      _error != null ? Result.failure(_error) : Result.success(_subjects);
 }
 
 Question _question({
@@ -180,9 +183,10 @@ void main() {
         studentIdService: FakeStudentIdService(),
       );
       final result = await service.fetchSubjects();
-      expect(result, hasLength(2));
-      expect(result[0].id, 's1');
-      expect(result[1].id, 's2');
+      expect(result.isSuccess, isTrue);
+      expect(result.data, hasLength(2));
+      expect(result.data![0].id, 's1');
+      expect(result.data![1].id, 's2');
     });
 
     test('fetchSubjects returns empty list when no subjects', () async {
@@ -195,7 +199,22 @@ void main() {
         studentIdService: FakeStudentIdService(),
       );
       final result = await service.fetchSubjects();
-      expect(result, isEmpty);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isEmpty);
+    });
+
+    test('fetchSubjects propagates repository failure', () async {
+      final subjectRepo = _FakeSubjectRepository([], error: 'box not open');
+
+      final service = PracticeDataService(
+        srService: _FakeSpacedRepetitionService({}),
+        questionRepo: _FakeQuestionRepository([]),
+        subjectRepo: subjectRepo,
+        studentIdService: FakeStudentIdService(),
+      );
+      final result = await service.fetchSubjects();
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'box not open');
     });
 
     test('loadWeakAreaQuestions returns questions for weak topics', () async {

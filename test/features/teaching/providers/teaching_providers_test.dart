@@ -383,9 +383,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final history = await service.getLessonHistory('stu-1');
-      expect(history, hasLength(1));
-      expect(history.first.id, 'ts-1');
-      expect(history.first.topicTitle, 'Algebra');
+      expect(history.isSuccess, isTrue);
+      expect(history.data, hasLength(1));
+      expect(history.data!.first.id, 'ts-1');
+      expect(history.data!.first.topicTitle, 'Algebra');
     });
 
     test('behavioral: database override returns active session', () async {
@@ -418,9 +419,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final active = await service.getActiveSession();
-      expect(active, isNotNull);
-      expect(active!.id, 'active-1');
-      expect(active.status, SessionStatus.inProgress);
+      expect(active.isSuccess, isTrue);
+      expect(active.data, isNotNull);
+      expect(active.data!.id, 'active-1');
+      expect(active.data!.status, SessionStatus.inProgress);
     });
 
     test('behavioral: no active sessions returns null', () async {
@@ -453,7 +455,8 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final active = await service.getActiveSession();
-      expect(active, isNull);
+      expect(active.isSuccess, isTrue);
+      expect(active.data, isNull);
     });
 
     test('behavioral: database override provides session stats', () async {
@@ -494,9 +497,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final stats = await service.getStats('stu-1');
-      expect(stats['totalSessions'], 2);
-      expect(stats['completedSessions'], 1);
-      expect(stats['totalQuestions'], 10);
+      expect(stats.isSuccess, isTrue);
+      expect(stats.data!['totalSessions'], 2);
+      expect(stats.data!['completedSessions'], 1);
+      expect(stats.data!['totalQuestions'], 10);
     });
 
     test('behavioral: conversation repo override provides session messages', () async {
@@ -534,9 +538,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final messages = await service.getSessionMessages('session-1');
-      expect(messages, hasLength(2));
-      expect(messages.first.content, 'Hello');
-      expect(messages.last.content, 'Hi');
+      expect(messages.isSuccess, isTrue);
+      expect(messages.data, hasLength(2));
+      expect(messages.data!.first.content, 'Hello');
+      expect(messages.data!.last.content, 'Hi');
     });
 
     test('behavioral: saveMessage delegates to overridden conversation repo', () async {
@@ -566,12 +571,14 @@ void main() {
         content: 'New message', timestamp: DateTime(2024, 6, 15),
         tokenCount: 10,
       );
-      await service.saveMessage(message);
+      final saveResult = await service.saveMessage(message);
+      expect(saveResult.isSuccess, isTrue);
 
       final messages = await service.getSessionMessages('session-1');
-      expect(messages, hasLength(1));
-      expect(messages.first.id, 'new-msg');
-      expect(messages.first.content, 'New message');
+      expect(messages.isSuccess, isTrue);
+      expect(messages.data, hasLength(1));
+      expect(messages.data!.first.id, 'new-msg');
+      expect(messages.data!.first.content, 'New message');
     });
 
     test('behavioral: lesson history handles repo error gracefully', () async {
@@ -597,10 +604,11 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final history = await service.getLessonHistory('stu-1');
-      expect(history, isEmpty);
+      expect(history.isFailure, isTrue);
+      expect(history.error, 'simulated error');
     });
 
-    test('behavioral: getStats handles repo error gracefully', () async {
+    test('behavioral: getActiveSession handles repo error gracefully', () async {
       final fakeTutorRepo = _FakeTutorSessionRepository();
       fakeTutorRepo.throwOnGet = true;
       final db = DatabaseService(
@@ -623,7 +631,8 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final active = await service.getActiveSession();
-      expect(active, isNull);
+      expect(active.isFailure, isTrue);
+      expect(active.error, 'simulated error');
     });
 
     test('behavioral: database override provides session stats', () async {
@@ -664,9 +673,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final stats = await service.getStats('stu-1');
-      expect(stats['totalSessions'], 2);
-      expect(stats['completedSessions'], 1);
-      expect(stats['totalQuestions'], 10);
+      expect(stats.isSuccess, isTrue);
+      expect(stats.data!['totalSessions'], 2);
+      expect(stats.data!['completedSessions'], 1);
+      expect(stats.data!['totalQuestions'], 10);
     });
 
     test('behavioral: conversation repo override provides session messages', () async {
@@ -704,9 +714,10 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final messages = await service.getSessionMessages('session-1');
-      expect(messages, hasLength(2));
-      expect(messages.first.content, 'Hello');
-      expect(messages.last.content, 'Hi');
+      expect(messages.isSuccess, isTrue);
+      expect(messages.data, hasLength(2));
+      expect(messages.data!.first.content, 'Hello');
+      expect(messages.data!.last.content, 'Hi');
     });
 
     test('behavioral: saveMessage delegates to overridden conversation repo', () async {
@@ -736,12 +747,14 @@ void main() {
         content: 'New message', timestamp: DateTime(2024, 6, 15),
         tokenCount: 10,
       );
-      await service.saveMessage(message);
+      final saveResult = await service.saveMessage(message);
+      expect(saveResult.isSuccess, isTrue);
 
       final messages = await service.getSessionMessages('session-1');
-      expect(messages, hasLength(1));
-      expect(messages.first.id, 'new-msg');
-      expect(messages.first.content, 'New message');
+      expect(messages.isSuccess, isTrue);
+      expect(messages.data, hasLength(1));
+      expect(messages.data!.first.id, 'new-msg');
+      expect(messages.data!.first.content, 'New message');
     });
 
     test('behavioral: lesson history is empty for unknown student', () async {
@@ -774,7 +787,8 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final history = await service.getLessonHistory('unknown-student');
-      expect(history, isEmpty);
+      expect(history.isSuccess, isTrue);
+      expect(history.data, isEmpty);
     });
 
     test('behavioral: lesson history handles repo error gracefully', () async {
@@ -800,7 +814,8 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final history = await service.getLessonHistory('stu-1');
-      expect(history, isEmpty);
+      expect(history.isFailure, isTrue);
+      expect(history.error, 'simulated error');
     });
 
     test('behavioral: getStats handles repo error gracefully', () async {
@@ -826,7 +841,8 @@ void main() {
 
       final service = container.read(tutorServiceProvider);
       final stats = await service.getStats('stu-1');
-      expect(stats, isEmpty);
+      expect(stats.isFailure, isTrue);
+      expect(stats.error, 'simulated error');
     });
 
     test('behavioral: voiceServiceProvider override can be provided', () {
@@ -880,11 +896,13 @@ void main() {
       final service = container.read(tutorServiceProvider);
 
       final history = await service.getLessonHistory('stu-1');
-      expect(history, hasLength(1));
+      expect(history.isSuccess, isTrue);
+      expect(history.data, hasLength(1));
 
       final messages = await service.getSessionMessages('session-1');
-      expect(messages, hasLength(1));
-      expect(messages.first.content, 'Hello');
+      expect(messages.isSuccess, isTrue);
+      expect(messages.data, hasLength(1));
+      expect(messages.data!.first.content, 'Hello');
     });
   });
 }

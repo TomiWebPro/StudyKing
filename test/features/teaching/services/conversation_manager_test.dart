@@ -193,10 +193,12 @@ void main() {
 
     group('generateLessonPlan', () {
       test('returns LessonPlan from LLM service', () async {
-        final plan = await manager.generateLessonPlan(
+        final planResult = await manager.generateLessonPlan(
           durationMinutes: 45,
         );
 
+        expect(planResult.isSuccess, isTrue);
+        final plan = planResult.data!;
         expect(plan.goals, isNotEmpty);
         expect(plan.sections, isNotEmpty);
         expect(plan.totalDurationMinutes, greaterThan(0));
@@ -205,20 +207,24 @@ void main() {
 
       test('falls back to default plan on malformed JSON', () async {
         llmService.chatResponse = 'invalid json';
-        final plan = await manager.generateLessonPlan(
+        final planResult = await manager.generateLessonPlan(
           durationMinutes: 30,
         );
 
+        expect(planResult.isSuccess, isTrue);
+        final plan = planResult.data!;
         expect(plan.goals, isNotEmpty);
         expect(plan.totalDurationMinutes, equals(30));
       });
 
       test('falls back to default plan when LLM returns failure', () async {
         llmService.shouldThrowOnChat = true;
-        final plan = await manager.generateLessonPlan(
+        final planResult = await manager.generateLessonPlan(
           durationMinutes: 45,
         );
 
+        expect(planResult.isSuccess, isTrue);
+        final plan = planResult.data!;
         expect(plan.goals, isNotEmpty);
         expect(plan.totalDurationMinutes, equals(45));
         expect(manager.lessonPlan, isNotNull);
@@ -229,8 +235,10 @@ void main() {
         await manager.generateLessonPlan(durationMinutes: 30);
 
         llmService.shouldThrowOnChat = false;
-        final plan = await manager.generateLessonPlan(durationMinutes: 45);
+        final planResult = await manager.generateLessonPlan(durationMinutes: 45);
 
+        expect(planResult.isSuccess, isTrue);
+        final plan = planResult.data!;
         expect(plan.goals, isNotEmpty);
         expect(plan.sections, isNotEmpty);
         expect(manager.lessonPlan, isNotNull);
