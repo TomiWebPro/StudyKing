@@ -3,12 +3,14 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/utils/study_utils.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorWellbeingService {
+  static final Logger _logger = const Logger('MentorWellbeingService');
   static const int _maxNudgesPerDay = 5;
 
   final SessionRepository _sessionRepository;
@@ -55,13 +57,17 @@ class MentorWellbeingService {
   Future<void> _checkOverwork(int todayMinutes, int dailyCap, List<String> messages) async {
     if (dailyCap <= 0 || todayMinutes <= dailyCap) return;
     final msg = lookupAppLocalizations(Locale(_localeName)).nudgeOverworkMinutes(todayMinutes, dailyCap);
-    await _nudgeRepo.create(EngagementNudgeModel(
+    final createResult = await _nudgeRepo.create(EngagementNudgeModel(
       id: 'overwork_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
       studentId: _studentId,
       nudgeType: NudgeType.overwork.name,
       message: msg,
       severity: NudgeSeverity.medium.name,
     ));
+    if (createResult.isFailure) {
+      _logger.w('Failed to persist overwork wellbeing nudge', createResult.error);
+      return;
+    }
     messages.add(msg);
   }
 
@@ -71,13 +77,17 @@ class MentorWellbeingService {
     final lateNight = recentResult.data!.where((s) => s.startTime.hour >= lateNightHour).toList();
     if (lateNight.isEmpty) return;
     final msg = lookupAppLocalizations(Locale(_localeName)).nudgeLateNight(lateNight.length);
-    await _nudgeRepo.create(EngagementNudgeModel(
+    final createResult = await _nudgeRepo.create(EngagementNudgeModel(
       id: 'wellbeing_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
       studentId: _studentId,
       nudgeType: NudgeType.overwork.name,
       message: msg,
       severity: NudgeSeverity.low.name,
     ));
+    if (createResult.isFailure) {
+      _logger.w('Failed to persist late-night wellbeing nudge', createResult.error);
+      return;
+    }
     messages.add(msg);
   }
 
@@ -87,13 +97,17 @@ class MentorWellbeingService {
     final atRiskCount = weakResult.data!.length;
     if (atRiskCount < 3) return;
     final msg = lookupAppLocalizations(Locale(_localeName)).nudgeRevisionNeeded(atRiskCount);
-    await _nudgeRepo.create(EngagementNudgeModel(
+    final createResult = await _nudgeRepo.create(EngagementNudgeModel(
       id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
       studentId: _studentId,
       nudgeType: NudgeType.revision.name,
       message: msg,
       severity: NudgeSeverity.low.name,
     ));
+    if (createResult.isFailure) {
+      _logger.w('Failed to persist revision-needed wellbeing nudge', createResult.error);
+      return;
+    }
     messages.add(msg);
   }
 
@@ -101,13 +115,17 @@ class MentorWellbeingService {
     final consecutiveDays = (await _getConsecutiveStudyDays()).data ?? 0;
     if (consecutiveDays >= 7) {
       final msg = lookupAppLocalizations(Locale(_localeName)).nudgeStreakDays(consecutiveDays);
-      await _nudgeRepo.create(EngagementNudgeModel(
+      final createResult = await _nudgeRepo.create(EngagementNudgeModel(
         id: 'streak_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
         studentId: _studentId,
         nudgeType: NudgeType.planAdjustment.name,
         message: msg,
         severity: NudgeSeverity.low.name,
       ));
+      if (createResult.isFailure) {
+        _logger.w('Failed to persist streak wellbeing nudge', createResult.error);
+        return;
+      }
       messages.add(msg);
       return;
     }
@@ -143,13 +161,17 @@ class MentorWellbeingService {
       nudgeType = NudgeType.planAdjustment.name;
       severity = NudgeSeverity.medium.name;
     }
-    await _nudgeRepo.create(EngagementNudgeModel(
+    final createResult = await _nudgeRepo.create(EngagementNudgeModel(
       id: 'inactive_${DateTime.now().millisecondsSinceEpoch}_$_studentId',
       studentId: _studentId,
       nudgeType: nudgeType,
       message: msg,
       severity: severity,
     ));
+    if (createResult.isFailure) {
+      _logger.w('Failed to persist inactivity wellbeing nudge', createResult.error);
+      return;
+    }
     messages.add(msg);
   }
 

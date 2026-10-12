@@ -44,10 +44,12 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   int _todayCount = 0;
   bool _throwOnCreate = false;
   bool _throwOnGetTodayCount = false;
+  bool _failOnCreate = false;
 
   void setTodayCount(int count) => _todayCount = count;
   void setThrowOnCreate() => _throwOnCreate = true;
   void setThrowOnGetTodayCount() => _throwOnGetTodayCount = true;
+  void setFailOnCreate() => _failOnCreate = true;
 
   List<EngagementNudgeModel> get createdNudges => List.unmodifiable(_nudges);
 
@@ -63,6 +65,7 @@ class _FakeNudgeRepo extends EngagementNudgeRepository {
   @override
   Future<Result<void>> create(EngagementNudgeModel nudge) async {
     if (_throwOnCreate) throw Exception('Simulated error');
+    if (_failOnCreate) return Result.failure('Simulated write failure');
     _nudges.add(nudge);
     return Result.success(null);
   }
@@ -478,6 +481,93 @@ void main() {
 
           await service.checkWellbeingAndGenerateNudges();
           expect(nudgeRepo.createdNudges.where((n) => n.message.contains('study streak')), isEmpty);
+        });
+      });
+
+      group('create failure handling', () {
+        test('excludes late-night nudge message when create fails', () async {
+          final now = DateTime.now();
+          final lateNightSession = Session(
+            id: 'late-1',
+            studentId: 'test-student',
+            startTime: DateTime(now.year, now.month, now.day, 23, 0),
+          );
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setTodaySessions([lateNightSession]);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          nudgeRepo.setFailOnCreate();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isEmpty);
+          expect(nudgeRepo.createdNudges, isEmpty);
+        });
+
+        test('excludes revision nudge message when create fails', () async {
+          final now = DateTime.now();
+          final atRiskQuestions = List.generate(3, (i) => QuestionMasteryState(
+            studentId: 'test-student',
+            questionId: 'q-$i',
+            lastAttempt: now,
+          ));
+          final mastery = _FakeMasteryGraphService();
+          mastery.setAtRiskQuestions(atRiskQuestions);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          nudgeRepo.setFailOnCreate();
+          final service = _createService(
+            nudgeRepo: nudgeRepo,
+            masteryService: mastery,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isEmpty);
+          expect(nudgeRepo.createdNudges, isEmpty);
+        });
+
+        test('excludes streak nudge message when create fails', () async {
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setConsecutiveDays(7);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          nudgeRepo.setFailOnCreate();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isEmpty);
+          expect(nudgeRepo.createdNudges, isEmpty);
+        });
+
+        test('still includes nudge message when create succeeds', () async {
+          final now = DateTime.now();
+          final lateNightSession = Session(
+            id: 'late-1',
+            studentId: 'test-student',
+            startTime: DateTime(now.year, now.month, now.day, 23, 0),
+          );
+          final sessionRepo = _FakeSessionRepo();
+          sessionRepo.setTodaySessions([lateNightSession]);
+
+          final nudgeRepo = _FakeNudgeRepo();
+          final service = _createService(
+            sessionRepository: sessionRepo,
+            nudgeRepo: nudgeRepo,
+          );
+
+          final result = await service.checkWellbeingAndGenerateNudges();
+          expect(result.isSuccess, isTrue);
+          expect(result.data, isNotEmpty);
+          expect(nudgeRepo.createdNudges, isNotEmpty);
         });
       });
     });
