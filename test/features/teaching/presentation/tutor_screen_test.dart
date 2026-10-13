@@ -343,6 +343,38 @@ class _FakeTutorService extends TutorService {
   Future<void> endLesson() async {}
 }
 
+/// TutorService whose `startLesson` throws on the first call (the
+/// initial init) and succeeds afterwards, so the Retry button's
+/// second `_initializeTutor()` run can be observed recovering.
+class _FailOnceTutorService extends _FakeTutorService {
+  _FailOnceTutorService() : super(llmService: _FakeLlmService());
+
+  int _startLessonCalls = 0;
+
+  @override
+  Future<ConversationManager> startLesson({
+    required String studentId,
+    required String subjectId,
+    required String topicId,
+    required String topicTitle,
+    int durationMinutes = 45,
+    String? scheduledSessionId,
+    String localeName = 'en',
+  }) async {
+    _startLessonCalls++;
+    if (_startLessonCalls == 1) throw Exception('LLM connection failed');
+    return super.startLesson(
+      studentId: studentId,
+      subjectId: subjectId,
+      topicId: topicId,
+      topicTitle: topicTitle,
+      durationMinutes: durationMinutes,
+      scheduledSessionId: scheduledSessionId,
+      localeName: localeName,
+    );
+  }
+}
+
 /// ConversationManager whose `addAssistantMessage` — the error-path
 /// persist `TutorScreen._sendText` awaits — parks on a gate until the
 /// test releases it, so the screen can be disposed while the persist
@@ -810,6 +842,41 @@ void main() {
       expect(find.text('Retry'), findsOneWidget);
       expect(find.text('Go to Settings'), findsOneWidget);
     });
+
+    testWidgets(
+      'retry after init failure re-initializes without LateInitializationError',
+      (tester) async {
+        await tester.pumpWidget(_wrapApp(
+          TutorScreen(
+            topicId: '',
+            topicTitle: 'Algebra',
+            subjectId: 'math',
+            tutorService: _FailOnceTutorService(),
+          ),
+        ));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(seconds: 2));
+
+        // First init failed: the error card with the Retry button.
+        expect(find.text('Retry'), findsOneWidget);
+
+        // Retry re-runs `_initializeTutor()`. Pre-fix, the second
+        // assignment to the late-final `_tutorService` threw
+        // `LateInitializationError` synchronously inside the
+        // gesture handler, so the retry could never succeed.
+        await tester.tap(find.text('Retry'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 2));
+        await tester.pump(const Duration(seconds: 2));
+
+        // The retry recovered: the second init succeeded and the
+        // error card is gone (lesson UI renders instead).
+        expect(find.text('Retry'), findsNothing);
+        expect(find.byIcon(Icons.error_outline), findsNothing);
+        expect(tester.takeException(), isNull);
+      },
+    );
 
     testWidgets('streaming loops stop consuming after the route is popped mid-stream', (tester) async {
       final tutorService = _FakeTutorService(llmService: _SlowStreamLlmService());

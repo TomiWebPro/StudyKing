@@ -56,7 +56,10 @@ class TutorScreen extends ConsumerStatefulWidget {
 
 class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAliveClientMixin {
   static final Logger _logger = const Logger('TutorScreen');
-  late final TutorService _tutorService;
+  // Not `final`: the Retry button re-runs `_initializeTutor()` after a
+  // failed init, so the field must be re-assignable (re-read from the
+  // provider or `widget.tutorService`).
+  late TutorService _tutorService;
   late final TextEditingController _textController;
   late final ScrollController _scrollController;
   late final FocusNode _inputFocusNode;
