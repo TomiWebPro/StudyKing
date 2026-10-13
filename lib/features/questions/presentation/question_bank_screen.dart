@@ -260,18 +260,38 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
     if (confirmed != true || !mounted) return;
 
     final idsToDelete = Set<String>.from(_selectedIds);
+    final deletedIds = <String>{};
+    var failedDeletes = 0;
     for (final id in idsToDelete) {
-      await _questionRepo.delete(id);
+      final deleteResult = await _questionRepo.delete(id);
+      if (deleteResult.isFailure) {
+        failedDeletes++;
+        _logger.w('Failed to delete question $id', deleteResult.error);
+      } else {
+        deletedIds.add(id);
+      }
     }
     if (mounted) {
       setState(() {
-        _allQuestions.removeWhere((q) => _selectedIds.contains(q.id));
+        _allQuestions.removeWhere((q) => deletedIds.contains(q.id));
         _selectedIds.clear();
         _selectionMode = false;
       });
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.questionsDeleted(idsToDelete.length))),
-      );
+      if (failedDeletes > 0) {
+        // Repository.delete reports write failures as Result.failure (it
+        // does not throw), so the checked result — not an exception — is
+        // the realistic failure path.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.somethingWentWrong),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.questionsDeleted(idsToDelete.length))),
+        );
+      }
     }
   }
 

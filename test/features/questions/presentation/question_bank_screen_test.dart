@@ -38,6 +38,14 @@ class _FakeQuestionRepo extends QuestionRepository {
 
   set createShouldFail(bool v) => _createShouldFail = v;
 
+  final Set<String> _deleteFailIds = {};
+
+  set deleteFailIds(Set<String> ids) {
+    _deleteFailIds
+      ..clear()
+      ..addAll(ids);
+  }
+
   @override
   Future<void> init() async {}
 
@@ -65,6 +73,9 @@ class _FakeQuestionRepo extends QuestionRepository {
 
   @override
   Future<Result<void>> delete(String key) async {
+    if (_deleteFailIds.contains(key)) {
+      return Result.failure('Hive write failed');
+    }
     _questions.removeWhere((q) => q.id == key);
     return Result.success(null);
   }
@@ -744,6 +755,82 @@ void main() {
       expect(find.text('Solve for x: 2x + 3 = 7'), findsNothing);
       expect(find.text('What is the chemical formula for water?'), findsOneWidget);
       expect(find.text('Questions: 1'), findsOneWidget);
+    });
+
+    testWidgets('multi-select delete keeps questions and shows error when all deletes fail',
+        (tester) async {
+      final repo = _FakeQuestionRepo(List.from(mockQuestions));
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Select multiple'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('What is Newton\'s first law?'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Solve for x: 2x + 3 = 7'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Delete selected'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Delete Questions'), findsOneWidget);
+
+      // Simulate failed Hive writes: Repository.delete returns
+      // Result.failure (it never throws).
+      repo.deleteFailIds = {'q1', 'q3'};
+      await tester.tap(find.text('Delete').first);
+      await tester.pumpAndSettle();
+
+      // Failed deletes must not remove the questions from the list,
+      // must not report success, and must surface the failure.
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('Solve for x: 2x + 3 = 7'), findsOneWidget);
+      expect(find.text('Questions: 3'), findsOneWidget);
+      expect(find.text('2 questions deleted'), findsNothing);
+      expect(find.text('Something went wrong'), findsOneWidget);
+    });
+
+    testWidgets('multi-select delete removes only successfully deleted questions on partial failure',
+        (tester) async {
+      final repo = _FakeQuestionRepo(List.from(mockQuestions));
+      await tester.pumpWidget(_buildWidget(
+        questionRepo: repo,
+        subjectRepo: _FakeSubjectRepo(subjects),
+        topicRepo: _FakeTopicRepo(topics),
+        sourceRepo: _FakeSourceRepo([]),
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Select multiple'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('What is Newton\'s first law?'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Solve for x: 2x + 3 = 7'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byTooltip('Delete selected'));
+      await tester.pumpAndSettle();
+
+      // Only the q1 write fails; q3 must still be deleted.
+      repo.deleteFailIds = {'q1'};
+      await tester.tap(find.text('Delete').first);
+      await tester.pumpAndSettle();
+
+      expect(find.text('What is Newton\'s first law?'), findsOneWidget);
+      expect(find.text('Solve for x: 2x + 3 = 7'), findsNothing);
+      expect(find.text('Questions: 2'), findsOneWidget);
+      // A partial failure is surfaced instead of a pure success message.
+      expect(find.text('2 questions deleted'), findsNothing);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
 
     testWidgets('create question dialog cancel returns to screen', (tester) async {
