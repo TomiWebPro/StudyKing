@@ -19,9 +19,11 @@ import '../../../helpers/navigator_observer_helper.dart';
 class _FakeSubjectRepository extends SubjectRepository {
   final Map<String, Subject> _subjects = {};
   bool _shouldThrowOnDelete = false;
+  bool _shouldFailOnDelete = false;
 
   void addSubject(Subject subject) => _subjects[subject.id] = subject;
   void setThrowOnDelete(bool value) => _shouldThrowOnDelete = value;
+  void setFailOnDelete(bool value) => _shouldFailOnDelete = value;
 
   @override
   Future<Result<Subject?>> get(String key) async => Result.success(_subjects[key]);
@@ -29,6 +31,7 @@ class _FakeSubjectRepository extends SubjectRepository {
   @override
   Future<Result<void>> delete(String key) async {
     if (_shouldThrowOnDelete) throw Exception('Delete failed');
+    if (_shouldFailOnDelete) return Result.failure('Hive write failed');
     _subjects.remove(key);
     return Result.success(null);
   }
@@ -807,6 +810,65 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
 
       expect(find.text('Something went wrong'), findsOneWidget);
+    });
+
+    testWidgets('delete shows error snackbar and stays when repo returns failure Result',
+        (tester) async {
+      final subjectRepo = _FakeSubjectRepository();
+      subjectRepo.setFailOnDelete(true);
+      subjectRepo.addSubject(Subject(id: 'test-id', name: 'Mathematics', color: '#2196F3'));
+      final observer = TestNavigatorObserver();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            subjectsRepositoryProvider.overrideWith(() => _FakeSubjectsNotifier(subjectRepo)),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            navigatorObservers: [observer],
+            onGenerateRoute: _testRoute,
+            home: SubjectDetailScreen(
+              subject: Subject(
+                id: 'test-id', name: 'Mathematics',
+                color: '#2196F3', topicIds: [],
+                createdAt: DateTime(2024, 1, 1),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      final iconButtons = find.byType(IconButton);
+      IconButton? moreVert;
+      for (final el in iconButtons.evaluate()) {
+        final btn = el.widget as IconButton;
+        if (btn.icon is Icon && (btn.icon as Icon).icon == Icons.more_vert) {
+          moreVert = btn;
+          break;
+        }
+      }
+
+      moreVert!.onPressed!.call();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete Subject'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      await tester.tap(find.text('Delete'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // Write failure must surface as the error snackbar, not the
+      // success snackbar, and the screen must not pop.
+      expect(find.text('Something went wrong'), findsOneWidget);
+      expect(find.text('Delete Subject'), findsNothing);
+      expect(observer.poppedRoutes.whereType<PageRoute>(), isEmpty);
+      expect((await subjectRepo.get('test-id')).data, isNotNull);
     });
   });
 

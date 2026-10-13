@@ -375,7 +375,15 @@ class _SubjectDetailScreenState extends ConsumerState<SubjectDetailScreen> with 
     if (confirmed != true || !mounted) return;
     try {
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      await repo.delete(widget.subject.id);
+      final deleteResult = await repo.delete(widget.subject.id);
+      if (deleteResult.isFailure) {
+        _logger.w('Delete subject failed: ${deleteResult.error}');
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.somethingWentWrong)),
+        );
+        return;
+      }
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.deleteSubject)),
