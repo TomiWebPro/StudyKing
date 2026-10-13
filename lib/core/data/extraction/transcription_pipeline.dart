@@ -163,8 +163,12 @@ class TranscriptionPipeline {
                 confidence: asrResult.confidence ?? 0.0,
               ));
             }
-            totalOffset += _chunkDurationSeconds;
           }
+          // Each chunk occupies its own slice of the timeline even
+          // when it yields no text (silence, noise, a transient
+          // failure), so the offset must advance per chunk position
+          // — otherwise every later segment shifts earlier.
+          totalOffset += _chunkDurationSeconds;
         }
 
         if (segments.isEmpty) {

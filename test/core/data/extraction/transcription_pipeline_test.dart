@@ -582,6 +582,84 @@ void main() {
       }
     });
 
+    test('chunked ASR keeps segment offsets when a chunk yields no text',
+        () async {
+      final dir = Directory.systemTemp.createTempSync('pipeline_chunk_offset_test_');
+      try {
+        final largeFile = File('${dir.path}/large.mp3');
+        final largeBytes = Uint8List(30 * 1024 * 1024);
+        for (var i = 0; i < largeBytes.length; i++) {
+          largeBytes[i] = 0xFF;
+        }
+        await largeFile.writeAsBytes(largeBytes);
+
+        // 30MB / (30s * 128kbps) = 8 chunks. Simulate chunk #1 (the
+        // second chunk) returning no text, e.g. silence or a
+        // transient failure on that slice of the audio.
+        var callCount = 0;
+        final asrEngine = _FakeAsrEngine(
+          available: true,
+          onTranscribeFile: (_) async {
+            final chunkIndex = callCount++;
+            if (chunkIndex == 1) {
+              return const TranscriptionResult(
+                text: '',
+                extractionMethod: 'whisper_api',
+              );
+            }
+            return TranscriptionResult(
+              text: 'chunk $chunkIndex',
+              extractionMethod: 'whisper_api',
+              confidence: 0.90,
+              segments: [
+                TranscriptionSegment(
+                  text: 'chunk $chunkIndex',
+                  startSeconds: 0.0,
+                  endSeconds: 30.0,
+                  confidence: 0.90,
+                ),
+              ],
+            );
+          },
+        );
+
+        final extractor = TranscriptionExtractor(
+          modelId: 'test-model',
+          localeName: 'en',
+          httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+        );
+
+        final pipeline = TranscriptionPipeline(
+          extractor: extractor,
+          asrEngine: asrEngine,
+        );
+
+        final result = await pipeline.transcribe(
+          rawContent: 'file://${largeFile.path}',
+        );
+
+        expect(result.extractionMethod, 'chunked_asr');
+        // Chunk 1 contributed nothing; the rest are joined in order.
+        expect(
+          result.text,
+          'chunk 0 chunk 2 chunk 3 chunk 4 chunk 5 chunk 6 chunk 7',
+        );
+        expect(result.segments, hasLength(7));
+        // Chunk 0 keeps its position...
+        expect(result.segments![0].startSeconds, 0.0);
+        // ...and chunk 2 starts at 60s, not 30s: the empty chunk 1
+        // still occupies its 30s slice of the timeline.
+        expect(result.segments![1].startSeconds, 60.0);
+        expect(result.segments![1].endSeconds, 90.0);
+        // Duration covers all 8 chunks (8 * 30s), not just the 7
+        // chunks that produced text.
+        expect(result.durationSeconds, 240);
+        pipeline.dispose();
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    });
+
     test('detects content type from URL extension', () async {
       final asrEngine = _FakeAsrEngine(
         available: true,
