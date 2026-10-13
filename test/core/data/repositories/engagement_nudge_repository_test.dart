@@ -351,6 +351,108 @@ void main() {
       expect(result.data!.first.id, 's1b');
     });
   });
+
+  group('EngagementNudgeRepository write-result propagation (fake box)', () {
+    test('markActedUpon propagates write failure instead of masking it',
+        () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(
+          storage: {'n1': createTestNudge(id: 'n1', studentId: 's1')},
+          failWrites: true,
+        ));
+      final result = await repository.markActedUpon('n1');
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Failed to put'));
+    });
+
+    test('markActedUpon persists acted-upon flag when write succeeds',
+        () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(
+          storage: {'n1': createTestNudge(id: 'n1', studentId: 's1')},
+        ));
+      final result = await repository.markActedUpon('n1');
+      expect(result.isSuccess, isTrue);
+      final stored = (await repository.get('n1')).data;
+      expect(stored!.wasActedUpon, isTrue);
+      expect(stored.actedUponAt, isNotNull);
+    });
+
+    test('markActedUpon succeeds for non-existent nudge without writing',
+        () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(failWrites: true));
+      final result = await repository.markActedUpon('missing');
+      expect(result.isSuccess, isTrue);
+    });
+
+    test('markActedUpon returns failure when box is not open', () async {
+      final repository = EngagementNudgeRepository();
+      final result = await repository.markActedUpon('n1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('deleteOld propagates write failure instead of masking it',
+        () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(
+          storage: {
+            'old1': createTestNudge(
+              id: 'old1',
+              studentId: 's1',
+              sentAt:
+                  DateTime.now().subtract(const Duration(days: 10)),
+            ),
+          },
+          failWrites: true,
+        ));
+      final result = await repository.deleteOld(7);
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Failed to delete'));
+    });
+
+    test('deleteOld removes old nudges and succeeds when writes succeed',
+        () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(
+          storage: {
+            'old1': createTestNudge(
+              id: 'old1',
+              studentId: 's1',
+              sentAt:
+                  DateTime.now().subtract(const Duration(days: 10)),
+            ),
+            'new1': createTestNudge(
+              id: 'new1',
+              studentId: 's1',
+              sentAt:
+                  DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          },
+        ));
+      final result = await repository.deleteOld(7);
+      expect(result.isSuccess, isTrue);
+      final remaining = (await repository.getByStudent('s1')).data!;
+      expect(remaining.map((n) => n.id), ['new1']);
+    });
+
+    test('deleteOld succeeds when nothing is old enough', () async {
+      final repository = EngagementNudgeRepository()
+        ..attachBox(_FakeNudgeBox(
+          storage: {
+            'new1': createTestNudge(
+              id: 'new1',
+              studentId: 's1',
+              sentAt:
+                  DateTime.now().subtract(const Duration(days: 1)),
+            ),
+          },
+          failWrites: true,
+        ));
+      final result = await repository.deleteOld(7);
+      expect(result.isSuccess, isTrue);
+    });
+  });
 }
 
 class _TestEngagementNudgeAdapter extends TypeAdapter<EngagementNudgeModel> {
@@ -399,4 +501,72 @@ class _TestEngagementNudgeAdapter extends TypeAdapter<EngagementNudgeModel> {
       ..writeByte(8)
       ..write(obj.actedUponAt);
   }
+}
+
+/// In-memory fake `Box<EngagementNudgeModel>` with an optional write-failure
+/// mode, used to verify that write Results are propagated instead of being
+/// masked as success.
+class _FakeNudgeBox implements Box<EngagementNudgeModel> {
+  final Map<dynamic, EngagementNudgeModel> _storage;
+  final bool failWrites;
+
+  _FakeNudgeBox({
+    Map<dynamic, EngagementNudgeModel>? storage,
+    this.failWrites = false,
+  }) : _storage = Map<dynamic, EngagementNudgeModel>.of(storage ?? {});
+
+  @override
+  Iterable<EngagementNudgeModel> get values => _storage.values;
+
+  @override
+  EngagementNudgeModel? get(
+          dynamic key, {EngagementNudgeModel? defaultValue}) =>
+      _storage[key] ?? defaultValue;
+
+  @override
+  Future<void> put(dynamic key, EngagementNudgeModel value) async {
+    if (failWrites) {
+      throw HiveError('simulated put failure');
+    }
+    _storage[key] = value;
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    if (failWrites) {
+      throw HiveError('simulated delete failure');
+    }
+    _storage.remove(key);
+  }
+
+  @override
+  Future<int> clear() async {
+    final count = _storage.length;
+    _storage.clear();
+    return count;
+  }
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'engagement_nudges';
+
+  @override
+  int get length => _storage.length;
+
+  @override
+  bool get isNotEmpty => _storage.isNotEmpty;
+
+  @override
+  bool get isEmpty => _storage.isEmpty;
+
+  @override
+  bool containsKey(dynamic key) => _storage.containsKey(key);
+
+  @override
+  Stream<BoxEvent> watch({dynamic key}) => const Stream.empty();
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }

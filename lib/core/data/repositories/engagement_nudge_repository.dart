@@ -50,13 +50,21 @@ class EngagementNudgeRepository extends Repository<EngagementNudgeModel> {
   }
 
   Future<Result<void>> markActedUpon(String id) async {
-    return Result.capture(() async {
+    try {
       final nudge = box.get(id);
-      if (nudge != null) {
-        await super.put(
-            id, nudge.copyWith(wasActedUpon: true, actedUponAt: DateTime.now()));
+      if (nudge == null) {
+        return Result.success(null);
       }
-    }, context: 'markActedUpon');
+      final result = await super.put(
+          id, nudge.copyWith(wasActedUpon: true, actedUponAt: DateTime.now()));
+      if (result.isFailure) {
+        _logger.w('Failed to mark nudge $id acted upon', result.error);
+      }
+      return result;
+    } catch (e) {
+      _logger.w('markActedUpon failed for nudge $id: $e', e);
+      return Result.failure('markActedUpon failed: $e');
+    }
   }
 
   Future<Result<int>> getTodayCount(String studentId) async {
@@ -79,12 +87,20 @@ class EngagementNudgeRepository extends Repository<EngagementNudgeModel> {
   }
 
   Future<Result<void>> deleteOld(int daysOld) async {
-    return Result.capture(() async {
+    try {
       final cutoff = DateTime.now().subtract(Duration(days: daysOld));
       final old = box.values.where((n) => n.sentAt.isBefore(cutoff)).toList();
       for (final n in old) {
-        await super.delete(n.id);
+        final result = await super.delete(n.id);
+        if (result.isFailure) {
+          _logger.w('Failed to delete old nudge ${n.id}', result.error);
+          return result;
+        }
       }
-    }, context: 'deleteOld');
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('deleteOld failed: $e', e);
+      return Result.failure('deleteOld failed: $e');
+    }
   }
 }
