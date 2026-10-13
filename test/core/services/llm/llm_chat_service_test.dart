@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/llm_response_cache.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 
@@ -1315,6 +1316,49 @@ void main() {
         expect(callCount, 2);
       });
 
+      test('does not cache the backup response under the primary model',
+          () async {
+        final client = _FakeHttpClient();
+        int callCount = 0;
+        client.handler = (request) async {
+          callCount++;
+          if (callCount.isOdd) {
+            return http.Response('Server Error', 500);
+          }
+          return http.Response(
+            jsonEncode({
+              'choices': [
+                {'message': {'content': 'Backup response'}}
+              ],
+              'usage': {'prompt_tokens': 5, 'completion_tokens': 10},
+            }),
+            200,
+            headers: {'Content-Type': 'application/json'},
+          );
+        };
+
+        final cache = LlmResponseCache();
+        await cache.init();
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'primary-key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+          backupModel: 'backup-model',
+        );
+        final service =
+            LlmService(config: config, httpClient: client, cache: cache);
+        final first = await service.chat(message: 'Hi', modelId: 'primary-model');
+        expect(first.data, 'Backup response');
+        // A repeat must reach the providers again instead of being
+        // served from the primary model's cache entry, which would
+        // attribute the backup's answer to the primary model.
+        final repeat =
+            await service.chat(message: 'Hi', modelId: 'primary-model');
+        expect(repeat.data, 'Backup response');
+        expect(callCount, 3);
+      });
+
       test('does not use backup on non-server error', () async {
         final client = _FakeHttpClient();
         client.handler = (_) async => http.Response('Bad Request', 400);
@@ -1379,6 +1423,57 @@ void main() {
           ]),
         );
         expect(callCount, 2);
+      });
+
+      test('does not cache the backup stream under the primary model',
+          () async {
+        final client = _FakeHttpClient();
+        int callCount = 0;
+        client.handler = (request) async {
+          callCount++;
+          if (callCount.isOdd) {
+            throw Exception('HTTP 500 Internal Server Error');
+          }
+          return http.Response(
+            'data: ${jsonEncode({"choices": [{"delta": {"content": "Backup stream"}}]})}\n'
+            'data: [DONE]\n'
+            '\n',
+            200,
+          );
+        };
+
+        final cache = LlmResponseCache();
+        await cache.init();
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'primary-key',
+          backupProvider: LlmProvider.openAI,
+          backupApiKey: 'backup-key',
+          backupModel: 'backup-model',
+        );
+        final service =
+            LlmService(config: config, httpClient: client, cache: cache);
+        await expectLater(
+          service.chatStream(message: 'Hello', modelId: 'primary-model'),
+          emitsInOrder([
+            '\n\n[Primary provider failed. Trying backup provider...]\n\n',
+            'Backup stream',
+            emitsDone,
+          ]),
+        );
+        // A repeat must reach the providers again instead of being
+        // served from the primary model's cache entry, which would
+        // attribute the backup's answer to the primary model and
+        // bake the failover notice into the cached content.
+        await expectLater(
+          service.chatStream(message: 'Hello', modelId: 'primary-model'),
+          emitsInOrder([
+            '\n\n[Primary provider failed. Trying backup provider...]\n\n',
+            'Backup stream',
+            emitsDone,
+          ]),
+        );
+        expect(callCount, 3);
       });
 
       test('does not use backup on non-server error', () async {

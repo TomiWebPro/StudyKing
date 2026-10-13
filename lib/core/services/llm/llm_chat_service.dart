@@ -193,6 +193,7 @@ class LlmService {
       List<Map<String, String>>? history,
       String feature,
     }) primaryStream,
+    void Function()? onFallback,
   }) async* {
     try {
       // NOTE: `yield*` forwards inner-stream errors to the listener rather than
@@ -216,6 +217,7 @@ class LlmService {
           errorStr.contains('ConnectionFailedError') || errorStr.contains('SocketException');
 
       if (isServerError && config.hasBackup) {
+        onFallback?.call();
         yield '\n\n[Primary provider failed. Trying backup provider...]\n\n';
         yield* _streamBackup(
           message: message,
@@ -278,6 +280,7 @@ class LlmService {
       List<Map<String, String>>? history,
       String feature,
     }) primaryCall,
+    void Function()? onFallback,
   }) async {
     final result = await primaryCall(
       message: message,
@@ -295,6 +298,7 @@ class LlmService {
           errorStr.contains('SocketException');
 
       if (isServerError) {
+        onFallback?.call();
         final backupConfig = LlmConfiguration(
           provider: config.backupProvider!,
           apiKey: config.backupApiKey!,
@@ -347,6 +351,7 @@ class LlmService {
       return Result.success(cached);
     }
 
+    bool usedBackup = false;
     final result = await _callWithFallback(
       message: message,
       modelId: modelId,
@@ -354,6 +359,7 @@ class LlmService {
       memory: memory,
       history: history,
       feature: feature,
+      onFallback: () => usedBackup = true,
       primaryCall: ({
         required String message,
         required String modelId,
@@ -375,7 +381,11 @@ class LlmService {
       },
     );
 
-    if (result.isSuccess) {
+    // Cache only responses produced by the primary provider under the
+    // primary model id. A fallback response is already cached by the
+    // backup service under the backup model id; caching it here would
+    // attribute the backup's answer to the primary model.
+    if (result.isSuccess && !usedBackup) {
       final ttl = _cache?.ttlForFeature(feature) ?? const Duration(minutes: 10);
       _cache?.set(modelId, effectiveSystemPrompt, message, result.data!, ttl: ttl);
     }
@@ -411,6 +421,7 @@ class LlmService {
     }
 
     String fullContent = '';
+    bool usedBackup = false;
     yield* _streamWithFallback(
       message: message,
       modelId: modelId,
@@ -418,6 +429,7 @@ class LlmService {
       memory: memory,
       history: history,
       feature: feature,
+      onFallback: () => usedBackup = true,
       primaryStream: ({
         required String message,
         required String modelId,
@@ -444,7 +456,12 @@ class LlmService {
           sink.add(data);
         },
         handleDone: (sink) {
-          if (fullContent.isNotEmpty) {
+          // Cache only responses produced by the primary provider under
+          // the primary model id. A fallback response is already cached
+          // by the backup service under the backup model id, and caching
+          // it here would attribute it to the primary model and bake
+          // the failover notice into the cached content.
+          if (fullContent.isNotEmpty && !usedBackup) {
             final ttl = _cache?.ttlForFeature(feature) ?? const Duration(minutes: 10);
             _cache?.set(modelId, effectiveSystemPrompt, message, fullContent, ttl: ttl);
           }
