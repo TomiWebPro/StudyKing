@@ -665,13 +665,20 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     if (source == null) return;
     final result = await _sourceRepo.delete(widget.sourceId);
     if (result.isSuccess && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      final messenger = ScaffoldMessenger.of(context);
+      messenger.showSnackBar(
         SnackBar(
           content: Text(l10n.sourceDeleted),
           action: SnackBarAction(
             label: l10n.undo,
             onPressed: () async {
-              await _sourceRepo.create(source);
+              final recreateResult = await _sourceRepo.create(source);
+              if (recreateResult.isFailure) {
+                _logger.w('Failed to restore deleted source ${source.id}', recreateResult.error);
+                messenger.showSnackBar(
+                  SnackBar(content: Text(l10n.somethingWentWrong)),
+                );
+              }
             },
           ),
         ),

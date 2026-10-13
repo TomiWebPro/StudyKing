@@ -20,11 +20,13 @@ class _FakeSourceRepo extends SourceRepository {
   final Map<String, Source> _sources;
   bool _shouldThrow = false;
   bool _failOnSave = false;
+  bool _createShouldFail = false;
 
   _FakeSourceRepo(this._sources);
 
   void setThrowOnGet(bool shouldThrow) => _shouldThrow = shouldThrow;
   void setFailOnSave(bool fail) => _failOnSave = fail;
+  set createShouldFail(bool v) => _createShouldFail = v;
 
   @override
   Future<void> init() async {}
@@ -37,6 +39,13 @@ class _FakeSourceRepo extends SourceRepository {
 
   @override
   Future<Result<List<Source>>> getAll() async => Result.success(_sources.values.toList());
+
+  @override
+  Future<Result<void>> create(Source source) async {
+    if (_createShouldFail) return Result.failure('Hive write failed');
+    _sources[source.id] = source;
+    return Result.success(null);
+  }
 
   @override
   Future<Result<void>> save(String key, Source item) async {
@@ -116,6 +125,62 @@ Widget _buildWidget({
       ),
     ),
   );
+}
+
+/// Pumps the app with SourceDetailScreen pushed over a home Scaffold, like
+/// the real navigation stack. The home Scaffold stays mounted across the
+/// delete-pop, so the delete SnackBar (and any queued error SnackBar shown
+/// by the Undo action) keep a root Scaffold to present in.
+Future<void> _pumpDetailOverHome(
+  WidgetTester tester, {
+  required _FakeSourceRepo sourceRepo,
+}) async {
+  await tester.pumpWidget(ProviderScope(
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Scaffold(
+        body: Builder(
+          builder: (context) => ElevatedButton(
+            onPressed: () {
+              Navigator.push<void>(
+                context,
+                MaterialPageRoute<void>(
+                  builder: (_) => SourceDetailScreen(
+                    sourceId: 'src1',
+                    sourceRepo: sourceRepo,
+                    subjectRepo: _FakeSubjectRepo(),
+                    topicRepo: _FakeTopicRepo(),
+                    questionRepo: _FakeQuestionRepo(),
+                  ),
+                ),
+              );
+            },
+            child: const Text('open'),
+          ),
+        ),
+      ),
+    ),
+  ));
+  await tester.tap(find.text('open'));
+  await tester.pumpAndSettle();
+  await tester.pump(const Duration(seconds: 1));
+}
+
+/// Runs the overflow-menu delete flow: open menu, tap Delete, confirm dialog.
+/// Ends with pumpAndSettle so the popped route's exit animation completes and
+/// the delete SnackBar (re-hosted by the still-mounted root Scaffold) is
+/// on-screen and hittable.
+Future<void> _deleteSourceViaMenu(WidgetTester tester) async {
+  await tester.tap(find.byIcon(Icons.more_vert));
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.text('Delete').last);
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.pump(const Duration(milliseconds: 300));
+  await tester.tap(find.widgetWithText(FilledButton, 'Delete').last);
+  await tester.pumpAndSettle();
 }
 
 void main() {
@@ -360,6 +425,52 @@ void main() {
       expect(find.text('Something went wrong'), findsOneWidget);
       expect(find.text('Thermodynamics'), findsNothing);
       expect(find.text('Mechanics'), findsOneWidget);
+    });
+
+    testWidgets('delete source then undo recreates it', (tester) async {
+      final sourceRepo = _FakeSourceRepo({'src1': mockSource});
+      await _pumpDetailOverHome(tester, sourceRepo: sourceRepo);
+
+      expect(find.text('Physics Textbook'), findsOneWidget);
+
+      await _deleteSourceViaMenu(tester);
+
+      // The detail route popped, but the root home Scaffold keeps the
+      // delete confirmation SnackBar (with its Undo action) visible.
+      expect(find.text('Source deleted'), findsOneWidget);
+
+      // Undo recreates the source in the repository.
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      final restored = await sourceRepo.get('src1');
+      expect(restored.isSuccess, isTrue);
+      expect(restored.data, isNotNull);
+      expect(restored.data!.title, 'Physics Textbook');
+    });
+
+    testWidgets('undo shows error snackbar when recreate write fails',
+        (tester) async {
+      final sourceRepo = _FakeSourceRepo({'src1': mockSource});
+      sourceRepo.createShouldFail = true;
+      await _pumpDetailOverHome(tester, sourceRepo: sourceRepo);
+
+      expect(find.text('Physics Textbook'), findsOneWidget);
+
+      await _deleteSourceViaMenu(tester);
+
+      expect(find.text('Source deleted'), findsOneWidget);
+
+      // Undo: the recreate write fails, so the source stays deleted instead
+      // of being silently reported as restored. Tapping the Undo action
+      // closes the delete SnackBar, so the queued error SnackBar shows
+      // immediately.
+      await tester.tap(find.text('Undo'));
+      await tester.pumpAndSettle();
+
+      final restored = await sourceRepo.get('src1');
+      expect(restored.data, isNull);
+      expect(find.text('Something went wrong'), findsOneWidget);
     });
   });
 
