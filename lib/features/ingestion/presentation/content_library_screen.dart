@@ -211,8 +211,24 @@ class _ContentLibraryScreenState extends ConsumerState<ContentLibraryScreen> {
     if (confirmed != true || !mounted) return;
 
     if (alsoDeleteQuestions) {
+      var failedQuestionDeletes = 0;
       for (final qId in source.generatedQuestionIds) {
-        await _questionRepo.delete(qId);
+        final deleteResult = await _questionRepo.delete(qId);
+        if (deleteResult.isFailure) {
+          failedQuestionDeletes++;
+          _logger.w('Failed to delete question $qId', deleteResult.error);
+        }
+      }
+      if (failedQuestionDeletes > 0 && mounted) {
+        // Repository.delete reports write failures as Result.failure (it
+        // does not throw), so the checked result — not an exception —
+        // is the realistic failure path.
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.somethingWentWrong),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
       }
     }
 

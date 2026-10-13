@@ -75,8 +75,16 @@ class _FakeSourceRepo extends SourceRepository {
 }
 
 class _FakeQuestionRepo extends QuestionRepository {
+  bool deleteShouldFail = false;
+
   @override
   Future<void> init() async {}
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    if (deleteShouldFail) return Result.failure('Hive write failed');
+    return Result.success(null);
+  }
 }
 
 Widget _buildWidget({
@@ -281,6 +289,57 @@ void main() {
       // Failed recreate: the source stays deleted and an error is shown.
       expect(find.text('Physics Textbook'), findsNothing);
       expect(find.text('Something went wrong'), findsOneWidget);
+    });
+
+    testWidgets('delete source with also-delete-questions warns when question delete fails', (tester) async {
+      final sourceWithQuestions = Source(
+        id: 'src1',
+        title: 'Physics Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        createdAt: DateTime(2024, 1, 15),
+        generatedQuestionIds: ['q1', 'q2'],
+      );
+      final questionRepo = _FakeQuestionRepo();
+      await tester.pumpWidget(_buildWidget(
+        sourceRepo: _FakeSourceRepo([sourceWithQuestions]),
+        subjectRepo: _FakeSubjectRepo(subjects),
+        questionRepo: questionRepo,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pump(const Duration(milliseconds: 500));
+
+      expect(find.text('Physics Textbook'), findsOneWidget);
+
+      // Swipe the source tile (src1) to trigger delete.
+      await tester.drag(find.byKey(const ValueKey('src1')), const Offset(-500, 0));
+      await tester.pumpAndSettle();
+      // Confirm the Dismissible's delete dialog.
+      await tester.tap(find.widgetWithText(FilledButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Enable "also delete questions" in the screen's delete dialog.
+      await tester.tap(
+        find.widgetWithText(CheckboxListTile, 'Also delete questions generated from this source'),
+      );
+      await tester.pumpAndSettle();
+
+      // Simulate a failing questions box.
+      questionRepo.deleteShouldFail = true;
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // The question-delete failures are surfaced, not silent.
+      expect(find.text('Something went wrong'), findsOneWidget);
+      // The source delete still proceeds.
+      expect(find.text('Physics Textbook'), findsNothing);
+      // After the warning's display time, the queued source-deleted message appears.
+      await tester.pump(const Duration(seconds: 5));
+      await tester.pumpAndSettle();
+      expect(find.text('Source deleted'), findsOneWidget);
     });
   });
 
