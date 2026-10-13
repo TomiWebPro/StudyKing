@@ -673,6 +673,35 @@ void main() {
         }
       });
 
+      test('computes improvement over the previous week, not the current week',
+          () async {
+        final now = DateTime.now();
+        // Accuracy rises over time: 0% (oldest) → 50% → 100% (current).
+        // Each pair sits mid-window so it lands in exactly one week.
+        mockRepo.setAttempts([
+          // Current week (i = 0): 2/2 correct → 100%.
+          StudentAttempt(id: 'c1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 1)), subjectId: 'math'),
+          StudentAttempt(id: 'c2', studentId: 'student1', questionId: 'q2', isCorrect: true, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 2)), subjectId: 'math'),
+          // One week ago (i = 1): 1/2 correct → 50%.
+          StudentAttempt(id: 'w1', studentId: 'student1', questionId: 'q3', isCorrect: true, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 8)), subjectId: 'math'),
+          StudentAttempt(id: 'w2', studentId: 'student1', questionId: 'q4', isCorrect: false, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 9)), subjectId: 'math'),
+          // Two weeks ago (i = 2): 0/2 correct → 0%.
+          StudentAttempt(id: 'o1', studentId: 'student1', questionId: 'q5', isCorrect: false, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 15)), subjectId: 'math'),
+          StudentAttempt(id: 'o2', studentId: 'student1', questionId: 'q6', isCorrect: false, timeSpentMs: 5000, timestamp: now.subtract(const Duration(days: 16)), subjectId: 'math'),
+        ]);
+
+        final trend = await tracker.getWeeklyTrend(3, studentId: 'student1');
+
+        final improvements =
+            trend.data!.map((w) => w['improvement'] as num).toList();
+        // Current week (100%) vs one week ago (50%) → +50.
+        expect(improvements[0], 50.0);
+        // One week ago (50%) vs two weeks ago (0%) → +50.
+        expect(improvements[1], 50.0);
+        // Oldest week has no earlier period to compare against.
+        expect(improvements[2], 0.0);
+      });
+
       test('does not count future-dated attempts in the current week', () async {
         final now = DateTime.now();
         mockRepo.setAttempts([

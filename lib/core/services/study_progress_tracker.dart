@@ -234,6 +234,10 @@ class StudyProgressTracker {
       }
 
       final trend = <Map<String, dynamic>>[];
+      // Raw per-week accuracy (0..1), parallel to [trend], kept
+      // unrounded so the improvement delta is not computed from the
+      // rounded integer percent stored in each entry.
+      final weekAccuracies = <double>[];
       final now = DateTime.now();
 
       for (var i = 0; i < weeks; i++) {
@@ -252,6 +256,7 @@ class StudyProgressTracker {
 
         final correct = weekAttempts.where((a) => a.isCorrect).length;
         final accuracy = weekAttempts.isEmpty ? 0.0 : correct / weekAttempts.length;
+        weekAccuracies.add(accuracy);
 
         final isGap = weekAttempts.isEmpty && hasPriorData;
 
@@ -261,9 +266,24 @@ class StudyProgressTracker {
           'weekNumber': _isoWeekNumber(weekStart),
           'attempts': weekAttempts.length,
           'accuracy': (accuracy * 100).round(),
-          'improvement': _calculateImprovement(weekAttempts, trend.isNotEmpty ? trend.first : {}),
+          'improvement': 0.0,
           'isGap': isGap,
         });
+      }
+
+      // Improvement is the accuracy change over the previous (older)
+      // period. The loop above emits entries newest-first, so week i's
+      // previous week is entry i + 1; the oldest week has no earlier
+      // period to compare against and stays 0.0. Computing this in a
+      // post-loop pass (rather than inline against `trend.first`,
+      // which is always the current week) gives every week — including
+      // the current one — a real week-over-week delta.
+      for (var i = 0; i < trend.length; i++) {
+        final improvement = i + 1 < weekAccuracies.length
+            ? ((weekAccuracies[i] - weekAccuracies[i + 1]) * 100)
+                .roundToDouble()
+            : 0.0;
+        trend[i]['improvement'] = improvement;
       }
 
       // The loop above already emits entries in strict
@@ -388,21 +408,6 @@ class StudyProgressTracker {
       _logger.w('getDailyTrend failed: $e');
       return Result.failure('StudyProgressTracker.getDailyTrend: $e');
     }
-  }
-
-  double _calculateImprovement(
-    List<dynamic> currentWeek,
-    Map<String, dynamic> previousWeek,
-  ) {
-    if (previousWeek.isEmpty || previousWeek['accuracy'] == null) return 0.0;
-
-    final currentAccuracy = currentWeek.isEmpty
-        ? 0.0
-        : currentWeek.where((a) => a.isCorrect).length / currentWeek.length;
-
-    final previousAccuracy = (previousWeek['accuracy'] as num).toDouble();
-    final previousRatio = previousAccuracy / 100.0;
-    return ((currentAccuracy - previousRatio) * 100).roundToDouble();
   }
 
   /// ISO 8601 week number (1-53) of the week containing [date].
