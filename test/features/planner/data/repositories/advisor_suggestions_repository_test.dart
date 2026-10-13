@@ -153,6 +153,11 @@ void main() {
         final stored = mockBox.get('s1');
         expect(stored!.applied, isTrue);
       });
+
+      test('returns success for a non-existent suggestion', () async {
+        final result = await repository.markApplied('missing');
+        expect(result.isSuccess, isTrue);
+      });
     });
 
     group('getUnappliedByStudent', () {
@@ -180,6 +185,16 @@ void main() {
       repo.attachBox(_ThrowingAdvisorBox());
       final result = await repo.create(createTestSuggestion());
       expect(result.isFailure, isTrue);
+    });
+
+    test('markApplied returns failure when the box write fails', () async {
+      final repo = AdvisorSuggestionsRepository();
+      final failingBox = _PutFailingAdvisorBox()
+        ..addSuggestion(createTestSuggestion(id: 's1'));
+      repo.attachBox(failingBox);
+      final result = await repo.markApplied('s1');
+      expect(result.isFailure, isTrue);
+      expect(failingBox.get('s1')!.applied, isFalse);
     });
 
     test('getLatestByStudent returns failure when box throws', () async {
@@ -233,6 +248,58 @@ class _ThrowingAdvisorBox implements Box<PlanAdvisorSuggestionModel> {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw Exception('Simulated Hive error');
+  }
+}
+
+/// A box whose reads succeed but whose writes fail — reproduces the
+/// case where [Repository.put] returns [Result.failure] instead of
+/// throwing, so callers must propagate the inner Result.
+class _PutFailingAdvisorBox implements Box<PlanAdvisorSuggestionModel> {
+  final Map<String, PlanAdvisorSuggestionModel> _storage = {};
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    return super.noSuchMethod(invocation);
+  }
+
+  @override
+  PlanAdvisorSuggestionModel? get(dynamic key,
+      {PlanAdvisorSuggestionModel? defaultValue}) {
+    return _storage[key as String] ?? defaultValue;
+  }
+
+  @override
+  Future<void> put(dynamic key, PlanAdvisorSuggestionModel value) async {
+    throw Exception('Simulated write failure');
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    _storage.remove(key as String);
+  }
+
+  @override
+  bool containsKey(dynamic key) {
+    return _storage.containsKey(key as String);
+  }
+
+  @override
+  Future<void> close() async {}
+
+  @override
+  bool get isOpen => true;
+
+  @override
+  String get name => 'put-failing-advisor-suggestions';
+
+  @override
+  Iterable<String> get keys => _storage.keys;
+
+  @override
+  Iterable<PlanAdvisorSuggestionModel> get values => _storage.values.toList();
+
+  void addSuggestion(PlanAdvisorSuggestionModel model) {
+    _storage[model.id] = model;
   }
 }
 

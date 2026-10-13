@@ -1,9 +1,12 @@
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/planner/data/models/plan_advisor_suggestion_model.dart';
 
 class AdvisorSuggestionsRepository extends Repository<PlanAdvisorSuggestionModel> {
+  static final Logger _logger = const Logger('AdvisorSuggestionsRepository');
+
   AdvisorSuggestionsRepository() : super(boxName: HiveBoxNames.planAdvisorSuggestions);
 
   Future<Result<void>> init() async {
@@ -36,12 +39,20 @@ class AdvisorSuggestionsRepository extends Repository<PlanAdvisorSuggestionModel
   }
 
   Future<Result<void>> markApplied(String id) async {
-    return Result.capture(() async {
+    try {
       final existing = box.get(id);
-      if (existing != null) {
-        await super.put(id, existing.copyWith(applied: true));
+      if (existing == null) {
+        return Result.success(null);
       }
-    }, context: 'AdvisorSuggestionsRepository.markApplied');
+      final result = await super.put(id, existing.copyWith(applied: true));
+      if (result.isFailure) {
+        _logger.w('Failed to mark suggestion $id as applied', result.error);
+      }
+      return result;
+    } catch (e) {
+      _logger.w('Failed to mark suggestion $id as applied', e);
+      return Result.failure(e.toString());
+    }
   }
 
   Future<Result<void>> deleteSuggestion(String id) async {
