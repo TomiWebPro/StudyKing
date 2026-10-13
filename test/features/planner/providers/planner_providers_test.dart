@@ -165,6 +165,9 @@ class _FakePlanService extends PersonalLearningPlanService {
   bool throwsOnGenerate = false;
   bool throwsOnSyllabus = false;
   bool throwsOnRedistribute = false;
+  String? lastRedistributeStrategy;
+  int? lastRedistributeMinutes;
+  int? lastExtendDays;
 
   _FakePlanService({
     super.masteryService,
@@ -221,12 +224,20 @@ class _FakePlanService extends PersonalLearningPlanService {
   }
 
   @override
+  Future<Result<void>> extendPlan(String studentId, int extraDays) async {
+    lastExtendDays = extraDays;
+    return Result.success(null);
+  }
+
+  @override
   Future<Result<void>> redistributeMissedWorkloadForStudent(
     String studentId,
     int missedMinutes, {
     String strategy = 'days:3',
   }) async {
     if (throwsOnRedistribute) throw Exception('redistribute error');
+    lastRedistributeStrategy = strategy;
+    lastRedistributeMinutes = missedMinutes;
     return Result.success(null);
   }
 }
@@ -1584,6 +1595,66 @@ void main() {
         final failingNotifier = PlannerNotifier(failingService);
         await failingNotifier.redistributeWorkload(30, l10n);
         expect(failingNotifier.currentState.error, 'Failed to redistribute workload');
+      });
+    });
+
+    group('catchUpWithStrategy', () {
+      PersonalLearningPlan planWithTargetMinutes(double minutesPerDay) {
+        return PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime(2026, 1, 1),
+          dailyPlans: const [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: const [],
+          ),
+          recommendations: const [],
+          targetMinutesPerDay: minutesPerDay,
+        );
+      }
+
+      test('passes the all-days strategy to the service for redistribute:all',
+          () async {
+        notifier.currentState = notifier.currentState.copyWith(
+          plan: planWithTargetMinutes(60),
+        );
+
+        await notifier.catchUpWithStrategy('redistribute:all', 2, l10n);
+
+        // Behavioral: the service must receive the 'all' strategy
+        // (every remaining day), not the mangled 'days:all' which
+        // the service would read as its 3-day fallback.
+        expect(fakePlanService.lastRedistributeStrategy, 'all');
+        expect(fakePlanService.lastRedistributeMinutes, 120);
+      });
+
+      test('passes a days:N strategy to the service for redistribute:N',
+          () async {
+        notifier.currentState = notifier.currentState.copyWith(
+          plan: planWithTargetMinutes(60),
+        );
+
+        await notifier.catchUpWithStrategy('redistribute:5', 2, l10n);
+
+        expect(fakePlanService.lastRedistributeStrategy, 'days:5');
+        expect(fakePlanService.lastRedistributeMinutes, 120);
+      });
+
+      test('extends the plan by the missed day count for extend', () async {
+        await notifier.catchUpWithStrategy('extend', 3, l10n);
+
+        expect(fakePlanService.lastExtendDays, 3);
+      });
+
+      test('does not redistribute when no plan is loaded', () async {
+        await notifier.catchUpWithStrategy('redistribute:all', 2, l10n);
+
+        expect(fakePlanService.lastRedistributeStrategy, isNull);
+        expect(notifier.currentState.error, isNull);
       });
     });
 

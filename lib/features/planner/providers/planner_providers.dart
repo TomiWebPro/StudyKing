@@ -633,7 +633,14 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
       final plan = state.plan;
       if (plan != null) {
         final missedMinutes = plan.targetMinutesPerDay.toInt() * missedDays;
-        result = await _service.planService.redistributeMissedWorkloadForStudent(_service.studentId, missedMinutes, strategy: 'days:$redistributeStrategy');
+        // 'all' is a first-class service strategy meaning "every
+        // remaining day". Prefixing it with 'days:' would make the
+        // service fall back to its 3-day default, since 'all' is
+        // not a parseable day count.
+        final serviceStrategy = redistributeStrategy == 'all'
+            ? 'all'
+            : 'days:$redistributeStrategy';
+        result = await _service.planService.redistributeMissedWorkloadForStudent(_service.studentId, missedMinutes, strategy: serviceStrategy);
       }
     } else if (strategy == 'regenerate') {
       await regenerateFromAdherence(l10n);
