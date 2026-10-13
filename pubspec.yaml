@@ -88,6 +88,7 @@ dev_dependencies:
   path_provider_platform_interface: ^2.1.1
   plugin_platform_interface: ^2.1.7
   image_picker_platform_interface: ^2.11.2
+  share_plus_platform_interface: ^6.1.0
 
 flutter:
   uses-material-design: true

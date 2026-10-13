@@ -2,16 +2,49 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show MethodChannel;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:share_plus_platform_interface/share_plus_platform_interface.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
-import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/dashboard/data/adapters/badge_adapter.dart';
+import 'package:studyking/features/dashboard/data/models/badge_model.dart';
+import 'package:studyking/features/practice/data/adapters/mastery_state_adapter.dart';
+import 'package:studyking/features/practice/data/adapters/question_mastery_state_adapter.dart';
+import 'package:studyking/features/questions/data/adapters/question_adapter.dart';
+import 'package:studyking/features/questions/data/adapters/question_evaluation_adapter.dart';
+import 'package:studyking/features/questions/data/models/question_evaluation_model.dart';
 import 'package:studyking/features/subjects/data/adapters/subject_adapter.dart';
+import 'package:studyking/features/subjects/data/adapters/topic_dependency_adapter.dart';
+import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/features/sessions/presentation/session_history_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/locale_switch_harness.dart';
 import '../../../helpers/navigator_observer_helper.dart';
+
+/// Hand-written fake for the share_plus platform interface.
+///
+/// Widget tests cannot run the real share path: share_plus writes
+/// in-memory files with dart:io async calls, which never complete
+/// under `testWidgets`. Swapping [SharePlatform.instance] before any
+/// `SharePlus.instance` access (it is captured lazily) keeps the
+/// export flow fully synchronous-friendly and deterministic.
+class _FakeSharePlatform extends SharePlatform {
+  bool fail = false;
+
+  @override
+  Future<ShareResult> share(ShareParams params) async {
+    if (fail) throw Exception('share unavailable');
+    return const ShareResult('ok', ShareResultStatus.success);
+  }
+}
+
+final _fakeSharePlatform = _FakeSharePlatform();
 
 class _FakeSessionRepository extends SessionRepository {
   _FakeSessionRepository({
@@ -84,9 +117,66 @@ Future<void> _seedSubjects() async {
   }
 }
 
+/// The comprehensive export flow constructs real repositories that
+/// open Hive boxes. Under `testWidgets`, `Hive.openBox` for a
+/// not-yet-open box never completes, so every box the flow needs
+/// must be opened (with the correct type) before any `pumpWidget`.
+Future<void> _seedComprehensiveExportBoxes() async {
+  if (!Hive.isAdapterRegistered(2)) {
+    Hive.registerAdapter(QuestionAdapter());
+  }
+  if (!Hive.isAdapterRegistered(8)) {
+    Hive.registerAdapter(BadgeModelAdapter());
+  }
+  if (!Hive.isAdapterRegistered(14)) {
+    Hive.registerAdapter(QuestionEvaluationAdapter());
+  }
+  if (!Hive.isAdapterRegistered(16)) {
+    Hive.registerAdapter(MasteryStateAdapter());
+  }
+  if (!Hive.isAdapterRegistered(17)) {
+    Hive.registerAdapter(TopicDependencyAdapter());
+  }
+  if (!Hive.isAdapterRegistered(18)) {
+    Hive.registerAdapter(QuestionMasteryStateAdapter());
+  }
+  if (!Hive.isAdapterRegistered(24)) {
+    Hive.registerAdapter(StudentAttemptAdapter());
+  }
+
+  if (!Hive.isBoxOpen(HiveBoxNames.attempts)) {
+    await Hive.openBox<StudentAttempt>(HiveBoxNames.attempts);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.questions)) {
+    await Hive.openBox<Question>(HiveBoxNames.questions);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.masteryStates)) {
+    await Hive.openBox<MasteryState>(HiveBoxNames.masteryStates);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.questionMasteryStates)) {
+    await Hive.openBox<QuestionMasteryState>(HiveBoxNames.questionMasteryStates);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.topicDependencies)) {
+    await Hive.openBox<TopicDependency>(HiveBoxNames.topicDependencies);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.questionEvaluations)) {
+    await Hive.openBox<QuestionEvaluation>(HiveBoxNames.questionEvaluations);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.badges)) {
+    await Hive.openBox<BadgeModel>(HiveBoxNames.badges);
+  }
+  if (!Hive.isBoxOpen(HiveBoxNames.studentId)) {
+    await Hive.openBox(HiveBoxNames.studentId);
+  }
+}
+
 void main() {
   setUpAll(() async {
     await _seedSubjects();
+    await _seedComprehensiveExportBoxes();
+    // Must happen before the first `SharePlus.instance` access so
+    // the lazily-created singleton captures the fake.
+    SharePlatform.instance = _fakeSharePlatform;
   });
 
   group('SessionHistoryScreen - Loading and empty states', () {
@@ -1110,6 +1200,115 @@ void main() {
       await tester.tap(find.text('Full Progress JSON'));
       await tester.pumpAndSettle();
       expect(tester.takeException(), isNull);
+    });
+
+    testWidgets('failed comprehensive CSV export shows error snackbar, not success', (tester) async {
+      // Force the share step to fail; ProgressExportService captures
+      // the thrown exception into Result.failure instead of rethrowing.
+      _fakeSharePlatform.fail = true;
+      addTearDown(() => _fakeSharePlatform.fail = false);
+
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress CSV'));
+      await tester.pumpAndSettle();
+
+      // The share failed, so the failure must be surfaced: the error
+      // snackbar is shown and the success snackbar never is.
+      expect(find.text('Comprehensive progress report exported'), findsNothing);
+      expect(find.text('Export failed: Something went wrong'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('failed comprehensive PDF export shows error snackbar, not success', (tester) async {
+      _fakeSharePlatform.fail = true;
+      addTearDown(() => _fakeSharePlatform.fail = false);
+
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress PDF'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comprehensive progress report exported'), findsNothing);
+      expect(find.text('Export failed: Something went wrong'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('failed comprehensive JSON export shows error snackbar, not success', (tester) async {
+      _fakeSharePlatform.fail = true;
+      addTearDown(() => _fakeSharePlatform.fail = false);
+
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress JSON'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comprehensive progress report exported'), findsNothing);
+      expect(find.text('Export failed: Something went wrong'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('successful comprehensive CSV export shows success snackbar', (tester) async {
+      // The share completes normally, so the success snackbar must show.
+      _fakeSharePlatform.fail = false;
+      addTearDown(() => _fakeSharePlatform.fail = false);
+
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1', studentId: 'u1', subjectId: 'math',
+          startTime: now, questionsAnswered: 10, correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.manual,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byIcon(Icons.share));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Full Progress CSV'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Comprehensive progress report exported'), findsAtLeastNWidgets(1));
+      expect(find.text('Export failed: Something went wrong'), findsNothing);
     });
   });
 

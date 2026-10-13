@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:studyking/core/constants/timeouts.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/services/progress_export_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
@@ -185,21 +186,25 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
             final sidService = StudentIdService();
             final studentId = sidService.getStudentId().data ?? '';
             final compFilename = 'comprehensive_report_${DateTime.now().millisecondsSinceEpoch}';
-            switch (format) {
-              case 'comprehensive':
-                await exportService.shareComprehensiveCSV(studentId, compFilename, l10n);
-                break;
-              case 'comprehensive_pdf':
-                await exportService.shareComprehensivePDF(studentId, compFilename, l10n);
-                break;
-              case 'comprehensive_json':
-                await exportService.shareComprehensiveJSON(studentId, compFilename, l10n);
-                break;
-            }
+            final compResult = switch (format) {
+              'comprehensive' =>
+                await exportService.shareComprehensiveCSV(studentId, compFilename, l10n),
+              'comprehensive_pdf' =>
+                await exportService.shareComprehensivePDF(studentId, compFilename, l10n),
+              'comprehensive_json' =>
+                await exportService.shareComprehensiveJSON(studentId, compFilename, l10n),
+              _ => Result<void>.failure('Unsupported export format'),
+            };
             if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(l10n.comprehensiveReportExported)),
-              );
+              if (compResult.isSuccess) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.comprehensiveReportExported)),
+                );
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text(l10n.exportFailed(l10n.somethingWentWrong))),
+                );
+              }
             }
           }
       }
