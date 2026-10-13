@@ -66,6 +66,15 @@ class _SubjectSelectionScreenState
     super.dispose();
   }
 
+  void _showSaveError(String step, String? error) {
+    _logger.w(step, error);
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context)!;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(l10n.errorSavingSubject(l10n.somethingWentWrong))),
+    );
+  }
+
   Future<void> _saveSubject() async {
     final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
@@ -96,7 +105,11 @@ class _SubjectSelectionScreenState
       );
 
       final repo = await ref.read(subjectsRepositoryProvider.future);
-      await repo.create(subject);
+      final createResult = await repo.create(subject);
+      if (createResult.isFailure) {
+        _showSaveError('Failed to save subject', createResult.error);
+        return;
+      }
 
       final seedEntry = !widget.isEditing
           ? findSeedEntry(_nameController.text.trim())
@@ -109,10 +122,19 @@ class _SubjectSelectionScreenState
           }
           final topicRepo = TopicRepository();
           await topicRepo.init();
-          final createdTopicIds =
+          final createdTopicsResult =
               await createSeedTopics(topicRepo, subject.id, seedEntry);
+          if (createdTopicsResult.isFailure) {
+            _showSaveError('Failed to auto-create seed topics', createdTopicsResult.error);
+            return;
+          }
+          final createdTopicIds = createdTopicsResult.data ?? [];
           final updatedSubject = subject.copyWith(topicIds: createdTopicIds);
-          await repo.put(updatedSubject.id, updatedSubject);
+          final putResult = await repo.put(updatedSubject.id, updatedSubject);
+          if (putResult.isFailure) {
+            _showSaveError('Failed to attach seed topics to subject', putResult.error);
+            return;
+          }
           if (mounted) {
             await _showTopicsCreatedDialog(context, l10n, seedEntry.topics, subject.id, subjectName: subject.name);
           }

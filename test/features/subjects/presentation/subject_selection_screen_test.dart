@@ -51,6 +51,24 @@ class _FailingSubjectRepository extends SubjectRepository {
   }
 }
 
+/// Fake mirroring the real repository's write-failure mode:
+/// [Repository.put] catches Hive errors internally and
+/// returns [Result.failure] instead of throwing.
+class _WriteFailingSubjectRepository extends SubjectRepository {
+  final List<Subject> attemptedCreates = [];
+
+  _WriteFailingSubjectRepository();
+
+  @override
+  Future<Result<void>> create(Subject subject) async {
+    attemptedCreates.add(subject);
+    return Result.failure('Hive write failed');
+  }
+
+  @override
+  Future<Result<List<Subject>>> getAll() async => Result.success(const []);
+}
+
 class _SlowSubjectRepository extends SubjectRepository {
   _SlowSubjectRepository();
 
@@ -234,6 +252,31 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.textContaining('Error saving subject:'), findsOneWidget);
+    });
+
+    testWidgets('shows error snackbar and aborts when the subject write fails', (tester) async {
+      final repo = _WriteFailingSubjectRepository();
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextFormField).first, 'Mathematics');
+      await tester.pump();
+
+      await tester.tap(find.text('Save'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The failed write is reported as an error, not
+      // masked as a successful save.
+      expect(find.textContaining('Error saving subject:'), findsOneWidget);
+      expect(find.text('Subject created successfully'), findsNothing);
+      expect(find.text('No thanks'), findsNothing);
+
+      // The write was attempted but nothing was persisted.
+      expect(repo.attemptedCreates, hasLength(1));
+      final subjects = await repo.getAll();
+      expect(subjects.data, isEmpty);
     });
 
     testWidgets('entering all fields and saving works', (tester) async {

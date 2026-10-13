@@ -1,5 +1,6 @@
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/id_generator.dart';
 import 'curriculum_seed_data.dart';
 
@@ -7,13 +8,20 @@ import 'curriculum_seed_data.dart';
 ///
 /// Returns the IDs of every created topic/subtopic in creation order.
 ///
+/// [TopicRepository.create] catches Hive write errors internally and
+/// returns [Result.failure] instead of throwing, so every write result
+/// is checked: the first failure aborts the seeding and is propagated
+/// as [Result.failure] rather than being masked as success (which
+/// would leave the subject referencing topics that were never
+/// persisted).
+///
 /// IDs are generated with [IdGenerator], whose monotonic process-wide
 /// counter guarantees uniqueness even when topics are created within
 /// the same millisecond (e.g. two subjects seeded back-to-back).
 /// Clock-based IDs would collide in that case and, because
 /// [TopicRepository.create] saves by ID, silently overwrite each
 /// other in the topics box.
-Future<List<String>> createSeedTopics(
+Future<Result<List<String>>> createSeedTopics(
   TopicRepository topicRepo,
   String subjectId,
   CurriculumSeedEntry entry,
@@ -29,7 +37,12 @@ Future<List<String>> createSeedTopics(
       syllabusText: seedTopic.syllabusText,
       sortOrder: seedTopic.sortOrder,
     );
-    await topicRepo.create(topic);
+    final created = await topicRepo.create(topic);
+    if (created.isFailure) {
+      return Result.failure(
+        'Failed to create seed topic "$topicId" for subject "$subjectId": ${created.error}',
+      );
+    }
     createdTopicIds.add(topicId);
 
     for (final sub in seedTopic.subtopics) {
@@ -43,9 +56,14 @@ Future<List<String>> createSeedTopics(
         sortOrder: sub.sortOrder,
         parentId: topicId,
       );
-      await topicRepo.create(subtopic);
+      final createdSubtopic = await topicRepo.create(subtopic);
+      if (createdSubtopic.isFailure) {
+        return Result.failure(
+          'Failed to create seed topic "$subId" for subject "$subjectId": ${createdSubtopic.error}',
+        );
+      }
       createdTopicIds.add(subId);
     }
   }
-  return createdTopicIds;
+  return Result.success(createdTopicIds);
 }
