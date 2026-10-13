@@ -159,7 +159,10 @@ class TutorSession extends HiveObject {
     subjectId: json['subjectId'],
     topicId: json['topicId'],
     topicTitle: json['topicTitle'],
-    status: SessionStatus.values.firstWhere((s) => s.name == json['status']),
+    status: SessionStatus.values.firstWhere(
+      (s) => s.name == json['status'],
+      orElse: () => SessionStatus.planned,
+    ),
     startTime: DateTime.parse(json['startTime']),
     endTime: json['endTime'] != null ? DateTime.parse(json['endTime']) : null,
     plannedDurationMinutes: json['plannedDurationMinutes'] ?? 45,

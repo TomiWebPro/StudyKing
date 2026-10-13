@@ -408,6 +408,30 @@ void main() {
           expect(session.status, status, reason: 'Failed for status: $status');
         }
       });
+
+      test('unknown status falls back to planned instead of throwing', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle,
+          'status': 'paused',
+          'startTime': startTime.toIso8601String(),
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.status, SessionStatus.planned);
+      });
+
+      test('null status falls back to planned instead of throwing', () {
+        final json = {
+          'id': id, 'studentId': studentId,
+          'subjectId': subjectId, 'topicId': topicId,
+          'topicTitle': topicTitle,
+          'status': null,
+          'startTime': startTime.toIso8601String(),
+        };
+        final session = TutorSession.fromJson(json);
+        expect(session.status, SessionStatus.planned);
+      });
     });
 
     group('serialization roundtrip', () {
