@@ -132,8 +132,14 @@ class ConversationMessage extends HiveObject {
   factory ConversationMessage.fromJson(Map<String, dynamic> json) => ConversationMessage(
     id: json['id'],
     sessionId: json['sessionId'],
-    role: MessageRole.values.firstWhere((r) => r.name == json['role']),
-    type: MessageType.values.firstWhere((t) => t.name == json['type']),
+    role: MessageRole.values.firstWhere(
+      (r) => r.name == json['role'],
+      orElse: () => MessageRole.student,
+    ),
+    type: MessageType.values.firstWhere(
+      (t) => t.name == json['type'],
+      orElse: () => MessageType.text,
+    ),
     content: json['content'],
     metadataJson: json['metadataJson'],
     timestamp: DateTime.parse(json['timestamp']),

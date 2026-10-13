@@ -101,6 +101,39 @@ void main() {
       });
     });
 
+    group('fromJson robustness', () {
+      test('unknown role falls back instead of throwing', () {
+        final json = {
+          'id': id, 'sessionId': sessionId,
+          'role': 'assistant', 'type': 'text',
+          'content': content, 'timestamp': now.toIso8601String(),
+        };
+        final msg = ConversationMessage.fromJson(json);
+        expect(msg.role, MessageRole.student);
+      });
+
+      test('unknown type falls back instead of throwing', () {
+        final json = {
+          'id': id, 'sessionId': sessionId,
+          'role': 'tutor', 'type': 'newKind',
+          'content': content, 'timestamp': now.toIso8601String(),
+        };
+        final msg = ConversationMessage.fromJson(json);
+        expect(msg.type, MessageType.text);
+      });
+
+      test('null role and type fall back instead of throwing', () {
+        final json = {
+          'id': id, 'sessionId': sessionId,
+          'role': null, 'type': null,
+          'content': content, 'timestamp': now.toIso8601String(),
+        };
+        final msg = ConversationMessage.fromJson(json);
+        expect(msg.role, MessageRole.student);
+        expect(msg.type, MessageType.text);
+      });
+    });
+
     group('serialization roundtrip', () {
       test('preserves all fields', () {
         final original = ConversationMessage(
