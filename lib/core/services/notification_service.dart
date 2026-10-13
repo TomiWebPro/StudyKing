@@ -187,6 +187,41 @@ class NotificationService {
     }
   }
 
+  /// Returns the next occurrence of a daily reminder for [remindAt].
+  ///
+  /// When today's occurrence is still ahead of [now] it is returned
+  /// as-is; otherwise the reminder rolls to the same wall-clock time
+  /// on the next calendar day. Calendar-day arithmetic (rather than
+  /// adding a 24-hour duration) keeps the wall-clock time stable
+  /// across DST transitions, where a calendar day is 23 or 25 hours
+  /// long.
+  @visibleForTesting
+  static tz.TZDateTime nextDailyOccurrence(
+    tz.TZDateTime now,
+    TimeOfDay remindAt,
+  ) {
+    final location = now.location;
+    final today = tz.TZDateTime(
+      location,
+      now.year,
+      now.month,
+      now.day,
+      remindAt.hour,
+      remindAt.minute,
+    );
+    if (today.isBefore(now)) {
+      return tz.TZDateTime(
+        location,
+        now.year,
+        now.month,
+        now.day + 1,
+        remindAt.hour,
+        remindAt.minute,
+      );
+    }
+    return today;
+  }
+
   Future<Result<void>> showDailyReminder({
     required int id,
     required String title,
@@ -214,25 +249,17 @@ class NotificationService {
         iOS: iosDetails,
       );
 
-      final now = DateTime.now();
-      var scheduledDate = DateTime(
-        now.year,
-        now.month,
-        now.day,
-        remindAt.hour,
-        remindAt.minute,
-      );
-      if (scheduledDate.isBefore(now)) {
-        scheduledDate = scheduledDate.add(Timeouts.day);
-      }
-
       try {
         final local = await _resolveLocalLocation();
+        final scheduledDate = nextDailyOccurrence(
+          tz.TZDateTime.now(local),
+          remindAt,
+        );
         await plugin.zonedSchedule(
           id,
           title,
           body,
-          tz.TZDateTime.from(scheduledDate, local),
+          scheduledDate,
           details,
           uiLocalNotificationDateInterpretation:
               UILocalNotificationDateInterpretation.absoluteTime,

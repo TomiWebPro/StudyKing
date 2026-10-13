@@ -8,6 +8,8 @@ import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'package:studyking/l10n/generated/app_localizations_es.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -252,6 +254,79 @@ void main() {
         final periodicArgs =
             periodicCalls.single.arguments as Map<Object?, Object?>;
         expect(periodicArgs['repeatInterval'], RepeatInterval.daily.index);
+      });
+    });
+
+    group('nextDailyOccurrence DST wall-clock stability', () {
+      late final tz.Location newYork;
+
+      setUpAll(() {
+        tz_data.initializeTimeZones();
+        newYork = tz.getLocation('America/New_York');
+      });
+
+      test('returns today when the chosen time is still ahead', () {
+        final now = tz.TZDateTime(newYork, 2026, 3, 7, 8, 0);
+        final next = NotificationService.nextDailyOccurrence(
+          now,
+          const TimeOfDay(hour: 9, minute: 0),
+        );
+        expect(next.year, 2026);
+        expect(next.month, 3);
+        expect(next.day, 7);
+        expect(next.hour, 9);
+        expect(next.minute, 0);
+        expect(next.timeZoneName, 'EST');
+      });
+
+      test('rolls to the same wall-clock time on the next calendar '
+          'day across a spring-forward transition', () {
+        // America/New_York springs forward on 2026-03-08: the day
+        // is 23 hours long, so adding 24h to 2026-03-07 09:00
+        // would land on 10:00 wall clock. Calendar-day arithmetic
+        // keeps the chosen 09:00.
+        final now = tz.TZDateTime(newYork, 2026, 3, 7, 10, 0);
+        final next = NotificationService.nextDailyOccurrence(
+          now,
+          const TimeOfDay(hour: 9, minute: 0),
+        );
+        expect(next.year, 2026);
+        expect(next.month, 3);
+        expect(next.day, 8);
+        expect(next.hour, 9);
+        expect(next.minute, 0);
+        expect(next.timeZoneOffset, const Duration(hours: -4)); // EDT
+      });
+
+      test('rolls to the same wall-clock time on the next calendar '
+          'day across a fall-back transition', () {
+        // America/New_York falls back on 2026-11-01: the day is 25
+        // hours long, so adding 24h to 2026-10-31 09:00 would land
+        // on 08:00 wall clock. Calendar-day arithmetic keeps 09:00.
+        final now = tz.TZDateTime(newYork, 2026, 10, 31, 10, 0);
+        final next = NotificationService.nextDailyOccurrence(
+          now,
+          const TimeOfDay(hour: 9, minute: 0),
+        );
+        expect(next.year, 2026);
+        expect(next.month, 11);
+        expect(next.day, 1);
+        expect(next.hour, 9);
+        expect(next.minute, 0);
+        expect(next.timeZoneOffset, const Duration(hours: -5)); // EST
+      });
+
+      test('preserves the chosen minutes of the time-of-day', () {
+        final now = tz.TZDateTime(newYork, 2026, 6, 1, 10, 0);
+        final next = NotificationService.nextDailyOccurrence(
+          now,
+          const TimeOfDay(hour: 7, minute: 45),
+        );
+        expect(next.year, 2026);
+        expect(next.month, 6);
+        expect(next.day, 2);
+        expect(next.hour, 7);
+        expect(next.minute, 45);
       });
     });
 
