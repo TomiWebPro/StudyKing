@@ -266,7 +266,16 @@ class StudyProgressTracker {
         });
       }
 
-      trend.sort((a, b) => (b['week'] as int).compareTo(a['week']));
+      // The loop above already emits entries in strict
+      // most-recent-first order (i = 0 is the current week).
+      // Do NOT re-sort here: the only sane sort key would be
+      // recency, which the entries do not carry, and sorting
+      // by the calendar year alone makes every same-year week
+      // compare equal — Dart's List.sort is not stable, so
+      // same-year weeks get arbitrarily reordered (deterministically
+      // for partitions of 34+ weeks), which would put the wrong
+      // week's data under WeeklyChart's index-based labels
+      // ("this week", "1 week ago", ...) and in CSV exports.
       return Result.success(trend);
     } catch (e) {
       _logger.w('getWeeklyTrend failed: $e');

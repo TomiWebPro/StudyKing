@@ -692,6 +692,33 @@ void main() {
 
         expect(trend.data!.isNotEmpty, isTrue);
       });
+
+      test('keeps strict most-recent-first order for large windows (no year-only re-sort)',
+          () async {
+        mockRepo.setAttempts([]);
+
+        // 104 weeks always spans a >=52-week same-calendar-year
+        // partition on every date, which is above the 34-element
+        // threshold where Dart's unstable List.sort reorders
+        // equal-key (same-year) entries. The loop must emit
+        // entries in generation order (i = 0 is the current
+        // week) because WeeklyChart labels bars by list index
+        // and the CSV exporters emit rows in list order.
+        final now = DateTime.now();
+        final trend = await tracker.getWeeklyTrend(104, studentId: 'student1');
+
+        expect(trend.data, hasLength(104));
+        for (var i = 0; i < trend.data!.length; i++) {
+          final entry = trend.data![i];
+          final weekStart = now.subtract(Duration(days: i * 7 + 6));
+          expect(entry['week'], equals(weekStart.year));
+          expect(entry['month'], equals(weekStart.month));
+          expect(
+            entry['weekNumber'],
+            equals(_referenceIsoWeekNumber(weekStart)),
+          );
+        }
+      });
     });
 
     group('getRecommendations', () {
