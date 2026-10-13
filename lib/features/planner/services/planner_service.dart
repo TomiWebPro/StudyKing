@@ -687,7 +687,14 @@ class PlannerService {
       }
       final executed = executedResult.data ?? false;
       if (executed) {
-        await pendingActionRepo.markCompleted(actionId);
+        final completedResult = await pendingActionRepo.markCompleted(actionId);
+        if (completedResult.isFailure) {
+          _logger.w(
+            'Failed to mark pending action completed: $actionId',
+            completedResult.error,
+          );
+          return Result.failure(completedResult.error);
+        }
       }
       return Result.success(executed);
     } catch (e) {
@@ -699,7 +706,14 @@ class PlannerService {
   Future<Result<bool>> dismissPendingAction(String actionId) async {
     try {
       await pendingActionRepo.init();
-      await pendingActionRepo.markRejected(actionId);
+      final rejectedResult = await pendingActionRepo.markRejected(actionId);
+      if (rejectedResult.isFailure) {
+        _logger.w(
+          'Failed to mark pending action rejected: $actionId',
+          rejectedResult.error,
+        );
+        return Result.failure(rejectedResult.error);
+      }
       return Result.success(true);
     } catch (e) {
       _logger.w('Failed to dismiss pending action', e);

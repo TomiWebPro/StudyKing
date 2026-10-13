@@ -199,6 +199,8 @@ class FakePendingActionRepository extends PendingActionRepository {
   final Map<String, PendingActionModel> _actions = {};
   bool throwOnMarkCompleted = false;
   bool throwOnMarkRejected = false;
+  bool failOnMarkCompleted = false;
+  bool failOnMarkRejected = false;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
@@ -216,6 +218,9 @@ class FakePendingActionRepository extends PendingActionRepository {
   @override
   Future<Result<void>> markCompleted(String id) async {
     if (throwOnMarkCompleted) throw Exception('mark completed error');
+    if (failOnMarkCompleted) {
+      return Result.failure('mark completed write failed');
+    }
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'completed');
@@ -226,6 +231,9 @@ class FakePendingActionRepository extends PendingActionRepository {
   @override
   Future<Result<void>> markRejected(String id) async {
     if (throwOnMarkRejected) throw Exception('mark rejected error');
+    if (failOnMarkRejected) {
+      return Result.failure('mark rejected write failed');
+    }
     final action = _actions[id];
     if (action != null) {
       _actions[id] = action.copyWith(status: 'rejected');

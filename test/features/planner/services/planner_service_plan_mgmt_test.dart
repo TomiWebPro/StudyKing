@@ -240,6 +240,47 @@ void main() {
       final result = await service.dismissPendingAction('action-1');
       expect(result.isFailure, isTrue);
     });
+
+    test('acceptPendingAction returns failure when markCompleted fails',
+        () async {
+      pendingActionRepo.addAction(PendingActionModel(
+        id: 'action-w1',
+        studentId: 'test-student',
+        actionType: 'schedule',
+        status: 'pending',
+        payload: {
+          'topicId': 'topic-1',
+          'subjectId': 'subject-1',
+          'scheduledTime':
+              DateTime.now().add(const Duration(hours: 1)).toIso8601String(),
+          'durationMinutes': 30,
+        },
+      ));
+      pendingActionRepo.failOnMarkCompleted = true;
+      final result = await service.acceptPendingAction('action-w1');
+      expect(result.isFailure, isTrue);
+      // The write failed, so the action must remain pending.
+      final pending = await service.loadPendingActions();
+      expect(pending.data, hasLength(1));
+      expect(pending.data!.first.status, 'pending');
+    });
+
+    test('dismissPendingAction returns failure when markRejected fails',
+        () async {
+      pendingActionRepo.addAction(PendingActionModel(
+        id: 'action-w2',
+        studentId: 'test-student',
+        actionType: 'schedule',
+        status: 'pending',
+      ));
+      pendingActionRepo.failOnMarkRejected = true;
+      final result = await service.dismissPendingAction('action-w2');
+      expect(result.isFailure, isTrue);
+      // The write failed, so the action must remain pending.
+      final pending = await service.loadPendingActions();
+      expect(pending.data, hasLength(1));
+      expect(pending.data!.first.status, 'pending');
+    });
   });
 
   group('adherence', () {

@@ -275,6 +275,41 @@ void main() {
     });
   });
 
+  group('write failure propagation', () {
+    test('markCompleted returns failure when the write fails', () async {
+      final box = _WriteFailingPendingActionBox();
+      box.seed(createTestAction(id: 'a1', studentId: 's1'));
+      final repo = PendingActionRepository();
+      repo.attachBox(box);
+      final result = await repo.markCompleted('a1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('markRejected returns failure when the write fails', () async {
+      final box = _WriteFailingPendingActionBox();
+      box.seed(createTestAction(id: 'a1', studentId: 's1'));
+      final repo = PendingActionRepository();
+      repo.attachBox(box);
+      final result = await repo.markRejected('a1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('clearAll returns failure when a delete fails', () async {
+      final box = _WriteFailingPendingActionBox();
+      box.seed(createTestAction(id: 'a1', studentId: 's1'));
+      final repo = PendingActionRepository();
+      repo.attachBox(box);
+      final result = await repo.clearAll('s1');
+      expect(result.isFailure, isTrue);
+    });
+
+    test('markCompleted returns failure when box is not open', () async {
+      final repo = PendingActionRepository();
+      final result = await repo.markCompleted('a1');
+      expect(result.isFailure, isTrue);
+    });
+  });
+
   group('PendingActionRepository (init with real Hive)', () {
     late PendingActionRepository repository;
     late String hivePath;
@@ -351,6 +386,37 @@ class _ThrowingPendingActionBox implements Box<PendingActionModel> {
   dynamic noSuchMethod(Invocation invocation) {
     throw Exception('Simulated Hive error');
   }
+}
+
+/// A box whose reads succeed but whose writes fail, to verify that
+/// [PendingActionRepository] propagates write [Result]s instead of
+/// masking them as success.
+class _WriteFailingPendingActionBox implements Box<PendingActionModel> {
+  final Map<String, PendingActionModel> _storage = {};
+
+  void seed(PendingActionModel action) => _storage[action.id] = action;
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    throw Exception('Unexpected box call: ${invocation.memberName}');
+  }
+
+  @override
+  PendingActionModel? get(dynamic key, {dynamic defaultValue}) =>
+      _storage[key as String?];
+
+  @override
+  Future<void> put(dynamic key, PendingActionModel value) async {
+    throw Exception('Simulated write failure');
+  }
+
+  @override
+  Future<void> delete(dynamic key) async {
+    throw Exception('Simulated delete failure');
+  }
+
+  @override
+  Iterable<PendingActionModel> get values => _storage.values;
 }
 
 class _TestPendingActionAdapter extends TypeAdapter<PendingActionModel> {
