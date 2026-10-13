@@ -252,7 +252,18 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
 
     try {
       final topicRepo = ref.read(topicRepositoryProvider);
-      await topicRepo.delete(topic.id);
+      final deleteResult = await topicRepo.delete(topic.id);
+      if (deleteResult.isFailure) {
+        _logger.w('Topic delete failed: ${deleteResult.error}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.topicDeleteFailed(l10n.somethingWentWrong)),
+            ),
+          );
+        }
+        return;
+      }
 
       final depRepo = ref.read(topicDependencyRepositoryProvider);
       final depsResult = await depRepo.getAllDependencies();
@@ -270,7 +281,20 @@ class _SubjectTopicsTabState extends ConsumerState<SubjectTopicsTab> {
       }
 
       final subjectRepoResult = await ref.read(subjectsRepositoryProvider.future);
-      await subjectRepoResult.removeTopicFromSubject(widget.subjectId, topic.id);
+      final unlinkResult = await subjectRepoResult.removeTopicFromSubject(
+          widget.subjectId, topic.id);
+      if (unlinkResult.isFailure) {
+        _logger.w(
+            'Failed to remove topic ${topic.id} from subject: ${unlinkResult.error}');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(l10n.topicDeleteFailed(l10n.somethingWentWrong)),
+            ),
+          );
+        }
+        return;
+      }
 
       await _loadTopics();
       if (mounted) {

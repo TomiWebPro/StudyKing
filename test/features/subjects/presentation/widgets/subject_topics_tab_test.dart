@@ -24,6 +24,7 @@ class _FakeTopicRepository extends TopicRepository {
   bool throwOnCreate = false;
   bool throwOnDelete = false;
   bool createReturnsFailure = false;
+  bool deleteReturnsFailure = false;
 
   void seed(Topic topic) => _storage[topic.id] = topic;
   bool hasKey(String id) => _storage.containsKey(id);
@@ -66,6 +67,7 @@ class _FakeTopicRepository extends TopicRepository {
   @override
   Future<Result<void>> delete(String id) async {
     if (throwOnDelete) throw Exception('Delete failed');
+    if (deleteReturnsFailure) return Result.failure('write failed');
     _storage.remove(id);
     return Result.success(null);
   }
@@ -74,7 +76,9 @@ class _FakeTopicRepository extends TopicRepository {
 class _FakeSubjectRepository extends SubjectRepository {
   final Map<String, Subject> _storage = {};
   bool throwOnAddTopic = false;
+  bool removeTopicReturnsFailure = false;
   final List<String> addTopicCalls = [];
+  final List<String> removeTopicCalls = [];
 
   void seed(Subject subject) => _storage[subject.id] = subject;
 
@@ -98,6 +102,8 @@ class _FakeSubjectRepository extends SubjectRepository {
 
   @override
   Future<Result<void>> removeTopicFromSubject(String subjectId, String topicId) async {
+    removeTopicCalls.add(topicId);
+    if (removeTopicReturnsFailure) return Result.failure('write failed');
     final subject = _storage[subjectId];
     if (subject != null) {
       _storage[subjectId] = subject.copyWith(
@@ -390,6 +396,82 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.textContaining('Failed to delete'), findsOneWidget);
+    });
+
+    testWidgets('delete topic shows failure snackbar and keeps topic when delete returns failure',
+        (tester) async {
+      fakeTopicRepo.seed(Topic(
+        id: 't-1',
+        subjectId: 'sub-1',
+        title: 'Algebra',
+        description: 'Desc',
+        syllabusText: 'Syllabus',
+      ));
+      fakeSubjectRepo.seed(
+          Subject(id: 'sub-1', name: 'Math', topicIds: ['t-1']));
+      fakeTopicRepo.deleteReturnsFailure = true;
+
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: fakeTopicRepo,
+        subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Failure is surfaced, not masked as success.
+      expect(find.textContaining('Failed to delete topic'), findsOneWidget);
+      expect(find.text('Topic deleted'), findsNothing);
+      // The topic stays persisted and linked to the subject.
+      expect(fakeTopicRepo.hasKey('t-1'), isTrue);
+      final subject = await fakeSubjectRepo.get('sub-1');
+      expect(subject.data?.topicIds, contains('t-1'));
+      expect(fakeSubjectRepo.removeTopicCalls, isEmpty);
+    });
+
+    testWidgets('delete topic shows failure snackbar and keeps subject link when unlink fails',
+        (tester) async {
+      fakeTopicRepo.seed(Topic(
+        id: 't-1',
+        subjectId: 'sub-1',
+        title: 'Algebra',
+        description: 'Desc',
+        syllabusText: 'Syllabus',
+      ));
+      fakeSubjectRepo.seed(
+          Subject(id: 'sub-1', name: 'Math', topicIds: ['t-1']));
+      fakeSubjectRepo.removeTopicReturnsFailure = true;
+
+      await tester.pumpWidget(_buildTestApp(
+        topicRepo: fakeTopicRepo,
+        subjectRepo: fakeSubjectRepo,
+        depRepo: fakeDepRepo,
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Delete'));
+      await tester.pumpAndSettle();
+
+      // Failure is surfaced, not masked as success.
+      expect(find.textContaining('Failed to delete topic'), findsOneWidget);
+      expect(find.text('Topic deleted'), findsNothing);
+      // The topic was deleted but the subject link was kept.
+      expect(fakeTopicRepo.hasKey('t-1'), isFalse);
+      final subject = await fakeSubjectRepo.get('sub-1');
+      expect(subject.data?.topicIds, contains('t-1'));
+      expect(fakeSubjectRepo.removeTopicCalls, ['t-1']);
     });
 
     testWidgets('edit topic opens TopicEditDialog with pre-filled data',
