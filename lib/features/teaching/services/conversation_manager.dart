@@ -251,6 +251,13 @@ class ConversationManager {
       _consecutiveIncorrect = 0;
     }
 
+    // Detect exercise requests BEFORE building the prompt so that:
+    // (1) the request turn itself streams under the exercise-phase
+    //     prompt, and (2) the capture block below runs with the flag
+    //     already set, storing the generated exercise question (not the
+    //     follow-up teaching reply) in _lastExerciseQuestion.
+    _detectExerciseRequest(content);
+
     final buffer = StringBuffer();
     var emittedLength = 0;
     final entry = _prompts.tutorMessage(
@@ -299,8 +306,6 @@ class ConversationManager {
     if (enableVoiceOutput) {
       _speakResponse(assistantContent);
     }
-
-    _detectExerciseRequest(content);
   }
 
   Future<void> _speakResponse(String text) async {

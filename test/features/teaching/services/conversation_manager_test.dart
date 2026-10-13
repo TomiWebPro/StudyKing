@@ -83,6 +83,7 @@ class FakeLlmService extends LlmService {
 class FakeExerciseEvaluator extends ExerciseEvaluator {
   bool shouldThrow = false;
   bool shouldReturnFailure = false;
+  final List<String> recordedQuestions = [];
 
   FakeExerciseEvaluator()
       : super(
@@ -100,6 +101,7 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
     String? systemPrompt,
     String? userPrompt,
   }) async {
+    recordedQuestions.add(question);
     if (shouldThrow) throw Exception('Simulated evaluator error');
     if (shouldReturnFailure) return Result.failure('Simulated evaluator failure');
     final lower = studentAnswer.toLowerCase();
@@ -407,6 +409,47 @@ void main() {
         }
 
         expect(manager.adaptivePace, greaterThanOrEqualTo(0.5));
+      });
+    });
+
+    group('exercise question capture', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('captures the generated exercise question on request',
+          () async {
+        llmService.streamResponse = 'Solve: what is 2 + 2?';
+
+        await manager.sendMessage('give me an exercise').toList();
+
+        expect(manager.phase, equals(ConversationPhase.exercise));
+        expect(manager.capturedExerciseQuestion,
+            equals('Solve: what is 2 + 2?'));
+      });
+
+      test('evaluates the student answer against the captured question',
+          () async {
+        llmService.streamResponse = 'Solve: what is 2 + 2?';
+        await manager.sendMessage('give me an exercise').toList();
+
+        exerciseEvaluator.recordedQuestions.clear();
+        await manager.sendMessage('4').toList();
+
+        expect(exerciseEvaluator.recordedQuestions,
+            equals(['Solve: what is 2 + 2?']));
+      });
+
+      test('follow-up teaching reply does not overwrite the captured question',
+          () async {
+        llmService.streamResponse = 'Solve: what is 2 + 2?';
+        await manager.sendMessage('give me an exercise').toList();
+
+        llmService.streamResponse = 'Great job! Moving on.';
+        await manager.sendMessage('4').toList();
+
+        expect(manager.capturedExerciseQuestion,
+            equals('Solve: what is 2 + 2?'));
       });
     });
 
