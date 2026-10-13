@@ -1,9 +1,11 @@
 import 'dart:async' show TimeoutException;
 import 'dart:convert' show utf8;
+import 'dart:io' show Directory;
 import 'package:crypto/crypto.dart' show sha256;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
@@ -25,6 +27,8 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/data/adapters/subject_adapter.dart';
+import 'package:studyking/features/subjects/data/adapters/topic_adapter.dart';
 
 class FakeLlmService extends LlmService {
   FakeLlmService() : super(config: const LlmConfiguration(
@@ -263,6 +267,16 @@ class FakeTopicRepository extends TopicRepository {
 
   @override
   Future<Result<void>> create(Topic topic) async => Result.success(null);
+}
+
+/// TopicRepository whose writes always fail, to verify the pipeline does
+/// not link or return topic ids that were never persisted.
+class FailingCreateTopicRepository extends FakeTopicRepository {
+  FailingCreateTopicRepository() : super([]);
+
+  @override
+  Future<Result<void>> create(Topic topic) async =>
+      Result.failure('simulated topic create failure');
 }
 
 class FakeQuestionRepository extends QuestionRepository {
@@ -688,6 +702,148 @@ void main() {
 
       expect(result.isFailure, isTrue);
       expect(result.error, contains('DUPLICATE'));
+    });
+  });
+
+  group('ContentPipeline topic auto-creation failures', () {
+    late Directory hiveDir;
+
+    // The topic helpers instantiate a real SubjectRepository inline, so
+    // Hive must be initialized (with adapters) for its init() to succeed.
+    // Otherwise the pre-fix code would also fall back to '' via its
+    // catch block and the phantom-topic-id regression could not be
+    // distinguished from the fix.
+    setUpAll(() async {
+      Hive.registerAdapter(SubjectAdapter());
+      Hive.registerAdapter(TopicAdapter());
+      hiveDir = await Directory.systemTemp.createTemp(
+        'content_pipeline_topic_test_',
+      );
+      Hive.init(hiveDir.path);
+    });
+
+    tearDownAll(() async {
+      await Hive.close();
+      await hiveDir.delete(recursive: true);
+    });
+
+    test('leaves topicId empty when classified-topic auto-creation fails',
+        () async {
+      final chunks = [
+        SourceChunk(chunkIndex: 0, text: 'chunk one text'),
+        SourceChunk(chunkIndex: 1, text: 'chunk two text'),
+      ];
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+          chunks: chunks,
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: 'Biology', confidence: 1.0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FailingCreateTopicRepository(),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        subjectId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        possibleTopics: ['Biology'],
+      );
+
+      expect(result.isSuccess, isTrue);
+      // The failed topic create must not leave a dangling topic id on
+      // the source (the classified topic did not exist and could not
+      // be auto-created).
+      expect(result.data!.topicId, isEmpty);
+    });
+
+    test('leaves topicId empty when single-chunk topic auto-creation fails',
+        () async {
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FailingCreateTopicRepository(),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        subjectId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        // The fake LLM answers "llm-response", which matches "llm".
+        possibleTopics: ['llm'],
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.topicId, isEmpty);
+    });
+
+    test('leaves topicId empty when syllabus topic auto-creation fails',
+        () async {
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FailingCreateTopicRepository(),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'Syllabus T',
+        content: 'some syllabus content',
+        type: SourceType.syllabus,
+        studentId: 's1',
+        subjectId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+      );
+
+      expect(result.isSuccess, isTrue);
+      // The fake LLM response is not valid JSON, so the fallback split
+      // yields one topic name whose creation fails; no id may be
+      // returned for it.
+      expect(result.data!.topicId, isEmpty);
     });
   });
 

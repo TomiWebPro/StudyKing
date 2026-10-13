@@ -608,7 +608,15 @@ class ContentPipeline {
           description: 'Auto-created from content classification',
           syllabusText: '',
         );
-        await _topicRepository.create(newTopic);
+        final createResult = await _topicRepository.create(newTopic);
+        if (createResult.isFailure) {
+          _logger.w(
+            'Failed to auto-create topic "$topicTitle" under subject $subjectId',
+            createResult.error,
+          );
+          // Do not link or return a topic id that was never persisted.
+          return '';
+        }
         final subjRepo = SubjectRepository();
         await subjRepo.init();
         await subjRepo.addTopicToSubject(subjectId, newTopic.id);
@@ -749,7 +757,15 @@ class ContentPipeline {
             description: 'Auto-created from syllabus upload',
             syllabusText: '',
           );
-          await _topicRepository.create(newTopic);
+          final createResult = await _topicRepository.create(newTopic);
+          if (createResult.isFailure) {
+            _logger.w(
+              'Failed to auto-create topic "$topicTitle" under subject $subjectId',
+              createResult.error,
+            );
+            // Do not link or return a topic id that was never persisted.
+            return '';
+          }
           final subjRepo = SubjectRepository();
           await subjRepo.init();
           await subjRepo.addTopicToSubject(subjectId, newTopic.id);
@@ -823,7 +839,16 @@ class ContentPipeline {
           description: 'Auto-created from syllabus upload',
           syllabusText: '',
         );
-        await _topicRepository.create(topic);
+        final createResult = await _topicRepository.create(topic);
+        if (createResult.isFailure) {
+          _logger.w(
+            'Failed to auto-create syllabus topic "$name" under subject $subjectId',
+            createResult.error,
+          );
+          // Skip topics that were not persisted; their ids must not be
+          // linked to the subject or returned to the caller.
+          continue;
+        }
         await subjRepo.addTopicToSubject(subjectId, topic.id);
         createdIds.add(topic.id);
         _logger.i('Auto-created syllabus topic "$name" under subject $subjectId');
