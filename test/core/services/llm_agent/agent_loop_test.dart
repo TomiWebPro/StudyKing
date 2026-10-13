@@ -33,10 +33,11 @@ class _BrokenTool extends AgentTool {
 }
 
 /// Hand-written fake that scripts LLM replies and records the
-/// conversation history seen on each call.
+/// conversation history and current message seen on each call.
 class _FakeLlmService extends LlmService {
   final List<String> _scriptedResponses;
   final List<List<Map<String, String>>> historyCalls = [];
+  final List<String> messageCalls = [];
 
   _FakeLlmService(this._scriptedResponses)
       : super(
@@ -56,6 +57,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    messageCalls.add(message);
     historyCalls.add(List<Map<String, String>>.from(history ?? []));
     return Result.success(_scriptedResponses.removeAt(0));
   }
@@ -106,12 +108,31 @@ void main() {
       expect(response.toolCalls.first.toolName, 'searchQuestions');
       expect(response.toolCalls.first.arguments, {'topic': 'physics'});
 
-      // The history fed back to the LLM must contain a well-formed tool
-      // result message naming the tool, not "Instance of '_ParsedResponse'".
-      final toolResultMessage = fakeLlm.historyCalls[1].last['content']!;
+      // The tool RESULT is the current message of the second call,
+      // not a history entry: it must name the tool and carry its
+      // result, never "Instance of '_ParsedResponse'".
+      final toolResultMessage = fakeLlm.messageCalls[1];
       expect(toolResultMessage, startsWith('Tool result for searchQuestions:'));
       expect(toolResultMessage, contains('{"results":["Q1","Q2"],"count":2}'));
       expect(toolResultMessage, isNot(contains('Instance of')));
+
+      // The current message must reach the LLM exactly once: as
+      // `message`, never duplicated inside `history`.
+      expect(
+        fakeLlm.historyCalls[1]
+            .map((m) => m['content'])
+            .where((content) => content == toolResultMessage),
+        isEmpty,
+      );
+      expect(
+        fakeLlm.messageCalls.where((m) => m == toolResultMessage),
+        hasLength(1),
+      );
+
+      // History still carries the original user message and the
+      // assistant tool-call turn (nothing older is dropped).
+      final historyRoles = fakeLlm.historyCalls[1].map((m) => m['role']).toList();
+      expect(historyRoles, ['user', 'assistant']);
     });
 
     test('unknown tool error names the requested tool', () async {
@@ -154,7 +175,7 @@ void main() {
       );
 
       expect(response.content, 'Done.');
-      final toolResultMessage = fakeLlm.historyCalls[1].last['content']!;
+      final toolResultMessage = fakeLlm.messageCalls[1];
       expect(toolResultMessage, startsWith('Tool result for broken:'));
       expect(toolResultMessage, contains('error'));
     });

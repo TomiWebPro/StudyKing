@@ -53,7 +53,11 @@ class AgentLoop {
           message: messages.last['content']!,
           modelId: _modelId,
           systemPrompt: _buildAgentSystemPrompt(systemPrompt),
-          history: messages.sublist(1),
+          // The last message is passed as `message` above; chat appends it
+          // after the history entries, so it must NOT also appear in history
+          // or the LLM would receive it twice. Index 0 is the agent system
+          // prompt, which chat also takes separately as `systemPrompt`.
+          history: messages.sublist(1, messages.length - 1),
         );
 
         if (result.isFailure) {
