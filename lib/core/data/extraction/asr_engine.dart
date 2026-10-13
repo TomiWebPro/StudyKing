@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'dart:io' show File;
 import 'dart:math';
 import 'package:http/http.dart' as http;
+import 'package:studyking/core/constants/app_api_config.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'transcription_extractor.dart';
 
@@ -16,16 +17,30 @@ abstract class AsrEngine {
 
 class WhisperApiAsrEngine implements AsrEngine {
   final String? _apiKey;
+  final Uri _apiUrl;
   final http.Client _httpClient;
   static final Logger _logger = const Logger('WhisperApiAsrEngine');
 
-  static const _whisperApiUrl = 'https://api.openai.com/v1/audio/transcriptions';
-
   WhisperApiAsrEngine({
     String? apiKey,
+    String? baseUrl,
     http.Client? httpClient,
   })  : _apiKey = apiKey,
+        _apiUrl = _resolveApiUrl(baseUrl),
         _httpClient = httpClient ?? http.Client();
+
+  /// Resolves the transcription endpoint. An explicit [baseUrl] (or the
+  /// `OPENAI_BASE_URL` override via [ApiConfig.openAIDefaultUrl]) is
+  /// honored so a self-hosted, OpenAI-compatible Whisper server can be
+  /// used instead of the paid cloud — the same override every other
+  /// OpenAI-compatible service in the app already respects.
+  static Uri _resolveApiUrl(String? baseUrl) {
+    final base =
+        (baseUrl != null && baseUrl.isNotEmpty) ? baseUrl : ApiConfig.openAIDefaultUrl;
+    final normalized =
+        base.endsWith('/') ? base.substring(0, base.length - 1) : base;
+    return Uri.parse('$normalized/audio/transcriptions');
+  }
 
   @override
   bool get isAvailable => _apiKey != null && _apiKey.isNotEmpty;
@@ -54,7 +69,7 @@ class WhisperApiAsrEngine implements AsrEngine {
 
       final bytes = await file.readAsBytes();
       final fileName = filePath.split('/').last;
-      final request = http.MultipartRequest('POST', Uri.parse(_whisperApiUrl))
+      final request = http.MultipartRequest('POST', _apiUrl)
         ..headers['Authorization'] = 'Bearer $_apiKey'
         ..fields['model'] = 'whisper-1'
         ..fields['response_format'] = 'verbose_json'

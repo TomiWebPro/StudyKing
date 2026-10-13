@@ -241,5 +241,61 @@ void main() {
         dir.deleteSync(recursive: true);
       }
     });
+
+    Future<Uri?> captureRequestUrl(String? baseUrl) async {
+      final dir = Directory.systemTemp.createTempSync('whisper_url_test_');
+      try {
+        final file = File('${dir.path}/test.mp3');
+        await file.writeAsBytes([0xFF, 0xFB, 0x90]);
+
+        Uri? capturedUrl;
+        final mockClient = _MockHttpClient(
+          (_) async => http.Response('', 404),
+          onSend: (request) async {
+            capturedUrl = request.url;
+            return http.StreamedResponse(
+              Stream.value(utf8.encode('{"text": "ok"}')),
+              200,
+            );
+          },
+        );
+
+        final engine = WhisperApiAsrEngine(
+          apiKey: 'sk-test-key',
+          baseUrl: baseUrl,
+          httpClient: mockClient,
+        );
+
+        await engine.transcribeFile(filePath: file.path);
+        engine.dispose();
+        return capturedUrl;
+      } finally {
+        dir.deleteSync(recursive: true);
+      }
+    }
+
+    test('defaults to the OpenAI API base URL', () async {
+      final url = await captureRequestUrl(null);
+      expect(
+        url.toString(),
+        'https://api.openai.com/v1/audio/transcriptions',
+      );
+    });
+
+    test('honors a custom OpenAI-compatible base URL', () async {
+      final url = await captureRequestUrl('http://localhost:8080/v1');
+      expect(
+        url.toString(),
+        'http://localhost:8080/v1/audio/transcriptions',
+      );
+    });
+
+    test('normalizes a trailing slash on the base URL', () async {
+      final url = await captureRequestUrl('http://localhost:8080/v1/');
+      expect(
+        url.toString(),
+        'http://localhost:8080/v1/audio/transcriptions',
+      );
+    });
   });
 }
