@@ -212,19 +212,28 @@ class TutorService {
           generatedBy: GeneratedBy.ai,
           createdAt: _clock.now(),
         );
-        await _lessonRepository.create(lesson);
-        _currentLessonId = lesson.id;
-        _currentLessonBlocks = lesson.blocks;
+        final createResult = await _lessonRepository.create(lesson);
+        if (createResult.isFailure) {
+          _logger.w(
+            'Failed to persist lesson ${lesson.id}',
+            createResult.error,
+          );
+          lessonPlanError = createResult.error ?? 'Failed to create lesson';
+        } else {
+          _currentLessonId = lesson.id;
+          _currentLessonBlocks = lesson.blocks;
 
-        _currentManager = manager;
+          _currentManager = manager;
+        }
       }
     } catch (e) {
       await _rollbackFailedLessonStart(session, scheduledSessionId, e);
       rethrow;
     }
     if (lessonPlanError != null) {
-      // No plan could be built at all; roll the session back
-      // and propagate the failure to the caller.
+      // No plan could be built or the lesson could not be
+      // persisted; roll the session back and propagate the
+      // failure to the caller.
       final error = StateError(lessonPlanError);
       await _rollbackFailedLessonStart(session, scheduledSessionId, error);
       return Future.error(error);

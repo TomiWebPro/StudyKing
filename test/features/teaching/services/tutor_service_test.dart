@@ -210,6 +210,13 @@ class FakeQuestionRepository extends QuestionRepository {
   }
 }
 
+class FakeFailingLessonRepository extends LessonRepository {
+  @override
+  Future<Result<void>> create(Lesson lesson) async {
+    return Result.failure('lesson box unavailable');
+  }
+}
+
 class FakeSessionRepository extends SessionRepository {
   final List<Session> _savedSessions = [];
 
@@ -441,6 +448,40 @@ void main() {
           tutorSessionRepo._sessions.last.status,
           equals(SessionStatus.cancelled),
         );
+      });
+
+      test('rolls back and propagates error when lesson persistence fails', () async {
+        final failingService = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: FakeFailingLessonRepository(),
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+        );
+
+        await expectLater(
+          failingService.startLesson(
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            topicTitle: 'Algebra',
+            durationMinutes: 30,
+            localeName: 'en',
+          ),
+          throwsA(isA<StateError>()),
+        );
+        // A failed lesson write must not be masked as success: the
+        // session is rolled back to cancelled, not left inProgress,
+        // and no lesson/manager is adopted.
+        expect(
+          tutorSessionRepo._sessions.last.status,
+          equals(SessionStatus.cancelled),
+        );
+        expect(failingService.currentManager, isNull);
       });
     });
 
