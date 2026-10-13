@@ -76,6 +76,31 @@ void main() {
       expect(result.error, contains('empty'));
     });
 
+    test('trims surrounding whitespace from recognized text', () async {
+      final extractor = _FakeOcrExtractor((_, _) async => const OcrExtractionResult(
+            text: '  3x + 2 = 8\n',
+            extractionMethod: 'ocr_llm',
+          ));
+      final service = VisionInterpretationService(ocrExtractor: extractor);
+
+      final result = await service.interpretImage(Uint8List.fromList([7, 8]));
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, '3x + 2 = 8');
+    });
+
+    test('returns failure when OCR extraction throws unexpectedly', () async {
+      final extractor = _FakeOcrExtractor((_, _) async =>
+          throw Exception('ocr engine crashed'));
+      final service = VisionInterpretationService(ocrExtractor: extractor);
+
+      final result = await service.interpretImage(Uint8List.fromList([1, 2]));
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, contains('Vision interpretation failed'));
+      expect(result.error, contains('ocr engine crashed'));
+    });
+
     test('encodes image to base64 before passing to OCR', () async {
       String? captured;
       final extractor = _FakeOcrExtractor((rawContent, _) async {

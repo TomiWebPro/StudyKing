@@ -5,9 +5,13 @@ import 'package:studyking/core/data/extraction/ocr_extractor.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
 
-/// Interprets an uploaded image of student work (handwritten or drawn) into
-/// text using the vision-capable [OcrExtractor] and returns the recognized
-/// answer so it can be routed into the answer-validation pipeline.
+/// Interprets an uploaded image of student work (handwritten or drawn) by
+/// extracting its text with the OCR-based [OcrExtractor] and returns the
+/// recognized text so it can be routed into the answer-validation pipeline.
+///
+/// This is a text-only OCR path: it does not reason about diagrams, graphs,
+/// geometry, or math layout. Images without recognizable text (e.g. pure
+/// drawings) yield a failure.
 class VisionInterpretationService {
   static final Logger _logger = const Logger('VisionInterpretationService');
 
