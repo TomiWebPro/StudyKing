@@ -361,7 +361,14 @@ class ContentPipeline {
 
         if (oldQuestionIds.isNotEmpty) {
           for (final oldId in oldQuestionIds) {
-            await _questionRepository.delete(oldId);
+            final deleteResult = await _questionRepository.delete(oldId);
+            if (deleteResult.isFailure) {
+              _logger.w(
+                'Failed to delete stale question $oldId',
+                deleteResult.error,
+              );
+              return Result.failure(deleteResult.error);
+            }
           }
         }
 

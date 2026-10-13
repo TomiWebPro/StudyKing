@@ -287,6 +287,31 @@ class FakeQuestionRepository extends QuestionRepository {
   Future<Result<void>> delete(String key) async => Result.success(null);
 }
 
+/// QuestionRepository whose deletes always fail, to verify the
+/// pipeline propagates stale-question deletion failures instead of
+/// silently keeping the old questions linked to the source.
+class FailingDeleteQuestionRepository extends FakeQuestionRepository {
+  final List<String> deletedKeys = [];
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    deletedKeys.add(key);
+    return Result.failure('simulated question delete failure');
+  }
+}
+
+/// QuestionRepository that records every deleted key so tests can
+/// assert stale questions are removed before regeneration.
+class RecordingQuestionRepository extends FakeQuestionRepository {
+  final List<String> deletedKeys = [];
+
+  @override
+  Future<Result<void>> delete(String key) async {
+    deletedKeys.add(key);
+    return super.delete(key);
+  }
+}
+
 class FakeWebScraper extends WebScraper {
   final Result<ScrapedPage> pageResult;
   FakeWebScraper(this.pageResult) : super();
@@ -304,13 +329,14 @@ ContentPipeline buildPipeline({
   required FakeSourceRepository sourceRepo,
   required FakeTopicRepository topicRepo,
   required FakeWebScraper webScraper,
+  QuestionRepository? questionRepository,
   String localeName = 'en',
 }) {
   return ContentPipeline(
     llmService: FakeLlmService(),
     sourceRepository: sourceRepo,
     topicRepository: topicRepo,
-    questionRepository: FakeQuestionRepository(),
+    questionRepository: questionRepository ?? FakeQuestionRepository(),
     documentExtractor: docExtractor,
     webScraper: webScraper,
     chunkedProcessor: chunked,
@@ -658,6 +684,89 @@ void main() {
       final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
       expect(stored, isNotNull);
       expect(stored!.processingStatus, isNot(ProcessingStatus.completed.name));
+    });
+
+    test('returns failure when stale question deletion fails', () async {
+      final questionRepo = FailingDeleteQuestionRepository();
+      final sourceRepo = FakeSourceRepository();
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        questionRepository: questionRepo,
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        generateQuestions: true,
+        oldQuestionIds: ['q-old-1', 'q-old-2'],
+      );
+
+      expect(result.isFailure, isTrue);
+      expect(result.error, 'simulated question delete failure');
+      // Deletion aborts on the first failed stale question.
+      expect(questionRepo.deletedKeys, ['q-old-1']);
+      // The source must not be reported as completed when the
+      // stale-question cleanup fails.
+      final stored = sourceRepo.getStored(sourceRepo.lastCreatedId!);
+      expect(stored, isNotNull);
+      expect(stored!.processingStatus, isNot(ProcessingStatus.completed.name));
+    });
+
+    test('deletes stale questions before regenerating', () async {
+      final questionRepo = RecordingQuestionRepository();
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        chunked: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        sourceRepo: FakeSourceRepository(),
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        questionRepository: questionRepo,
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        generateQuestions: true,
+        oldQuestionIds: ['q-old-1'],
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(questionRepo.deletedKeys, ['q-old-1']);
+      expect(result.data!.processingStatus, ProcessingStatus.completed.name);
     });
 
     test('returns DUPLICATE failure when a matching source already exists',
