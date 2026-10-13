@@ -163,7 +163,8 @@ class _FakeStudyProgressTracker implements StudyProgressTracker {
   Future<Result<List<Map<String, dynamic>>>> getBadges(String studentId) async => Result.success(badges);
 
   @override
-  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async => Result.success(trend);
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
+      {String? studentId, DateTime? now}) async => Result.success(trend);
 
   @override
   Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async => Result.success(trend);
@@ -203,7 +204,8 @@ class _FailingStudyProgressTracker implements StudyProgressTracker {
       Result.failure('badges unavailable');
 
   @override
-  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async =>
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
+      {String? studentId, DateTime? now}) async =>
       Result.failure('trend unavailable');
 
   @override

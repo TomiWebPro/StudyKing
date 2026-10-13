@@ -18,6 +18,8 @@ import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:timezone/timezone.dart' as tz;
 
 class FakeAttemptRepository extends AttemptRepository {
   final List<StudentAttempt> _attempts = [];
@@ -215,8 +217,16 @@ class FakeMasteryGraphService extends MasteryGraphService {
 
 /// Independent ISO 8601 week-number computation (day-of-year
 /// formula) used to cross-check the production implementation.
+///
+/// The day count is computed on UTC midnights so the reference
+/// stays exact in DST-observing zones: elapsed-time differences
+/// lose an hour across transitions and truncate `inDays` by one,
+/// which would mask the very bug this cross-check guards against.
 int _referenceIsoWeekNumber(DateTime date) {
-  final dayOfYear = date.difference(DateTime(date.year, 1, 1)).inDays + 1;
+  final dayOfYear = DateTime.utc(date.year, date.month, date.day)
+      .difference(DateTime.utc(date.year, 1, 1))
+      .inDays +
+      1;
   final week = (dayOfYear - date.weekday + 10) ~/ 7;
   if (week < 1) {
     return _referenceIsoWeekNumber(DateTime(date.year - 1, 12, 31));
@@ -746,6 +756,74 @@ void main() {
             entry['weekNumber'],
             equals(_referenceIsoWeekNumber(weekStart)),
           );
+        }
+      });
+
+      test('week numbers match ISO 8601 across a spring-forward '
+          'transition in a fixed DST timezone', () async {
+        tz_data.initializeTimeZones();
+        final berlin = tz.getLocation('Europe/Berlin');
+        // Europe/Berlin springs forward on Sunday 2026-03-29
+        // (02:00 -> 03:00) and falls back on Sunday 2026-10-25.
+        // Entry 0's week starts 6 days before `now`, so passing
+        // now = target + 6 days pins entry 0's week start to the
+        // target date. Before the fix, every week between the
+        // two transitions came out one week too few because the
+        // Thursday-to-first-Thursday difference is elapsed time,
+        // which loses an hour across the spring-forward
+        // transition and truncates inDays by one.
+        final cases = <(DateTime, int)>[
+          // Before spring-forward: unaffected.
+          (tz.TZDateTime(berlin, 2026, 3, 25), 13),
+          // The week containing the transition and every
+          // week after it, up to fall-back.
+          (tz.TZDateTime(berlin, 2026, 3, 30), 14),
+          (tz.TZDateTime(berlin, 2026, 4, 1), 14),
+          (tz.TZDateTime(berlin, 2026, 6, 15), 25),
+          (tz.TZDateTime(berlin, 2026, 10, 20), 43),
+          // After fall-back the elapsed-time error cancels
+          // out and the value is correct again.
+          (tz.TZDateTime(berlin, 2026, 11, 5), 45),
+        ];
+        for (final (date, week) in cases) {
+          final trend = await tracker.getWeeklyTrend(
+            1,
+            studentId: 'student1',
+            now: date.add(const Duration(days: 6)),
+          );
+
+          expect(
+            trend.data!.single['weekNumber'],
+            equals(week),
+            reason: 'ISO week of ${date.toIso8601String()}',
+          );
+        }
+      });
+
+      test('cross-checks every entry against the reference ISO week '
+          'formula at a fixed DST-zone date', () async {
+        tz_data.initializeTimeZones();
+        final berlin = tz.getLocation('Europe/Berlin');
+        // A fixed "now" inside the DST window (after the
+        // 2026-03-29 spring-forward): every entry of the
+        // 8-week window must match the independent formula.
+        // Midnight pins the week starts to exact midnights,
+        // where the elapsed-time truncation bites.
+        final now = tz.TZDateTime(berlin, 2026, 4, 8);
+        final trend = await tracker.getWeeklyTrend(8,
+            studentId: 'student1', now: now);
+
+        expect(trend.data, hasLength(8));
+        for (var i = 0; i < trend.data!.length; i++) {
+          final entry = trend.data![i];
+          final weekStart = now.subtract(Duration(days: i * 7 + 6));
+          expect(entry['week'], equals(weekStart.year));
+          expect(entry['month'], equals(weekStart.month));
+          expect(
+            entry['weekNumber'],
+            equals(_referenceIsoWeekNumber(weekStart)),
+          );
+          expect(entry['weekNumber'], inInclusiveRange(1, 53));
         }
       });
     });

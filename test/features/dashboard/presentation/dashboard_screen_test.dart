@@ -148,7 +148,8 @@ class FakeStudyProgressTracker extends StudyProgressTracker {
   }
 
   @override
-  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
+      {String? studentId, DateTime? now}) async {
     return Result.success(weeklyTrend);
   }
 

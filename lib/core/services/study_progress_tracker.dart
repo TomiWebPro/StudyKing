@@ -215,7 +215,8 @@ class StudyProgressTracker {
     }
   }
 
-  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks, {String? studentId}) async {
+  Future<Result<List<Map<String, dynamic>>>> getWeeklyTrend(int weeks,
+      {String? studentId, DateTime? now}) async {
     try {
       studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
@@ -225,9 +226,15 @@ class StudyProgressTracker {
       }
       final allAttempts = allAttemptsResult.data ?? [];
 
+      // [now] is injectable so tests can pin the trend to fixed
+      // dates (including DST-zone dates); production callers omit
+      // it and get the wall clock.
+      final effectiveNow = now ?? DateTime.now();
+
       bool hasPriorData = false;
       for (final a in allAttempts) {
-        if (a.timestamp.isBefore(DateTime.now().subtract(const Duration(days: 7)))) {
+        if (a.timestamp
+            .isBefore(effectiveNow.subtract(const Duration(days: 7)))) {
           hasPriorData = true;
           break;
         }
@@ -238,12 +245,11 @@ class StudyProgressTracker {
       // unrounded so the improvement delta is not computed from the
       // rounded integer percent stored in each entry.
       final weekAccuracies = <double>[];
-      final now = DateTime.now();
 
       for (var i = 0; i < weeks; i++) {
-        final weekStart = now.subtract(Duration(days: i * 7 + 6));
-        final windowStart = now.subtract(Duration(days: (i + 1) * 7));
-        final windowEnd = now.subtract(Duration(days: i * 7));
+        final weekStart = effectiveNow.subtract(Duration(days: i * 7 + 6));
+        final windowStart = effectiveNow.subtract(Duration(days: (i + 1) * 7));
+        final windowEnd = effectiveNow.subtract(Duration(days: i * 7));
 
         // Half-open (windowStart, windowEnd] windows keep consecutive
         // weeks disjoint: an attempt on a boundary day lands in exactly
@@ -416,8 +422,18 @@ class StudyProgressTracker {
   /// Thursday, so the week number is unambiguous across years and
   /// never confused with the calendar month (1-12).
   int _isoWeekNumber(DateTime date) {
-    final thursday = date.add(Duration(days: DateTime.thursday - date.weekday));
-    final firstJan = DateTime(thursday.year, 1, 1);
+    // Do the arithmetic on UTC midnights: DateTime.difference
+    // measures elapsed time, which is one hour short of a whole
+    // number of days between the year's first Thursday and any
+    // later Thursday after a spring-forward transition. inDays
+    // then truncates the 7k-day span to 7k-1 and the week number
+    // comes out one too few for every week between the DST
+    // transitions. UTC has no DST, so the day count is exact
+    // calendar days in every timezone.
+    final utcDate = DateTime.utc(date.year, date.month, date.day);
+    final thursday =
+        utcDate.add(Duration(days: DateTime.thursday - utcDate.weekday));
+    final firstJan = DateTime.utc(thursday.year, 1, 1);
     final firstThursday =
         firstJan.add(Duration(days: DateTime.thursday - firstJan.weekday));
     return 1 + thursday.difference(firstThursday).inDays ~/ 7;
