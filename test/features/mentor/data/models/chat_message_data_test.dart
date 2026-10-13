@@ -360,7 +360,7 @@ void main() {
       expect(restored.toolResult, isNull);
     });
 
-    test('fromJson throws on unknown role', () {
+    test('fromJson falls back on unknown role instead of throwing', () {
       final json = {
         'id': 'msg-err',
         'sessionId': 'session-err',
@@ -373,13 +373,13 @@ void main() {
         'isStreaming': false,
       };
 
-      expect(
-        () => ConversationMessage.fromJson(json),
-        throwsA(isA<StateError>()),
-      );
+      final restored = ConversationMessage.fromJson(json);
+
+      expect(restored.role, MessageRole.student);
+      expect(restored.type, MessageType.text);
     });
 
-    test('fromJson throws on unknown type', () {
+    test('fromJson falls back on unknown type instead of throwing', () {
       final json = {
         'id': 'msg-err2',
         'sessionId': 'session-err2',
@@ -392,10 +392,10 @@ void main() {
         'isStreaming': false,
       };
 
-      expect(
-        () => ConversationMessage.fromJson(json),
-        throwsA(isA<StateError>()),
-      );
+      final restored = ConversationMessage.fromJson(json);
+
+      expect(restored.role, MessageRole.tutor);
+      expect(restored.type, MessageType.text);
     });
   });
 
