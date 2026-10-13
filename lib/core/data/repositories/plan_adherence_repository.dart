@@ -3,10 +3,12 @@ import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 
 class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
+  static final Logger _logger = const Logger('PlanAdherenceRepository');
   final Clock _clock;
 
   PlanAdherenceRepository({Clock? clock})
@@ -20,9 +22,14 @@ class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
   }
 
   Future<Result<void>> create(PlanAdherenceModel model) async {
-    return Result.capture(() async {
-      await super.save(model.id, model);
-    }, context: 'create');
+    // Repository.save reports write failures as Result.failure (it does not
+    // throw), so the result must be propagated — discarding it here would
+    // mask a failed adherence write as success.
+    final result = await super.save(model.id, model);
+    if (result.isFailure) {
+      _logger.w('Failed to persist plan adherence ${model.id}', result.error);
+    }
+    return result;
   }
 
   Future<Result<List<PlanAdherenceModel>>> getByStudent(String studentId) async {
@@ -93,11 +100,20 @@ class PlanAdherenceRepository extends Repository<PlanAdherenceModel> {
   }
 
   Future<Result<void>> deleteByStudent(String studentId) async {
-    return Result.capture(() async {
+    try {
       final metrics = filterBy((m) => m.studentId, studentId);
       for (final m in metrics) {
-        await super.delete(m.id);
+        final result = await super.delete(m.id);
+        if (result.isFailure) {
+          _logger.w('Failed to delete plan adherence ${m.id}', result.error);
+          return result;
+        }
       }
-    }, context: 'deleteByStudent');
+      return Result.success(null);
+    } catch (e) {
+      _logger.w(
+          'Failed to delete plan adherence records for $studentId', e);
+      return Result.failure(e.toString());
+    }
   }
 }

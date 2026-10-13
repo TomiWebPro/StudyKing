@@ -357,11 +357,12 @@ void main() {
       expect(result.isFailure, isTrue);
     });
 
-    test('create does not throw when box throws (caught by base)', () async {
+    test('create returns failure when box throws', () async {
       final repo = PlanAdherenceRepository();
       repo.attachBox(_ThrowingAdherenceBox());
       final model = createTestAdherence();
-      await repo.create(model);
+      final result = await repo.create(model);
+      expect(result.isFailure, isTrue);
     });
 
     test('get returns failure when box throws', () async {
@@ -415,6 +416,14 @@ void main() {
       final result = await repo.deleteByStudent('test');
       expect(result.isFailure, isTrue);
     });
+
+    test('deleteByStudent propagates a failed delete', () async {
+      final repo = PlanAdherenceRepository();
+      repo.attachBox(
+          _DeleteFailingAdherenceBox(createTestAdherence(id: 'a1')));
+      final result = await repo.deleteByStudent('student-1');
+      expect(result.isFailure, isTrue);
+    });
   });
 
   group('PlanAdherenceRepository (init with real Hive)', () {
@@ -440,7 +449,8 @@ void main() {
 
     test('init opens box and supports CRUD', () async {
       final model = createTestAdherence(id: 'hive-1');
-      await repository.create(model);
+      final createResult = await repository.create(model);
+      expect(createResult.isSuccess, isTrue);
       final stored = await repository.get('hive-1');
       expect(stored.data, isNotNull);
       expect(stored.data!.adherenceScore, 0.8);
@@ -512,7 +522,8 @@ void main() {
       await repository.create(createTestAdherence(id: 'ds1', studentId: 's1'));
       await repository.create(createTestAdherence(id: 'ds2', studentId: 's1'));
       await repository.create(createTestAdherence(id: 'ds3', studentId: 's2'));
-      await repository.deleteByStudent('s1');
+      final result = await repository.deleteByStudent('s1');
+      expect(result.isSuccess, isTrue);
       expect((await repository.get('ds1')).data, isNull);
       expect((await repository.get('ds2')).data, isNull);
       expect((await repository.get('ds3')).data, isNotNull);
@@ -572,5 +583,24 @@ class _ThrowingAdherenceBox implements Box<PlanAdherenceModel> {
   @override
   dynamic noSuchMethod(Invocation invocation) {
     throw Exception('Simulated Hive error');
+  }
+}
+
+/// A box whose reads work but whose [delete] throws, to verify that
+/// [PlanAdherenceRepository.deleteByStudent] propagates a failed
+/// delete instead of masking it as success.
+class _DeleteFailingAdherenceBox implements Box<PlanAdherenceModel> {
+  final PlanAdherenceModel model;
+  _DeleteFailingAdherenceBox(this.model);
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) {
+    if (invocation.memberName == #delete) {
+      throw Exception('Simulated Hive delete error');
+    }
+    if (invocation.memberName == #values) {
+      return <PlanAdherenceModel>[model];
+    }
+    return null;
   }
 }
