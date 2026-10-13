@@ -855,6 +855,28 @@ class DocumentExtractor {
     }
   }
 
+  /// Compares OOXML part files (e.g. `slide2.xml` vs `slide10.xml`)
+  /// by the trailing number in their name so archives with 10+
+  /// parts are processed in their intended order. Plain string
+  /// comparison is lexicographic and sorts `slide10.xml`
+  /// before `slide2.xml`.
+  static int _comparePartNames(ArchiveFile a, ArchiveFile b) {
+    final aNumber = _trailingPartNumber(a.name);
+    final bNumber = _trailingPartNumber(b.name);
+    if (aNumber != null && bNumber != null && aNumber != bNumber) {
+      return aNumber.compareTo(bNumber);
+    }
+    return a.name.compareTo(b.name);
+  }
+
+  /// The number at the end of an OOXML part name
+  /// (`ppt/slides/slide10.xml` → 10), or null when the name does
+  /// not end with a number.
+  static int? _trailingPartNumber(String name) {
+    final match = RegExp(r'(\d+)(?=[^/]*$)').firstMatch(name);
+    return match != null ? int.parse(match.group(1)!) : null;
+  }
+
   String _extractXlsx(Archive archive) {
     String readFile(Archive archive, String path) {
       final file = archive.files.firstWhere(
@@ -881,7 +903,7 @@ class DocumentExtractor {
       final sheetFiles = archive.files
           .where((f) => f.name.startsWith('xl/worksheets/sheet') && f.name.endsWith('.xml'))
           .toList()
-        ..sort((a, b) => a.name.compareTo(b.name));
+        ..sort(_comparePartNames);
 
       for (final sheetFile in sheetFiles) {
         final sheetXml = utf8.decode(sheetFile.content);
@@ -955,7 +977,7 @@ class DocumentExtractor {
     final slideFiles = archive.files
         .where((f) => f.name.startsWith('ppt/slides/slide') && f.name.endsWith('.xml'))
         .toList()
-      ..sort((a, b) => a.name.compareTo(b.name));
+      ..sort(_comparePartNames);
 
     for (final slideFile in slideFiles) {
       final xmlContent = utf8.decode(slideFile.content);

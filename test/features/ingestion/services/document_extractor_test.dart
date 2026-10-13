@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:io';
+
+import 'package:archive/archive.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
@@ -192,6 +196,80 @@ void main() {
       expect(meta.title, 'Page Title');
       expect(meta.description, 'A description');
       expect(meta.siteName, 'Site');
+    });
+  });
+
+  group('DocumentExtractor OOXML part ordering', () {
+    Archive archiveWithParts(String prefix, int count, String Function(int i) xmlFor) {
+      final archive = Archive();
+      for (var i = 1; i <= count; i++) {
+        final xml = xmlFor(i);
+        archive.addFile(
+          ArchiveFile('$prefix$i.xml', xml.length, utf8.encode(xml)),
+        );
+      }
+      return archive;
+    }
+
+    Future<String> extractZipFromTemp(
+      Archive archive,
+      String fileName,
+    ) async {
+      final dir = await Directory.systemTemp.createTemp('sk_ooxml');
+      try {
+        final path = '${dir.path}/$fileName';
+        final zipBytes = ZipEncoder().encode(archive);
+        expect(zipBytes, isNotNull);
+        await File(path).writeAsBytes(zipBytes!);
+
+        final extractor = buildExtractor(
+          const OcrExtractionResult(text: '', extractionMethod: 'x'),
+        );
+        final result = await extractor.extractText(
+          rawContent: 'file://$path',
+          sourceType: SourceType.document,
+        );
+        return result.text;
+      } finally {
+        await dir.delete(recursive: true);
+      }
+    }
+
+    test('extracts pptx slides in numeric order with 10+ slides', () async {
+      final archive = archiveWithParts(
+        'ppt/slides/slide',
+        12,
+        (i) => '<p:sld xmlns:p="p" xmlns:a="a">'
+            '<p:sp><a:t>SLIDE-${i.toString().padLeft(2, '0')}</a:t></p:sp>'
+            '</p:sld>',
+      );
+
+      final text = await extractZipFromTemp(archive, 'deck.pptx');
+
+      final markers = [
+        for (var i = 1; i <= 12; i++) 'SLIDE-${i.toString().padLeft(2, '0')}',
+      ];
+      var lastIndex = -1;
+      for (final marker in markers) {
+        final index = text.indexOf(marker);
+        expect(index, greaterThan(lastIndex),
+            reason: '$marker is out of order in:\n$text');
+        lastIndex = index;
+      }
+    });
+
+    test('extracts xlsx sheets in numeric order with 10+ sheets', () async {
+      final archive = archiveWithParts(
+        'xl/worksheets/sheet',
+        12,
+        (i) => '<worksheet><sheetData><row><c><v>$i</v></c></row>'
+            '</sheetData></worksheet>',
+      );
+
+      final text = await extractZipFromTemp(archive, 'book.xlsx');
+
+      final lines = text.split('\n').where((l) => l.trim().isNotEmpty).toList();
+      expect(lines, ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12']);
     });
   });
 }
