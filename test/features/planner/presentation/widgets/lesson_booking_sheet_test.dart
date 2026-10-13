@@ -1,9 +1,14 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/features/planner/data/adapters/student_availability_adapter.dart';
+import 'package:studyking/features/planner/data/models/student_availability_model.dart';
 import 'package:studyking/features/planner/presentation/widgets/lesson_booking_sheet.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -41,6 +46,26 @@ Future<void> _showSheet(WidgetTester tester, LessonBookingSheet sheet,
 
 void main() {
   group('LessonBookingSheet', () {
+    setUpAll(() {
+      Hive.init(
+        Directory.systemTemp.createTempSync('lesson_booking_').path,
+      );
+      if (!Hive.isAdapterRegistered(
+        StudentAvailabilityModelAdapter().typeId,
+      )) {
+        Hive.registerAdapter(StudentAvailabilityModelAdapter());
+      }
+    });
+
+    setUp(() async {
+      // Start each test with an empty availability box so a record
+      // written by one test cannot leak into another.
+      final box = await Hive.openBox<StudentAvailabilityModel>(
+        HiveBoxNames.studentAvailability,
+      );
+      await box.clear();
+    });
+
     testWidgets('renders title and topic title', (tester) async {
       await _showSheet(tester, const LessonBookingSheet(
         topicId: 'topic-1',
@@ -563,6 +588,168 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 300));
 
+        expect(tester.takeException(), isNull);
+      },
+    );
+
+    testWidgets(
+      'reschedule keeps the lesson time and duration despite saved availability defaults',
+      (tester) async {
+        // The box is opened in setUp (normal zone); seeding a
+        // record is real I/O, so it must run via runAsync —
+        // real I/O events never fire inside a testWidgets body.
+        final box = Hive.box<StudentAvailabilityModel>(
+          HiveBoxNames.studentAvailability,
+        );
+        // Availability defaults differ from the lesson's scheduled
+        // time (3:00 PM) and duration (45 minutes).
+        await tester.runAsync(
+          () => box.put(
+            'test',
+            StudentAvailabilityModel(
+              studentId: 'test',
+              preferredStartHour: 8,
+              defaultSessionDurationMinutes: 90,
+            ),
+          ),
+        );
+
+        DateTime? scheduledAt;
+        int? scheduledDuration;
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => MediaQuery(
+                      data: const MediaQueryData(size: Size(400, 800)),
+                      child: LessonBookingSheet(
+                        topicId: 'topic-1',
+                        topicTitle: 'Algebra Basics',
+                        subjectId: 'subj-1',
+                        plannerService:
+                            _FakeConflictPlannerService(conflictResult: false),
+                        initialDate: DateTime(2026, 1, 10, 15, 0),
+                        initialDuration: 45,
+                        excludeSessionId: 'session-1',
+                        onSchedule: (time, duration) async {
+                          scheduledAt = time;
+                          scheduledDuration = duration;
+                        },
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ));
+
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        // _loadAvailability only reads the already-open box
+        // in memory, so its microtasks are flushed by pump
+        // and the rebuilt values are shown.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // The lesson's scheduled time (3:00 PM) and duration (45
+        // minutes) win over the availability defaults (8:00 AM /
+        // 90 minutes) on the reschedule path.
+        expect(find.text('3:00 PM'), findsOneWidget);
+        expect(find.text('8:00 AM'), findsNothing);
+        expect(find.text('45 minutes'), findsOneWidget);
+        expect(find.text('90 minutes'), findsNothing);
+
+        // Confirming the reschedule writes the lesson's own values,
+        // not the availability defaults.
+        await tester.tap(find.text('Schedule Lesson').last);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        expect(find.text('Reschedule lesson'), findsOneWidget);
+        await tester.tap(find.widgetWithText(FilledButton, 'Confirm'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        await tester.pump();
+
+        expect(scheduledAt, DateTime(2026, 1, 10, 15, 0));
+        expect(scheduledDuration, 45);
+      },
+    );
+
+    testWidgets(
+      'new booking applies saved availability defaults without crashing',
+      (tester) async {
+        // The box is opened in setUp (normal zone); seeding a
+        // record is real I/O, so it must run via runAsync —
+        // real I/O events never fire inside a testWidgets body.
+        final box = Hive.box<StudentAvailabilityModel>(
+          HiveBoxNames.studentAvailability,
+        );
+        await tester.runAsync(
+          () => box.put(
+            'test',
+            StudentAvailabilityModel(
+              studentId: 'test',
+              preferredStartHour: 8,
+              defaultSessionDurationMinutes: 90,
+            ),
+          ),
+        );
+
+        await tester.pumpWidget(MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('en'),
+          home: Scaffold(
+            body: Center(
+              child: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () => showModalBottomSheet(
+                    context: context,
+                    isScrollControlled: true,
+                    builder: (_) => MediaQuery(
+                      data: const MediaQueryData(size: Size(400, 800)),
+                      child: LessonBookingSheet(
+                        topicId: 'topic-1',
+                        topicTitle: 'Algebra Basics',
+                        subjectId: 'subj-1',
+                        plannerService:
+                            _FakeConflictPlannerService(conflictResult: false),
+                        onSchedule: _fakeSchedule,
+                      ),
+                    ),
+                  ),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ));
+
+        await tester.tap(find.text('Open'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+        // _loadAvailability only reads the already-open box
+        // in memory, so its microtasks are flushed by pump
+        // and the rebuilt values are shown.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Availability defaults are applied for a new booking: the
+        // preferred start hour (8:00 AM) and default duration (90
+        // minutes) are shown, and no LateInitializationError is
+        // thrown when updating the (mutable) selected time.
+        expect(find.text('8:00 AM'), findsOneWidget);
+        expect(find.text('90 minutes'), findsOneWidget);
         expect(tester.takeException(), isNull);
       },
     );

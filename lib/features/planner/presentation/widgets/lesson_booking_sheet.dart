@@ -39,7 +39,9 @@ class LessonBookingSheet extends StatefulWidget {
 
 class _LessonBookingSheetState extends State<LessonBookingSheet> {
   static final Logger _logger = const Logger('LessonBookingSheet');
-  late final TimeOfDay _selectedTime;
+  // Mutable: availability defaults (new bookings) and the time picker
+  // both update it after initState, so it cannot be `late final`.
+  late TimeOfDay _selectedTime;
   late final DateTime _selectedDate;
   int _durationMinutes = 30;
   bool _isScheduling = false;
@@ -81,11 +83,19 @@ class _LessonBookingSheetState extends State<LessonBookingSheet> {
       final availability = availabilityResult.data;
       if (availability != null && mounted) {
         setState(() {
-          _selectedTime = TimeOfDay(
-            hour: availability.preferredStartHour,
-            minute: 0,
-          );
-          _durationMinutes = availability.defaultSessionDurationMinutes;
+          // Availability defaults apply only to new bookings. On the
+          // reschedule path the lesson's own time/duration (passed via
+          // initialDate/initialDuration) must win, so never overwrite a
+          // value the caller explicitly provided.
+          if (widget.initialDate == null) {
+            _selectedTime = TimeOfDay(
+              hour: availability.preferredStartHour,
+              minute: 0,
+            );
+          }
+          if (widget.initialDuration == null) {
+            _durationMinutes = availability.defaultSessionDurationMinutes;
+          }
         });
       }
     } catch (e) {
