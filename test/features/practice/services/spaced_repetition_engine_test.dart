@@ -192,6 +192,51 @@ void main() {
       expect(result.updatedData.repetitions, 0);
       expect(result.updatedData.previousInterval, isNull);
     });
+
+    test('a 7-calendar-day window spanning a spring-forward seeds the strong branch',
+        () {
+      final reviewTime = DateTime(2026, 3, 27, 12, 0);
+      // 7 calendar days later at 11:00 — 167 elapsed
+      // hours (one 23h DST day inside the window).
+      final result = engine.migrateFromLegacy(
+        questionId: 'q1',
+        legacyNextReview: DateTime(2026, 4, 3, 11, 0),
+        legacyLastReview: reviewTime.subtract(const Duration(days: 2)),
+        totalAttempts: 3,
+        accuracy: 0.9,
+        now: reviewTime,
+      );
+      // >= 7 calendar-day branch: repetitions max(3, 3),
+      // ease 2.5, 7-day interval, next review 7 days out.
+      expect(result.updatedData.repetitions, 3);
+      expect(result.updatedData.easeFactor, 2.5);
+      expect(result.updatedData.previousInterval,
+          const Duration(days: 7));
+      expect(result.nextReview,
+          reviewTime.add(const Duration(days: 7)));
+    });
+
+    test('a 1-calendar-day window spanning a spring-forward seeds the 1-day branch',
+        () {
+      final reviewTime = DateTime(2026, 3, 27, 12, 0);
+      // 1 calendar day later at 11:00 — 23 elapsed hours.
+      final result = engine.migrateFromLegacy(
+        questionId: 'q1',
+        legacyNextReview: DateTime(2026, 3, 28, 11, 0),
+        legacyLastReview: reviewTime.subtract(const Duration(days: 2)),
+        totalAttempts: 3,
+        accuracy: 0.9,
+        now: reviewTime,
+      );
+      // >= 1 calendar-day branch: repetitions max(1, 3 ~/ 3),
+      // ease 2.0, 1-day interval, next review 1 day out.
+      expect(result.updatedData.repetitions, 1);
+      expect(result.updatedData.easeFactor, 2.0);
+      expect(result.updatedData.previousInterval,
+          const Duration(days: 1));
+      expect(result.nextReview,
+          reviewTime.add(const Duration(days: 1)));
+    });
   });
 
   group('ReviewLogEntry serialization', () {

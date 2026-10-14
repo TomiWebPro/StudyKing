@@ -1,5 +1,16 @@
 import 'dart:math';
 
+/// Calendar-day difference `a - b` in whole days. Both
+/// arguments are local timestamps; the computation is done
+/// on UTC-normalized dates so a DST transition (a 23h or
+/// 25h calendar day) cannot shift the result the way
+/// elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
+
 class ReviewLogEntry {
   final String questionId;
   final DateTime timestamp;
@@ -161,8 +172,12 @@ class SpacedRepetitionEngine {
     Duration? initialInterval;
 
     if (legacyNextReview != null && legacyNextReview.isAfter(reviewTime)) {
+      // Calendar-day count: elapsed-time `difference().inDays`
+      // truncates a 23h/25h DST day, so a window spanning a
+      // spring-forward transition counts one day short and
+      // seeds the wrong SM-2 branch (and interval).
       final daysUntilReview =
-          legacyNextReview.difference(reviewTime).inDays;
+          _calendarDayDiff(legacyNextReview, reviewTime);
       if (daysUntilReview >= 7) {
         initialRepetitions = max(3, totalAttempts);
         initialEaseFactor = 2.5;
