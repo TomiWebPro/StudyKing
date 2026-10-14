@@ -124,6 +124,28 @@ void main() {
       expect(meter.getRecords(), hasLength(1));
     });
 
+    test('rapid successive recordUsage calls all persist for the next session',
+        () async {
+      for (var i = 0; i < 20; i++) {
+        meter.recordUsage(
+          id: 'burst-$i',
+          feature: 'chat',
+          modelId: 'gpt-4',
+          inputTokens: 1,
+          outputTokens: 1,
+        );
+      }
+      // Saves are fire-and-forget; wait for the ordered
+      // write chain to finish before reloading from the box.
+      await meter.persistenceComplete;
+
+      final reloaded = LlmUsageMeter();
+      await reloaded.init();
+      expect(reloaded.getRecords().length, 20);
+      final ids = reloaded.getRecords().map((r) => r.id).toSet();
+      expect(ids, containsAll(['burst-0', 'burst-10', 'burst-19']));
+    });
+
     test('recordUsage stores unsuccessful record', () {
       meter.recordUsage(
         id: 'r1',

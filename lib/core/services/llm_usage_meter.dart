@@ -1,5 +1,7 @@
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/settings/data/models/settings_model.dart';
 
 class LlmUsageRecord {
@@ -57,8 +59,13 @@ class LlmUsageRecord {
 }
 
 class LlmUsageMeter {
+  static final Logger _logger = const Logger('LlmUsageMeter');
+
   final List<LlmUsageRecord> _records = [];
   Box? _box;
+  // Trailing save future: serializes box writes so overlapping
+  // mutations cannot interleave their clear/put sequences.
+  Future<void> _saveChain = Future<void>.value();
 
   Future<void> init() async {
     _box = await Hive.openBox(HiveBoxNames.llmUsageRecords);
@@ -76,14 +83,33 @@ class LlmUsageMeter {
     }
   }
 
-  void _saveToBox() {
+  Future<void> _saveToBox() async {
     final box = _box;
     if (box == null || !box.isOpen) return;
-    box.clear();
-    for (final record in _records) {
-      box.put(record.id, record.toJson());
+    try {
+      // The clear must fully complete before the puts start. Firing
+      // both unawaited lets Hive's async keystore updates interleave,
+      // which nondeterministically either drops the just-written
+      // records or leaves stale ones behind for the next init().
+      await box.clear();
+      for (final record in _records) {
+        await box.put(record.id, record.toJson());
+      }
+    } catch (e) {
+      _logger.w('Failed to persist usage records to box', e);
     }
   }
+
+  /// Schedules an ordered box save. Saves run one after another, each
+  /// writing the full current state, so rapid successive mutations
+  /// coalesce without ever interleaving their writes.
+  void _persist() {
+    _saveChain = _saveChain.then((_) => _saveToBox());
+  }
+
+  /// Completes once every save scheduled so far has finished.
+  @visibleForTesting
+  Future<void> get persistenceComplete => _saveChain;
 
   LlmUsageRecord recordUsage({
     required String id,
@@ -111,7 +137,7 @@ class LlmUsageMeter {
     if (_records.length > 1000) {
       _records.removeAt(0);
     }
-    _saveToBox();
+    _persist();
     return record;
   }
 

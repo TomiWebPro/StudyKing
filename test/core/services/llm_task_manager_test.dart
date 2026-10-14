@@ -153,6 +153,25 @@ void main() {
       expect(manager.tasks.first.status, LlmTaskStatus.queued);
     });
 
+    test('rapid successive mutations persist the final task set', () async {
+      for (var i = 0; i < 20; i++) {
+        final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+        manager.startTask(taskId);
+        manager.completeTask(taskId, tokensUsed: i + 1);
+      }
+      // Saves are fire-and-forget; wait for the ordered
+      // write chain to finish before reloading from the box.
+      await manager.persistenceComplete;
+
+      final reloaded = LlmTaskManager();
+      await reloaded.init();
+      expect(reloaded.tasks.length, 20);
+      expect(
+        reloaded.tasks.where((t) => t.status == LlmTaskStatus.done).length,
+        20,
+      );
+    });
+
     test('startTask updates status to running', () {
       final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
       manager.startTask(taskId);

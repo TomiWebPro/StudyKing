@@ -3,6 +3,7 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:http/http.dart' as http;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/llm_response_cache.dart';
@@ -64,6 +65,15 @@ void main() {
   setUpAll(() {
     hivePath = Directory.systemTemp.createTempSync('llm_chat_test_').path;
     Hive.init(hivePath);
+  });
+
+  // These boxes are shared process-wide (see flutter_test_config.dart),
+  // so clear them before every test to keep each meter/manager fresh.
+  setUp(() async {
+    final usageBox = await Hive.openBox(HiveBoxNames.llmUsageRecords);
+    await usageBox.clear();
+    final tasksBox = await Hive.openBox(HiveBoxNames.llmTasks);
+    await tasksBox.clear();
   });
 
   group('LlmConfiguration', () {

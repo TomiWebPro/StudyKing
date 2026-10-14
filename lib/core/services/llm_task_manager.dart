@@ -1,8 +1,10 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:hive_flutter/hive_flutter.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import '../data/hive_box_names.dart';
 import '../theme/llm_task_status.dart';
+import '../utils/logger.dart';
 export '../theme/llm_task_status.dart';
 
 class LlmTask {
@@ -91,9 +93,14 @@ class LlmTask {
 }
 
 class LlmTaskManager {
+  static final Logger _logger = const Logger('LlmTaskManager');
+
   final List<LlmTask> _tasks = [];
   int _counter = 0;
   Box? _box;
+  // Trailing save future: serializes box writes so overlapping
+  // mutations cannot interleave their clear/put sequences.
+  Future<void> _saveChain = Future<void>.value();
 
   List<LlmTask> get tasks => List.unmodifiable(_tasks);
 
@@ -123,14 +130,33 @@ class LlmTaskManager {
     }
   }
 
-  void _saveToBox() {
+  Future<void> _saveToBox() async {
     final box = _box;
     if (box == null || !box.isOpen) return;
-    box.clear();
-    for (final task in _tasks) {
-      box.put(task.id, task.toJson());
+    try {
+      // The clear must fully complete before the puts start. Firing
+      // both unawaited lets Hive's async keystore updates interleave,
+      // which nondeterministically either drops the just-written
+      // tasks or leaves stale ones behind for the next init().
+      await box.clear();
+      for (final task in _tasks) {
+        await box.put(task.id, task.toJson());
+      }
+    } catch (e) {
+      _logger.w('Failed to persist LLM tasks to box', e);
     }
   }
+
+  /// Schedules an ordered box save. Saves run one after another, each
+  /// writing the full current state, so rapid successive mutations
+  /// coalesce without ever interleaving their writes.
+  void _persist() {
+    _saveChain = _saveChain.then((_) => _saveToBox());
+  }
+
+  /// Completes once every save scheduled so far has finished.
+  @visibleForTesting
+  Future<void> get persistenceComplete => _saveChain;
 
   String createTask({
     required String feature,
@@ -148,7 +174,7 @@ class LlmTaskManager {
     if (_tasks.length > 1000) {
       _tasks.removeRange(0, _tasks.length - 1000);
     }
-    _saveToBox();
+    _persist();
     _notify();
     return id;
   }
@@ -159,7 +185,7 @@ class LlmTaskManager {
     _tasks[idx] = _tasks[idx].copyWith(
       status: LlmTaskStatus.running,
     );
-    _saveToBox();
+    _persist();
     _notify();
   }
 
@@ -172,7 +198,7 @@ class LlmTaskManager {
       tokensUsed: tokensUsed,
       estimatedCost: estimatedCost,
     );
-    _saveToBox();
+    _persist();
     _notify();
   }
 
@@ -184,7 +210,7 @@ class LlmTaskManager {
       endTime: DateTime.now(),
       error: error,
     );
-    _saveToBox();
+    _persist();
     _notify();
     onTaskFailed?.call(_tasks[idx].feature, error);
   }
@@ -199,7 +225,7 @@ class LlmTaskManager {
         status: LlmTaskStatus.cancelled,
         endTime: DateTime.now(),
       );
-      _saveToBox();
+      _persist();
       _notify();
     }
   }
