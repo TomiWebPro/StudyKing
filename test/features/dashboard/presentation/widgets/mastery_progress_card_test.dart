@@ -224,6 +224,88 @@ void main() {
       expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
     });
 
+    group('DST calendar-day arithmetic', () {
+      testWidgets('stale badge counts calendar days, not elapsed 24h '
+          'periods, across a spring-forward-like 49h span', (tester) async {
+        // Fri 2026-03-27 23:00 -> Mon 2026-03-30 01:00 spans a
+        // spring-forward (a 23h calendar day): 49 elapsed hours
+        // but 3 calendar days. Elapsed-time inDays truncates to 2,
+        // so the >= 3 staleness badge would be suppressed for a
+        // full day and the user-facing count would read "2 days ago".
+        await tester.pumpWidget(_buildTestApp(
+          MasteryProgressCard(
+            asOf: DateTime(2026, 3, 30, 1),
+            snapshot: MasterySnapshot(
+              totalTopics: 5,
+              masteredTopics: 2,
+              weakTopics: 1,
+              averageAccuracy: 0.6,
+              avgReadiness: 0.5,
+              lastUpdated: DateTime(2026, 3, 27, 23),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('3 days ago'), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+      });
+
+      testWidgets('stale badge counts calendar days across a '
+          'fall-back-like 51h span', (tester) async {
+        // Fri 2026-10-23 23:00 -> Mon 2026-10-26 01:00 spans a
+        // fall-back (a 25h calendar day): 51 elapsed hours but
+        // 3 calendar days. Elapsed-time inDays truncates to 2 and
+        // the >= 3 staleness badge would be suppressed.
+        await tester.pumpWidget(_buildTestApp(
+          MasteryProgressCard(
+            asOf: DateTime(2026, 10, 26, 1),
+            snapshot: MasterySnapshot(
+              totalTopics: 5,
+              masteredTopics: 2,
+              weakTopics: 1,
+              averageAccuracy: 0.6,
+              avgReadiness: 0.5,
+              lastUpdated: DateTime(2026, 10, 23, 23),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('3 days ago'), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+      });
+
+      testWidgets('warning severity counts calendar days, not elapsed '
+          '24h periods, across a spring-forward-like 167h span', (tester) async {
+        // Mon 2026-03-23 23:00 -> Mon 2026-03-30 23:00 spans a
+        // spring-forward: 167 elapsed hours but 7 calendar days.
+        // Elapsed-time inDays truncates to 6, so the badge would
+        // stay at info severity instead of escalating to the
+        // warning for a full day.
+        await tester.pumpWidget(_buildTestApp(
+          MasteryProgressCard(
+            asOf: DateTime(2026, 3, 30, 23),
+            snapshot: MasterySnapshot(
+              totalTopics: 5,
+              masteredTopics: 2,
+              weakTopics: 1,
+              averageAccuracy: 0.6,
+              avgReadiness: 0.5,
+              lastUpdated: DateTime(2026, 3, 23, 23),
+            ),
+          ),
+        ));
+        await tester.pumpAndSettle();
+
+        expect(find.text('7 days ago'), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.info_outline), findsNothing);
+      });
+    });
+
     testWidgets('shows weak topics stat label', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         MasteryProgressCard(snapshot: MasterySnapshot(

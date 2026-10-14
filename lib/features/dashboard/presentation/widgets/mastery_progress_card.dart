@@ -5,8 +5,24 @@ import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+/// Calendar-day difference `a - b` in whole days. Both
+/// arguments are local timestamps; the computation is done
+/// on UTC-normalized dates so a DST transition (a 23h or
+/// 25h calendar day) cannot shift the result the way
+/// elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
+
 class MasteryProgressCard extends StatelessWidget {
   final MasterySnapshot? snapshot;
+
+  /// Anchor for the days-since-update computation; defaults
+  /// to `DateTime.now()`. Injectable so tests can pin a date
+  /// across a DST transition (same seam as WeeklyChart).
+  final DateTime? asOf;
 
   /// When provided, the card scopes its stats to this per-syllabus mastery
   /// (multi-syllabus support) instead of the overall snapshot. The
@@ -17,6 +33,7 @@ class MasteryProgressCard extends StatelessWidget {
   const MasteryProgressCard({
     super.key,
     this.snapshot,
+    this.asOf,
     this.syllabusMastery,
     this.subjectTitle,
   });
@@ -52,8 +69,13 @@ class MasteryProgressCard extends StatelessWidget {
     final masteryPercent = totalTopics > 0 ? masteredTopics / totalTopics : 0.0;
 
     final lastUpdated = data.lastUpdated;
+    // Calendar-day arithmetic, not elapsed 24h periods:
+    // across a DST transition a calendar day is 23h/25h, so
+    // `difference().inDays` truncates the count (a 3-calendar-day
+    // gap computes as 2) and the staleness badge and the
+    // "N days ago" label fire a day late.
     final daysSinceUpdate = lastUpdated != null
-        ? DateTime.now().difference(lastUpdated).inDays
+        ? _calendarDayDiff(asOf ?? DateTime.now(), lastUpdated)
         : -1;
 
     if (filtered && masteryStates.isEmpty) {
