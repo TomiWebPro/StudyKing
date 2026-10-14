@@ -43,6 +43,43 @@ import 'package:studyking/core/services/prerequisite_check_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/widgets/widgets.dart';
 
+/// Consecutive days with practice activity ending on [now]'s
+/// calendar day (today counts as day 0, so a streak of 1
+/// means "only today").
+///
+/// Activity is a completed [Session] or a [MasteryState]
+/// attempt on the same calendar day. Candidate days are built
+/// with calendar arithmetic: `today.subtract(Duration(days: i))`
+/// is an absolute 24h×i span that lands on 23:00 (spring-forward)
+/// or 01:00 (fall-back) of the *previous* calendar day when the
+/// span contains a DST transition, so the transition day is never
+/// tested and every older day is tested one day early. Constructing
+/// the date directly (the local DateTime constructor normalizes day
+/// overflow) keeps every candidate on the intended calendar day in
+/// every timezone. Same class as the fixed
+/// `SessionRepository.getConsecutiveStudyDays` and
+/// `adherenceSummaryProvider` walks.
+int computePracticeStreak({
+  required DateTime now,
+  required List<Session> sessions,
+  required List<MasteryState> allMastery,
+}) {
+  final today = now.dateOnly;
+  int streak = 0;
+  for (var i = 0; i < 365; i++) {
+    final day = DateTime(today.year, today.month, today.day - i);
+    final hasActivity = sessions.any((s) =>
+            s.startTime.isSameDay(day) && s.completed) ||
+        (allMastery.any((ms) => ms.lastAttempt.isSameDay(day)));
+    if (hasActivity) {
+      streak++;
+    } else {
+      break;
+    }
+  }
+  return streak;
+}
+
 
 class PracticeScreen extends ConsumerStatefulWidget {
   const PracticeScreen({super.key});
@@ -198,7 +235,7 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
 
       final allMasteryResult =
           await ref.read(masteryGraphServiceProvider).getAllTopicMastery(studentId);
-      final allMastery = allMasteryResult.data ?? [];
+      final allMastery = allMasteryResult.data ?? <MasteryState>[];
       int weak = 0, medium = 0, strong = 0;
       for (final ms in allMastery) {
         switch (ms.masteryLevel) {
@@ -214,21 +251,13 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
       }
 
       final sessionsResult = await _sessionRepo.getByStudent(studentId);
-      final sessions = sessionsResult.data ?? [];
+      final sessions = sessionsResult.data ?? <Session>[];
       final now = DateTime.now();
-      final today = now.dateOnly;
-      int streak = 0;
-      for (var i = 0; i < 365; i++) {
-        final day = today.subtract(Duration(days: i));
-        final hasActivity = sessions.any((s) =>
-            s.startTime.isSameDay(day) && s.completed) ||
-            (allMastery.any((ms) => ms.lastAttempt.isSameDay(day)));
-        if (hasActivity) {
-          streak++;
-        } else {
-          break;
-        }
-      }
+      final streak = computePracticeStreak(
+        now: now,
+        sessions: sessions,
+        allMastery: allMastery,
+      );
 
       final recentSessions = sessions
           .where((s) => s.completed && s.endTime != null)
