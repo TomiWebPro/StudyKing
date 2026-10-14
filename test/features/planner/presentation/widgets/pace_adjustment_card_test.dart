@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:intl/intl.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
@@ -12,6 +13,16 @@ import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/planner/presentation/widgets/pace_adjustment_card.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
+
+/// True when the local zone observes the 2026-03-08 US
+/// spring-forward (a 23h day), e.g. America/New_York. The
+/// estimated-finish DST regression below can only reproduce the
+/// elapsed-time date-skipping under such a zone; in zones without
+/// that transition it is skipped.
+bool _zoneObserves2026UsSpringForward() {
+  return DateTime(2026, 3, 9).difference(DateTime(2026, 3, 8)) ==
+      const Duration(hours: 23);
+}
 
 class _FakePlannerService extends PlannerService {
   _FakePlannerService({PersonalLearningPlan? plan})
@@ -231,6 +242,74 @@ void main() {
         find.textContaining('Estimación de finalización'),
         findsOneWidget,
       );
+    });
+
+    testWidgets('estimated finish counts calendar days, not elapsed '
+        '24h periods, across spring-forward', (tester) async {
+      // Regression: _estimateCompletionDate advanced the plan's first
+      // date with elapsed-time `add(Duration(days: n))`. Anchored at
+      // 23:30 on the eve of the 2026-03-08 spring-forward, one elapsed
+      // day crosses the +1h shift and lands on 2026-03-09 00:30 EDT,
+      // skipping the transition day — so a 1-day plan showed a finish
+      // date of March 9 instead of the correct March 8.
+      if (!_zoneObserves2026UsSpringForward()) return;
+
+      final plan = PersonalLearningPlan(
+        studentId: 'student-1',
+        planId: 'plan-dst',
+        generatedAt: DateTime(2026, 3, 7, 23, 30),
+        dailyPlans: [
+          DailyPlan(
+            date: DateTime(2026, 3, 7, 23, 30),
+            dayNumber: 1,
+            priorityTopics: [],
+            reviewQuestionIds: [],
+            stretchGoalQuestionIds: [],
+            targetQuestions: 5,
+            targetMinutes: 60,
+          ),
+        ],
+        summary: PlanSummary(
+          totalQuestions: 5,
+          totalMinutes: 60,
+          newTopics: 1,
+          reviewTopics: 0,
+          estimatedCoverage: 0.5,
+          focusAreas: [],
+        ),
+        recommendations: [],
+        targetMinutesPerDay: 60.0,
+        targetQuestionsPerDay: 5,
+        metadata: {
+          'syllabus_goals': [
+            {
+              'subjectId': 'math',
+              'subjectTitle': 'Math',
+              'targetDays': 1,
+              'targetHoursPerDay': 1,
+            },
+          ],
+        },
+      );
+
+      await tester.pumpWidget(
+        buildApp(const PaceAdjustmentCard(), _FakePlannerService(plan: plan)),
+      );
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(PaceAdjustmentCard)),
+        listen: false,
+      );
+      await container.read(plannerProvider.notifier).loadExistingPlan();
+      await tester.pumpAndSettle();
+
+      // targetMinutesPerDay = 60 -> 1.0 h/day; totalMinutes = 60 ->
+      // daysNeeded = ceil(60 / (1 * 60)) = 1, so the finish is the
+      // calendar day after the 2026-03-07 anchor: 2026-03-08. Under
+      // the old elapsed-time arithmetic it landed on 2026-03-09.
+      final mar8 = DateFormat.yMd('en').format(DateTime(2026, 3, 8));
+      final mar9 = DateFormat.yMd('en').format(DateTime(2026, 3, 9));
+      expect(find.textContaining(mar8), findsOneWidget);
+      expect(find.textContaining(mar9), findsNothing);
     });
 
     testWidgets('dragging a per-subject slider updates that subject goal, '

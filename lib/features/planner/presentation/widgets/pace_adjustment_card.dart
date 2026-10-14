@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import '../../../../../l10n/generated/app_localizations.dart';
@@ -191,7 +192,14 @@ class _PaceAdjustmentCardState extends ConsumerState<PaceAdjustmentCard> {
   DateTime _estimateCompletionDate(DateTime startDate, double hoursPerDay, int totalMinutes) {
     if (hoursPerDay <= 0) return startDate;
     final daysNeeded = (totalMinutes / (hoursPerDay * 60)).ceil();
-    return startDate.add(Duration(days: daysNeeded));
+    // Calendar-day arithmetic, not elapsed 24h Durations: across a DST
+    // transition a local calendar day is 23h/25h, so
+    // `startDate.add(Duration(days: n))` drifts off the calendar day
+    // (skipping spring-forward / repeating fall-back) when the anchor's
+    // time-of-day is late — the same class of bug fixed in the planner
+    // date generation. `addCalendarDays` constructs the wall-clock local
+    // date, normalizing day overflow.
+    return addCalendarDays(startDate, daysNeeded);
   }
 
   void _updateSyllabusHours(SyllabusGoal goal, double newHours) {
