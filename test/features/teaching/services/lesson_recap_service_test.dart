@@ -39,6 +39,7 @@ class FakeLlmService extends LlmService {
 class FakeLessonRecapRepository extends LessonRecapRepository {
   final Map<String, LessonRecapModel> _store = {};
   bool open = true;
+  bool saveShouldFail = false;
 
   @override
   bool get isOpen => open;
@@ -48,6 +49,7 @@ class FakeLessonRecapRepository extends LessonRecapRepository {
 
   @override
   Future<Result<void>> saveRecap(LessonRecapModel recap) async {
+    if (saveShouldFail) return Result.failure('Simulated save failure');
     _store[recap.id] = recap;
     return Result.success(null);
   }
@@ -218,6 +220,23 @@ void main() {
       expect(recap.accuracy, closeTo(0.5, 0.001));
       final stored = await repo.getBySession('sess-1');
       expect(stored.data, isNotNull);
+    });
+
+    test('generateAndStoreRecap returns failure when the fallback save fails after the LLM throws',
+        () async {
+      llm.shouldThrow = true;
+      repo.saveShouldFail = true;
+      final result = await service.generateAndStoreRecap(
+        session: makeSession(asked: 2, correct: 1),
+        messages: makeMessages(),
+      );
+
+      // The LLM transport error triggers the recovered catch path,
+      // but the fallback write also failed, so the failure must
+      // propagate instead of being masked as success.
+      expect(result.isFailure, isTrue);
+      final stored = await repo.getBySession('sess-1');
+      expect(stored.data, isNull);
     });
 
     test('getRecapForLesson returns the stored recap by lessonId', () async {
