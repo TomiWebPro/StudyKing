@@ -27,6 +27,16 @@ import 'package:studyking/features/subjects/data/models/topic_dependency_model.d
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'package:studyking/l10n/generated/app_localizations_es.dart';
 
+/// True when the local zone observes the 2026-03-08 US
+/// spring-forward (a 23h day), e.g. America/New_York. The
+/// DST regression test below can only reproduce the
+/// elapsed-time window bug under such a zone; in zones
+/// without that transition it is skipped.
+bool _zoneObserves2026UsSpringForward() {
+  return DateTime(2026, 3, 9).difference(DateTime(2026, 3, 8)) ==
+      const Duration(hours: 23);
+}
+
 class FakeMasteryGraphService extends MasteryGraphService {
   final MasteryGraphRepository _fakeRepo;
 
@@ -1195,6 +1205,67 @@ void main() {
           expect(saved.dailyPlans[1].targetMinutes, 165); // 120 + 45
           // Day 3 is outside the 2-day redistribution window.
           expect(saved.dailyPlans[2].targetMinutes, 120);
+        });
+
+        test('redistributes over exactly the requested calendar days across a spring-forward',
+            () async {
+          // Regression: the day-window filter compared two
+          // local calendar midnights with elapsed-time
+          // arithmetic. When the span contains a
+          // spring-forward (a 23h day), the elapsed
+          // difference is one hour short of whole days, so
+          // a day at calendar distance redistributeDays + 1
+          // measured as redistributeDays and wrongly
+          // received extra minutes — one day of
+          // over-redistribution.
+          if (!_zoneObserves2026UsSpringForward()) return;
+
+          final today = DateTime(2026, 3, 7);
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: today,
+            dailyPlans: [
+              for (var i = 1; i <= 5; i++)
+                DailyPlan(
+                  date: DateTime(2026, 3, 7 + i), // 03-08 .. 03-12
+                  dayNumber: i,
+                  priorityTopics: [],
+                  reviewQuestionIds: [],
+                  stretchGoalQuestionIds: [],
+                  targetQuestions: 15,
+                  targetMinutes: 30,
+                  focus: 'Study',
+                ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 75, totalMinutes: 150,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+            planDurationDays: 5,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.redistributeMissedWorkload(
+            'student1', 90, plan,
+            strategy: 'days:3',
+            now: today,
+          );
+
+          expect(result.isSuccess, isTrue);
+          final saved = planRepo.storedPlan!;
+          // baseExtraPerDay = ceil(90 / 3) = 30, capped at
+          // ceil(30 * 0.5) = 15 per day: +15 on each of
+          // the three in-window days.
+          expect(saved.dailyPlans[0].targetMinutes, 45); // 2026-03-08
+          expect(saved.dailyPlans[1].targetMinutes, 45); // 2026-03-09
+          expect(saved.dailyPlans[2].targetMinutes, 45); // 2026-03-10
+          // Calendar +4d and +5d are outside the 3-day
+          // window; pre-fix, 2026-03-11 measured as 3
+          // elapsed days and wrongly absorbed +15 minutes.
+          expect(saved.dailyPlans[3].targetMinutes, 30); // 2026-03-11
+          expect(saved.dailyPlans[4].targetMinutes, 30); // 2026-03-12
         });
 
         test('returns success when no future non-rest days remain and student was away', () async {

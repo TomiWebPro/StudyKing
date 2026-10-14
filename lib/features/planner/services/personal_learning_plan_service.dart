@@ -22,6 +22,16 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/services/planner_advisor_strategy.dart';
 
+/// Calendar-day difference `a - b` in whole days. Both
+/// arguments are local calendar midnights; the computation
+/// is done on UTC-normalized dates so a DST transition (a
+/// 23h or 25h calendar day) cannot widen the day window
+/// the way elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
 
 class PlanGenerationConfig {
   final int planDurationDays;
@@ -712,10 +722,10 @@ class PersonalLearningPlanService {
     int missedMinutes,
     PersonalLearningPlan plan, {
     String strategy = 'days:3',
+    DateTime? now,
   }) async {
     try {
-      final now = DateTime.now();
-      final todayStart = now.dateOnly;
+      final todayStart = (now ?? DateTime.now()).dateOnly;
 
       final metadata = plan.metadata ?? {};
       final lastRedistribution = metadata['lastRedistributionDate'] as String?;
@@ -760,7 +770,7 @@ class PersonalLearningPlanService {
       final updatedPlans = plan.dailyPlans.map((day) {
         final dDay = day.date.dateOnly;
         if (dDay.isAfter(todayStart) &&
-            dDay.difference(todayStart).inDays <= redistributeDays &&
+            _calendarDayDiff(dDay, todayStart) <= redistributeDays &&
             !day.isRestDay) {
           // Each day can only absorb up to half of its own target,
           // so the ceiling must be derived per day — taking it from
