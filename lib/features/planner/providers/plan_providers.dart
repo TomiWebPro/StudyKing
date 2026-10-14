@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/time_utils.dart';
-import 'planner_providers.dart' show plannerServiceProvider, activePlanIdProvider;
+import 'planner_providers.dart' show plannerServiceProvider, activePlanIdProvider, clockProvider;
 
 class PlanProgressData {
   final int plannedMinutesToday;
@@ -45,7 +45,7 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
   final plan = planResult.data;
   if (plan == null) return const PlanProgressData();
 
-  final now = DateTime.now();
+  final now = ref.watch(clockProvider).now();
   final todayStart = now.dateOnly;
 
   int plannedMinutesToday = 0;
@@ -73,7 +73,11 @@ final planProgressProvider = FutureProvider<PlanProgressData>((ref) async {
 
   final weeklyProgress = <DailyProgress>[];
   for (var i = 6; i >= 0; i--) {
-    final day = todayStart.subtract(Duration(days: i));
+    // Calendar-day step: `Duration(days: i)` is an absolute
+    // 24h×i span that lands on 23:00/01:00 across a DST
+    // transition and can never equal the calendar midnights
+    // plan days and adherence records are keyed by.
+    final day = DateTime(todayStart.year, todayStart.month, todayStart.day - i);
     var pMin = 0;
     var aMin = 0;
     for (final dp in plan.dailyPlans) {
