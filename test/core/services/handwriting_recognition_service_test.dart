@@ -298,6 +298,72 @@ void main() {
         final combined = service.combineStrokes(strokes);
         expect(combined, hasLength(2));
       });
+
+      test('skips a zero-point stroke between mergeable strokes', () {
+        final strokes = [
+          Stroke(
+            points: [
+              DrawingPoint(point: const Offset(0, 0)),
+              DrawingPoint(point: const Offset(10, 10)),
+            ],
+          ),
+          Stroke(points: []),
+          Stroke(
+            points: [
+              DrawingPoint(point: const Offset(11, 11)),
+              DrawingPoint(point: const Offset(20, 20)),
+            ],
+          ),
+        ];
+        final combined = service.combineStrokes(strokes);
+        // The empty stroke carries no geometry, so the close strokes
+        // either side of it still merge into one.
+        expect(combined, hasLength(1));
+      });
+
+      test('skips a leading zero-point stroke', () {
+        final strokes = [
+          Stroke(points: []),
+          Stroke(
+            points: [
+              DrawingPoint(point: const Offset(0, 0)),
+              DrawingPoint(point: const Offset(10, 10)),
+            ],
+          ),
+        ];
+        final combined = service.combineStrokes(strokes);
+        expect(combined, hasLength(1));
+        expect(combined.first.points, hasLength(2));
+      });
+
+      test('returns empty list for all zero-point strokes', () {
+        final combined = service.combineStrokes([
+          Stroke(points: []),
+          Stroke(points: []),
+        ]);
+        expect(combined, isEmpty);
+      });
+
+      test('keeps far-apart strokes separate around a zero-point stroke',
+          () {
+        final strokes = [
+          Stroke(
+            points: [
+              DrawingPoint(point: const Offset(0, 0)),
+              DrawingPoint(point: const Offset(10, 10)),
+            ],
+          ),
+          Stroke(points: []),
+          Stroke(
+            points: [
+              DrawingPoint(point: const Offset(200, 200)),
+              DrawingPoint(point: const Offset(210, 210)),
+            ],
+          ),
+        ];
+        final combined = service.combineStrokes(strokes);
+        expect(combined, hasLength(2));
+      });
     });
 
     group('dispose', () {

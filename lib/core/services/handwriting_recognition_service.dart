@@ -231,6 +231,12 @@ class HandwritingRecognitionService {
         continue;
       }
 
+      // Zero-point strokes carry no geometry. Every other method in
+      // this class skips strokes with fewer than two points, so a
+      // 0-point stroke is a legal input; merging one would crash on
+      // `points.first`/`points.last` below.
+      if (stroke.points.isEmpty) continue;
+
       if (current == null) {
         current = Stroke(
           points: List<DrawingPoint>.from(stroke.points),
