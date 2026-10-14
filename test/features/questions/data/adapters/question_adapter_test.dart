@@ -96,6 +96,52 @@ void main() {
       await box.close();
     });
 
+    test('write/read round-trip preserves srDataJson', () async {
+      final box = await Hive.openBox<Question>('questions_srdata');
+      final created = DateTime(2026, 5, 12);
+      final srDataJson =
+          '{"repetitions":3,"easeFactor":2.6,"previousInterval":4.0,"lastReview":1747008000000}';
+      final question = Question(
+        id: 'q3',
+        text: 'What is 3+3?',
+        type: QuestionType.singleChoice,
+        difficulty: 2,
+        subjectId: 'sub3',
+        topicId: 'top3',
+        createdAt: created,
+        updatedAt: created,
+        nextReview: created.add(const Duration(days: 4)),
+        srDataJson: srDataJson,
+      );
+
+      await box.put('q3', question);
+      final restored = box.get('q3')!;
+
+      expect(restored.srDataJson, srDataJson);
+      expect(restored.nextReview, created.add(const Duration(days: 4)));
+      await box.close();
+    });
+
+    test('write/read round-trip keeps srDataJson null when unset', () async {
+      final box = await Hive.openBox<Question>('questions_srdata_null');
+      final created = DateTime(2026, 5, 12);
+      final question = Question(
+        id: 'q4',
+        text: 'What is 4+4?',
+        type: QuestionType.singleChoice,
+        subjectId: 'sub4',
+        topicId: 'top4',
+        createdAt: created,
+        updatedAt: created,
+      );
+
+      await box.put('q4', question);
+      final restored = box.get('q4')!;
+
+      expect(restored.srDataJson, isNull);
+      await box.close();
+    });
+
     test('write/read with minimal fields uses defaults', () async {
       final box = await Hive.openBox<Question>('questions_min');
       final created = DateTime(2026, 5, 12);
