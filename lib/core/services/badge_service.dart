@@ -61,7 +61,7 @@ class BadgeService {
       final newlyUnlocked = <BadgeModel>[];
 
       for (final definition in BadgeDefinitions.all) {
-        if (existing.containsKey(definition.id)) continue;
+        if (existing.containsKey('${definition.id}_$studentId')) continue;
 
         if (definition.isSatisfiedBy(stats)) {
           final badge = BadgeModel(
@@ -173,7 +173,7 @@ class BadgeService {
       }
       final existing = existingResult.data!;
       return Result.success(BadgeDefinitions.all
-          .where((d) => !existing.containsKey(d.id))
+          .where((d) => !existing.containsKey('${d.id}_$studentId'))
           .toList());
     } catch (e) {
       _logger.w('getLockedBadges failed', e);

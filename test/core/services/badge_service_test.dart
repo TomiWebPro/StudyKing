@@ -239,6 +239,27 @@ void main() {
         expect(result.data!.first.id, startsWith('first_attempt'));
         expect(mockRepo._badges, hasLength(1));
       });
+
+      test('second call with unchanged stats unlocks nothing and shows no '
+          'second notification', () async {
+        final notif = _FakeNotificationService();
+        final idempotentService = BadgeService(
+          repository: mockRepo,
+          getStats: satisfyingStats,
+          notificationService: notif,
+        );
+
+        final first = await idempotentService.checkAndUnlockBadges('student1');
+        final second = await idempotentService.checkAndUnlockBadges('student1');
+
+        expect(first.isSuccess, isTrue);
+        expect(first.data, hasLength(1));
+        expect(second.isSuccess, isTrue);
+        expect(second.data, isEmpty);
+        expect(notif.unlocked, hasLength(1));
+        expect(mockRepo._badges, hasLength(1));
+        expect(mockRepo._badges.first.id, 'first_attempt_student1');
+      });
     });
 
     group('hasBadge', () {
@@ -311,14 +332,21 @@ void main() {
       });
 
       test('excludes earned badges from locked list', () async {
+        // Seed with the same key format the real repository
+        // produces (BadgeModel.id, i.e. '<definition>_<studentId>').
         mockRepo._badgeMap = {
-          'first_attempt': BadgeModel(
-            id: 'fa_s1', studentId: 's1', name: 'FS', description: 'd',
+          'first_attempt_student1': BadgeModel(
+            id: 'first_attempt_student1',
+            studentId: 'student1', name: 'First Step', description: 'd',
           ),
         };
         final locked = await service.getLockedBadges('student1');
         expect(locked.isSuccess, isTrue);
         expect(locked.data!.length, lessThan(BadgeDefinitions.all.length));
+        expect(
+          locked.data!.any((d) => d.id == 'first_attempt'),
+          isFalse,
+        );
       });
 
       test('propagates failure when getBadgeMap fails', () async {
