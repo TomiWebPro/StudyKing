@@ -1,7 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive/hive.dart';
 import 'package:studyking/core/constants/notification_ids.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/engagement_scheduler.dart';
@@ -9,6 +11,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/planner/data/models/engagement_nudge_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -401,6 +404,18 @@ class _RecordingNotificationService extends NotificationService {
   }
 }
 
+/// Clock stub returning a fixed instant, used to pin the
+/// scheduler's day-count arithmetic to dates around a DST
+/// transition without depending on the test process timezone.
+class _FixedClock implements Clock {
+  final DateTime fixed;
+
+  _FixedClock(this.fixed);
+
+  @override
+  DateTime now() => fixed;
+}
+
 void main() {
   group('EngagementScheduler', () {
     late _FakeNudgeRepository nudgeRepo;
@@ -739,6 +754,139 @@ void main() {
         final result = await scheduler.getRevisionNudges('test-student');
         expect(result.isSuccess, true);
         expect(result.data, isEmpty);
+      });
+    });
+
+    group('getRevisionNudges calendar-day counting', () {
+      EngagementScheduler clockedScheduler(Clock clock) {
+        return EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: masteryService,
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _FakeSessionRepo(),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+          clock: clock,
+        );
+      }
+
+      test('counts calendar days, not elapsed 24h periods, so the nudge is not suppressed across a DST-like boundary',
+          () async {
+        // Fri 2026-03-27 23:00 -> Mon 2026-03-30 01:00 spans the
+        // Europe/Berlin spring-forward (2026-03-29): 3 calendar
+        // days but 49h, i.e. 2 elapsed days. Elapsed-time
+        // `difference().inDays` used to fall below the >= 3 gate
+        // and suppress the revision nudge for a full day.
+        final clock = _FixedClock(DateTime(2026, 3, 30, 1, 0));
+        masteryService.topicsNeedingReview.add(MasteryState(
+          studentId: 'test-student',
+          topicId: 'topic-dst',
+          lastAttempt: DateTime(2026, 3, 27, 23, 0),
+          lastUpdated: DateTime(2026, 3, 27, 23, 0),
+        ));
+
+        final result =
+            await clockedScheduler(clock).getRevisionNudges('test-student');
+
+        expect(result.isSuccess, true);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.nudgeType, 'revision');
+        expect(result.data!.first.topicId, 'topic-dst');
+        // 3 calendar days, not the 2 elapsed days.
+        expect(result.data!.first.message, contains('3 days'));
+        expect(result.data!.first.message, contains('topic-dst'));
+      });
+
+      test('severity is high at 7 calendar days even when only 6 have elapsed',
+          () async {
+        // Mon 2026-03-23 23:00 -> Mon 2026-03-30 01:00: 7 calendar
+        // days but 146h, i.e. 6 elapsed days. The >= 7 severity gate
+        // must see the calendar count.
+        final clock = _FixedClock(DateTime(2026, 3, 30, 1, 0));
+        masteryService.topicsNeedingReview.add(MasteryState(
+          studentId: 'test-student',
+          topicId: 'topic-week',
+          lastAttempt: DateTime(2026, 3, 23, 23, 0),
+          lastUpdated: DateTime(2026, 3, 23, 23, 0),
+        ));
+
+        final result =
+            await clockedScheduler(clock).getRevisionNudges('test-student');
+
+        expect(result.isSuccess, true);
+        expect(result.data, hasLength(1));
+        expect(result.data!.first.severity, 'high');
+      });
+
+      test('no revision nudge before 3 calendar days have passed', () async {
+        // Sat 2026-03-28 23:00 -> Mon 2026-03-30 01:00: 2 calendar
+        // days (1 elapsed). Guards against overcorrecting the count.
+        final clock = _FixedClock(DateTime(2026, 3, 30, 1, 0));
+        masteryService.topicsNeedingReview.add(MasteryState(
+          studentId: 'test-student',
+          topicId: 'topic-recent',
+          lastAttempt: DateTime(2026, 3, 28, 23, 0),
+          lastUpdated: DateTime(2026, 3, 28, 23, 0),
+        ));
+
+        final result =
+            await clockedScheduler(clock).getRevisionNudges('test-student');
+
+        expect(result.isSuccess, true);
+        expect(result.data, isEmpty);
+      });
+    });
+
+    group('welcome-back backfill calendar-day counting', () {
+      test('fires the welcome-back nudge at 2 calendar days missed even when only 1 has elapsed',
+          () async {
+        // The app last ran Sat 2026-03-28 23:00 and is next opened
+        // Mon 2026-03-30 01:00: 2 calendar days missed but 26h,
+        // i.e. 1 elapsed day. Elapsed-time `difference().inDays`
+        // used to fall below the >= 2 gate and suppress the nudge.
+        final clock = _FixedClock(DateTime(2026, 3, 30, 1, 0));
+        final box = Hive.isBoxOpen(HiveBoxNames.settings)
+            ? Hive.box(HiveBoxNames.settings)
+            : await Hive.openBox(HiveBoxNames.settings);
+        await box.put(
+          'scheduler_last_run',
+          DateTime(2026, 3, 28, 23, 0).toIso8601String(),
+        );
+
+        final backfillScheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: NotificationService(),
+          nudgeRepository: nudgeRepo,
+          adherenceRepository: adherenceRepo,
+          planOrchestrator: planOrchestrator,
+          sessionRepository: _FakeSessionRepo(),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+          clock: clock,
+        );
+
+        final result = await backfillScheduler.init();
+
+        expect(result.isSuccess, true);
+        final welcomeBack = nudgeRepo.storedNudges
+            .where((n) => n.nudgeType == 'planAdjustment')
+            .toList();
+        expect(welcomeBack, hasLength(1));
+        // "Welcome back! You've been away for 2 days." — the calendar
+        // count, not the 1 elapsed day.
+        expect(welcomeBack.first.message, contains('2 days'));
       });
     });
 

@@ -5,6 +5,7 @@ import 'package:studyking/core/constants/app_constants.dart';
 import 'package:studyking/core/constants/notification_ids.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import '../utils/logger.dart';
+import '../utils/clock.dart';
 import '../errors/result.dart';
 import '../../l10n/generated/app_localizations.dart';
 import '../services/study_progress_tracker.dart';
@@ -42,6 +43,16 @@ class EngagementSchedulerConfig {
   }
 }
 
+/// Calendar-day difference `a - b` in whole days. Both arguments
+/// are local timestamps; the computation is done on UTC-normalized
+/// dates so a DST transition (a 23h or 25h calendar day) cannot
+/// shift the result the way elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
+
 class EngagementScheduler {
   static final Logger _logger = const Logger('EngagementScheduler');
 
@@ -57,6 +68,7 @@ class EngagementScheduler {
   SettingsBox? _settingsBox;
   final   PlannerService? _plannerService;
   final MentorService? _mentorService;
+  final Clock _clock;
 
   Timer? _dailyTimer;
   Timer? _lessonCheckTimer;
@@ -83,6 +95,7 @@ class EngagementScheduler {
     SettingsBox? settingsBox,
     PlannerService? plannerService,
     MentorService? mentorService,
+    Clock? clock,
   })  :         _tracker = tracker,
         _masteryService = masteryService,
         _notificationService = notificationService ?? NotificationService(),
@@ -94,7 +107,8 @@ class EngagementScheduler {
         _l10n = l10n,
         _settingsBox = settingsBox,
         _plannerService = plannerService,
-        _mentorService = mentorService;
+        _mentorService = mentorService,
+        _clock = clock ?? SystemClock();
 
   Future<Result<void>> updateSettings(SettingsBox settingsBox) async {
     _settingsBox = settingsBox;
@@ -195,10 +209,13 @@ class EngagementScheduler {
       }
       final lastRunStr = schedulerBox.get(schedulerBoxKey) as String?;
       final lastRun = lastRunStr != null ? DateTime.tryParse(lastRunStr) : null;
-      final now = DateTime.now();
+      final now = _clock.now();
 
       if (lastRun != null) {
-        final missedDays = now.difference(lastRun).inDays;
+        // Calendar-day count: elapsed-time `difference().inDays`
+        // truncates a 23h/25h DST day and would undercount the
+        // days the user was away, delaying the welcome-back nudge.
+        final missedDays = _calendarDayDiff(now, lastRun);
         if (missedDays >= 2) {
           final createResult = await _nudgeRepository.create(EngagementNudgeModel(
             id: 'missed_backfill_${now.millisecondsSinceEpoch}_${_config.studentId}',
@@ -560,10 +577,14 @@ class EngagementScheduler {
   Future<Result<List<EngagementNudgeModel>>> getRevisionNudges(String studentId) async {
     try {
       final nudges = <EngagementNudgeModel>[];
+      final now = _clock.now();
       final weakResult = await _masteryService.getTopicsNeedingReview(studentId);
       if (weakResult.isSuccess) {
         for (final state in weakResult.data!) {
-          final daysSince = DateTime.now().difference(state.lastAttempt).inDays;
+          // Calendar-day count: elapsed-time `difference().inDays`
+          // truncates a 23h/25h DST day, so a 3-calendar-day gap
+          // can compute as 2 days and suppress the revision nudge.
+          final daysSince = _calendarDayDiff(now, state.lastAttempt);
           if (daysSince >= 3) {
             nudges.add(EngagementNudgeModel(
               id: 'revision_${DateTime.now().millisecondsSinceEpoch}_$studentId',
