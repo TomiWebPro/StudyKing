@@ -407,5 +407,77 @@ void main() {
       expect(find.text('Archived goal'), findsOneWidget);
       expect(find.text('Not Started'), findsOneWidget);
     });
+
+    testWidgets('editing a roadmap pre-fills remaining days, not total lifetime', (tester) async {
+      final roadmapRepo = FakeRoadmapRepository();
+      final now = DateTime.now();
+      // A 30-day plan created 10 days ago: 20 days remain. The +1h
+      // margin keeps the remaining-day count stable against the
+      // milliseconds between roadmap construction and the dialog's
+      // DateTime.now() read. The old pre-fill (target - createdAt)
+      // showed the 30-day lifetime here instead.
+      final roadmap = RoadmapModel(
+        id: 'rm-edit-days',
+        studentId: 'test-student',
+        goal: 'Learn Spanish',
+        createdAt: now.subtract(const Duration(days: 10)),
+        targetCompletionDate: now.add(const Duration(days: 20, hours: 1)),
+        milestones: [],
+        status: 'active',
+      );
+      await roadmapRepo.saveRoadmap(roadmap);
+
+      await tester.pumpWidget(buildPlannerTestApp(
+        roadmapRepository: roadmapRepo,
+        fixedStudentId: 'test-student',
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Roadmaps'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      final daysField = tester.widget<TextField>(find.byType(TextField).at(1));
+      expect(daysField.controller?.text, '20');
+    });
+
+    testWidgets('editing an overdue roadmap pre-fills zero days', (tester) async {
+      final roadmapRepo = FakeRoadmapRepository();
+      final now = DateTime.now();
+      // Overdue by a day: remaining days are negative and must
+      // clamp to 0, not show the 30-day lifetime (old behavior)
+      // nor a negative number.
+      final roadmap = RoadmapModel(
+        id: 'rm-edit-overdue',
+        studentId: 'test-student',
+        goal: 'Overdue plan',
+        createdAt: now.subtract(const Duration(days: 30)),
+        targetCompletionDate: now.subtract(const Duration(days: 1)),
+        milestones: [],
+        status: 'active',
+      );
+      await roadmapRepo.saveRoadmap(roadmap);
+
+      await tester.pumpWidget(buildPlannerTestApp(
+        roadmapRepository: roadmapRepo,
+        fixedStudentId: 'test-student',
+      ));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Roadmaps'));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byType(PopupMenuButton<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+
+      final daysField = tester.widget<TextField>(find.byType(TextField).at(1));
+      expect(daysField.controller?.text, '0');
+    });
   });
 }

@@ -64,10 +64,19 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
   Future<void> _showCreateRoadmapDialog({RoadmapModel? existing}) async {
     final l10n = AppLocalizations.of(context)!;
     final goalController = TextEditingController(text: existing?.goal ?? '');
+    // The edit dialog's Days field follows updateRoadmap's
+    // "complete in N days from now" semantics, so it must
+    // pre-fill the *remaining* days until the target. The old
+    // pre-fill (target - createdAt) was the roadmap's total
+    // lifetime: it inflated by the roadmap's age after every
+    // update and silently extended the plan when saved unchanged.
+    final remainingDays = existing?.targetCompletionDate
+        ?.difference(DateTime.now())
+        .inDays;
     final daysController = TextEditingController(
-      text: existing != null && existing.targetCompletionDate != null
-          ? '${existing.targetCompletionDate!.difference(existing.createdAt).inDays}'
-          : '30',
+      text: existing == null || remainingDays == null
+          ? '30'
+          : '${remainingDays < 0 ? 0 : remainingDays}',
     );
     var selectedSubjectId = existing?.subjectId ?? '';
     var daysError = '';
