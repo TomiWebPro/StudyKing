@@ -725,6 +725,72 @@ void main() {
     });
   });
 
+  group('SessionAnalyticsWidget - DST transitions', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('day-of-week buckets survive a spring-forward transition',
+        (tester) async {
+      // Europe/Berlin springs forward on Sunday 2026-03-29, so that
+      // calendar day is only 23h long. Elapsed-time subtraction
+      // (`now.subtract(Duration(days: i))`, the pre-fix code) spans
+      // an absolute 24h×i: for asOf 00:30 on Monday 2026-03-30 it
+      // lands on 2026-03-28 23:30 for i=1, so every past weekday
+      // shifted one calendar day early — Sunday 2026-03-29 got no
+      // bucket at all (its sessions vanished from the chart) and
+      // Monday's bar accumulated the out-of-window prior Monday's
+      // sessions. Calendar-day arithmetic keeps every bucket on its
+      // own calendar day. In a timezone without DST (e.g. UTC) this
+      // is a contract test: the same counts must hold.
+      final dstAsOf = DateTime(2026, 3, 30, 0, 30);
+      final sessions = [
+        // Today, Monday 2026-03-30.
+        buildSession(id: 'today', start: dstAsOf, timeSpentMs: 3600000),
+        // The transition day itself, Sunday 2026-03-29.
+        buildSession(
+          id: 'transition-day',
+          start: DateTime(2026, 3, 29, 12, 0),
+          timeSpentMs: 3600000,
+        ),
+        // Saturday 2026-03-28.
+        buildSession(
+          id: 'saturday',
+          start: DateTime(2026, 3, 28, 12, 0),
+          timeSpentMs: 3600000,
+        ),
+        // The Monday before the 7-day window (2026-03-23): must be
+        // excluded from Monday's bar.
+        buildSession(
+          id: 'prior-monday',
+          start: DateTime(2026, 3, 23, 12, 0),
+          timeSpentMs: 3600000,
+        ),
+      ];
+
+      await tester.pumpWidget(buildTestApp(
+        SessionAnalyticsWidget(
+          sessions: sessions,
+          currentStreak: 1,
+          asOf: dstAsOf,
+        ),
+      ));
+      await tester.pump();
+
+      final chart = tester.widget<AnimatedBarChart>(find.byType(AnimatedBarChart));
+      // The transition day (Sunday) keeps its own bucket; the
+      // pre-fix code has no 'Sun' key at all.
+      expect(chart.data['Sun'], 1);
+      // Saturday counts only its own session.
+      expect(chart.data['Sat'], 1);
+      // Monday counts only today's session, not the prior Monday's.
+      expect(chart.data['Mon'], 1);
+    });
+  });
+
   group('SessionAnalyticsWidget - bodySmallColor fallback', () {
     setUp(() {
       final binding = TestWidgetsFlutterBinding.ensureInitialized();

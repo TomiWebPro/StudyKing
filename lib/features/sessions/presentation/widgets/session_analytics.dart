@@ -59,7 +59,15 @@ class SessionAnalyticsWidget extends StatelessWidget {
     final counts = <String, int>{};
 
     for (var i = 0; i < daysToShow; i++) {
-      final date = now.subtract(Duration(days: i));
+      // Calendar-day arithmetic, not a 24h×i Duration: across a DST
+      // transition a local midnight is 23h/25h from the next one, so
+      // `now.subtract(Duration(days: i))` keeps the time-of-day and
+      // lands on the previous calendar day whenever `now` sits within
+      // an hour of midnight — the transition day would get no bucket
+      // (its sessions silently dropped) and every weekday label
+      // would shift. Constructing the date directly keeps every
+      // bucket on its calendar day in every timezone.
+      final date = DateTime(now.year, now.month, now.day - i);
       final dayName = DateFormat.E(localeName).format(date);
 
       counts[dayName] =
