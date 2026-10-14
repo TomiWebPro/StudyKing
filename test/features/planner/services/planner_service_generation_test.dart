@@ -434,6 +434,65 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(result.data, isNotNull);
     });
+
+    test('regenerated plan lasts as long as the longest goal', () async {
+      // Existing plan covers a 30-day physics goal.
+      topicRepo.addTopic(Topic(
+        id: 'topic-physics',
+        subjectId: 'sub_physics',
+        title: 'Kinematics',
+        description: 'Motion',
+        syllabusText: 'IB Physics topic',
+      ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-physics'),
+      );
+
+      final existingResult = await service.generatePlanFromSyllabus(
+        syllabusGoals: const [
+          SyllabusGoal(
+            subjectId: 'sub_physics',
+            subjectTitle: 'IB Physics',
+            targetDays: 30,
+            targetHoursPerDay: 2,
+          ),
+        ],
+        daysValue: 30,
+        hoursValue: 2,
+      );
+      expect(existingResult.data, isNotNull);
+      final existingPlan = existingResult.data!;
+      expect(existingPlan.planDurationDays, 30);
+
+      // Add a shorter 7-day goal for a second subject.
+      topicRepo.addTopic(Topic(
+        id: 'topic-new',
+        subjectId: 'sub_new',
+        title: 'New Subject',
+        description: '',
+        syllabusText: '',
+      ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-new'),
+      );
+
+      final result = await service.addSubjectToPlan(
+        newGoal: const SyllabusGoal(
+          subjectId: 'sub_new',
+          subjectTitle: 'New Subject',
+          targetDays: 7,
+          targetHoursPerDay: 1,
+        ),
+        existingPlan: existingPlan,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotNull);
+      // Goals are studied concurrently (per-day hours are summed), so the
+      // plan must cover the longest goal (30 days). Averaging the durations
+      // would yield 18 days and silently drop the physics topics.
+      expect(result.data!.planDurationDays, 30);
+    });
   });
 
   group('updateRoadmap catch block', () {

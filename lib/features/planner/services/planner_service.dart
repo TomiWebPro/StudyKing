@@ -322,7 +322,12 @@ class PlannerService {
 
       final existingGoals = existingPlan.syllabusGoals;
       final combinedGoals = [...existingGoals, newGoal];
-      final overallDays = combinedGoals.fold<int>(0, (sum, g) => sum + g.targetDays) ~/ combinedGoals.length;
+      // Goals are studied concurrently (per-day hours are summed below),
+      // so the plan must last as long as the longest goal. Averaging the
+      // durations would shorten the plan below that goal and silently drop
+      // its remaining topics from every daily plan.
+      final overallDays = combinedGoals.fold<int>(
+          0, (longest, g) => g.targetDays > longest ? g.targetDays : longest);
       final overallHours = combinedGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
 
       planService.config = PlanGenerationConfig(
