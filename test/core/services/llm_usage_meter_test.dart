@@ -243,6 +243,24 @@ void main() {
       expect(meter.getTotalTokens(), equals(0));
     });
 
+    test('clear persists to the box so records stay cleared after re-init',
+        () async {
+      meter.recordUsage(id: 'r1', feature: 'chat', modelId: 'gpt-4', inputTokens: 10, outputTokens: 5);
+      // Let the record's own save finish first, so clear() is the
+      // only mutation left to persist.
+      await meter.persistenceComplete;
+      meter.clear();
+      // Saves are fire-and-forget; wait for the ordered write
+      // chain to finish before reloading from the box.
+      await meter.persistenceComplete;
+
+      final reloaded = LlmUsageMeter();
+      await reloaded.init();
+      expect(reloaded.getRecords(), isEmpty);
+      expect(reloaded.getTotalTokens(), equals(0));
+      expect(reloaded.getTotalCost(), equals(0.0));
+    });
+
     test('getTotalCostPerFeature returns empty map when no records', () {
       expect(meter.getTotalCostPerFeature(), isEmpty);
     });

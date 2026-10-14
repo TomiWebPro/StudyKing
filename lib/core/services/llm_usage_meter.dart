@@ -196,7 +196,13 @@ class LlmUsageMeter {
     return totals;
   }
 
-  void clear() => _records.clear();
+  /// Clears all usage records from memory and persists the clear to
+  /// the box via the same ordered save path as [recordUsage], so the
+  /// cleared history stays cleared across restarts.
+  void clear() {
+    _records.clear();
+    _persist();
+  }
 }
 
 
