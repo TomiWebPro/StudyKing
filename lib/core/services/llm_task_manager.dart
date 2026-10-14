@@ -72,6 +72,7 @@ class LlmTask {
     double? estimatedCost,
     String? error,
     String? description,
+    Completer<void>? cancelCompleter,
   }) {
     return LlmTask(
       id: id ?? this.id,
@@ -84,7 +85,7 @@ class LlmTask {
       estimatedCost: estimatedCost ?? this.estimatedCost,
       error: error ?? this.error,
       description: description ?? this.description,
-      cancelCompleter: cancelCompleter,
+      cancelCompleter: cancelCompleter ?? this.cancelCompleter,
     );
   }
 }
@@ -207,14 +208,7 @@ class LlmTaskManager {
     final idx = _tasks.indexWhere((t) => t.id == taskId);
     if (idx == -1) return null;
     final completer = Completer<void>();
-    _tasks[idx] = LlmTask(
-      id: _tasks[idx].id,
-      feature: _tasks[idx].feature,
-      modelId: _tasks[idx].modelId,
-      status: _tasks[idx].status,
-      startTime: _tasks[idx].startTime,
-      cancelCompleter: completer,
-    );
+    _tasks[idx] = _tasks[idx].copyWith(cancelCompleter: completer);
     return completer;
   }
 

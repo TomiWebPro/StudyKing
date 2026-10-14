@@ -40,6 +40,38 @@ void main() {
       expect(updated.id, 'task_1');
     });
 
+    test('copyWith sets a new cancelCompleter', () {
+      final task = LlmTask(
+        id: 'task_1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        startTime: DateTime(2024, 1, 1),
+      );
+      final completer = Completer<void>();
+
+      final updated = task.copyWith(cancelCompleter: completer);
+
+      expect(updated.cancelCompleter, same(completer));
+      expect(updated.id, 'task_1');
+      expect(updated.status, LlmTaskStatus.queued);
+    });
+
+    test('copyWith preserves the existing cancelCompleter by default', () {
+      final completer = Completer<void>();
+      final task = LlmTask(
+        id: 'task_1',
+        feature: 'chat',
+        modelId: 'gpt-4',
+        startTime: DateTime(2024, 1, 1),
+        cancelCompleter: completer,
+      );
+
+      final updated = task.copyWith(status: LlmTaskStatus.running);
+
+      expect(updated.cancelCompleter, same(completer));
+      expect(updated.status, LlmTaskStatus.running);
+    });
+
     test('toJson/fromJson round-trip preserves all fields', () {
       final original = LlmTask(
         id: 'rt-1',
@@ -211,6 +243,40 @@ void main() {
       final completer = manager.registerCancelCompleter(taskId);
       expect(completer, isNotNull);
       expect(completer, isA<Completer<void>>());
+    });
+
+    test('registerCancelCompleter preserves usage, cost, description and status', () {
+      final taskId = manager.createTask(
+        feature: 'chat',
+        modelId: 'gpt-4',
+        description: 'Explain photosynthesis',
+      );
+      manager.startTask(taskId);
+      manager.completeTask(taskId, tokensUsed: 123, estimatedCost: 0.01);
+
+      final completer = manager.registerCancelCompleter(taskId);
+
+      expect(completer, isNotNull);
+      final task = manager.tasks.first;
+      expect(task.tokensUsed, 123);
+      expect(task.estimatedCost, 0.01);
+      expect(task.description, 'Explain photosynthesis');
+      expect(task.endTime, isNotNull);
+      expect(task.status, LlmTaskStatus.done);
+      expect(task.feature, 'chat');
+      expect(task.modelId, 'gpt-4');
+    });
+
+    test('registerCancelCompleter preserves error on a failed task', () {
+      final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.failTask(taskId, 'Connection timeout');
+
+      manager.registerCancelCompleter(taskId);
+
+      final task = manager.tasks.first;
+      expect(task.error, 'Connection timeout');
+      expect(task.status, LlmTaskStatus.failed);
+      expect(task.endTime, isNotNull);
     });
 
     test('registerCancelCompleter returns null for non-existent task', () {
