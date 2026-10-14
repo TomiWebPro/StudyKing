@@ -195,10 +195,26 @@ class ExamSessionService {
       final medium = candidates.where((q) => q.difficulty == mediumDifficulty).toList()..shuffle();
       final hard = candidates.where((q) => q.difficulty >= hardMinDifficulty).toList()..shuffle();
 
+      var easyQuota = config.easyCount ?? 0;
+      var mediumQuota = config.mediumCount ?? 0;
+      var hardQuota = config.hardCount ?? 0;
+      if (easyQuota + mediumQuota + hardQuota > config.questionCount) {
+        // The requested quotas overflow the question budget. Scale them
+        // down proportionally so the final truncation cannot silently
+        // drop the trailing difficulty bucket (typically `hard`).
+        final fitted = _fitQuotasToBudget(
+          [easyQuota, mediumQuota, hardQuota],
+          config.questionCount,
+        );
+        easyQuota = fitted[0];
+        mediumQuota = fitted[1];
+        hardQuota = fitted[2];
+      }
+
       final selected = <Question>[];
-      selected.addAll(easy.take(config.easyCount ?? 0));
-      selected.addAll(medium.take(config.mediumCount ?? 0));
-      selected.addAll(hard.take(config.hardCount ?? 0));
+      selected.addAll(easy.take(easyQuota));
+      selected.addAll(medium.take(mediumQuota));
+      selected.addAll(hard.take(hardQuota));
 
       if (selected.length < config.questionCount) {
         final remaining = candidates
@@ -212,6 +228,61 @@ class ExamSessionService {
     }
 
     return candidates.take(config.questionCount).toList();
+  }
+
+  /// Scales [requested] per-difficulty quotas down so they fit
+  /// within [budget] questions.
+  ///
+  /// One seat per requested bucket is reserved first so that an
+  /// explicitly requested difficulty is never dropped entirely when
+  /// the budget allows it; the remaining seats are distributed
+  /// proportionally to the leftover demand (largest-remainder
+  /// method).
+  static List<int> _fitQuotasToBudget(List<int> requested, int budget) {
+    final reserved = requested.map((count) => count > 0 ? 1 : 0).toList();
+    final reservedTotal = reserved.fold<int>(0, (sum, count) => sum + count);
+    final seatsLeft = budget - reservedTotal;
+    if (seatsLeft < 0) {
+      // The budget cannot cover every requested bucket; keep the
+      // earliest requested buckets so the selection still honors
+      // the budget.
+      final fitted = <int>[];
+      var left = budget;
+      for (final count in requested) {
+        final seat = count > 0 && left > 0 ? 1 : 0;
+        fitted.add(seat);
+        left -= seat;
+      }
+      return fitted;
+    }
+
+    final residual = [
+      for (var i = 0; i < requested.length; i++) requested[i] - reserved[i],
+    ];
+    final residualTotal = residual.fold<int>(0, (sum, count) => sum + count);
+    if (residualTotal == 0) return reserved;
+
+    final extra = residual
+        .map((count) => count * seatsLeft ~/ residualTotal)
+        .toList();
+    var unallocated =
+        seatsLeft - extra.fold<int>(0, (sum, count) => sum + count);
+    // Hand out the seats lost to integer division to the buckets
+    // with the largest fractional remainders.
+    final byRemainder = List.generate(requested.length, (i) => i)
+      ..sort((a, b) => (residual[b] * seatsLeft % residualTotal)
+          .compareTo(residual[a] * seatsLeft % residualTotal));
+    for (final i in byRemainder) {
+      if (unallocated == 0) break;
+      if (extra[i] < residual[i]) {
+        extra[i]++;
+        unallocated--;
+      }
+    }
+
+    return [
+      for (var i = 0; i < requested.length; i++) reserved[i] + extra[i],
+    ];
   }
 
   void startExam(ExamConfig config) {

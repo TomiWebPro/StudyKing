@@ -401,6 +401,85 @@ void main() {
       expect(selected, hasLength(2));
       expect(selected.every((q) => q.difficulty == 1), isTrue);
     });
+
+    test('overflow quotas are scaled so no requested difficulty is dropped',
+        () {
+      final pool = [
+        for (var i = 0; i < 5; i++)
+          _q(id: 'easy-$i', text: 'easy $i', difficulty: 1),
+        for (var i = 0; i < 5; i++)
+          _q(id: 'medium-$i', text: 'medium $i', difficulty: 2),
+        for (var i = 0; i < 5; i++)
+          _q(id: 'hard-$i', text: 'hard $i', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 10,
+        subjectId: 'subject-a',
+        easyCount: 5,
+        mediumCount: 5,
+        hardCount: 5,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(10));
+      expect(selected.where((q) => q.difficulty == 1), isNotEmpty,
+          reason: 'easy bucket must survive overflow scaling');
+      expect(selected.where((q) => q.difficulty == 2), isNotEmpty,
+          reason: 'medium bucket must survive overflow scaling');
+      expect(selected.where((q) => q.difficulty == 3), isNotEmpty,
+          reason: 'hard bucket must not be dropped by overflow truncation');
+    });
+
+    test('small requested buckets are not zeroed by proportional scaling',
+        () {
+      final pool = [
+        for (var i = 0; i < 8; i++)
+          _q(id: 'easy-$i', text: 'easy $i', difficulty: 1),
+        _q(id: 'medium-a', text: 'medium a', difficulty: 2),
+        _q(id: 'hard-a', text: 'hard a', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 5,
+        subjectId: 'subject-a',
+        easyCount: 8,
+        mediumCount: 1,
+        hardCount: 1,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(5));
+      expect(selected.where((q) => q.difficulty == 2), hasLength(1),
+          reason: 'a single requested medium question must still be selected');
+      expect(selected.where((q) => q.difficulty == 3), hasLength(1),
+          reason: 'a single requested hard question must still be selected');
+    });
+
+    test('quotas that already fit the budget are honored exactly', () {
+      final pool = [
+        for (var i = 0; i < 2; i++)
+          _q(id: 'easy-$i', text: 'easy $i', difficulty: 1),
+        for (var i = 0; i < 3; i++)
+          _q(id: 'medium-$i', text: 'medium $i', difficulty: 2),
+        for (var i = 0; i < 2; i++)
+          _q(id: 'hard-$i', text: 'hard $i', difficulty: 3),
+      ];
+      const config = ExamConfig(
+        durationMinutes: 30,
+        questionCount: 7,
+        subjectId: 'subject-a',
+        easyCount: 2,
+        mediumCount: 3,
+        hardCount: 2,
+      );
+
+      final selected = service.selectQuestions(pool: pool, config: config);
+      expect(selected, hasLength(7));
+      expect(selected.where((q) => q.difficulty == 1), hasLength(2));
+      expect(selected.where((q) => q.difficulty == 2), hasLength(3));
+      expect(selected.where((q) => q.difficulty == 3), hasLength(2));
+    });
   });
 
   group('ExamQuestionResult', () {
