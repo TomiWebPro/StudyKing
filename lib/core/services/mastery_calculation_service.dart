@@ -1,6 +1,22 @@
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/utils/clock.dart';
+
+/// Calendar-day difference `a - b` in whole days. Both
+/// arguments are local timestamps; the computation is done
+/// on UTC-normalized dates so a DST transition (a 23h or
+/// 25h calendar day) cannot shift the result the way
+/// elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
 
 class MasteryCalculationService {
+  MasteryCalculationService({Clock? clock}) : _clock = clock ?? SystemClock();
+
+  final Clock _clock;
+
   MasteryState recordAttempt({
     required MasteryState current,
     required bool isCorrect,
@@ -31,7 +47,7 @@ class MasteryCalculationService {
       bestStreak = current.bestStreak;
     }
 
-    final now = DateTime.now();
+    final now = _clock.now();
 
     final weakSubtopics = [...current.weakSubtopics];
     if (subtopicId != null && !isCorrect && !weakSubtopics.contains(subtopicId)) {
@@ -96,7 +112,7 @@ class MasteryCalculationService {
   }
 
   double _updateForgettingRisk(double accuracy, DateTime lastAttempt, DateTime now) {
-    final daysSinceLastAttempt = now.difference(lastAttempt).inDays;
+    final daysSinceLastAttempt = _calendarDayDiff(now, lastAttempt);
     final retentionDecay = accuracy * (1 - (daysSinceLastAttempt / 30.0).clamp(0.0, 1.0));
     return 1 - retentionDecay;
   }
@@ -116,7 +132,7 @@ class MasteryCalculationService {
   }
 
   double _recencyScore(DateTime lastAttempt, DateTime now) {
-    final daysSince = now.difference(lastAttempt).inDays;
+    final daysSince = _calendarDayDiff(now, lastAttempt);
     if (daysSince == 0) return 1.0;
     if (daysSince <= 1) return 0.9;
     if (daysSince <= 3) return 0.7;
@@ -147,7 +163,7 @@ class MasteryCalculationService {
   }
 
   double _updateReviewUrgency(double forgettingRisk, DateTime lastAttempt, DateTime now) {
-    final daysSinceAttempt = now.difference(lastAttempt).inDays;
+    final daysSinceAttempt = _calendarDayDiff(now, lastAttempt);
 
     double urgency;
     if (daysSinceAttempt == 0) {

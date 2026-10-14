@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/services/mastery_calculation_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 
 void main() {
   group('MasteryCalculationService', () {
@@ -338,6 +339,111 @@ void main() {
       });
     });
 
+    group('DST calendar-day arithmetic', () {
+      test('reviewUrgency and forgettingRisk count calendar days, not '
+          'elapsed 24h periods, across a spring-forward-like 23h span', () {
+        // Fri 2026-03-27 23:00 -> Sat 2026-03-28 22:00 spans 23h
+        // when a DST spring-forward (a 23h calendar day) falls inside
+        // the window: 1 calendar day, but 0 elapsed days. Elapsed-time
+        // inDays would treat the attempt as if it happened today.
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime(2026, 3, 27, 23),
+          lastUpdated: DateTime(2026, 3, 27, 23),
+        );
+        final service = MasteryCalculationService(
+          clock: _FixedClock(DateTime(2026, 3, 28, 22)),
+        );
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        // 1 calendar day since the last attempt: urgency bucket 1 (0.3),
+        // not the same-day bucket (0.1).
+        expect(updated.reviewUrgency, closeTo(0.3, 1e-9));
+        // Forgetting-risk decay runs over 1 calendar day, not 0:
+        // accuracy is 1.0, so the risk is 1 - (1 - 1/30) = 1/30.
+        expect(updated.forgettingRisk, closeTo(1 / 30, 1e-9));
+      });
+
+      test('day counts use calendar days across a spring-forward-like '
+          '49h span', () {
+        // Fri 2026-03-27 23:00 -> Mon 2026-03-30 01:00 spans 49h
+        // with a spring-forward inside the window: 3 calendar days,
+        // but only 2 elapsed days.
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime(2026, 3, 27, 23),
+          lastUpdated: DateTime(2026, 3, 27, 23),
+        );
+        final service = MasteryCalculationService(
+          clock: _FixedClock(DateTime(2026, 3, 30, 1)),
+        );
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        // 3 calendar days: forgetting risk 1 - (1 - 3/30) = 0.1,
+        // urgency bucket <= 3: 0.5 + 0.1 * 0.2 = 0.52.
+        expect(updated.forgettingRisk, closeTo(0.1, 1e-9));
+        expect(updated.reviewUrgency, closeTo(0.52, 1e-9));
+      });
+
+      test('day counts use calendar days across a fall-back-like 51h span',
+          () {
+        // Sat 2026-10-24 23:00 -> Mon 2026-10-27 01:00 spans 51h
+        // with a fall-back (a 25h calendar day) inside the window:
+        // still 3 calendar days, 2 elapsed days.
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime(2026, 10, 24, 23),
+          lastUpdated: DateTime(2026, 10, 24, 23),
+        );
+        final service = MasteryCalculationService(
+          clock: _FixedClock(DateTime(2026, 10, 27, 1)),
+        );
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        expect(updated.forgettingRisk, closeTo(0.1, 1e-9));
+        expect(updated.reviewUrgency, closeTo(0.52, 1e-9));
+      });
+
+      test('same calendar day counts as zero days', () {
+        final state = MasteryState(
+          studentId: 's1',
+          topicId: 't1',
+          lastAttempt: DateTime(2026, 3, 28, 8),
+          lastUpdated: DateTime(2026, 3, 28, 8),
+        );
+        final service = MasteryCalculationService(
+          clock: _FixedClock(DateTime(2026, 3, 28, 22)),
+        );
+        final updated = service.recordAttempt(
+          current: state,
+          isCorrect: true,
+          confidence: 4,
+          timeSpentMs: 30000,
+        );
+
+        expect(updated.reviewUrgency, closeTo(0.1, 1e-9));
+        expect(updated.forgettingRisk, 0.0);
+      });
+    });
+
     group('initial state transitions', () {
       test('novice with no attempts', () {
         final state = initialState('t1');
@@ -347,4 +453,13 @@ void main() {
       });
     });
   });
+}
+
+class _FixedClock implements Clock {
+  _FixedClock(this.fixed);
+
+  final DateTime fixed;
+
+  @override
+  DateTime now() => fixed;
 }
