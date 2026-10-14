@@ -36,50 +36,79 @@ final adherenceSummaryProvider =
       return const AdherenceSummaryData();
     }
 
-    final totalDays = records.length;
-    final completedDays = records.where((r) => r.adherenceScore >= 0.5).length;
+    // Adherence records are created per finished session, so a day
+    // can have several records and inactive days none. Aggregate to
+    // one mean adherence value per calendar day before computing
+    // any day-based stat (matches the weeklyTrend aggregation below).
+    final recordsByDay = <DateTime, List<PlanAdherenceModel>>{};
+    for (final record in records) {
+      recordsByDay.putIfAbsent(record.date.dateOnly, () => []).add(record);
+    }
+    final dayScores = <DateTime, double>{};
+    for (final entry in recordsByDay.entries) {
+      final sum = entry.value
+          .fold<double>(0, (sum, r) => sum + r.adherenceScore);
+      dayScores[entry.key] = sum / entry.value.length;
+    }
+
+    final totalDays = dayScores.length;
+    final completedDays =
+        dayScores.values.where((score) => score >= 0.5).length;
     final lowAdherenceDays =
-        records.where((r) => r.adherenceScore < 0.3).length;
+        dayScores.values.where((score) => score < 0.3).length;
     final averageAdherence = totalDays > 0
-        ? records.fold<double>(0, (sum, r) => sum + r.adherenceScore) /
+        ? dayScores.values.fold<double>(0, (sum, score) => sum + score) /
             totalDays
         : 0.0;
 
-    final sortedByDate = List<PlanAdherenceModel>.from(records)
-      ..sort((a, b) => a.date.compareTo(b.date));
-
-    int currentStreak = 0;
-    int bestStreak = 0;
-    int tempStreak = 0;
+    final sortedDays = dayScores.keys.toList()..sort();
     final now = DateTime.now().dateOnly;
 
-    for (final record in sortedByDate.reversed) {
-      if (record.adherenceScore >= 0.5) {
-        final daysDiff = now.difference(record.date.dateOnly).inDays;
-        if (currentStreak == 0 && daysDiff <= 1) {
-          currentStreak++;
-          tempStreak = currentStreak;
-        } else if (daysDiff == currentStreak) {
-          currentStreak++;
-          tempStreak = currentStreak;
-        } else {
+    // Walk backwards over distinct days while they are consecutive
+    // and good. The first accepted day may be today or yesterday
+    // (daysDiff <= 1); each older day must sit exactly one day
+    // before the previously accepted one.
+    int currentStreak = 0;
+    int anchorOffset = 0;
+    for (var i = sortedDays.length - 1; i >= 0; i--) {
+      final day = sortedDays[i];
+      final daysDiff = now.difference(day).inDays;
+      if (dayScores[day]! < 0.5 || daysDiff < 0) {
+        break;
+      }
+      if (currentStreak == 0) {
+        if (daysDiff > 1) {
           break;
         }
+        anchorOffset = daysDiff;
+        currentStreak = 1;
+      } else if (daysDiff == anchorOffset + currentStreak) {
+        currentStreak++;
       } else {
         break;
       }
     }
 
-    tempStreak = 0;
-    for (final record in sortedByDate) {
-      if (record.adherenceScore >= 0.5) {
-        tempStreak++;
-        if (tempStreak > bestStreak) {
-          bestStreak = tempStreak;
+    // Best streak: longest run of consecutive calendar days with
+    // adherence >= 0.5 (a gap day breaks the run).
+    int bestStreak = 0;
+    int runStreak = 0;
+    DateTime? previousDay;
+    for (final day in sortedDays) {
+      if (dayScores[day]! >= 0.5) {
+        if (previousDay != null &&
+            day.difference(previousDay).inDays == 1) {
+          runStreak++;
+        } else {
+          runStreak = 1;
+        }
+        if (runStreak > bestStreak) {
+          bestStreak = runStreak;
         }
       } else {
-        tempStreak = 0;
+        runStreak = 0;
       }
+      previousDay = day;
     }
 
     final trend = <double>[];

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
@@ -149,6 +150,128 @@ void main() {
       final data = await container.read(adherenceSummaryProvider('test-student').future);
       expect(data.currentStreak, 4);
       expect(data.bestStreak, 4);
+    });
+
+    test('currentStreak counts consecutive days ending yesterday', () async {
+      final now = DateTime.now().dateOnly;
+      final service = _FakePlannerService();
+      // 5 consecutive good days, no session recorded today yet.
+      service.setAdherenceRecords([
+        for (var i = 5; i >= 1; i--)
+          PlanAdherenceModel(
+            id: 'a$i',
+            studentId: 'test-student',
+            date: now.subtract(Duration(days: i)),
+            adherenceScore: 0.9,
+          ),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.currentStreak, 5);
+    });
+
+    test('currentStreak counts a day once across several same-day records', () async {
+      final now = DateTime.now().dateOnly;
+      final service = _FakePlannerService();
+      // Good yesterday, two sessions (two records) today.
+      service.setAdherenceRecords([
+        PlanAdherenceModel(id: 'a1', studentId: 'test-student',
+            date: now.subtract(const Duration(days: 1)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a2', studentId: 'test-student',
+            date: now, adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a3', studentId: 'test-student',
+            date: now, adherenceScore: 0.8),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.currentStreak, 2);
+      expect(data.totalDays, 2);
+    });
+
+    test('bestStreak counts days, not records', () async {
+      final now = DateTime.now().dateOnly;
+      final service = _FakePlannerService();
+      // Two good sessions on a single day.
+      service.setAdherenceRecords([
+        PlanAdherenceModel(id: 'a1', studentId: 'test-student',
+            date: now, adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a2', studentId: 'test-student',
+            date: now, adherenceScore: 0.9),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.bestStreak, 1);
+      expect(data.totalDays, 1);
+    });
+
+    test('bestStreak breaks on gap days', () async {
+      final now = DateTime.now().dateOnly;
+      final service = _FakePlannerService();
+      // Good day, inactive day, good day: best streak is 1 day.
+      service.setAdherenceRecords([
+        PlanAdherenceModel(id: 'a1', studentId: 'test-student',
+            date: now.subtract(const Duration(days: 2)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a2', studentId: 'test-student',
+            date: now, adherenceScore: 0.9),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.bestStreak, 1);
+      expect(data.currentStreak, 1);
+    });
+
+    test('averageAdherence weights each day once', () async {
+      final now = DateTime.now().dateOnly;
+      final service = _FakePlannerService();
+      // Day 1: one record (0.9). Day 2: two records averaging 0.3.
+      // Day-weighted mean: (0.9 + 0.3) / 2 = 0.6.
+      service.setAdherenceRecords([
+        PlanAdherenceModel(id: 'a1', studentId: 'test-student',
+            date: now.subtract(const Duration(days: 1)), adherenceScore: 0.9),
+        PlanAdherenceModel(id: 'a2', studentId: 'test-student',
+            date: now, adherenceScore: 0.3),
+        PlanAdherenceModel(id: 'a3', studentId: 'test-student',
+            date: now, adherenceScore: 0.3),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.totalDays, 2);
+      expect(data.averageAdherence, closeTo(0.6, 0.0001));
     });
   });
 
