@@ -1120,6 +1120,56 @@ void main() {
         expect(composite, lessThanOrEqualTo(1.0));
       });
 
+      test('counts attempts and sessions on every calendar day across a DST window',
+          () async {
+        tz_data.initializeTimeZones();
+        final berlin = tz.getLocation('Europe/Berlin');
+        // Pin "today" to 2026-06-15, inside the DST window. The
+        // 365-day window crosses the 2025-10-26 fall-back and the
+        // 2026-03-29 spring-forward, so every day between them is
+        // 23h/25h long. Day keys must be calendar midnights or
+        // attempts and sessions in that band are silently dropped:
+        // elapsed-time keys (cutoff ± 24h×i) land on 23:00/01:00
+        // and never equal the `dateOnly` midnights of real
+        // attempts.
+        final now = tz.TZDateTime(berlin, 2026, 6, 15);
+        mockRepo.setAttempts([
+          // After fall-back, before spring-forward: inside the band.
+          StudentAttempt(id: 'a1', studentId: 'student1', questionId: 'q1', isCorrect: true, timeSpentMs: 5000, timestamp: tz.TZDateTime(berlin, 2025, 11, 3, 10, 0), subjectId: 'math'),
+          StudentAttempt(id: 'a2', studentId: 'student1', questionId: 'q2', isCorrect: false, timeSpentMs: 5000, timestamp: tz.TZDateTime(berlin, 2026, 3, 10, 10, 0), subjectId: 'math'),
+          // After spring-forward: outside the band (control day).
+          StudentAttempt(id: 'a3', studentId: 'student1', questionId: 'q3', isCorrect: true, timeSpentMs: 5000, timestamp: tz.TZDateTime(berlin, 2026, 4, 15, 10, 0), subjectId: 'math'),
+        ]);
+        mockSessionRepo.setSessions([
+          Session(id: 's1', studentId: 'student1', type: SessionType.focus, startTime: tz.TZDateTime(berlin, 2025, 11, 3, 12, 0), actualDurationMs: 3600000),
+        ]);
+
+        final result = await tracker.getDailyTrend(365,
+            studentId: 'student1', now: now);
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data, hasLength(365));
+        Map<String, dynamic> entryFor(String ymd) {
+          for (final e in result.data!) {
+            if ((e['date'] as String).startsWith(ymd)) return e;
+          }
+          return {
+            'attempts': -1,
+            'correct': -1,
+            'focusSeconds': -1,
+            'sessions': -1,
+          };
+        }
+
+        // Days inside the DST band must still count their activity.
+        expect(entryFor('2025-11-03')['attempts'], equals(1));
+        expect(entryFor('2025-11-03')['sessions'], equals(1));
+        expect(entryFor('2025-11-03')['focusSeconds'], equals(3600));
+        expect(entryFor('2026-03-10')['attempts'], equals(1));
+        // Control day outside the band.
+        expect(entryFor('2026-04-15')['attempts'], equals(1));
+      });
+
       test('propagates failure when repo fails', () async {
         mockRepo.shouldThrow = true;
         final result = await tracker.getDailyTrend(7, studentId: 'student1');

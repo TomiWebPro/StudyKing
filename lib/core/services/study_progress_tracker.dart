@@ -309,7 +309,8 @@ class StudyProgressTracker {
     }
   }
 
-  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days, {String? studentId}) async {
+  Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days,
+      {String? studentId, DateTime? now}) async {
     try {
       studentId ??= StudentIdService().getStudentId().data ?? '';
       final allAttemptsResult = await _attemptRepo.getByStudent(studentId);
@@ -331,13 +332,22 @@ class StudyProgressTracker {
         }
       }
 
-      final now = DateTime.now();
-      final today = now.dateOnly;
-      final cutoff = today.subtract(Duration(days: days - 1));
+      // [now] is injectable so tests can pin the trend to fixed
+      // dates (including DST-zone dates); production callers omit
+      // it and get the wall clock.
+      final effectiveNow = now ?? DateTime.now();
+      final today = effectiveNow.dateOnly;
+      // Calendar-day step: `Duration(days: i)` is an absolute
+      // 24h×i span, which lands on 23:00/01:00 across a DST
+      // transition and can never equal the calendar midnights
+      // that `dateOnly` produces for attempts and sessions —
+      // every day in the transition band would be dropped.
+      final cutoff =
+          DateTime(today.year, today.month, today.day - (days - 1));
 
       final dayMap = <DateTime, Map<String, dynamic>>{};
       for (var i = 0; i < days; i++) {
-        final day = cutoff.add(Duration(days: i));
+        final day = DateTime(cutoff.year, cutoff.month, cutoff.day + i);
         dayMap[day] = {
           'date': day.toIso8601String(),
           'attempts': 0,

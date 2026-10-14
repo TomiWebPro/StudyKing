@@ -141,7 +141,7 @@ class _FakeProgressTracker extends StudyProgressTracker {
 
   @override
   Future<Result<List<Map<String, dynamic>>>> getDailyTrend(int days,
-      {String? studentId}) async {
+      {String? studentId, DateTime? now}) async {
     if (_throwOnGetDailyTrend) throw Exception('getDailyTrend error');
     return Result.success(_dailyTrend);
   }
