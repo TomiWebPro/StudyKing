@@ -4,10 +4,24 @@ import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
+/// Whole calendar days from [a] to [b] (`b - a`). Both arguments
+/// are local calendar midnights; the computation is done on
+/// UTC-normalized dates so a DST transition (a 23h or 25h
+/// calendar day) cannot shift the result the way elapsed-time
+/// `difference().inDays` does.
+int _calendarDaysBetween(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcB.difference(utcA).inDays;
+}
+
 class DailyActivityHeatmap extends StatelessWidget {
   final List<DailyTrendEntry> dailyTrend;
 
-  const DailyActivityHeatmap({super.key, required this.dailyTrend});
+  /// Current time; overridable in tests. Defaults to [DateTime.now].
+  final DateTime? now;
+
+  const DailyActivityHeatmap({super.key, required this.dailyTrend, this.now});
 
   static const double _cellSize = 12.0;
   static const double _cellGap = 2.0;
@@ -50,18 +64,25 @@ class DailyActivityHeatmap extends StatelessWidget {
       dateMap[entry.date.dateOnly] = entry;
     }
 
-    final today = DateTime.now().dateOnly;
+    final today = (now ?? DateTime.now()).dateOnly;
     final endDate = today;
     // Align the grid to the start of the week (Monday) containing the
     // first activity so the fixed row labels (row 0 = Monday) match the
     // actual weekday of every row, GitHub-style. Cells before the first
     // activity have no entry and render empty.
     final firstActivity = sorted.first.date.dateOnly;
-    final startDate = firstActivity.subtract(
-      Duration(days: firstActivity.weekday - DateTime.monday),
-    );
+    // Calendar-day arithmetic, not 24h Duration arithmetic: across a
+    // DST transition a local midnight is 23h/25h from the next one, so
+    // subtract/add(Duration(days: ...)) lands an hour off midnight and
+    // difference().inDays truncates a day — which drops the transition
+    // day's cell and shortens the grid. Constructing the date directly
+    // (the local DateTime constructor normalizes day overflow) and
+    // differencing UTC-normalized midnights keeps every cell on the
+    // correct calendar day in every timezone.
+    final startDate = DateTime(firstActivity.year, firstActivity.month,
+        firstActivity.day - (firstActivity.weekday - DateTime.monday));
 
-    final totalDays = endDate.difference(startDate).inDays + 1;
+    final totalDays = _calendarDaysBetween(startDate, endDate) + 1;
     final weeksCount = (totalDays / 7).ceil();
 
     final columns = <List<DailyTrendEntry?>>[];
@@ -69,7 +90,8 @@ class DailyActivityHeatmap extends StatelessWidget {
       final column = <DailyTrendEntry?>[];
       for (var d = 0; d < 7; d++) {
         final dayOffset = w * 7 + d;
-        final date = startDate.add(Duration(days: dayOffset));
+        final date = DateTime(
+            startDate.year, startDate.month, startDate.day + dayOffset);
         if (date.isAfter(endDate)) {
           column.add(null);
         } else {
@@ -282,7 +304,8 @@ class DailyActivityHeatmap extends StatelessWidget {
     DateTime? lastMonth;
 
     for (var i = 0; i < columns.length; i++) {
-      final firstDayOfWeek = startDate.add(Duration(days: i * 7));
+      final firstDayOfWeek = DateTime(
+          startDate.year, startDate.month, startDate.day + i * 7);
       final month = DateTime(firstDayOfWeek.year, firstDayOfWeek.month);
       if (lastMonth == null || month != lastMonth) {
         labels.add(_MonthLabel(

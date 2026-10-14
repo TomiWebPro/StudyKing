@@ -208,5 +208,91 @@ void main() {
         expect(tester.getTopLeft(cell).dy - gridTop(tester), 0.0);
       });
     });
+
+    testWidgets('renders a cell for every day from first activity through today',
+        (tester) async {
+      await initializeDateFormatting();
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final trend = <DailyTrendEntry>[];
+      for (var i = 6; i >= 0; i--) {
+        trend.add(DailyTrendEntry(
+          date: DateTime(today.year, today.month, today.day - i),
+          attempts: i + 1,
+          accuracy: 50.0 + i,
+          focusSeconds: 60 * (i + 1),
+          sessions: 1,
+          compositeScore: 0.1 * (i + 1),
+        ));
+      }
+
+      await tester.pumpWidget(
+          _buildTestApp(DailyActivityHeatmap(dailyTrend: trend)));
+      await tester.pumpAndSettle();
+
+      // Every one of the last 7 days must render a cell with its
+      // own semantics label — no day in [firstActivity, today] may
+      // be dropped from the grid (regression guard for the DST
+      // day-dropping bug).
+      for (var i = 0; i < 7; i++) {
+        final day = DateTime(today.year, today.month, today.day - i);
+        final dateStr = DateFormat.yMMMd('en').format(day);
+        expect(
+          find.bySemanticsLabel(RegExp('^${RegExp.escape(dateStr)}')),
+          findsOneWidget,
+          reason: 'day $dateStr must render a heatmap cell',
+        );
+      }
+    });
+
+    testWidgets('renders every day across a spring-forward DST transition',
+        (tester) async {
+      await initializeDateFormatting();
+      // US spring-forward 2026: Sunday Mar 8 -> Monday Mar 9 is a
+      // 23-hour local day. With elapsed-time Duration arithmetic
+      // (the pre-fix code) the Mar 9 cell is pushed out of the
+      // grid and today's activity is dropped. Calendar-day
+      // arithmetic keeps both days on midnight. In a timezone
+      // without DST (e.g. UTC) this is a contract test: both
+      // days must still render.
+      final mar8 = DateTime(2026, 3, 8);
+      final mar9 = DateTime(2026, 3, 9);
+      final trend = [
+        DailyTrendEntry(
+          date: mar8,
+          attempts: 4,
+          accuracy: 75,
+          focusSeconds: 240,
+          sessions: 1,
+          compositeScore: 0.4,
+        ),
+        DailyTrendEntry(
+          date: mar9,
+          attempts: 9,
+          accuracy: 88,
+          focusSeconds: 540,
+          sessions: 2,
+          compositeScore: 0.8,
+        ),
+      ];
+
+      await tester.pumpWidget(_buildTestApp(
+        DailyActivityHeatmap(dailyTrend: trend, now: mar9),
+      ));
+      await tester.pumpAndSettle();
+
+      final mar8Str = DateFormat.yMMMd('en').format(mar8);
+      final mar9Str = DateFormat.yMMMd('en').format(mar9);
+      expect(
+        find.bySemanticsLabel(RegExp('^${RegExp.escape(mar8Str)}')),
+        findsOneWidget,
+        reason: 'transition-day activity (Mar 8) must render',
+      );
+      expect(
+        find.bySemanticsLabel(RegExp('^${RegExp.escape(mar9Str)}')),
+        findsOneWidget,
+        reason: 'the day after the transition (Mar 9) must render',
+      );
+    });
   });
 }
