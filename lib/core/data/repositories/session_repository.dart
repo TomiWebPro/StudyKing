@@ -241,7 +241,10 @@ class SessionRepository extends Repository<Session> {
       final now = _clock.now();
       final today = now.dateOnly;
       for (var i = 0; i < studyDays.length; i++) {
-        final expected = today.subtract(Duration(days: i));
+        // Calendar-day step: `Duration(days: i)` is an absolute 24h×i
+        // span, which lands on 23:00/01:00 across a DST transition and
+        // can never equal the calendar midnights stored in studyDays.
+        final expected = DateTime(today.year, today.month, today.day - i);
         if (studyDays[i] == expected) {
           consecutive++;
         } else {

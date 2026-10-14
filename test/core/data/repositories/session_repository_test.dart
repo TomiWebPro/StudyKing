@@ -858,5 +858,131 @@ void main() {
       expect(day1.data!.map((s) => s.id).toSet(), {'a', 'b'});
       expect(day2.data!.map((s) => s.id).toSet(), {'c', 'd'});
     });
+
+    test('consecutive-day streak survives the EU spring-forward transition day',
+        () async {
+      // 2026-03-29 is 23h long in DST-observing zones. An absolute
+      // 24h span back from 2026-03-30 midnight lands on 23:00 of the
+      // transition day, which can never equal the stored calendar
+      // midnight of a session started that day.
+      repository = SessionRepository(clock: _FakeClock(DateTime(2026, 3, 30, 12, 0)));
+      await repository.init();
+      await repository.save(
+        'yesterday',
+        createSession(
+          id: 'yesterday',
+          startTime: DateTime(2026, 3, 29, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+      await repository.save(
+        'today',
+        createSession(
+          id: 'today',
+          startTime: DateTime(2026, 3, 30, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+
+      final result = await repository.getConsecutiveStudyDays();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 2);
+    });
+
+    test('consecutive-day streak survives the EU fall-back transition day',
+        () async {
+      // 2026-10-25 is 25h long; an absolute 24h span back from
+      // 2026-10-26 midnight lands on 01:00 of the transition day.
+      repository = SessionRepository(clock: _FakeClock(DateTime(2026, 10, 26, 12, 0)));
+      await repository.init();
+      await repository.save(
+        'yesterday',
+        createSession(
+          id: 'yesterday',
+          startTime: DateTime(2026, 10, 25, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+      await repository.save(
+        'today',
+        createSession(
+          id: 'today',
+          startTime: DateTime(2026, 10, 26, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+
+      final result = await repository.getConsecutiveStudyDays();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 2);
+    });
+
+    test('consecutive-day streak spans a transition day across three days',
+        () async {
+      repository = SessionRepository(clock: _FakeClock(DateTime(2026, 3, 30, 12, 0)));
+      await repository.init();
+      await repository.save(
+        'd-2',
+        createSession(
+          id: 'd-2',
+          startTime: DateTime(2026, 3, 28, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+      await repository.save(
+        'd-1',
+        createSession(
+          id: 'd-1',
+          startTime: DateTime(2026, 3, 29, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+      await repository.save(
+        'd0',
+        createSession(
+          id: 'd0',
+          startTime: DateTime(2026, 3, 30, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+
+      final result = await repository.getConsecutiveStudyDays();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 3);
+    });
+
+    test('consecutive-day streak stops at a one-day gap', () async {
+      repository = SessionRepository(clock: _FakeClock(DateTime(2026, 3, 30, 12, 0)));
+      await repository.init();
+      await repository.save(
+        'today',
+        createSession(
+          id: 'today',
+          startTime: DateTime(2026, 3, 30, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+      await repository.save(
+        'two-days-ago',
+        createSession(
+          id: 'two-days-ago',
+          startTime: DateTime(2026, 3, 28, 10, 0),
+          completed: true,
+          actualDurationMs: 60000,
+        ),
+      );
+
+      final result = await repository.getConsecutiveStudyDays();
+      expect(result.isSuccess, isTrue);
+      expect(result.data, 1);
+    });
   });
 }
