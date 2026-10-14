@@ -378,6 +378,43 @@ void main() {
       );
     });
 
+    testWidgets('weekday headers stay on their calendar day across a spring-forward',
+        (tester) async {
+      _setLargeViewport(tester);
+      // Europe/Berlin springs forward on Sunday 2026-03-29, so that
+      // calendar day is only 23h long. Anchored at Monday
+      // 2026-03-23 23:30, the pre-fix elapsed-time arithmetic
+      // (`weekStart.add(Duration(days: 6))`) spans an absolute
+      // 24h×6 and lands at 2026-03-30 00:30 — one hour past
+      // midnight into Monday — so the Sunday slot rendered "Mon",
+      // the header row showed Monday twice and no Sunday.
+      // Calendar-day construction keeps slot 6 on Sunday
+      // 2026-03-29 in every timezone; in a zone without DST this
+      // is a contract test (the same labels must hold).
+      await tester.pumpWidget(buildApp(
+        CalendarViewWidget(
+          plan: createPlan(),
+          asOf: DateTime(2026, 3, 23, 23, 30),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      const weekdayPrefixes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      final headerCenters = <String, double>{};
+      for (final prefix in weekdayPrefixes) {
+        final header = find.textContaining(prefix);
+        expect(header, findsOneWidget, reason: 'weekday header $prefix');
+        headerCenters[prefix] = tester.getCenter(header).dx;
+      }
+      // Headers are Monday-first, exactly one of each.
+      for (var i = 0; i < weekdayPrefixes.length - 1; i++) {
+        expect(
+          headerCenters[weekdayPrefixes[i]]!,
+          lessThan(headerCenters[weekdayPrefixes[i + 1]]!),
+        );
+      }
+    });
+
     // CalendarViewWidget uses an onDayTap callback for navigation;
     // navigation is handled by the parent widget, not internally.
   });

@@ -12,11 +12,17 @@ class CalendarViewWidget extends StatefulWidget {
   final void Function(String topicId, String topicTitle, String subjectId)?
       onDayTap;
 
+  /// Anchor for the weekday-header computation; defaults to
+  /// `DateTime.now()`. Injectable so tests can pin a date inside a
+  /// DST-transition week (same seam as SessionAnalyticsWidget).
+  final DateTime? asOf;
+
   const CalendarViewWidget({
     super.key,
     required this.plan,
     this.roadmaps = const [],
     this.onDayTap,
+    this.asOf,
   });
 
   @override
@@ -129,10 +135,16 @@ class _CalendarViewWidgetState extends State<CalendarViewWidget> {
   }
 
   Widget _buildDayHeaders(ThemeData theme, AppLocalizations l10n) {
-    final now = DateTime.now();
-    final weekStart = now.subtract(Duration(days: now.weekday - 1));
+    final now = widget.asOf ?? DateTime.now();
+    // Calendar-day arithmetic, not 24h Durations: across a DST
+    // transition a local midnight is 23h/25h from the next one, so
+    // `weekStart.add(Duration(days: i))` drifts off the calendar day
+    // and the Sunday slot can render Monday's name. Constructing
+    // each date directly (with normalization for month boundaries)
+    // keeps every header on its own weekday in every timezone.
+    final weekStart = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     final days = List.generate(7, (i) {
-      final date = weekStart.add(Duration(days: i));
+      final date = DateTime(weekStart.year, weekStart.month, weekStart.day + i);
       return DateFormat.EEEE(l10n.localeName).format(date);
     });
     return Row(
