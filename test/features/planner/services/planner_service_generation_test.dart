@@ -4,6 +4,8 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/utils/clock.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
@@ -11,6 +13,26 @@ import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'planner_service_test_helpers.dart';
+
+/// True when the local zone observes the 2026-03-08 US
+/// spring-forward (a 23h day), e.g. America/New_York.
+/// The DST regression tests below can only reproduce the
+/// elapsed-time date-skipping under such a zone; in zones
+/// without that transition they are skipped.
+bool _zoneObserves2026UsSpringForward() {
+  return DateTime(2026, 3, 9).difference(DateTime(2026, 3, 8)) ==
+      const Duration(hours: 23);
+}
+
+/// Clock that always reports [fixed], for pinning the
+/// roadmap-creation anchor in DST regression tests.
+class _FixedClock implements Clock {
+  final DateTime _fixed;
+  _FixedClock(this._fixed);
+
+  @override
+  DateTime now() => _fixed;
+}
 
 void main() {
   late String hivePath;
@@ -28,6 +50,7 @@ void main() {
   });
 
   late PlannerService service;
+  late PersonalLearningPlanService planService;
   late FakeMasteryGraphRepository masteryRepo;
   late FakeTopicRepository topicRepo;
   late FakePlanRepository planRepo;
@@ -48,7 +71,7 @@ void main() {
     l10n = AppLocalizationsEn();
 
     final fakeAdherenceRepo = FakeAdherenceRepo();
-    final planService = PersonalLearningPlanService(
+    planService = PersonalLearningPlanService(
       masteryService: MasteryGraphService(),
       repository: masteryRepo,
       topicRepository: topicRepo,
@@ -275,6 +298,51 @@ void main() {
       expect(roadmap.data!.subjectId, 'sub_physics');
       expect(roadmap.data!.milestones.first.topicsCovered, isNotEmpty);
     });
+
+    test('target and milestone deadlines use calendar days across spring-forward', () async {
+      // Regression: `createRoadmap` advanced the target
+      // date and milestone deadlines with elapsed-time
+      // `add(Duration(days: n))`. Anchored at 23:30 on
+      // the eve of the 2026-03-08 spring-forward, each
+      // elapsed day crosses the +1h shift, so a 14-day
+      // roadmap reported a 2026-03-22 target and
+      // 2026-03-15/2026-03-22 deadlines — each one
+      // calendar day late.
+      if (!_zoneObserves2026UsSpringForward()) return;
+
+      final dstService = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        planService: planService,
+        adherenceRepo: FakeAdherenceRepo(),
+        syllabusResolver: SyllabusResolver(
+          topicRepository: topicRepo,
+          masteryRepository: masteryRepo,
+        ),
+        clock: _FixedClock(DateTime(2026, 3, 7, 23, 30)),
+      );
+
+      final roadmap = await dstService.createRoadmap(
+        goal: 'Learn Physics',
+        days: 14,
+        l10n: l10n,
+      );
+
+      expect(roadmap.data, isNotNull);
+      final target = roadmap.data!.targetCompletionDate!;
+      // 14 calendar days after 2026-03-07 is 2026-03-21.
+      expect(target.isSameDay(DateTime(2026, 3, 21)), isTrue);
+      // Two weekly milestones, 7 and 14 calendar days out.
+      final deadlines =
+          roadmap.data!.milestones.map((m) => m.deadline).toList();
+      expect(deadlines[0].isSameDay(DateTime(2026, 3, 14)), isTrue);
+      expect(deadlines[1].isSameDay(DateTime(2026, 3, 21)), isTrue);
+    });
   });
 
   group('toggleMilestoneCompletion', () {
@@ -377,6 +445,56 @@ void main() {
       );
       expect(updated.data, isNotNull);
       expect(updated.data!.goal, 'Updated goal');
+    });
+
+    test('target uses calendar days across spring-forward', () async {
+      // Regression: `updateRoadmap` recomputed the target
+      // date with elapsed-time `add(Duration(days: n))`,
+      // which lands one calendar day late when the anchor's
+      // time-of-day is at/after 23:00 on the eve of a
+      // spring-forward transition.
+      if (!_zoneObserves2026UsSpringForward()) return;
+
+      final roadmap = await service.createRoadmap(
+        goal: 'Original goal',
+        days: 14,
+        l10n: l10n,
+      );
+      expect(roadmap.data, isNotNull);
+
+      final dstService = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        planService: planService,
+        adherenceRepo: FakeAdherenceRepo(),
+        syllabusResolver: SyllabusResolver(
+          topicRepository: topicRepo,
+          masteryRepository: masteryRepo,
+        ),
+        clock: _FixedClock(DateTime(2026, 3, 7, 23, 30)),
+      );
+
+      final updated = await dstService.updateRoadmap(
+        roadmapId: roadmap.data!.id,
+        goal: 'Updated goal',
+        days: 14,
+        l10n: l10n,
+      );
+
+      expect(updated.data, isNotNull);
+      // 14 calendar days after the 2026-03-07 23:30
+      // anchor is 2026-03-21, not the 2026-03-22 that
+      // elapsed-time arithmetic produced.
+      expect(
+        updated.data!.targetCompletionDate!
+            .isSameDay(DateTime(2026, 3, 21)),
+        isTrue,
+      );
     });
 
     test('returns null when roadmap does not exist', () async {

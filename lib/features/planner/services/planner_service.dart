@@ -20,6 +20,7 @@ import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/constants/app_constants.dart';
+import '../../../core/utils/clock.dart';
 import '../../../core/utils/logger.dart';
 import '../../../core/utils/study_utils.dart';
 import '../../../core/utils/time_utils.dart';
@@ -44,6 +45,7 @@ class PlannerService {
   final LessonAgentService? lessonAgentService;
   final PlannerAdvisorStrategy? advisor;
   final String? fixedStudentId;
+  final Clock _clock;
   final String _localeName;
   ActionExecutor? _actionExecutor;
 
@@ -71,6 +73,7 @@ class PlannerService {
     this.fixedStudentId,
     String localeName = 'en',
     AppLocalizations? l10n,
+    Clock? clock,
   })  : _localeName = localeName,
         planRepo = planRepo ?? PlanRepository(),
         masteryService = masteryService ?? MasteryGraphService(),
@@ -81,6 +84,7 @@ class PlannerService {
               masteryService: masteryService ?? MasteryGraphService(),
               advisor: advisor,
               l10n: l10n,
+              clock: clock,
         ),
         sessionRepo = sessionRepo ?? SessionRepository(),
         pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
@@ -88,7 +92,8 @@ class PlannerService {
         syllabusResolver = syllabusResolver ?? SyllabusResolver(),
         adherenceRepo = adherenceRepo ?? PlanAdherenceRepository(),
         planContextRepo = planContextRepo ?? PlanContextRepository(),
-        _actionExecutor = actionExecutor;
+        _actionExecutor = actionExecutor,
+        _clock = clock ?? SystemClock();
 
   String get studentId =>
       fixedStudentId ?? (StudentIdService().getStudentId().data ?? '');
@@ -377,8 +382,8 @@ class PlannerService {
     String? subjectId,
   }) async {
     try {
-      final now = DateTime.now();
-      final targetDate = now.add(Duration(days: days));
+      final now = _clock.now();
+      final targetDate = addCalendarDays(now, days);
       final numMilestones = (days / 7).ceil().clamp(1, 52);
       final milestones = <MilestoneModel>[];
 
@@ -408,9 +413,10 @@ class PlannerService {
           description: subjectId != null
               ? l10n.syllabusTopics(milestoneTopics.length)
               : l10n.milestoneForWeek(i + 1),
-          deadline: now.add(Duration(
-            days: ((i + 1) * days / numMilestones).round(),
-          )),
+          deadline: addCalendarDays(
+            now,
+            ((i + 1) * days / numMilestones).round(),
+          ),
           order: i + 1,
           topicsCovered: milestoneTopics,
           assessmentCriteria: subjectId != null
@@ -452,8 +458,8 @@ class PlannerService {
       final existing = existingResult.data;
       if (existing == null) return Result.success(null);
 
-      final now = DateTime.now();
-      final targetDate = now.add(Duration(days: days));
+      final now = _clock.now();
+      final targetDate = addCalendarDays(now, days);
       final updated = existing.copyWith(
         goal: goal,
         targetCompletionDate: targetDate,
@@ -819,7 +825,7 @@ class PlannerService {
                 .expand((d) => d.priorityTopics)
                 .toList();
             newPlans.add(DailyPlan(
-              date: now.add(Duration(days: i)),
+              date: addCalendarDays(now, i),
               dayNumber: i + 1,
               priorityTopics: topics,
               reviewQuestionIds: [],

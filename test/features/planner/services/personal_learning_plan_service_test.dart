@@ -6,10 +6,12 @@ import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/repositories/mastery_state_repository.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/student_id_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -35,6 +37,16 @@ import 'package:studyking/l10n/generated/app_localizations_es.dart';
 bool _zoneObserves2026UsSpringForward() {
   return DateTime(2026, 3, 9).difference(DateTime(2026, 3, 8)) ==
       const Duration(hours: 23);
+}
+
+/// Clock that always reports [fixed], for pinning the
+/// generation anchor in DST regression tests.
+class _FixedClock implements Clock {
+  final DateTime _fixed;
+  _FixedClock(this._fixed);
+
+  @override
+  DateTime now() => _fixed;
 }
 
 class FakeMasteryGraphService extends MasteryGraphService {
@@ -419,6 +431,41 @@ void main() {
         expect(result.data!.planDurationDays, equals(5));
         expect(result.data!.targetQuestionsPerDay, equals(10));
         expect(result.data!.targetMinutesPerDay, equals(20.0));
+      });
+
+      test('generates consecutive calendar dates across spring-forward', () async {
+        // Regression: the empty-mastery plan dated its daily
+        // plans with elapsed-time `add(Duration(days: n))`.
+        // Anchored at 23:30 on the eve of the 2026-03-08
+        // spring-forward, each elapsed day crosses the +1h
+        // shift, so the transition day itself (2026-03-08,
+        // a 23h day) was never scheduled and the plan ran
+        // one calendar day long.
+        if (!_zoneObserves2026UsSpringForward()) return;
+
+        mockRepo.injectedMasteryStates = [];
+        final dstService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
+          repository: mockRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 3),
+          l10n: AppLocalizationsEn(),
+          clock: _FixedClock(DateTime(2026, 3, 7, 23, 30)),
+        );
+
+        final result = await dstService.generatePlan(
+          'student1',
+          courseName: 'IB Physics',
+        );
+
+        expect(result.isSuccess, isTrue);
+        final dates = result.data!.dailyPlans.map((d) => d.date).toList();
+        expect(dates, hasLength(3));
+        expect(dates[0].isSameDay(DateTime(2026, 3, 7)), isTrue);
+        // Pre-fix, elapsed +24h from 23:30 EST landed on
+        // 2026-03-09 00:30 EDT, skipping 2026-03-08 entirely.
+        expect(dates[1].isSameDay(DateTime(2026, 3, 8)), isTrue);
+        expect(dates[2].isSameDay(DateTime(2026, 3, 9)), isTrue);
       });
 
       test('returns failure when mastery states fail', () async {
@@ -1418,6 +1465,50 @@ void main() {
           expect(result.isSuccess, isTrue);
           expect(planRepo.storedPlan!.dailyPlans, hasLength(3));
           expect(planRepo.storedPlan!.planDurationDays, equals(5));
+        });
+
+        test('extends with consecutive calendar dates across spring-forward', () async {
+          // Regression: `extendPlan` advanced the extension
+          // base with elapsed-time `add(Duration(days: i))`.
+          // From a 23:30 anchor on the eve of the 2026-03-08
+          // spring-forward, the first extension day landed on
+          // 2026-03-09 00:30 EDT, skipping the 2026-03-08
+          // transition day.
+          if (!_zoneObserves2026UsSpringForward()) return;
+
+          final anchor = DateTime(2026, 3, 7, 23, 30);
+          final plan = PersonalLearningPlan(
+            studentId: 'student1',
+            generatedAt: anchor,
+            dailyPlans: [
+              DailyPlan(
+                date: anchor,
+                dayNumber: 1,
+                priorityTopics: [],
+                reviewQuestionIds: [],
+                stretchGoalQuestionIds: [],
+                targetQuestions: 15,
+                targetMinutes: 30,
+                focus: 'Study',
+              ),
+            ],
+            summary: PlanSummary(
+              totalQuestions: 15, totalMinutes: 30,
+              newTopics: 1, reviewTopics: 0,
+              estimatedCoverage: 0.5, focusAreas: [],
+            ),
+            recommendations: [],
+            planDurationDays: 1,
+          );
+          await planRepo.savePlan(plan);
+
+          final result = await svc.extendPlan('student1', 2);
+
+          expect(result.isSuccess, isTrue);
+          final extended = planRepo.storedPlan!.dailyPlans;
+          expect(extended, hasLength(3));
+          expect(extended[1].date.isSameDay(DateTime(2026, 3, 8)), isTrue);
+          expect(extended[2].date.isSameDay(DateTime(2026, 3, 9)), isTrue);
         });
 
         test('returns success when no plan exists', () async {

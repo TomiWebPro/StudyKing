@@ -1,6 +1,7 @@
 import 'package:studyking/core/utils/answer_comparator.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -65,6 +66,7 @@ class PersonalLearningPlanService {
   final SyllabusResolver? _syllabusResolver;
   final PlannerAdvisorStrategy? _advisor;
   final StudentIdService? _studentIdService;
+  final Clock _clock;
   PlanGenerationConfig config;
   AppLocalizations? _l10n;
 
@@ -81,6 +83,7 @@ class PersonalLearningPlanService {
     StudentIdService? studentIdService,
     PlanGenerationConfig? config,
     AppLocalizations? l10n,
+    Clock? clock,
   })  : _masteryService = masteryService ?? MasteryGraphService(),
         _repository = repository ?? MasteryGraphRepository(),
         _topicRepository = topicRepository ?? TopicRepository(),
@@ -92,7 +95,8 @@ class PersonalLearningPlanService {
         _advisor = advisor,
         _studentIdService = studentIdService,
         config = config ?? PlanGenerationConfig(),
-        _l10n = l10n;
+        _l10n = l10n,
+        _clock = clock ?? SystemClock();
 
   /// Updates the [AppLocalizations] used for generated plan strings.
   /// Called when the app locale changes (see `l10nProvider`), mirroring
@@ -344,7 +348,7 @@ class PersonalLearningPlanService {
     required String studentId,
     required String courseName,
   }) async {
-    final now = DateTime.now();
+    final now = _clock.now();
     final dailyPlans = <DailyPlan>[];
     final totalDays = config.planDurationDays;
 
@@ -393,7 +397,7 @@ class PersonalLearningPlanService {
 
       if (isRestDay) {
         dailyPlans.add(DailyPlan(
-          date: now.add(Duration(days: day - 1)),
+          date: addCalendarDays(now, day - 1),
           dayNumber: day,
           priorityTopics: [],
           reviewQuestionIds: [],
@@ -412,7 +416,7 @@ class PersonalLearningPlanService {
           : 'generated_${day}_$studentId';
       final effectiveSubjectId = resolvedSubjectId ?? '';
       dailyPlans.add(DailyPlan(
-        date: now.add(Duration(days: day - 1)),
+        date: addCalendarDays(now, day - 1),
         dayNumber: day,
         priorityTopics: [
           PlannedTopic(
@@ -816,7 +820,7 @@ class PersonalLearningPlanService {
       var nextDayNumber = plan.dailyPlans.length + 1;
 
       for (var i = 1; i <= extraDays; i++) {
-        final date = lastDay.add(Duration(days: i));
+        final date = addCalendarDays(lastDay, i);
         newPlans.add(DailyPlan(
           date: date,
           dayNumber: nextDayNumber++,
@@ -863,7 +867,7 @@ class PersonalLearningPlanService {
     String courseName = '',
   }) async {
     final dailyPlans = <DailyPlan>[];
-    final now = DateTime.now();
+    final now = _clock.now();
 
     var recommendationIndex = 0;
     final questionsPerTopic = <String, int>{};
@@ -893,7 +897,7 @@ class PersonalLearningPlanService {
 
       if (isRestDay) {
         dailyPlans.add(DailyPlan(
-          date: now.add(Duration(days: day - 1)),
+          date: addCalendarDays(now, day - 1),
           dayNumber: day,
           priorityTopics: [],
           reviewQuestionIds: [],
@@ -964,7 +968,7 @@ class PersonalLearningPlanService {
       }
 
       dailyPlans.add(DailyPlan(
-        date: now.add(Duration(days: day - 1)),
+        date: addCalendarDays(now, day - 1),
         dayNumber: day,
         priorityTopics: priorityTopics,
         reviewQuestionIds: reviewQuestionIds,

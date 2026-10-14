@@ -6,6 +6,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/features/lessons/data/models/lesson_model.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
@@ -383,6 +384,7 @@ PlannerService createPlannerService({
   PlanContextRepository? planContextRepo,
   LessonAgentService? lessonAgentService,
   String? fixedStudentId,
+  Clock? clock,
 }) {
   return PlannerService(
     planRepo: planRepo,
@@ -399,5 +401,6 @@ PlannerService createPlannerService({
     planContextRepo: planContextRepo,
     lessonAgentService: lessonAgentService,
     fixedStudentId: fixedStudentId ?? 'test-student',
+    clock: clock,
   );
 }

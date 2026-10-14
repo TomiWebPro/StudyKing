@@ -11,9 +11,20 @@ import 'package:studyking/features/planner/services/action_executor.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
+import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'planner_service_test_helpers.dart';
+
+/// True when the local zone observes the 2026-03-08 US
+/// spring-forward (a 23h day), e.g. America/New_York. The
+/// DST regression test below can only reproduce the
+/// elapsed-time date-skipping under such a zone; in zones
+/// without that transition it is skipped.
+bool _zoneObserves2026UsSpringForward() {
+  return DateTime(2026, 3, 9).difference(DateTime(2026, 3, 8)) ==
+      const Duration(hours: 23);
+}
 
 void main() {
   late String hivePath;
@@ -482,6 +493,67 @@ void main() {
       final loaded = await service.loadExistingPlan();
       expect(loaded.isSuccess, isTrue);
       expect(loaded.data!.targetMinutesPerDay, 120.0);
+    });
+
+    test('compressed plan dates use calendar days across spring-forward', () async {
+      // Regression: the compressed-plan re-labeling in
+      // `adjustPace` dated days with elapsed-time
+      // `add(Duration(days: i))`. From a 23:30 anchor
+      // on the eve of the 2026-03-08 spring-forward,
+      // the second compressed day landed on 2026-03-09
+      // 00:30 EDT, skipping the 2026-03-08 transition
+      // day.
+      if (!_zoneObserves2026UsSpringForward()) return;
+
+      final plan = PersonalLearningPlan(
+        studentId: 'test-student',
+        generatedAt: DateTime(2026, 3, 7, 23, 30),
+        dailyPlans: [
+          for (var i = 0; i < 3; i++)
+            DailyPlan(
+              date: DateTime(2026, 3, 7 + i, 23, 30),
+              dayNumber: i + 1,
+              priorityTopics: [
+                PlannedTopic(
+                  topicId: 't$i',
+                  topicTitle: 'T$i',
+                  priority: 0.5,
+                  reason: '',
+                  readinessScore: 0.5,
+                  reviewUrgency: 0,
+                  estimatedQuestions: 5,
+                  estimatedMinutes: 15,
+                  subjectId: 's1',
+                  reasons: [],
+                ),
+              ],
+              reviewQuestionIds: [],
+              stretchGoalQuestionIds: [],
+              targetQuestions: 10,
+              targetMinutes: 80,
+              focus: 'Day ${i + 1}',
+            ),
+        ],
+        summary: PlanSummary(
+          totalQuestions: 30, totalMinutes: 240,
+          newTopics: 1, reviewTopics: 0,
+          estimatedCoverage: 0.5, focusAreas: [],
+        ),
+        recommendations: [],
+        targetMinutesPerDay: 80,
+        targetQuestionsPerDay: 10,
+      );
+      await planRepo.savePlan(plan);
+
+      await service.adjustPace(120.0, recalculateDuration: true);
+      final loaded = await service.loadExistingPlan();
+      expect(loaded.isSuccess, isTrue);
+      // 240 total minutes at 120/day compresses to 2
+      // days; both must keep consecutive calendar dates.
+      final compressed = loaded.data!.dailyPlans;
+      expect(compressed, hasLength(2));
+      expect(compressed[0].date.isSameDay(DateTime(2026, 3, 7)), isTrue);
+      expect(compressed[1].date.isSameDay(DateTime(2026, 3, 8)), isTrue);
     });
 
     test('returns null when oldTarget is zero', () async {

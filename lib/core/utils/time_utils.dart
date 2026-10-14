@@ -108,6 +108,17 @@ String formatDateFromContext(BuildContext context, DateTime? date) {
   return formatDate(date, l10n: l10n);
 }
 
+/// Adds [days] calendar days to [date] using local wall-clock
+/// arithmetic, so the result names the calendar day that is
+/// [days] days after [date]'s local date — even across a DST
+/// transition, where consecutive calendar midnights are 23h or
+/// 25h apart. `DateTime.add(Duration(days: n))` is elapsed-time
+/// arithmetic and can skip (spring-forward) or repeat a local
+/// calendar day when the anchor's time-of-day is late enough.
+DateTime addCalendarDays(DateTime date, int days) =>
+    DateTime(date.year, date.month, date.day + days, date.hour, date.minute,
+        date.second);
+
 extension DateTimeX on DateTime {
   bool isSameDay(DateTime other) =>
       year == other.year && month == other.month && day == other.day;
