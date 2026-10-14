@@ -81,6 +81,34 @@ void main() {
       expect(find.text('Sun'), findsOneWidget);
     });
 
+    testWidgets(
+        'fallback day labels stay on their calendar day across a spring-forward',
+        (tester) async {
+      // Europe/Berlin springs forward on Sunday 2026-03-29, so that
+      // calendar day is only 23h long. Anchored at Monday 2026-03-23
+      // 23:30, the pre-fix elapsed-time arithmetic
+      // (`startOfWeek.add(Duration(days: 6))`) spanned an absolute
+      // 24h×6 and landed at 2026-03-30 00:30 — one hour past midnight
+      // into Monday — so the Sunday slot rendered "Mon", Monday
+      // collided in the label map and Sunday was missing. Calendar-day
+      // construction keeps slot 6 on Sunday 2026-03-29 in every
+      // timezone; in a zone without DST this is a contract test (the
+      // same seven labels must hold).
+      await tester.pumpWidget(_buildTestApp(
+        WeeklyChart(
+          weeklyTrend: const [],
+          asOf: DateTime(2026, 3, 23, 23, 30),
+        ),
+      ));
+      await tester.pumpAndSettle();
+
+      const weekdayPrefixes = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+      for (final prefix in weekdayPrefixes) {
+        expect(find.text(prefix), findsOneWidget,
+            reason: 'fallback chart label $prefix');
+      }
+    });
+
     testWidgets('renders weekly activity header with semantics', (tester) async {
       await tester.pumpWidget(_buildTestApp(
         const WeeklyChart(weeklyTrend: []),

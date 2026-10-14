@@ -9,14 +9,28 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class WeeklyChart extends ConsumerWidget {
   final List<WeeklyTrendEntry> weeklyTrend;
 
-  const WeeklyChart({super.key, required this.weeklyTrend});
+  /// Anchor for the fallback weekday-label computation; defaults
+  /// to `DateTime.now()`. Injectable so tests can pin a date inside
+  /// a DST-transition week (same seam as CalendarViewWidget).
+  final DateTime? asOf;
+
+  const WeeklyChart({super.key, required this.weeklyTrend, this.asOf});
 
   Map<String, int> _fallbackDayLabels(String localeName) {
-    final now = DateTime.now();
-    final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+    final now = asOf ?? DateTime.now();
+    // Calendar-day arithmetic, not 24h Durations: across a DST
+    // transition a local midnight is 23h/25h from the next one, so
+    // `startOfWeek.add(Duration(days: i))` drifts off the calendar
+    // day and the Sunday slot can render Monday's name (which also
+    // collides in the label map, dropping Sunday entirely). Construct
+    // each date directly (with normalization for month boundaries)
+    // to keep every label on its own weekday in every timezone.
+    final startOfWeek = DateTime(now.year, now.month, now.day - (now.weekday - 1));
     return {
       for (var i = 0; i < 7; i++)
-        DateFormat.E(localeName).format(startOfWeek.add(Duration(days: i))): 0,
+        DateFormat.E(localeName).format(
+          DateTime(startOfWeek.year, startOfWeek.month, startOfWeek.day + i),
+        ): 0,
     };
   }
 
