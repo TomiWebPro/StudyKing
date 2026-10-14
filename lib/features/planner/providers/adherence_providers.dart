@@ -2,9 +2,19 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
-import 'planner_providers.dart' show plannerServiceProvider;
+import 'planner_providers.dart' show plannerServiceProvider, clockProvider;
 
 final _logger = const Logger('AdherenceProviders');
+
+/// Calendar-day difference `a - b` in whole days. Both arguments are
+/// local calendar midnights; the computation is done on UTC-normalized
+/// dates so a DST transition (a 23h or 25h calendar day) cannot shift
+/// the result the way elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
 
 class AdherenceSummaryData {
   final double averageAdherence;
@@ -62,7 +72,7 @@ final adherenceSummaryProvider =
         : 0.0;
 
     final sortedDays = dayScores.keys.toList()..sort();
-    final now = DateTime.now().dateOnly;
+    final now = ref.watch(clockProvider).now().dateOnly;
 
     // Walk backwards over distinct days while they are consecutive
     // and good. The first accepted day may be today or yesterday
@@ -72,7 +82,7 @@ final adherenceSummaryProvider =
     int anchorOffset = 0;
     for (var i = sortedDays.length - 1; i >= 0; i--) {
       final day = sortedDays[i];
-      final daysDiff = now.difference(day).inDays;
+      final daysDiff = _calendarDayDiff(now, day);
       if (dayScores[day]! < 0.5 || daysDiff < 0) {
         break;
       }
@@ -97,7 +107,7 @@ final adherenceSummaryProvider =
     for (final day in sortedDays) {
       if (dayScores[day]! >= 0.5) {
         if (previousDay != null &&
-            day.difference(previousDay).inDays == 1) {
+            _calendarDayDiff(day, previousDay) == 1) {
           runStreak++;
         } else {
           runStreak = 1;
@@ -113,7 +123,11 @@ final adherenceSummaryProvider =
 
     final trend = <double>[];
     for (var i = 6; i >= 0; i--) {
-      final day = now.subtract(Duration(days: i));
+      // Calendar-day step: `Duration(days: i)` is an absolute 24h×i
+      // span that lands on 23:00/01:00 across a DST transition and
+      // can never equal the calendar midnights adherence records are
+      // keyed by.
+      final day = DateTime(now.year, now.month, now.day - i);
       final dayRecords = records.where(
         (r) => r.date.dateOnly == day,
       );

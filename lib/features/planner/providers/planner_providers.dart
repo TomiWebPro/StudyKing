@@ -11,6 +11,7 @@ import 'package:studyking/core/providers/app_providers.dart' show planOrchestrat
 import 'package:studyking/features/lessons/providers/lesson_providers.dart' show lessonAgentServiceProvider;
 import '../../../core/services/plan_adherence_orchestrator.dart';
 import '../../../core/utils/study_utils.dart';
+import '../../../core/utils/clock.dart';
 import '../../../core/utils/time_utils.dart';
 import '../services/planner_service.dart';
 import 'plan_providers.dart' show planProgressProvider;
@@ -28,6 +29,11 @@ final plannerServiceProvider = Provider<PlannerService>((ref) {
     l10n: l10n,
   );
 });
+
+/// Wall-clock used by time-dependent planner providers. Overridable
+/// in tests so DST-sensitive date arithmetic can be pinned to fixed
+/// dates (same pattern as `clockProvider` in teaching).
+final clockProvider = Provider<Clock>((ref) => SystemClock());
 
 /// Holds the id of the currently active study plan context. Switching this
 /// value drives downstream plan-scoped providers to re-bind to the new plan

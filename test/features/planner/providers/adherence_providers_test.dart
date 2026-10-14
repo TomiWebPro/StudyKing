@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
@@ -41,6 +42,14 @@ class _FakePlannerService extends PlannerService {
     if (_throwOnMetrics) throw Exception('metrics error');
     return Result.success(_metrics);
   }
+}
+
+class _FixedClock implements Clock {
+  final DateTime _now;
+  _FixedClock(this._now);
+
+  @override
+  DateTime now() => _now;
 }
 
 void main() {
@@ -272,6 +281,131 @@ void main() {
       final data = await container.read(adherenceSummaryProvider('test-student').future);
       expect(data.totalDays, 2);
       expect(data.averageAdherence, closeTo(0.6, 0.0001));
+    });
+
+    test('currentStreak and bestStreak survive a spring-forward transition',
+        () async {
+      // Europe/Berlin springs forward on 2026-03-29, so that
+      // calendar day is only 23h long. Elapsed-time arithmetic
+      // between the calendar midnights loses an hour and
+      // truncates the day difference by one: the streak walk
+      // broke after today and the best-streak run test failed
+      // across the transition day.
+      final service = _FakePlannerService();
+      service.setAdherenceRecords([
+        for (final day in [28, 29, 30, 31])
+          PlanAdherenceModel(
+            id: 'a$day',
+            studentId: 'test-student',
+            date: DateTime(2026, 3, day, 10, 0),
+            adherenceScore: 0.9,
+          ),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+          clockProvider.overrideWithValue(_FixedClock(DateTime(2026, 3, 31, 12, 0))),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.currentStreak, 4);
+      expect(data.bestStreak, 4);
+    });
+
+    test('currentStreak ending yesterday survives a spring-forward transition',
+        () async {
+      // Good streak on Mar 28-30 spanning the 2026-03-29
+      // spring-forward, no session recorded today (Mar 31).
+      // The first accepted day is yesterday (one calendar day
+      // back), which elapsed-time arithmetic miscounts as zero
+      // days back and breaks the walk.
+      final service = _FakePlannerService();
+      service.setAdherenceRecords([
+        for (final day in [28, 29, 30])
+          PlanAdherenceModel(
+            id: 'a$day',
+            studentId: 'test-student',
+            date: DateTime(2026, 3, day, 10, 0),
+            adherenceScore: 0.9,
+          ),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+          clockProvider.overrideWithValue(_FixedClock(DateTime(2026, 3, 31, 12, 0))),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.currentStreak, 3);
+    });
+
+    test('weeklyTrend shows every day across a spring-forward transition',
+        () async {
+      // `now.subtract(Duration(days: i))` spans an absolute
+      // 24h×i, which lands on 23:00 of the target calendar day
+      // for every i whose span contains the 2026-03-29 transition
+      // and therefore matches no adherence record.
+      final service = _FakePlannerService();
+      service.setAdherenceRecords([
+        for (final day in [25, 26, 27, 28, 29, 30, 31])
+          PlanAdherenceModel(
+            id: 'a$day',
+            studentId: 'test-student',
+            date: DateTime(2026, 3, day, 10, 0),
+            adherenceScore: 0.9,
+          ),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+          clockProvider.overrideWithValue(_FixedClock(DateTime(2026, 3, 31, 12, 0))),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.weeklyTrend, hasLength(7));
+      for (final score in data.weeklyTrend) {
+        expect(score, closeTo(0.9, 0.0001));
+      }
+    });
+
+    test('weeklyTrend shows every day across a fall-back transition',
+        () async {
+      // Europe/Berlin falls back on 2026-10-25, so that calendar
+      // day is 25h long and a 24h×i span lands on 01:00 of the
+      // target calendar day, matching no adherence record.
+      final service = _FakePlannerService();
+      service.setAdherenceRecords([
+        for (final day in [20, 21, 22, 23, 24, 25, 26])
+          PlanAdherenceModel(
+            id: 'b$day',
+            studentId: 'test-student',
+            date: DateTime(2026, 10, day, 10, 0),
+            adherenceScore: 0.8,
+          ),
+      ]);
+
+      final container = ProviderContainer(
+        overrides: [
+          plannerServiceProvider.overrideWithValue(service),
+          clockProvider.overrideWithValue(_FixedClock(DateTime(2026, 10, 26, 12, 0))),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final data = await container.read(adherenceSummaryProvider('test-student').future);
+      expect(data.weeklyTrend, hasLength(7));
+      for (final score in data.weeklyTrend) {
+        expect(score, closeTo(0.8, 0.0001));
+      }
     });
   });
 
