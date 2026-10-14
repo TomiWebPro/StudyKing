@@ -42,6 +42,9 @@ void main() {
         lessonIds: ['lesson-1', 'lesson-2'],
         tags: ['algebra', 'equations'],
         createdAt: createdAt,
+        lessonReady: false,
+        tutorSessionId: 'tutor-42',
+        status: SessionStatus.completed,
         tutorMetadata: TutorMetadata(
           topicTitle: 'Linear Equations',
           lessonPlanJson: '{"steps":[]}',
@@ -82,6 +85,9 @@ void main() {
       expect(restored.tutorMetadata!.topicsCovered, ['solving', 'graphing']);
       expect(restored.tutorMetadata!.totalMessages, 25);
       expect(restored.tutorMetadata!.totalTokensUsed, 15000);
+      expect(restored.lessonReady, isFalse);
+      expect(restored.tutorSessionId, 'tutor-42');
+      expect(restored.status, SessionStatus.completed);
     });
 
     test('write/read with minimal fields (null optionals, defaults)', () {
@@ -423,6 +429,130 @@ void main() {
       expect(restored.tutorMetadata!.confidenceRating, 5);
       expect(restored.tutorMetadata!.totalMessages, 99999);
       expect(restored.tutorMetadata!.totalTokensUsed, 999999999);
+    });
+
+    test('status, lessonReady and tutorSessionId survive a round-trip', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
+        ..registerAdapter(SessionAdapter());
+      final adapter = SessionAdapter();
+      final now = DateTime(2025, 6, 15, 10, 30, 0);
+      final source = Session(
+        id: 'sr-1',
+        studentId: 'student-1',
+        startTime: now,
+        status: SessionStatus.inProgress,
+        lessonReady: false,
+        tutorSessionId: 'tutor-session-77',
+      );
+
+      final writer = BinaryWriterImpl(registry);
+      adapter.write(writer, source);
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.status, SessionStatus.inProgress);
+      expect(restored.lessonReady, isFalse);
+      expect(restored.tutorSessionId, 'tutor-session-77');
+    });
+
+    test('write/read for all SessionStatus values', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
+        ..registerAdapter(SessionAdapter());
+      final adapter = SessionAdapter();
+      final now = DateTime(2025, 6, 15);
+
+      for (final status in SessionStatus.values) {
+        final source = Session(
+          id: 's-status', studentId: 's1', startTime: now,
+          status: status,
+        );
+
+        final writer = BinaryWriterImpl(registry);
+        adapter.write(writer, source);
+        final reader = BinaryReaderImpl(writer.toBytes(), registry);
+        final restored = adapter.read(reader);
+
+        expect(restored.status, status, reason: 'Failed for SessionStatus.${status.name}');
+      }
+    });
+
+    test('reading a legacy 18-field record applies defaults for the new fields', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
+        ..registerAdapter(SessionAdapter());
+      final adapter = SessionAdapter();
+      final now = DateTime(2025, 6, 15);
+
+      // Simulate a record written before lessonReady /
+      // tutorSessionId / status were persisted: exactly 18
+      // fields, indices 0..17.
+      final writer = BinaryWriterImpl(registry);
+      writer.writeByte(18);
+      writer.writeByte(0); writer.write('legacy-1');
+      writer.writeByte(1); writer.write('student-1');
+      writer.writeByte(2); writer.write(null);
+      writer.writeByte(3); writer.write(null);
+      writer.writeByte(4); writer.write(SessionType.focus.index);
+      writer.writeByte(5); writer.write(now.millisecondsSinceEpoch);
+      writer.writeByte(6); writer.write(null);
+      writer.writeByte(7); writer.write(null);
+      writer.writeByte(8); writer.write(0);
+      writer.writeByte(9); writer.write(0);
+      writer.writeByte(10); writer.write(0);
+      writer.writeByte(11); writer.write(false);
+      writer.writeByte(12); writer.write(null);
+      writer.writeByte(13); writer.write(null);
+      writer.writeByte(14); writer.write(null);
+      writer.writeByte(15); writer.write(null);
+      writer.writeByte(16); writer.write(now.millisecondsSinceEpoch);
+      writer.writeByte(17); writer.write(null);
+
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.id, 'legacy-1');
+      expect(restored.status, SessionStatus.planned);
+      expect(restored.lessonReady, isTrue);
+      expect(restored.tutorSessionId, isNull);
+    });
+
+    test('reading a record with an out-of-range status index falls back to planned', () {
+      final registry = TypeRegistryImpl()
+        ..registerAdapter(DateTimeWithTimezoneAdapter(), internal: true)
+        ..registerAdapter(SessionAdapter());
+      final adapter = SessionAdapter();
+      final now = DateTime(2025, 6, 15);
+
+      final writer = BinaryWriterImpl(registry);
+      writer.writeByte(21);
+      writer.writeByte(0); writer.write('bad-status');
+      writer.writeByte(1); writer.write('student-1');
+      writer.writeByte(2); writer.write(null);
+      writer.writeByte(3); writer.write(null);
+      writer.writeByte(4); writer.write(SessionType.focus.index);
+      writer.writeByte(5); writer.write(now.millisecondsSinceEpoch);
+      writer.writeByte(6); writer.write(null);
+      writer.writeByte(7); writer.write(null);
+      writer.writeByte(8); writer.write(0);
+      writer.writeByte(9); writer.write(0);
+      writer.writeByte(10); writer.write(0);
+      writer.writeByte(11); writer.write(false);
+      writer.writeByte(12); writer.write(null);
+      writer.writeByte(13); writer.write(null);
+      writer.writeByte(14); writer.write(null);
+      writer.writeByte(15); writer.write(null);
+      writer.writeByte(16); writer.write(now.millisecondsSinceEpoch);
+      writer.writeByte(17); writer.write(null);
+      writer.writeByte(18); writer.write(true);
+      writer.writeByte(19); writer.write(null);
+      writer.writeByte(20); writer.write(99);
+
+      final reader = BinaryReaderImpl(writer.toBytes(), registry);
+      final restored = adapter.read(reader);
+
+      expect(restored.status, SessionStatus.planned);
     });
   });
 }
