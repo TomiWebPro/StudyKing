@@ -36,6 +36,30 @@ class _FailingConversationRepository extends ConversationRepository {
   }
 }
 
+/// Hand-written fake that mimics Hive's `put` semantics: saving a message
+/// under an id that already exists overwrites the previous message, so
+/// colliding ids silently lose the earlier message.
+class _HiveConversationRepository extends ConversationRepository {
+  final Map<String, ConversationMessage> _store = {};
+
+  @override
+  Future<Result<void>> saveMessage(ConversationMessage msg) async {
+    _store[msg.id] = msg;
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<List<ConversationMessage>>> getSessionMessages(String sessionId) async {
+    final stored = _store.values
+        .where((m) => m.sessionId == sessionId)
+        .toList()
+      ..sort((a, b) => a.timestamp.compareTo(b.timestamp));
+    return Result.success(stored);
+  }
+
+  int get storedMessageCount => _store.length;
+}
+
 void main() {
   group('ConversationMemory', () {
     test('starts with empty messages', () {
@@ -383,6 +407,40 @@ void main() {
         final memory = ConversationMemory(sessionId: 'sess1');
         await memory.loadFromRepository();
         expect(memory.messages, isEmpty);
+      });
+    });
+
+    group('message id uniqueness', () {
+      test('rapidly added messages get unique ids', () async {
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          maxTurns: 500,
+        );
+        for (var i = 0; i < 500; i++) {
+          await memory.addAssistantMessage('msg$i');
+        }
+        final ids = memory.messages.map((m) => m.id).toList();
+        expect(ids.toSet().length, ids.length);
+      });
+
+      test('same-millisecond messages all persist and reload', () async {
+        final repo = _HiveConversationRepository();
+        final memory = ConversationMemory(
+          sessionId: 'sess1',
+          repository: repo,
+          maxTurns: 500,
+        );
+        // A tight loop makes several messages land in the same
+        // millisecond. Without a uniqueness component in the id, the
+        // earlier ones are overwritten under the same Hive key and are
+        // gone after a reload.
+        for (var i = 0; i < 500; i++) {
+          await memory.addAssistantMessage('msg$i');
+        }
+        expect(repo.storedMessageCount, 500);
+
+        await memory.loadFromRepository();
+        expect(memory.messages, hasLength(500));
       });
     });
 

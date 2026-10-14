@@ -21,6 +21,7 @@ class ConversationMemory {
   final ConversationRepository? _repository;
   final ConversationSummarizer? _summarizer;
   bool _truncationNotified = false;
+  int _idCounter = 0;
 
   ConversationMemory({
     this.maxTurns = 20,
@@ -58,7 +59,10 @@ class ConversationMemory {
         _ => MessageRole.student,
       };
       final msg = ConversationMessage(
-        id: '${sessionId ?? 'mem'}_${DateTime.now().millisecondsSinceEpoch}',
+        // Counter suffix keeps ids unique for messages created within
+        // the same millisecond; Hive `put` would otherwise silently
+        // overwrite the earlier message under the same key.
+        id: '${sessionId ?? 'mem'}_${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}',
         sessionId: sessionId ?? '',
         role: messageRole,
         type: MessageType.text,
@@ -95,7 +99,7 @@ class ConversationMemory {
       if (summary == null || summary.isEmpty) return;
 
       final summaryMsg = ConversationMessage(
-        id: '${sessionId ?? 'mem'}_summary_${DateTime.now().millisecondsSinceEpoch}',
+        id: '${sessionId ?? 'mem'}_summary_${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}',
         sessionId: sessionId ?? '',
         role: MessageRole.system,
         type: MessageType.system,
@@ -122,7 +126,7 @@ class ConversationMemory {
     final summary = await _summarizeBatch(toDrop);
     if (summary != null && summary.isNotEmpty) {
       final summaryMsg = ConversationMessage(
-        id: '${sessionId ?? 'mem'}_drop_summary_${DateTime.now().millisecondsSinceEpoch}',
+        id: '${sessionId ?? 'mem'}_drop_summary_${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}',
         sessionId: sessionId ?? '',
         role: MessageRole.system,
         type: MessageType.system,
@@ -138,7 +142,7 @@ class ConversationMemory {
       if (!_truncationNotified) {
         _truncationNotified = true;
         final truncMsg = ConversationMessage(
-          id: '${sessionId ?? 'mem'}_trunc_${DateTime.now().millisecondsSinceEpoch}',
+          id: '${sessionId ?? 'mem'}_trunc_${DateTime.now().millisecondsSinceEpoch}_${_idCounter++}',
           sessionId: sessionId ?? '',
           role: MessageRole.system,
           type: MessageType.system,
