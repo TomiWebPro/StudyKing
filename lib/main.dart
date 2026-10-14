@@ -191,9 +191,9 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
     }
 
     // Initialize student ID service
-    StudentIdService();
-    await StudentIdService().init();
-    await StudentIdService().updateLastActivity();
+    final studentIdService = StudentIdService();
+    await studentIdService.init();
+    await studentIdService.updateLastActivity();
 
     try {
       final masteryService = MasteryGraphService();

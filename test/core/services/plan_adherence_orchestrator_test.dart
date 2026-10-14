@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/features/planner/data/adapters.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -296,6 +298,55 @@ void main() {
         expect(after.data!.message,
             lookupAppLocalizations(const Locale('es')).adherenceLowDaysRegenerate(3));
         expect(after.data!.message, contains('días consecutivos'));
+      });
+
+      test('returns AbsenceDeviation when last activity was 10 days ago',
+          () async {
+        final box = await Hive.openBox(HiveBoxNames.studentId);
+        addTearDown(() => box.delete('lastActivityAt'));
+        await box.put(
+          'lastActivityAt',
+          DateTime.now().subtract(const Duration(days: 10)).toIso8601String(),
+        );
+
+        final studentIdService = StudentIdService();
+        final absenceAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+          studentIdService: studentIdService,
+        );
+
+        final result = await absenceAdapter.checkAdherence('student-1');
+
+        expect(result.isSuccess, true);
+        expect(result.data, isA<AbsenceDeviation>());
+        final absence = result.data! as AbsenceDeviation;
+        expect(absence.daysSinceLastActivity, 10);
+        expect(absence.requiresRegeneration, true);
+        expect(absence.requiresEscalation, true);
+        expect(absence.message, contains('10 days'));
+      });
+
+      test('does not report absence when last activity is today', () async {
+        final box = await Hive.openBox(HiveBoxNames.studentId);
+        addTearDown(() => box.delete('lastActivityAt'));
+        await box.put('lastActivityAt', DateTime.now().toIso8601String());
+
+        final studentIdService = StudentIdService();
+        final absenceAdapter = PlanAdherenceOrchestrator(
+          adherenceRepository: adherenceRepo,
+          planRepository: planRepo,
+          planService: _FakePlanService(adherenceRepo: adherenceRepo),
+          studentIdService: studentIdService,
+        );
+
+        final result = await absenceAdapter.checkAdherence('student-1');
+
+        expect(result.isSuccess, true);
+        expect(result.data, isNot(isA<AbsenceDeviation>()));
+        expect(result.data!.consecutiveLowDays, 0);
+        expect(result.data!.requiresRegeneration, false);
       });
     });
 

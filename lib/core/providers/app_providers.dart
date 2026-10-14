@@ -39,6 +39,7 @@ final planOrchestratorProvider = Provider<PlanAdherenceOrchestrator>((ref) {
               'l10nProvider returned null for planOrchestratorProvider, using English fallback');
           return lookupAppLocalizations(const Locale('en'));
         })(),
+    studentIdService: ref.watch(studentIdServiceProvider),
   );
   ref.listen(l10nProvider, (_, next) {
     if (next != null) orchestrator.updateLocalization(next);

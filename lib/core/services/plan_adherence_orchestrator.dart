@@ -43,6 +43,7 @@ class PlanAdherenceOrchestrator {
   PlanAdherenceRepository get adherenceRepository => _adherenceRepository;
   final PlanRepository _planRepository;
   final PersonalLearningPlanService _planService;
+  final StudentIdService? _studentIdService;
   AppLocalizations? _l10n;
 
   PlanAdherenceOrchestrator({
@@ -51,9 +52,11 @@ class PlanAdherenceOrchestrator {
     PersonalLearningPlanService? planService,
     MasteryGraphService? masteryService,
     AppLocalizations? l10n,
+    StudentIdService? studentIdService,
   })  : _adherenceRepository = adherenceRepository ?? PlanAdherenceRepository(),
         _planRepository = planRepository ?? PlanRepository(),
         _planService = planService ?? PersonalLearningPlanService(l10n: l10n),
+        _studentIdService = studentIdService,
         _l10n = l10n;
 
   /// Updates the [AppLocalizations] used for adherence deviation and daily
@@ -69,7 +72,8 @@ class PlanAdherenceOrchestrator {
       await _adherenceRepository.init();
       await _planRepository.init();
 
-      final studentIdService = StudentIdService();
+      final studentIdService = _studentIdService ?? StudentIdService();
+      await studentIdService.init();
       final daysSinceLastActivity = studentIdService.getDaysSinceLastActivity();
 
       if (daysSinceLastActivity >= 3) {
