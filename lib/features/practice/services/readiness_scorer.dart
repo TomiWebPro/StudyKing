@@ -5,6 +5,17 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 
+/// Calendar-day difference `a - b` in whole days. Both
+/// arguments are local timestamps; the computation is done
+/// on UTC-normalized dates so a DST transition (a 23h or
+/// 25h calendar day) cannot shift the result the way
+/// elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
+
 class ScoredQuestion {
   final Question question;
   final double score;
@@ -209,8 +220,12 @@ class ReadinessScorer {
     }
 
     if (questionMastery != null) {
+      // Calendar-day count, not elapsed 24h periods: a
+      // question attempted late yesterday is one day stale
+      // even when the elapsed span is under 24h (always the
+      // case on a 23h DST-transition day).
       final daysSinceLastAttempt =
-          now.difference(questionMastery.lastAttempt).inDays.toDouble();
+          _calendarDayDiff(now, questionMastery.lastAttempt).toDouble();
       final daysNorm = (daysSinceLastAttempt / 30.0).clamp(0.0, 1.0);
       score += daysNorm * daysSinceLastAttemptWeight;
 

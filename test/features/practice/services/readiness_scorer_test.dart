@@ -374,6 +374,34 @@ void main() {
         final result = await scorer.scoreQuestions(questions);
         expect(result.first.question.id, 'q2');
       });
+
+      test('counts calendar days since last attempt, not elapsed 24h periods',
+          () async {
+        final now = DateTime.now();
+        // Last second of yesterday: the elapsed span is always
+        // under 24h (even on a 23h DST-transition day), so
+        // elapsed-time `difference().inDays` reports 0 days,
+        // but the attempt is on the previous calendar day —
+        // exactly 1 calendar day in every timezone.
+        final yesterdayLastSecond =
+            DateTime(now.year, now.month, now.day - 1, 23, 59, 59);
+        final questions = [_createQ(id: 'q1')];
+        final qMastery = QuestionMasteryState(
+          studentId: 's1',
+          questionId: 'q1',
+          lastAttempt: yesterdayLastSecond,
+          confidenceHistory: const [],
+        );
+        final scorer = ReadinessScorer(questionMasteryMap: {'q1': qMastery});
+        final result = await scorer.scoreQuestions(questions);
+
+        // No topic mastery (0.8*0.4 + 0.5*0.3), one calendar day
+        // since last attempt (1/30 * 0.2), default confidence gap
+        // (0.5*0.1), difficulty 1 ((1-1)/2 * 0.05).
+        final expected =
+            0.8 * 0.4 + 0.5 * 0.3 + (1 / 30.0) * 0.2 + 0.5 * 0.1;
+        expect(result.first.score, closeTo(expected, 1e-9));
+      });
     });
 
     group('variant awareness', () {
