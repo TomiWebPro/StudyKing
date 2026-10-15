@@ -8,9 +8,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/prep_budget.dart';
+import 'package:studyking/core/services/prep_budget_repository.dart';
 import 'package:studyking/core/services/secure_api_key_service.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/secure_api_key_provider.dart';
@@ -117,14 +120,20 @@ class FakeLlmUsageMeter extends LlmUsageMeter {
   final int _totalTokens;
   final double _totalCost;
   final Map<String, int> _perFeature;
+  final Map<String, int> _perTaskTypeTokens;
+  final Map<String, double> _perTaskTypeCost;
 
   FakeLlmUsageMeter({
     int totalTokens = 0,
     double totalCost = 0.0,
     Map<String, int> perFeature = const {},
+    Map<String, int> perTaskTypeTokens = const {},
+    Map<String, double> perTaskTypeCost = const {},
   })  : _totalTokens = totalTokens,
         _totalCost = totalCost,
-        _perFeature = perFeature;
+        _perFeature = perFeature,
+        _perTaskTypeTokens = perTaskTypeTokens,
+        _perTaskTypeCost = perTaskTypeCost;
 
   @override
   Future<void> init() async {}
@@ -140,6 +149,12 @@ class FakeLlmUsageMeter extends LlmUsageMeter {
 
   @override
   Map<String, int> getTotalTokensPerFeature() => _perFeature;
+
+  @override
+  Map<String, int> getTotalTokensPerTaskType() => _perTaskTypeTokens;
+
+  @override
+  Map<String, double> getTotalCostPerTaskType() => _perTaskTypeCost;
 }
 
 class FakeSecureApiKeyService extends SecureApiKeyService {
@@ -182,6 +197,34 @@ class FakeDataBackupService extends DataBackupService {
   }
 }
 
+class FakePrepBudgetRepository implements PrepBudgetRepository {
+  PrepBudget current = PrepBudget.defaults;
+  bool shouldFail = false;
+  int saveCallCount = 0;
+  PrepBudget? lastSaved;
+
+  @override
+  Future<Result<void>> init() async {
+    if (shouldFail) return Result.failure('Simulated init failure');
+    return Result.success(null);
+  }
+
+  @override
+  Result<PrepBudget> load() {
+    if (shouldFail) return Result.failure('Simulated load failure');
+    return Result.success(current);
+  }
+
+  @override
+  Future<Result<void>> save(PrepBudget budget) async {
+    saveCallCount++;
+    lastSaved = budget;
+    if (shouldFail) return Result.failure('Simulated save failure');
+    current = budget;
+    return Result.success(null);
+  }
+}
+
 class _TestSettingsNotifier extends SettingsController {
   _TestSettingsNotifier(SettingsBox initial, SettingsRepository repo) : super(repo) {
     state = initial;
@@ -211,12 +254,22 @@ Widget buildSettingsScreen({
   bool useThrowingNotifier = false,
   TestNavigatorObserver? navigatorObserver,
   Locale locale = const Locale('en'),
+  PrepBudget? initialPrepBudget,
+  FakePrepBudgetRepository? prepBudgetRepository,
 }) {
   if (initialSettings != null) {
     fakeRepo.settings = initialSettings;
   }
   final effectiveTaskManager = taskManager ?? FakeLlmTaskManager();
   final effectiveUsageMeter = usageMeter ?? FakeLlmUsageMeter();
+  final effectivePrepBudgetRepository = prepBudgetRepository ?? FakePrepBudgetRepository();
+  if (initialPrepBudget != null) {
+    effectivePrepBudgetRepository.current = initialPrepBudget;
+  }
+  final effectivePrepBudgetService = PrepBudgetService(
+    meter: effectiveUsageMeter,
+    budget: effectivePrepBudgetRepository.current,
+  );
   return ProviderScope(
     overrides: [
       if (useThrowingNotifier)
@@ -227,6 +280,10 @@ Widget buildSettingsScreen({
       selectedModelProvider.overrideWith((ref) => selectedModel),
       llmTaskManagerProvider.overrideWith((ref) => effectiveTaskManager),
       llmUsageMeterProvider.overrideWith((ref) => effectiveUsageMeter),
+      prepBudgetRepositoryProvider.overrideWith((ref) => effectivePrepBudgetRepository),
+      prepBudgetSettingsProvider.overrideWith((ref) =>
+          PrepBudgetSettingsController(effectivePrepBudgetRepository)),
+      prepBudgetServiceProvider.overrideWithValue(effectivePrepBudgetService),
       if (secureApiKeyService != null)
         secureApiKeyServiceProvider.overrideWith((ref) => secureApiKeyService),
       if (backupService != null)
@@ -257,6 +314,8 @@ Future<void> pumpWithSettings(WidgetTester tester, {
   bool useThrowingNotifier = false,
   TestNavigatorObserver? navigatorObserver,
   Locale locale = const Locale('en'),
+  PrepBudget? initialPrepBudget,
+  FakePrepBudgetRepository? prepBudgetRepository,
 }) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(800, 3500);
@@ -271,6 +330,8 @@ Future<void> pumpWithSettings(WidgetTester tester, {
     useThrowingNotifier: useThrowingNotifier,
     navigatorObserver: navigatorObserver,
     locale: locale,
+    initialPrepBudget: initialPrepBudget,
+    prepBudgetRepository: prepBudgetRepository,
   ));
   await tester.pumpAndSettle();
 }

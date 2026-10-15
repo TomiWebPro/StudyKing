@@ -82,6 +82,28 @@ class PrepBudget {
     );
   }
 
+  /// Reference total budget used to map absolute caps to percentages in the
+  /// Settings surface. The vision §4.2 default split (40/30/20/10) is expressed
+  /// as caps over this total, so the student can steer each category as a
+  /// percentage of a known whole.
+  static const int referenceTotalTokens = 500000;
+
+  /// Percentage of [referenceTotalTokens] allocated to [category] (0–100).
+  int percentFor(PrepCategory category) {
+    final cap = caps[category] ?? 0;
+    return ((cap / referenceTotalTokens) * 100).round();
+  }
+
+  /// A copy with the cap for [category] set to the token amount implied by
+  /// [percent] of [referenceTotalTokens] (clamped to 0–100).
+  PrepBudget withPercent(PrepCategory category, int percent) {
+    final clamped = percent.clamp(0, 100);
+    final cap = (clamped / 100 * referenceTotalTokens).round();
+    return copyWith(caps: {
+      for (final c in PrepCategory.values) c: c == category ? cap : (caps[c] ?? 0),
+    });
+  }
+
   /// Tokens remaining in [category] for the given per-task-type spend map,
   /// clamped to zero once the cap is exhausted.
   int remainingFor(PrepCategory category, Map<String, int> spentByCategory) {

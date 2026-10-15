@@ -4,7 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/llm_tasks/presentation/llm_task_manager_screen.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
@@ -178,10 +181,13 @@ class FakeLlmTaskManager extends LlmTaskManager {
 TestNavigatorObserver? testNavigatorObserver;
 late FakeLlmTaskManager manager;
 
-Widget _buildTestApp(FakeLlmTaskManager manager) {
+Widget _buildTestApp(FakeLlmTaskManager manager, {PrepBudgetService? prepBudgetService}) {
   return ProviderScope(
     overrides: [
       llmTaskManagerProvider.overrideWithValue(manager),
+      prepBudgetServiceProvider.overrideWithValue(
+        prepBudgetService ?? PrepBudgetService(meter: LlmUsageMeter()),
+      ),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -815,7 +821,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsWidgets);
     });
 
     testWidgets('hides progress indicator when no completed tasks',
@@ -827,7 +833,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsWidgets);
     });
 
     testWidgets('shows divider between token meter and task list',
@@ -839,7 +845,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      expect(find.byType(Divider), findsOneWidget);
+      expect(find.byType(Divider), findsWidgets);
     });
 
     // =====================
@@ -926,7 +932,7 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.byType(LinearProgressIndicator), findsWidgets);
     });
 
     // =====================
@@ -1014,10 +1020,13 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      final progress = tester.widget<LinearProgressIndicator>(
+       // The token meter LPI is the one with value 1.0 (all completed);
+      // prep budget bars have 0% spend in this scenario.
+      final progresses = tester.widgetList<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      expect(progress.value, 1.0);
+      final tokenMeterProgress = progresses.firstWhere((p) => p.value == 1.0);
+      expect(tokenMeterProgress.value, 1.0);
     });
 
     testWidgets('progress indicator partially filled with mixed status',
@@ -1032,10 +1041,13 @@ void main() {
       await tester.pumpWidget(_buildTestApp(manager));
       await tester.pump();
 
-      final progress = tester.widget<LinearProgressIndicator>(
+      // The token meter LPI is the one with a non-zero value (33.3% complete);
+      // prep budget bars have 0% spend in this scenario.
+      final progresses = tester.widgetList<LinearProgressIndicator>(
         find.byType(LinearProgressIndicator),
       );
-      expect(progress.value, closeTo(0.333, 0.001));
+      final tokenMeterProgress = progresses.firstWhere((p) => p.value != null && p.value! > 0);
+      expect(tokenMeterProgress.value, closeTo(0.333, 0.001));
     });
 
     // =====================

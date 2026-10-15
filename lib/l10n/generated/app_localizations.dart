@@ -10239,6 +10239,12 @@ abstract class AppLocalizations {
   /// **'Active syllabus'**
   String get mentorContextActiveSyllabus;
 
+  /// Directive injected into mentor context when no study materials have been uploaded
+  ///
+  /// In en, this message translates to:
+  /// **'You have no uploaded study materials. When the student asks about a course, suggest uploading a syllabus or using a standard curriculum.'**
+  String get mentorContextNoMaterials;
+
   /// Tutor acknowledgement when the student switches the active syllabus
   ///
   /// In en, this message translates to:
@@ -10478,6 +10484,72 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pipeline complete'**
   String get pipelineStageComplete;
+
+  /// Section title for the preparation budget settings
+  ///
+  /// In en, this message translates to:
+  /// **'Preparation budget'**
+  String get preparationBudget;
+
+  /// Subtitle for the preparation budget settings section
+  ///
+  /// In en, this message translates to:
+  /// **'Control where off-period preparation tokens are spent'**
+  String get preparationBudgetDesc;
+
+  /// Master toggle for off-period preparation
+  ///
+  /// In en, this message translates to:
+  /// **'Prepare while I\'m away'**
+  String get prepareWhileAway;
+
+  /// Subtitle for the prepare-while-away master toggle
+  ///
+  /// In en, this message translates to:
+  /// **'Generate lessons, question variants, and a knowledge base while you\'re away'**
+  String get prepareWhileAwayDesc;
+
+  /// Label for the PDF ingestion preparation budget category
+  ///
+  /// In en, this message translates to:
+  /// **'PDF → Knowledge base'**
+  String get prepCategoryPdfIngestion;
+
+  /// Label for the question-bank expansion preparation budget category
+  ///
+  /// In en, this message translates to:
+  /// **'Question bank expansion'**
+  String get prepCategoryQuestionVariants;
+
+  /// Label for the lesson preparation budget category
+  ///
+  /// In en, this message translates to:
+  /// **'Lesson preparation'**
+  String get prepCategoryLessonPrep;
+
+  /// Label for the embeddings preparation budget category
+  ///
+  /// In en, this message translates to:
+  /// **'Embeddings'**
+  String get prepCategoryEmbeddings;
+
+  /// Label for the background preparation budget category
+  ///
+  /// In en, this message translates to:
+  /// **'Background tasks'**
+  String get prepCategoryBackground;
+
+  /// Percentage label for a preparation budget category cap
+  ///
+  /// In en, this message translates to:
+  /// **'{percent}%'**
+  String prepCapPercent(int percent);
+
+  /// Caption shown when the preparation budget master switch is off
+  ///
+  /// In en, this message translates to:
+  /// **'Preparation budget is off — prep tasks are paused'**
+  String get prepBudgetDisabled;
 }
 
 class _AppLocalizationsDelegate

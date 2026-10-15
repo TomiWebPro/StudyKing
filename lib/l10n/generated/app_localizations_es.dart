@@ -6296,6 +6296,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mentorContextActiveSyllabus => 'Plan de estudio activo';
 
   @override
+  String get mentorContextNoMaterials => 'No se han subido materiales de estudio. Cuando el estudiante pregunte sobre un curso, sugiera subir un plan de estudios o libro de texto, o usar un currículo estándar.';
+
+  @override
   String tutorSyllabusSwitched(String title) {
     return 'Syllabus activo cambiado a $title.';
   }
@@ -6460,4 +6463,42 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get pipelineStageComplete => 'Proceso completado';
+
+  @override
+  String get preparationBudget => 'Presupuesto de preparación';
+
+  @override
+  String get preparationBudgetDesc =>
+      'Controle dónde se gastan los tokens de preparación fuera de clase';
+
+  @override
+  String get prepareWhileAway => 'Preparar mientras estoy ausente';
+
+  @override
+  String get prepareWhileAwayDesc =>
+      'Generar lecciones, variantes de preguntas y una base de conocimiento mientras está ausente';
+
+  @override
+  String get prepCategoryPdfIngestion => 'PDF → Base de conocimiento';
+
+  @override
+  String get prepCategoryQuestionVariants => 'Expansión del banco de preguntas';
+
+  @override
+  String get prepCategoryLessonPrep => 'Preparación de lecciones';
+
+  @override
+  String get prepCategoryEmbeddings => 'Incrustaciones';
+
+  @override
+  String get prepCategoryBackground => 'Tareas en segundo plano';
+
+  @override
+  String prepCapPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get prepBudgetDisabled =>
+      'El presupuesto de preparación está desactivado; las tareas de preparación están pausadas';
 }

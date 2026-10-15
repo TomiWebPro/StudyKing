@@ -8187,6 +8187,10 @@
   "@mentorContextActiveSyllabus": {
     "description": "Mentor context active syllabus label"
   },
+  "mentorContextNoMaterials": "You have no uploaded study materials. When the student asks about a course, suggest uploading a syllabus or using a standard curriculum.",
+  "@mentorContextNoMaterials": {
+    "description": "Directive injected into mentor context when no study materials have been uploaded"
+  },
   "tutorSyllabusSwitched": "Switched active syllabus to {title}.",
   "@tutorSyllabusSwitched": {
     "description": "Tutor acknowledgement when the student switches the active syllabus",
@@ -8376,5 +8380,54 @@
   "pipelineStageComplete": "Pipeline complete",
   "@pipelineStageComplete": {
     "description": "Content pipeline progress stage: processing complete"
+  },
+  "preparationBudget": "Preparation budget",
+  "@preparationBudget": {
+    "description": "Section title for the preparation budget settings"
+  },
+  "preparationBudgetDesc": "Control where off-period preparation tokens are spent",
+  "@preparationBudgetDesc": {
+    "description": "Subtitle for the preparation budget settings section"
+  },
+  "prepareWhileAway": "Prepare while I'm away",
+  "@prepareWhileAway": {
+    "description": "Master toggle for off-period preparation"
+  },
+  "prepareWhileAwayDesc": "Generate lessons, question variants, and a knowledge base while you're away",
+  "@prepareWhileAwayDesc": {
+    "description": "Subtitle for the prepare-while-away master toggle"
+  },
+  "prepCategoryPdfIngestion": "PDF → Knowledge base",
+  "@prepCategoryPdfIngestion": {
+    "description": "Label for the PDF ingestion preparation budget category"
+  },
+  "prepCategoryQuestionVariants": "Question bank expansion",
+  "@prepCategoryQuestionVariants": {
+    "description": "Label for the question-bank expansion preparation budget category"
+  },
+  "prepCategoryLessonPrep": "Lesson preparation",
+  "@prepCategoryLessonPrep": {
+    "description": "Label for the lesson preparation budget category"
+  },
+  "prepCategoryEmbeddings": "Embeddings",
+  "@prepCategoryEmbeddings": {
+    "description": "Label for the embeddings preparation budget category"
+  },
+  "prepCategoryBackground": "Background tasks",
+  "@prepCategoryBackground": {
+    "description": "Label for the background preparation budget category"
+  },
+  "prepCapPercent": "{percent}%",
+  "@prepCapPercent": {
+    "description": "Percentage label for a preparation budget category cap",
+    "placeholders": {
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "prepBudgetDisabled": "Preparation budget is off — prep tasks are paused",
+  "@prepBudgetDisabled": {
+    "description": "Caption shown when the preparation budget master switch is off"
   }
 }

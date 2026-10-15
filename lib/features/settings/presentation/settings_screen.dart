@@ -63,6 +63,8 @@ import 'package:studyking/features/subjects/providers/subjects_list_provider.dar
 import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart' show mentorServiceProvider;
 import 'package:studyking/core/providers/llm_providers.dart' show llmTaskManagerProvider, llmUsageMeterProvider;
+import 'package:studyking/core/providers/prep_budget_providers.dart';
+import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/core/providers/secure_api_key_provider.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/settings/providers/settings_providers.dart';
@@ -385,6 +387,13 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> with AutomaticK
                 title: Text(l10n.totalCost),
                 subtitle: Text(formatCurrency(ref.watch(llmUsageMeterProvider).getTotalCost(), l10n.localeName)),
               ),
+            ]),
+            _section(l10n.preparationBudget, [
+              Text(l10n.preparationBudgetDesc,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant)),
+              const SizedBox(height: 8),
+              const _PrepBudgetSection(),
             ]),
             _section(l10n.backupAndRestore, [
               Card(
@@ -2099,4 +2108,168 @@ class _ModelItem {
   final String id;
 
   const _ModelItem({required this.name, required this.provider, required this.id});
+}
+
+/// Student-facing surface for the per-category preparation budget (vision
+/// Next-Term §4.2). Shows the "Prepare while I'm away" master switch,
+/// per-category percentage sliders, and live spend/cost counters read from
+/// [PrepBudgetService].
+class _PrepBudgetSection extends ConsumerWidget {
+  const _PrepBudgetSection();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final budget = ref.watch(prepBudgetSettingsProvider);
+    final service = ref.watch(prepBudgetServiceProvider);
+    final controller = ref.read(prepBudgetSettingsProvider.notifier);
+
+    if (!budget.enabled) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SwitchListTile(
+            secondary: const Icon(Icons.account_tree),
+            title: Text(l10n.prepareWhileAway),
+            subtitle: Text(l10n.prepareWhileAwayDesc),
+            value: budget.enabled,
+            onChanged: (v) => controller.setEnabled(v),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Text(
+              l10n.prepBudgetDisabled,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ),
+        ],
+      );
+    }
+
+    final spending = service.spendingByCategory();
+    final costs = service.costByCategory();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SwitchListTile(
+          secondary: const Icon(Icons.account_tree),
+          title: Text(l10n.prepareWhileAway),
+          subtitle: Text(l10n.prepareWhileAwayDesc),
+          value: budget.enabled,
+          onChanged: (v) => controller.setEnabled(v),
+        ),
+        const SizedBox(height: 8),
+        ...PrepCategory.values.map((category) => _PrepCategoryRow(
+              category: category,
+              percent: budget.percentFor(category),
+              cap: budget.caps[category] ?? 0,
+              spent: spending[category] ?? 0,
+              remaining: service.remainingFor(category),
+              cost: costs[category] ?? 0.0,
+              onPercentChanged: (value) =>
+                  controller.setCategoryPercent(category, value),
+            )),
+      ],
+    );
+  }
+}
+
+class _PrepCategoryRow extends StatelessWidget {
+  const _PrepCategoryRow({
+    required this.category,
+    required this.percent,
+    required this.cap,
+    required this.spent,
+    required this.remaining,
+    required this.cost,
+    required this.onPercentChanged,
+  });
+
+  final PrepCategory category;
+  final int percent;
+  final int cap;
+  final int spent;
+  final int remaining;
+  final double cost;
+  final void Function(int) onPercentChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final label = _prepCategoryLabel(category, l10n);
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(label,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w500,
+                      )),
+              Text(l10n.prepCapPercent(percent),
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: Theme.of(context).colorScheme.primary,
+                      )),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            '${l10n.tokensLabel(formatCompactNumber(spent, l10n.localeName))} / ${l10n.tokensLabel(formatCompactNumber(cap, l10n.localeName))}',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+          if (cost > 0) ...[
+            const SizedBox(height: 2),
+            Text(
+              l10n.totalCost,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+            Text(
+              formatCurrency(cost, l10n.localeName, minFractionDigits: 2, maxFractionDigits: 2),
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Slider(
+            value: percent.toDouble(),
+            min: 0,
+            max: 100,
+            divisions: 100,
+            label: l10n.prepCapPercent(percent),
+            activeColor: Theme.of(context).colorScheme.primary,
+            inactiveColor: Theme.of(context).colorScheme.onSurfaceVariant.withValues(alpha: 0.3),
+            onChanged: (value) => onPercentChanged(value.round()),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+String _prepCategoryLabel(PrepCategory category, AppLocalizations l10n) {
+  switch (category) {
+    case PrepCategory.pdfIngestion:
+      return l10n.prepCategoryPdfIngestion;
+    case PrepCategory.questionVariants:
+      return l10n.prepCategoryQuestionVariants;
+    case PrepCategory.lessonPrep:
+      return l10n.prepCategoryLessonPrep;
+    case PrepCategory.embeddings:
+      return l10n.prepCategoryEmbeddings;
+    case PrepCategory.background:
+      return l10n.prepCategoryBackground;
+  }
 }

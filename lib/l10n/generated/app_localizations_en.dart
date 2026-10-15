@@ -6227,6 +6227,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mentorContextActiveSyllabus => 'Active syllabus';
 
   @override
+  String get mentorContextNoMaterials => 'You have no uploaded study materials. When the student asks about a course, suggest uploading a syllabus or using a standard curriculum.';
+
+  @override
   String tutorSyllabusSwitched(String title) {
     return 'Switched active syllabus to $title.';
   }
@@ -6389,4 +6392,42 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pipelineStageComplete => 'Pipeline complete';
+
+  @override
+  String get preparationBudget => 'Preparation budget';
+
+  @override
+  String get preparationBudgetDesc =>
+      'Control where off-period preparation tokens are spent';
+
+  @override
+  String get prepareWhileAway => 'Prepare while I\'m away';
+
+  @override
+  String get prepareWhileAwayDesc =>
+      'Generate lessons, question variants, and a knowledge base while you\'re away';
+
+  @override
+  String get prepCategoryPdfIngestion => 'PDF → Knowledge base';
+
+  @override
+  String get prepCategoryQuestionVariants => 'Question bank expansion';
+
+  @override
+  String get prepCategoryLessonPrep => 'Lesson preparation';
+
+  @override
+  String get prepCategoryEmbeddings => 'Embeddings';
+
+  @override
+  String get prepCategoryBackground => 'Background tasks';
+
+  @override
+  String prepCapPercent(int percent) {
+    return '$percent%';
+  }
+
+  @override
+  String get prepBudgetDisabled =>
+      'Preparation budget is off — prep tasks are paused';
 }

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/llm_tasks/services/llm_task_service.dart';
 import 'package:studyking/core/constants/timeouts.dart';
 import 'package:studyking/core/theme/app_theme.dart';
@@ -95,6 +97,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
     final activeTasks = taskService.getActiveTasks();
     final hasTokenData = tasks.any((t) => t.tokensUsed > 0);
     final taskManager = ref.watch(llmTaskManagerProvider);
+    final budgetService = ref.watch(prepBudgetServiceProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -125,6 +128,8 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
             )
           : Column(
               children: [
+                _buildPrepBudgetBars(context, l10n, budgetService),
+                const Divider(height: 1),
                 if (hasTokenData) _buildTokenUsageMeter(context, tasks, l10n),
                 if (hasTokenData) const Divider(height: 1),
                 Expanded(
@@ -251,6 +256,126 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
 
   String _formatTokens(int tokens, String localeName) {
     return formatCompactNumber(tokens, localeName);
+  }
+
+  Widget _buildPrepBudgetBars(
+    BuildContext context,
+    AppLocalizations l10n,
+    PrepBudgetService service,
+  ) {
+    final budget = service.budget;
+    final spending = service.spendingByCategory();
+    final cs = Theme.of(context).colorScheme;
+
+    return Container(
+      padding: ResponsiveUtils.cardPadding(context),
+      color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(Icons.account_tree,
+                  size: 18, color: cs.primary),
+              const SizedBox(width: 8),
+              Text(
+                l10n.preparationBudget,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+              const Spacer(),
+              if (!budget.enabled)
+                Icon(Icons.pause, size: 16, color: cs.onSurfaceVariant),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (!budget.enabled) ...[
+            Text(
+              l10n.prepBudgetDisabled,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: cs.onSurfaceVariant,
+                  ),
+            ),
+          ] else ...[
+            ...PrepCategory.values.map((category) => _buildBudgetBar(
+                context,
+                l10n,
+                category,
+                budget,
+                spending[category] ?? 0,
+                service.remainingFor(category))),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBudgetBar(
+    BuildContext context,
+    AppLocalizations l10n,
+    PrepCategory category,
+    PrepBudget budget,
+    int spent,
+    int remaining,
+  ) {
+    final cap = budget.caps[category] ?? 0;
+    final spentRatio = cap > 0 ? (spent / cap).clamp(0.0, 1.0) : 0.0;
+    final color = spent >= cap
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.primary;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                _prepCategoryLabel(category, l10n),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+              Text(
+                '${formatCompactNumber(spent, l10n.localeName)} / ${formatCompactNumber(cap, l10n.localeName)}',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: spentRatio,
+              minHeight: 6,
+              backgroundColor: Theme.of(context)
+                  .colorScheme
+                  .onSurfaceVariant
+                  .withValues(alpha: 0.2),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _prepCategoryLabel(PrepCategory category, AppLocalizations l10n) {
+    switch (category) {
+      case PrepCategory.pdfIngestion:
+        return l10n.prepCategoryPdfIngestion;
+      case PrepCategory.questionVariants:
+        return l10n.prepCategoryQuestionVariants;
+      case PrepCategory.lessonPrep:
+        return l10n.prepCategoryLessonPrep;
+      case PrepCategory.embeddings:
+        return l10n.prepCategoryEmbeddings;
+      case PrepCategory.background:
+        return l10n.prepCategoryBackground;
+    }
   }
 
   Widget _buildTaskCard(BuildContext context, LlmTask task, AppLocalizations l10n, LlmTaskManager taskManager) {
