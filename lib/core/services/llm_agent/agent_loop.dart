@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -8,7 +9,12 @@ import 'package:studyking/core/services/llm_task_manager.dart';
 
 class AgentLoop {
   static final Logger _logger = const Logger('AgentLoop');
-  static const int _maxIterations = 10;
+
+  /// Maximum think→act→observe iterations before the loop stops.
+  /// Exposed for offline integration tests that script tool-call loops.
+  @visibleForTesting
+  static const int maxIterations = 10;
+  static const int _maxIterations = maxIterations;
 
   final LlmService _llmService;
   final String _modelId;
@@ -58,6 +64,7 @@ class AgentLoop {
           // or the LLM would receive it twice. Index 0 is the agent system
           // prompt, which chat also takes separately as `systemPrompt`.
           history: messages.sublist(1, messages.length - 1),
+          feature: feature,
         );
 
         if (result.isFailure) {
