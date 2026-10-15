@@ -144,10 +144,7 @@ class AnswerValidationService {
     if (answer.isEmpty) return false;
     try {
       final decoded = base64Decode(answer);
-      if (decoded.length < 4) return false;
-      final isPng = decoded[0] == 0x89 && decoded[1] == 0x50 && decoded[2] == 0x4E && decoded[3] == 0x47;
-      final isJpeg = decoded[0] == 0xFF && decoded[1] == 0xD8 && decoded[2] == 0xFF;
-      return isPng || isJpeg;
+      return decoded.isNotEmpty && QuestionAnswerValidator._isImageBytes(decoded);
     } catch (e, st) {
       _logger.w('Failed to validate image answer', e, st);
       return false;
@@ -578,16 +575,37 @@ class QuestionAnswerValidator {
     }
   }
 
-  /// Decodes a base64-encoded JSON drawing payload into its raw JSON list.
+  /// Whether the decoded bytes are a PNG or JPEG image.
+  ///
+  /// `CanvasDrawingWidget` renders drawings to PNG via `RenderRepaintBoundary`,
+  /// so a legitimate canvas/graph-drawing submission is binary image data,
+  /// not UTF-8 text. Detecting the magic bytes lets the decoder treat the
+  /// submission as a valid (non-empty) drawing instead of letting
+  /// `utf8.decode` throw and mis-classify it as "Invalid drawing data".
+  static bool _isImageBytes(List<int> bytes) {
+    if (bytes.length < 4) return false;
+    final isPng = bytes[0] == 0x89 && bytes[1] == 0x50 && bytes[2] == 0x4E && bytes[3] == 0x47;
+    final isJpeg = bytes.length >= 3 && bytes[0] == 0xFF && bytes[1] == 0xD8 && bytes[2] == 0xFF;
+    return isPng || isJpeg;
+  }
+
+  /// Decodes a base64-encoded drawing answer into its raw JSON list.
   ///
   /// Returns `null` when the answer is blank, decodes to empty bytes, or is
   /// not a non-empty JSON list. Decode failures (invalid base64, non-UTF-8
   /// bytes, malformed JSON) propagate to the caller, which maps them to
   /// [ValidationMessages.invalidDrawingData].
+  ///
+  /// PNG/JPEG image bytes (produced by `CanvasDrawingWidget`'s render-to-image
+  /// save path) are recognised as a valid drawing submission and returned as a
+  /// single non-empty point so callers don't mis-classify a real submission.
   static List<dynamic>? _decodeDrawingPayload(String answer) {
     if (answer.trim().isEmpty) return null;
     final decoded = base64Decode(answer);
     if (decoded.isEmpty) return null;
+    if (_isImageBytes(decoded)) {
+      return [{'x': 0.0, 'y': 0.0}];
+    }
     final jsonStr = utf8.decode(decoded);
     final data = jsonDecode(jsonStr);
     if (data is! List || data.isEmpty) return null;

@@ -707,6 +707,36 @@ void main() {
       expect(result.explanation, contains('Drawing detected'));
     });
 
+    test('canvas question with PNG image payload is recognised as a valid drawing', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final png = base64Encode([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, // PNG signature
+        1, 2, 3, 4, 5, 6, // dummy image bytes
+      ]);
+      final result = QuestionAnswerValidator.validateStatic(png, QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isTrue);
+      expect(result.explanation, contains('Drawing detected'));
+    });
+
+    test('canvas question with JPEG image payload is recognised as a valid drawing', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final jpeg = base64Encode([0xFF, 0xD8, 0xFF, 0xE0, 1, 2, 3, 4]);
+      final result = QuestionAnswerValidator.validateStatic(jpeg, QuestionType.canvas, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isTrue);
+      expect(result.explanation, contains('Drawing detected'));
+    });
+
+    test('graphDrawing question with PNG image payload is recognised as a valid drawing', () {
+      final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
+      final png = base64Encode([
+        0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+        1, 2, 3, 4, 5, 6,
+      ]);
+      final result = QuestionAnswerValidator.validateStatic(png, QuestionType.graphDrawing, markscheme, messages: ValidationMessages.english);
+      expect(result.isCorrect, isTrue);
+      expect(result.explanation, contains('Drawing detected'));
+    });
+
     test('fileUpload question type returns incorrect for empty answer', () {
       final markscheme = Markscheme(questionId: 'q1', correctAnswer: '');
       final result = QuestionAnswerValidator.validateStatic('', QuestionType.fileUpload, markscheme, messages: ValidationMessages.english);
