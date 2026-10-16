@@ -177,6 +177,204 @@ class AgentLoop {
     }
   }
 
+  /// Streaming variant of [run].
+  ///
+  /// Like [run], this drives the think→act→observe loop, but instead of
+  /// blocking on every LLM call and returning a single [AgentResponse], it
+  /// yields text tokens progressively via [LlmService.chatStream] so callers
+  /// (e.g. the mentor UI) can render a live, word-by-word reply while tools
+  /// are still executing.
+  ///
+  /// Tool-call markers (`TOOL_CALL:` / `ARGUMENTS:`) are buffered internally
+  /// and never surfaced to the caller — only the human-readable text *before*
+  /// a tool call is yielded. The [onToolCall] callback (if supplied) is invoked
+  /// once per executed tool so the caller can record side-effects (e.g. adding
+  /// a system message to conversation memory).
+  ///
+  /// Token aggregation and task-lifecycle tracking mirror [run]: per-call LLM
+  /// tasks created by [LlmService] are aggregated onto the agent-turn task.
+  Stream<String> runStream({
+    required String userMessage,
+    required String studentId,
+    required String systemPrompt,
+    String feature = 'agent',
+    List<Map<String, String>>? history,
+    Future<void> Function(AgentToolCall call)? onToolCall,
+  }) async* {
+    final taskType = LlmTaskType.fromFeature(feature)?.name;
+    final taskId = _taskManager?.createTask(
+          feature: feature,
+          modelId: _modelId,
+          taskType: taskType,
+        ) ??
+        '';
+    _taskManager?.startTask(taskId);
+
+    final preRunTaskIds = _taskManager != null
+        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        : const <String>{};
+
+    final messages = <Map<String, String>>[];
+    messages.add({'role': 'system', 'content': _buildAgentSystemPrompt(systemPrompt)});
+    if (history != null) {
+      messages.addAll(history);
+    }
+    messages.add({'role': 'user', 'content': userMessage});
+
+    final toolCalls = <AgentToolCall>[];
+    var finalContent = '';
+    var iteration = 0;
+
+    try {
+      while (iteration < _maxIterations) {
+        iteration++;
+
+        // ---- Stream one LLM turn, yielding text progressively ----
+        final buffer = StringBuffer();
+        var yieldedCount = 0; // chars of [buffer] already emitted to caller
+
+        await for (final chunk in _llmService.chatStream(
+          message: messages.last['content']!,
+          modelId: _modelId,
+          systemPrompt: _buildAgentSystemPrompt(systemPrompt),
+          history: messages.sublist(1, messages.length - 1),
+          feature: feature,
+        )) {
+          buffer.write(chunk);
+          final current = buffer.toString();
+
+          // Detect the bare `TOOL_CALL:` marker first. A partial marker may
+          // appear before the tool name and ARGUMENTS arrive, so we hold back
+          // any text from the marker onward to avoid leaking tool-call syntax
+          // to the UI.
+          final markerMatch = RegExp(r'TOOL_CALL:').firstMatch(current);
+
+          if (markerMatch != null) {
+            final toolMatch = RegExp(r'TOOL_CALL:\s*(\S+)').firstMatch(current);
+            final argsMatch = toolMatch != null
+                ? RegExp(r'ARGUMENTS:\s*(\{.*\})', dotAll: true).firstMatch(current)
+                : null;
+
+            if (toolMatch != null && argsMatch != null) {
+              // Complete tool call — yield only text before the marker, then
+              // break to execute the tool.
+              final textBeforeTool = current.substring(0, markerMatch.start);
+              final remaining = textBeforeTool.substring(yieldedCount);
+              if (remaining.isNotEmpty) {
+                yield remaining;
+                finalContent += remaining;
+              }
+              yieldedCount = current.length;
+              break;
+            } else {
+              // Partial tool call (marker seen but ARGUMENTS incomplete or no
+              // tool name yet). Yield text up to the marker, hold the rest.
+              final textBeforeMarker = current.substring(0, markerMatch.start);
+              final remaining = textBeforeMarker.substring(yieldedCount);
+              if (remaining.isNotEmpty) {
+                yield remaining;
+                finalContent += remaining;
+              }
+              yieldedCount = markerMatch.start;
+            }
+          } else {
+            // No tool call marker — yield the new text.
+            final remaining = current.substring(yieldedCount);
+            if (remaining.isNotEmpty) {
+              yield remaining;
+              finalContent += remaining;
+            }
+            yieldedCount = current.length;
+          }
+        }
+
+        final response = buffer.toString();
+        final parsed = _parseResponse(response);
+
+        if (parsed == null || parsed.toolName.isEmpty) {
+          // No tool call in this turn — streaming is complete.
+          break;
+        }
+
+        final tool = _toolRegistry.get(parsed.toolName);
+        if (tool == null) {
+          finalContent = 'I tried to use a tool "${parsed.toolName}" but it is not available.';
+          yield finalContent;
+          break;
+        }
+
+        Map<String, dynamic> toolArgs = {};
+        try {
+          toolArgs = parsed.toolArguments.isNotEmpty
+              ? jsonDecode(parsed.toolArguments) as Map<String, dynamic>
+              : {};
+        } catch (e) {
+          _logger.w('Failed to parse tool arguments JSON: $e');
+          toolArgs = {};
+        }
+
+        final toolCallId = const Uuid().v4();
+        final toolCall = AgentToolCall(
+          id: toolCallId,
+          toolName: parsed.toolName,
+          arguments: toolArgs,
+        );
+
+        dynamic toolResult;
+        try {
+          toolResult = await tool.execute(toolArgs);
+        } catch (e) {
+          _logger.w('Tool execution failed: $e');
+          toolResult = {'error': e.toString()};
+        }
+
+        final resultStr = toolResult is String ? toolResult : jsonEncode(toolResult);
+        toolCall.result = resultStr;
+        toolCalls.add(toolCall);
+
+        // Notify caller (e.g. MentorService records a system message).
+        await onToolCall?.call(toolCall);
+
+        messages.add({'role': 'assistant', 'content': jsonEncode({
+          'tool_call': parsed.toolName,
+          'tool_call_id': toolCallId,
+          'arguments': parsed.toolArguments,
+        })});
+        messages.add({'role': 'user', 'content': 'Tool result for ${parsed.toolName}: $resultStr'});
+      }
+
+      if (iteration >= _maxIterations && finalContent.isEmpty) {
+        finalContent = 'I completed the required actions. Is there anything else you need help with?';
+        yield finalContent;
+      }
+
+      // Aggregate tokens from LLM-service per-call tasks created during this
+      // run, so the agent-turn task carries real token usage instead of 0
+      // (vision next-term §4.2 token transparency).
+      var totalTokens = 0;
+      var totalCost = 0.0;
+      if (_taskManager != null) {
+        for (final t in _taskManager!.tasks) {
+          if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
+          totalTokens += t.tokensUsed;
+          totalCost += t.estimatedCost;
+        }
+      }
+
+      _taskManager?.completeTask(
+        taskId,
+        tokensUsed: totalTokens,
+        estimatedCost: totalCost,
+      );
+    } catch (e) {
+      _logger.w('Agent loop stream error', e);
+      if (_taskManager != null) {
+        _taskManager!.failTask(taskId, e.toString());
+      }
+      yield 'An error occurred during processing.';
+    }
+  }
+
   String _buildAgentSystemPrompt(String basePrompt) {
     final toolDescriptions = _toolRegistry.toolDescriptions;
     final toolsJson = jsonEncode(toolDescriptions);

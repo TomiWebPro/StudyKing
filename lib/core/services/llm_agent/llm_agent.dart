@@ -46,6 +46,29 @@ class LlmAgent {
     );
   }
 
+  /// Streaming variant of [chat].
+  ///
+  /// Yields text chunks progressively so the UI can render a live reply while
+  /// the agent loop executes tool calls. Tool-call markers are buffered
+  /// internally by [AgentLoop.runStream]; the [onToolCall] callback is invoked
+  /// once per executed tool for side-effect recording.
+  Stream<String> chatStream({
+    required String message,
+    required String systemPrompt,
+    String feature = 'agent',
+    List<Map<String, String>>? history,
+    Future<void> Function(AgentToolCall call)? onToolCall,
+  }) {
+    return _loop.runStream(
+      userMessage: message,
+      studentId: _studentId,
+      systemPrompt: systemPrompt,
+      feature: feature,
+      history: history,
+      onToolCall: onToolCall,
+    );
+  }
+
   Future<void> enqueueBackgroundTask(String description, Future<void> Function() task) {
     // Post-lesson adherence, weak-topic reanalysis and next-topic prep are
     // off-period, LLM-heat prep: mark them heavy so the SystemMonitorService

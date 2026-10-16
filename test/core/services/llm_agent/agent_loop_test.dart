@@ -117,6 +117,96 @@ class _TaskTrackingFakeLlmService extends _FakeLlmService {
   }
 }
 
+/// Hand-written fake that scripts streaming LLM replies and records the
+/// conversation history and current message seen on each call. Each scripted
+/// response is split into word-sized chunks to exercise progressive yield.
+class _StreamingFakeLlmService extends LlmService {
+  final List<String> _scriptedResponses;
+  final List<List<Map<String, String>>> historyCalls = [];
+  final List<String> messageCalls = [];
+  final List<String> allChunks = [];
+
+  _StreamingFakeLlmService(this._scriptedResponses)
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test-key',
+          ),
+        );
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    messageCalls.add(message);
+    historyCalls.add(List<Map<String, String>>.from(history ?? []));
+
+    final response = _scriptedResponses.removeAt(0);
+    // Split into word-sized chunks so the consumer can assert progressive yield.
+    final words = response.split(' ');
+    for (var i = 0; i < words.length; i++) {
+      final chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+      allChunks.add(chunk);
+      yield chunk;
+    }
+  }
+}
+
+/// Streaming fake that also records per-call task token usage on a shared
+/// [LlmTaskManager], so [AgentLoop.runStream] token aggregation can be tested.
+class _TaskTrackingStreamingFakeLlmService extends _StreamingFakeLlmService {
+  final LlmTaskManager taskManager;
+  final String feature;
+  final int simulatedTokens;
+
+  _TaskTrackingStreamingFakeLlmService(
+    super.scriptedResponses,
+    this.taskManager,
+    this.feature, {
+    this.simulatedTokens = 500,
+  });
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async* {
+    messageCalls.add(message);
+    historyCalls.add(List<Map<String, String>>.from(history ?? []));
+
+    final callTaskId = taskManager.createTask(
+      feature: feature,
+      modelId: modelId,
+      taskType: _LlmTaskTypeForTest.fromFeature(feature),
+    );
+    taskManager.startTask(callTaskId);
+    taskManager.completeTask(
+      callTaskId,
+      tokensUsed: simulatedTokens,
+      estimatedCost: 0.005,
+    );
+
+    final response = _scriptedResponses.removeAt(0);
+    final words = response.split(' ');
+    for (var i = 0; i < words.length; i++) {
+      final chunk = words[i] + (i < words.length - 1 ? ' ' : '');
+      allChunks.add(chunk);
+      yield chunk;
+    }
+  }
+}
+
 /// Minimal mirror of LlmTaskType.fromFeature for test purposes — returns
 /// the enum name string for known features, null otherwise.
 class _LlmTaskTypeForTest {
@@ -396,6 +486,141 @@ void main() {
 
       final agentTask = taskManager.tasks.firstWhere((t) => t.feature == 'mentor');
       expect(agentTask.taskType, 'mentor');
+    });
+  });
+
+  group('AgentLoop.runStream', () {
+    test('streams chunks progressively for a plain text response', () async {
+      final fakeLlm = _StreamingFakeLlmService([
+        'Sure I can help with that',
+      ]);
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: ToolRegistry(),
+      );
+
+      final chunks = await loop.runStream(
+        userMessage: 'Hello',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      ).toList();
+
+      expect(chunks, isNotEmpty);
+      expect(chunks.length, greaterThan(1)); // progressive, not one chunk
+      expect(chunks.join(), 'Sure I can help with that');
+    });
+
+    test('does not yield tool-call text to the caller', () async {
+      final fakeLlm = _StreamingFakeLlmService([
+        'Let me check. TOOL_CALL: searchQuestions\nARGUMENTS: {"topic": "math"}',
+        'Here are the results.',
+      ]);
+      final registry = ToolRegistry()..register(_SearchTool());
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final chunks = await loop.runStream(
+        userMessage: 'Find math questions',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      ).toList();
+
+      // Tool call markers must never appear in yielded chunks.
+      expect(chunks, isNotEmpty);
+      expect(chunks.any((c) => c.contains('TOOL_CALL')), isFalse);
+      expect(chunks.any((c) => c.contains('ARGUMENTS')), isFalse);
+      // Text before the tool call should be present.
+      expect(chunks.join(), contains('Let me check.'));
+      // The final LLM response (after tool execution) should be yielded.
+      expect(chunks.join(), contains('Here are the results.'));
+      // Progressive: more than one chunk.
+      expect(chunks.length, greaterThan(1));
+    });
+
+    test('invokes onToolCall callback for each executed tool', () async {
+      final fakeLlm = _StreamingFakeLlmService([
+        'TOOL_CALL: searchQuestions\nARGUMENTS: {"topic": "physics"}',
+        'Done.',
+      ]);
+      final registry = ToolRegistry()..register(_SearchTool());
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final calls = <String>[];
+      await loop.runStream(
+        userMessage: 'Find physics questions',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+        onToolCall: (call) async {
+          calls.add(call.toolName);
+        },
+      ).toList();
+
+      expect(calls, ['searchQuestions']);
+    });
+
+    test('handles unknown tool in streaming mode', () async {
+      final fakeLlm = _StreamingFakeLlmService([
+        'TOOL_CALL: nonexistentTool\nARGUMENTS: {}',
+      ]);
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: ToolRegistry(),
+      );
+
+      final chunks = await loop.runStream(
+        userMessage: 'Do something',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+      ).toList();
+
+      expect(chunks.join(), contains('nonexistentTool'));
+      expect(chunks.join(), isNot(contains('TOOL_CALL')));
+    });
+
+    test('aggregates tokens from per-call LLM tasks', () async {
+      await Hive.openBox(HiveBoxNames.llmTasks);
+      await Hive.box(HiveBoxNames.llmTasks).clear();
+      final taskManager = LlmTaskManager();
+      await taskManager.init();
+      addTearDown(() async {
+        await taskManager.persistenceComplete;
+        Hive.box(HiveBoxNames.llmTasks).clear();
+      });
+
+      final fakeLlm = _TaskTrackingStreamingFakeLlmService(
+        ['Final answer streamed.'],
+        taskManager,
+        'mentor',
+        simulatedTokens: 800,
+      );
+
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: ToolRegistry(),
+        taskManager: taskManager,
+      );
+
+      await loop.runStream(
+        userMessage: 'Tell me about photosynthesis.',
+        studentId: 's1',
+        systemPrompt: 'You are a tutor.',
+        feature: 'mentor',
+      ).toList();
+
+      final agentTask = taskManager.tasks.firstWhere(
+        (t) => t.endTime != null && t.taskType == 'mentor',
+      );
+      expect(agentTask.tokensUsed, greaterThan(0));
     });
   });
 }

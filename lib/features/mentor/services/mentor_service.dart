@@ -191,23 +191,27 @@ class MentorService {
         'content': m.content,
       }).toList();
 
-      final response = await _agent.chat(
+      // Stream the agent's reply progressively so the UI shows a live,
+      // word-by-word response while tool calls are executing (vision
+      // next-term §2.1 + agent_must_read.md conversational mentor mode).
+      final buffer = StringBuffer();
+      await for (final chunk in _agent.chatStream(
         message: message,
         systemPrompt: systemPrompt,
         feature: 'mentor',
         history: history,
-      );
-
-      final content = response.content;
-      await _memory.addAssistantMessage(content);
-      await _storeMentorSessionSummary(content);
-      yield content;
-      if (response.toolCalls.isNotEmpty) {
-        for (final call in response.toolCalls) {
+        onToolCall: (call) async {
           final toolMsg = '[${call.toolName}] ${call.result ?? 'executed'}';
           await _memory.addSystemMessage(toolMsg);
-        }
+        },
+      )) {
+        buffer.write(chunk);
+        yield chunk;
       }
+
+      final content = buffer.toString();
+      await _memory.addAssistantMessage(content);
+      await _storeMentorSessionSummary(content);
       await _checkAndHandlePlanningIntent(message);
       return;
     }

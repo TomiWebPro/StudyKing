@@ -25,6 +25,11 @@ import 'package:studyking/features/teaching/data/repositories/tutor_session_repo
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/agent_loop.dart';
+import 'package:studyking/core/services/llm_agent/agent_memory.dart';
+import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
@@ -156,7 +161,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
   }
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return _weakTopicsResult ?? Result.success([]);
   }
 
@@ -306,6 +311,7 @@ MentorService createMentorService({
   EngagementNudgeRepository? nudgeRepo,
   SessionRepository? sessionRepository,
   LongTermMemory? longTermMemory,
+  LlmAgent? agent,
   String modelId = 'test-model',
   String studentId = 'test-student',
   String localeName = 'en',
@@ -341,6 +347,7 @@ MentorService createMentorService({
     localeName: localeName,
     pendingActionRepo: pendingActionRepo,
     longTermMemory: longTermMemory,
+    agent: agent,
   );
 }
 
@@ -443,6 +450,44 @@ class _FakeThrowingInitLTM extends LongTermMemory {
   }
 }
 
+/// Hand-written fake [LlmAgent] that yields a scripted list of chunks via
+/// [chatStream], bypassing the real [AgentLoop] and [LlmService]. Used to
+/// test the MentorService agent-streaming path without any network or Hive I/O.
+class _FakeStreamingAgent extends LlmAgent {
+  final List<String> _chunks;
+  final List<String> capturedMessages = [];
+  int chatStreamCallCount = 0;
+
+  _FakeStreamingAgent(List<String> chunks)
+      : _chunks = chunks,
+        super(
+          loop: AgentLoop(
+            llmService: FakeLlmService(),
+            modelId: 'test-model',
+            toolRegistry: ToolRegistry(),
+          ),
+          toolRegistry: ToolRegistry(),
+          memoryStore: AgentMemoryStore(),
+          idleExecutor: IdleExecutor(),
+          studentId: 'test-student',
+        );
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String systemPrompt,
+    String feature = 'agent',
+    List<Map<String, String>>? history,
+    Future<void> Function(AgentToolCall call)? onToolCall,
+  }) async* {
+    chatStreamCallCount++;
+    capturedMessages.add(message);
+    for (final chunk in _chunks) {
+      yield chunk;
+    }
+  }
+}
+
 void main() {
   setUpAll(() async {
     await initializeDateFormatting();
@@ -479,6 +524,52 @@ void main() {
         expect(history[0].content, equals('Hello'));
         expect(history[1].role, equals(MessageRole.tutor));
         expect(history[1].content, equals('Mentor response'));
+      });
+    });
+
+    group('chat - agent streaming path', () {
+      test('streams multiple chunks progressively when agent is set', () async {
+        final agent = _FakeStreamingAgent(['Hello ', 'student ', 'how ', 'can ', 'I ', 'help']);
+        final service = createMentorService(agent: agent);
+
+        final chunks = await service.chat('Hi').toList();
+
+        expect(chunks.length, greaterThan(1));
+        expect(agent.chatStreamCallCount, 1);
+        expect(chunks.join(), equals('Hello student how can I help'));
+      });
+
+      test('assistant message is persisted after streaming completes', () async {
+        final agent = _FakeStreamingAgent(['Response ', 'chunk ', 'two']);
+        final service = createMentorService(agent: agent);
+
+        await service.chat('Hello').toList();
+
+        final history = service.memory.getHistory();
+        expect(history.length, equals(2));
+        expect(history[0].role, equals(MessageRole.student));
+        expect(history[0].content, equals('Hello'));
+        expect(history[1].role, equals(MessageRole.tutor));
+        expect(history[1].content, equals('Response chunk two'));
+      });
+
+      test('streaming agent does not freeze the UI between chunks', () async {
+        final agent = _FakeStreamingAgent(['a', 'b', 'c', 'd', 'e']);
+        final service = createMentorService(agent: agent);
+
+        final chunks = await service.chat('test').toList();
+
+        expect(chunks.length, 5);
+        expect(chunks, equals(['a', 'b', 'c', 'd', 'e']));
+      });
+
+      test('planning intent still recognized with agent streaming', () async {
+        final agent = _FakeStreamingAgent(['I ', 'will ', 'schedule ', 'that']);
+        final service = createMentorService(agent: agent);
+
+        await service.chat('schedule a math lesson').toList();
+
+        expect(service.pendingScheduleProposal, isNotNull);
       });
     });
 
