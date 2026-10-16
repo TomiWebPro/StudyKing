@@ -17,6 +17,7 @@ import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
+import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/features/practice/presentation/screens/practice_session_screen.dart';
@@ -182,7 +183,28 @@ class FakeMasteryGraphService extends MasteryGraphService {
   @override
   Future<Result<void>> init() async => Result.success(null);
   @override
-  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async => Result.success(null);
+  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId, String? subjectId}) async => Result.success(null);
+}
+
+class FakeReadinessScorer extends ReadinessScorer {
+  final List<List<Question>> scoreCalls = [];
+  final List<ScoredQuestion>? overrideScoreResult;
+
+  FakeReadinessScorer([this.overrideScoreResult]) : super();
+
+  @override
+  Future<List<ScoredQuestion>> scoreQuestions(List<Question> questions) async {
+    scoreCalls.add(List.of(questions));
+    if (overrideScoreResult != null) return overrideScoreResult!;
+    // Return in reverse order with distinct scores so ordering is observable.
+    final reversed = List<Question>.of(questions.reversed);
+    return reversed
+        .asMap()
+        .entries
+        .map((e) => ScoredQuestion(
+            question: e.value, score: (e.key + 1).toDouble()))
+        .toList();
+  }
 }
 
 class _DummyLlmService implements LlmService {
@@ -260,6 +282,7 @@ Widget sessionApp({
   List<String>? orderedQuestionIds,
   QuestionRepository? questionRepository,
   QuestionVariantService? variantService,
+  ReadinessScorer? readinessScorer,
 }) {
   return ProviderScope(
     overrides: [
@@ -282,6 +305,10 @@ Widget sessionApp({
         spacedRepetitionServiceProvider.overrideWithValue(srService)
       else
         spacedRepetitionServiceProvider.overrideWithValue(FakeSpacedRepetitionService()),
+      if (readinessScorer != null)
+        readinessScorerProvider.overrideWithValue(readinessScorer)
+      else
+        readinessScorerProvider.overrideWithValue(FakeReadinessScorer()),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

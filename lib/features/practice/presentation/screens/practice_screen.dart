@@ -283,13 +283,42 @@ class _PracticeScreenState extends ConsumerState<PracticeScreen>
   }
 
   Future<void> _startPractice(Subject subject) async {
-    final topicIds = await _getSubjectTopicIds(subject.id);
-    final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
-    if (!canProceed) return;
-    if (!mounted) return;
-    final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
-        arguments: PracticeSessionArgs(subjectId: subject.id)) as PracticeSessionResult?;
-    _onSessionResult(result);
+    try {
+      final topicIds = await _getSubjectTopicIds(subject.id);
+      final canProceed = await _checkPrerequisitesForTopicIds(topicIds);
+      if (!canProceed) return;
+      if (!mounted) return;
+
+      final allQuestionsResult = await _questionRepo.getAll();
+      final allQuestions = allQuestionsResult.data ?? [];
+      final subjectQuestions =
+          allQuestions.where((q) => q.subjectId == subject.id).toList();
+      if (subjectQuestions.isEmpty) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.noQuestionsAvailable)));
+        return;
+      }
+
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(subjectQuestions);
+      final orderedIds = scored.map((s) => s.question.id).toList();
+
+      if (!mounted) return;
+      final result = await Navigator.pushNamed(context, AppRoutes.practiceSession,
+          arguments: PracticeSessionArgs(
+            subjectId: subject.id,
+            orderedQuestionIds: orderedIds,
+            questionCount: orderedIds.length,
+          )) as PracticeSessionResult?;
+      _onSessionResult(result);
+    } catch (e) {
+      _logger.w('Failed to start subject practice', e);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context)!.errorOccurred)));
+    }
   }
 
   Future<List<String>> _getSubjectTopicIds(String subjectId) async {

@@ -162,10 +162,24 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         _showNoQuestionsDialog();
         return;
       }
-      final shuffled = List<Question>.from(filteredQuestions)..shuffle();
-      final count = (widget.args.questionCount ?? shuffled.length).clamp(1, shuffled.length);
+      // Use the readiness scorer to order questions adaptively, matching
+      // the pattern used by topic / weak-area / at-risk practice modes in
+      // PracticeScreen. Falls back to shuffle only if scoring yields nothing.
+      final scorer = ref.read(readinessScorerProvider);
+      final scored = await scorer.scoreQuestions(filteredQuestions);
+      final orderedQuestions = scored.map((s) => s.question).toList();
+      if (orderedQuestions.isEmpty) {
+        final fallback = List<Question>.from(filteredQuestions)..shuffle();
+        if (mounted) {
+          setState(() => _questions = fallback);
+          _initializeSession();
+        }
+        return;
+      }
+      final count = (widget.args.questionCount ?? orderedQuestions.length)
+          .clamp(1, orderedQuestions.length);
       if (mounted) {
-        setState(() => _questions = shuffled.take(count).toList());
+        setState(() => _questions = orderedQuestions.take(count).toList());
         _initializeSession();
       }
     } catch (e) {

@@ -1640,6 +1640,46 @@ void main() {
           expect(find.textContaining('Spaced'), findsWidgets);
         });
       });
+
+      group('readiness scorer ordering', () {
+        testWidgets(
+          'subject mode uses readiness scorer ordering instead of random shuffle',
+          (tester) async {
+            final questions = [
+              question(id: 'qA', text: 'Question A',
+                  type: QuestionType.typedAnswer, markschemeText: 'a'),
+              question(id: 'qB', text: 'Question B',
+                  type: QuestionType.typedAnswer, markschemeText: 'b'),
+              question(id: 'qC', text: 'Question C',
+                  type: QuestionType.typedAnswer, markschemeText: 'c'),
+            ];
+
+            final scorer = FakeReadinessScorer();
+
+            await tester.pumpWidget(sessionApp(
+              result: Result.success(questions),
+              readinessScorer: scorer,
+            ));
+            await tester.tap(find.text('Open Session'));
+            await tester.pumpAndSettle();
+
+            // The scorer was invoked with all subject questions.
+            expect(scorer.scoreCalls, isNotEmpty);
+            expect(
+              scorer.scoreCalls.first.map((q) => q.id),
+              ['qA', 'qB', 'qC'],
+            );
+
+            // FakeReadinessScorer reverses the input order, so the scorer
+            // returns [qC, qB, qA]. The first rendered question is
+            // 'Question C', proving the scorer's ordering drives the session
+            // rather than a random shuffle.
+            expect(find.text('Question C'), findsOneWidget);
+            expect(find.text('Question A'), findsNothing);
+            expect(find.text('Question B'), findsNothing);
+          },
+        );
+      });
     });
   });
 
