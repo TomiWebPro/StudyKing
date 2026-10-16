@@ -146,6 +146,15 @@ void main() {
     test('maps known feature strings', () {
       expect(LlmTaskType.fromFeature('mentor'), equals(LlmTaskType.mentor));
       expect(LlmTaskType.fromFeature('tutor'), equals(LlmTaskType.tutor));
+      // 'teaching' is the live tutoring feature passed by ConversationManager;
+      // it must classify as tutor, not fall into 'unknown'.
+      expect(LlmTaskType.fromFeature('teaching'), equals(LlmTaskType.tutor));
+      // Conversation-memory compression is live summarization work, not an
+      // unclassified 'general' chat turn.
+      expect(
+        LlmTaskType.fromFeature('conversation_memory_compression'),
+        equals(LlmTaskType.summarization),
+      );
       expect(
         LlmTaskType.fromFeature('content_classification'),
         equals(LlmTaskType.classification),

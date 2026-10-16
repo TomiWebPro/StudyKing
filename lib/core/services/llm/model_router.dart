@@ -56,7 +56,10 @@ enum LlmTaskType {
         f.contains('lesson_agent')) {
       return LlmTaskType.generation;
     }
-    if (f.contains('summar')) return LlmTaskType.summarization;
+    if (f.contains('summar') ||
+        f.contains('conversation_memory_compression')) {
+      return LlmTaskType.summarization;
+    }
     if (f.contains('evaluation') || f.contains('_eval')) {
       return LlmTaskType.evaluation;
     }

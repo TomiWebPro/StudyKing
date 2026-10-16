@@ -276,6 +276,10 @@ class ConversationManager {
         modelId: _modelId,
         memory: _memory,
         systemPrompt: '${entry.systemPrompt}\n\n${entry.userPrompt}',
+        // Live tutoring turns must be attributable in the LLM task-manager
+        // portal (Vision Next-Term §0 thesis: students steer where tokens go).
+        // 'teaching' maps to LlmTaskType.tutor via LlmTaskType.fromFeature.
+        feature: 'teaching',
       )) {
         buffer.write(chunk);
         final streamed = buffer.toString();

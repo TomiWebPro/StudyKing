@@ -1156,6 +1156,45 @@ void main() {
       await tester.pumpAndSettle();
     });
 
+    testWidgets('live tutor and mentor tasks surface as filterable types with token totals',
+        (tester) async {
+      // Post-fix: a teaching lesson and a mentor turn are classified as
+      // 'tutor'/'mentor' rather than the 'unknown' catch-all, so the
+      // task-manager portal attributes live spend to those types instead of
+      // hiding it under an unlabelled bucket (Vision Next-Term §0 thesis).
+      final tutorId = manager.createTask(
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+      );
+      manager.startTask(tutorId);
+      manager.completeTask(tutorId, tokensUsed: 1500, estimatedCost: 0.03);
+
+      final mentorId = manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.startTask(mentorId);
+      manager.completeTask(mentorId, tokensUsed: 900, estimatedCost: 0.02);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Token usage summary surfaces because the live turns now carry tokens.
+      expect(find.text('Token Usage Summary'), findsOneWidget);
+      expect(find.text('2.4K'), findsOneWidget);
+
+      // The task-type filter lists the previously-hidden live categories.
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+      expect(find.text('tutor'), findsWidgets);
+      expect(find.text('mentor'), findsWidgets);
+
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
     testWidgets('filtering by taskType hides non-matching tasks', (tester) async {
       manager.createTask(
         feature: 'mentor',

@@ -233,6 +233,9 @@ class MentorService {
         modelId: _modelId,
         memory: _memory,
         systemPrompt: _mentorSystemPrompt(),
+        // Non-agent fallback path: attribute mentor turns so usage is not
+        // hidden under 'unknown' in the task-manager portal (Vision §0).
+        feature: 'mentor',
       )) {
         buffer.write(chunk);
         yield chunk;

@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/hive_box_names.dart';
+import 'package:studyking/core/services/llm/model_router.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 
 void main() {
@@ -219,6 +220,47 @@ void main() {
       final costs = meter.getTotalCostPerFeature();
       expect(costs.containsKey('chat'), isTrue);
       expect(costs.containsKey('embedding'), isTrue);
+    });
+
+    test('getTotalTokensPerTaskType classifies feature-derived types as tutor/mentor/summarization',
+        () {
+      // Mirrors LlmChatService._recordCompletion: the task type is derived from
+      // the feature string via LlmTaskType.fromFeature. Live teaching and mentor
+      // turns (plus memory compression) must classify as 'tutor', 'mentor', and
+      // 'summarization' respectively — never falling into the 'unknown'
+      // catch-all bucket (Vision Next-Term §0 token principle).
+      meter.recordUsage(
+        id: 't1',
+        feature: 'teaching',
+        modelId: 'gpt-4',
+        inputTokens: 100,
+        outputTokens: 50,
+        taskType: LlmTaskType.fromFeature('teaching')?.name,
+      );
+      meter.recordUsage(
+        id: 'm1',
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        inputTokens: 200,
+        outputTokens: 80,
+        taskType: LlmTaskType.fromFeature('mentor')?.name,
+      );
+      meter.recordUsage(
+        id: 'mem',
+        feature: 'conversation_memory_compression',
+        modelId: 'gpt-4',
+        inputTokens: 10,
+        outputTokens: 40,
+        taskType: LlmTaskType.fromFeature('conversation_memory_compression')?.name,
+      );
+
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(byType['tutor'], equals(150)); // 100 + 50
+      expect(byType['mentor'], equals(280)); // 200 + 80
+      expect(byType['summarization'], equals(50)); // 10 + 40
+      // No live turn should be hidden under the 'unknown' bucket.
+      expect(byType.containsKey('unknown'), isFalse);
+      expect(meter.getTotalTokens(), equals(480));
     });
 
     test('getTotalCost sums all records', () {
