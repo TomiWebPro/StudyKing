@@ -57,6 +57,7 @@ class ConversationPromptSet {
     LearningPreference? learningPreferences,
     String? feedbackContext,
     int confusionCount = 0,
+    String? masteryContext,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -88,6 +89,12 @@ class ConversationPromptSet {
     if (confusionCount >= 2) {
       final confusionDirective = _buildConfusionDirective(confusionCount);
       systemPrompt = '$systemPrompt\n\n$confusionDirective';
+    }
+    // Inject the student's mastery history (weak topics + recent lessons) so
+    // the tutor adapts to actual progress rather than only the current topic
+    // (agent_must_read.md §32-45, §86-96). LLM-facing: invariant English OK.
+    if (masteryContext != null && masteryContext.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n$masteryContext';
     }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);

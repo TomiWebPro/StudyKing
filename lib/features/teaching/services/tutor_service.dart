@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:uuid/uuid.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/database_service.dart';
@@ -37,6 +36,7 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 import 'feedback_analyzer.dart';
+import 'mastery_context_builder.dart';
 
 class TutorService {
   static final Logger _logger = const Logger('TutorService');
@@ -204,6 +204,14 @@ class TutorService {
         (error) => _logger.w('Failed to build tutor feedback context', error),
       );
 
+      // Inject the student's weak topics + recent lesson history into the
+      // lesson prompt so the tutor adapts to actual progress rather than only
+      // the current topic (agent_must_read.md §32-45, §86-96). Both reads
+      // return Result and degrade to an empty context when the student has no
+      // recorded mastery data yet, so this never blocks lesson start. Awaited
+      // so the context is set before the lesson is handed off to the tutor UI.
+      await _injectMasteryContext(manager, studentId, subjectId);
+
       final lessonPlanResult = await manager.generateLessonPlan(
         durationMinutes: actualDuration,
       );
@@ -257,6 +265,23 @@ class TutorService {
       return Future.error(error);
     }
     return manager;
+  }
+
+  Future<void> _injectMasteryContext(
+    ConversationManager manager,
+    String studentId,
+    String subjectId,
+  ) async {
+    final weakResult =
+        await _masteryService.getWeakTopics(studentId, subjectId: subjectId);
+    final historyResult = await getLessonHistory(studentId);
+    final context = MasteryContextBuilder().build(
+      weakTopics: weakResult.data ?? [],
+      recentSessions: historyResult.data ?? [],
+    );
+    if (context != null && context.isNotEmpty) {
+      manager.masteryContext = context;
+    }
   }
 
   /// Rolls back a failed lesson start: marks the tutor session
@@ -508,7 +533,7 @@ class TutorService {
             nextTopic.subjectId.isNotEmpty ? nextTopic.subjectId : session.subjectId;
 
         if (_preGenerateLessonTool != null) {
-          final result = await _preGenerateLessonTool!.execute({
+          final result = await _preGenerateLessonTool.execute({
             'subjectId': subjectId,
             'topicId': nextTopic.topicId,
             'topicTitle': nextTopic.topicId,

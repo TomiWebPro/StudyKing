@@ -4,6 +4,7 @@ import 'package:hive/hive.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
@@ -165,8 +166,17 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
 
 class FakeMasteryGraphService extends MasteryGraphService {
   final List<Map<String, dynamic>> recordedAttempts = [];
+  List<MasteryState> weakTopicsToReturn = [];
 
   FakeMasteryGraphService();
+
+  @override
+  Future<Result<List<MasteryState>>> getWeakTopics(
+    String studentId, {
+    String? subjectId,
+  }) async {
+    return Result.success(List<MasteryState>.from(weakTopicsToReturn));
+  }
 
   @override
   Future<Result<void>> recordAttempt({
@@ -483,6 +493,66 @@ void main() {
           equals(SessionStatus.cancelled),
         );
         expect(failingService.currentManager, isNull);
+      });
+
+      test('injects mastery context when student has weak topics and history',
+          () async {
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            accuracy: 0.4,
+            totalAttempts: 6,
+            lastAttempt: DateTime(2024, 1, 2),
+            lastUpdated: DateTime(2024, 1, 2),
+            weakSubtopics: ['decimals'],
+            subjectId: 'math',
+          ),
+        ];
+        tutorSessionRepo._sessions.add(
+          TutorSession(
+            id: 'prev-1',
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            topicTitle: 'Previous Lesson',
+            status: SessionStatus.completed,
+            startTime: DateTime(2024, 1, 1),
+            endTime: DateTime(2024, 1, 1, 0, 45),
+            questionsAsked: 4,
+            questionsCorrect: 1,
+          ),
+        );
+
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          durationMinutes: 45,
+          localeName: 'en',
+        );
+
+        expect(manager.masteryContext, isNotNull);
+        expect(manager.masteryContext!, contains('weak areas to watch'));
+        expect(manager.masteryContext!, contains('weak_topic_id'));
+        expect(manager.masteryContext!, contains('Recent lesson history'));
+        expect(manager.masteryContext!, contains('Previous Lesson'));
+      });
+
+      test('does not set masteryContext when student has no mastery data',
+          () async {
+        // Fresh student: empty weak topics, no history. Lesson must still start.
+        final manager = await tutorService.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          durationMinutes: 45,
+          localeName: 'en',
+        );
+
+        expect(manager.masteryContext, isNull);
       });
     });
 

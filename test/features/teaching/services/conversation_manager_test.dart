@@ -805,6 +805,33 @@ void main() {
       });
     });
 
+    group('mastery context injection', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('injects masteryContext into the lesson system prompt', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.masteryContext = 'Student mastery context (weak areas to watch): - topic-fractions: accuracy 40%, 3 attempts';
+
+        await manager.sendMessage('Tell me more').toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(llmService.lastSystemPrompt!, contains('Student mastery context'));
+        expect(llmService.lastSystemPrompt!, contains('topic-fractions'));
+      });
+
+      test('omits mastery context when unset', () async {
+        await manager.sendMessage('Hello').toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(
+          llmService.lastSystemPrompt!,
+          isNot(contains('Student mastery context')),
+        );
+      });
+    });
+
     group('adaptive streaming chunks', () {
       setUp(() async {
         await manager.initialize();

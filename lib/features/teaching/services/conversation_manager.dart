@@ -62,6 +62,13 @@ class ConversationManager {
   /// injected into the tutor system prompt so the tutor can adapt its style.
   String? feedbackContext;
 
+  /// Optional note built from the student's weak topics and recent lesson
+  /// history, injected into the tutor system prompt so the tutor adapts to the
+  /// learner's actual progress (agent_must_read.md §32-45: adapt to
+  /// understanding; §86-96: progress feeds teaching). Null/empty means the
+  /// student has no recorded mastery data yet, so nothing is injected.
+  String? masteryContext;
+
   ConversationPhase phase = ConversationPhase.greeting;
   int exerciseCount = 0;
   int correctCount = 0;
@@ -279,6 +286,7 @@ class ConversationManager {
       learningPreferences: learningPreferences,
       feedbackContext: feedbackContext,
       confusionCount: _consecutiveIncorrect,
+      masteryContext: masteryContext,
     );
 
     try {
