@@ -63,7 +63,11 @@ class CreatePracticeSessionTool extends AgentTool {
       },
       'subjectId': {
         'type': 'string',
-        'description': 'Subject ID. Required for all modes except at_risk.',
+        'description':
+            'Subject ID. Required for spaced_repetition, weak_areas, '
+            'topic_focus, and exam modes. For at_risk, when provided the '
+            'session is scoped to this subject; otherwise all at-risk '
+            'questions across subjects are returned.',
       },
       'topicId': {
         'type': 'string',
@@ -128,6 +132,7 @@ class CreatePracticeSessionTool extends AgentTool {
           );
         case 'at_risk':
           return await _createAtRiskSession(
+            subjectId: subjectId,
             questionCount: questionCount,
           );
         case 'exam':
@@ -299,6 +304,7 @@ class CreatePracticeSessionTool extends AgentTool {
   }
 
   Future<Map<String, dynamic>> _createAtRiskSession({
+    String? subjectId,
     required int questionCount,
   }) async {
     final studentId = _studentIdService.getStudentId().data ?? '';
@@ -321,7 +327,9 @@ class CreatePracticeSessionTool extends AgentTool {
     final allQuestionsResult = await _questionRepo.getAll();
     final allQuestions = allQuestionsResult.data ?? [];
     final atRiskQuestions = allQuestions
-        .where((q) => atRiskIds.contains(q.id))
+        .where((q) =>
+            atRiskIds.contains(q.id) &&
+            (subjectId == null || q.subjectId == subjectId))
         .toList();
 
     if (atRiskQuestions.isEmpty) {

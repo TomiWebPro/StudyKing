@@ -195,6 +195,84 @@ void main() {
       expect(result['questionIds'], equals(['qA']));
     });
 
+    test('at_risk mode scopes to subjectId when provided — no cross-syllabus bleed',
+        () async {
+      // Two subjects each have an at-risk question in the mastery graph.
+      final atRisk = [
+        QuestionMasteryState.initial(
+          studentId: 'student-1',
+          questionId: 'qMath',
+          now: DateTime.now(),
+        ),
+        QuestionMasteryState.initial(
+          studentId: 'student-1',
+          questionId: 'qHist',
+          now: DateTime.now(),
+        ),
+      ];
+      mastery.atRisk = atRisk;
+      questionRepo.setQuestions([
+        _q('qMath', 'math', 'algebra', 3),
+        _q('qHist', 'history', 'rome', 3),
+      ]);
+
+      final tool = CreatePracticeSessionTool(
+        questionRepo: questionRepo,
+        srService: FakeSpacedRepetitionService(const []),
+        masteryService: mastery,
+        scorer: scorer,
+        examSessionService: examSession,
+        studentIdService: studentIdService,
+      );
+
+      final result = await tool.execute({
+        'mode': 'at_risk',
+        'subjectId': 'math',
+      });
+      expect(result['success'], isTrue);
+      expect(result['mode'], equals('at_risk'));
+      // Only the math question is returned; the history question is excluded
+      // even though it is also at-risk, preserving multi-syllabus isolation.
+      expect(result['questionIds'], equals(['qMath']));
+      expect(result['topicsCovered'], equals(['algebra']));
+    });
+
+    test(
+        'at_risk mode without subjectId returns at-risk questions across all subjects',
+        () async {
+      final atRisk = [
+        QuestionMasteryState.initial(
+          studentId: 'student-1',
+          questionId: 'qMath',
+          now: DateTime.now(),
+        ),
+        QuestionMasteryState.initial(
+          studentId: 'student-1',
+          questionId: 'qHist',
+          now: DateTime.now(),
+        ),
+      ];
+      mastery.atRisk = atRisk;
+      questionRepo.setQuestions([
+        _q('qMath', 'math', 'algebra', 3),
+        _q('qHist', 'history', 'rome', 3),
+      ]);
+
+      final tool = CreatePracticeSessionTool(
+        questionRepo: questionRepo,
+        srService: FakeSpacedRepetitionService(const []),
+        masteryService: mastery,
+        scorer: scorer,
+        examSessionService: examSession,
+        studentIdService: studentIdService,
+      );
+
+      final result = await tool.execute({'mode': 'at_risk'});
+      expect(result['success'], isTrue);
+      // Backward-compatible: without subjectId, all at-risk questions match.
+      expect(result['questionIds'], unorderedEquals(['qMath', 'qHist']));
+    });
+
     test('topic_focus mode filters by topic and subject', () async {
       questionRepo.setQuestions([
         _q('q1', 's1', 't1', 1),
