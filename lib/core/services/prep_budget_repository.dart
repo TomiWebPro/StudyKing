@@ -11,6 +11,10 @@ import 'package:studyking/core/utils/logger.dart';
 ///  - `prepBudgetEnabled` : bool, the "Prepare while I'm away" master switch.
 ///  - `prepBudgetCaps`    : `Map<String,int>` from [PrepCategory.taskTypeKey]
 ///    to a token cap. Missing categories fall back to [PrepBudget.defaults].
+///  - `prepBudgetQuietStart`: int hour (0–23) or absent (quiet hours off).
+///  - `prepBudgetQuietEnd`  : int hour (0–23) or absent (quiet hours off).
+///  - `prepBudgetDisabledSubjects`: `List<String>` of subject IDs where
+///    preparation is disabled (per-syllabus opt-in, vision §4.2).
 ///
 /// Using raw keys (rather than HiveFields on [SettingsBox]) keeps this
 /// opt-in feature decoupled from the SettingsBox adapter generation and the
@@ -19,6 +23,9 @@ class PrepBudgetRepository {
   static final Logger _logger = const Logger('PrepBudgetRepository');
   static const String _enabledKey = 'prepBudgetEnabled';
   static const String _capsKey = 'prepBudgetCaps';
+  static const String _quietStartKey = 'prepBudgetQuietStart';
+  static const String _quietEndKey = 'prepBudgetQuietEnd';
+  static const String _disabledSubjectsKey = 'prepBudgetDisabledSubjects';
 
   Box? _box;
 
@@ -56,7 +63,19 @@ class PrepBudgetRepository {
             : (PrepBudget.defaults.caps[category] ?? 0);
         caps[category] = storedCap;
       }
-      return Result.success(PrepBudget(enabled: enabled, caps: caps));
+      final quietStart = box.get(_quietStartKey) as int?;
+      final quietEnd = box.get(_quietEndKey) as int?;
+      final disabledList = box.get(_disabledSubjectsKey);
+      final disabledSubjects = disabledList is List
+          ? disabledList.whereType<String>().toSet()
+          : <String>{};
+      return Result.success(PrepBudget(
+        enabled: enabled,
+        caps: caps,
+        quietHoursStart: quietStart != null ? quietStart.clamp(0, 23) : null,
+        quietHoursEnd: quietEnd != null ? quietEnd.clamp(0, 23) : null,
+        disabledSubjects: disabledSubjects,
+      ));
     } catch (e) {
       _logger.w('Failed to load prep budget from settings box', e);
       return Result.success(PrepBudget.defaults);
@@ -77,6 +96,20 @@ class PrepBudgetRepository {
       };
       await box.put(_enabledKey, budget.enabled);
       await box.put(_capsKey, caps);
+      if (budget.quietHoursStart != null) {
+        await box.put(_quietStartKey, budget.quietHoursStart!);
+      } else {
+        await box.delete(_quietStartKey);
+      }
+      if (budget.quietHoursEnd != null) {
+        await box.put(_quietEndKey, budget.quietHoursEnd!);
+      } else {
+        await box.delete(_quietEndKey);
+      }
+      await box.put(
+        _disabledSubjectsKey,
+        budget.disabledSubjects.toList(),
+      );
       return Result.success(null);
     } catch (e) {
       _logger.w('Failed to persist prep budget', e);

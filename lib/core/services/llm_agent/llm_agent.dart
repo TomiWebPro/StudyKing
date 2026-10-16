@@ -5,6 +5,7 @@ import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 
 class LlmAgent {
   final AgentLoop _loop;
@@ -46,7 +47,10 @@ class LlmAgent {
   }
 
   Future<void> enqueueBackgroundTask(String description, Future<void> Function() task) {
-    return _idleExecutor.enqueue(description, task);
+    // Post-lesson adherence, weak-topic reanalysis and next-topic prep are
+    // off-period, LLM-heat prep: mark them heavy so the SystemMonitorService
+    // can defer them under CPU/battery pressure (Vision Next-Term §4.3).
+    return _idleExecutor.enqueue(description, task, requiresHeavy: true);
   }
 
   String? recallFact(String key) => _memoryStore.recallFact(_studentId, key);
@@ -65,6 +69,8 @@ class AgentFactory {
     required String studentId,
     LlmTaskManager? taskManager,
     List<AgentTool>? tools,
+    SystemMonitorService? systemMonitor,
+    bool Function(DateTime now)? shouldDeferForQuietHours,
   }) {
     final toolRegistry = ToolRegistry();
     if (tools != null) {
@@ -77,6 +83,8 @@ class AgentFactory {
     final idleExecutor = IdleExecutor(
       llmTaskManager: taskManager,
       studentId: studentId,
+      systemMonitor: systemMonitor,
+      shouldDeferForQuietHours: shouldDeferForQuietHours,
     );
     idleExecutor.startIdleMonitoring();
 

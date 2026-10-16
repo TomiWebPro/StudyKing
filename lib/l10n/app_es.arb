@@ -8408,5 +8408,29 @@
   "prepBudgetDisabled": "El presupuesto de preparación está desactivado; las tareas de preparación están pausadas",
   "@prepBudgetDisabled": {
     "description": "Caption shown when the preparation budget master switch is off"
+  },
+  "quietHoursDesc": "Las tareas de preparación se pausan durante estas horas para evitar interrumpir el sueño",
+  "@quietHoursDesc": {
+    "description": "Description shown under the quiet-hours picker"
+  },
+  "perSubjectPrep": "Preparación por asignatura",
+  "@perSubjectPrep": {
+    "description": "Section label for per-subject prep opt-in"
+  },
+  "perSubjectPrepDesc": "Elija qué asignaturas preparar durante los períodos libres",
+  "@perSubjectPrepDesc": {
+    "description": "Description shown under the per-subject prep section"
+  },
+  "noSubjectsAdded": "Aún no se han añadido asignaturas",
+  "@noSubjectsAdded": {
+    "description": "Empty state message when no subjects exist"
+  },
+  "clearQuietHours": "Borrar horas de silencio",
+  "@clearQuietHours": {
+    "description": "Button to remove quiet hours configuration"
+  },
+  "setQuietHours": "Establecer horas de silencio",
+  "@setQuietHours": {
+    "description": "Button shown when quiet hours are not configured"
   }
 }

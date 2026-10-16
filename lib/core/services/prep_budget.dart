@@ -50,6 +50,11 @@ enum PrepCategory {
 /// and persist student edits. [PrepBudget.defaults] encodes the §4.2 split
 /// (PDF→KB 40%, Q-bank 30%, lesson prep 20%, embeddings 10%) normalised to
 /// a 500 000-token budget.
+///
+/// Also holds quiet-hours configuration: when [quietHoursStart] and
+/// [quietHoursEnd] are both set, the [IdleExecutor] defers heavy prep tasks
+/// during the quiet window to prevent disturbing the student at night
+/// (vision §4.2: "Prepare while I'm away" master switch + quiet-hours).
 class PrepBudget {
   /// When false, no preparation tokens may be spent (master switch off).
   final bool enabled;
@@ -57,13 +62,33 @@ class PrepBudget {
   /// Per-category token caps. A category absent from the map has a cap of 0.
   final Map<PrepCategory, int> caps;
 
+  /// Hour of day (0–23) when quiet hours begin, or null when quiet hours
+  /// are not configured. When the window wraps midnight (e.g. start 22,
+  /// end 8) the check handles the wraparound.
+  final int? quietHoursStart;
+
+  /// Hour of day (0–23) when quiet hours end, or null when quiet hours
+  /// are not configured.
+  final int? quietHoursEnd;
+
+  /// Set of subject IDs for which preparation is disabled.
+  /// Empty means all subjects are enabled (default). When a subject's
+  /// toggle is switched off in Settings, its ID is added here so the
+  /// IdleExecutor can skip prep for that syllabus (vision §4.2:
+  /// "per-syllabus opt-in").
+  final Set<String> disabledSubjects;
+
   const PrepBudget({
     required this.enabled,
     required this.caps,
+    this.quietHoursStart,
+    this.quietHoursEnd,
+    this.disabledSubjects = const {},
   });
 
   /// Vision-default caps: 40% / 30% / 20% / 10% of a 500k-token budget, plus
-  /// a 50k background bucket.
+  /// a 50k background bucket. Quiet hours and per-subject opt-in are null/empty
+  /// by default (student must configure them).
   static const PrepBudget defaults = PrepBudget(
     enabled: true,
     caps: {
@@ -73,13 +98,55 @@ class PrepBudget {
       PrepCategory.embeddings: 50000,
       PrepCategory.background: 50000,
     },
+    quietHoursStart: null,
+    quietHoursEnd: null,
+    disabledSubjects: {},
   );
 
-  PrepBudget copyWith({bool? enabled, Map<PrepCategory, int>? caps}) {
+  PrepBudget copyWith({
+    bool? enabled,
+    Map<PrepCategory, int>? caps,
+    int? quietHoursStart,
+    int? quietHoursEnd,
+    Set<String>? disabledSubjects,
+  }) {
     return PrepBudget(
       enabled: enabled ?? this.enabled,
       caps: caps ?? Map<PrepCategory, int>.of(this.caps),
+      quietHoursStart: quietHoursStart ?? this.quietHoursStart,
+      quietHoursEnd: quietHoursEnd ?? this.quietHoursEnd,
+      disabledSubjects: disabledSubjects ?? Set<String>.of(this.disabledSubjects),
     );
+  }
+
+  /// Whether [now] falls within the quiet-hours window, meaning heavy prep
+  /// tasks should be deferred to avoid disturbing the student.
+  ///
+  /// Returns false when quiet hours are not configured (either hour is null)
+  /// or when start == end (no window). Handles midnight wraparound: a window
+  /// like 22:00–08:00 covers hours 22–23 and 0–7.
+  bool shouldDeferForQuietHours(DateTime now) {
+    final start = quietHoursStart;
+    final end = quietHoursEnd;
+    if (start == null || end == null) return false;
+    if (start == end) return false;
+    final hour = now.hour;
+    if (start < end) {
+      // Same-day window, e.g. 09:00–17:00.
+      return hour >= start && hour < end;
+    } else {
+      // Wraparound window, e.g. 22:00–08:00 → covers 22,23 + 0–7.
+      return hour >= start || hour < end;
+    }
+  }
+
+  /// Whether preparation is enabled for [subjectId]. Returns false when the
+  /// subject has been explicitly disabled by the student via the per-subject
+  /// prep toggle in Settings. An empty [disabledSubjects] set means all
+  /// subjects are enabled (default behaviour).
+  bool isPrepEnabledForSubject(String subjectId) {
+    if (disabledSubjects.isEmpty) return true;
+    return !disabledSubjects.contains(subjectId);
   }
 
   /// Reference total budget used to map absolute caps to percentages in the
@@ -173,4 +240,14 @@ class PrepBudgetService {
   /// cap (and only when the budget is enabled).
   bool canSpend(PrepCategory category, int tokens) =>
       budget.canSpend(category, tokens, _meter.getTotalTokensPerTaskType());
+
+  /// Whether the student has configured quiet hours and [now] falls within
+  /// the quiet window. Delegates to [PrepBudget.shouldDeferForQuietHours]
+  /// so the [IdleExecutor] can call this single method to decide whether to
+  /// defer a task.
+  bool shouldDeferForQuietHours(DateTime now) => budget.shouldDeferForQuietHours(now);
+
+  /// Whether preparation is enabled for [subjectId] (per-syllabus opt-in).
+  bool isPrepEnabledForSubject(String subjectId) =>
+      budget.isPrepEnabledForSubject(subjectId);
 }

@@ -41,6 +41,13 @@ StudyKing is a Flutter-based, AI-native learning platform designed to maximize s
 | [Quick Guide](features/quickguide.md) | In-app help, mode navigation, suggested prompts |
 | [Onboarding](features/onboarding.md) | First-run wizard, API key setup, completion tracking |
 
+### Vision
+
+| Document | Description |
+|---|---|
+| [Product Vision](vision_next_term.md) | Next-term goals: flutter-to-image visuals, ailab e2e, scenarios, prep-heavy tokens — **start here for new issues** |
+| [Core Vision](../agent_must_read.md) | Original product vision (teaching/mentor, planning, practice) |
+
 ### Development
 
 | Document | Description |

@@ -17,6 +17,7 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -28,6 +29,7 @@ class MentorContextBuilder {
   final PlannerService _plannerService;
   final SessionRepository _sessionRepository;
   final LearningMethodAnalyticsService? _learningAnalyticsService;
+  final SourceRepository? _sourceRepository;
   final String _localeName;
 
   /// Human-readable summary of the student's active syllabi, so the mentor can
@@ -41,12 +43,14 @@ class MentorContextBuilder {
     required PlannerService plannerService,
     required SessionRepository sessionRepository,
     LearningMethodAnalyticsService? learningAnalyticsService,
+    SourceRepository? sourceRepository,
     required String localeName,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
         _sessionRepository = sessionRepository,
         _learningAnalyticsService = learningAnalyticsService,
+        _sourceRepository = sourceRepository,
         _localeName = localeName;
 
   Future<Result<String>> buildContextPrompt() async {
@@ -70,6 +74,8 @@ class MentorContextBuilder {
     final syllabusGoals = (await loadSyllabusGoals()).data ?? [];
     _buildSyllabusContext(syllabusGoals, l10n);
 
+    final sourceCount = await _getSourceCount();
+
     final buffer = StringBuffer();
     buffer.writeln(l10n.mentorContextHeader);
     buffer.writeln('$bullet${l10n.mentorContextTotalAttempts(stats['totalAttempts'] as int? ?? 0)}');
@@ -78,6 +84,10 @@ class MentorContextBuilder {
     buffer.writeln('$bullet${l10n.mentorContextTopicsStudied(stats['topicsStudied'] as int? ?? 0)}');
     buffer.writeln('$bullet${l10n.mentorContextWeeklyActivity(stats['weeklyActivity'] as int? ?? 0)}');
     buffer.writeln('$bullet${l10n.mentorContextTotalStudyTime('${stats['totalStudyTimeHours']}')}');
+
+    if (sourceCount == 0) {
+      buffer.writeln('$bullet${l10n.mentorContextNoMaterials}');
+    }
 
     if (plan != null) {
       buffer.writeln('$bullet${l10n.mentorContextPlanPhase(_getPlanDay(plan), plan.dailyPlans.length)}');
@@ -283,5 +293,17 @@ class MentorContextBuilder {
 
   Future<Result<int>> _getConsecutiveStudyDays() async {
     return _sessionRepository.getConsecutiveStudyDays();
+  }
+
+  /// Queries the ingestion state (uploaded sources) for the current student.
+  /// Returns the count of uploaded sources, or -1 if the repository is unavailable.
+  Future<int> _getSourceCount() async {
+    if (_sourceRepository == null) return -1;
+    final result = await _sourceRepository.getByStudent(_plannerService.studentId);
+    if (result.isFailure) {
+      _logger.w('Failed to load sources for mentor context', result.error);
+      return -1;
+    }
+    return result.data?.length ?? 0;
   }
 }

@@ -98,5 +98,59 @@ void main() {
       final result = await repo2.save(PrepBudget.defaults);
       expect(result.isFailure, isTrue);
     });
+
+    test('save then load round-trips quiet hours', () async {
+      await repo.init();
+      final budget = PrepBudget.defaults.copyWith(quietHoursStart: 22, quietHoursEnd: 8);
+      await repo.save(budget);
+
+      final repo2 = PrepBudgetRepository();
+      await repo2.init();
+      final result = repo2.load();
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.quietHoursStart, 22);
+      expect(result.data!.quietHoursEnd, 8);
+    });
+
+    test('save deletes quiet hours keys when null', () async {
+      await repo.init();
+      final withQuiet = PrepBudget.defaults.copyWith(quietHoursStart: 22, quietHoursEnd: 8);
+      await repo.save(withQuiet);
+      final box = Hive.box(HiveBoxNames.settings);
+      expect(box.get('prepBudgetQuietStart'), 22);
+      expect(box.get('prepBudgetQuietEnd'), 8);
+
+      final withoutQuiet = PrepBudget.defaults.copyWith();
+      await repo.save(withoutQuiet);
+      expect(box.get('prepBudgetQuietStart'), isNull);
+      expect(box.get('prepBudgetQuietEnd'), isNull);
+    });
+
+    test('save then load round-trips disabled subjects', () async {
+      await repo.init();
+      final budget = PrepBudget.defaults.copyWith(disabledSubjects: {'math', 'history'});
+      await repo.save(budget);
+
+      final repo2 = PrepBudgetRepository();
+      await repo2.init();
+      final result = repo2.load();
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.disabledSubjects, containsAll(['math', 'history']));
+    });
+
+    test('load returns empty disabledSubjects when not persisted', () async {
+      await repo.init();
+      final result = repo.load();
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.disabledSubjects, isEmpty);
+    });
+
+    test('load returns null quiet hours when not persisted', () {
+      final repo2 = PrepBudgetRepository();
+      final result = repo2.load();
+      expect(result.isSuccess, isTrue);
+      expect(result.data!.quietHoursStart, isNull);
+      expect(result.data!.quietHoursEnd, isNull);
+    });
   });
 }

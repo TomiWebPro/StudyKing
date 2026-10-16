@@ -10550,6 +10550,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Preparation budget is off — prep tasks are paused'**
   String get prepBudgetDisabled;
+
+  /// Description shown under the quiet-hours picker
+  ///
+  /// In en, this message translates to:
+  /// **'Prep tasks pause during these hours to prevent overworking'**
+  String get quietHoursDesc;
+
+  /// Section label for per-subject prep opt-in
+  ///
+  /// In en, this message translates to:
+  /// **'Per-subject preparation'**
+  String get perSubjectPrep;
+
+  /// Description shown under the per-subject prep section
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which subjects to prepare during off-periods'**
+  String get perSubjectPrepDesc;
+
+  /// Empty state message when no subjects exist
+  ///
+  /// In en, this message translates to:
+  /// **'No subjects have been added yet'**
+  String get noSubjectsAdded;
+
+  /// Button to remove quiet hours configuration
+  ///
+  /// In en, this message translates to:
+  /// **'Clear quiet hours'**
+  String get clearQuietHours;
+
+  /// Button shown when quiet hours are not configured
+  ///
+  /// In en, this message translates to:
+  /// **'Set quiet hours'**
+  String get setQuietHours;
 }
 
 class _AppLocalizationsDelegate

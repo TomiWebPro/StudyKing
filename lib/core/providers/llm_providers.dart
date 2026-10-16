@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/constants/llm_defaults.dart' show defaultModelForProvider;
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -5,6 +6,7 @@ import 'package:studyking/core/services/llm/llm_response_cache.dart';
 import 'package:studyking/core/services/llm/model_router.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 
 final llmTaskManagerProvider = Provider<LlmTaskManager>((ref) {
@@ -17,6 +19,15 @@ final llmUsageMeterProvider = Provider<LlmUsageMeter>((ref) {
   final meter = LlmUsageMeter();
   meter.init();
   return meter;
+});
+
+/// Exposes device/system load so the [IdleExecutor] can defer heavy
+/// off-period prep under CPU/battery pressure (Vision Next-Term §4.3).
+/// Web has no native sensors → healthy noop; desktop/mobile uses the best-effort
+/// platform implementation.
+final systemMonitorServiceProvider = Provider<SystemMonitorService>((ref) {
+  if (kIsWeb) return const NoopSystemMonitorService();
+  return PlatformSystemMonitorService();
 });
 
 final llmResponseCacheProvider = Provider<LlmResponseCache>((ref) {

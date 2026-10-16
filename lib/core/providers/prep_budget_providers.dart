@@ -70,6 +70,45 @@ class PrepBudgetSettingsController extends StateNotifier<PrepBudget> {
   /// Sets a category cap from a percentage of [PrepBudget.referenceTotalTokens].
   Future<void> setCategoryPercent(PrepCategory category, int percent) =>
       setCategoryCap(category, (percent.clamp(0, 100) / 100 * PrepBudget.referenceTotalTokens).round());
+
+  /// Configures the quiet-hours window (vision §4.2). Pass null for either
+  /// hour to disable quiet hours. Hours are clamped to 0–23.
+  Future<void> setQuietHours({int? startHour, int? endHour}) async {
+    // Build directly rather than via copyWith: the ?? cascade in copyWith
+    // treats an explicit null as "keep current value", so passing null here
+    // (i.e. clearing quiet hours) would be silently ignored. Constructing the
+    // PrepBudget explicitly ensures null means null.
+    final updated = PrepBudget(
+      enabled: state.enabled,
+      caps: Map<PrepCategory, int>.of(state.caps),
+      quietHoursStart: startHour != null ? startHour.clamp(0, 23) : null,
+      quietHoursEnd: endHour != null ? endHour.clamp(0, 23) : null,
+      disabledSubjects: Set<String>.of(state.disabledSubjects),
+    );
+    state = updated;
+    final result = await _repository.save(updated);
+    if (result.isFailure) {
+      _logger.w('Failed to persist quiet hours: ${result.error}');
+    }
+  }
+
+  /// Toggles per-subject preparation opt-in (vision §4.2 "per-syllabus opt-in").
+  /// When [enabled] is false the subject is added to the disabled set;
+  /// when true it is removed.
+  Future<void> setSubjectPrepEnabled(String subjectId, bool enabled) async {
+    final current = Set<String>.of(state.disabledSubjects);
+    if (enabled) {
+      current.remove(subjectId);
+    } else {
+      current.add(subjectId);
+    }
+    final updated = state.copyWith(disabledSubjects: current);
+    state = updated;
+    final result = await _repository.save(updated);
+    if (result.isFailure) {
+      _logger.w('Failed to persist subject prep preference: ${result.error}');
+    }
+  }
 }
 
 /// Prepares the live [PrepBudgetService] from the student's persisted budget

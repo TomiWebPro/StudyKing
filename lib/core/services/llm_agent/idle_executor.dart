@@ -32,6 +32,14 @@ class IdleExecutor {
   static final Logger _logger = const Logger('IdleExecutor');
   final LlmTaskManager? _llmTaskManager;
   final SystemMonitorService? _systemMonitor;
+
+  /// Optional callback consulted before running a task. When it returns true
+  /// the task is left in the queue and retried on the next poll, implementing
+  /// vision §4.2 quiet-hours: heavy prep defers so the student is not
+  /// disturbed at night. Inject in tests with a stubbed [DateTime] for a
+  /// deterministic fake-clock (e.g. 2am within a 22–8 window).
+  final bool Function(DateTime now)? _shouldDeferForQuietHours;
+
   final List<IdleTask> _queue = [];
   Timer? _idleCheckTimer;
   bool _isExecuting = false;
@@ -40,8 +48,10 @@ class IdleExecutor {
     LlmTaskManager? llmTaskManager,
     String studentId = 'default',
     SystemMonitorService? systemMonitor,
+    bool Function(DateTime now)? shouldDeferForQuietHours,
   })  : _llmTaskManager = llmTaskManager,
-        _systemMonitor = systemMonitor;
+        _systemMonitor = systemMonitor,
+        _shouldDeferForQuietHours = shouldDeferForQuietHours;
 
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
@@ -84,6 +94,20 @@ class IdleExecutor {
     if (_isExecuting) return;
     final next = _queue.where((t) => !t.isCompleted && !t.isRunning).firstOrNull;
     if (next == null) return;
+
+    // Vision Next-Term §4.2 quiet-hours: defer ALL off-period prep tasks when
+    // the student has configured a quiet-hours window and the current time is
+    // within it. This prevents notifications, network traffic, and CPU use
+    // during sleep hours — not just heavy tasks (a light task at 2am is still
+    // disruptive). The check is delegated to the injected callback so tests
+    // can supply a fake clock deterministically.
+    if (_shouldDeferForQuietHours != null &&
+        _shouldDeferForQuietHours!(DateTime.now())) {
+      _logger.d(
+        'Deferring task "${next.description}" — within quiet hours',
+      );
+      return;
+    }
 
     // Vision Next-Term §4.3: heavy off-period prep must defer when the device
     // is stressed (CPU > 80%, battery < 20%, battery-saver on). The task is

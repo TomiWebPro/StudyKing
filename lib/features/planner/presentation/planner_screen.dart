@@ -14,6 +14,16 @@ import 'widgets/calendar_view_widget.dart';
 import 'widgets/roadmaps_tab.dart';
 import '../../../l10n/generated/app_localizations.dart';
 
+/// Calendar-day difference `a - b` in whole days. Both arguments are
+/// local timestamps; the computation is done on UTC-normalized dates so
+/// a DST transition (a 23h or 25h calendar day) cannot shift the result
+/// the way elapsed-time `difference().inDays` does.
+int _calendarDayDiff(DateTime a, DateTime b) {
+  final utcA = DateTime.utc(a.year, a.month, a.day);
+  final utcB = DateTime.utc(b.year, b.month, b.day);
+  return utcA.difference(utcB).inDays;
+}
+
 class PlannerScreen extends ConsumerStatefulWidget {
   final String? fixedStudentId;
 
@@ -70,9 +80,16 @@ class _PlannerScreenState extends ConsumerState<PlannerScreen>
     // pre-fill (target - createdAt) was the roadmap's total
     // lifetime: it inflated by the roadmap's age after every
     // update and silently extended the plan when saved unchanged.
-    final remainingDays = existing?.targetCompletionDate
-        ?.difference(DateTime.now())
-        .inDays;
+    //
+    // Calendar-day diff (not elapsed 24h periods) so a DST
+    // spring-forward day (23h) inside the window can't truncate
+    // the count by one. See _calendarDayDiff. `now` is read from
+    // clockProvider to match the anchor updateRoadmap uses, so the
+    // pre-filled value stays consistent with the re-anchored target.
+    final now = ref.read(clockProvider).now();
+    final remainingDays = existing?.targetCompletionDate == null
+        ? null
+        : _calendarDayDiff(existing!.targetCompletionDate!, now);
     final daysController = TextEditingController(
       text: existing == null || remainingDays == null
           ? '30'

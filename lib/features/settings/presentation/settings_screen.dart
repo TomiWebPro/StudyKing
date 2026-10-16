@@ -2112,8 +2112,11 @@ class _ModelItem {
 
 /// Student-facing surface for the per-category preparation budget (vision
 /// Next-Term §4.2). Shows the "Prepare while I'm away" master switch,
-/// per-category percentage sliders, and live spend/cost counters read from
-/// [PrepBudgetService].
+/// per-category percentage sliders, live spend/cost counters read from
+/// [PrepBudgetService], a quiet-hours time-range picker (prevents off-period
+/// prep from disturbing the student at night), and a per-subject prep
+/// opt-in section (lets the student choose which syllabi to prepare during
+/// off-periods).
 class _PrepBudgetSection extends ConsumerWidget {
   const _PrepBudgetSection();
 
@@ -2172,7 +2175,231 @@ class _PrepBudgetSection extends ConsumerWidget {
               onPercentChanged: (value) =>
                   controller.setCategoryPercent(category, value),
             )),
+        const SizedBox(height: 8),
+        _QuietHoursSection(
+          budget: budget,
+          onQuietHoursChanged: (start, end) => controller.setQuietHours(
+            startHour: start,
+            endHour: end,
+          ),
+        ),
+        const SizedBox(height: 8),
+        _PerSubjectPrepSection(
+          budget: budget,
+          onSubjectToggled: (subjectId, enabled) =>
+              controller.setSubjectPrepEnabled(subjectId, enabled),
+        ),
       ],
+    );
+  }
+}
+
+/// Time-range picker for quiet-hours configuration (vision §4.2).
+/// Uses two hour dropdowns (0–23) which handle midnight wraparound
+/// (e.g. start 22, end 8 covers 22:00–08:00).
+class _QuietHoursSection extends ConsumerWidget {
+  const _QuietHoursSection({
+    required this.budget,
+    required this.onQuietHoursChanged,
+  });
+
+  final PrepBudget budget;
+  final void Function(int? start, int? end) onQuietHoursChanged;
+
+  static final _hours = List.generate(24, (i) => i);
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final hasQuietHours =
+        budget.quietHoursStart != null && budget.quietHoursEnd != null;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.quietHours,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    )),
+            const SizedBox(height: 4),
+            Text(l10n.quietHoursDesc,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    )),
+            if (hasQuietHours) ...[
+              const SizedBox(height: 12),
+              Row(
+                children: [
+                  Expanded(
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: l10n.quietHoursStart,
+                        border: const OutlineInputBorder(),
+                      ),
+                      child: DropdownButton<int>(
+                        value: budget.quietHoursStart,
+                        items: _hourItems,
+                        onChanged: (v) =>
+                            onQuietHoursChanged(v, budget.quietHoursEnd),
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: InputDecorator(
+                      decoration: InputDecoration(
+                        labelText: l10n.quietHoursEnd,
+                        border: const OutlineInputBorder(),
+                      ),
+                      child: DropdownButton<int>(
+                        value: budget.quietHoursEnd,
+                        items: _hourItems,
+                        onChanged: (v) =>
+                            onQuietHoursChanged(budget.quietHoursStart, v),
+                        isExpanded: true,
+                        underline: const SizedBox.shrink(),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              TextButton.icon(
+                icon: const Icon(Icons.clear),
+                label: Text(l10n.clearQuietHours),
+                onPressed: () => onQuietHoursChanged(null, null),
+              ),
+            ],
+            if (!hasQuietHours)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: TextButton.icon(
+                  icon: const Icon(Icons.schedule),
+                  label: Text(l10n.setQuietHours),
+                  onPressed: () => _showStartHourPicker(context),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  List<DropdownMenuItem<int>> get _hourItems => _hours
+      .map((h) => DropdownMenuItem(
+          value: h, child: Text('${h.toString().padLeft(2, '0')}:00')))
+      .toList();
+
+  void _showStartHourPicker(BuildContext context) {
+    showModalBottomSheet<int?>(
+      context: context,
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _hours
+            .map((h) => ListTile(
+                  title: Text('${h.toString().padLeft(2, '0')}:00'),
+                  onTap: () => Navigator.pop(context, h),
+                ))
+            .toList(),
+      ),
+    ).then((start) {
+      if (start == null) return;
+      _showEndHourPicker(context, start);
+    });
+  }
+
+  void _showEndHourPicker(BuildContext context, int startHour) {
+    showModalBottomSheet<int?>(
+      context: context,
+      builder: (_) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: _hours
+            .map((h) => ListTile(
+                  title: Text('${h.toString().padLeft(2, '0')}:00'),
+                  onTap: () => Navigator.pop(context, h),
+                ))
+            .toList(),
+      ),
+    ).then((end) {
+      if (end == null) return;
+      onQuietHoursChanged(startHour, end);
+    });
+  }
+}
+
+/// Per-subject preparation opt-in section (vision §4.2 "per-syllabus opt-in").
+/// Shows a toggle for each active subject; toggling off adds the subject to
+/// [PrepBudget.disabledSubjects] so the IdleExecutor skips prep for it.
+class _PerSubjectPrepSection extends ConsumerWidget {
+  const _PerSubjectPrepSection({
+    required this.budget,
+    required this.onSubjectToggled,
+  });
+
+  final PrepBudget budget;
+  final void Function(String subjectId, bool enabled) onSubjectToggled;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final subjectsAsync = ref.watch(subjectListProvider);
+
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(l10n.perSubjectPrep,
+                style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w500,
+                    )),
+            const SizedBox(height: 4),
+            Text(l10n.perSubjectPrepDesc,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    )),
+            const SizedBox(height: 8),
+            subjectsAsync.when(
+              data: (subjects) {
+                if (subjects.isEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 8),
+                    child: Text(l10n.noSubjectsAdded,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurfaceVariant,
+                            )),
+                  );
+                }
+                return Column(
+                  children: subjects.map((subject) {
+                    final isEnabled = budget.isPrepEnabledForSubject(subject.id);
+                    return SwitchListTile(
+                      title: Text(subject.name),
+                      value: isEnabled,
+                      onChanged: (v) => onSubjectToggled(subject.id, v),
+                    );
+                  }).toList(),
+                );
+              },
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, st) => Text(l10n.failedToLoadSubjects,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: Theme.of(context).colorScheme.error,
+                      )),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

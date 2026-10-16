@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
+import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/long_term_memory.dart';
@@ -88,15 +89,24 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   final modelId = ref.watch(mentorModelIdProvider);
   final taskManager = ref.watch(llmTaskManagerProvider);
   final tools = ref.watch(llmAgentToolsProvider);
+  final systemMonitor = ref.watch(systemMonitorServiceProvider);
+  final prepBudget = ref.watch(prepBudgetSettingsProvider);
 
   if (llmService.config.apiKey.isEmpty) return null;
 
+  // Vision §4.2: quiet-hours — the IdleExecutor must defer off-period prep
+  // tasks when the student has configured a quiet window (e.g. 22:00–08:00).
+  // We inject the PrepBudget's quiet-hours predicate so the executor can call
+  // it with the current time without holding a direct dependency on the
+  // budget model at the service layer.
   return AgentFactory.create(
     llmService: llmService,
     modelId: modelId,
     studentId: studentId,
     taskManager: taskManager,
     tools: tools,
+    systemMonitor: systemMonitor,
+    shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
   );
 });
 

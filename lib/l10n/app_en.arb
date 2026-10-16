@@ -8429,5 +8429,29 @@
   "prepBudgetDisabled": "Preparation budget is off — prep tasks are paused",
   "@prepBudgetDisabled": {
     "description": "Caption shown when the preparation budget master switch is off"
+  },
+  "quietHoursDesc": "Prep tasks pause during these hours to prevent overworking",
+  "@quietHoursDesc": {
+    "description": "Description shown under the quiet-hours picker"
+  },
+  "perSubjectPrep": "Per-subject preparation",
+  "@perSubjectPrep": {
+    "description": "Section label for per-subject prep opt-in"
+  },
+  "perSubjectPrepDesc": "Choose which subjects to prepare during off-periods",
+  "@perSubjectPrepDesc": {
+    "description": "Description shown under the per-subject prep section"
+  },
+  "noSubjectsAdded": "No subjects have been added yet",
+  "@noSubjectsAdded": {
+    "description": "Empty state message when no subjects exist"
+  },
+  "clearQuietHours": "Clear quiet hours",
+  "@clearQuietHours": {
+    "description": "Button to remove quiet hours configuration"
+  },
+  "setQuietHours": "Set quiet hours",
+  "@setQuietHours": {
+    "description": "Button shown when quiet hours are not configured"
   }
 }

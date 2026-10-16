@@ -24,6 +24,8 @@ import 'package:studyking/features/settings/data/repositories/settings_repositor
 import 'package:studyking/features/settings/presentation/settings_screen.dart';
 import 'package:studyking/features/settings/providers/settings_providers.dart';
 import 'package:studyking/features/settings/services/data_backup_service.dart';
+import 'package:studyking/core/data/models/subject_model.dart';
+import 'package:studyking/features/subjects/providers/subjects_list_provider.dart' show subjectListProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 
@@ -223,6 +225,25 @@ class FakePrepBudgetRepository implements PrepBudgetRepository {
     current = budget;
     return Result.success(null);
   }
+
+  /// Convenience for tests: updates the quiet-hours window on [current]
+  /// without going through the controller, so a test can set up a
+  /// pre-existing quiet-hours configuration before pumping.
+  void setQuietHours(int? start, int? end) {
+    current = current.copyWith(quietHoursStart: start, quietHoursEnd: end);
+  }
+
+  /// Convenience for tests: toggles per-subject prep opt-in on [current]
+  /// directly.
+  void setSubjectPrepEnabled(String subjectId, bool enabled) {
+    final updated = Set<String>.of(current.disabledSubjects);
+    if (enabled) {
+      updated.remove(subjectId);
+    } else {
+      updated.add(subjectId);
+    }
+    current = current.copyWith(disabledSubjects: updated);
+  }
 }
 
 class _TestSettingsNotifier extends SettingsController {
@@ -256,6 +277,7 @@ Widget buildSettingsScreen({
   Locale locale = const Locale('en'),
   PrepBudget? initialPrepBudget,
   FakePrepBudgetRepository? prepBudgetRepository,
+  List<Subject>? subjects,
 }) {
   if (initialSettings != null) {
     fakeRepo.settings = initialSettings;
@@ -284,6 +306,9 @@ Widget buildSettingsScreen({
       prepBudgetSettingsProvider.overrideWith((ref) =>
           PrepBudgetSettingsController(effectivePrepBudgetRepository)),
       prepBudgetServiceProvider.overrideWithValue(effectivePrepBudgetService),
+      // Always override the subject list provider to avoid Hive I/O in tests.
+      // When [subjects] is null, provide an empty list (same as no subjects).
+      subjectListProvider.overrideWith((ref) async => subjects ?? []),
       if (secureApiKeyService != null)
         secureApiKeyServiceProvider.overrideWith((ref) => secureApiKeyService),
       if (backupService != null)
@@ -316,6 +341,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
   Locale locale = const Locale('en'),
   PrepBudget? initialPrepBudget,
   FakePrepBudgetRepository? prepBudgetRepository,
+  List<Subject>? subjects,
 }) async {
   tester.view.devicePixelRatio = 1.0;
   tester.view.physicalSize = const Size(800, 3500);
@@ -332,6 +358,7 @@ Future<void> pumpWithSettings(WidgetTester tester, {
     locale: locale,
     initialPrepBudget: initialPrepBudget,
     prepBudgetRepository: prepBudgetRepository,
+    subjects: subjects,
   ));
   await tester.pumpAndSettle();
 }

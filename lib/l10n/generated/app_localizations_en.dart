@@ -6227,7 +6227,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get mentorContextActiveSyllabus => 'Active syllabus';
 
   @override
-  String get mentorContextNoMaterials => 'You have no uploaded study materials. When the student asks about a course, suggest uploading a syllabus or using a standard curriculum.';
+  String get mentorContextNoMaterials =>
+      'You have no uploaded study materials. When the student asks about a course, suggest uploading a syllabus or using a standard curriculum.';
 
   @override
   String tutorSyllabusSwitched(String title) {
@@ -6430,4 +6431,24 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get prepBudgetDisabled =>
       'Preparation budget is off — prep tasks are paused';
+
+  @override
+  String get quietHoursDesc =>
+      'Prep tasks pause during these hours to prevent overworking';
+
+  @override
+  String get perSubjectPrep => 'Per-subject preparation';
+
+  @override
+  String get perSubjectPrepDesc =>
+      'Choose which subjects to prepare during off-periods';
+
+  @override
+  String get noSubjectsAdded => 'No subjects have been added yet';
+
+  @override
+  String get clearQuietHours => 'Clear quiet hours';
+
+  @override
+  String get setQuietHours => 'Set quiet hours';
 }

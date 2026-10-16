@@ -164,6 +164,99 @@ void main() {
       expect(fakeRepo.current.caps[PrepCategory.pdfIngestion], 50000);
       expect(fakeRepo.saveCallCount, 1);
     });
+
+    test('setQuietHours persists start and end hours', () async {
+      final fakeRepo = FakePrepBudgetRepositoryImpl();
+      final container = ProviderContainer(
+        overrides: [
+          prepBudgetRepositoryProvider.overrideWith((ref) => fakeRepo),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final controller = container.read(prepBudgetSettingsProvider.notifier);
+      await _waitForLoad();
+
+      await controller.setQuietHours(startHour: 22, endHour: 8);
+
+      expect(fakeRepo.current.quietHoursStart, 22);
+      expect(fakeRepo.current.quietHoursEnd, 8);
+      expect(fakeRepo.saveCallCount, 1);
+    });
+
+    test('setQuietHours clears when both hours are null', () async {
+      final fakeRepo = FakePrepBudgetRepositoryImpl();
+      fakeRepo.current = PrepBudget.defaults.copyWith(quietHoursStart: 22, quietHoursEnd: 8);
+      final container = ProviderContainer(
+        overrides: [
+          prepBudgetRepositoryProvider.overrideWith((ref) => fakeRepo),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final controller = container.read(prepBudgetSettingsProvider.notifier);
+      await _waitForLoad();
+
+      await controller.setQuietHours(startHour: null, endHour: null);
+
+      expect(fakeRepo.current.quietHoursStart, isNull);
+      expect(fakeRepo.current.quietHoursEnd, isNull);
+    });
+
+    test('setQuietHours clamps hours to 0–23', () async {
+      final fakeRepo = FakePrepBudgetRepositoryImpl();
+      final container = ProviderContainer(
+        overrides: [
+          prepBudgetRepositoryProvider.overrideWith((ref) => fakeRepo),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final controller = container.read(prepBudgetSettingsProvider.notifier);
+      await _waitForLoad();
+
+      await controller.setQuietHours(startHour: 25, endHour: -1);
+
+      expect(fakeRepo.current.quietHoursStart, 23);
+      expect(fakeRepo.current.quietHoursEnd, 0);
+    });
+
+    test('setSubjectPrepEnabled adds subject to disabled set when false', () async {
+      final fakeRepo = FakePrepBudgetRepositoryImpl();
+      final container = ProviderContainer(
+        overrides: [
+          prepBudgetRepositoryProvider.overrideWith((ref) => fakeRepo),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final controller = container.read(prepBudgetSettingsProvider.notifier);
+      await _waitForLoad();
+
+      await controller.setSubjectPrepEnabled('math', false);
+
+      expect(fakeRepo.current.disabledSubjects, contains('math'));
+      expect(fakeRepo.saveCallCount, 1);
+    });
+
+    test('setSubjectPrepEnabled removes subject from disabled set when true', () async {
+      final fakeRepo = FakePrepBudgetRepositoryImpl();
+      fakeRepo.current = PrepBudget.defaults.copyWith(disabledSubjects: {'math'});
+      final container = ProviderContainer(
+        overrides: [
+          prepBudgetRepositoryProvider.overrideWith((ref) => fakeRepo),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      final controller = container.read(prepBudgetSettingsProvider.notifier);
+      await _waitForLoad();
+
+      await controller.setSubjectPrepEnabled('math', true);
+
+      expect(fakeRepo.current.disabledSubjects, isNot(contains('math')));
+      expect(fakeRepo.current.disabledSubjects, isEmpty);
+    });
   });
 
   group('prepBudgetServiceProvider', () {

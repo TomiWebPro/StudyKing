@@ -18,6 +18,7 @@ import 'package:studyking/features/planner/data/models/engagement_nudge_model.da
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/mentor/data/models/progress_report.dart';
 import 'package:studyking/features/mentor/data/models/mentor_action.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -47,6 +48,7 @@ class MentorService {
   final PlannerService _plannerService;
   final EngagementNudgeRepository _nudgeRepo;
   final SessionRepository _sessionRepository;
+  final SourceRepository _sourceRepository;
   final String _localeName;
   final LlmAgent? _agent;
   final LongTermMemory? _longTermMemory;
@@ -71,6 +73,7 @@ class MentorService {
     EngagementNudgeRepository? nudgeRepo,
     SessionRepository? sessionRepository,
     ConversationRepository? conversationRepo,
+    SourceRepository? sourceRepository,
     required String localeName,
     LlmAgent? agent,
     LongTermMemory? longTermMemory,
@@ -84,6 +87,7 @@ class MentorService {
         _pendingActionRepo = pendingActionRepo ?? PendingActionRepository(),
         _nudgeRepo = nudgeRepo ?? EngagementNudgeRepository(),
         _sessionRepository = sessionRepository ?? SessionRepository(),
+        _sourceRepository = sourceRepository ?? SourceRepository(),
         _localeName = localeName,
         _agent = agent,
         _longTermMemory = longTermMemory,
@@ -98,6 +102,7 @@ class MentorService {
       masteryService: _masteryService,
       plannerService: _plannerService,
       sessionRepository: _sessionRepository,
+      sourceRepository: _sourceRepository,
       localeName: _localeName,
     );
     _wellbeingService = MentorWellbeingService(

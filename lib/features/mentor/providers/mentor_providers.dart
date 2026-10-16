@@ -11,6 +11,8 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show sourceRepositoryProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -67,6 +69,7 @@ final mentorServiceProvider = Provider.family<MentorService, String>((ref, stude
     plannerService: ref.watch(plannerServiceProvider),
     nudgeRepo: ref.watch(mentorEngagementNudgeRepoProvider),
     sessionRepository: ref.watch(mentorSessionRepositoryProvider),
+    sourceRepository: ref.watch(sourceRepositoryProvider),
     modelId: ref.watch(mentorModelIdProvider),
     studentId: studentId,
     localeName: l10n?.localeName ?? 'en',

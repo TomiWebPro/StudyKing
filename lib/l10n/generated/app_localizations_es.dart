@@ -6296,7 +6296,8 @@ class AppLocalizationsEs extends AppLocalizations {
   String get mentorContextActiveSyllabus => 'Plan de estudio activo';
 
   @override
-  String get mentorContextNoMaterials => 'No se han subido materiales de estudio. Cuando el estudiante pregunte sobre un curso, sugiera subir un plan de estudios o libro de texto, o usar un currículo estándar.';
+  String get mentorContextNoMaterials =>
+      'No se han subido materiales de estudio. Cuando el estudiante pregunte sobre un curso, sugiera subir un plan de estudios o libro de texto, o usar un currículo estándar.';
 
   @override
   String tutorSyllabusSwitched(String title) {
@@ -6501,4 +6502,24 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get prepBudgetDisabled =>
       'El presupuesto de preparación está desactivado; las tareas de preparación están pausadas';
+
+  @override
+  String get quietHoursDesc =>
+      'Las tareas de preparación se pausan durante estas horas para evitar interrumpir el sueño';
+
+  @override
+  String get perSubjectPrep => 'Preparación por asignatura';
+
+  @override
+  String get perSubjectPrepDesc =>
+      'Elija qué asignaturas preparar durante los períodos libres';
+
+  @override
+  String get noSubjectsAdded => 'Aún no se han añadido asignaturas';
+
+  @override
+  String get clearQuietHours => 'Borrar horas de silencio';
+
+  @override
+  String get setQuietHours => 'Establecer horas de silencio';
 }
