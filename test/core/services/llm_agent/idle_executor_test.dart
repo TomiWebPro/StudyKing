@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 
 void main() {
   group('IdleExecutor', () {
@@ -214,4 +215,154 @@ void main() {
       executor.dispose();
     });
   });
+
+  group('IdleExecutor system-monitor deferral', () {
+    test('defers heavy task when system reports stress', () async {
+      // Vision §4.3: heavy off-period prep must defer when the device is
+      // stressed (CPU > 80%, battery < 20%, battery-saver on).
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var taskRan = false;
+      await executor.enqueue(
+        'heavy embedding prep task',
+        () async {
+          taskRan = true;
+        },
+        requiresHeavy: true,
+      );
+
+      // The system monitor reports stress, so the heavy task must NOT run
+      // and must remain pending for a later retry.
+      expect(taskRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+      expect(executor.queue.first.isRunning, isFalse);
+      expect(executor.queue.first.isCompleted, isFalse);
+
+      executor.dispose();
+    });
+
+    test('runs heavy task after system recovers', () async {
+      // Stress clears → the deferred task runs on the next processNext() call.
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var taskRan = false;
+      await executor.enqueue(
+        'heavy question-variant task',
+        () async {
+          taskRan = true;
+        },
+        requiresHeavy: true,
+      );
+
+      // System under stress — task deferred.
+      expect(taskRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+
+      // Simulate the device recovering (CPU cooled, plugged in).
+      monitor.canRunHeavyPrepNowValue = true;
+      await executor.processNext();
+
+      // Now the deferred task should have run and completed.
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test('light task proceeds even when system reports stress', () async {
+      // Vision §4.3: "heavy jobs defer, light jobs proceed." A non-heavy task
+      // must not be blocked by CPU/battery stress — it is too cheap to matter.
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var taskRan = false;
+      await executor.enqueue(
+        'light cleanup task',
+        () async {
+          taskRan = true;
+        },
+        // requiresHeavy defaults to false — light jobs skip deferral.
+      );
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test('does not require a systemMonitor — heavy tasks run without it', () async {
+      // When no SystemMonitorService is injected, heavy tasks proceed normally
+      // (the deferral branch at idle_executor.dart:115 short-circuits on
+      // `_systemMonitor != null`).
+      final executor = IdleExecutor();
+
+      var taskRan = false;
+      await executor.enqueue(
+        'heavy task without monitor',
+        () async {
+          taskRan = true;
+        },
+        requiresHeavy: true,
+      );
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+  });
+}
+
+/// Hand-written, mutable fake [SystemMonitorService] for deterministic testing
+/// of the IdleExecutor's CPU/battery deferral branch
+/// (idle_executor.dart:112-120). Unlike the immutable
+/// [FakeSystemMonitorService] in system_monitor_service_test.dart, this one
+/// allows toggling `canRunHeavyPrepNow` at runtime so a single test can
+/// simulate stress → recovery.
+class MutableFakeSystemMonitorService extends SystemMonitorService {
+  bool canRunHeavyPrepNowValue;
+  final int batteryLevelValue;
+  final bool isChargingValue;
+  final double cpuLoadValue;
+  final bool isBatterySaverValue;
+  final String? networkTypeValue;
+
+  MutableFakeSystemMonitorService({
+    this.canRunHeavyPrepNowValue = true,
+    this.batteryLevelValue = -1,
+    this.isChargingValue = false,
+    this.cpuLoadValue = -1,
+    this.isBatterySaverValue = false,
+    this.networkTypeValue,
+  });
+
+  set canRunHeavyPrepNow(bool value) => canRunHeavyPrepNowValue = value;
+
+  @override
+  bool get canRunHeavyPrepNow => canRunHeavyPrepNowValue;
+
+  @override
+  int get batteryLevel => batteryLevelValue;
+
+  @override
+  bool get isCharging => isChargingValue;
+
+  @override
+  double get cpuLoad => cpuLoadValue;
+
+  @override
+  bool get isBatterySaver => isBatterySaverValue;
+
+  @override
+  String? get networkType => networkTypeValue;
 }
