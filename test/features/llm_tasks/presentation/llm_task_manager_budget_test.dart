@@ -45,6 +45,7 @@ class _FakeTaskManager extends LlmTaskManager {
     required String feature,
     required String modelId,
     String? description,
+    String? taskType,
   }) {
     final id = 'task_${_tasks.length + 1}';
     _tasks.add(LlmTask(
@@ -53,6 +54,7 @@ class _FakeTaskManager extends LlmTaskManager {
       modelId: modelId,
       startTime: DateTime.now(),
       description: description,
+      taskType: taskType,
     ));
     _notify();
     return id;

@@ -555,7 +555,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -597,7 +597,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -688,7 +688,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -735,7 +735,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -824,7 +824,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
@@ -865,7 +865,7 @@ class LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;

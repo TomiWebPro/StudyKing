@@ -83,6 +83,7 @@ void main() {
         tokensUsed: 500,
         estimatedCost: 0.01,
         error: null,
+        taskType: 'tutor',
       );
       final json = original.toJson();
       final restored = LlmTask.fromJson(json);
@@ -95,6 +96,7 @@ void main() {
       expect(restored.tokensUsed, original.tokensUsed);
       expect(restored.estimatedCost, original.estimatedCost);
       expect(restored.error, original.error);
+      expect(restored.taskType, 'tutor');
     });
 
     test('toJson/fromJson round-trip with null endTime and error', () {
@@ -107,12 +109,27 @@ void main() {
         tokensUsed: 0,
         estimatedCost: 0.0,
         error: 'Connection timeout',
+        taskType: 'classification',
       );
       final json = original.toJson();
       final restored = LlmTask.fromJson(json);
       expect(restored.endTime, isNull);
       expect(restored.error, 'Connection timeout');
       expect(restored.status, LlmTaskStatus.failed);
+      expect(restored.taskType, 'classification');
+    });
+
+    test('toJson/fromJson round-trip with null taskType', () {
+      final original = LlmTask(
+        id: 'rt-null',
+        feature: 'general',
+        modelId: 'gpt-4',
+        startTime: DateTime(2026, 6, 1),
+        taskType: null,
+      );
+      final json = original.toJson();
+      final restored = LlmTask.fromJson(json);
+      expect(restored.taskType, isNull);
     });
 
     test('toJson/fromJson round-trip for cancelled status', () {
@@ -226,6 +243,37 @@ void main() {
       final id2 = manager.createTask(feature: 'chat', modelId: 'gpt-4');
 
       expect(id1, isNot(id2));
+    });
+
+    test('createTask stores taskType on the created task', () {
+      final taskId = manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+
+      final task = manager.tasks.firstWhere((t) => t.id == taskId);
+      expect(task.taskType, 'mentor');
+    });
+
+    test('createTask with null taskType stores null', () {
+      final taskId = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      final task = manager.tasks.firstWhere((t) => t.id == taskId);
+      expect(task.taskType, isNull);
+    });
+
+    test('retryTask propagates taskType from the original task', () {
+      final taskId = manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.failTask(taskId, 'error');
+
+      final retryId = manager.retryTask(taskId);
+      final retried = manager.tasks.firstWhere((t) => t.id == retryId);
+      expect(retried.taskType, 'mentor');
+      expect(retried.feature, 'mentor');
     });
 
     test('startTask does nothing for non-existent task', () {

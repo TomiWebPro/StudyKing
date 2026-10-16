@@ -20,6 +20,11 @@ class LlmTask {
   final String? description;
   final Completer<void>? cancelCompleter;
 
+  /// Coarse task category for filtering/categorisation in the LLM task manager
+  /// portal (e.g. `mentor`, `tutor`, `background`, `pdf_ingestion`). See
+  /// [LlmUsageRecord.taskType] and Vision Next-Term §4.2.
+  final String? taskType;
+
   LlmTask({
     required this.id,
     required this.feature,
@@ -32,6 +37,7 @@ class LlmTask {
     this.error,
     this.description,
     this.cancelCompleter,
+    this.taskType,
   });
 
   Map<String, dynamic> toJson() => {
@@ -45,6 +51,7 @@ class LlmTask {
     'estimatedCost': estimatedCost,
     'error': error,
     'description': description,
+    'taskType': taskType,
   };
 
   factory LlmTask.fromJson(Map<String, dynamic> json) => LlmTask(
@@ -61,6 +68,7 @@ class LlmTask {
     estimatedCost: (json['estimatedCost'] as num?)?.toDouble() ?? 0.0,
     error: json['error'] as String?,
     description: json['description'] as String?,
+    taskType: json['taskType'] as String?,
   );
 
   LlmTask copyWith({
@@ -75,6 +83,7 @@ class LlmTask {
     String? error,
     String? description,
     Completer<void>? cancelCompleter,
+    String? taskType,
   }) {
     return LlmTask(
       id: id ?? this.id,
@@ -88,6 +97,7 @@ class LlmTask {
       error: error ?? this.error,
       description: description ?? this.description,
       cancelCompleter: cancelCompleter ?? this.cancelCompleter,
+      taskType: taskType ?? this.taskType,
     );
   }
 }
@@ -162,6 +172,7 @@ class LlmTaskManager {
     required String feature,
     required String modelId,
     String? description,
+    String? taskType,
   }) {
     final id = 'task_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _tasks.add(LlmTask(
@@ -170,6 +181,7 @@ class LlmTaskManager {
       modelId: modelId,
       startTime: DateTime.now(),
       description: description,
+      taskType: taskType,
     ));
     if (_tasks.length > 1000) {
       _tasks.removeRange(0, _tasks.length - 1000);
@@ -246,6 +258,7 @@ class LlmTaskManager {
       feature: oldTask.feature,
       modelId: oldTask.modelId,
       description: oldTask.description,
+      taskType: oldTask.taskType,
     );
   }
 

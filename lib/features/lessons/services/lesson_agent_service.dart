@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/lessons/data/models/lesson_block_model.dart';
@@ -37,8 +38,20 @@ class LessonAgentService {
     required String topicTitle,
     required String localeName,
   }) async {
-    final taskId = _taskManager?.createTask(feature: 'lesson_agent', modelId: _modelId) ?? '';
+    final taskType = LlmTaskType.fromFeature('lesson_agent')?.name;
+    final taskId = _taskManager?.createTask(
+          feature: 'lesson_agent',
+          modelId: _modelId,
+          taskType: taskType,
+        ) ??
+        '';
     _taskManager?.startTask(taskId);
+
+    // Snapshot task IDs before the call so we can aggregate tokens from
+    // the LLM service's per-call task after it completes.
+    final preRunIds = _taskManager != null
+        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        : const <String>{};
 
     try {
       final blocks = await _generateLessonBlocks(subjectId, topicId, topicTitle, localeName);
@@ -60,7 +73,21 @@ class LessonAgentService {
         return null;
       }
 
-      _taskManager?.completeTask(taskId);
+      // Aggregate tokens from the LLM-service task created during this run.
+      var totalTokens = 0;
+      var totalCost = 0.0;
+      if (_taskManager != null) {
+        for (final t in _taskManager!.tasks) {
+          if (preRunIds.contains(t.id) || t.id == taskId) continue;
+          totalTokens += t.tokensUsed;
+          totalCost += t.estimatedCost;
+        }
+      }
+      _taskManager?.completeTask(
+        taskId,
+        tokensUsed: totalTokens,
+        estimatedCost: totalCost,
+      );
       return lesson;
     } catch (e) {
       _logger.w('Failed to generate lesson', e);

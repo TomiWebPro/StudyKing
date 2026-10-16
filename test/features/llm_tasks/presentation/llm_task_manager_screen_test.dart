@@ -31,6 +31,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
     required String feature,
     required String modelId,
     String? description,
+    String? taskType,
   }) {
     final id = 'task_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _tasks.add(LlmTask(
@@ -39,6 +40,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       modelId: modelId,
       startTime: DateTime.now(),
       description: description,
+      taskType: taskType,
     ));
     _notify();
     return id;
@@ -104,7 +106,13 @@ class FakeLlmTaskManager extends LlmTaskManager {
       modelId: _tasks[idx].modelId,
       status: _tasks[idx].status,
       startTime: _tasks[idx].startTime,
+      endTime: _tasks[idx].endTime,
+      tokensUsed: _tasks[idx].tokensUsed,
+      estimatedCost: _tasks[idx].estimatedCost,
+      error: _tasks[idx].error,
+      description: _tasks[idx].description,
       cancelCompleter: completer,
+      taskType: _tasks[idx].taskType,
     );
     return completer;
   }
@@ -118,6 +126,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       feature: oldTask.feature,
       modelId: oldTask.modelId,
       description: oldTask.description,
+      taskType: oldTask.taskType,
     );
   }
 
@@ -174,6 +183,7 @@ class FakeLlmTaskManager extends LlmTaskManager {
       error: error ?? task.error,
       description: task.description,
       cancelCompleter: task.cancelCompleter,
+      taskType: task.taskType,
     );
   }
 }
@@ -1060,6 +1070,159 @@ void main() {
       await tester.pump();
 
       expect(find.text('Model: claude-3-opus'), findsOneWidget);
+    });
+
+    testWidgets('task card shows taskType label when present', (tester) async {
+      final id = manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.startTask(id);
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.text('Type: mentor'), findsOneWidget);
+    });
+
+    testWidgets('task card hides taskType label when null', (tester) async {
+      final id = manager.createTask(feature: 'chat', modelId: 'gpt-4');
+      manager.startTask(id);
+      manager.completeTask(id);
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pump();
+
+      expect(find.textContaining('Type:'), findsNothing);
+    });
+
+    // =====================
+    // TASK-TYPE FILTER
+    // =====================
+    testWidgets('shows filter dropdown in app bar', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DropdownMenu<String>), findsOneWidget);
+    });
+
+    testWidgets('filter dropdown shows All types by default', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.createTask(feature: 'chat', modelId: 'gpt-4');
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      expect(find.text('All types'), findsAtLeastNWidgets(1));
+    });
+
+    testWidgets('filter dropdown shows distinct taskTypes as options', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.createTask(
+        feature: 'tutor',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Open the dropdown
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+
+      expect(find.text('mentor'), findsWidgets);
+      expect(find.text('tutor'), findsWidgets);
+      expect(find.text('All types'), findsWidgets);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('filtering by taskType hides non-matching tasks', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.createTask(
+        feature: 'tutor',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Both task cards should be visible initially
+      expect(find.text('Type: mentor'), findsOneWidget);
+      expect(find.text('Type: tutor'), findsOneWidget);
+
+      // Open dropdown and select 'mentor'
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('mentor').last);
+      await tester.pumpAndSettle();
+
+      // Only the mentor task card should remain
+      expect(find.text('Type: mentor'), findsOneWidget);
+      expect(find.text('Type: tutor'), findsNothing);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('clearing filter shows all tasks again', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+      manager.createTask(
+        feature: 'tutor',
+        modelId: 'gpt-4',
+        taskType: 'tutor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Filter to mentor
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('mentor').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Type: mentor'), findsOneWidget);
+      expect(find.text('Type: tutor'), findsNothing);
+
+      // Clear filter
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('All types').last);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Type: mentor'), findsOneWidget);
+      expect(find.text('Type: tutor'), findsOneWidget);
     });
 
     // =====================

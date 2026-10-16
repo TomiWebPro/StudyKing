@@ -272,6 +272,67 @@ void main() {
       });
     });
 
+    group('taskType queries', () {
+      test('createTask stores taskType', () {
+        final id = service.createTask(
+          feature: 'mentor',
+          modelId: 'gpt-4',
+          taskType: 'mentor',
+        );
+        final task = service.getAllTasks().firstWhere((t) => t.id == id);
+        expect(task.taskType, 'mentor');
+      });
+
+      test('getTasksByTaskType returns only matching taskType', () {
+        service.createTask(feature: 'mentor', modelId: 'gpt-4', taskType: 'mentor');
+        service.createTask(feature: 'tutor', modelId: 'gpt-4', taskType: 'tutor');
+        service.createTask(feature: 'chat', modelId: 'gpt-4');
+
+        expect(service.getTasksByTaskType('mentor'), hasLength(1));
+        expect(service.getTasksByTaskType('tutor'), hasLength(1));
+        expect(service.getTasksByTaskType(null), hasLength(3));
+      });
+
+      test('getFilteredTasks with taskType filter', () {
+        service.createTask(feature: 'mentor', modelId: 'gpt-4', taskType: 'mentor');
+        service.createTask(feature: 'tutor', modelId: 'gpt-4', taskType: 'tutor');
+        service.createTask(feature: 'embed', modelId: 'gpt-4', taskType: 'mentor');
+
+        final mentorTasks = service.getFilteredTasks(taskType: 'mentor');
+        expect(mentorTasks, hasLength(2));
+      });
+
+      test('tokenUsageByTaskType groups by taskType', () {
+        final t1 = service.createTask(feature: 'mentor', modelId: 'gpt-4', taskType: 'mentor');
+        service.startTask(t1);
+        service.completeTask(t1, tokensUsed: 100);
+
+        final t2 = service.createTask(feature: 'tutor', modelId: 'gpt-4', taskType: 'tutor');
+        service.startTask(t2);
+        service.completeTask(t2, tokensUsed: 200);
+
+        final t3 = service.createTask(feature: 'embed', modelId: 'gpt-4', taskType: 'mentor');
+        service.startTask(t3);
+        service.completeTask(t3, tokensUsed: 50);
+
+        expect(service.tokenUsageByTaskType['mentor'], 150);
+        expect(service.tokenUsageByTaskType['tutor'], 200);
+      });
+
+      test('retryTask propagates taskType', () {
+        final id = service.createTask(
+          feature: 'mentor',
+          modelId: 'gpt-4',
+          taskType: 'mentor',
+        );
+        service.failTask(id, 'error');
+
+        final retryId = service.retryTask(id);
+        final retried = service.getAllTasks().firstWhere((t) => t.id == retryId);
+        expect(retried.taskType, 'mentor');
+      });
+    });
+
     group('listener notification', () {
       test('listener is called when task is created', () {
 

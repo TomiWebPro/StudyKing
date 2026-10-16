@@ -24,6 +24,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   LlmTaskService? _taskService;
   final Set<String> _notifiedFailedTaskIds = {};
   bool _inDidChangeDependencies = false;
+  String? _selectedTaskType;
 
   @override
   void initState() {
@@ -103,6 +104,17 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
       appBar: AppBar(
         title: Text(l10n.llmTaskManager),
         actions: [
+          // Task-type filter dropdown (Vision Next-Term §4.2)
+          Padding(
+            padding: const EdgeInsetsDirectional.only(end: 12),
+            child: _TaskTypeFilterDropdown(
+              taskType: _selectedTaskType,
+              onChanged: (String? newValue) {
+                setState(() => _selectedTaskType = newValue);
+              },
+              allTasks: tasks,
+            ),
+          ),
           if (activeTasks.isNotEmpty)
             Padding(
               padding: const EdgeInsetsDirectional.only(end: 12),
@@ -135,9 +147,9 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                 Expanded(
                   child: ListView.builder(
                     padding: ResponsiveUtils.listPadding(context),
-                    itemCount: tasks.length,
+                    itemCount: _filteredTasks(tasks).length,
                     itemBuilder: (context, index) {
-                      final task = tasks[tasks.length - 1 - index];
+                      final task = _filteredTasks(tasks)[_filteredTasks(tasks).length - 1 - index];
                       return _buildTaskCard(context, task, l10n, taskManager);
                     },
                   ),
@@ -145,6 +157,12 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               ],
             ),
     );
+  }
+
+  /// Filters the task list by the selected task-type, if any.
+  List<LlmTask> _filteredTasks(List<LlmTask> tasks) {
+    if (_selectedTaskType == null) return tasks;
+    return tasks.where((t) => t.taskType == _selectedTaskType).toList();
   }
 
   Widget _buildTokenUsageMeter(
@@ -402,11 +420,23 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
                 Icon(statusIcon, color: statusColor, size: 20),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: Text(
-                    task.feature,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        task.feature,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      if (task.taskType != null)
+                        Text(
+                          'Type: ${task.taskType}',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
                 Container(
@@ -555,5 +585,44 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
       case LlmTaskStatus.cancelled:
         return l10n.llmStatusCancelled;
     }
+  }
+}
+
+/// Dropdown to filter the task list by [LlmTask.taskType].
+/// Shows "All types" plus one entry per distinct taskType present in [allTasks].
+class _TaskTypeFilterDropdown extends StatelessWidget {
+  final String? taskType;
+  final void Function(String?) onChanged;
+  final List<LlmTask> allTasks;
+
+  const _TaskTypeFilterDropdown({
+    required this.taskType,
+    required this.onChanged,
+    required this.allTasks,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final distinctTypes = allTasks
+        .where((t) => t.taskType != null)
+        .map((t) => t.taskType!)
+        .toSet()
+        .toList()
+      ..sort();
+
+    final items = <DropdownMenuEntry<String>>[
+      const DropdownMenuEntry(value: 'all', label: 'All types'),
+      ...distinctTypes.map(
+        (t) => DropdownMenuEntry(value: t, label: t),
+      ),
+    ];
+
+    return DropdownMenu<String>(
+      label: const Text('Filter'),
+      initialSelection: taskType ?? 'all',
+      onSelected: (String? newValue) => onChanged(newValue == 'all' ? null : newValue),
+      dropdownMenuEntries: items,
+      leadingIcon: const Icon(Icons.filter_alt, size: 20),
+    );
   }
 }

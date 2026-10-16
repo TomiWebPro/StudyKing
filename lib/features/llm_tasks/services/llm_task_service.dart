@@ -18,13 +18,21 @@ class LlmTaskService {
     return _manager.tasks.where((t) => t.status == status).toList();
   }
 
-  List<LlmTask> getFilteredTasks({String? feature, LlmTaskStatus? status}) {
+  List<LlmTask> getTasksByTaskType(String? taskType) {
+    if (taskType == null) return List<LlmTask>.from(_manager.tasks);
+    return _manager.tasks.where((t) => t.taskType == taskType).toList();
+  }
+
+  List<LlmTask> getFilteredTasks({String? feature, LlmTaskStatus? status, String? taskType}) {
     var tasks = _manager.tasks;
     if (feature != null) {
       tasks = tasks.where((t) => t.feature == feature).toList();
     }
     if (status != null) {
       tasks = tasks.where((t) => t.status == status).toList();
+    }
+    if (taskType != null) {
+      tasks = tasks.where((t) => t.taskType == taskType).toList();
     }
     return tasks;
   }
@@ -43,6 +51,15 @@ class LlmTaskService {
     return usage;
   }
 
+  Map<String, int> get tokenUsageByTaskType {
+    final usage = <String, int>{};
+    for (final task in _manager.tasks) {
+      final key = task.taskType ?? 'unknown';
+      usage[key] = (usage[key] ?? 0) + task.tokensUsed;
+    }
+    return usage;
+  }
+
   Map<String, double> get costByFeature {
     final cost = <String, double>{};
     for (final task in _manager.tasks) {
@@ -51,8 +68,16 @@ class LlmTaskService {
     return cost;
   }
 
-  String createTask({required String feature, required String modelId}) {
-    return _manager.createTask(feature: feature, modelId: modelId);
+  String createTask({
+    required String feature,
+    required String modelId,
+    String? taskType,
+  }) {
+    return _manager.createTask(
+      feature: feature,
+      modelId: modelId,
+      taskType: taskType,
+    );
   }
 
   void startTask(String taskId) => _manager.startTask(taskId);

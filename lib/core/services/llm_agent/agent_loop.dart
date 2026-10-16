@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:uuid/uuid.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 
@@ -31,6 +32,10 @@ class AgentLoop {
         _toolRegistry = toolRegistry,
         _taskManager = taskManager;
 
+  /// Read-only access to the tool registry, exposed for tests that need
+  /// to assert on the set of registered tools (e.g. dry-run scenario audits).
+  ToolRegistry get toolRegistry => _toolRegistry;
+
   Future<AgentResponse> run({
     required String userMessage,
     required String studentId,
@@ -38,8 +43,20 @@ class AgentLoop {
     String feature = 'agent',
     List<Map<String, String>>? history,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: _modelId) ?? '';
+    final taskType = LlmTaskType.fromFeature(feature)?.name;
+    final taskId = _taskManager?.createTask(
+      feature: feature,
+      modelId: _modelId,
+      taskType: taskType,
+    ) ?? '';
     _taskManager?.startTask(taskId);
+
+    // Snapshot task IDs that already existed before this run so we can
+    // aggregate token counts from the LLM service's per-call tasks after
+    // the loop finishes (they share the same [LlmTaskManager]).
+    final preRunTaskIds = _taskManager != null
+        ? Set<String>.from(_taskManager!.tasks.map((t) => t.id))
+        : const <String>{};
 
     final messages = <Map<String, String>>[];
     messages.add({'role': 'system', 'content': _buildAgentSystemPrompt(systemPrompt)});
@@ -130,7 +147,24 @@ class AgentLoop {
         finalContent = 'I completed the required actions. Is there anything else you need help with?';
       }
 
-      _taskManager?.completeTask(taskId);
+      // Aggregate tokens from LLM-service per-call tasks created during this
+      // run, so the agent-turn task carries real token usage instead of 0
+      // (vision next-term §4.2 token transparency).
+      var totalTokens = 0;
+      var totalCost = 0.0;
+      if (_taskManager != null) {
+        for (final t in _taskManager!.tasks) {
+          if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
+          totalTokens += t.tokensUsed;
+          totalCost += t.estimatedCost;
+        }
+      }
+
+      _taskManager?.completeTask(
+        taskId,
+        tokensUsed: totalTokens,
+        estimatedCost: totalCost,
+      );
       return AgentResponse(content: finalContent, toolCalls: toolCalls);
     } catch (e) {
       _logger.w('Agent loop error', e);

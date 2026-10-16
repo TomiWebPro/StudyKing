@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:meta/meta.dart' show visibleForTesting;
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -98,9 +99,11 @@ class IdleExecutor {
     next.isRunning = true;
 
     final taskId = _llmTaskManager?.createTask(
-      feature: 'idle_executor',
-      modelId: 'background',
-    );
+          feature: 'idle_executor',
+          modelId: 'background',
+          taskType: LlmTaskType.background.name,
+        ) ??
+        '';
     if (taskId != null) _llmTaskManager?.startTask(taskId);
 
     try {
