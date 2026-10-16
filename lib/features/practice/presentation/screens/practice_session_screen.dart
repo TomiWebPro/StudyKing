@@ -20,6 +20,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/sessions/providers/session_providers.dart';
 import 'package:studyking/features/practice/services/practice_session_service.dart';
+import 'package:studyking/features/practice/services/practice_session_sizer.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/providers/app_providers.dart' show planOrchestratorProvider, settingsProvider;
 import 'package:studyking/l10n/generated/app_localizations.dart';
@@ -176,8 +177,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         }
         return;
       }
-      final count = (widget.args.questionCount ?? orderedQuestions.length)
-          .clamp(1, orderedQuestions.length);
+      final count = PracticeSessionSizer.cappedCount(
+        orderedQuestions.length,
+        preferredCount: widget.args.questionCount,
+      ).clamp(1, orderedQuestions.length);
       if (mounted) {
         setState(() => _questions = orderedQuestions.take(count).toList());
         _initializeSession();
@@ -209,7 +212,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
         _showNoQuestionsDialog();
         return;
       }
-      final count = (widget.args.questionCount ?? ordered.length).clamp(1, ordered.length);
+      final count = PracticeSessionSizer.cappedCount(
+        ordered.length,
+        preferredCount: widget.args.questionCount,
+      ).clamp(1, ordered.length);
       if (mounted) {
         setState(() => _questions = ordered.take(count).toList());
         _initializeSession();
@@ -233,7 +239,10 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       var dueQuestions = result.data!;
       dueQuestions.sort((a, b) => (a.nextReview ?? DateTime.now())
           .compareTo(b.nextReview ?? DateTime.now()));
-      final count = (widget.args.questionCount ?? dueQuestions.length).clamp(1, dueQuestions.length);
+      final count = PracticeSessionSizer.cappedCount(
+        dueQuestions.length,
+        preferredCount: widget.args.questionCount,
+      ).clamp(1, dueQuestions.length);
       if (mounted) {
         setState(() => _questions = dueQuestions.take(count).toList());
         _initializeSession();

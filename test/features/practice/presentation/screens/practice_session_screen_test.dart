@@ -12,6 +12,7 @@ import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider, sourceRepositoryProvider, questionVariantServiceProvider;
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/practice/services/practice_session_sizer.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
 import 'package:studyking/core/providers/app_providers.dart' show settingsProvider;
 import 'package:studyking/core/providers/service_providers.dart' show studentIdServiceProvider, voiceServiceProvider;
@@ -503,6 +504,45 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      });
+
+      testWidgets('caps a large backlog at the default session cap',
+          (tester) async {
+        // Reproduces the practice-screen bug from
+        // issues/open/practice-due-queue-uncapped-marathon: a large backlog
+        // is passed as `questionCount = <all>.length` (here 200) via
+        // orderedQuestionIds.
+        final questions = List.generate(
+          200,
+          (i) => question(
+            id: 'q$i',
+            text: 'Question $i',
+            type: QuestionType.typedAnswer,
+            markschemeText: 'A$i',
+          ),
+        );
+
+        await tester.pumpWidget(sessionApp(
+          result: Result.success(questions),
+          orderedQuestionIds: questions.map((q) => q.id).toList(),
+          questionCount: questions.length,
+          isSpacedRepetition: true,
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        // The first question of the capped chunk loads ...
+        expect(find.text('Question 0'), findsOneWidget);
+
+        // ... and the progress bar reflects the cap (1/N), not the backlog.
+        final indicators = tester.widgetList<LinearProgressIndicator>(
+          find.byType(LinearProgressIndicator),
+        );
+        expect(indicators, isNotEmpty);
+        expect(
+          indicators.first.value,
+          moreOrLessEquals(1 / PracticeSessionSizer.defaultSessionQuestionCap),
+        );
       });
 
       testWidgets('shows timer and score stats', (tester) async {
