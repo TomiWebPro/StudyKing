@@ -23,6 +23,15 @@ import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/settings/data/models/settings_box.dart';
+import 'package:studyking/core/data/database_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
+import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/lessons/data/repositories/lesson_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
+import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
 
 class _FakeAttemptRepo extends AttemptRepository {
   @override
@@ -66,7 +75,7 @@ class _FakeMasteryForScheduler extends MasteryGraphService {
   final List<MasteryState> topicsNeedingReview = [];
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success(weakTopics);
   }
 
@@ -207,6 +216,7 @@ class _FakeNotificationService extends NotificationService {
   final List<double> overworkHoursStudied = [];
   final List<String> revisionTopicNames = [];
   final List<int> planAdjustmentLowDays = [];
+  final List<({int id, String title, String body})> mentorMessages = [];
 
   @override
   Future<Result<void>> showOverworkWarning({
@@ -235,6 +245,16 @@ class _FakeNotificationService extends NotificationService {
     planAdjustmentLowDays.add(consecutiveLowDays);
     return Result.success(null);
   }
+
+  @override
+  Future<Result<void>> showMentorMessage({
+    required int id,
+    required String title,
+    required String body,
+  }) async {
+    mentorMessages.add((id: id, title: title, body: body));
+    return Result.success(null);
+  }
 }
 
 /// Planner service stub whose scheduled lessons are controlled by the
@@ -246,6 +266,55 @@ class _FakePlannerService extends PlannerService {
   @override
   Future<Result<List<Session>>> getScheduledLessons() async {
     return Result.success(lessons);
+  }
+}
+
+/// Minimal LlmService subclass used solely to satisfy the MentorService
+/// constructor in scheduler unit tests (the wellbeing-nudge path does not
+/// call the LLM).
+class _FakeLlmService extends LlmService {
+  _FakeLlmService()
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'test',
+          ),
+        );
+}
+
+/// MentorService stub that overrides checkWellbeingAndGenerateNudges() to
+/// return canned messages, so the scheduler's _sendMentorNudges path can be
+/// tested without LLM or Hive involvement.
+class _FakeMentorService extends MentorService {
+  final List<String> nudges;
+
+  _FakeMentorService({
+    this.nudges = const ['Wellbeing check: remember to take a break.'],
+  }) : super(
+          database: DatabaseService(
+            topicRepository: TopicRepository(),
+            questionRepository: QuestionRepository(),
+            attemptRepository: _FakeAttemptRepo(),
+            lessonRepository: LessonRepository(),
+            sessionRepository: _FakeSessionRepo(),
+            subjectRepository: SubjectRepository(),
+            conversationRepository: ConversationRepository(),
+            tutorSessionRepository: TutorSessionRepository(),
+          ),
+          llmService: _FakeLlmService(),
+          masteryService: _FakeMasteryForScheduler(),
+          progressTracker: _FakeTracker(),
+          modelId: 'test-model',
+          studentId: 'test-student',
+          plannerService: _FakePlannerService(),
+          nudgeRepo: _FakeNudgeRepository(),
+          sessionRepository: _FakeSessionRepo(),
+          localeName: 'en',
+        );
+
+  @override
+  Future<Result<List<String>>> checkWellbeingAndGenerateNudges() async {
+    return Result.success(nudges);
   }
 }
 
@@ -1353,6 +1422,113 @@ void main() {
 
         expect(notif.cancelledIds, isEmpty);
         expect(notif.dailyReminders, isEmpty);
+      });
+    });
+
+    group('mentor wellbeing nudge', () {
+      test('runDailyChecksNow delivers a mentor wellbeing notification when mentorService is present',
+          () async {
+        final notif = _FakeNotificationService();
+        final scheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notif,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator: _FakePlanAdherenceOrchestrator(
+            adherenceRepo: _FakeAdherenceRepo(),
+          ),
+          sessionRepository: _FakeSessionRepo(),
+          plannerService: _FakePlannerService(),
+          mentorService: _FakeMentorService(
+            nudges: ['Wellbeing check: take a study break'],
+          ),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        await scheduler.updateLocalization(
+          lookupAppLocalizations(const Locale('en')),
+        );
+
+        await scheduler.runDailyChecksNow();
+
+        expect(notif.mentorMessages, isNotEmpty);
+        expect(notif.mentorMessages.first.title,
+            lookupAppLocalizations(const Locale('en')).mentorCheckIn);
+        expect(notif.mentorMessages.first.body,
+            contains('Wellbeing check'));
+      });
+
+      test('runDailyChecksNow does NOT deliver a mentor notification when mentorService is null',
+          () async {
+        final notif = _FakeNotificationService();
+        final scheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notif,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator: _FakePlanAdherenceOrchestrator(
+            adherenceRepo: _FakeAdherenceRepo(),
+          ),
+          sessionRepository: _FakeSessionRepo(),
+          plannerService: _FakePlannerService(),
+          // No mentorService — the proactive nudge path must stay dormant.
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        await scheduler.updateLocalization(
+          lookupAppLocalizations(const Locale('en')),
+        );
+
+        await scheduler.runDailyChecksNow();
+
+        // _sendMentorNudges early-returns when _mentorService is null.
+        expect(notif.mentorMessages, isEmpty);
+      });
+
+      test('_runDailyChecks triggers mentor nudges on the scheduled timer', () async {
+        final notif = _FakeNotificationService();
+        final scheduler = EngagementScheduler(
+          tracker: _FakeTracker(),
+          masteryService: _FakeMasteryForScheduler(),
+          notificationService: notif,
+          nudgeRepository: _FakeNudgeRepository(),
+          adherenceRepository: _FakeAdherenceRepo(),
+          planOrchestrator: _FakePlanAdherenceOrchestrator(
+            adherenceRepo: _FakeAdherenceRepo(),
+          ),
+          sessionRepository: _FakeSessionRepo(),
+          plannerService: _FakePlannerService(),
+          mentorService: _FakeMentorService(
+            nudges: ['Streak saved!'],
+          ),
+          config: const EngagementSchedulerConfig(
+            checkHour: 9,
+            checkMinute: 0,
+            studentId: 'test-student',
+          ),
+          l10n: lookupAppLocalizations(const Locale('en')),
+        );
+        await scheduler.updateLocalization(
+          lookupAppLocalizations(const Locale('en')),
+        );
+
+        await scheduler.init();
+        // _runDailyChecks is called directly (it is the timer callback).
+        // It re-schedules the next check, then runs nudges + mentor nudges.
+        await scheduler.runDailyChecksNow();
+
+        expect(notif.mentorMessages, isNotEmpty);
+        expect(notif.mentorMessages.first.body, contains('Streak'));
       });
     });
   });

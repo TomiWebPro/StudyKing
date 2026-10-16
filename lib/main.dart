@@ -50,6 +50,8 @@ import 'features/settings/presentation/settings_screen.dart';
 import 'features/subjects/presentation/subject_list_screen.dart';
 import 'features/practice/presentation/screens/practice_screen.dart';
 import 'features/mentor/presentation/mentor_screen.dart';
+import 'features/mentor/services/mentor_service.dart';
+import 'features/settings/data/models/settings_box.dart';
 import 'features/dashboard/presentation/dashboard_screen.dart';
 import 'features/focus_mode/presentation/focus_timer_screen.dart';
 import 'features/onboarding/providers/onboarding_providers.dart';
@@ -104,6 +106,46 @@ Future<void> _runAutoBackupCheck() async {
   } catch (e) {
     _mainLogger.w('Auto-backup check failed', e);
   }
+}
+
+/// Builds an [LlmConfiguration] from persisted [SettingsBox] values for
+/// constructing the [MentorService] used by the [EngagementScheduler].
+LlmConfiguration? _buildLlmConfigFromSettings(SettingsBox settings) {
+  final apiKey = _effectiveApiKey.isNotEmpty ? _effectiveApiKey : settings.apiKey;
+  if (apiKey.isEmpty) return null;
+  final providerName = settings.llmProviderName.isNotEmpty
+      ? settings.llmProviderName
+      : 'openRouter';
+  final provider = LlmProvider.values.firstWhere(
+    (p) => p.name == providerName,
+    orElse: () => LlmProvider.openRouter,
+  );
+  final modelId = settings.selectedModel;
+  LlmProvider? backupProvider;
+  String? backupApiKey;
+  String? backupBaseUrl;
+  String? backupModel;
+  if (settings.backupLlmProviderName.isNotEmpty) {
+    backupProvider = LlmProvider.values.firstWhere(
+      (p) => p.name == settings.backupLlmProviderName,
+      orElse: () => LlmProvider.openRouter,
+    );
+    backupApiKey = _effectiveBackupApiKey.isNotEmpty
+        ? _effectiveBackupApiKey
+        : settings.backupApiKey;
+    backupBaseUrl = settings.backupBaseUrl;
+    backupModel = settings.backupModel;
+  }
+  return LlmConfiguration(
+    provider: provider,
+    apiKey: apiKey,
+    baseUrl: settings.apiBaseUrl,
+    model: modelId,
+    backupProvider: backupProvider,
+    backupApiKey: backupApiKey?.isNotEmpty == true ? backupApiKey : null,
+    backupBaseUrl: backupBaseUrl?.isNotEmpty == true ? backupBaseUrl : null,
+    backupModel: backupModel?.isNotEmpty == true ? backupModel : null,
+  );
 }
 
 void main() async {
@@ -195,10 +237,62 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
     await studentIdService.init();
     await studentIdService.updateLastActivity();
 
+    // Load initial settings, reading API keys from secure storage if available
+    var settingsResult = await initSettingsRepo.getSettings();
+    SettingsBox? settings;
+    if (settingsResult.isSuccess) {
+      settings = settingsResult.data!;
+      // Pre-load settings into the controller to avoid an async race where the
+      // widget tree renders with default settings before _loadSettings() completes.
+      preloadSettings(settings);
+      final secureKey = (await _secureApiKeyService!.getApiKey()).data ?? '';
+      final secureBackupKey = (await _secureApiKeyService!.getBackupApiKey()).data ?? '';
+      if (secureKey.isEmpty && settings.apiKey.isNotEmpty) {
+        await _secureApiKeyService!.saveApiKey(settings.apiKey);
+        _mainLogger.i('Migrated API key from Hive to secure storage');
+      }
+      _effectiveApiKey = secureKey.isNotEmpty ? secureKey : settings.apiKey;
+      _effectiveBackupApiKey = secureBackupKey.isNotEmpty ? secureBackupKey : settings.backupApiKey;
+    } else {
+      _mainLogger.w('Error loading initial settings: ${settingsResult.error}');
+    }
+
     try {
       final masteryService = MasteryGraphService();
       _mainLogger.w('Using English locale fallback for EngagementScheduler during startup');
       final defaultL10n = lookupAppLocalizations(const Locale('en'));
+
+      // Build LLM config + MentorService so proactive wellbeing nudges can fire
+      // from the daily check timer (Vision: mentor off-period engagement).
+      final config = settings != null ? _buildLlmConfigFromSettings(settings) : null;
+      MentorService? mentorService;
+      if (config != null) {
+        final studentId = studentIdService.getStudentId().data ?? 'default';
+        final provider = config.provider;
+        final modelId = config.model.isNotEmpty
+            ? config.model
+            : defaultModelForProvider(provider);
+        final llmService = LlmService(config: config);
+        mentorService = MentorService(
+          database: mainDb,
+          llmService: llmService,
+          masteryService: masteryService,
+          progressTracker: StudyProgressTracker(
+            attemptRepo: mainDb.attemptRepository,
+            masteryService: masteryService,
+            sessionRepo: mainDb.sessionRepository,
+            questionRepo: mainDb.questionRepository,
+            l10n: defaultL10n,
+          ),
+          modelId: modelId,
+          studentId: studentId,
+          plannerService: PlannerService(l10n: defaultL10n),
+          nudgeRepo: EngagementNudgeRepository(),
+          sessionRepository: mainDb.sessionRepository,
+          localeName: 'en',
+        );
+      }
+
       final schedulerRef = EngagementScheduler(
         tracker: StudyProgressTracker(
           attemptRepo: mainDb.attemptRepository,
@@ -213,32 +307,16 @@ Future<void> _runAppInitialization(StudyKingApp appEntry) async {
         planOrchestrator: PlanAdherenceOrchestrator(l10n: defaultL10n),
         sessionRepository: mainDb.sessionRepository,
         plannerService: PlannerService(l10n: defaultL10n),
+        mentorService: mentorService,
         l10n: defaultL10n,
       );
       await schedulerRef.init();
       _engagementScheduler = schedulerRef;
+      if (settings != null) {
+        schedulerRef.updateSettings(settings);
+      }
     } catch (e) {
       _mainLogger.w('Failed to init EngagementScheduler: $e');
-    }
-
-    // Load initial settings, reading API keys from secure storage if available
-    var settingsResult = await initSettingsRepo.getSettings();
-    if (settingsResult.isSuccess) {
-      final settings = settingsResult.data!;
-      // Pre-load settings into the controller to avoid an async race where the
-      // widget tree renders with default settings before _loadSettings() completes.
-      preloadSettings(settings);
-      final secureKey = (await _secureApiKeyService!.getApiKey()).data ?? '';
-      final secureBackupKey = (await _secureApiKeyService!.getBackupApiKey()).data ?? '';
-      if (secureKey.isEmpty && settings.apiKey.isNotEmpty) {
-        await _secureApiKeyService!.saveApiKey(settings.apiKey);
-        _mainLogger.i('Migrated API key from Hive to secure storage');
-      }
-      _effectiveApiKey = secureKey.isNotEmpty ? secureKey : settings.apiKey;
-      _effectiveBackupApiKey = secureBackupKey.isNotEmpty ? secureBackupKey : settings.backupApiKey;
-      _engagementScheduler?.updateSettings(settings);
-    } else {
-      _mainLogger.w('Error loading initial settings: ${settingsResult.error}');
     }
 
     // Run auto-backup check

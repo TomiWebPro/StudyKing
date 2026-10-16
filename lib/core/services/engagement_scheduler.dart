@@ -292,6 +292,7 @@ class EngagementScheduler {
   Future<Result<void>> runDailyChecksNow() async {
     try {
       await _sendNudgeNotifications(_config.studentId);
+      await _sendMentorNudges();
       await _checkUpcomingLessons();
       return Result.success(null);
     } catch (e) {
