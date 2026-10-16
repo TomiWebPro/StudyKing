@@ -941,4 +941,53 @@ class PlannerService {
       strategy: strategy,
     );
   }
+
+  /// Marks the daily plan for [date] (matched by calendar day) as a rest day.
+  ///
+  /// Rest days carry no study targets and are excluded from adherence and
+  /// workload aggregation (see `adjustPace` and `MentorContextBuilder`). This
+  /// backs the `schedule_rest_day` agent tool so the mentor can protect the
+  /// student from overwork (Vision Next-Term §3.1,
+  /// `scenario_overworked_student`). It is an explicit agent action — the
+  /// mentor only calls it after the student confirms — so it never silently
+  /// alters the plan.
+  Future<Result<bool>> markRestDay(DateTime date, {required AppLocalizations l10n}) async {
+    try {
+      await planRepo.init();
+      await planContextRepo.init();
+      final result = await planRepo.loadPlan(studentId);
+      final plan = result.data;
+      if (plan == null) {
+        return Result.failure('No plan found for student $studentId');
+      }
+
+      final target = date.dateOnly;
+      final matches = plan.dailyPlans.where((d) => d.date.dateOnly == target);
+      if (matches.isEmpty) {
+        // No daily plan exists for that calendar day (plan ended or date out
+        // of range). Report success:false so the agent surfaces a clear
+        // message instead of silently doing nothing.
+        return Result.success(false);
+      }
+
+      final restFocus = l10n.planFocusRestAndReview;
+      final updatedPlans = plan.dailyPlans.map((d) {
+        if (d.date.dateOnly == target) {
+          return d.copyWith(
+            isRestDay: true,
+            targetMinutes: 0,
+            targetQuestions: 0,
+            focus: restFocus,
+          );
+        }
+        return d;
+      }).toList();
+
+      await planRepo.savePlan(plan.copyWith(dailyPlans: updatedPlans));
+      return Result.success(true);
+    } catch (e) {
+      _logger.w('markRestDay failed', e);
+      return Result.failure(e.toString());
+    }
+  }
 }

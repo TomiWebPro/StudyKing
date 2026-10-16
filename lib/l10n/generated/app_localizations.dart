@@ -6626,6 +6626,24 @@ abstract class AppLocalizations {
   /// **'Invalid scheduledTime. Provide an ISO 8601 datetime string (e.g. 2025-01-31T14:00:00Z).'**
   String get toolScheduleLessonInvalidTime;
 
+  /// Result message when a rest day is scheduled via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Rest day scheduled for {date}'**
+  String toolScheduleRestDayResult(String date);
+
+  /// Result message when scheduling a rest day fails via tool
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to schedule rest day'**
+  String get toolScheduleRestDayFail;
+
+  /// Error message when schedule_rest_day receives an unparseable date
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid date. Provide an ISO 8601 date string (e.g. 2025-01-31).'**
+  String get toolScheduleRestDayInvalidDate;
+
   /// Result message when lesson block generation fails via tool
   ///
   /// In en, this message translates to:

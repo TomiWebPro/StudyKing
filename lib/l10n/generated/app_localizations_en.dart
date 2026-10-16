@@ -3953,6 +3953,18 @@ class AppLocalizationsEn extends AppLocalizations {
       'Invalid scheduledTime. Provide an ISO 8601 datetime string (e.g. 2025-01-31T14:00:00Z).';
 
   @override
+  String toolScheduleRestDayResult(String date) {
+    return 'Rest day scheduled for $date';
+  }
+
+  @override
+  String get toolScheduleRestDayFail => 'Failed to schedule rest day';
+
+  @override
+  String get toolScheduleRestDayInvalidDate =>
+      'Invalid date. Provide an ISO 8601 date string (e.g. 2025-01-31).';
+
+  @override
   String get toolGenerateBlocksFail => 'Failed to generate lesson blocks';
 
   @override

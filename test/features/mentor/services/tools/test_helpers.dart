@@ -257,6 +257,12 @@ class FakePlannerService extends PlannerService {
   int? lastGenerateDaysValue;
   int? lastGenerateHoursValue;
 
+  // markRestDay (Wellbeing rest-day scheduling tool, Vision §3.1)
+  bool markRestDayResult = true;
+  int markRestDayCallCount = 0;
+  DateTime? lastMarkRestDayDate;
+  bool markRestDayNoMatch = false;
+
   FakePlannerService([this.plan])
       : super(
           localeName: 'en',
@@ -306,6 +312,14 @@ class FakePlannerService extends PlannerService {
     lastScheduledTime = scheduledTime;
     lastScheduledDurationMinutes = durationMinutes;
     return Result.success(scheduleResult);
+  }
+
+  @override
+  Future<Result<bool>> markRestDay(DateTime date, {required AppLocalizations l10n}) async {
+    markRestDayCallCount++;
+    lastMarkRestDayDate = date;
+    if (markRestDayNoMatch) return Result.success(false);
+    return Result.success(markRestDayResult);
   }
 }
 

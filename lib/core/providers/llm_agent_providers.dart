@@ -15,6 +15,7 @@ import 'package:studyking/features/mentor/services/tools/enqueue_question_varian
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
+import 'package:studyking/features/mentor/services/tools/schedule_rest_day_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
@@ -61,6 +62,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
 
   return [
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
+    ScheduleRestDayTool(plannerService: plannerService, localeName: localeName),
     SearchQuestionsTool(questionRepo: questionRepo),
     GetStudentStatsTool(
       progressTracker: progressTracker,

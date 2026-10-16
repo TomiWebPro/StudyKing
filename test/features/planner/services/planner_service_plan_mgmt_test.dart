@@ -804,4 +804,81 @@ void main() {
       expect(executor1, isA<ActionExecutor>());
     });
   });
+
+  group('markRestDay', () {
+    PersonalLearningPlan planWithDays(DateTime start) => PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: start,
+          dailyPlans: List.generate(5, (i) => DailyPlan(
+            date: DateTime(start.year, start.month, start.day + i),
+            dayNumber: i + 1,
+            priorityTopics: [],
+            reviewQuestionIds: [],
+            stretchGoalQuestionIds: [],
+            targetQuestions: 10,
+            targetMinutes: 60,
+          )),
+          summary: PlanSummary(
+            totalQuestions: 50,
+            totalMinutes: 300,
+            newTopics: 5,
+            reviewTopics: 0,
+            estimatedCoverage: 1.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+        );
+
+    test('marks the matching calendar day as a rest day', () async {
+      await planRepo.savePlan(planWithDays(DateTime(2026, 1, 10)));
+
+      final target = DateTime(2026, 1, 12);
+      final result = await service.markRestDay(target, l10n: l10n);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isTrue);
+
+      final loaded = await service.loadExistingPlan();
+      final day = loaded.data!.dailyPlans
+          .firstWhere((d) => d.date.dateOnly == target.dateOnly);
+      expect(day.isRestDay, isTrue);
+      expect(day.targetMinutes, 0);
+      expect(day.targetQuestions, 0);
+      expect(day.focus, l10n.planFocusRestAndReview);
+    });
+
+    test('matches by calendar day, ignoring time-of-day', () async {
+      await planRepo.savePlan(planWithDays(DateTime(2026, 1, 10, 8, 0)));
+
+      final result = await service.markRestDay(
+        DateTime(2026, 1, 11, 23, 59),
+        l10n: l10n,
+      );
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isTrue);
+
+      final day = (await service.loadExistingPlan()).data!
+          .dailyPlans
+          .firstWhere((d) => d.date.dateOnly == DateTime(2026, 1, 11).dateOnly);
+      expect(day.isRestDay, isTrue);
+    });
+
+    test('returns failure when no plan exists', () async {
+      final result = await service.markRestDay(DateTime(2026, 1, 11), l10n: l10n);
+      expect(result.isFailure, isTrue);
+    });
+
+    test('returns success false when the date is not in the plan', () async {
+      await planRepo.savePlan(planWithDays(DateTime(2026, 1, 10)));
+
+      final result = await service.markRestDay(DateTime(2026, 6, 1), l10n: l10n);
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isFalse);
+    });
+
+    test('returns failure when planRepo throws', () async {
+      planRepo.throwOnLoad = true;
+      final result = await service.markRestDay(DateTime(2026, 1, 11), l10n: l10n);
+      expect(result.isFailure, isTrue);
+    });
+  });
 }

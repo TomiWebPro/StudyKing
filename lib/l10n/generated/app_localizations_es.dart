@@ -3996,6 +3996,18 @@ class AppLocalizationsEs extends AppLocalizations {
       'scheduledTime no válido. Proporciona una fecha y hora en formato ISO 8601 (p. ej. 2025-01-31T14:00:00Z).';
 
   @override
+  String toolScheduleRestDayResult(String date) {
+    return 'Día de descanso programado para $date';
+  }
+
+  @override
+  String get toolScheduleRestDayFail => 'Error al programar el día de descanso';
+
+  @override
+  String get toolScheduleRestDayInvalidDate =>
+      'Fecha no válida. Proporciona una fecha en formato ISO 8601 (p. ej. 2025-01-31).';
+
+  @override
   String get toolGenerateBlocksFail => 'Error al generar bloques de lección';
 
   @override

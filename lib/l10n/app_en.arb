@@ -5281,6 +5281,21 @@
   "@toolScheduleLessonInvalidTime": {
     "description": "Error message when schedule_lesson receives an unparseable scheduledTime"
   },
+  "toolScheduleRestDayResult": "Rest day scheduled for {date}",
+  "@toolScheduleRestDayResult": {
+    "description": "Result message when a rest day is scheduled via tool",
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "toolScheduleRestDayFail": "Failed to schedule rest day",
+  "@toolScheduleRestDayFail": {
+    "description": "Result message when scheduling a rest day fails via tool"
+  },
+  "toolScheduleRestDayInvalidDate": "Invalid date. Provide an ISO 8601 date string (e.g. 2025-01-31).",
+  "@toolScheduleRestDayInvalidDate": {
+    "description": "Error message when schedule_rest_day receives an unparseable date"
+  },
   "toolGenerateBlocksFail": "Failed to generate lesson blocks",
   "@toolGenerateBlocksFail": {
     "description": "Result message when lesson block generation fails via tool"
