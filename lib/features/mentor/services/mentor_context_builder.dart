@@ -19,6 +19,7 @@ import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -85,7 +86,7 @@ class MentorContextBuilder {
     final upcomingLessonsForSyllabus = upcomingLessons;
     _buildSyllabusContext(syllabusGoals, upcomingLessonsForSyllabus, l10n);
 
-    final sourceCount = await _getSourceCount();
+    final sources = await _getSourceInventory();
 
     final buffer = StringBuffer();
     buffer.writeln(l10n.mentorContextHeader);
@@ -96,8 +97,18 @@ class MentorContextBuilder {
     buffer.writeln('$bullet${l10n.mentorContextWeeklyActivity(stats['weeklyActivity'] as int? ?? 0)}');
     buffer.writeln('$bullet${l10n.mentorContextTotalStudyTime('${stats['totalStudyTimeHours']}')}');
 
-    if (sourceCount == 0) {
-      buffer.writeln('$bullet${l10n.mentorContextNoMaterials}');
+    if (sources != null) {
+      if (sources.isEmpty) {
+        buffer.writeln('$bullet${l10n.mentorContextNoMaterials}');
+      } else {
+        // Vision §11 / §3.1: surface the student's uploaded materials so the
+        // mentor LLM is not blind to content added since the last session.
+        // Inventory is grouped per-syllabus (by subjectId) with capped titles
+        // plus an overflow count, keeping the prompt bounded while making every
+        // source visible to the agent. LLM-facing text -> en-invariant per
+        // AGENTS i18n convention (prompts/tutor notes may stay invariant).
+        _appendSourceInventory(buffer, sources, syllabusGoals, bullet);
+      }
     }
 
     if (plan != null) {
@@ -385,14 +396,69 @@ class MentorContextBuilder {
   }
 
   /// Queries the ingestion state (uploaded sources) for the current student.
-  /// Returns the count of uploaded sources, or -1 if the repository is unavailable.
-  Future<int> _getSourceCount() async {
-    if (_sourceRepository == null) return -1;
+  ///
+  /// Returns `null` when the source repository is unavailable or a read fails
+  /// (so the caller leaves the prompt unchanged, matching the prior behaviour
+  /// where an unavailable repo injected nothing). Returns an empty list when
+  /// the student has no uploaded materials, and a populated list otherwise —
+  /// letting the prompt surface per-syllabus titles instead of just a count.
+  Future<List<Source>?> _getSourceInventory() async {
+    if (_sourceRepository == null) return null;
     final result = await _sourceRepository.getByStudent(_plannerService.studentId);
     if (result.isFailure) {
       _logger.w('Failed to load sources for mentor context', result.error);
-      return -1;
+      return null;
     }
-    return result.data?.length ?? 0;
+    return result.data ?? [];
+  }
+
+  /// Appends a bounded, per-syllabus inventory of uploaded sources to the
+  /// mentor prompt so the LLM stays aware of content added off-period.
+  ///
+  /// Sources are grouped by `subjectId` (mapped to the syllabus goal's
+  /// `subjectTitle`), with at most [_maxSourceTitlesPerSubject] titles shown
+  /// per syllabus plus an overflow count ("+N more"). Sources without a
+  /// `subjectId` are reported as an unattributed count.
+  static const int _maxSourceTitlesPerSubject = 3;
+
+  void _appendSourceInventory(
+    StringBuffer buffer,
+    List<Source> sources,
+    List<SyllabusGoal> syllabusGoals,
+    String bullet,
+  ) {
+    final subjectTitleById = <String, String>{};
+    for (final goal in syllabusGoals) {
+      if (goal.subjectId.isNotEmpty) {
+        subjectTitleById[goal.subjectId] = goal.subjectTitle;
+      }
+    }
+
+    // Group sources by subject; keep unattributed sources separate.
+    final bySubject = <String, List<Source>>{};
+    final unattributed = <Source>[];
+    for (final source in sources) {
+      if (source.subjectId.isNotEmpty) {
+        bySubject.putIfAbsent(source.subjectId, () => []).add(source);
+      } else {
+        unattributed.add(source);
+      }
+    }
+
+    buffer.writeln('${bullet}Uploaded study materials (${sources.length}):');
+    for (final entry in bySubject.entries) {
+      final subjectTitle = subjectTitleById[entry.key] ?? entry.key;
+      final list = entry.value;
+      buffer.writeln('  $bullet$subjectTitle: ${list.length}');
+      for (final source in list.take(_maxSourceTitlesPerSubject)) {
+        buffer.writeln('    $bullet${source.title}');
+      }
+      if (list.length > _maxSourceTitlesPerSubject) {
+        buffer.writeln('    $bullet+${list.length - _maxSourceTitlesPerSubject} more');
+      }
+    }
+    if (unattributed.isNotEmpty) {
+      buffer.writeln('  ${bullet}Unattributed materials: ${unattributed.length}');
+    }
   }
 }

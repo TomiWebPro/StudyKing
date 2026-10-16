@@ -426,6 +426,131 @@ void main() {
       });
     });
 
+    group('source inventory', () {
+      PersonalLearningPlan planWithGoals(List<Map<String, dynamic>> goals) =>
+          PersonalLearningPlan(
+            studentId: 'test-student',
+            generatedAt: DateTime.now(),
+            dailyPlans: [],
+            summary: PlanSummary(
+              totalQuestions: 0,
+              totalMinutes: 0,
+              newTopics: 0,
+              reviewTopics: 0,
+              estimatedCoverage: 0,
+              focusAreas: [],
+            ),
+            recommendations: [],
+            metadata: {'syllabus_goals': goals},
+          );
+
+      test('includes per-syllabus source titles when sources exist', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'math-1', 'subjectTitle': 'Math'},
+          {'subjectId': 'sci-1', 'subjectTitle': 'Science'},
+        ]));
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(id: 's1', title: 'Bonding Notes', type: SourceType.syllabus, studentId: 'test-student', subjectId: 'math-1'),
+          Source(id: 's2', title: 'Equations.pdf', type: SourceType.pdf, studentId: 'test-student', subjectId: 'math-1'),
+          Source(id: 's3', title: 'Lab Handbook', type: SourceType.pdf, studentId: 'test-student', subjectId: 'sci-1'),
+        ]);
+
+        final builder = _createBuilder(plannerService: planner, sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Uploaded study materials (3)'));
+        expect(result.data, contains('Math: 2'));
+        expect(result.data, contains('Bonding Notes'));
+        expect(result.data, contains('Equations.pdf'));
+        expect(result.data, contains('Science: 1'));
+        expect(result.data, contains('Lab Handbook'));
+        expect(result.data, isNot(contains('no uploaded study materials')));
+      });
+
+      test('caps titles per subject with an overflow count', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'math-1', 'subjectTitle': 'Math'},
+        ]));
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources(List.generate(5, (i) => Source(
+          id: 's$i', title: 'Topic Source $i', type: SourceType.pdf,
+          studentId: 'test-student', subjectId: 'math-1',
+        )));
+
+        final builder = _createBuilder(plannerService: planner, sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Math: 5'));
+        expect(result.data, contains('+2 more'));
+        expect(result.data, contains('Topic Source 0'));
+        expect(result.data, contains('Topic Source 2'));
+        // Titles beyond the per-subject cap are folded into the overflow count.
+        expect(result.data!.contains('Topic Source 3'), isFalse);
+        expect(result.data!.contains('Topic Source 4'), isFalse);
+      });
+
+      test('surfaces unattributed materials when subjectId is empty', () async {
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(id: 's1', title: 'Misc Notes', type: SourceType.document, studentId: 'test-student'),
+        ]);
+
+        final builder = _createBuilder(sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Uploaded study materials (1)'));
+        expect(result.data, contains('Unattributed materials: 1'));
+        expect(result.data, isNot(contains('no uploaded study materials')));
+      });
+
+      test('falls back to subjectId when no syllabus goal matches', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'math-1', 'subjectTitle': 'Math'},
+        ]));
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(id: 's1', title: 'Unknown Source', type: SourceType.pdf, studentId: 'test-student', subjectId: 'orph-1'),
+        ]);
+
+        final builder = _createBuilder(plannerService: planner, sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('orph-1: 1'));
+        expect(result.data, contains('Unknown Source'));
+      });
+
+      test('updates inventory when more sources are added', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'math-1', 'subjectTitle': 'Math'},
+        ]));
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(id: 's1', title: 'First Note', type: SourceType.document, studentId: 'test-student', subjectId: 'math-1'),
+        ]);
+
+        final builder = _createBuilder(plannerService: planner, sourceRepository: sourceRepo);
+        var result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('First Note'));
+        expect(result.data, contains('Math: 1'));
+
+        // Simulate off-period ingestion adding a second source to the same syllabus.
+        sourceRepo.setSources([
+          Source(id: 's1', title: 'First Note', type: SourceType.document, studentId: 'test-student', subjectId: 'math-1'),
+          Source(id: 's2', title: 'Second Note', type: SourceType.document, studentId: 'test-student', subjectId: 'math-1'),
+        ]);
+        result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Second Note'));
+        expect(result.data, contains('Math: 2'));
+      });
+    });
+
     group('missed lessons', () {
       test('includes missed lessons when present', () async {
         final planner = _FakePlannerService();
