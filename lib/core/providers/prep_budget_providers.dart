@@ -81,8 +81,8 @@ class PrepBudgetSettingsController extends StateNotifier<PrepBudget> {
     final updated = PrepBudget(
       enabled: state.enabled,
       caps: Map<PrepCategory, int>.of(state.caps),
-      quietHoursStart: startHour != null ? startHour.clamp(0, 23) : null,
-      quietHoursEnd: endHour != null ? endHour.clamp(0, 23) : null,
+      quietHoursStart: startHour?.clamp(0, 23),
+      quietHoursEnd: endHour?.clamp(0, 23),
       disabledSubjects: Set<String>.of(state.disabledSubjects),
     );
     state = updated;

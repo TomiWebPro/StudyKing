@@ -12,6 +12,8 @@ class IdleTask {
   final DateTime createdAt;
   final Future<void> Function()? taskFn;
   final bool requiresHeavy;
+  final String? taskType;
+  final String? feature;
   bool isRunning;
   bool isCompleted;
   String? error;
@@ -22,6 +24,8 @@ class IdleTask {
     required this.createdAt,
     this.taskFn,
     this.requiresHeavy = false,
+    this.taskType,
+    this.feature,
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
@@ -77,7 +81,36 @@ class IdleExecutor {
       description: description,
       createdAt: DateTime.now(),
       taskFn: task,
-      requiresHeavy: requiresHeavy ?? false,
+      requiresHeavy: requiresHeavy,
+    ));
+    if (_queue.length > 50) {
+      _queue.removeAt(0);
+    }
+    _tryExecuteNext();
+  }
+
+   Future<void> enqueuePrepTool(
+    String description,
+    Future<Map<String, dynamic>> Function() task, {
+    required bool requiresHeavy,
+    required String feature,
+    required String taskType,
+  }) async {
+    final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
+    _queue.add(IdleTask(
+      id: id,
+      description: description,
+      createdAt: DateTime.now(),
+      taskFn: () async {
+        final result = await task();
+        final success = result['success'] as bool? ?? false;
+        if (!success) {
+          throw Exception(result['error'] ?? 'Prep tool returned failure');
+        }
+      },
+      requiresHeavy: requiresHeavy,
+      feature: feature,
+      taskType: taskType,
     ));
     if (_queue.length > 50) {
       _queue.removeAt(0);
@@ -102,7 +135,7 @@ class IdleExecutor {
     // disruptive). The check is delegated to the injected callback so tests
     // can supply a fake clock deterministically.
     if (_shouldDeferForQuietHours != null &&
-        _shouldDeferForQuietHours!(DateTime.now())) {
+        _shouldDeferForQuietHours(DateTime.now())) {
       _logger.d(
         'Deferring task "${next.description}" — within quiet hours',
       );
@@ -112,7 +145,7 @@ class IdleExecutor {
     // Vision Next-Term §4.3: heavy off-period prep must defer when the device
     // is stressed (CPU > 80%, battery < 20%, battery-saver on). The task is
     // left in the queue and retried on the next poll / enqueue.
-    if (next.requiresHeavy && _systemMonitor != null && !_systemMonitor!.canRunHeavyPrepNow) {
+    if (next.requiresHeavy && _systemMonitor != null && !_systemMonitor.canRunHeavyPrepNow) {
       _logger.w(
         'Deferring heavy prep task "${next.description}" — system under load',
       );
@@ -123,20 +156,20 @@ class IdleExecutor {
     next.isRunning = true;
 
     final taskId = _llmTaskManager?.createTask(
-          feature: 'idle_executor',
+          feature: next.feature ?? 'idle_executor',
           modelId: 'background',
-          taskType: LlmTaskType.background.name,
+          taskType: next.taskType ?? LlmTaskType.background.name,
         ) ??
         '';
-    if (taskId != null) _llmTaskManager?.startTask(taskId);
+    if (taskId.isNotEmpty) _llmTaskManager?.startTask(taskId);
 
     try {
       await _executeTask(next);
       next.isCompleted = true;
-      if (taskId != null) _llmTaskManager?.completeTask(taskId);
+      if (taskId.isNotEmpty) _llmTaskManager?.completeTask(taskId);
     } catch (e) {
       next.error = e.toString();
-      if (taskId != null) _llmTaskManager?.failTask(taskId, e.toString());
+      if (taskId.isNotEmpty) _llmTaskManager?.failTask(taskId, e.toString());
       _logger.w('Idle task failed: ${next.description}', e);
     } finally {
       next.isRunning = false;

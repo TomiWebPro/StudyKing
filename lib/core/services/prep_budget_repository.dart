@@ -72,8 +72,8 @@ class PrepBudgetRepository {
       return Result.success(PrepBudget(
         enabled: enabled,
         caps: caps,
-        quietHoursStart: quietStart != null ? quietStart.clamp(0, 23) : null,
-        quietHoursEnd: quietEnd != null ? quietEnd.clamp(0, 23) : null,
+        quietHoursStart: quietStart?.clamp(0, 23),
+        quietHoursEnd: quietEnd?.clamp(0, 23),
         disabledSubjects: disabledSubjects,
       ));
     } catch (e) {

@@ -80,6 +80,17 @@ class RefreshMasteryTool extends PrepTool {
       return {'success': false, 'error': 'No student ID available'};
     }
 
+    // Vision §4.2: consult the preparation budget. Light tasks (no LLM calls)
+    // proceed even when a category cap is exhausted — the check is advisory
+    // — but we log so the student can see budget pressure in the task manager.
+    final budget = _budgetService;
+    if (budget != null && !budget.canSpend(prepCategory, estimatedTotalTokens)) {
+      _logger.d(
+        'Mastery refresh proceeding despite budget pressure for '
+        '${prepCategory.taskTypeKey} (light task, no LLM call)',
+      );
+    }
+
     final taskId = _taskManager?.createTask(
           feature: 'mastery_refresh',
           modelId: 'background',

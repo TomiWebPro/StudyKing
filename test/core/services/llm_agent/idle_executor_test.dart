@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 
 void main() {
@@ -316,6 +317,125 @@ void main() {
       );
 
       expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+  });
+
+  group('IdleExecutor enqueuePrepTool', () {
+    test('executes a prep tool that returns success', () async {
+      final executor = IdleExecutor();
+
+      var toolRan = false;
+      await executor.enqueuePrepTool(
+        'pre_generate_lesson prep job',
+        () async {
+          toolRan = true;
+          return {'success': true, 'lessonId': 'l1'};
+        },
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+      );
+
+      expect(toolRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.queue.first.taskType, 'lesson_prep');
+      expect(executor.queue.first.feature, 'lesson_prep');
+    });
+
+    test('marks task as failed when prep tool returns success: false', () async {
+      final executor = IdleExecutor();
+
+      await executor.enqueuePrepTool(
+        'failed prep job',
+        () async {
+          return {'success': false, 'error': 'Budget exhausted'};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+      );
+
+      expect(executor.queue.first.isCompleted, isFalse);
+      expect(executor.queue.first.error, contains('Budget exhausted'));
+    });
+
+    test('defers heavy prep tool under CPU pressure and resumes on recovery',
+        () async {
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var toolRan = false;
+      await executor.enqueuePrepTool(
+        'heavy prep job',
+        () async {
+          toolRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'question_variants',
+        taskType: 'question_variants',
+      );
+
+      // Deferred — system monitor reports stress.
+      expect(toolRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+
+      // System recovers — task runs on next poll.
+      monitor.canRunHeavyPrepNowValue = true;
+      await executor.processNext();
+
+      expect(toolRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+
+    test('tracks task on LlmTaskManager with correct feature and taskType',
+        () async {
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+
+      await executor.enqueuePrepTool(
+        'pdf ingestion prep',
+        () async {
+          return {'success': true, 'chunkCount': 5};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+      );
+
+      expect(manager.tasks, isNotEmpty);
+      expect(manager.tasks.any((t) => t.feature == 'pdf_ingestion'), isTrue);
+      expect(manager.tasks.any((t) => t.taskType == 'pdf_ingestion'), isTrue);
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
+    });
+
+    test('light prep tool is not deferred by system monitor', () async {
+      final monitor = MutableFakeSystemMonitorService(
+        canRunHeavyPrepNowValue: false,
+      );
+      final executor = IdleExecutor(systemMonitor: monitor);
+
+      var toolRan = false;
+      await executor.enqueuePrepTool(
+        'light mastery refresh',
+        () async {
+          toolRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'mastery_refresh',
+        taskType: 'background',
+      );
+
+      // Light tasks proceed even under CPU pressure.
+      expect(toolRan, isTrue);
       expect(executor.queue.first.isCompleted, isTrue);
 
       executor.dispose();

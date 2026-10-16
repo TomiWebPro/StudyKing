@@ -1,6 +1,5 @@
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/prep_budget.dart';
-import 'package:studyking/core/utils/logger.dart';
 
 /// CPU and network intensity classification for prep tools.
 ///
@@ -17,8 +16,6 @@ enum PrepCpuClass { light, medium, heavy }
 /// carries a [PrepCategory] so spend can be attributed to the right
 /// budget bucket via [PrepBudgetService].
 abstract class PrepTool extends AgentTool {
-  static final Logger _logger = const Logger('PrepTool');
-
   /// Estimated input tokens this prep task will consume.
   int get estimatedInputTokens;
 
