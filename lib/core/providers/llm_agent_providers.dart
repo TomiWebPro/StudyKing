@@ -8,7 +8,12 @@ import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
-import 'package:studyking/features/questions/providers/question_providers.dart' show questionRepositoryProvider;
+import 'package:studyking/features/questions/providers/question_providers.dart'
+    show questionRepositoryProvider, questionVariantServiceProvider;
+import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
+import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
+import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
+import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';
@@ -42,6 +47,17 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final examSessionService = ref.watch(examSessionServiceProvider);
   final subjectRepo = ref.watch(subjectRepositoryProvider);
   final topicRepo = ref.watch(topicRepositoryProvider);
+
+  // Vision Next-Term §4.3 LLM prep toolbox dependencies. These are watched so
+  // the prep tools can record spend against the correct [PrepCategory.taskTypeKey]
+  // and consult [PrepBudgetService.canSpend] before spending — closing the
+  // production disconnect where off-period prep was always stamped as 'background'.
+  final llmService = ref.watch(llmServiceProvider);
+  final modelId = ref.watch(mentorModelIdProvider);
+  final taskManager = ref.watch(llmTaskManagerProvider);
+  final usageMeter = ref.watch(llmUsageMeterProvider);
+  final budgetService = ref.watch(prepBudgetServiceProvider);
+  final questionVariantService = ref.watch(questionVariantServiceProvider);
 
   return [
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
@@ -80,6 +96,38 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
       masteryService: masteryService,
       dependencyRepo: ref.watch(topicDependencyRepositoryProvider),
       studentIdService: studentIdService,
+    ),
+    // Off-period preparation toolbox (Vision Next-Term §4.3). Previously these
+    // four tools existed but were never registered, so the mentor agent could
+    // not invoke them and their spend was never attributed to a prep category.
+    // Now the agent can call them and they stamp the correct taskTypeKey that
+    // [PrepBudgetService.spendingByCategory] reads live.
+    IngestPdfToKbTool(
+      llmService: llmService,
+      modelId: modelId,
+      taskManager: taskManager,
+      usageMeter: usageMeter,
+      budgetService: budgetService,
+    ),
+    EnqueueQuestionVariantsTool(
+      variantService: questionVariantService,
+      questionRepo: questionRepo,
+      taskManager: taskManager,
+      usageMeter: usageMeter,
+      budgetService: budgetService,
+    ),
+    PreGenerateLessonTool(
+      lessonAgentService: lessonAgentService,
+      taskManager: taskManager,
+      usageMeter: usageMeter,
+      budgetService: budgetService,
+    ),
+    RefreshMasteryTool(
+      masteryService: masteryService,
+      studentIdService: studentIdService,
+      taskManager: taskManager,
+      usageMeter: usageMeter,
+      budgetService: budgetService,
     ),
   ];
 });
