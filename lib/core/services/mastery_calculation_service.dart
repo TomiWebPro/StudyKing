@@ -71,6 +71,7 @@ class MasteryCalculationService {
     return MasteryState(
       studentId: current.studentId,
       topicId: current.topicId,
+      subjectId: current.subjectId,
       accuracy: accuracy,
       confidenceTrend: confidenceTrend,
       speedTrend: speedTrend,

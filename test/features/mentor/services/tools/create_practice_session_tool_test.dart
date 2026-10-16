@@ -143,8 +143,8 @@ void main() {
 
     test('weak_areas mode targets weak topics in the subject', () async {
       final weak = [
-        MasteryState.initial(studentId: 'student-1', topicId: 't1')
-            .copyWith(readinessScore: 0.2),
+        MasteryState.initial(studentId: 'student-1', topicId: 't1', subjectId: 's1')
+            .copyWith(accuracy: 0.3, readinessScore: 0.2),
       ];
       mastery.weakTopics = weak;
       questionRepo.setQuestions([

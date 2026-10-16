@@ -203,7 +203,10 @@ class CreatePracticeSessionTool extends AgentTool {
     final studentId = _studentIdService.getStudentId().data ?? '';
     await _masteryService.init();
 
-    final weakResult = await _masteryService.getWeakTopics(studentId);
+    final weakResult = await _masteryService.getWeakTopics(
+      studentId,
+      subjectId: subjectId,
+    );
     final weakTopics = weakResult.data ?? [];
 
     if (weakTopics.isEmpty) {

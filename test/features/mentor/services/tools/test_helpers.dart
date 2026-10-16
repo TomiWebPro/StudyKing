@@ -80,18 +80,28 @@ class FakeMasteryGraphService extends MasteryGraphService {
   MasteryState? topicMastery;
 
   FakeMasteryGraphService({
-    this.weakTopics = const [],
+    List<MasteryState>? weakTopics,
     this.atRisk = const [],
     this.allMastery = const [],
     this.topicMastery,
-  }) : super();
+  })  : weakTopics = weakTopics ?? const [],
+        super();
 
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async =>
-      Result.success(weakTopics);
+  Future<Result<List<MasteryState>>> getWeakTopics(
+    String studentId, {
+    String? subjectId,
+  }) async {
+    if (subjectId == null || subjectId.isEmpty) {
+      return Result.success(weakTopics);
+    }
+    return Result.success(
+      weakTopics.where((t) => t.subjectId == subjectId).toList(),
+    );
+  }
 
   @override
   Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(

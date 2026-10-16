@@ -59,5 +59,46 @@ void main() {
       expect(result['weakTopics'], equals([]));
       expect(result['weakTopics'], isA<List>());
     });
+
+    test('forwards subjectId to scope weak topics to a single subject',
+        () async {
+      final mathState = MasteryState.initial(
+        studentId: 'student-1',
+        topicId: 't1',
+        subjectId: 'math',
+      ).copyWith(accuracy: 0.4, reviewUrgency: 0.8, readinessScore: 0.3);
+      final chemState = MasteryState.initial(
+        studentId: 'student-1',
+        topicId: 't2',
+        subjectId: 'chem',
+      ).copyWith(accuracy: 0.2, reviewUrgency: 0.9, readinessScore: 0.1);
+
+      final mastery = FakeMasteryGraphService(
+        weakTopics: [mathState, chemState],
+      );
+      final tool = GetWeakTopicsTool(
+        masteryService: mastery,
+        studentIdService: studentIdService,
+      );
+
+      final result = await tool.execute({'subjectId': 'math'});
+
+      expect(result['weakTopicCount'], equals(1));
+      final topics = result['weakTopics'] as List;
+      expect(topics.length, equals(1));
+      expect(topics[0]['topicId'], equals('t1'));
+      expect(topics[0]['subjectId'], equals('math'));
+    });
+
+    test('declares subjectId in parameter schema', () {
+      final mastery = FakeMasteryGraphService();
+      final tool = GetWeakTopicsTool(
+        masteryService: mastery,
+        studentIdService: studentIdService,
+      );
+      final params = tool.parameters;
+      expect(params['properties'], contains('subjectId'));
+      expect(params['required'], isNot(contains('subjectId')));
+    });
   });
 }

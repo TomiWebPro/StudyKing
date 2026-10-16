@@ -22,14 +22,23 @@ class GetWeakTopicsTool extends AgentTool {
   @override
   Map<String, dynamic> get parameters => {
     'type': 'object',
-    'properties': {},
+    'properties': {
+      'subjectId': {
+        'type': 'string',
+        'description': 'Optional subject ID to scope weak topics to a single syllabus.',
+      },
+    },
     'required': [],
   };
 
   @override
   Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
     final studentId = _studentIdService.getStudentId().data ?? '';
-    final weakResult = await _masteryService.getWeakTopics(studentId);
+    final subjectId = args['subjectId'] as String?;
+    final weakResult = await _masteryService.getWeakTopics(
+      studentId,
+      subjectId: subjectId != null && subjectId.isNotEmpty ? subjectId : null,
+    );
     final atRiskResult = await _masteryService.getAtRiskQuestions(studentId);
 
     final weakTopics = weakResult.data ?? [];
@@ -40,6 +49,7 @@ class GetWeakTopicsTool extends AgentTool {
       'weakTopics': weakTopics
           .map((t) => {
         'topicId': t.topicId,
+        'subjectId': t.subjectId,
         'accuracy': t.accuracy,
         'reviewUrgency': t.reviewUrgency,
         'readinessScore': t.readinessScore,

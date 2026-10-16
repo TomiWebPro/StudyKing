@@ -31,13 +31,14 @@ class MasteryStateAdapter extends TypeAdapter<MasteryState> {
       readinessScore: fields[16] as double? ?? 0.0,
       reviewUrgency: fields[17] as double? ?? 0.0,
       weakSubtopics: (fields[18] as List?)?.cast<String>() ?? [],
+      subjectId: fields[19] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, MasteryState obj) {
     writer
-      ..writeByte(19)
+      ..writeByte(20)
       ..writeByte(0)
       ..write(obj.studentId)
       ..writeByte(1)
@@ -75,7 +76,9 @@ class MasteryStateAdapter extends TypeAdapter<MasteryState> {
       ..writeByte(17)
       ..write(obj.reviewUrgency)
       ..writeByte(18)
-      ..write(obj.weakSubtopics);
+      ..write(obj.weakSubtopics)
+      ..writeByte(19)
+      ..write(obj.subjectId);
   }
 
   @override

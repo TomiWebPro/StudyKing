@@ -16,6 +16,16 @@ void main() {
       expect(state.masteryLevel, MasteryLevel.novice);
       expect(state.totalAttempts, 0);
       expect(state.correctAttempts, 0);
+      expect(state.subjectId, isEmpty);
+    });
+
+    test('initial factory accepts subjectId', () {
+      final state = MasteryState.initial(
+        studentId: 'stu1',
+        topicId: 'topic1',
+        subjectId: 'chemistry-101',
+      );
+      expect(state.subjectId, 'chemistry-101');
     });
 
     test('toJson and fromJson round-trip', () {
@@ -63,6 +73,7 @@ void main() {
       expect(restored.readinessScore, state.readinessScore);
       expect(restored.reviewUrgency, state.reviewUrgency);
       expect(restored.weakSubtopics, state.weakSubtopics);
+      expect(restored.subjectId, state.subjectId);
     });
 
     test('toJson and fromJson round-trip with defaults', () {

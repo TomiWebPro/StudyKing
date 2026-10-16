@@ -219,6 +219,7 @@ class MasteryRecorder {
         isCorrect: isCorrect,
         confidence: confidence,
         timeSpentMs: timeSpentMs,
+        subjectId: subjectId,
       );
       if (masteryResult.isFailure) {
         _logger.w('MasteryGraphService.recordAttempt failed: ${masteryResult.error}');

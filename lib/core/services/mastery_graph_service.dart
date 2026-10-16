@@ -47,9 +47,11 @@ class MasteryGraphService {
     required int confidence,
     required int timeSpentMs,
     String? subtopicId,
+    String? subjectId,
   }) async {
     final topicMasteryResult =
-        await masteryStateRepo.getMasteryState(studentId, topicId);
+        await masteryStateRepo.getMasteryState(studentId, topicId,
+            subjectId: subjectId);
     if (topicMasteryResult.isFailure) {
       return Result.failure(topicMasteryResult.error);
     }
@@ -102,6 +104,7 @@ class MasteryGraphService {
     required int confidence,
     required int timeSpentMs,
     String? subtopicId,
+    String? subjectId,
   }) async {
     final topicResult = await recordTopicAttempt(
       studentId: studentId,
@@ -110,6 +113,7 @@ class MasteryGraphService {
       confidence: confidence,
       timeSpentMs: timeSpentMs,
       subtopicId: subtopicId,
+      subjectId: subjectId,
     );
     if (topicResult.isFailure) return topicResult;
 
@@ -164,8 +168,11 @@ class MasteryGraphService {
   }
 
   // proxy: delegates to masteryStateRepo.getWeakTopics
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) {
-    return masteryStateRepo.getWeakTopics(studentId);
+  Future<Result<List<MasteryState>>> getWeakTopics(
+    String studentId, {
+    String? subjectId,
+  }) {
+    return masteryStateRepo.getWeakTopics(studentId, subjectId: subjectId);
   }
 
   // proxy: delegates to masteryStateRepo.getMasterySnapshot

@@ -43,6 +43,7 @@ void main() {
         readinessScore: 0.9,
         reviewUrgency: 0.2,
         weakSubtopics: ['subtopic_a'],
+        subjectId: 'math-101',
       );
 
       final writer = BinaryWriterImpl(registry);
@@ -69,6 +70,7 @@ void main() {
       expect(restored.readinessScore, 0.9);
       expect(restored.reviewUrgency, 0.2);
       expect(restored.weakSubtopics, ['subtopic_a']);
+      expect(restored.subjectId, 'math-101');
     });
 
     test('write/read with minimal fields', () {
@@ -101,6 +103,7 @@ void main() {
       expect(restored.readinessScore, 0.0);
       expect(restored.reviewUrgency, 0.0);
       expect(restored.weakSubtopics, isEmpty);
+      expect(restored.subjectId, isEmpty);
     });
 
     test('write/read with empty lists', () {

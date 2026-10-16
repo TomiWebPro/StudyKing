@@ -16,14 +16,19 @@ class _FakeMasteryStateRepository extends MasteryStateRepository {
   @override
   Future<Result<MasteryState>> getMasteryState(
     String studentId,
-    String topicId,
-  ) async {
+    String topicId, {
+    String? subjectId,
+  }) async {
     final key = '${studentId}_$topicId';
     final state = _storage[key];
     if (state != null) {
       return Result.success(state);
     }
-    final newState = MasteryState.initial(studentId: studentId, topicId: topicId);
+    final newState = MasteryState.initial(
+      studentId: studentId,
+      topicId: topicId,
+      subjectId: subjectId ?? '',
+    );
     _storage[key] = newState;
     return Result.success(newState);
   }
@@ -54,9 +59,13 @@ class _FakeMasteryStateRepository extends MasteryStateRepository {
   }
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(
+    String studentId, {
+    String? subjectId,
+  }) async {
     final states = _storage.values
         .where((s) => s.studentId == studentId && s.accuracy < 0.7)
+        .where((s) => subjectId == null || s.subjectId == subjectId)
         .toList();
     states.sort((a, b) => a.accuracy.compareTo(b.accuracy));
     return Result.success(states);
@@ -105,6 +114,7 @@ class _FakeMasteryStateRepository extends MasteryStateRepository {
 MasteryState _createState({
   String studentId = 's1',
   String topicId = 't1',
+  String subjectId = '',
   double accuracy = 0.0,
   double reviewUrgency = 0.0,
   int totalAttempts = 0,
@@ -115,6 +125,7 @@ MasteryState _createState({
   return MasteryState(
     studentId: studentId,
     topicId: topicId,
+    subjectId: subjectId,
     accuracy: accuracy,
     totalAttempts: totalAttempts,
     lastAttempt: now,
@@ -264,6 +275,28 @@ void main() {
 
         final result = await repository.getWeakTopics('s1');
         expect(result.data, isEmpty);
+      });
+
+      test('scopes by subjectId when provided', () async {
+        await repository.updateMasteryState(
+            _createState(topicId: 't1', subjectId: 'math', accuracy: 0.5));
+        await repository.updateMasteryState(
+            _createState(topicId: 't2', subjectId: 'math', accuracy: 0.3));
+        await repository.updateMasteryState(
+            _createState(topicId: 't3', subjectId: 'chem', accuracy: 0.4));
+        await repository.updateMasteryState(
+            _createState(topicId: 't4', subjectId: 'chem', accuracy: 0.6));
+
+        final all = await repository.getWeakTopics('s1');
+        expect(all.data?.length, 4);
+
+        final mathOnly = await repository.getWeakTopics('s1', subjectId: 'math');
+        expect(mathOnly.data?.length, 2);
+        expect(mathOnly.data!.every((s) => s.subjectId == 'math'), isTrue);
+
+        final chemOnly = await repository.getWeakTopics('s1', subjectId: 'chem');
+        expect(chemOnly.data?.length, 2);
+        expect(chemOnly.data!.every((s) => s.subjectId == 'chem'), isTrue);
       });
     });
 

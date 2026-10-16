@@ -314,6 +314,7 @@ class TutorService {
     await _masteryService.recordAttempt(
       studentId: session.studentId,
       topicId: session.topicId,
+      subjectId: session.subjectId,
       questionId: 'tutor_${session.id}',
       isCorrect: session.accuracy > 0.5,
       confidence: session.confidenceRating.clamp(0, 5).round(),

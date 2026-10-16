@@ -16,8 +16,9 @@ class MasteryStateRepository extends Repository<MasteryState> {
 
   Future<Result<MasteryState>> getMasteryState(
     String studentId,
-    String topicId,
-  ) async {
+    String topicId, {
+    String? subjectId,
+  }) async {
     try {
       final key = '${studentId}_$topicId';
       final stateResult = await get(key);
@@ -25,8 +26,11 @@ class MasteryStateRepository extends Repository<MasteryState> {
       if (state != null) {
         return Result.success(state);
       }
-      final newState =
-          MasteryState.initial(studentId: studentId, topicId: topicId);
+      final newState = MasteryState.initial(
+        studentId: studentId,
+        topicId: topicId,
+        subjectId: subjectId ?? '',
+      );
       await save(key, newState);
       return Result.success(newState);
     } catch (e) {
@@ -71,10 +75,14 @@ class MasteryStateRepository extends Repository<MasteryState> {
     }
   }
 
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(
+    String studentId, {
+    String? subjectId,
+  }) async {
     try {
       final states = filterBy((s) => s.studentId, studentId)
           .where((s) => s.accuracy < 0.7)
+          .where((s) => subjectId == null || s.subjectId == subjectId)
           .toList();
       states.sort((a, b) => a.accuracy.compareTo(b.accuracy));
       return Result.success(states);

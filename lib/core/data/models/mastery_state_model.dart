@@ -67,6 +67,11 @@ class MasteryState extends HiveObject {
   @HiveField(18)
   final List<String> weakSubtopics;
 
+  /// Subject ID that this topic belongs to, enabling subject-scoped
+  /// weak-topic queries for multi-syllabus students.
+  @HiveField(19, defaultValue: '')
+  final String subjectId;
+
   MasteryState({
     required this.studentId,
     required this.topicId,
@@ -87,16 +92,19 @@ class MasteryState extends HiveObject {
     this.readinessScore = 0.0,
     this.reviewUrgency = 0.0,
     this.weakSubtopics = const [],
+    this.subjectId = '',
   });
 
   factory MasteryState.initial({
     required String studentId,
     required String topicId,
+    String subjectId = '',
   }) {
     final now = DateTime.now();
     return MasteryState(
       studentId: studentId,
       topicId: topicId,
+      subjectId: subjectId,
       lastAttempt: now,
       lastUpdated: now,
     );
@@ -122,6 +130,7 @@ class MasteryState extends HiveObject {
     'readinessScore': readinessScore,
     'reviewUrgency': reviewUrgency,
     'weakSubtopics': weakSubtopics,
+    'subjectId': subjectId,
   };
 
   factory MasteryState.fromJson(Map<String, dynamic> json) => MasteryState(
@@ -144,6 +153,7 @@ class MasteryState extends HiveObject {
     readinessScore: (json['readinessScore'] ?? 0.0).toDouble(),
     reviewUrgency: (json['reviewUrgency'] ?? 0.0).toDouble(),
     weakSubtopics: List<String>.from(json['weakSubtopics'] ?? []),
+    subjectId: json['subjectId'] ?? '',
   );
 
   MasteryState copyWith({
@@ -166,6 +176,7 @@ class MasteryState extends HiveObject {
     double? readinessScore,
     double? reviewUrgency,
     List<String>? weakSubtopics,
+    String? subjectId,
   }) {
     return MasteryState(
       studentId: studentId ?? this.studentId,
@@ -187,6 +198,7 @@ class MasteryState extends HiveObject {
       readinessScore: readinessScore ?? this.readinessScore,
       reviewUrgency: reviewUrgency ?? this.reviewUrgency,
       weakSubtopics: weakSubtopics ?? this.weakSubtopics,
+      subjectId: subjectId ?? this.subjectId,
     );
   }
 }
