@@ -10569,6 +10569,36 @@ abstract class AppLocalizations {
   /// **'Preparation budget is off — prep tasks are paused'**
   String get prepBudgetDisabled;
 
+  /// Section title for the prep-vs-live token allocation split
+  ///
+  /// In en, this message translates to:
+  /// **'Token allocation'**
+  String get tokenAllocation;
+
+  /// Prep token count and its percentage of total allocation
+  ///
+  /// In en, this message translates to:
+  /// **'Prep {tokens} ({percent}%)'**
+  String prepTokensAlloc(String tokens, int percent);
+
+  /// Live token count and its percentage of total allocation
+  ///
+  /// In en, this message translates to:
+  /// **'Live {tokens} ({percent}%)'**
+  String liveTokensAlloc(String tokens, int percent);
+
+  /// Badge shown when preparation tokens equal or exceed live tokens
+  ///
+  /// In en, this message translates to:
+  /// **'Prep dominates'**
+  String get prepDominant;
+
+  /// Badge shown when live tokens exceed preparation tokens
+  ///
+  /// In en, this message translates to:
+  /// **'Live dominates'**
+  String get liveDominant;
+
   /// Description shown under the quiet-hours picker
   ///
   /// In en, this message translates to:

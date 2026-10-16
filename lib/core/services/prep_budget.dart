@@ -223,6 +223,40 @@ class PrepBudgetService {
   }
 
   /// Live est. cost spent per category (for §4.2 "est. cost per category").
+  /// Total tokens spent across all preparation categories, read straight
+  /// from the meter's per-task-type aggregates. Realises the §4.2 "live
+  /// counters: tokens per category" counter as an aggregate; the §4.4
+  /// prep-vs-live thesis test compares it against live chat tokens.
+  int totalPrepTokens() {
+    final byType = _meter.getTotalTokensPerTaskType();
+    var total = 0;
+    for (final category in PrepCategory.values) {
+      total += byType[category.taskTypeKey] ?? 0;
+    }
+    return total;
+  }
+
+  /// Total tokens spent on live (non-preparation) work — the complement of
+  /// [totalPrepTokens] against the meter's per-task-type aggregates
+  /// (Vision Next-Term §0 thesis: "Students must be able to see where tokens
+  /// go"). Sums every task-type bucket that is NOT a [PrepCategory], which is
+  /// equivalent to `LlmUsageMeter.getTotalTokens() - totalPrepTokens()` but
+  /// reads from the same per-task-type snapshot as [totalPrepTokens], keeping
+  /// the two values consistent when tests stub the meter with a fake.
+  /// Unclassified / null task types (recorded under `unknown`) are treated as
+  /// live, so the two sums always partition the meter's total exactly.
+  int totalLiveTokens() {
+    final byType = _meter.getTotalTokensPerTaskType();
+    final prepKeys = {for (final category in PrepCategory.values) category.taskTypeKey};
+    var total = 0;
+    for (final entry in byType.entries) {
+      if (!prepKeys.contains(entry.key)) {
+        total += entry.value;
+      }
+    }
+    return total;
+  }
+
   Map<PrepCategory, double> costByCategory() {
     final byType = _meter.getTotalCostPerTaskType();
     final out = <PrepCategory, double>{};

@@ -8445,6 +8445,42 @@
   "@prepBudgetDisabled": {
     "description": "Caption shown when the preparation budget master switch is off"
   },
+  "tokenAllocation": "Token allocation",
+  "@tokenAllocation": {
+    "description": "Section title for the prep-vs-live token allocation split"
+  },
+  "prepTokensAlloc": "Prep {tokens} ({percent}%)",
+  "@prepTokensAlloc": {
+    "description": "Prep token count and its percentage of total allocation",
+    "placeholders": {
+      "tokens": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "liveTokensAlloc": "Live {tokens} ({percent}%)",
+  "@liveTokensAlloc": {
+    "description": "Live token count and its percentage of total allocation",
+    "placeholders": {
+      "tokens": {
+        "type": "String"
+      },
+      "percent": {
+        "type": "int"
+      }
+    }
+  },
+  "prepDominant": "Prep dominates",
+  "@prepDominant": {
+    "description": "Badge shown when preparation tokens equal or exceed live tokens"
+  },
+  "liveDominant": "Live dominates",
+  "@liveDominant": {
+    "description": "Badge shown when live tokens exceed preparation tokens"
+  },
   "quietHoursDesc": "Prep tasks pause during these hours to prevent overworking",
   "@quietHoursDesc": {
     "description": "Description shown under the quiet-hours picker"

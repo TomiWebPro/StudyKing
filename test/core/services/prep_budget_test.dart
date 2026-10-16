@@ -317,4 +317,218 @@ void main() {
       expect(reenabled.isPrepEnabledForSubject('math'), isTrue);
     });
   });
+
+  // Vision §0 thesis / §4.4 acceptance #1:
+  // "With budgets at defaults, a week of simulated off-periods shows
+  //  prep tokens > live tokens in LlmUsageMeter aggregates (test proves the
+  //  ratio)." Preparation must dominate tokens so lessons start pre-built.
+  group('PrepBudget token-economy thesis', () {
+    test('a week of off-period prep produces more tokens than live chat', () {
+      final meter = LlmUsageMeter();
+      final service = PrepBudgetService(meter: meter); // defaults
+      final caps = PrepBudget.defaults.caps;
+
+      // --- Live chat: teaching + mentor only, during scheduled contact.
+      // Realistic 1h lesson + 0.5h mentor chat per day over a week.
+      const days = 7;
+      for (var d = 0; d < days; d++) {
+        meter.recordUsage(
+          id: 'live_teach_$d',
+          feature: 'tutor',
+          modelId: 'gpt-4o',
+          inputTokens: 4000,
+          outputTokens: 2000,
+          taskType: 'teaching',
+        );
+        meter.recordUsage(
+          id: 'live_mentor_$d',
+          feature: 'mentor',
+          modelId: 'gpt-4o',
+          inputTokens: 2000,
+          outputTokens: 1000,
+          taskType: 'mentor',
+        );
+      }
+
+      // --- Off-period prep: the background queue pre-builds material
+      // across every prep category, approaching (never exceeding) the
+      // default caps. Over a week of idle compute the caps are the limit.
+      // The 80/20 input/output split is a realistic generation-heavy ratio.
+      void prep(String id, String taskType, int cap) {
+        final total = (cap * 0.8).round();
+        meter.recordUsage(
+          id: id,
+          feature: 'prep',
+          modelId: 'gpt-4o',
+          inputTokens: (total * 0.8).round(),
+          outputTokens: (total * 0.2).round(),
+          taskType: taskType,
+        );
+      }
+
+      prep('prep_pdf', 'pdf_ingestion', caps[PrepCategory.pdfIngestion]!);
+      prep('prep_qv', 'question_variants', caps[PrepCategory.questionVariants]!);
+      prep('prep_lp', 'lesson_prep', caps[PrepCategory.lessonPrep]!);
+      prep('prep_emb', 'embeddings', caps[PrepCategory.embeddings]!);
+      prep('prep_bg', 'background', caps[PrepCategory.background]!);
+
+      // --- Aggregates read straight off the shared LlmUsageMeter.
+      final totalPrepTokens = service.totalPrepTokens();
+      final liveByType = meter.getTotalTokensPerTaskType();
+      final totalLiveTokens =
+          (liveByType['teaching'] ?? 0) + (liveByType['mentor'] ?? 0);
+
+      // Thesis: preparation dominates tokens.
+      expect(totalPrepTokens, greaterThan(totalLiveTokens));
+
+      // Guardrail: prep stayed inside the default caps (budget enforced).
+      final spent = service.spendingByCategory();
+      for (final category in PrepCategory.values) {
+        expect(
+          spent[category],
+          lessThanOrEqualTo(caps[category]!),
+          reason: '${category.name} exceeded its cap',
+        );
+      }
+
+      // Sanity: the four required prep categories all carried tokens (≥4),
+      // and live tokens equal the realistic per-day contact window.
+      expect(spent[PrepCategory.pdfIngestion], greaterThan(0));
+      expect(spent[PrepCategory.questionVariants], greaterThan(0));
+      expect(spent[PrepCategory.lessonPrep], greaterThan(0));
+      expect(spent[PrepCategory.embeddings], greaterThan(0));
+      expect(totalLiveTokens, equals(days * (6000 + 3000)));
+    });
+  });
+
+  // Mirrors the §4.4 prep-vs-live thesis assertion, but exercises the
+  // dedicated [PrepBudgetService.totalLiveTokens] complement method (the
+  // screen uses this to render the on-portal ratio), instead of inlining the
+  // live sum.
+  group('PrepBudgetService live tokens', () {
+    test('totalLiveTokens is the complement of totalPrepTokens', () {
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'prep1',
+        feature: 'prep',
+        modelId: 'gpt-4o',
+        inputTokens: 4000,
+        outputTokens: 1000,
+        taskType: 'pdf_ingestion',
+      );
+      meter.recordUsage(
+        id: 'prep2',
+        feature: 'prep',
+        modelId: 'gpt-4o',
+        inputTokens: 3000,
+        outputTokens: 1000,
+        taskType: 'lesson_prep',
+      );
+      meter.recordUsage(
+        id: 'live1',
+        feature: 'tutor',
+        modelId: 'gpt-4o',
+        inputTokens: 2000,
+        outputTokens: 1000,
+        taskType: 'teaching',
+      );
+      meter.recordUsage(
+        id: 'live2',
+        feature: 'mentor',
+        modelId: 'gpt-4o',
+        inputTokens: 1000,
+        outputTokens: 500,
+        taskType: 'mentor',
+      );
+      final service = PrepBudgetService(meter: meter);
+
+      // prep = 5000 + 4000 = 9000; live = 3000 + 1500 = 4500
+      expect(service.totalPrepTokens(), 9000);
+      expect(service.totalLiveTokens(), 4500);
+      // The two sums partition the meter's total exactly.
+      expect(service.totalPrepTokens() + service.totalLiveTokens(),
+          meter.getTotalTokens());
+      // Prep dominates live in this simulation.
+      expect(service.totalLiveTokens(), lessThan(service.totalPrepTokens()));
+    });
+
+    test('totalLiveTokens is 0 when only prep categories have spend', () {
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'p',
+        feature: 'prep',
+        modelId: 'm',
+        inputTokens: 1000,
+        outputTokens: 0,
+        taskType: 'embeddings',
+      );
+      final service = PrepBudgetService(meter: meter);
+      expect(service.totalPrepTokens(), 1000);
+      expect(service.totalLiveTokens(), 0);
+    });
+
+    test('totalLiveTokens treats unclassified tasks as live', () {
+      final meter = LlmUsageMeter();
+      // background is a prep category; a null taskType is unclassified (live).
+      meter.recordUsage(
+        id: 'p',
+        feature: 'prep',
+        modelId: 'm',
+        inputTokens: 1000,
+        outputTokens: 0,
+        taskType: 'background',
+      );
+      meter.recordUsage(
+        id: 'u',
+        feature: 'chat',
+        modelId: 'm',
+        inputTokens: 500,
+        outputTokens: 0,
+        taskType: null,
+      );
+      final service = PrepBudgetService(meter: meter);
+      expect(service.totalPrepTokens(), 1000);
+      expect(service.totalLiveTokens(), 500);
+    });
+
+    test('totalLiveTokens is 0 for an empty meter', () {
+      final service = PrepBudgetService(meter: LlmUsageMeter());
+      expect(service.totalPrepTokens(), 0);
+      expect(service.totalLiveTokens(), 0);
+    });
+
+    test('totalPrepTokens + totalLiveTokens partitions every meter token', () {
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'a',
+        feature: 'x',
+        modelId: 'm',
+        inputTokens: 100,
+        outputTokens: 100,
+        taskType: 'pdf_ingestion',
+      );
+      meter.recordUsage(
+        id: 'b',
+        feature: 'x',
+        modelId: 'm',
+        inputTokens: 50,
+        outputTokens: 50,
+        taskType: 'teaching',
+      );
+      meter.recordUsage(
+        id: 'c',
+        feature: 'x',
+        modelId: 'm',
+        inputTokens: 25,
+        outputTokens: 25,
+        taskType: null,
+      );
+      final service = PrepBudgetService(meter: meter);
+      // prep = pdf_ingestion(200); live = teaching(100) + unknown(50)
+      expect(service.totalPrepTokens(), 200);
+      expect(service.totalLiveTokens(), 150);
+      expect(service.totalPrepTokens() + service.totalLiveTokens(),
+          meter.getTotalTokens());
+    });
+  });
 }

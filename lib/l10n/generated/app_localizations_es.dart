@@ -6516,6 +6516,25 @@ class AppLocalizationsEs extends AppLocalizations {
       'El presupuesto de preparación está desactivado; las tareas de preparación están pausadas';
 
   @override
+  String get tokenAllocation => 'Distribución de tokens';
+
+  @override
+  String prepTokensAlloc(String tokens, int percent) {
+    return 'Preparación $tokens ($percent%)';
+  }
+
+  @override
+  String liveTokensAlloc(String tokens, int percent) {
+    return 'En vivo $tokens ($percent%)';
+  }
+
+  @override
+  String get prepDominant => 'Preparación predomina';
+
+  @override
+  String get liveDominant => 'En vivo predomina';
+
+  @override
   String get quietHoursDesc =>
       'Las tareas de preparación se pausan durante estas horas para evitar interrumpir el sueño';
 

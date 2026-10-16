@@ -142,7 +142,7 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               children: [
                 _buildPrepBudgetBars(context, l10n, budgetService),
                 const Divider(height: 1),
-                if (hasTokenData) _buildTokenUsageMeter(context, tasks, l10n),
+                if (hasTokenData) _buildTokenUsageMeter(context, tasks, l10n, budgetService),
                 if (hasTokenData) const Divider(height: 1),
                 Expanded(
                   child: ListView.builder(
@@ -166,7 +166,11 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
   }
 
   Widget _buildTokenUsageMeter(
-      BuildContext context, List<LlmTask> tasks, AppLocalizations l10n) {
+    BuildContext context,
+    List<LlmTask> tasks,
+    AppLocalizations l10n,
+    PrepBudgetService budgetService,
+  ) {
     final totalTokens =
         tasks.fold<int>(0, (sum, t) => sum + (t.tokensUsed > 0 ? t.tokensUsed : 0));
     final totalCost = tasks.fold<double>(
@@ -249,8 +253,125 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
               ),
             ),
           ],
+          // Vision Next-Term §0 thesis: students must be able to see where
+          // tokens go (preparation must dominate live chat).
+          _buildTokenAllocation(context, budgetService, l10n),
         ],
       ),
+    );
+  }
+
+  /// Prep-vs-live token allocation row (Vision Next-Term §0 thesis:
+  /// "Students must be able to see where tokens go"). Reads the split straight
+  /// from [PrepBudgetService] so a student with "Prepare while I'm away" can
+  /// confirm that off-period preparation dominates live chat spend. Renders a
+  /// header with a dominance badge, Prep/Live stat cards, and a ratio bar.
+  Widget _buildTokenAllocation(
+    BuildContext context,
+    PrepBudgetService budgetService,
+    AppLocalizations l10n,
+  ) {
+    final prepTokens = budgetService.totalPrepTokens();
+    final liveTokens = budgetService.totalLiveTokens();
+    final allocationTotal = prepTokens + liveTokens;
+    if (allocationTotal == 0) return const SizedBox.shrink();
+
+    final prepPercent = (prepTokens / allocationTotal * 100).round();
+    final livePercent = 100 - prepPercent;
+    final prepDominant = prepTokens >= liveTokens;
+    final cs = Theme.of(context).colorScheme;
+    final allocStyle = Theme.of(context).textTheme.titleSmall?.copyWith(
+          fontWeight: FontWeight.bold,
+        );
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Icon(Icons.pie_chart, size: 18, color: cs.primary),
+            const SizedBox(width: 8),
+            Text(
+              l10n.tokenAllocation,
+              style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+            ),
+            const Spacer(),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: (prepDominant ? cs.primaryContainer : cs.errorContainer)
+                    .withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                prepDominant ? l10n.prepDominant : l10n.liveDominant,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                      color: prepDominant ? cs.primary : cs.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        if (ResponsiveUtils.breakpointOf(context).isMobile)
+          Wrap(
+            spacing: 16,
+            runSpacing: 12,
+            children: [
+              Text(
+                l10n.prepTokensAlloc(
+                  formatDecimal(prepTokens.toDouble(), l10n.localeName),
+                  prepPercent,
+                ),
+                style: allocStyle,
+              ),
+              Text(
+                l10n.liveTokensAlloc(
+                  formatDecimal(liveTokens.toDouble(), l10n.localeName),
+                  livePercent,
+                ),
+                style: allocStyle,
+              ),
+            ],
+          )
+        else
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  l10n.prepTokensAlloc(
+                    formatDecimal(prepTokens.toDouble(), l10n.localeName),
+                    prepPercent,
+                  ),
+                  style: allocStyle,
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Text(
+                  l10n.liveTokensAlloc(
+                    formatDecimal(liveTokens.toDouble(), l10n.localeName),
+                    livePercent,
+                  ),
+                  style: allocStyle,
+                ),
+              ),
+            ],
+          ),
+        const SizedBox(height: 8),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(4),
+          child: LinearProgressIndicator(
+            value: allocationTotal > 0 ? prepTokens / allocationTotal : 0,
+            minHeight: 6,
+            backgroundColor: cs.errorContainer,
+            valueColor: AlwaysStoppedAnimation<Color>(cs.primary),
+          ),
+        ),
+      ],
     );
   }
 
