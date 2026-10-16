@@ -263,6 +263,32 @@ void main() {
       expect(meter.getTotalTokens(), equals(480));
     });
 
+    test("'unknown' catch-all never hides classifiable ingestion work (syllabus extraction)", () {
+      // Syllabus topic extraction (ContentPipeline) passes feature:
+      // 'syllabus_topic_extraction' to the LLM service, which derives the
+      // task type via LlmTaskType.fromFeature. It must classify as
+      // 'classification' — never null/'unknown' — so prep-token attribution
+      // stays auditable in the task-manager portal (Vision §0: students must
+      // see and steer where tokens go).
+      meter.recordUsage(
+        id: 's1',
+        feature: 'syllabus_topic_extraction',
+        modelId: 'gpt-4o-mini',
+        inputTokens: 200,
+        outputTokens: 60,
+        taskType: LlmTaskType.fromFeature('syllabus_topic_extraction')?.name,
+      );
+
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(
+        byType['classification'],
+        equals(260), // 200 + 60, attributed to classification
+      );
+      // The 'unknown' catch-all must not swallow syllabus-extraction tokens.
+      expect(byType.containsKey('unknown'), isFalse);
+      expect(meter.getTotalTokens(), equals(260));
+    });
+
     test('getTotalCost sums all records', () {
       meter.recordUsage(id: 'r1', feature: 'chat', modelId: 'gpt-4', inputTokens: 100, outputTokens: 50);
       meter.recordUsage(id: 'r2', feature: 'chat', modelId: 'gpt-4', inputTokens: 50, outputTokens: 25);

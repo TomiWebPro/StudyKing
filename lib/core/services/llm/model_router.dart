@@ -46,7 +46,13 @@ enum LlmTaskType {
     if (f.contains('transcription') || f.contains('ocr')) {
       return LlmTaskType.transcription;
     }
-    if (f.contains('classif')) return LlmTaskType.classification;
+    // 'classif' covers general content classification; 'topic_extraction'
+    // covers syllabus/topic-list extraction (ContentPipeline uses the
+    // classification model for this), keeping ingestion spend attributable
+    // instead of leaking into the 'unknown' bucket (Vision §0 token principle).
+    if (f.contains('classif') || f.contains('topic_extraction')) {
+      return LlmTaskType.classification;
+    }
     if (f.contains('question_generation') ||
         f.contains('variant_generation') ||
         f.contains('flashcard_generation') ||

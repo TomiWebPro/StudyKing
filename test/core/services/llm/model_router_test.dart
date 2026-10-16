@@ -146,6 +146,12 @@ void main() {
     test('maps known feature strings', () {
       expect(LlmTaskType.fromFeature('mentor'), equals(LlmTaskType.mentor));
       expect(LlmTaskType.fromFeature('tutor'), equals(LlmTaskType.tutor));
+      // Syllabus topic-extraction is a classification task (ContentPipeline
+      // uses the classification model); it must NOT fall into 'unknown'.
+      expect(
+        LlmTaskType.fromFeature('syllabus_topic_extraction'),
+        equals(LlmTaskType.classification),
+      );
       // 'teaching' is the live tutoring feature passed by ConversationManager;
       // it must classify as tutor, not fall into 'unknown'.
       expect(LlmTaskType.fromFeature('teaching'), equals(LlmTaskType.tutor));
