@@ -41,6 +41,7 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
   final List<ChatMessageData> _messages = [];
   StreamSubscription<String>? _voiceSubscription;
   bool _isSending = false;
+  bool _voiceOutputEnabled = false;
   bool _isInitialized = false;
   bool _initError = false;
   bool _isRetrying = false;
@@ -732,6 +733,19 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             tooltip: l10n.mentorHelpTitle,
             onPressed: () => _showMentorHelpDialog(context),
           ),
+          if (_isInitialized)
+            IconButton(
+              icon: Icon(_voiceOutputEnabled ? Icons.volume_up : Icons.volume_off),
+              tooltip: l10n.voiceInput,
+              onPressed: () {
+                setState(() {
+                  _voiceOutputEnabled = !_voiceOutputEnabled;
+                  if (!_voiceOutputEnabled) {
+                    ref.read(voiceServiceProvider).stopSpeaking();
+                  }
+                });
+              },
+            ),
           PopupMenuButton<String>(
             icon: const Icon(Icons.more_vert),
             tooltip: l10n.moreOptions,
@@ -1237,7 +1251,19 @@ class _MentorScreenState extends ConsumerState<MentorScreen> {
             _AnimatedMessageItem(
               key: ValueKey(chatMsg.message.id),
               reduceMotion: reduceMotion,
-              child: ChatBubble(message: chatMsg.message, reduceMotion: reduceMotion),
+              child: ChatBubble(
+                message: chatMsg.message,
+                reduceMotion: reduceMotion,
+                onSpeak: chatMsg.message.role == MessageRole.mentor &&
+                        _voiceOutputEnabled &&
+                        !chatMsg.message.isStreaming &&
+                        chatMsg.message.content.isNotEmpty
+                    ? () => ref.read(voiceServiceProvider).speak(
+                          chatMsg.message.content,
+                          localeName: l10n.localeName,
+                        )
+                    : null,
+              ),
             ),
             if (isFailed)
               Positioned(

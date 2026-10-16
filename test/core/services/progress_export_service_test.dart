@@ -48,7 +48,7 @@ class _FakeMasteryGraphService implements MasteryGraphService {
       Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
 
   @override
-  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async =>
+  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId, String? subjectId}) async =>
       Result.success(null);
 
   @override
@@ -56,7 +56,7 @@ class _FakeMasteryGraphService implements MasteryGraphService {
       Result.success(null);
 
   @override
-  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async =>
+  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId, String? subjectId}) async =>
       Result.success(null);
 
   @override
@@ -72,7 +72,7 @@ class _FakeMasteryGraphService implements MasteryGraphService {
   Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success([]);
 
   @override
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});
@@ -251,13 +251,13 @@ class _FailingMasteryGraphService implements MasteryGraphService {
   Future<Result<QuestionMasteryState>> getQuestionMastery(String studentId, String questionId) async => Result.success(QuestionMasteryState.initial(studentId: studentId, questionId: questionId, now: DateTime.now()));
 
   @override
-  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async => Result.success(null);
+  Future<Result<void>> recordTopicAttempt({required String studentId, required String topicId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId, String? subjectId}) async => Result.success(null);
 
   @override
   Future<Result<void>> recordQuestionAttempt({required String studentId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs}) async => Result.success(null);
 
   @override
-  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId}) async => Result.success(null);
+  Future<Result<void>> recordAttempt({required String studentId, required String topicId, required String questionId, required bool isCorrect, required int confidence, required int timeSpentMs, String? subtopicId, String? subjectId}) async => Result.success(null);
 
   @override
   Future<Result<List<QuestionMasteryState>>> getQuestionsDueForReview(String studentId, {DateTime? asOf}) async => Result.success([]);
@@ -272,7 +272,7 @@ class _FailingMasteryGraphService implements MasteryGraphService {
   Future<Result<List<QuestionMasteryState>>> getAllQuestionMastery(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success([]);
 
   @override
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});

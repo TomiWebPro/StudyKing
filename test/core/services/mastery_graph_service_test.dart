@@ -18,7 +18,7 @@ class FakeMasteryStateRepo extends MasteryStateRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     if (failOnGet) return Result.failure(failureMessage ?? 'getMasteryState failed');
     final key = '${studentId}_$topicId';
     final state = _masteryStates[key];
@@ -57,7 +57,7 @@ class FakeMasteryStateRepo extends MasteryStateRepository {
   }
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     final states = _masteryStates.entries
         .where((e) => e.key.startsWith('${studentId}_'))
         .map((e) => e.value)

@@ -31,6 +31,7 @@ import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
+import 'package:studyking/core/utils/clock.dart';
 
 final _l10n = AppLocalizationsEn();
 
@@ -121,7 +122,7 @@ class _FakeMasteryGraphRepository extends MasteryGraphRepository {
   }
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
       return Result.success(_masteryStates[key]!);
@@ -308,7 +309,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
         );
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success([]);
   }
 
@@ -382,6 +383,7 @@ Widget _buildTestApp({
   String? fixedStudentId,
   NavigatorObserver? navigatorObserver,
   RouteFactory? onGenerateRoute,
+  Clock? clock,
 }) {
   final id = fixedStudentId ?? 'test-student';
   final repo = masteryGraphRepository ?? _FakeMasteryGraphRepository();
@@ -412,6 +414,7 @@ Widget _buildTestApp({
       plannerServiceProvider.overrideWith((ref) => svc),
       subjectRepositoryProvider.overrideWith((ref) => subjectRepo),
       topicRepositoryProvider.overrideWith((ref) => topicRepo),
+      if (clock != null) clockProvider.overrideWithValue(clock),
     ],
     child: MaterialApp(
       localizationsDelegates: AppLocalizations.localizationsDelegates,

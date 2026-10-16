@@ -103,7 +103,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   }
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
       return Result.success(_masteryStates[key]!);
@@ -595,7 +595,7 @@ class FakeMasteryGraphService {
   bool getWeakTopicsCalled = false;
   bool getAtRiskQuestionsCalled = false;
 
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     getWeakTopicsCalled = true;
     return Result.success([]);
   }

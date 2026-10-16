@@ -47,6 +47,11 @@ class ConversationManager {
   /// `null` means all syllabi are in scope.
   String? get currentSyllabusId => _currentSyllabusId;
   String? get currentSyllabusTitle => _currentSyllabusTitle;
+
+  /// The syllabus goals TutorService injected at lesson start (Vision Next-Term
+  /// §3.1: the tutor must know which syllabi are available so the student can
+  /// switch mid-lesson). Exposed so behaviour can be asserted in tests.
+  List<SyllabusGoal> get availableSyllabi => List.unmodifiable(_availableSyllabi);
   String? _currentSyllabusId;
   String? _currentSyllabusTitle;
   final List<SyllabusGoal> _availableSyllabi;
@@ -61,6 +66,11 @@ class ConversationManager {
   int exerciseCount = 0;
   int correctCount = 0;
   int _consecutiveIncorrect = 0;
+
+  /// Number of consecutive incorrect answers in the current exercise streak.
+  /// Exposed so behaviour (confusion detection, §4.1 prep triggers) can be
+  /// asserted in tests without reaching into private state.
+  int get consecutiveIncorrectCount => _consecutiveIncorrect;
   int _adaptiveReviewExchanges = 0;
   double adaptivePace = 1.0;
   LessonPlan? lessonPlan;
@@ -268,6 +278,7 @@ class ConversationManager {
       scheduledSessionId: scheduledSessionId,
       learningPreferences: learningPreferences,
       feedbackContext: feedbackContext,
+      confusionCount: _consecutiveIncorrect,
     );
 
     try {

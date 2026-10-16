@@ -176,6 +176,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    String? subjectId,
     String? subtopicId,
   }) async {
     recordedAttempts.add({

@@ -58,7 +58,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
         );
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return _fakeRepo.getWeakTopics(studentId);
   }
 
@@ -91,7 +91,7 @@ class FakeMasteryStateRepository extends MasteryStateRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
   }
 
@@ -110,7 +110,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
       accuracy: 0.8,
       currentStreak: 5,
@@ -152,7 +152,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success([
       MasteryState.initial(studentId: studentId, topicId: 'topic1').copyWith(accuracy: 0.4),
     ]);
@@ -1789,7 +1789,7 @@ class _EmptyMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     return Result.success(MasteryState.initial(studentId: studentId, topicId: topicId));
   }
 
@@ -1819,7 +1819,7 @@ class _EmptyMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success([]);
 
   @override
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});
@@ -1870,7 +1870,7 @@ class _FailingMasteryGraphRepository extends MasteryGraphRepository {
   Future<void> init() async => throw Exception('Init failed');
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async =>
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async =>
       Result.failure('Failed to get mastery state');
 
   @override
@@ -1899,7 +1899,7 @@ class _FailingMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.failure('Failed to get weak topics');
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.failure('Failed to get weak topics');
 
   @override
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({});

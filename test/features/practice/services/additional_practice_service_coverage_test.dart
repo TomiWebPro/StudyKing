@@ -1011,6 +1011,7 @@ class _FakeMasteryGraphSvc3 extends MasteryGraphService {
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    String? subjectId,
     String? subtopicId,
   }) async {
     return Result.success(null);

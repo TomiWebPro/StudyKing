@@ -89,7 +89,7 @@ class _FakeMasteryRepository extends MasteryGraphRepository {
   }
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
       return Result.success(_masteryStates[key]!);
@@ -376,7 +376,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
         );
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success([]);
   }
 
@@ -437,6 +437,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    String? subjectId,
     String? subtopicId,
   }) async {
     return Result.success(null);

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/question_model.dart';
@@ -30,6 +32,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    String? subjectId,
     String? subtopicId,
   }) async {
     recordAttemptCallCount++;
@@ -248,6 +251,57 @@ void main() {
       expect(savedAttempt.confidence, 2);
       expect(savedAttempt.userAnswer, 'wrong answer');
     });
+
+    test('recordAttempt persists reviewLog so intervals survive a restart',
+        () async {
+      final realEngine = SpacedRepetitionEngine();
+      final engineRecorder = MasteryRecorder(
+        masteryGraphService: fakeMasteryGraph,
+        srEngine: realEngine,
+        attemptRepo: fakeAttemptRepo,
+        questionMasteryRepo: fakeQuestionMasteryRepo,
+        questionRepo: fakeQuestionRepo,
+      );
+      final question = Question(
+        id: 'q1',
+        text: 'Test?',
+        type: QuestionType.singleChoice,
+        subjectId: 'sub1',
+        topicId: 't1',
+        createdAt: DateTime(2026, 1, 1),
+        updatedAt: DateTime(2026, 1, 1),
+      );
+      await fakeQuestionRepo.save('q1', question);
+      final now = DateTime(2026, 1, 1, 12, 0);
+
+      final result = await engineRecorder.recordAttempt(
+        studentId: 's1',
+        questionId: 'q1',
+        subjectId: 'sub1',
+        topicId: 't1',
+        isCorrect: true,
+        timeSpentMs: 5000,
+        confidence: 4,
+        userAnswer: 'correct',
+        timestamp: now,
+      );
+      expect(result.isSuccess, isTrue);
+
+      final updated = await fakeQuestionRepo.get('q1');
+      // The review log now travels with the persisted SR payload.
+      expect(updated.data!.srDataJson, contains('"log"'));
+
+      // Simulate an app restart: reload the persisted payload and confirm the
+      // engine reads the real next-review date instead of the +1d fallback.
+      final reloaded = QuestionSRData.fromJson(
+        jsonDecode(updated.data!.srDataJson!) as Map<String, dynamic>,
+      );
+      expect(reloaded.reviewLog, isNotEmpty);
+      expect(
+        realEngine.variantGroupNextReview([reloaded]),
+        now.add(const Duration(days: 1)),
+      );
+    });
   });
 
   group('MasteryRecorder - coverage gaps', () {
@@ -417,6 +471,8 @@ void main() {
       expect(updated.data!.srDataJson, isNotNull);
       expect(updated.data!.srDataJson, contains('"r"'));
       expect(updated.data!.srDataJson, contains('"ef"'));
+      // reviewLog must be persisted, not dropped on save.
+      expect(updated.data!.srDataJson, contains('"log"'));
     });
 
     test('recordAttempt uses provided timestamp', () async {
@@ -793,6 +849,7 @@ class _FakeMasteryGraphSvc extends MasteryGraphService {
     required bool isCorrect,
     required int confidence,
     required int timeSpentMs,
+    String? subjectId,
     String? subtopicId,
   }) async {
     lastIsCorrect = isCorrect;

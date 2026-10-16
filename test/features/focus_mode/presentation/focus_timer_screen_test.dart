@@ -355,12 +355,12 @@ class _FakeSettingsRepository extends SettingsRepository {
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success(<MasteryState>[]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success(<MasteryState>[]);
 }
 
 class _ThrowingMasteryGraphService extends MasteryGraphService {
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async =>
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async =>
       throw Exception('Mastery service unavailable');
 }
 

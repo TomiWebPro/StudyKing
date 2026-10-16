@@ -170,17 +170,18 @@ class MentorService {
 
     final hasDataResult = await hasMeaningfulData();
     final hasData = hasDataResult.data ?? true;
-    if (!hasData) {
-      final l10n = lookupAppLocalizations(Locale(_localeName));
-      final msg = l10n.mentorNoSubjects;
-      await _memory.addAssistantMessage(msg);
-      yield msg;
-      return;
-    }
+    final isEmptyUser = !hasData;
 
     { final memResult = await _memory.addUserMessage(message); if (memResult.isFailure) _logger.w('Failed to persist mentor message: ${memResult.error}'); }
 
     final memoryContext = await _buildLongTermMemoryContext();
+
+    // Vision §2.1 + §5: empty-start users (no subjects, no attempts, no
+    // materials) must NOT receive a dead-end string. Instead, route them into
+    // the agent/LLM path with explicit onboarding guidance so they can reach
+    // CreatePlanTool, seed-curriculum, or upload flows.
+    // LLM-facing note — invariant 'en' per AGENTS.md i18n rules.
+    final emptyStartContext = isEmptyUser ? _buildEmptyStartContext() : '';
 
     if (_agent != null) {
       final contextResult = await _contextBuilder.buildContextPrompt();
@@ -188,7 +189,7 @@ class MentorService {
         _logger.w('Failed to build mentor context: ${contextResult.error}');
       }
       final context = contextResult.data ?? '';
-      final systemPrompt = '${_mentorSystemPrompt()}\n\n$context\n\n$memoryContext';
+      final systemPrompt = '${_mentorSystemPrompt()}\n\n$context\n\n$memoryContext\n\n$emptyStartContext';
       final history = _memory.getHistory().map((m) => {
         'role': m.role == MessageRole.student ? 'user' : 'assistant',
         'content': m.content,
@@ -224,7 +225,7 @@ class MentorService {
       _logger.w('Failed to build mentor context: ${contextResult2.error}');
     }
     final context2 = contextResult2.data ?? '';
-    final fullPrompt = '$context2\n\n$memoryContext\n\nStudent: $message';
+    final fullPrompt = '$context2\n\n$memoryContext\n\n$emptyStartContext\n\nStudent: $message';
 
     final buffer = StringBuffer();
     try {
@@ -259,6 +260,19 @@ class MentorService {
     final base = l10n.mentorSystemPrompt;
     final l10nSuffix = lookupAppLocalizations(Locale(_localeName)).mentorSystemPromptScheduling;
     return '$base\n\n$l10nSuffix';
+  }
+
+  /// LLM-facing guidance injected into the system prompt for first-time students
+  /// with no subjects, attempts, or uploaded materials. Per AGENTS.md i18n rules,
+  /// prompt strings remain invariant 'en'. This ensures the agent can engage
+  /// them toward plan creation, seed-curriculum, or upload — never a dead-end
+  /// string (agent_must_read.md §2.1 conversational mentor mode).
+  String _buildEmptyStartContext() {
+    return 'STUDENT ONBOARDING NOTE: This is a first-time student with no subjects, '
+        'no attempts, and no uploaded materials. If they express a learning goal '
+        '(e.g. "learn chemistry in a year"), offer to create a study plan via '
+        'create_plan, suggest a standard curriculum seed, or guide them to upload '
+        'materials. Surface a clear next step — do not dead-end.';
   }
 
   Future<String> _buildLongTermMemoryContext() async {

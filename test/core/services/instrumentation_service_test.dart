@@ -24,7 +24,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   Future<void> init() async {}
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
       final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
         accuracy: 0.8,
         readinessScore: 0.8,
@@ -55,7 +55,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   Future<Result<List<MasteryState>>> getTopicsNeedingReview(String studentId) async => Result.success([]);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success([]);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success([]);
 
   @override
   Future<Result<Map<String, dynamic>>> getMasterySnapshot(String studentId) async => Result.success({

@@ -260,7 +260,7 @@ class FakeMasteryGraphService extends MasteryGraphService {
   FakeMasteryGraphService() : super();
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success(_weakTopics);
   }
 

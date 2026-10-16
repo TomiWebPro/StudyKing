@@ -42,6 +42,9 @@ class FakeLlmService extends LlmService {
   bool shouldThrowOnChat = false;
   bool shouldThrowStream = false;
 
+  /// Captures the last systemPrompt passed to chatStream, for asserting prompt directives.
+  String? lastSystemPrompt;
+
   @override
   Future<Result<String>> chat({
     required String message,
@@ -69,6 +72,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async* {
+    lastSystemPrompt = systemPrompt;
     if (shouldThrowStream) throw Exception('Simulated stream error');
     if (streamChunks != null) {
       for (final chunk in streamChunks!) {
@@ -762,6 +766,42 @@ void main() {
         await manager.sendMessage('I need practice').toList();
 
         expect(manager.phase, equals(ConversationPhase.exercise));
+      });
+    });
+
+    group('confusion detection directive', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('injects confusion directive into system prompt after 2 consecutive incorrect',
+          () async {
+        await manager.sendMessage('Hello').toList();
+        manager.phase = ConversationPhase.exercise;
+
+        // Two incorrect answers → _consecutiveIncorrect == 2
+        await manager.sendMessage('wrong').toList();
+        await manager.sendMessage('ok').toList(); // transitions to adaptiveReview
+        manager.phase = ConversationPhase.exercise;
+        await manager.sendMessage('wrong').toList();
+
+        expect(manager.consecutiveIncorrectCount, equals(2));
+
+        // Next sendMessage should include confusion directive in the prompt
+        manager.phase = ConversationPhase.teaching;
+        await manager.sendMessage("I don't get it").toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(llmService.lastSystemPrompt!, contains('STUDENT CONFUSION DETECTED'));
+        expect(llmService.lastSystemPrompt!, contains('Switch explanation modality'));
+      });
+
+      test('does not inject confusion directive when no confusion history',
+          () async {
+        await manager.sendMessage('Hello').toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(llmService.lastSystemPrompt!, isNot(contains('STUDENT CONFUSION DETECTED')));
       });
     });
 

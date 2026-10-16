@@ -287,6 +287,51 @@ void main() {
         expect(entry.systemPrompt, contains('Atomic Structure'));
         expect(entry.systemPrompt, contains('AI tutor'));
       });
+
+      test('system prompt includes confusion directive when confusionCount >= 2', () {
+        final entry = promptSet.tutorMessage(
+          subjectId: _testSubjectId,
+          topicTitle: _testTopicTitle,
+          adaptivePace: 1.0,
+          phase: ConversationPhase.teaching,
+          confusionCount: 2,
+        );
+        expect(entry.systemPrompt, contains('STUDENT CONFUSION DETECTED'));
+        expect(entry.systemPrompt, contains('Switch explanation modality'));
+        expect(entry.systemPrompt, contains('step-by-step breakdown'));
+      });
+
+      test('system prompt includes confusion directive with correct count', () {
+        final entry = promptSet.tutorMessage(
+          subjectId: _testSubjectId,
+          topicTitle: _testTopicTitle,
+          adaptivePace: 1.0,
+          phase: ConversationPhase.teaching,
+          confusionCount: 3,
+        );
+        expect(entry.systemPrompt, contains('3 times in a row'));
+      });
+
+      test('system prompt omits confusion directive when confusionCount < 2', () {
+        final entry = promptSet.tutorMessage(
+          subjectId: _testSubjectId,
+          topicTitle: _testTopicTitle,
+          adaptivePace: 1.0,
+          phase: ConversationPhase.teaching,
+          confusionCount: 1,
+        );
+        expect(entry.systemPrompt, isNot(contains('STUDENT CONFUSION DETECTED')));
+      });
+
+      test('system prompt omits confusion directive when confusionCount is 0 (default)', () {
+        final entry = promptSet.tutorMessage(
+          subjectId: _testSubjectId,
+          topicTitle: _testTopicTitle,
+          adaptivePace: 1.0,
+          phase: ConversationPhase.teaching,
+        );
+        expect(entry.systemPrompt, isNot(contains('STUDENT CONFUSION DETECTED')));
+      });
     });
 
     group('summary', () {

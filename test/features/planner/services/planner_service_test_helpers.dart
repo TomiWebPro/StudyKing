@@ -50,7 +50,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   }
 
   @override
-  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId) async {
+  Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
     final key = '${studentId}_$topicId';
     if (_masteryStates.containsKey(key)) {
       return Result.success(_masteryStates[key]!);

@@ -392,7 +392,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return _result;
   }
 }
@@ -402,7 +402,7 @@ class _FakeMasteryGraphServiceFailure extends MasteryGraphService {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.failure('error');
   }
 }
@@ -449,7 +449,7 @@ class _FakeMasteryGraphSvc2 extends MasteryGraphService {
   Future<Result<void>> init() async => Result.success(null);
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success(<MasteryState>[]);
   }
 }

@@ -177,6 +177,20 @@ void main() {
       );
     });
 
+    test('maps off-period prep features to background', () {
+      // Vision Next-Term §4.1: prep tasks (PDF ingestion, question variants,
+      // lesson pre-generation, embeddings, mastery refresh) are all off-period
+      // background work. Mapping them to background ensures LlmUsageMeter
+      // records them with a prep-category taskType, not null — so
+      // PrepBudgetService.totalLiveTokens() does not mistakenly count prep
+      // tokens as live.
+      expect(LlmTaskType.fromFeature('pdf_ingestion'), equals(LlmTaskType.background));
+      expect(LlmTaskType.fromFeature('question_variants'), equals(LlmTaskType.background));
+      expect(LlmTaskType.fromFeature('lesson_prep'), equals(LlmTaskType.background));
+      expect(LlmTaskType.fromFeature('embeddings'), equals(LlmTaskType.background));
+      expect(LlmTaskType.fromFeature('mastery_refresh'), equals(LlmTaskType.background));
+    });
+
     test('returns null for unrecognized features', () {
       expect(LlmTaskType.fromFeature('weather_lookup'), isNull);
     });

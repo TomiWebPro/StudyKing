@@ -70,6 +70,16 @@ enum LlmTaskType {
     if (f.contains('background') || f.contains('idle')) {
       return LlmTaskType.background;
     }
+    // Vision Next-Term §4.1 prep features: all map to background so the
+    // LlmUsageMeter records them with a prep-category taskType (not null),
+    // keeping spend attributable to PrepBudgetService categories.
+    if (f.contains('pdf_ingestion') ||
+        f.contains('question_variants') ||
+        f.contains('lesson_prep') ||
+        f.contains('embeddings') ||
+        f.contains('mastery_refresh')) {
+      return LlmTaskType.background;
+    }
     return null;
   }
 }

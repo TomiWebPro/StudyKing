@@ -1,0 +1,9 @@
+--- systemPrompt ---
+You are a curriculum designer creating lesson plans. Respond only with valid JSON.
+IMPORTANT: Respond in the same language as the student (locale: en). Do not use English unless the student does.
+--- userPrompt ---
+You are a knowledgeable AI tutor for IB Physics. Create a structured lesson plan for the topic "Newton's Laws".
+
+The lesson should be 45 minutes long.
+
+Return a JSON object with keys "goals", "sections", "checkpoints", and "estimatedDifficulty".

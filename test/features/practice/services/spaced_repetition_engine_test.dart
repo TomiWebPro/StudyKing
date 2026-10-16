@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_engine.dart';
 
@@ -256,6 +258,71 @@ void main() {
       expect(restored.easeFactor, entry.easeFactor);
       expect(restored.interval, entry.interval);
       expect(restored.nextReview, entry.nextReview);
+    });
+  });
+
+  group('QuestionSRData serialization', () {
+    const engine = SpacedRepetitionEngine();
+    final now = DateTime(2026, 1, 1, 12, 0);
+
+    test('round-trips all fields including reviewLog', () {
+      final scheduled = engine.scheduleReview(
+        questionId: 'q1',
+        grade: 4,
+        now: now,
+      );
+      final data = scheduled.updatedData;
+
+      // Persist as a JSON string (mirrors srDataJson storage on disk), reload.
+      final reloaded = QuestionSRData.fromJson(
+        jsonDecode(jsonEncode(data.toJson())) as Map<String, dynamic>,
+      );
+
+      expect(reloaded.repetitions, data.repetitions);
+      expect(reloaded.easeFactor, data.easeFactor);
+      expect(reloaded.previousInterval, data.previousInterval);
+      expect(reloaded.lastReview, data.lastReview);
+      expect(reloaded.reviewLog, isNotEmpty);
+      expect(reloaded.reviewLog.length, data.reviewLog.length);
+      expect(reloaded.reviewLog.single.questionId, 'q1');
+      expect(reloaded.reviewLog.single.nextReview, data.reviewLog.single.nextReview);
+    });
+
+    test(
+        'persisted reviewLog drives identical scheduling decisions after reload',
+        () {
+      final scheduled = engine.scheduleReview(
+        questionId: 'q1',
+        grade: 4,
+        now: now,
+      );
+      final reloaded = QuestionSRData.fromJson(
+        jsonDecode(jsonEncode(scheduled.updatedData.toJson()))
+            as Map<String, dynamic>,
+      );
+
+      // variantGroupNextReview reads reviewLog.last.nextReview when present,
+      // so it must yield the persisted next-review date, not a +1d fallback.
+      expect(engine.variantGroupNextReview([reloaded]), scheduled.nextReview);
+
+      // isConceptDue: just reviewed -> not due now; past next-review -> due.
+      expect(engine.isConceptDue([reloaded], now: now), isFalse);
+      expect(
+        engine.isConceptDue(
+          [reloaded],
+          now: scheduled.nextReview.add(const Duration(days: 1)),
+        ),
+        isTrue,
+      );
+    });
+
+    test('fromJson tolerates legacy payloads without a reviewLog', () {
+      final legacy = jsonDecode('{"r":1,"ef":2.5,"pi":86400000,"lr":1700000000000}')
+          as Map<String, dynamic>;
+      final data = QuestionSRData.fromJson(legacy);
+      expect(data.repetitions, 1);
+      expect(data.easeFactor, 2.5);
+      expect(data.reviewLog, isEmpty);
     });
   });
 }

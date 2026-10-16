@@ -1,0 +1,6 @@
+# Golden PNG fixtures are binary test artifacts, not tracked in git.
+# They are regenerated locally via:  flutter test --update-goldens
+# CI may cache them or regenerate on demand.
+# Keep the directory itself (and this .gitignore) so the convention
+# `test/goldens/` always exists.
+*.png

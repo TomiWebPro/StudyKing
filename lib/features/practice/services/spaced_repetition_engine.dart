@@ -80,6 +80,39 @@ class QuestionSRData {
       reviewLog: reviewLog ?? this.reviewLog,
     );
   }
+
+  /// Serialises every field, including the [reviewLog], so that scheduling
+  /// decisions survive an app restart.
+  ///
+  /// The abbreviated keys (`r`, `ef`, `pi`, `lr`) are retained for backward
+  /// compatibility with previously persisted payloads; `log` is additive, so
+  /// legacy data without it deserialises to an empty log.
+  Map<String, dynamic> toJson() => {
+        'r': repetitions,
+        'ef': easeFactor,
+        if (previousInterval != null)
+          'pi': previousInterval!.inMilliseconds,
+        if (lastReview != null) 'lr': lastReview!.millisecondsSinceEpoch,
+        'log': reviewLog.map((e) => e.toJson()).toList(),
+      };
+
+  /// Deserialises a payload produced by [toJson] (or a legacy payload lacking
+  /// a `log` key). Never throws — returns an empty [QuestionSRData] instead.
+  factory QuestionSRData.fromJson(Map<String, dynamic> json) => QuestionSRData(
+        repetitions: json['r'] as int? ?? 0,
+        easeFactor: (json['ef'] as num?)?.toDouble() ?? 2.5,
+        previousInterval: (json['pi'] as int?) != null
+            ? Duration(milliseconds: json['pi'] as int)
+            : null,
+        lastReview: (json['lr'] as int?) != null
+            ? DateTime.fromMillisecondsSinceEpoch(json['lr'] as int)
+            : null,
+        reviewLog: (json['log'] as List<dynamic>?)
+            ?.map((e) =>
+                ReviewLogEntry.fromJson(Map<String, dynamic>.from(e as Map)))
+            .toList() ??
+            const [],
+      );
 }
 
 class SM2Result {

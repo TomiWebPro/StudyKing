@@ -1,0 +1,208 @@
+import 'dart:typed_data';
+
+import 'package:flutter/material.dart';
+
+import 'renderer.dart';
+
+/// Builds a golden file path from locale, size, and theme.
+typedef GoldenPathBuilder = String Function(
+  Locale locale,
+  Size size,
+  ThemeMode theme,
+);
+
+/// Renders [widget] across a matrix of [locales] × [sizes] and returns a
+/// map of golden-path → PNG bytes.
+///
+/// This is the convenience helper for generating the full golden matrix
+/// described in `vision_next_term.md` §1.1 (locale × width × theme/light-dark).
+///
+/// Pass [themeMode] = `ThemeMode.light` or `ThemeMode.dark` to render a
+/// single theme. For both, call twice and merge the maps.
+///
+/// [pathBuilder] receives the locale, size, and theme mode and returns the
+/// golden file path (convention: `test/goldens/<widget>_<locale>_<width>_<theme>.png`).
+Future<Map<String, Uint8List>> renderGoldenMatrix(
+  Widget widget, {
+  required List<Locale> locales,
+  required List<Size> sizes,
+  ThemeMode themeMode = ThemeMode.system,
+  Brightness? brightness,
+  double pixelRatio = 2.0,
+  double textScale = 1.0,
+  TextDirection textDirection = TextDirection.ltr,
+  List<LocalizationsDelegate<dynamic>>? localizationsDelegates,
+  List<Locale>? supportedLocales,
+  required GoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+
+  for (final locale in locales) {
+    for (final size in sizes) {
+      final path = pathBuilder(locale, size, themeMode);
+      final png = await renderWidgetToPng(
+        widget,
+        size: size,
+        pixelRatio: pixelRatio,
+        locale: locale,
+        themeMode: themeMode,
+        textScale: textScale,
+        textDirection: textDirection,
+        localizationsDelegates: localizationsDelegates,
+        supportedLocales: supportedLocales,
+        brightness: brightness,
+      );
+      results[path] = png;
+    }
+  }
+
+  return results;
+}
+
+/// Renders [widget] across a matrix of [locales] × [sizes] ×
+/// [themeModes] and returns a map of golden-path → PNG bytes.
+///
+/// This is a convenience wrapper around [renderGoldenMatrix] that
+/// iterates over all requested theme modes, producing the complete
+/// locale × width × theme matrix described in `vision_next_term.md` §1.1
+/// in a single call — no manual merge step required.
+///
+/// [pathBuilder] receives the locale, size, and theme mode and returns the
+/// golden file path (convention: `test/goldens/<widget>_<locale>_<width>_<theme>.png`).
+Future<Map<String, Uint8List>> renderGoldenMatrixFull(
+  Widget widget, {
+  required List<Locale> locales,
+  required List<Size> sizes,
+  required List<ThemeMode> themeModes,
+  Brightness? brightness,
+  double pixelRatio = 2.0,
+  double textScale = 1.0,
+  TextDirection textDirection = TextDirection.ltr,
+  List<LocalizationsDelegate<dynamic>>? localizationsDelegates,
+  List<Locale>? supportedLocales,
+  required GoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+
+  for (final themeMode in themeModes) {
+    final matrix = await renderGoldenMatrix(
+      widget,
+      locales: locales,
+      sizes: sizes,
+      themeMode: themeMode,
+      brightness: brightness,
+      pixelRatio: pixelRatio,
+      textScale: textScale,
+      textDirection: textDirection,
+      localizationsDelegates: localizationsDelegates,
+      supportedLocales: supportedLocales,
+      pathBuilder: pathBuilder,
+    );
+    results.addAll(matrix);
+  }
+
+  return results;
+}
+
+/// Default path builder following the convention:
+/// `test/goldens/<name>_<locale>_<width>_<theme>.png`
+String buildGoldenPath(
+  String name,
+  Locale locale,
+  Size size,
+  ThemeMode theme,
+) {
+  final themeName = switch (theme) {
+    ThemeMode.light => 'light',
+    ThemeMode.dark => 'dark',
+    ThemeMode.system => 'system',
+  };
+  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}_$themeName.png';
+}
+
+/// Path builder for [renderGoldenTextScaleSweep].
+///
+/// Receives the locale, size, text scale, and theme mode and returns the
+/// golden file path. Use [buildGoldenPathWithTextScale] to follow the
+/// conventional `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`
+/// path.
+typedef TextScaleGoldenPathBuilder = String Function(
+  Locale locale,
+  Size size,
+  double textScale,
+  ThemeMode theme,
+);
+
+/// Default path convention for a text-scale sweep:
+/// `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`.
+///
+/// `<textScale>` is written with one decimal place and an `x` separator
+/// (e.g. `x1.0`, `x1.5`, `x2.0`) so every scale yields a unique, sortable
+/// filename, mirroring [buildGoldenPath] but extending it with the scale.
+String buildGoldenPathWithTextScale(
+  String name,
+  Locale locale,
+  Size size,
+  double textScale,
+  ThemeMode theme,
+) {
+  final themeName = switch (theme) {
+    ThemeMode.light => 'light',
+    ThemeMode.dark => 'dark',
+    ThemeMode.system => 'system',
+  };
+  final scaleName = textScale.toStringAsFixed(1);
+  return 'test/goldens/${name}_${locale.languageCode}_${size.width.toInt()}x${scaleName}_$themeName.png';
+}
+
+/// Renders [widget] across a sweep of [textScales] (keeping locale, size, and
+/// theme fixed) and returns a map of golden-path -> PNG bytes.
+///
+/// Supports the "text-scale sweep" helper from `vision_next_term.md` §1.1: a
+/// widget must stay readable and overflow-free at larger font sizes (an
+/// accessibility concern). Each text scale produces a distinct PNG, so
+/// regressions in text-scaling behaviour are caught by `matchesGoldenFile`.
+///
+/// [pathBuilder] receives the locale, size, text scale, and theme mode and
+/// should return the golden file path. Use [buildGoldenPathWithTextScale] for
+/// the conventional `test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`
+/// path.
+///
+/// Must be called from within a `testWidgets` callback so that the
+/// `TestWidgetsFlutterBinding` is in the "in test" state (see
+/// [renderWidgetToPng]).
+Future<Map<String, Uint8List>> renderGoldenTextScaleSweep(
+  Widget widget, {
+  required Locale locale,
+  required Size size,
+  required List<double> textScales,
+  ThemeMode themeMode = ThemeMode.system,
+  Brightness? brightness,
+  double pixelRatio = 2.0,
+  TextDirection textDirection = TextDirection.ltr,
+  List<LocalizationsDelegate<dynamic>>? localizationsDelegates,
+  List<Locale>? supportedLocales,
+  required TextScaleGoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+  if (textScales.isEmpty) {
+    return results;
+  }
+  for (final textScale in textScales) {
+    final path = pathBuilder(locale, size, textScale, themeMode);
+    final png = await renderWidgetToPng(
+      widget,
+      size: size,
+      pixelRatio: pixelRatio,
+      locale: locale,
+      themeMode: themeMode,
+      textScale: textScale,
+      textDirection: textDirection,
+      localizationsDelegates: localizationsDelegates,
+      supportedLocales: supportedLocales,
+      brightness: brightness,
+    );
+    results[path] = png;
+  }
+  return results;
+}

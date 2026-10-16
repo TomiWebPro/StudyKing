@@ -54,7 +54,7 @@ class _FakeMasteryStateRepo extends MasteryStateRepository {
   }
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async {
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async {
     return Result.success([]);
   }
 

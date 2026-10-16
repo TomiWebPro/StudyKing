@@ -142,31 +142,15 @@ class SpacedRepetitionService {
   QuestionSRData _deserializeSrData(String? json) {
     if (json == null || json.isEmpty) return const QuestionSRData();
     try {
-      final map = jsonDecode(json) as Map<String, dynamic>;
-      return QuestionSRData(
-        repetitions: map['r'] as int? ?? 0,
-        easeFactor: (map['ef'] as num?)?.toDouble() ?? 2.5,
-        previousInterval: map['pi'] != null
-            ? Duration(milliseconds: map['pi'] as int)
-            : null,
-        lastReview: map['lr'] != null
-            ? DateTime.fromMillisecondsSinceEpoch(map['lr'] as int)
-            : null,
-      );
+      return QuestionSRData.fromJson(jsonDecode(json) as Map<String, dynamic>);
     } catch (e) {
       _logger.w('Error deserializing SR data', e);
       return const QuestionSRData();
     }
   }
 
-  String _serializeSrData(QuestionSRData data) {
-    return jsonEncode({
-      'r': data.repetitions,
-      'ef': data.easeFactor,
-      if (data.previousInterval != null) 'pi': data.previousInterval!.inMilliseconds,
-      if (data.lastReview != null) 'lr': data.lastReview!.millisecondsSinceEpoch,
-    });
-  }
+  String _serializeSrData(QuestionSRData data) =>
+      jsonEncode(data.toJson());
 
   /// Get question due history
   Future<Result<List<DateTime>>> getQuestionDueTimes(

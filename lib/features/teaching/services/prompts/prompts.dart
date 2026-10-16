@@ -56,6 +56,7 @@ class ConversationPromptSet {
     String? scheduledSessionId,
     LearningPreference? learningPreferences,
     String? feedbackContext,
+    int confusionCount = 0,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -84,6 +85,10 @@ class ConversationPromptSet {
     if (feedbackContext != null && feedbackContext.isNotEmpty) {
       systemPrompt = '$systemPrompt\n\n$feedbackContext';
     }
+    if (confusionCount >= 2) {
+      final confusionDirective = _buildConfusionDirective(confusionCount);
+      systemPrompt = '$systemPrompt\n\n$confusionDirective';
+    }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);
   }
@@ -103,6 +108,21 @@ class ConversationPromptSet {
       hints.add('Spaced repetition is effective for this student. Include review of previously covered material.');
     }
     return hints.isEmpty ? '' : 'Learning style preferences:\n${hints.join('\n')}';
+  }
+
+  /// Builds an LLM-facing confusion-adaptation directive that is injected
+  /// into the tutor system prompt when the student shows repeated difficulty
+  /// (two or more consecutive incorrect exercise answers).
+  ///
+  /// Per AGENTS.md, LLM-facing prompt strings may remain in invariant English.
+  String _buildConfusionDirective(int confusionCount) {
+    return 'STUDENT CONFUSION DETECTED: the student has shown difficulty '
+        '$confusionCount times in a row. Adapt your next response:\n'
+        '- Switch explanation modality: use a real-world analogy, '
+        'a visual/physical description, or a step-by-step breakdown.\n'
+        '- Ask the student to share their working or thinking process.\n'
+        '- If confusion persists, suggest a brief practice session on the '
+        'prerequisite concept before continuing.';
   }
 
   PromptEntry summary({

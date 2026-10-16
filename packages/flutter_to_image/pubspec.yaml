@@ -1,0 +1,24 @@
+name: flutter_to_image
+description: >
+  A small Dart/Flutter package that renders any Flutter widget to a PNG
+  image (Uint8List) headlessly under `flutter test` — no emulator or GPU
+  required. Lets tests and agents see pixels so UI can be optimised
+  visually (overflow, contrast, density, hierarchy, stale-l10n, desktop
+  width, RTL layout).
+version: 0.1.0
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_test:
+    sdk: flutter
+
+# The package is itself exercised with flutter_test via its own test/ dir.
+dev_dependencies:
+  flutter_lints: ^5.0.0
+
+flutter:
+  uses-material-design: true
