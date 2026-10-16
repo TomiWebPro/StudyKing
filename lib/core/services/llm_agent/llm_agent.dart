@@ -76,6 +76,34 @@ class LlmAgent {
     return _idleExecutor.enqueue(description, task, requiresHeavy: true);
   }
 
+  /// Enqueues an off-period prep task via [IdleExecutor.enqueuePrepTool],
+  /// attributing it to the correct `feature`/`taskType` so that
+  /// [LlmTaskManager] categorises prep spend under the right prep bucket
+  /// (Vision Next-Term §4.1–§4.3) instead of the generic `background`
+  /// bucket used by [enqueueBackgroundTask].
+  ///
+  /// The [task] closure must return a result map with a `success` boolean
+  /// (and optionally an `error` string), matching the prep-tool contract
+  /// ([PrepTool.execute] / [IdleExecutor.enqueuePrepTool]) so the executor
+  /// can record success/failure against the correct prep category.
+  Future<void> enqueuePrepTask(
+    String description,
+    Future<Map<String, dynamic>> Function() task, {
+    required bool requiresHeavy,
+    required String feature,
+    required String taskType,
+    String? subjectId,
+  }) {
+    return _idleExecutor.enqueuePrepTool(
+      description,
+      task,
+      requiresHeavy: requiresHeavy,
+      feature: feature,
+      taskType: taskType,
+      subjectId: subjectId,
+    );
+  }
+
   String? recallFact(String key) => _memoryStore.recallFact(_studentId, key);
 
   Future<void> rememberFact(String key, String value) => _memoryStore.rememberFact(_studentId, key, value);
@@ -94,6 +122,7 @@ class AgentFactory {
     List<AgentTool>? tools,
     SystemMonitorService? systemMonitor,
     bool Function(DateTime now)? shouldDeferForQuietHours,
+    bool Function(String subjectId)? isPrepEnabledForSubject,
   }) {
     final toolRegistry = ToolRegistry();
     if (tools != null) {
@@ -108,6 +137,7 @@ class AgentFactory {
       studentId: studentId,
       systemMonitor: systemMonitor,
       shouldDeferForQuietHours: shouldDeferForQuietHours,
+      isPrepEnabledForSubject: isPrepEnabledForSubject,
     );
     idleExecutor.startIdleMonitoring();
 

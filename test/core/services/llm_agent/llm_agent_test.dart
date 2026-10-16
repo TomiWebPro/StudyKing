@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/agent_memory.dart';
@@ -5,6 +7,7 @@ import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_task_manager.dart';
 
 class FakeAgentLoop extends AgentLoop {
   String? capturedMessage;
@@ -65,11 +68,42 @@ class FakeIdleExecutor extends IdleExecutor {
   bool disposed = false;
   String? enqueuedDescription;
   Future<void> Function()? enqueuedTask;
+  bool? enqueuedRequiresHeavy;
+
+  // Captures for enqueuePrepTool (Vision Next-Term §4 prep wiring).
+  String? prepEnqueuedDescription;
+  Future<Map<String, dynamic>> Function()? prepEnqueuedTask;
+  bool? prepEnqueuedRequiresHeavy;
+  String? prepEnqueuedFeature;
+  String? prepEnqueuedTaskType;
+  String? prepEnqueuedSubjectId;
 
   @override
-  Future<void> enqueue(String description, Future<void> Function() task) async {
+  Future<void> enqueue(
+    String description,
+    Future<void> Function() task, {
+    bool requiresHeavy = false,
+  }) async {
     enqueuedDescription = description;
     enqueuedTask = task;
+    enqueuedRequiresHeavy = requiresHeavy;
+  }
+
+  @override
+  Future<void> enqueuePrepTool(
+    String description,
+    Future<Map<String, dynamic>> Function() task, {
+    required bool requiresHeavy,
+    required String feature,
+    required String taskType,
+    String? subjectId,
+  }) async {
+    prepEnqueuedDescription = description;
+    prepEnqueuedTask = task;
+    prepEnqueuedRequiresHeavy = requiresHeavy;
+    prepEnqueuedFeature = feature;
+    prepEnqueuedTaskType = taskType;
+    prepEnqueuedSubjectId = subjectId;
   }
 
   @override
@@ -143,6 +177,83 @@ void main() {
 
       expect(fakeIdleExecutor.enqueuedDescription, 'test task');
       expect(fakeIdleExecutor.enqueuedTask, task);
+      // Post-lesson prep is heavy off-period work and must be marked so the
+      // SystemMonitorService can defer it under load.
+      expect(fakeIdleExecutor.enqueuedRequiresHeavy, isTrue);
+    });
+
+    test(
+        'enqueuePrepTask delegates to idleExecutor.enqueuePrepTool with feature '
+        'and taskType', () async {
+      Future<Map<String, dynamic>> task() async => {'success': true};
+      await agent.enqueuePrepTask(
+        'Next topic lesson prep',
+        task,
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+      );
+
+      expect(fakeIdleExecutor.prepEnqueuedDescription, 'Next topic lesson prep');
+      expect(fakeIdleExecutor.prepEnqueuedTask, task);
+      expect(fakeIdleExecutor.prepEnqueuedRequiresHeavy, isTrue);
+      expect(fakeIdleExecutor.prepEnqueuedFeature, 'lesson_prep');
+      expect(fakeIdleExecutor.prepEnqueuedTaskType, 'lesson_prep');
+      expect(fakeIdleExecutor.prepEnqueuedSubjectId, 'chemistry');
+    });
+
+    test(
+        'enqueuePrepTask routes through real IdleExecutor so LlmTask is recorded '
+        'under lesson_prep (not background)', () async {
+      // Proves the production wiring: the IdleAgent.enqueuePrepTask path reaches
+      // IdleExecutor.enqueuePrepTool, which stamps the LlmTask record with the
+      // correct taskType/feature instead of the generic 'background' bucket that
+      // enqueueBackgroundTask would have used. (idle_executor_test.dart already
+      // proves enqueuePrepTool's mechanism; this proves LlmAgent reaches it.)
+      final manager = LlmTaskManager();
+      final realExecutor = IdleExecutor(llmTaskManager: manager);
+      final wiredAgent = LlmAgent(
+        loop: fakeLoop,
+        toolRegistry: fakeToolRegistry,
+        memoryStore: fakeMemory,
+        idleExecutor: realExecutor,
+        studentId: 'test-student',
+      );
+
+      var taskRan = false;
+      final completer = Completer<void>();
+      await wiredAgent.enqueuePrepTask(
+        'Next topic lesson prep',
+        () async {
+          taskRan = true;
+          // Signal the test that the task body executed so assertions run after
+          // the LlmTaskManager completeTask() call.
+          completer.complete();
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+      );
+
+      // enqueuePrepTool fires _tryExecuteNext() without awaiting it, so the task
+      // may still be mid-flight. Wait for the task body to run.
+      await completer.future;
+      // Flush remaining microtasks so _tryExecuteNext's post-task
+      // completeTask(startTask) continuation settles.
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+
+      expect(taskRan, isTrue);
+      expect(manager.tasks, isNotEmpty,
+          reason: 'LlmTaskManager should record the prep task');
+      expect(manager.tasks.any((t) => t.taskType == 'lesson_prep'), isTrue,
+          reason: 'next-topic lesson prep must be categorised as lesson_prep');
+      expect(manager.tasks.any((t) => t.feature == 'lesson_prep'), isTrue);
+      // The lesson_prep task must NOT be lost in the generic background bucket.
+      expect(manager.tasks.any((t) => t.taskType == 'background'), isFalse);
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
     });
 
     test('recallFact delegates to memoryStore', () {

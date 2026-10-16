@@ -441,6 +441,145 @@ void main() {
       executor.dispose();
     });
   });
+
+  group('IdleExecutor per-subject opt-in enforcement', () {
+    // Mirrors a PrepBudget whose disabledSubjects contains only 'chemistry':
+    // the predicate returns true (enabled) for every subject except chemistry.
+    bool onlyChemistryDisabled(String subjectId) => subjectId != 'chemistry';
+
+    test('defers prep task for a student-disabled subject', () async {
+      final executor = IdleExecutor(
+        isPrepEnabledForSubject: onlyChemistryDisabled,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'ingest chemistry textbook',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        subjectId: 'chemistry',
+      );
+
+      // The student paused Chemistry, so no tokens may be spent on it: the
+      // task is deferred (not executed) and remains pending.
+      expect(taskRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+      expect(executor.queue.first.isCompleted, isFalse);
+      expect(executor.queue.first.isRunning, isFalse);
+
+      executor.dispose();
+    });
+
+    test('runs prep task for an enabled subject', () async {
+      final executor = IdleExecutor(
+        isPrepEnabledForSubject: onlyChemistryDisabled,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'ingest biology textbook',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        subjectId: 'biology',
+      );
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test('runs subject-agnostic task even with the subject gate injected',
+        () async {
+      // Tasks without a subjectId (e.g. adherence maintenance attributed to
+      // the background bucket) must not be blocked by the per-subject gate —
+      // there is no subject to consult.
+      final executor = IdleExecutor(
+        isPrepEnabledForSubject: onlyChemistryDisabled,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'subject-agnostic maintenance',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'background',
+        taskType: 'background',
+      );
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+
+    test('does not register a disabled-subject task on LlmTaskManager', () async {
+      // Vision §4.2: a skipped task must not masquerade as a running/failed
+      // prep job in the task manager — it never entered execution.
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        isPrepEnabledForSubject: onlyChemistryDisabled,
+      );
+
+      await executor.enqueuePrepTool(
+        'ingest chemistry textbook',
+        () async {
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        subjectId: 'chemistry',
+      );
+
+      expect(
+        manager.tasks,
+        isEmpty,
+        reason: 'Disabled-subject task must never reach the task manager',
+      );
+
+      executor.dispose();
+    });
+
+    test('runs subject-scoped task when no subject gate is injected', () async {
+      // Backward compatible: without the callback the executor behaves as it
+      // always has (subjectId is simply not consulted).
+      final executor = IdleExecutor();
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'prep with no gate',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+      );
+
+      expect(taskRan, isTrue);
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+  });
 }
 
 /// Hand-written, mutable fake [SystemMonitorService] for deterministic testing

@@ -14,6 +14,13 @@ class IdleTask {
   final bool requiresHeavy;
   final String? taskType;
   final String? feature;
+
+  /// Subject this prep task belongs to, for per-subject opt-in enforcement
+  /// (Vision Next-Term §4.2 "per-syllabus opt-in"). When non-null and the
+  /// subject has been disabled by the student, the [IdleExecutor] defers the
+  /// task so no tokens are spent on a syllabus the student paused.
+  final String? subjectId;
+
   bool isRunning;
   bool isCompleted;
   String? error;
@@ -26,6 +33,7 @@ class IdleTask {
     this.requiresHeavy = false,
     this.taskType,
     this.feature,
+    this.subjectId,
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
@@ -44,6 +52,14 @@ class IdleExecutor {
   /// deterministic fake-clock (e.g. 2am within a 22–8 window).
   final bool Function(DateTime now)? _shouldDeferForQuietHours;
 
+  /// Optional callback consulted before running a task that carries a
+  /// [IdleTask.subjectId]. When it returns false the task is left in the queue
+  /// (deferred) and no tokens are spent, realising vision §4.2 "per-syllabus
+  /// opt-in": a student who toggles a subject off gets no prep for that
+  /// syllabus while away. Inject in tests with a predicate mirroring a
+  /// `PrepBudget` whose `disabledSubjects` contains the subject.
+  final bool Function(String subjectId)? _isPrepEnabledForSubject;
+
   final List<IdleTask> _queue = [];
   Timer? _idleCheckTimer;
   bool _isExecuting = false;
@@ -53,9 +69,11 @@ class IdleExecutor {
     String studentId = 'default',
     SystemMonitorService? systemMonitor,
     bool Function(DateTime now)? shouldDeferForQuietHours,
+    bool Function(String subjectId)? isPrepEnabledForSubject,
   })  : _llmTaskManager = llmTaskManager,
         _systemMonitor = systemMonitor,
-        _shouldDeferForQuietHours = shouldDeferForQuietHours;
+        _shouldDeferForQuietHours = shouldDeferForQuietHours,
+        _isPrepEnabledForSubject = isPrepEnabledForSubject;
 
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
@@ -95,6 +113,7 @@ class IdleExecutor {
     required bool requiresHeavy,
     required String feature,
     required String taskType,
+    String? subjectId,
   }) async {
     final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
     _queue.add(IdleTask(
@@ -111,6 +130,7 @@ class IdleExecutor {
       requiresHeavy: requiresHeavy,
       feature: feature,
       taskType: taskType,
+      subjectId: subjectId,
     ));
     if (_queue.length > 50) {
       _queue.removeAt(0);
@@ -148,6 +168,23 @@ class IdleExecutor {
     if (next.requiresHeavy && _systemMonitor != null && !_systemMonitor.canRunHeavyPrepNow) {
       _logger.w(
         'Deferring heavy prep task "${next.description}" — system under load',
+      );
+      return;
+    }
+
+    // Vision Next-Term §4.2: per-subject opt-in. A student may disable prep for
+    // a specific syllabus in Settings; such tasks are deferred (never executed,
+    // no tokens spent) and logged so they surface as "subject disabled by
+    // student" instead of silently burning budget. The check happens before the
+    // task is registered on [LlmTaskManager], so a disabled-subject task never
+    // appears as a running/failed prep job. Mirrors the quiet-hours predicate
+    // pattern: inject `isPrepEnabledForSubject` in tests with a stub.
+    final subjectId = next.subjectId;
+    if (subjectId != null &&
+        _isPrepEnabledForSubject != null &&
+        !_isPrepEnabledForSubject(subjectId)) {
+      _logger.d(
+        'Deferring task "${next.description}" — subject "$subjectId" prep disabled by student',
       );
       return;
     }

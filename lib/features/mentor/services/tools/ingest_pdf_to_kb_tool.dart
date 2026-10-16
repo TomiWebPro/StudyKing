@@ -13,7 +13,8 @@ import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 /// material (Vision Next-Term §4.1, §4.3).
 ///
 /// This is an off-period prep tool — it is designed to be enqueued via
-/// [LlmAgent.enqueueBackgroundTask] and tracked in [LlmTaskManagerScreen].
+/// [LlmAgent.enqueuePrepTask] and tracked in [LlmTaskManagerScreen] under its
+/// configured prep category.
 class IngestPdfToKbTool extends PrepTool {
   static final Logger _logger = const Logger('IngestPdfToKbTool');
 
@@ -90,6 +91,23 @@ class IngestPdfToKbTool extends PrepTool {
 
     if (textContent.trim().isEmpty) {
       return {'success': false, 'error': 'textContent is required'};
+    }
+
+    // Vision §4.2: per-subject opt-in. The IdleExecutor gates enqueued tasks,
+    // but the agent can invoke this tool directly, so it enforces the gate
+    // itself: no LLM call, no token spend, for a subject the student paused.
+    final subjectGate = _budgetService;
+    if (subjectGate != null &&
+        subjectId.isNotEmpty &&
+        !subjectGate.isPrepEnabledForSubject(subjectId)) {
+      _logger.d(
+        'PDF ingestion skipped: subject "$subjectId" disabled by student',
+      );
+      return {
+        'success': false,
+        'error': 'Subject $subjectId prep disabled by student',
+        'deferrable': true,
+      };
     }
 
     // Vision §4.2: respect the preparation budget before spending tokens.

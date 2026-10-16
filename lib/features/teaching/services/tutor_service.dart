@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:uuid/uuid.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/database_service.dart';
@@ -24,12 +25,15 @@ import 'package:studyking/features/teaching/data/repositories/lesson_recap_repos
 import 'package:studyking/features/teaching/services/lesson_recap_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
+import 'package:studyking/core/services/prep_budget.dart' show PrepCategory;
+import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/core/utils/study_utils.dart';
 import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/voice_service.dart';
 import 'package:studyking/features/practice/services/spaced_repetition_service.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 import 'feedback_analyzer.dart';
@@ -55,6 +59,8 @@ class TutorService {
   final VoiceService? _voiceService;
   final LongTermMemory? _longTermMemory;
   final LessonFeedbackRepository _feedbackRepository;
+  final PlannerService? _plannerService;
+  final PreGenerateLessonTool? _preGenerateLessonTool;
   late final FeedbackAnalyzer _feedbackAnalyzer;
   LlmAgent? _llmAgent;
   ConversationManager? _currentManager;
@@ -78,6 +84,8 @@ class TutorService {
     LlmAgent? llmAgent,
     LongTermMemory? longTermMemory,
     LessonFeedbackRepository? feedbackRepository,
+    PlannerService? plannerService,
+    PreGenerateLessonTool? preGenerateLessonTool,
     Clock? clock,
   })  : _database = database,
         _llmService = llmService,
@@ -99,6 +107,8 @@ class TutorService {
         _llmAgent = llmAgent,
         _longTermMemory = longTermMemory,
         _feedbackRepository = feedbackRepository ?? LessonFeedbackRepository(),
+        _plannerService = plannerService,
+        _preGenerateLessonTool = preGenerateLessonTool,
         _clock = clock ?? SystemClock() {
     _feedbackAnalyzer = FeedbackAnalyzer(_feedbackRepository);
   }
@@ -158,6 +168,13 @@ class TutorService {
       }
     }
 
+    // Fetch the student's active syllabus goals so the tutor can switch
+    // syllabi mid-lesson (agent_must_read.md §100: "Student can dynamically
+    // switch syllabi"). Without these, SyllabusSwitchParser has an empty
+    // title list and can never match a switch intent.
+    final availableSyllabi =
+        (await _plannerService?.loadExistingPlan())?.data?.syllabusGoals ?? [];
+
     final manager = ConversationManager(
       llmService: _llmService,
       modelId: _modelId,
@@ -167,6 +184,7 @@ class TutorService {
       subjectId: subjectId,
       topicId: topicId,
       scheduledSessionId: scheduledSessionId,
+      availableSyllabi: availableSyllabi,
       exerciseEvaluator: _exerciseEvaluator,
       persistenceRepo: _conversationRepository,
       clock: _clock,
@@ -435,65 +453,116 @@ class TutorService {
   }
 
   void _enqueueAdherenceCheck(String studentId) {
-    _llmAgent!.enqueueBackgroundTask(
+    _llmAgent!.enqueuePrepTask(
       'Post-lesson adherence update',
       () async {
         try {
           await _planOrchestrator.checkAdherence(studentId);
+          return {'success': true};
         } catch (e) {
           _logger.w('Post-lesson adherence update failed', e);
+          return {'success': false, 'error': e.toString()};
         }
       },
+      requiresHeavy: true,
+      // Plan adherence update is off-period maintenance — attribute to the
+      // generic background prep bucket so the task manager + budget reflect it.
+      feature: PrepCategory.background.taskTypeKey,
+      taskType: PrepCategory.background.taskTypeKey,
     );
   }
 
   void _enqueueWeakTopicAnalysis(String studentId) {
-    _llmAgent!.enqueueBackgroundTask(
+    _llmAgent!.enqueuePrepTask(
       'Post-lesson weak topic reanalysis',
       () async {
         try {
           await _masteryService.getWeakTopics(studentId);
+          return {'success': true};
         } catch (e) {
           _logger.w('Post-lesson weak topic reanalysis failed', e);
+          return {'success': false, 'error': e.toString()};
         }
       },
+      requiresHeavy: true,
+      feature: PrepCategory.background.taskTypeKey,
+      taskType: PrepCategory.background.taskTypeKey,
     );
   }
 
-  void _enqueueNextTopicPrep(TutorSession session) {
-    _llmAgent!.enqueueBackgroundTask(
-      'Next topic lesson prep',
-      () async {
-        try {
-          final weakResult = await _masteryService.getWeakTopics(session.studentId);
-          if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
-            final nextTopic = weakResult.data!.first;
-            final lesson = Lesson(
+  /// Generates a pre-built lesson for the student's next weak topic as an
+  /// off-period prep task (Vision Next-Term §4.1: "Lesson pre-generation
+  /// ahead of each scheduled lesson").
+  ///
+  /// When [_preGenerateLessonTool] is wired, this invokes the prep tool so
+  /// the lesson receives real structured blocks (slides, examples, exercises,
+  /// recap) instead of a one-line placeholder. When the tool is absent, a
+  /// minimal placeholder is created so the lesson list is never empty.
+  @visibleForTesting
+  Future<Map<String, dynamic>> generateNextTopicLesson(TutorSession session) async {
+    try {
+      final weakResult = await _masteryService.getWeakTopics(session.studentId);
+      if (weakResult.isSuccess && weakResult.data!.isNotEmpty) {
+        final nextTopic = weakResult.data!.first;
+        final subjectId =
+            nextTopic.subjectId.isNotEmpty ? nextTopic.subjectId : session.subjectId;
+
+        if (_preGenerateLessonTool != null) {
+          final result = await _preGenerateLessonTool!.execute({
+            'subjectId': subjectId,
+            'topicId': nextTopic.topicId,
+            'topicTitle': nextTopic.topicId,
+            'localeName': _localeName,
+          });
+          return result;
+        }
+
+        // Fallback: minimal placeholder when the prep tool is not wired
+        // (e.g. no API key). Ensures the lesson list always has content.
+        final lesson = Lesson(
+          id: const Uuid().v4(),
+          subjectId: session.subjectId,
+          title: nextTopic.topicId,
+          topicId: nextTopic.topicId,
+          blocks: [
+            LessonBlock(
               id: const Uuid().v4(),
               subjectId: session.subjectId,
-              title: nextTopic.topicId,
-              topicId: nextTopic.topicId,
-              blocks: [
-                LessonBlock(
-                  id: const Uuid().v4(),
-                  subjectId: session.subjectId,
-                  lessonId: nextTopic.topicId,
-                  type: LessonBlockType.text,
-                  content: 'Pre-generated lesson for ${nextTopic.topicId}. Open to start learning.',
-                  order: 0,
-                ),
-              ],
-              difficulty: 3,
-              generatedBy: GeneratedBy.ai,
-              createdAt: _clock.now(),
-            );
-            await _lessonRepository.init();
-            await _lessonRepository.create(lesson);
-          }
-        } catch (e) {
-          _logger.w('Next topic lesson prep failed', e);
-        }
-      },
+              lessonId: nextTopic.topicId,
+              type: LessonBlockType.text,
+              content: 'Pre-generated lesson for ${nextTopic.topicId}. Open to start learning.',
+              order: 0,
+            ),
+          ],
+          difficulty: 3,
+          generatedBy: GeneratedBy.ai,
+          createdAt: _clock.now(),
+        );
+        await _lessonRepository.init();
+        await _lessonRepository.create(lesson);
+        return {'success': true, 'lessonId': lesson.id};
+      }
+      return {'success': true};
+    } catch (e) {
+      _logger.w('Next topic lesson prep failed', e);
+      return {'success': false, 'error': e.toString()};
+    }
+  }
+
+  void _enqueueNextTopicPrep(TutorSession session) {
+    if (_llmAgent == null) return;
+    _llmAgent!.enqueuePrepTask(
+      'Next topic lesson prep',
+      () => generateNextTopicLesson(session),
+      requiresHeavy: true,
+      // Lesson pre-generation is §4.1 prep work — attribute to the lesson_prep
+      // budget bucket so the task manager + PrepBudgetService surface the
+      // correct category (Vision Next-Term §4.1/§4.2).
+      feature: PrepCategory.lessonPrep.taskTypeKey,
+      taskType: PrepCategory.lessonPrep.taskTypeKey,
+      // Vision §4.2: bind the task to the lesson's subject so the
+      // IdleExecutor can skip prep when the student has paused that syllabus.
+      subjectId: session.subjectId,
     );
   }
 

@@ -81,6 +81,25 @@ class PreGenerateLessonTool extends PrepTool {
       };
     }
 
+    // Vision §4.2: per-subject opt-in. The IdleExecutor gates enqueued tasks,
+    // but the mentor agent can also invoke this tool directly, so the tool
+    // enforces the gate itself: no LLM call, no token spend, for a subject the
+    // student has paused. Checked before the budget gate so a disabled subject
+    // short-circuits immediately regardless of remaining budget.
+    final subjectGate = _budgetService;
+    if (subjectGate != null &&
+        subjectId.isNotEmpty &&
+        !subjectGate.isPrepEnabledForSubject(subjectId)) {
+      _logger.d(
+        'Lesson prep skipped: subject "$subjectId" disabled by student',
+      );
+      return {
+        'success': false,
+        'error': 'Subject $subjectId prep disabled by student',
+        'deferrable': true,
+      };
+    }
+
     // Vision §4.2: respect the preparation budget before spending tokens.
     final budget = _budgetService;
     if (budget != null &&

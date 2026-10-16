@@ -144,11 +144,12 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
 
   if (llmService.config.apiKey.isEmpty) return null;
 
-  // Vision §4.2: quiet-hours — the IdleExecutor must defer off-period prep
-  // tasks when the student has configured a quiet window (e.g. 22:00–08:00).
-  // We inject the PrepBudget's quiet-hours predicate so the executor can call
-  // it with the current time without holding a direct dependency on the
-  // budget model at the service layer.
+  // Vision §4.2: quiet-hours + per-subject opt-in — the IdleExecutor must defer
+  // off-period prep tasks when (a) the student has configured a quiet window
+  // (e.g. 22:00–08:00) or (b) a syllabus has been paused via the per-subject
+  // prep toggle. Both predicates are derived from the persisted [PrepBudget]
+  // so the executor stays free of a direct budget-model dependency at the
+  // service layer (mirrors the existing quiet-hours injection pattern).
   return AgentFactory.create(
     llmService: llmService,
     modelId: modelId,
@@ -157,6 +158,8 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
     tools: tools,
     systemMonitor: systemMonitor,
     shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
+    isPrepEnabledForSubject: (subjectId) =>
+        prepBudget.isPrepEnabledForSubject(subjectId),
   );
 });
 
