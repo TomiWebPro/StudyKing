@@ -11,6 +11,7 @@ import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -135,6 +136,32 @@ class _FakeProgressTracker extends StudyProgressTracker {
   }
 }
 
+/// Hand-written fake [SystemMonitorService] for deterministic testing of the
+/// device-status context injection (Vision Next-Term §4.3).
+class _FakeSystemMonitor extends SystemMonitorService {
+  @override
+  final bool canRunHeavyPrepNow;
+  @override
+  final int batteryLevel;
+  @override
+  final bool isCharging;
+  @override
+  final double cpuLoad;
+  @override
+  final bool isBatterySaver;
+  @override
+  final String? networkType;
+
+  const _FakeSystemMonitor({
+    this.canRunHeavyPrepNow = true,
+    this.batteryLevel = -1,
+    this.isCharging = false,
+    this.cpuLoad = -1,
+    this.isBatterySaver = false,
+    this.networkType,
+  });
+}
+
 MentorContextBuilder _createBuilder({
   StudyProgressTracker? progressTracker,
   MasteryGraphService? masteryService,
@@ -142,6 +169,7 @@ MentorContextBuilder _createBuilder({
   SessionRepository? sessionRepository,
   SourceRepository? sourceRepository,
   String localeName = 'en',
+  SystemMonitorService? systemMonitor,
 }) {
   return MentorContextBuilder(
     progressTracker: progressTracker ?? _FakeProgressTracker(),
@@ -150,6 +178,7 @@ MentorContextBuilder _createBuilder({
     sessionRepository: sessionRepository ?? _FakeSessionRepo(),
     sourceRepository: sourceRepository,
     localeName: localeName,
+    systemMonitor: systemMonitor,
   );
 }
 
@@ -494,6 +523,52 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('day study streak')));
         expect(result.data, isNot(contains('consecutive study days')));
+      });
+    });
+
+    group('device status', () {
+      test('includes a device-status line when a system monitor is provided', () async {
+        final monitor = _FakeSystemMonitor(
+          canRunHeavyPrepNow: false,
+          batteryLevel: 15,
+          isCharging: false,
+          cpuLoad: 0.85,
+          isBatterySaver: true,
+          networkType: 'cellular',
+        );
+        final builder = _createBuilder(systemMonitor: monitor);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Device status'));
+        expect(result.data, contains('battery 15%'));
+        expect(result.data, contains('CPU 85%'));
+        expect(result.data, contains('battery-saver on'));
+        expect(result.data, contains('cellular'));
+        expect(result.data, contains('heavy prep deferred'));
+      });
+
+      test('reports heavy prep available when the system is healthy', () async {
+        final monitor = _FakeSystemMonitor(
+          canRunHeavyPrepNow: true,
+          batteryLevel: 80,
+          isCharging: true,
+          cpuLoad: 0.3,
+          networkType: 'wifi',
+        );
+        final builder = _createBuilder(systemMonitor: monitor);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Device status'));
+        expect(result.data, contains('plugged in'));
+        expect(result.data, contains('heavy prep available'));
+        expect(result.data, isNot(contains('heavy prep deferred')));
+      });
+
+      test('omits the device-status line when no system monitor is available', () async {
+        final builder = _createBuilder(); // systemMonitor defaults to null
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Device status')));
       });
     });
 

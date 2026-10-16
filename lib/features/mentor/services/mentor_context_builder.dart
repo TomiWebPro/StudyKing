@@ -5,6 +5,7 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/date_utils.dart';
 import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/time_utils.dart';
@@ -32,6 +33,13 @@ class MentorContextBuilder {
   final SourceRepository? _sourceRepository;
   final String _localeName;
 
+  /// Device/system-load awareness (Vision Next-Term §4.3). When present, a
+  /// concise device-status line is injected into the mentor context so the LLM
+  /// can proactively advise on offline, battery, or CPU state (e.g.
+  /// "I see you're offline — I'll switch to local Ollama"). Null on platforms
+  /// without sensors (web) or when monitoring is unavailable — never throws.
+  final SystemMonitorService? _systemMonitor;
+
   /// Human-readable summary of the student's active syllabi, so the mentor can
   /// understand which syllabus the student is referring to when they chat.
   String get currentSyllabusContext => _currentSyllabusContext;
@@ -45,13 +53,15 @@ class MentorContextBuilder {
     LearningMethodAnalyticsService? learningAnalyticsService,
     SourceRepository? sourceRepository,
     required String localeName,
+    SystemMonitorService? systemMonitor,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
         _sessionRepository = sessionRepository,
         _learningAnalyticsService = learningAnalyticsService,
         _sourceRepository = sourceRepository,
-        _localeName = localeName;
+        _localeName = localeName,
+        _systemMonitor = systemMonitor;
 
   Future<Result<String>> buildContextPrompt() async {
     try {
@@ -185,6 +195,15 @@ class MentorContextBuilder {
       } else if (dailyCap > 0) {
         buffer.writeln('$bullet${l10n.mentorContextCapRemaining(dailyCap, dailyCap - todayMinutes)}');
       }
+    }
+
+    // Vision Next-Term §4.3 / §3.1: inject a concise device/system-status line so
+    // the mentor LLM can proactively advise on offline, battery, or CPU state
+    // (e.g. "I see you're offline — I'll switch to local Ollama" /
+    // "heavy prep deferred under load"). Omitted when no monitor is available
+    // (web / fallback) so existing context is untouched.
+    if (_systemMonitor != null) {
+      buffer.writeln('$bullet${_buildDeviceStatusLine()}');
     }
 
     if (consecutiveDays >= 7) {
@@ -330,6 +349,35 @@ class MentorContextBuilder {
   Future<int> _getTodayStudyMinutes() async {
     final result = await _sessionRepository.getTodayDurationMs();
     return result.isSuccess ? (result.data! ~/ msPerMinute) : 0;
+  }
+
+  /// Builds a single concise, LLM-facing line summarising device/system state
+  /// (Vision Next-Term §4.3) so the mentor can reason about offline/battery/CPU
+  /// constraints. Only fields with a known value are included; unknown readings
+  /// degrade to a healthy signal by design (see [SystemMonitorService]).
+  String _buildDeviceStatusLine() {
+    final monitor = _systemMonitor!;
+    final parts = <String>[];
+    if (monitor.isCharging) {
+      parts.add('plugged in');
+    } else if (monitor.batteryLevel >= 0) {
+      parts.add('battery ${monitor.batteryLevel}%');
+    } else {
+      parts.add('on battery');
+    }
+    if (monitor.cpuLoad >= 0) {
+      parts.add('CPU ${(monitor.cpuLoad * 100).round()}%');
+    }
+    if (monitor.isBatterySaver) {
+      parts.add('battery-saver on');
+    }
+    if (monitor.networkType != null) {
+      parts.add(monitor.networkType!);
+    }
+    final prepNote = monitor.canRunHeavyPrepNow
+        ? 'heavy prep available'
+        : 'heavy prep deferred';
+    return 'Device status: ${parts.join(', ')} — $prepNote';
   }
 
   Future<Result<int>> _getConsecutiveStudyDays() async {

@@ -11,6 +11,7 @@ import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/planner/data/repositories/pending_action_repository.dart';
 import 'package:studyking/core/data/repositories/engagement_nudge_repository.dart';
@@ -77,6 +78,7 @@ class MentorService {
     required String localeName,
     LlmAgent? agent,
     LongTermMemory? longTermMemory,
+    SystemMonitorService? systemMonitor,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
@@ -104,6 +106,7 @@ class MentorService {
       sessionRepository: _sessionRepository,
       sourceRepository: _sourceRepository,
       localeName: _localeName,
+      systemMonitor: systemMonitor,
     );
     _wellbeingService = MentorWellbeingService(
       sessionRepository: _sessionRepository,
