@@ -1024,7 +1024,7 @@ void main() {
     });
 
     group('LlmUsageMeter + LlmTaskManager audit', () {
-      test('all 15 agent tools are traced across the suite', () async {
+      test('all 16 agent tools are traced across the suite', () async {
         final allToolNames = <String>{};
 
         // Tools traced in other files (create_plan, schedule_lesson,
@@ -1036,10 +1036,12 @@ void main() {
           'schedule_lesson',
         ]);
 
-        // Tools traced in this file — 7 interactive mentor tools +
-        // 4 off-period prep tools registered in llmAgentToolsProvider.
+        // Tools traced in this file — 12 interactive mentor tools (including
+        // schedule_rest_day) + 4 off-period prep tools registered in
+        // llmAgentToolsProvider.
         allToolNames.addAll([
           'search_questions',
+          'schedule_rest_day',
           'generate_lesson_blocks',
           'modify_plan',
           'get_adherence_trends',
@@ -1052,28 +1054,13 @@ void main() {
           'refresh_mastery',
         ]);
 
-        // All 15 tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(15));
+        // All 16 tools from llmAgentToolsProvider are traced.
+        expect(allToolNames, hasLength(16));
 
-        // Cross-check against the real ToolRegistry entries.
-        final realToolNames = <String>{
-          'schedule_lesson',
-          'search_questions',
-          'get_student_stats',
-          'generate_lesson_blocks',
-          'create_plan',
-          'modify_plan',
-          'get_weak_topics',
-          'get_adherence_trends',
-          'get_lesson_history',
-          'create_practice_session',
-          'get_syllabus_structure',
-          'ingest_pdf_to_kb',
-          'enqueue_question_variants',
-          'pre_generate_lesson',
-          'refresh_mastery',
-        };
-        expect(allToolNames, equals(realToolNames));
+        // Cross-check against the canonical registered tool-name set from
+        // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
+        expect(allToolNames, equals(registeredToolNames));
+        expect(registeredToolNames, hasLength(16));
       });
     });
   });

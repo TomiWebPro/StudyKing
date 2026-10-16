@@ -113,6 +113,39 @@ class RecordingTool extends AgentTool {
   }
 }
 
+/// Canonical set of tool names registered by `llmAgentToolsProvider` in
+/// `lib/core/providers/llm_agent_providers.dart`.
+///
+/// This is a single source-of-truth used by the dry-run scenario validation
+/// and tool-trace coverage tests so they always audit against the real
+/// provider tree rather than a hardcoded snapshot that goes stale when a tool
+/// is added or removed.
+///
+/// When a tool is registered/removed in [llmAgentToolsProvider], update this
+/// list in lock-step. The [registeredToolNames] constant is the read-side
+/// guard: scenario audits that reference it will automatically reflect the
+/// current tooling without manual edits to individual test assertions.
+const Set<String> registeredToolNames = {
+  // Interactive mentor tools
+  'schedule_lesson',
+  'schedule_rest_day',
+  'create_plan',
+  'modify_plan',
+  'search_questions',
+  'get_student_stats',
+  'get_weak_topics',
+  'get_adherence_trends',
+  'get_lesson_history',
+  'create_practice_session',
+  'get_syllabus_structure',
+  'generate_lesson_blocks',
+  // Off-period preparation toolbox (Vision Next-Term §4.3)
+  'ingest_pdf_to_kb',
+  'enqueue_question_variants',
+  'pre_generate_lesson',
+  'refresh_mastery',
+};
+
 /// A tool that always throws, regardless of arguments.
 class AlwaysThrowTool extends AgentTool {
   @override
