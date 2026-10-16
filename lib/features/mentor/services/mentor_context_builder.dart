@@ -72,7 +72,8 @@ class MentorContextBuilder {
     final bullet = l10n.mentorBulletPoint;
 
     final syllabusGoals = (await loadSyllabusGoals()).data ?? [];
-    _buildSyllabusContext(syllabusGoals, l10n);
+    final upcomingLessonsForSyllabus = upcomingLessons;
+    _buildSyllabusContext(syllabusGoals, upcomingLessonsForSyllabus, l10n);
 
     final sourceCount = await _getSourceCount();
 
@@ -99,8 +100,11 @@ class MentorContextBuilder {
       }
     }
 
-    if (syllabusGoals.isNotEmpty) {
-      buffer.writeln('$bullet${l10n.mentorContextSyllabusGoals}: ${syllabusGoals.length}');
+    if (_currentSyllabusContext.isNotEmpty) {
+      // Vision §3.1: inject the current/active syllabus context so the LLM
+      // can disambiguate which syllabus a student utterance refers to when
+      // multiple syllabi are active.
+      buffer.writeln('$bullet$_currentSyllabusContext');
       for (final goal in syllabusGoals) {
         buffer.writeln('  $bullet${l10n.mentorContextActiveSyllabus}: ${goal.subjectTitle}');
       }
@@ -254,14 +258,51 @@ class MentorContextBuilder {
     return Result.success(plan?.syllabusGoals ?? []);
   }
 
-  void _buildSyllabusContext(List<SyllabusGoal> goals, AppLocalizations l10n) {
+  /// Builds [_currentSyllabusContext] — a structured line that identifies the
+  /// syllabus the student is most likely discussing, enabling syllabus-scoped
+  /// agent tool calls (Vision §3.1 tool/context audit).
+  ///
+  /// Resolution order:
+  /// 1. If upcoming scheduled lessons map to a syllabus goal, that goal is the
+  ///    active syllabus.
+  /// 2. If there is exactly one syllabus goal, it is the active syllabus.
+  /// 3. If multiple syllabi are active with no upcoming lesson to pin one,
+  ///    surface an ambiguity notice so the LLM can ask the student to
+  ///    disambiguate.
+  void _buildSyllabusContext(
+    List<SyllabusGoal> goals,
+    List<Session> upcomingLessons,
+    AppLocalizations l10n,
+  ) {
     if (goals.isEmpty) {
       _currentSyllabusContext = '';
       return;
     }
-    final titles = goals.map((g) => g.subjectTitle).join(', ');
-    _currentSyllabusContext =
-        '${l10n.mentorContextSyllabusGoals}: $titles';
+
+    final upcomingSubjectIds = upcomingLessons
+        .map((s) => s.subjectId)
+        .whereType<String>()
+        .toSet();
+
+    SyllabusGoal? activeGoal;
+    if (upcomingSubjectIds.isNotEmpty) {
+      activeGoal = goals.firstWhere(
+        (g) => upcomingSubjectIds.contains(g.subjectId),
+        orElse: () => goals.first,
+      );
+    } else if (goals.length == 1) {
+      activeGoal = goals.first;
+    }
+
+    if (activeGoal != null) {
+      _currentSyllabusContext =
+          '${l10n.mentorContextActiveSyllabus}: ${activeGoal.subjectTitle}';
+    } else {
+      // Multiple syllabi active, no upcoming lesson to pin a current one.
+      final titles = goals.map((g) => g.subjectTitle).join(', ');
+      _currentSyllabusContext =
+          '${l10n.mentorContextSyllabusGoals}: $titles';
+    }
   }
 
   Future<Result<List<PendingActionModel>>> _loadPendingActions() async {

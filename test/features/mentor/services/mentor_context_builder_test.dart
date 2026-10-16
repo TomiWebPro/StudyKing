@@ -3,12 +3,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
@@ -41,7 +44,7 @@ class _FakeMasteryGraphService extends MasteryGraphService {
   void setWeakTopics(List<MasteryState> topics) => _weakTopics = topics;
 
   @override
-  Future<Result<List<MasteryState>>> getWeakTopics(String studentId) async => Result.success(_weakTopics);
+  Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success(_weakTopics);
 }
 
 class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
@@ -52,6 +55,20 @@ class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   @override
   Future<Result<AdherenceDeviation>> checkAdherence(String studentId) async {
     return Result.success(_deviation ?? const AdherenceDeviation());
+  }
+}
+
+class _FakeSourceRepo extends SourceRepository {
+  List<Source> _sources = [];
+  bool _throwOnGetByStudent = false;
+
+  void setSources(List<Source> sources) => _sources = sources;
+  void setThrowOnGetByStudent(bool v) => _throwOnGetByStudent = v;
+
+  @override
+  Future<Result<List<Source>>> getByStudent(String studentId) async {
+    if (_throwOnGetByStudent) throw Exception('Simulated source read failure');
+    return Result.success(_sources);
   }
 }
 
@@ -123,6 +140,7 @@ MentorContextBuilder _createBuilder({
   MasteryGraphService? masteryService,
   PlannerService? plannerService,
   SessionRepository? sessionRepository,
+  SourceRepository? sourceRepository,
   String localeName = 'en',
 }) {
   return MentorContextBuilder(
@@ -130,6 +148,7 @@ MentorContextBuilder _createBuilder({
     masteryService: masteryService ?? _FakeMasteryGraphService(),
     plannerService: plannerService ?? _FakePlannerService(),
     sessionRepository: sessionRepository ?? _FakeSessionRepo(),
+    sourceRepository: sourceRepository,
     localeName: localeName,
   );
 }
@@ -341,6 +360,40 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, contains('Pending actions'));
         expect(result.data, contains('Algebra review'));
+      });
+
+      test('injects missing-materials directive when no sources uploaded', () async {
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([]);
+
+        final builder = _createBuilder(sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('no uploaded study materials'));
+      });
+
+      test('does not inject missing-materials directive when sources exist', () async {
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'src-1',
+            title: 'IB Chemistry Syllabus',
+            type: SourceType.syllabus,
+            studentId: 'test-student',
+          ),
+        ]);
+
+        final builder = _createBuilder(sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('no uploaded study materials')));
+      });
+
+      test('does not inject directive when sourceRepository is null', () async {
+        final builder = _createBuilder(sourceRepository: null);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('no uploaded study materials')));
       });
     });
 
@@ -589,6 +642,59 @@ void main() {
         expect(result.data, contains('Math'));
         expect(result.data, contains('Science'));
         expect(builder.currentSyllabusContext, contains('Math'));
+        // currentSyllabusContext must be injected into the buffer output,
+        // not just available as a getter (Vision §3.1 context audit).
+        expect(result.data, contains(builder.currentSyllabusContext));
+      });
+
+      test('identifies current syllabus from upcoming lesson subject', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals());
+        planner.setScheduledLessons([
+          Session(
+            id: 's-1',
+            studentId: 'test-student',
+            subjectId: 'subj2', // Science has an upcoming lesson
+            startTime: DateTime.now().add(const Duration(days: 1)),
+          ),
+        ]);
+        final builder = _createBuilder(plannerService: planner);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // currentSyllabusContext should identify Science as the active syllabus
+        expect(builder.currentSyllabusContext, contains('Science'));
+        expect(builder.currentSyllabusContext, contains('Active syllabus'));
+        // And it must appear in the built prompt buffer
+        expect(result.data, contains(builder.currentSyllabusContext));
+      });
+
+      test('auto-identifies single syllabus as current', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              {'subjectId': 'subj1', 'subjectTitle': 'Math'},
+            ],
+          },
+        ));
+        final builder = _createBuilder(plannerService: planner);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(builder.currentSyllabusContext, contains('Math'));
+        expect(builder.currentSyllabusContext, contains('Active syllabus'));
+        expect(result.data, contains(builder.currentSyllabusContext));
       });
 
       test('omits syllabus context when plan has no goals', () async {
