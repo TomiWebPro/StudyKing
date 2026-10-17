@@ -32,6 +32,8 @@ import 'package:studyking/features/mentor/services/tools/get_lesson_history_tool
 import 'package:studyking/features/mentor/services/tools/create_practice_session_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_syllabus_structure_tool.dart';
 import 'package:studyking/features/mentor/services/tools/read_source_content_tool.dart';
+import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
+import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
@@ -211,6 +213,20 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
       sourceRepo: sourceRepo,
       studentIdService: studentIdService,
     ),
+    // Vision Next-Term §3.1 / scenario_ingestion_pdf_to_knowledge_base Step 3:
+    // conversational search across ingested source chunks so the mentor can
+    // answer "where does my textbook discuss X?" with page-cited results.
+    SearchSourcesTool(
+      sourceRepo: sourceRepo,
+      studentIdService: studentIdService,
+    ),
+    // Vision Next-Term §3.1 / scenario_ingestion_pdf_to_knowledge_base Step 5:
+    // paged, recency-ordered revisit of ingested materials so the mentor can
+    // surface "the sources you uploaded last week" conversationally.
+    RevisitSourcesTool(
+      sourceRepo: sourceRepo,
+      studentIdService: studentIdService,
+    ),
     // Vision Next-Term §3.1 (scenario_practice_mistake_review /
     // scenario_practice_review_adaptive): exposes recent wrong answers with
     // markscheme explanations and linked concepts so the mentor can review
@@ -226,13 +242,15 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
 final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   final llmService = ref.watch(llmServiceProvider);
   final modelId = ref.watch(mentorModelIdProvider);
-  final taskManager = ref.watch(llmTaskManagerProvider);
   final tools = ref.watch(llmAgentToolsProvider);
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
   final prepBudget = ref.watch(prepBudgetSettingsProvider);
 
   if (llmService.config.apiKey.isEmpty) return null;
 
+  final taskManager = ref.watch(llmTaskManagerProvider);
+  final usageMeter = ref.watch(llmUsageMeterProvider);
+  
   // Vision §4.2: quiet-hours + per-subject opt-in — the IdleExecutor must defer
   // off-period prep tasks when (a) the student has configured a quiet window
   // (e.g. 22:00–08:00) or (b) a syllabus has been paused via the per-subject
@@ -249,6 +267,7 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
     shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
     isPrepEnabledForSubject: (subjectId) =>
         prepBudget.isPrepEnabledForSubject(subjectId),
+    usageMeter: usageMeter,
   );
 });
 
