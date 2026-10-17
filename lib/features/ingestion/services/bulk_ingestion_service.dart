@@ -3,6 +3,7 @@ import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/prep_budget.dart' show PrepCategory;
 import 'package:studyking/core/utils/id_generator.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/string_extensions.dart';
@@ -191,10 +192,13 @@ class BulkIngestionService extends ChangeNotifier {
       created.add(job);
       notifyListeners();
 
-      await _idleExecutor.enqueue(
+      await _idleExecutor.enqueuePrepTool(
         'Ingest "${file.fileName}"',
         () => _processJob(job),
         requiresHeavy: true,
+        feature: PrepCategory.pdfIngestion.taskTypeKey,
+        taskType: PrepCategory.background.taskTypeKey,
+        subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
       );
     }
 
@@ -208,7 +212,7 @@ class BulkIngestionService extends ChangeNotifier {
   /// network), the job is retried up to [maxRetries] times with exponential
   /// backoff. On permanent failure, the job status is set to
   /// [BulkJobStatus.failed] with the error captured.
-  Future<void> _processJob(BulkIngestionJob job) async {
+  Future<Map<String, dynamic>> _processJob(BulkIngestionJob job) async {
     job.status = BulkJobStatus.running;
     job.startedAt = DateTime.now();
     job.error = '';
@@ -252,14 +256,25 @@ class BulkIngestionService extends ChangeNotifier {
         job.completedAt = DateTime.now();
         job.processingStage = null;
         job.description = 'Completed';
+        return {'success': true};
       } else {
         job.error = result.error ?? 'Processing failed';
         _handleTransientFailure(job);
+        if (job.isFailed) {
+          return {'success': false, 'error': job.error};
+        }
+        // Retry was scheduled by [_handleTransientFailure]; this execution
+        // is done — the retry will run as a separate prep task.
+        return {'success': true};
       }
     } catch (e) {
       _logger.w('Job "${job.fileName}" failed: $e', e);
       job.error = e.toString();
       _handleTransientFailure(job);
+      if (job.isFailed) {
+        return {'success': false, 'error': job.error};
+      }
+      return {'success': true};
     } finally {
       notifyListeners();
     }
@@ -283,10 +298,13 @@ class BulkIngestionService extends ChangeNotifier {
       Future.delayed(
         Duration(seconds: delaySeconds),
         () async {
-          await _idleExecutor.enqueue(
+          await _idleExecutor.enqueuePrepTool(
             'Retry "${job.fileName}"',
             () => _processJob(job),
             requiresHeavy: true,
+            feature: PrepCategory.pdfIngestion.taskTypeKey,
+            taskType: PrepCategory.background.taskTypeKey,
+            subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
           );
         },
       );
@@ -311,10 +329,13 @@ class BulkIngestionService extends ChangeNotifier {
     job.description = '';
     notifyListeners();
 
-    await _idleExecutor.enqueue(
+    await _idleExecutor.enqueuePrepTool(
       'Retry "${job.fileName}"',
       () => _processJob(job),
       requiresHeavy: true,
+      feature: PrepCategory.pdfIngestion.taskTypeKey,
+      taskType: PrepCategory.background.taskTypeKey,
+      subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
     );
   }
 

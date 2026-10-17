@@ -4,6 +4,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
+import 'package:studyking/core/services/prep_budget.dart' show PrepCategory;
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/services/bulk_ingestion_service.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
@@ -158,16 +159,44 @@ class _FakeQuestionRepo extends QuestionRepository {
 /// are fully deterministic without real time delays.
 class _SyncIdleExecutor extends IdleExecutor {
   final List<String> enqueuedDescriptions = [];
+  final List<_EnqueuedPrepTool> enqueuedPrepTools = [];
 
   @override
-  Future<void> enqueue(
+  Future<void> enqueuePrepTool(
     String description,
-    Future<void> Function() task, {
-    bool requiresHeavy = false,
+    Future<Map<String, dynamic>> Function() task, {
+    required bool requiresHeavy,
+    required String feature,
+    required String taskType,
+    String? subjectId,
   }) async {
     enqueuedDescriptions.add(description);
+    enqueuedPrepTools.add(_EnqueuedPrepTool(
+      description: description,
+      requiresHeavy: requiresHeavy,
+      feature: feature,
+      taskType: taskType,
+      subjectId: subjectId,
+    ));
     await task();
   }
+}
+
+/// Captured parameters from an [IdleExecutor.enqueuePrepTool] call.
+class _EnqueuedPrepTool {
+  final String description;
+  final bool requiresHeavy;
+  final String feature;
+  final String taskType;
+  final String? subjectId;
+
+  _EnqueuedPrepTool({
+    required this.description,
+    required this.requiresHeavy,
+    required this.feature,
+    required this.taskType,
+    this.subjectId,
+  });
 }
 
 void main() {
@@ -491,6 +520,187 @@ void main() {
         );
 
         expect(notificationCount, greaterThan(0));
+      });
+    });
+
+    group('prep-tool attribution', () {
+      test('enqueues via enqueuePrepTool with pdf_ingestion feature and background taskType',
+          () async {
+        await service.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/prep.pdf',
+              fileName: 'prep.pdf',
+              title: 'Prep',
+              sourceType: SourceType.pdf,
+              subjectId: 'chemistry',
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        expect(executor.enqueuedPrepTools.length, 1);
+        final captured = executor.enqueuedPrepTools.first;
+        expect(captured.feature, PrepCategory.pdfIngestion.taskTypeKey);
+        expect(captured.taskType, PrepCategory.background.taskTypeKey);
+        expect(captured.requiresHeavy, isTrue);
+      });
+
+      test('passes subjectId for per-subject opt-in enforcement', () async {
+        await service.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/subject.pdf',
+              fileName: 'subject.pdf',
+              title: 'Subject',
+              sourceType: SourceType.pdf,
+              subjectId: 'biology',
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        expect(executor.enqueuedPrepTools.first.subjectId, 'biology');
+      });
+
+      test('passes null subjectId when file has no subject', () async {
+        await service.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/nosubject.pdf',
+              fileName: 'nosubject.pdf',
+              title: 'No Subject',
+              sourceType: SourceType.pdf,
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        expect(executor.enqueuedPrepTools.first.subjectId, isNull);
+      });
+
+      test('retry path uses prep-tool attribution with correct feature/taskType/subjectId',
+          () async {
+        pipeline.failCount = 1;
+        pipeline.failureError = '429 Too Many Requests';
+
+        await service.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/retry_attr.pdf',
+              fileName: 'retry_attr.pdf',
+              title: 'Retry Attr',
+              sourceType: SourceType.pdf,
+              subjectId: 'physics',
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        // First enqueue + first failed attempt.
+        expect(executor.enqueuedPrepTools.length, 1);
+        expect(executor.enqueuedPrepTools.first.subjectId, 'physics');
+
+        // Wait for the backoff-delayed retry to fire.
+        await Future.delayed(
+          Duration(seconds: BulkIngestionService.retryBaseDelaySeconds + 1),
+        );
+
+        // The retry should also have gone through enqueuePrepTool with the
+        // same attribution (feature/taskType/subjectId).
+        expect(executor.enqueuedPrepTools.length, 2);
+        final retryCall = executor.enqueuedPrepTools[1];
+        expect(retryCall.feature, PrepCategory.pdfIngestion.taskTypeKey);
+        expect(retryCall.taskType, PrepCategory.background.taskTypeKey);
+        expect(retryCall.subjectId, 'physics');
+      });
+
+      test('manual retryJob uses prep-tool attribution', () async {
+        // Force a permanent failure so the job lands in failed state.
+        pipeline.failCount = 100;
+        pipeline.failureError = 'Invalid API key: unauthorized';
+
+        await service.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/manual_retry.pdf',
+              fileName: 'manual_retry.pdf',
+              title: 'Manual',
+              sourceType: SourceType.pdf,
+              subjectId: 'math',
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        expect(executor.enqueuedPrepTools.length, 1);
+
+        // Reset pipeline to succeed, then retry manually.
+        pipeline.failCount = 0;
+        await service.retryJob(service.jobs.first);
+
+        expect(executor.enqueuedPrepTools.length, 2);
+        final retryCall = executor.enqueuedPrepTools[1];
+        expect(retryCall.feature, PrepCategory.pdfIngestion.taskTypeKey);
+        expect(retryCall.taskType, PrepCategory.background.taskTypeKey);
+        expect(retryCall.subjectId, 'math');
+      });
+    });
+
+    group('per-subject opt-in deferral', () {
+      test('BulkIngestionService defers bulk ingestion for student-disabled subject',
+          () async {
+        // Uses the real IdleExecutor logic with an isPrepEnabledForSubject gate
+        // (vision §4.2 per-syllabus opt-in): tokens must never be spent on a
+        // syllabus the student toggled off.
+        final realExecutor = IdleExecutor(
+          isPrepEnabledForSubject: (subjectId) => subjectId != 'chemistry',
+        );
+        final deferredService = BulkIngestionService(
+          pipeline: pipeline,
+          idleExecutor: realExecutor,
+        );
+
+        await deferredService.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/opts_out.pdf',
+              fileName: 'opts_out.pdf',
+              title: 'Opts Out',
+              sourceType: SourceType.pdf,
+              subjectId: 'chemistry',
+            ),
+          ],
+          studentId: 's',
+          classificationModelId: 'c',
+          summarizationModelId: 's2',
+          generationModelId: 'g',
+        );
+
+        // The real IdleExecutor deferred the chemistry task — pipeline never
+        // called, job still pending, task stays in the queue.
+        expect(pipeline.callCount, 0,
+            reason: 'No tokens may be spent on a disabled subject');
+        expect(deferredService.jobs.first.isPending, isTrue);
+        expect(
+            realExecutor.queue.any((t) => t.subjectId == 'chemistry'), isTrue);
+
+        realExecutor.dispose();
       });
     });
   });

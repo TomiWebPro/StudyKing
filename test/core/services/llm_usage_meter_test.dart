@@ -289,6 +289,28 @@ void main() {
       expect(meter.getTotalTokens(), equals(260));
     });
 
+    test('pdf_ingestion feature classifies as background — not unknown', () {
+      // Vision §0 token principle: students must see where tokens go. Bulk PDF
+      // ingestion passes feature: 'pdf_ingestion' to the LLM service;
+      // LlmTaskType.fromFeature('pdf_ingestion') maps to LlmTaskType.background,
+      // so usage must land in the 'background' bucket — never 'unknown'.
+      meter.recordUsage(
+        id: 'pdf1',
+        feature: 'pdf_ingestion',
+        modelId: 'gpt-4o-mini',
+        inputTokens: 300,
+        outputTokens: 120,
+        taskType: LlmTaskType.fromFeature('pdf_ingestion')?.name,
+      );
+
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(byType['background'], equals(420)); // 300 + 120
+      expect(byType.containsKey('unknown'), isFalse,
+          reason: 'pdf_ingestion must not fall into the unknown catch-all');
+      expect(byType['pdf_ingestion'], isNull,
+          reason: 'taskType is derived from feature, not stored as pdf_ingestion');
+    });
+
     test('getTotalCost sums all records', () {
       meter.recordUsage(id: 'r1', feature: 'chat', modelId: 'gpt-4', inputTokens: 100, outputTokens: 50);
       meter.recordUsage(id: 'r2', feature: 'chat', modelId: 'gpt-4', inputTokens: 50, outputTokens: 25);
