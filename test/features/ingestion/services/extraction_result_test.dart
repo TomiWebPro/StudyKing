@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/services/extraction_result.dart';
@@ -100,7 +102,7 @@ void main() {
         expect(result.chunksToJson(), '');
       });
 
-      test('returns wrapped chunks when chunks present', () {
+      test('returns valid JSON array with all fields', () {
         final result = ExtractionResult(
           text: 'test',
           chunks: [
@@ -109,13 +111,15 @@ void main() {
         );
 
         final out = result.chunksToJson();
-        expect(out, startsWith('['));
-        expect(out, endsWith(']'));
-        expect(out, contains('chunkIndex: 0'));
-        expect(out, contains('text: First chunk'));
+        // Output must be valid JSON parseable by jsonDecode.
+        final decoded = jsonDecode(out) as List;
+        expect(decoded.length, 1);
+        final map = decoded.first as Map<String, dynamic>;
+        expect(map['chunkIndex'], 0);
+        expect(map['text'], 'First chunk');
       });
 
-      test('returns combined string for multiple chunks', () {
+      test('returns JSON with all fields including optional ones', () {
         final result = ExtractionResult(
           text: 'test',
           chunks: [
@@ -125,10 +129,33 @@ void main() {
         );
 
         final out = result.chunksToJson();
-        expect(out, contains('chunkIndex: 0'));
-        expect(out, contains('chunkIndex: 1'));
-        expect(out, contains('heading: Intro'));
-        expect(out, contains('pageStart: 1'));
+        final decoded = jsonDecode(out) as List;
+        expect(decoded.length, 2);
+        final first = decoded[0] as Map<String, dynamic>;
+        expect(first['heading'], 'Intro');
+        final second = decoded[1] as Map<String, dynamic>;
+        expect(second['pageStart'], 1);
+        expect(second['pageEnd'], 2);
+      });
+
+      test('round-trips through chunksToJson → SourceChunk.parse', () {
+        final originalChunks = [
+          SourceChunk(chunkIndex: 0, text: 'First', heading: 'Intro', pageStart: 1, pageEnd: 3),
+          SourceChunk(chunkIndex: 1, text: 'Second', pageStart: 4, pageEnd: 6),
+        ];
+        final result = ExtractionResult(text: 'test', chunks: originalChunks);
+
+        final json = result.chunksToJson();
+        final parsed = SourceChunk.parse(json);
+
+        expect(parsed.length, 2);
+        expect(parsed[0].chunkIndex, 0);
+        expect(parsed[0].text, 'First');
+        expect(parsed[0].heading, 'Intro');
+        expect(parsed[0].pageStart, 1);
+        expect(parsed[0].pageEnd, 3);
+        expect(parsed[1].chunkIndex, 1);
+        expect(parsed[1].text, 'Second');
       });
     });
 
@@ -171,8 +198,9 @@ void main() {
             SourceChunk(chunkIndex: 1, text: 'valid'),
           ],
         );
-        final out = result.chunksToJson();
-        expect(out, contains('chunkIndex: 1'));
+        final parsed = SourceChunk.parse(result.chunksToJson());
+        // The empty-text chunk must still round-trip.
+        expect(parsed.any((c) => c.text == 'valid'), isTrue);
       });
 
       test('handles chunk with negative page range', () {
@@ -182,8 +210,46 @@ void main() {
             SourceChunk(chunkIndex: 0, text: 'A', pageStart: -1, pageEnd: 0),
           ],
         );
-        final out = result.chunksToJson();
-        expect(out, contains('pageStart: -1'));
+
+        final parsed = SourceChunk.parse(result.chunksToJson());
+        expect(parsed.length, 1);
+        expect(parsed[0].pageStart, -1);
+        expect(parsed[0].pageEnd, 0);
+      });
+    });
+
+    group('truncation fields', () {
+      test('truncated defaults to false and truncationNote to null', () {
+        final result = ExtractionResult(text: 'Hello');
+        expect(result.truncated, isFalse);
+        expect(result.truncationNote, isNull);
+      });
+
+      test('toMetaJson omits truncated when false', () {
+        final result = ExtractionResult(text: 'Hello');
+        final meta = result.toMetaJson();
+        expect(meta.containsKey('truncated'), isFalse);
+      });
+
+      test('toMetaJson includes truncated and note when set', () {
+        final result = ExtractionResult(
+          text: 'truncated text',
+          truncated: true,
+          truncationNote: 'Content truncated for token ceiling',
+        );
+        final meta = result.toMetaJson();
+        expect(meta['truncated'], isTrue);
+        expect(meta['truncationNote'], 'Content truncated for token ceiling');
+      });
+
+      test('toMetaJson omits truncationNote when truncated but no note', () {
+        final result = ExtractionResult(
+          text: 'truncated text',
+          truncated: true,
+        );
+        final meta = result.toMetaJson();
+        expect(meta['truncated'], isTrue);
+        expect(meta.containsKey('truncationNote'), isFalse);
       });
     });
   });

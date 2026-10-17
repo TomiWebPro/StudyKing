@@ -1,5 +1,8 @@
+import 'dart:convert';
+
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/utils/logger.dart';
 
 @HiveType(typeId: 26)
 class Source extends HiveObject {
@@ -102,6 +105,23 @@ class Source extends HiveObject {
     (e) => e.name == processingStatus,
     orElse: () => ProcessingStatus.pending,
   );
+
+  static final Logger _logger = const Logger('Source');
+
+  /// Reads the recorded page count from the source's `extractionMeta` JSON, if
+  /// present. Returns null when the meta is absent or unparseable.
+  int? get pageCount {
+    if (extractionMeta.isEmpty) return null;
+    try {
+      final decoded = jsonDecode(extractionMeta);
+      if (decoded is Map && decoded['pageCount'] is int) {
+        return decoded['pageCount'] as int;
+      }
+    } catch (e, stack) {
+      _logger.w('Failed to parse extractionMeta for source $id', e, stack);
+    }
+    return null;
+  }
 
   Map<String, dynamic> toJson() => {
     'id': id,

@@ -4961,6 +4961,33 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noExtractedText => 'No extracted text available';
 
   @override
+  String get sourceContentSection => 'Source Content';
+
+  @override
+  String sourceContentCount(int count) {
+    return 'Source Content ($count)';
+  }
+
+  @override
+  String get noChunksAvailable =>
+      'No structured content available for this source';
+
+  @override
+  String chunkLabel(int number) {
+    return 'Chunk $number';
+  }
+
+  @override
+  String sourcePage(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String sourcePageRange(int start, int end) {
+    return 'pp. $start-$end';
+  }
+
+  @override
   String get generatedQuestions => 'Generated Questions';
 
   @override

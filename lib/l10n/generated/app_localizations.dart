@@ -8231,6 +8231,42 @@ abstract class AppLocalizations {
   /// **'No extracted text available'**
   String get noExtractedText;
 
+  /// Section header for structured source chunks/pages
+  ///
+  /// In en, this message translates to:
+  /// **'Source Content'**
+  String get sourceContentSection;
+
+  /// Section header for source content with chunk count
+  ///
+  /// In en, this message translates to:
+  /// **'Source Content ({count})'**
+  String sourceContentCount(int count);
+
+  /// Placeholder when source has no structured chunks
+  ///
+  /// In en, this message translates to:
+  /// **'No structured content available for this source'**
+  String get noChunksAvailable;
+
+  /// Label for a chunk without a heading, showing its 1-based number
+  ///
+  /// In en, this message translates to:
+  /// **'Chunk {number}'**
+  String chunkLabel(int number);
+
+  /// Page label for a single page reference
+  ///
+  /// In en, this message translates to:
+  /// **'p. {page}'**
+  String sourcePage(int page);
+
+  /// Page label for a page range reference
+  ///
+  /// In en, this message translates to:
+  /// **'pp. {start}-{end}'**
+  String sourcePageRange(int start, int end);
+
   /// Section header for generated questions
   ///
   /// In en, this message translates to:
@@ -8570,7 +8606,7 @@ abstract class AppLocalizations {
   /// Warning for streak at risk in mentor context — student has a streak but hasn't studied today
   ///
   /// In en, this message translates to:
-  /// **'Your {count}-day streak is at risk — you haven't studied today. A quick review will keep it alive.'**
+  /// **'Your {count}-day streak is at risk — you haven\'t studied today. A quick review will keep it alive.'**
   String mentorContextStreakAtRisk(int count);
 
   /// Label for sessions today count in mentor context

@@ -484,5 +484,52 @@ void main() {
         expect(restored.processingStatus, original.processingStatus);
       });
     });
+
+    group('pageCount', () {
+      test('returns null when extractionMeta is empty', () {
+        final source = Source(id: 's1', title: 'T', type: SourceType.pdf);
+        expect(source.pageCount, isNull);
+      });
+
+      test('parses pageCount from extractionMeta JSON', () {
+        final source = Source(
+          id: 's1',
+          title: 'T',
+          type: SourceType.pdf,
+          extractionMeta: '{"pageCount": 42}',
+        );
+        expect(source.pageCount, 42);
+      });
+
+      test('returns null when pageCount key is absent', () {
+        final source = Source(
+          id: 's1',
+          title: 'T',
+          type: SourceType.pdf,
+          extractionMeta: '{"other": "value"}',
+        );
+        expect(source.pageCount, isNull);
+      });
+
+      test('returns null when pageCount is not an int', () {
+        final source = Source(
+          id: 's1',
+          title: 'T',
+          type: SourceType.pdf,
+          extractionMeta: '{"pageCount": "forty-two"}',
+        );
+        expect(source.pageCount, isNull);
+      });
+
+      test('returns null for malformed JSON', () {
+        final source = Source(
+          id: 's1',
+          title: 'T',
+          type: SourceType.pdf,
+          extractionMeta: 'not valid json',
+        );
+        expect(source.pageCount, isNull);
+      });
+    });
   });
 }

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 
 class ExtractionResult {
@@ -11,6 +13,15 @@ class ExtractionResult {
   final String? errorMessage;
   final List<SourceChunk> chunks;
 
+  /// When `true`, the text was truncated to fit within the configured
+  /// per-source character ceiling. The student should be told that content
+  /// was cut off.
+  final bool truncated;
+
+  /// User-visible note explaining why truncation occurred (e.g. file too
+  /// large). Set when [truncated] is `true`.
+  final String? truncationNote;
+
   ExtractionResult({
     required this.text,
     this.extractionMethod = 'direct',
@@ -21,6 +32,8 @@ class ExtractionResult {
     this.mimeType,
     this.errorMessage,
     this.chunks = const [],
+    this.truncated = false,
+    this.truncationNote,
   });
 
   bool get isError => errorMessage != null;
@@ -35,11 +48,18 @@ class ExtractionResult {
     if (durationSeconds != null) meta['durationSeconds'] = durationSeconds;
     if (mimeType != null) meta['mimeType'] = mimeType;
     if (errorMessage != null) meta['errorMessage'] = errorMessage;
+    if (truncated) {
+      meta['truncated'] = true;
+      if (truncationNote != null) meta['truncationNote'] = truncationNote;
+    }
     return meta;
   }
 
+  /// Serializes chunks to a valid JSON string that [SourceChunk.parse] can
+  /// round-trip. Returns `''` when there are no chunks so the storage column
+  /// stays empty (not `'[]'`).
   String chunksToJson() {
     if (chunks.isEmpty) return '';
-    return '[${chunks.map((c) => c.toJson()).join(',')}]';
+    return jsonEncode(chunks.map((c) => c.toJson()).toList());
   }
 }

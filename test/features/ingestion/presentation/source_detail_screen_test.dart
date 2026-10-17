@@ -531,4 +531,149 @@ void main() {
       expect(find.text('Something went wrong'), findsNothing);
     });
   });
+
+  group('SourceDetailScreen - source content chunks', () {
+    testWidgets('renders structured chunks with headings and page ranges',
+        (tester) async {
+      final chunksJson =
+          '[{"chunkIndex":0,"pageStart":1,"pageEnd":3,"text":"Intro content","'
+          'heading":"Introduction"},'
+          '{"chunkIndex":1,"pageStart":4,"pageEnd":6,"text":"Algebra content",'
+          '"heading":"Algebra"}]';
+      final sourceWithChunks = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        chunks: chunksJson,
+        extractedText: 'full text here',
+        extractionMeta: '{"pageCount":6}',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithChunks}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      // Section header shows the chunk count.
+      expect(find.text('Source Content (2)'), findsOneWidget);
+
+      // Chunk headings appear as ExpansionTile titles.
+      expect(find.text('Introduction'), findsOneWidget);
+      expect(find.text('Algebra'), findsOneWidget);
+
+      // Tapping a chunk expands it and reveals its text.
+      await tester.tap(find.text('Introduction'));
+      await tester.pumpAndSettle();
+      expect(find.text('Intro content'), findsOneWidget);
+    });
+
+    testWidgets('shows placeholder when source has no structured chunks',
+        (tester) async {
+      final sourceNoChunks = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        subjectId: 'sub1',
+        studentId: 'stu1',
+        processingStatus: 'completed',
+        chunks: '',
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceNoChunks}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Source Content (0)'), findsOneWidget);
+      expect(find.text('No structured content available for this source'),
+          findsOneWidget);
+    });
+
+    testWidgets('renders page range label for each chunk', (tester) async {
+      final chunksJson =
+          '[{"chunkIndex":0,"pageStart":1,"pageEnd":3,"text":"A","heading":"Section A"},'
+          '{"chunkIndex":1,"pageStart":4,"pageEnd":6,"text":"B","heading":"Section B"}]';
+      final sourceWithChunks = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        chunks: chunksJson,
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithChunks}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('pp. 1-3'), findsOneWidget);
+      expect(find.text('pp. 4-6'), findsOneWidget);
+    });
+
+    testWidgets('renders chunk label when heading is null', (tester) async {
+      final chunksJson =
+          '[{"chunkIndex":0,"text":"Content without heading"}]';
+      final sourceWithChunks = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        chunks: chunksJson,
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceWithChunks}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Chunk 1'), findsOneWidget);
+    });
+
+    testWidgets('gracefully handles malformed chunks JSON', (tester) async {
+      final sourceCorruptChunks = Source(
+        id: 'src1',
+        title: 'Textbook',
+        type: SourceType.pdf,
+        processingStatus: 'completed',
+        chunks: 'not valid json',
+        extractedText: 'some text',
+      );
+
+      await tester.pumpWidget(_buildWidget(
+        sourceId: 'src1',
+        sourceRepo: _FakeSourceRepo({'src1': sourceCorruptChunks}),
+        subjectRepo: _FakeSubjectRepo(),
+        topicRepo: _FakeTopicRepo(),
+        questionRepo: _FakeQuestionRepo(),
+      ));
+      await tester.pump(const Duration(seconds: 1));
+
+      // Malformed JSON should yield zero chunks, not a crash.
+      expect(find.text('Source Content (0)'), findsOneWidget);
+      expect(find.text('No structured content available for this source'),
+          findsOneWidget);
+    });
+  });
 }

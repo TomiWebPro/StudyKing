@@ -6555,6 +6555,53 @@
   "@noExtractedText": {
     "description": "Placeholder when no extracted text exists"
   },
+  "sourceContentSection": "Source Content",
+  "@sourceContentSection": {
+    "description": "Section header for structured source chunks/pages"
+  },
+  "sourceContentCount": "Source Content ({count})",
+  "@sourceContentCount": {
+    "description": "Section header for source content with chunk count",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "noChunksAvailable": "No structured content available for this source",
+  "@noChunksAvailable": {
+    "description": "Placeholder when source has no structured chunks"
+  },
+  "chunkLabel": "Chunk {number}",
+  "@chunkLabel": {
+    "description": "Label for a chunk without a heading, showing its 1-based number",
+    "placeholders": {
+      "number": {
+        "type": "int"
+      }
+    }
+  },
+  "sourcePage": "p. {page}",
+  "@sourcePage": {
+    "description": "Page label for a single page reference",
+    "placeholders": {
+      "page": {
+        "type": "int"
+      }
+    }
+  },
+  "sourcePageRange": "pp. {start}-{end}",
+  "@sourcePageRange": {
+    "description": "Page label for a page range reference",
+    "placeholders": {
+      "start": {
+        "type": "int"
+      },
+      "end": {
+        "type": "int"
+      }
+    }
+  },
   "generatedQuestions": "Generated Questions",
   "@generatedQuestions": {
     "description": "Section header for generated questions"

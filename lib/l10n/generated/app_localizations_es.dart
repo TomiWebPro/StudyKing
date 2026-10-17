@@ -5013,6 +5013,33 @@ class AppLocalizationsEs extends AppLocalizations {
   String get noExtractedText => 'No hay texto extraído disponible';
 
   @override
+  String get sourceContentSection => 'Contenido de la Fuente';
+
+  @override
+  String sourceContentCount(int count) {
+    return 'Contenido de la Fuente ($count)';
+  }
+
+  @override
+  String get noChunksAvailable =>
+      'No hay contenido estructurado disponible para esta fuente';
+
+  @override
+  String chunkLabel(int number) {
+    return 'Fragmento $number';
+  }
+
+  @override
+  String sourcePage(int page) {
+    return 'p. $page';
+  }
+
+  @override
+  String sourcePageRange(int start, int end) {
+    return 'pp. $start-$end';
+  }
+
+  @override
   String get generatedQuestions => 'Preguntas Generadas';
 
   @override

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 
@@ -383,6 +385,93 @@ void main() {
       test('includes Instance of SourceChunk', () {
         final chunk = SourceChunk(chunkIndex: 0, text: 'test');
         expect(chunk.toString(), contains('SourceChunk'));
+      });
+    });
+
+    group('parse', () {
+      test('returns empty list for empty string', () {
+        expect(SourceChunk.parse(''), isEmpty);
+      });
+
+      test('returns empty list for malformed JSON', () {
+        expect(SourceChunk.parse('not valid json'), isEmpty);
+      });
+
+      test('returns empty list for non-list JSON', () {
+        expect(SourceChunk.parse('{"key": "value"}'), isEmpty);
+      });
+
+      test('parses a single chunk with all fields', () {
+        final json = '[{"chunkIndex":0,"pageStart":1,"pageEnd":5,"text":"Intro","heading":"Introduction"}]';
+        final chunks = SourceChunk.parse(json);
+
+        expect(chunks.length, 1);
+        expect(chunks[0].chunkIndex, 0);
+        expect(chunks[0].pageStart, 1);
+        expect(chunks[0].pageEnd, 5);
+        expect(chunks[0].text, 'Intro');
+        expect(chunks[0].heading, 'Introduction');
+      });
+
+      test('parses multiple chunks preserving order', () {
+        final json = '[{"chunkIndex":0,"text":"A","heading":"First"},'
+            '{"chunkIndex":1,"text":"B","pageStart":3,"pageEnd":4},'
+            '{"chunkIndex":2,"text":"C"}]';
+        final chunks = SourceChunk.parse(json);
+
+        expect(chunks.length, 3);
+        expect(chunks[0].text, 'A');
+        expect(chunks[0].heading, 'First');
+        expect(chunks[1].text, 'B');
+        expect(chunks[1].pageStart, 3);
+        expect(chunks[1].pageEnd, 4);
+        expect(chunks[1].heading, isNull);
+        expect(chunks[2].text, 'C');
+      });
+
+      test('round-trips through SourceChunk.toJson → parse', () {
+        final original = [
+          SourceChunk(chunkIndex: 0, text: 'First', heading: 'Intro', pageStart: 1, pageEnd: 3),
+          SourceChunk(chunkIndex: 1, text: 'Second', pageStart: 4, pageEnd: 6),
+        ];
+        final json = jsonEncode(original.map((c) => c.toJson()).toList());
+        final parsed = SourceChunk.parse(json);
+
+        expect(parsed.length, 2);
+        expect(parsed[0].chunkIndex, 0);
+        expect(parsed[0].text, 'First');
+        expect(parsed[0].heading, 'Intro');
+        expect(parsed[0].pageStart, 1);
+        expect(parsed[0].pageEnd, 3);
+        expect(parsed[1].chunkIndex, 1);
+        expect(parsed[1].text, 'Second');
+        expect(parsed[1].pageStart, 4);
+        expect(parsed[1].pageEnd, 6);
+      });
+
+      test('ignores non-map elements in the JSON list', () {
+        final json = '[42, "string", {"chunkIndex":0,"text":"valid"}]';
+        final parsed = SourceChunk.parse(json);
+
+        expect(parsed.length, 1);
+        expect(parsed[0].chunkIndex, 0);
+        expect(parsed[0].text, 'valid');
+      });
+
+      test('handles chunks with empty text', () {
+        final json = '[{"chunkIndex":0,"text":""}]';
+        final chunks = SourceChunk.parse(json);
+
+        expect(chunks.length, 1);
+        expect(chunks[0].text, '');
+      });
+
+      test('handles chunks with empty heading', () {
+        final json = '[{"chunkIndex":0,"text":"t","heading":""}]';
+        final chunks = SourceChunk.parse(json);
+
+        expect(chunks.length, 1);
+        expect(chunks[0].heading, '');
       });
     });
   });

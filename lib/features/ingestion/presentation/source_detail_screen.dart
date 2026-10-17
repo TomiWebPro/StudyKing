@@ -12,6 +12,7 @@ import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/utils/time_utils.dart';
 import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -188,11 +189,11 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
       // any per-task configuration) instead of the global model.
       final router = ref.read(modelRouterProvider);
       final classificationModelId =
-          router.resolve(LlmTaskType.classification);
+        router.resolve(LlmTaskType.classification);
       final summarizationModelId =
-          router.resolve(LlmTaskType.summarization);
+        router.resolve(LlmTaskType.summarization);
       final generationModelId =
-          router.resolve(LlmTaskType.generation);
+        router.resolve(LlmTaskType.generation);
       final oldIds = _keepOldQuestions ? <String>[] : List<String>.from(source.generatedQuestionIds);
       final result = await pipeline.reprocessSource(
         source,
@@ -249,11 +250,11 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     // of the global model.
     final router = ref.read(modelRouterProvider);
     final classificationModelId =
-        router.resolve(LlmTaskType.classification);
+      router.resolve(LlmTaskType.classification);
     final summarizationModelId =
-        router.resolve(LlmTaskType.summarization);
+      router.resolve(LlmTaskType.summarization);
     final generationModelId =
-        router.resolve(LlmTaskType.generation);
+      router.resolve(LlmTaskType.generation);
 
     setState(() => _isReprocessing = true);
 
@@ -275,6 +276,28 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     } finally {
       if (mounted) setState(() => _isReprocessing = false);
     }
+  }
+
+  /// Formats the page reference for a [SourceChunk], using locale-aware labels.
+  /// Returns null when the chunk has no page information.
+  String? _formatPageLabel(BuildContext context, SourceChunk chunk) {
+    final l10n = AppLocalizations.of(context)!;
+    if (chunk.pageStart == null && chunk.pageEnd == null) return null;
+    final start = chunk.pageStart;
+    final end = chunk.pageEnd;
+    if (start != null && end != null && start == end) {
+      return l10n.sourcePage(start);
+    }
+    if (start != null && end != null) {
+      return l10n.sourcePageRange(start, end);
+    }
+    if (start != null) {
+      return l10n.sourcePage(start);
+    }
+    if (end != null) {
+      return l10n.sourcePage(end);
+    }
+    return null;
   }
 
   @override
@@ -303,6 +326,7 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
     final subjectName = _subject?.name ?? '';
     final status = source.statusEnum;
     final topic = _topics.where((t) => t.id == source.topicId).firstOrNull;
+    final chunks = SourceChunk.parse(source.chunks);
 
     return Scaffold(
       appBar: AppBar(
@@ -334,269 +358,309 @@ class _SourceDetailScreenState extends ConsumerState<SourceDetailScreen> {
         ],
       ),
       body: _isReprocessing
-          ? Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const LoadingIndicator(),
-                  const SizedBox(height: 16),
-                  Text(_reprocessingStage),
-                ],
-              ),
-            )
-          : SingleChildScrollView(
-              padding: ResponsiveUtils.screenPadding(context),
-              physics: const AlwaysScrollableScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _InfoRow(label: l10n.status, value: processingStatusLabel(status, l10n)),
-                  if (subjectName.isNotEmpty)
-                    _InfoRow(label: l10n.subject, value: subjectName),
-                  _InfoRow(label: l10n.type, value: sourceTypeLabel(source.type, l10n)),
-                  if (source.createdAt != null)
-                    _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
+        ? Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const LoadingIndicator(),
+                const SizedBox(height: 16),
+                Text(_reprocessingStage),
+              ],
+            ),
+          )
+        : SingleChildScrollView(
+            padding: ResponsiveUtils.screenPadding(context),
+            physics: const AlwaysScrollableScrollPhysics(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _InfoRow(label: l10n.status, value: processingStatusLabel(status, l10n)),
+                if (subjectName.isNotEmpty)
+                  _InfoRow(label: l10n.subject, value: subjectName),
+                _InfoRow(label: l10n.type, value: sourceTypeLabel(source.type, l10n)),
+                if (source.createdAt != null)
+                  _InfoRow(label: l10n.uploaded, value: formatDateFromContext(context, source.createdAt!)),
 
-                  const SizedBox(height: 16),
-                  if (status == ProcessingStatus.failed)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      margin: const EdgeInsets.only(bottom: 16),
-                      decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Icon(Icons.error_outline, color: theme.colorScheme.error),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  source.errorMessage.isNotEmpty
-                                      ? source.errorMessage
-                                      : l10n.processingFailed,
-                                  style: TextStyle(color: theme.colorScheme.error),
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (source.errorMessage.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8),
-                              child: Text(
-                                l10n.processingFailed,
-                                style: theme.textTheme.bodySmall?.copyWith(
-                                  color: theme.colorScheme.error.withValues(alpha: 0.7),
-                                ),
-                              ),
-                            ),
-                          const SizedBox(height: 8),
-                          Align(
-                            alignment: AlignmentDirectional.centerEnd,
-                            child: TextButton.icon(
-                              icon: const Icon(Icons.refresh, size: 18),
-                              label: Text(l10n.retry),
-                              onPressed: _reprocess,
-                            ),
-                          ),
-                        ],
-                      ),
+                const SizedBox(height: 16),
+                if (status == ProcessingStatus.failed)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.errorContainer,
+                      borderRadius: BorderRadius.circular(8),
                     ),
-
-                  _SectionHeader(title: l10n.topicClassification),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: topic != null
-                                ? Text(topic.title)
-                                : Text(l10n.notYetClassified, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(Icons.error_outline, color: theme.colorScheme.error),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                source.errorMessage.isNotEmpty
+                                    ? source.errorMessage
+                                    : l10n.processingFailed,
+                                style: TextStyle(color: theme.colorScheme.error),
+                              ),
+                            ),
+                          ],
+                        ),
+                        if (source.errorMessage.isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8),
+                            child: Text(
+                              l10n.processingFailed,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error.withValues(alpha: 0.7),
+                              ),
+                            ),
                           ),
-                          if (_topics.isNotEmpty)
-                            IconButton(
-                              icon: const Icon(Icons.edit, size: 20),
-                              tooltip: l10n.edit,
-                              onPressed: () => _showTopicPicker(),
-                            ),
-                          if (topic == null && _topics.isNotEmpty)
-                            TextButton(
-                              onPressed: _classifyNow,
-                              child: Text(l10n.classifyNow),
-                            ),
-                        ],
-                      ),
+                        const SizedBox(height: 8),
+                        Align(
+                          alignment: AlignmentDirectional.centerEnd,
+                          child: TextButton.icon(
+                            icon: const Icon(Icons.refresh, size: 18),
+                            label: Text(l10n.retry),
+                            onPressed: _reprocess,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
 
-                  const SizedBox(height: 16),
-                  _SectionHeader(title: l10n.summarySection),
+                _SectionHeader(title: l10n.topicClassification),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: topic != null
+                              ? Text(topic.title)
+                              : Text(l10n.notYetClassified, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                        ),
+                        if (_topics.isNotEmpty)
+                          IconButton(
+                            icon: const Icon(Icons.edit, size: 20),
+                            tooltip: l10n.edit,
+                            onPressed: () => _showTopicPicker(),
+                          ),
+                        if (topic == null && _topics.isNotEmpty)
+                          TextButton(
+                            onPressed: _classifyNow,
+                            child: Text(l10n.classifyNow),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                _SectionHeader(title: l10n.summarySection),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Text(
+                      source.summary.isNotEmpty ? source.summary : l10n.noSummaryAvailable,
+                      style: TextStyle(
+                        color: source.summary.isEmpty ? theme.colorScheme.onSurfaceVariant : null,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                _SectionHeader(title: l10n.extractedTextCount(source.extractedText.length)),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(12),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        TextField(
+                          controller: _searchController,
+                          decoration: InputDecoration(
+                            hintText: l10n.searchInText,
+                            prefixIcon: const Icon(Icons.search, size: 20),
+                            isDense: true,
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        ConstrainedBox(
+                          constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.4),
+                          child: Scrollbar(
+                            controller: _scrollController,
+                            child: SingleChildScrollView(
+                              controller: _scrollController,
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: source.extractedText.isNotEmpty
+                                  ? Text(source.extractedText, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))
+                                  : Text(
+                                      l10n.noExtractedText,
+                                      style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
+                                    ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+                _SectionHeader(title: l10n.sourceContentCount(chunks.length)),
+                if (chunks.isEmpty)
                   Card(
                     child: Padding(
                       padding: const EdgeInsets.all(12),
                       child: Text(
-                        source.summary.isNotEmpty ? source.summary : l10n.noSummaryAvailable,
-                        style: TextStyle(
-                          color: source.summary.isEmpty ? theme.colorScheme.onSurfaceVariant : null,
-                        ),
+                        l10n.noChunksAvailable,
+                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
                       ),
                     ),
-                  ),
-
-                  const SizedBox(height: 16),
-                  _SectionHeader(title: l10n.extractedTextCount(source.extractedText.length)),
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                  )
+                else
+                  ...chunks.asMap().entries.map((entry) {
+                    final chunk = entry.value;
+                    final pageLabel = _formatPageLabel(context, chunk);
+                    final hasHeading = chunk.heading != null && chunk.heading!.isNotEmpty;
+                    final cardTitle = hasHeading
+                        ? chunk.heading!
+                        : l10n.chunkLabel(chunk.chunkIndex + 1);
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 8),
+                      child: ExpansionTile(
+                        title: Text(cardTitle),
+                        subtitle: pageLabel != null
+                            ? Text(pageLabel, style: TextStyle(fontSize: 12, color: theme.colorScheme.onSurfaceVariant))
+                            : null,
                         children: [
-                          TextField(
-                            controller: _searchController,
-                            decoration: InputDecoration(
-                              hintText: l10n.searchInText,
-                              prefixIcon: const Icon(Icons.search, size: 20),
-                              isDense: true,
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          ConstrainedBox(
-                            constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.4),
-                            child: Scrollbar(
-                              controller: _scrollController,
-                              child: SingleChildScrollView(
-                                controller: _scrollController,
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                child: source.extractedText.isNotEmpty
-                                    ? Text(source.extractedText, style: const TextStyle(fontFamily: 'monospace', fontSize: 13))
-                                    : Text(
-                                        l10n.noExtractedText,
-                                        style: TextStyle(color: theme.colorScheme.onSurfaceVariant),
-                                      ),
-                              ),
+                          Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Text(
+                              chunk.text,
+                              style: const TextStyle(fontSize: 13),
                             ),
                           ),
                         ],
                       ),
+                    );
+                  }),
+
+                const SizedBox(height: 16),
+                _SectionHeader(title: l10n.generatedQuestionsCount(_questions.length)),
+                if (_questions.isEmpty)
+                  Card(
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Text(l10n.noQuestionsFromSource, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
+                    ),
+                  )
+                else
+                  ...List.generate(_questions.length, (i) {
+                    final q = _questions[i];
+                    return Semantics(
+                      button: true,
+                      label: q.text,
+                      child: Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          leading: CircleAvatar(
+                            radius: 14,
+                            backgroundColor: theme.colorScheme.primaryContainer,
+                            child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
+                          ),
+                          title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
+                          subtitle: Text(l10n.questionSubtitle(questionTypeLabel(q.type, l10n), q.difficultyText ?? difficultyWord(q.difficulty, l10n))),
+                          trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
+                          onTap: () {
+                            Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
+                          },
+                        ),
+                      ),
+                    );
+                  }),
+
+                if (source.generatedQuestionIds.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: () => _navigateToPractice(source),
+                      icon: const Icon(Icons.play_arrow),
+                      label: Text(l10n.practiceAllQuestions),
                     ),
                   ),
-
+                ] else ...[
                   const SizedBox(height: 16),
-                  _SectionHeader(title: l10n.generatedQuestionsCount(_questions.length)),
-                  if (_questions.isEmpty)
-                    Card(
-                      child: Padding(
+                  SizedBox(
+                    width: double.infinity,
+                    child: FilledButton.icon(
+                      onPressed: null,
+                      icon: const Icon(Icons.play_arrow),
+                      label: Text(l10n.noQuestionsToPractice),
+                    ),
+                  ),
+                ],
+
+                if (source.topicId.isEmpty && source.generatedQuestionIds.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Semantics(
+                      liveRegion: true,
+                      child: Container(
+                        width: double.infinity,
                         padding: const EdgeInsets.all(12),
-                        child: Text(l10n.noQuestionsFromSource, style: TextStyle(color: theme.colorScheme.onSurfaceVariant)),
-                      ),
-                    )
-                  else
-                    ...List.generate(_questions.length, (i) {
-                      final q = _questions[i];
-                      return Semantics(
-                        button: true,
-                        label: q.text,
-                        child: Card(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              radius: 14,
-                              backgroundColor: theme.colorScheme.primaryContainer,
-                              child: Text('${i + 1}', style: TextStyle(fontSize: 12, color: theme.colorScheme.primary)),
-                            ),
-                            title: Text(q.text, maxLines: 2, overflow: TextOverflow.ellipsis),
-                            subtitle: Text(l10n.questionSubtitle(questionTypeLabel(q.type, l10n), q.difficultyText ?? difficultyWord(q.difficulty, l10n))),
-                            trailing: Icon(Directionality.of(context) == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right),
-                            onTap: () {
-                              Navigator.pushNamed(context, AppRoutes.questionBank, arguments: q.id);
-                            },
-                          ),
+                        decoration: BoxDecoration(
+                          color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      );
-                    }),
-
-                  if (source.generatedQuestionIds.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: () => _navigateToPractice(source),
-                        icon: const Icon(Icons.play_arrow),
-                        label: Text(l10n.practiceAllQuestions),
-                      ),
-                    ),
-                  ] else ...[
-                    const SizedBox(height: 16),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: null,
-                        icon: const Icon(Icons.play_arrow),
-                        label: Text(l10n.noQuestionsToPractice),
-                      ),
-                    ),
-                  ],
-
-                  if (source.topicId.isEmpty && source.generatedQuestionIds.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8),
-                      child: Semantics(
-                        liveRegion: true,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(
-                            color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.5),
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(Icons.info_outline, size: 18, color: theme.colorScheme.tertiary),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  l10n.questionsWithoutTopicWarning,
-                                  style: theme.textTheme.bodySmall?.copyWith(
-                                    color: theme.colorScheme.tertiary,
-                                  ),
+                        child: Row(
+                          children: [
+                            Icon(Icons.info_outline, size: 18, color: theme.colorScheme.tertiary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                l10n.questionsWithoutTopicWarning,
+                                style: theme.textTheme.bodySmall?.copyWith(
+                                  color: theme.colorScheme.tertiary,
                                 ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
                     ),
+                  ),
 
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: _reprocess,
-                      icon: const Icon(Icons.refresh),
-                      label: Text(l10n.reprocess),
-                    ),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: _reprocess,
+                    icon: const Icon(Icons.refresh),
+                    label: Text(l10n.reprocess),
                   ),
-                  const SizedBox(height: 8),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      onPressed: () => _confirmDelete(),
-                      icon: Icon(Icons.delete, color: theme.colorScheme.error),
-                      label: Text(l10n.delete),
-                      style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.error)),
-                    ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () => _confirmDelete(),
+                    icon: Icon(Icons.delete, color: theme.colorScheme.error),
+                    label: Text(l10n.delete),
+                    style: OutlinedButton.styleFrom(side: BorderSide(color: theme.colorScheme.error)),
                   ),
-                  const SizedBox(height: 32),
-                ],
-              ),
+                ),
+                const SizedBox(height: 32),
+              ],
             ),
+          ),
     );
   }
 
@@ -733,5 +797,3 @@ class _SectionHeader extends StatelessWidget {
 }
 
 enum _SourceLoadError { sourceNotFound, somethingWentWrong }
-
-
