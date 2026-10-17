@@ -24,6 +24,7 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
+import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorContextBuilder {
@@ -43,6 +44,14 @@ class MentorContextBuilder {
   /// accuracy snapshot still injects question IDs so the prompt is never broken.
   final QuestionRepository? _questionRepository;
   final String _localeName;
+
+  /// Per-topic readiness scores from [ReadinessScorer] — the SAME signal used
+  /// by [CreatePracticeSessionTool] for difficulty selection (Vision Next-Term
+  /// §3.1). When present, a bounded readiness block is injected into the mentor
+  /// context so the LLM can reason about "ready" vs "not ready" topics instead
+  /// of relying only on raw weak-topic accuracy. Null when unavailable so the
+  /// existing context is untouched (tests/fallback).
+  final ReadinessScorer? _readinessScorer;
 
   /// Device/system-load awareness (Vision Next-Term §4.3). When present, a
   /// concise device-status line is injected into the mentor context so the LLM
@@ -81,6 +90,7 @@ class MentorContextBuilder {
     SystemMonitorService? systemMonitor,
     SyllabusFocusService? focusService,
     LlmConfiguration? llmConfig,
+    ReadinessScorer? readinessScorer,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
@@ -91,7 +101,15 @@ class MentorContextBuilder {
         _localeName = localeName,
         _focusService = focusService,
         _llmConfig = llmConfig,
+        _readinessScorer = readinessScorer,
         _systemMonitor = systemMonitor;
+
+  /// Upper bound on the number of per-topic readiness lines injected into the
+  /// mentor context (keeps the prompt bounded).
+  static const int _maxReadinessTopics = 5;
+
+  /// Upper bound on the recent-accuracy trend points shown per topic.
+  static const int _maxRecentAccuracyPoints = 3;
 
   /// Upper bound on the number of per-question mistake lines injected into the
   /// mentor context (Vision Next-Term §3.1 scenario_practice_review_context).
@@ -240,6 +258,29 @@ class MentorContextBuilder {
       }
     }
 
+    // Vision Next-Term §3.1 / §2 (scenario_practice_context): inject per-topic
+    // readiness scores — the SAME signal [CreatePracticeSessionTool] uses for
+    // difficulty selection — so the mentor can reason about readiness instead
+    // of relying only on raw weak-topic accuracy. Also surfaces a short
+    // accuracy trend per topic (past-session accuracy history).
+    // LLM-facing: invariant English per AGENTS.md i18n convention (the
+    // device/provider status lines in this file follow the same convention).
+    final readinessTopics = await _loadTopicReadiness();
+    if (readinessTopics.isNotEmpty) {
+      buffer.writeln('$bullet Readiness to practice (per topic):');
+      for (final topic in readinessTopics.take(_maxReadinessTopics)) {
+        final scorePct = formatPercent(topic.readinessScore * 100, _localeName, minFractionDigits: 0);
+        buffer.writeln('  $bullet${topic.topicId}: readiness $scorePct');
+        if (topic.recentAccuracy.isNotEmpty) {
+          final trend = topic.recentAccuracy
+              .take(_maxRecentAccuracyPoints)
+              .map((a) => formatPercent(a * 100, _localeName, minFractionDigits: 0))
+              .join(', ');
+          buffer.writeln('    recent: $trend');
+        }
+      }
+    }
+
     // Vision Next-Term §3.1 (scenario_practice_review_context): inject a
     // bounded per-question accuracy snapshot of the student's most recent
     // incorrect answers, plus per-question variant availability, so the mentor
@@ -260,6 +301,31 @@ class MentorContextBuilder {
         buffer.writeln('$bullet${l10n.mentorContextCapExceeded(dailyCap, todayMinutes - dailyCap)}');
       } else if (dailyCap > 0) {
         buffer.writeln('$bullet${l10n.mentorContextCapRemaining(dailyCap, dailyCap - todayMinutes)}');
+      }
+    }
+
+    // Vision Next-Term §3.1 / §4.1 (scenario_multisubject_juggling): inject a
+    // per-subject study-time breakdown so the mentor LLM can reason about which
+    // syllabus consumed today's study minutes ("How much time did I spend on
+    // Chemistry today?"). LLM-facing: invariant English per AGENTS.md i18n
+    // convention, with locale-aware number formatting for minutes.
+    final perSubjectMinutes = await _getTodayStudyMinutesBySubject();
+    if (perSubjectMinutes.isNotEmpty) {
+      // Map subjectId → subjectTitle using the active syllabus goals so the LLM
+      // sees human-readable labels, falling back to the raw subjectId.
+      final titleById = <String, String>{};
+      for (final goal in syllabusGoals) {
+        if (goal.subjectId.isNotEmpty) {
+          titleById[goal.subjectId] = goal.subjectTitle;
+        }
+      }
+      final sortedEntries = perSubjectMinutes.entries.toList()
+        ..sort((a, b) => b.value.compareTo(a.value));
+      buffer.writeln('$bullet Per-subject study time today:');
+      for (final entry in sortedEntries) {
+        final label = titleById[entry.key] ?? entry.key;
+        final mins = entry.value ~/ msPerMinute;
+        buffer.writeln('  $bullet$label: ${formatDecimal(mins.toDouble(), _localeName, minFractionDigits: 0)} minutes');
       }
     }
 
@@ -342,6 +408,20 @@ class MentorContextBuilder {
       final result = await _masteryService.getWeakTopics(_plannerService.studentId);
       return result.isSuccess ? result.data! : [];
     }, context: '_loadWeakTopics');
+  }
+
+  /// Loads per-topic readiness scores from [ReadinessScorer] (the same scorer
+  /// used by [CreatePracticeSessionTool] for difficulty selection), so the
+  /// mentor context reflects the readiness signal that actually drives practice
+  /// (Vision Next-Term §3.1). Omitted entirely when no scorer is wired in.
+  Future<List<TopicReadiness>> _loadTopicReadiness() async {
+    final scorer = _readinessScorer;
+    if (scorer == null) return const [];
+    final result = await Result.capture(
+      scorer.topicReadiness,
+      context: '_loadTopicReadiness',
+    );
+    return result.data ?? const [];
   }
 
   /// Builds a bounded, per-question accuracy snapshot of the student's most
@@ -499,6 +579,15 @@ class MentorContextBuilder {
   Future<int> _getTodayStudyMinutes() async {
     final result = await _sessionRepository.getTodayDurationMs();
     return result.isSuccess ? (result.data! ~/ msPerMinute) : 0;
+  }
+
+  /// Returns per-subject study time (in minutes) for today, keyed by `subjectId`.
+  /// Sessions without a `subjectId` are omitted. This feeds the per-subject
+  /// breakdown injected into the mentor context (Vision Next-Term §3.1).
+  Future<Map<String, int>> _getTodayStudyMinutesBySubject() async {
+    final result = await _sessionRepository.getTodayDurationBySubject();
+    if (result.isFailure || result.data == null) return const <String, int>{};
+    return Map<String, int>.from(result.data!);
   }
 
   /// Builds a single concise, LLM-facing line summarising device/system state

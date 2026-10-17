@@ -113,6 +113,25 @@ class SessionRepository extends Repository<Session> {
     return Result.success(todayResult.data!.fold<int>(0, (sum, s) => sum + s.actualDurationMs));
   }
 
+  /// Returns per-subject study time (in milliseconds) for today, keyed by
+  /// `subjectId`. Sessions without a `subjectId` are omitted from the map.
+  /// This powers the per-subject study-time breakdown injected into the mentor
+  /// context (Vision Next-Term §3.1, `scenario_multisubject_juggling.md`).
+  Future<Result<Map<String, int>>> getTodayDurationBySubject() async {
+    return Result.capture(() async {
+      final todayResult = await getByDate(_clock.now());
+      if (todayResult.isFailure) throw Exception(todayResult.error);
+      final bySubject = <String, int>{};
+      for (final s in todayResult.data!) {
+        final subjectId = s.subjectId;
+        if (subjectId != null && subjectId.isNotEmpty) {
+          bySubject[subjectId] = (bySubject[subjectId] ?? 0) + s.actualDurationMs;
+        }
+      }
+      return bySubject;
+    }, context: 'getTodayDurationBySubject');
+  }
+
   Future<Result<bool>> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,

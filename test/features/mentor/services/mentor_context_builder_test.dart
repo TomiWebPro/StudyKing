@@ -29,10 +29,13 @@ class _FakeSessionRepo extends SessionRepository {
   List<Session> _allSessions = [];
   List<Session> _todaySessions = [];
   int _todayDurationMs = 0;
+  Map<String, int> _todayDurationBySubject = {};
 
   void setAllSessions(List<Session> sessions) => _allSessions = sessions;
   void setTodaySessions(List<Session> sessions) => _todaySessions = sessions;
   void setTodayDurationMs(int ms) => _todayDurationMs = ms;
+  void setTodayDurationBySubject(Map<String, int> map) =>
+      _todayDurationBySubject = Map<String, int>.from(map);
 
   @override
   Future<Result<List<Session>>> getAll() async => Result.success(_allSessions);
@@ -42,6 +45,10 @@ class _FakeSessionRepo extends SessionRepository {
 
   @override
   Future<Result<int>> getTodayDurationMs() async => Result.success(_todayDurationMs);
+
+  @override
+  Future<Result<Map<String, int>>> getTodayDurationBySubject() async =>
+      Result.success(Map<String, int>.from(_todayDurationBySubject));
 }
 
 class _FakeMasteryGraphService extends MasteryGraphService {
@@ -636,6 +643,82 @@ void main() {
         final result = await builder.buildContextPrompt();
         expect(result.isSuccess, isTrue);
         expect(result.data, contains("Today's study time: 30 minutes"));
+      });
+    });
+
+    group('per-subject study time today', () {
+      test('includes per-subject breakdown when sessions span multiple subjects',
+          () async {
+        final sessionRepo = _FakeSessionRepo();
+        // Global total is 90 min (set for the existing global block); per-subject
+        // breakdown shows the split across syllabi.
+        sessionRepo.setTodayDurationMs(5400000);
+        sessionRepo.setTodayDurationBySubject({
+          'subj1': 3600000, // 60 min
+          'subj2': 1800000, // 30 min
+        });
+
+        final planner = _FakePlannerService();
+        planner.setPlan(PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              {'subjectId': 'subj1', 'subjectTitle': 'Math'},
+              {'subjectId': 'subj2', 'subjectTitle': 'Science'},
+            ],
+          },
+        ));
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sessionRepository: sessionRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Per-subject study time today'));
+        expect(result.data, contains('Math: 60 minutes'));
+        expect(result.data, contains('Science: 30 minutes'));
+        // Math (60 min) should appear before Science (30 min) — sorted desc.
+        expect(
+          result.data!.indexOf('Math: 60 minutes'),
+          lessThan(result.data!.indexOf('Science: 30 minutes')),
+        );
+      });
+
+      test('falls back to subjectId when no syllabus goal matches', () async {
+        final sessionRepo = _FakeSessionRepo();
+        sessionRepo.setTodayDurationMs(1800000);
+        sessionRepo.setTodayDurationBySubject({
+          'unknown-subj': 1800000, // 30 min
+        });
+
+        final builder = _createBuilder(sessionRepository: sessionRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Per-subject study time today'));
+        expect(result.data, contains('unknown-subj: 30 minutes'));
+      });
+
+      test('omits per-subject block when no subjects have study time', () async {
+        final sessionRepo = _FakeSessionRepo();
+        sessionRepo.setTodayDurationMs(0);
+        sessionRepo.setTodayDurationBySubject({});
+
+        final builder = _createBuilder(sessionRepository: sessionRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Per-subject study time today')));
       });
     });
 

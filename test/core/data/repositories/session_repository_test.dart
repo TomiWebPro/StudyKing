@@ -150,6 +150,25 @@ class InMemorySessionRepository extends SessionRepository {
   }
 
   @override
+  Future<Result<Map<String, int>>> getTodayDurationBySubject() async {
+    if (_failNextOperations) return Result.failure('Simulated failure');
+    final now = _clock.now();
+    final start = DateTime(now.year, now.month, now.day);
+    final end = DateTime(start.year, start.month, start.day + 1);
+    final today = _store.values.where((s) =>
+        !s.startTime.isBefore(start) &&
+        s.startTime.isBefore(end)).toList();
+    final bySubject = <String, int>{};
+    for (final s in today) {
+      final subjectId = s.subjectId;
+      if (subjectId != null && subjectId.isNotEmpty) {
+        bySubject[subjectId] = (bySubject[subjectId] ?? 0) + s.actualDurationMs;
+      }
+    }
+    return Result.success(bySubject);
+  }
+
+  @override
   Future<Result<bool>> hasSchedulingConflict({
     required DateTime startTime,
     required int durationMinutes,
@@ -456,6 +475,37 @@ void main() {
       });
     });
 
+    group('getTodayDurationBySubject', () {
+      test('returns per-subject durations for today', () async {
+        final today = clock.now();
+        await repo.save('s1', createSession(id: 's1', startTime: today, subjectId: 'math', actualDurationMs: 5000));
+        await repo.save('s2', createSession(id: 's2', startTime: today, subjectId: 'physics', actualDurationMs: 3000));
+        await repo.save('s3', createSession(id: 's3', startTime: today, subjectId: 'math', actualDurationMs: 2000));
+        final result = await repo.getTodayDurationBySubject();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, containsPair('math', 7000));
+        expect(result.data, containsPair('physics', 3000));
+      });
+
+      test('returns empty map when no sessions today', () async {
+        final result = await repo.getTodayDurationBySubject();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('omits sessions without subjectId', () async {
+        final today = clock.now();
+        await repo.save('s1', createSession(id: 's1', startTime: today, subjectId: null, actualDurationMs: 5000));
+        await repo.save('s2', createSession(id: 's2', startTime: today, subjectId: 'math', actualDurationMs: 3000));
+        final result = await repo.getTodayDurationBySubject();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, containsPair('math', 3000));
+        // Sessions without subjectId are excluded from the per-subject map.
+        expect(result.data!.keys, isNotEmpty);
+        expect(result.data!.keys, everyElement(isA<String>()));
+      });
+    });
+
     group('hasSchedulingConflict', () {
       test('returns false when no overlap', () async {
         await repo.save('s1', createSession(
@@ -756,6 +806,11 @@ void main() {
 
       test('getWeeklyDurationMs returns failure', () async {
         final result = await repo.getWeeklyDurationMs();
+        expect(result.isFailure, isTrue);
+      });
+
+      test('getTodayDurationBySubject returns failure', () async {
+        final result = await repo.getTodayDurationBySubject();
         expect(result.isFailure, isTrue);
       });
 
