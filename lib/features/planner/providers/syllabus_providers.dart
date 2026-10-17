@@ -1,7 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/utils/time_utils.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
+import 'package:studyking/features/practice/providers/practice_providers.dart' show masteryGraphServiceProvider;
+import 'package:studyking/features/subjects/providers/topic_repository_provider.dart' show topicRepositoryProvider;
 import 'planner_providers.dart' show plannerServiceProvider;
 
 final _logger = const Logger('SyllabusProviders');
@@ -89,5 +93,65 @@ final roadmapListProvider =
   } catch (e) {
     _logger.w('Failed to load roadmaps', e);
     return const RoadmapListData(isLoading: false);
+  }
+});
+
+/// Per-subject scoped data for `SyllabusProgressCard`, fetched once for ALL
+/// syllabus goals instead of per-card. Eliminates the N×2 redundant
+/// `getAllMasteryStates` + `getBySubject` round-trips when rendering 12 cards.
+class SyllabusProgressScope {
+  final List<MasteryState> masteryStates;
+  final int totalTopics;
+
+  const SyllabusProgressScope({
+    required this.masteryStates,
+    required this.totalTopics,
+  });
+}
+
+/// Fetches all mastery states once and all topics once, then returns a
+/// per-subject-map keyed by `subjectId`. Both the dashboard and planner's
+/// `SubjectProgressTabs` consume this so that rendering N syllabus progress
+/// cards triggers exactly **two** repository calls (one mastery, one topics),
+/// not 2×N.
+final syllabusProgressForCardsProvider =
+    FutureProvider.family<Map<String, SyllabusProgressScope>, String>(
+        (ref, studentId) async {
+  try {
+    final plannerService = ref.watch(plannerServiceProvider);
+    final masteryService = ref.watch(masteryGraphServiceProvider);
+    final topicRepo = ref.watch(topicRepositoryProvider);
+
+    final planResult = await plannerService.loadExistingPlan();
+    final plan = planResult.data;
+    if (plan == null || plan.syllabusGoals.isEmpty) return {};
+
+    final goals = plan.syllabusGoals;
+
+    // One mastery fetch for all subjects.
+    final masteryResult = await masteryService.getAllTopicMastery(studentId);
+    final allMastery =
+        masteryResult.isSuccess ? (masteryResult.data ?? []) : <MasteryState>[];
+
+    // One topics fetch for all subjects, then filter per subject.
+    final topicsResult = await topicRepo.getAll();
+    final allTopics = topicsResult.isSuccess ? (topicsResult.data ?? []) : <Topic>[];
+
+    final result = <String, SyllabusProgressScope>{};
+    for (final goal in goals) {
+      final subjectTopics =
+          allTopics.where((t) => t.subjectId == goal.subjectId).toList();
+      final topicIds = subjectTopics.map((t) => t.id).toSet();
+      final scopedMastery =
+          allMastery.where((m) => topicIds.contains(m.topicId)).toList();
+      result[goal.subjectId] = SyllabusProgressScope(
+        masteryStates: scopedMastery,
+        totalTopics: subjectTopics.length,
+      );
+    }
+    return result;
+  } catch (e) {
+    _logger.w('Failed to load syllabus progress for cards', e);
+    return {};
   }
 });

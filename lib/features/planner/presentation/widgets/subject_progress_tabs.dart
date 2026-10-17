@@ -24,6 +24,12 @@ class SubjectProgressTabs extends ConsumerWidget {
 
     final studentId = fixedStudentId ?? (ref.read(studentIdServiceProvider).getStudentId().data ?? '');
 
+    // Fetch shared mastery + topic data once for ALL syllabus goals (not per
+    // card). When the shared data is ready, each card receives scoped
+    // overrides instead of re-running getAllMasteryStates per card.
+    final progressForCardsAsync = ref.watch(syllabusProgressForCardsProvider(studentId));
+    final progressForCards = progressForCardsAsync.valueOrNull ?? {};
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -38,6 +44,7 @@ class SubjectProgressTabs extends ConsumerWidget {
               .map((t) => t.topicId)
               .toSet()
               .length;
+          final scope = progressForCards[goal.subjectId];
           return Card(
             margin: const EdgeInsets.only(bottom: 8),
             child: Padding(
@@ -60,7 +67,7 @@ class SubjectProgressTabs extends ConsumerWidget {
                     trailing: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Text(l10n.hoursPerDayAbbrev(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)),
+                         Text(l10n.hoursPerDayAbbrev(formatDecimal(goal.targetHoursPerDay.toDouble(), l10n.localeName)),
                             style: Theme.of(context).textTheme.bodySmall),
                       ],
                     ),
@@ -68,6 +75,8 @@ class SubjectProgressTabs extends ConsumerWidget {
                   SyllabusProgressCard(
                     studentId: studentId,
                     goal: goal,
+                    masteryStatesOverride: scope?.masteryStates,
+                    totalTopicsOverride: scope?.totalTopics,
                   ),
                 ],
               ),

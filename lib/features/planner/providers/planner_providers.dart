@@ -16,7 +16,7 @@ import '../../../core/utils/time_utils.dart';
 import '../services/planner_service.dart';
 import 'plan_providers.dart' show planProgressProvider;
 export 'plan_providers.dart' show PlanProgressData, DailyProgress, planProgressProvider;
-export 'syllabus_providers.dart' show SyllabusProgressData, RoadmapListData, syllabusProgressProvider, roadmapListProvider;
+export 'syllabus_providers.dart' show SyllabusProgressData, SyllabusProgressScope, RoadmapListData, syllabusProgressProvider, syllabusProgressForCardsProvider, roadmapListProvider;
 export 'adherence_providers.dart' show AdherenceSummaryData, TodayAdherenceData, adherenceSummaryProvider, todayAdherenceProvider;
 
 final plannerServiceProvider = Provider<PlannerService>((ref) {

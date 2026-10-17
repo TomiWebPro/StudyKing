@@ -5,6 +5,7 @@ import 'package:studyking/core/utils/number_format_utils.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/core/widgets/shimmer_widget.dart';
+import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/features/dashboard/data/models/dashboard_models.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/badges_card.dart';
 import 'package:studyking/features/dashboard/presentation/widgets/collapsible_card.dart' show DashboardCard;
@@ -347,7 +348,15 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
                   _buildRemainingLessonsCard(context, studentId),
                   if (syllabusGoals.isNotEmpty) ...[
                     SizedBox(height: vs),
-                    _buildSyllabusProgress(context, syllabusGoals, studentId),
+                    _buildSyllabusProgress(
+                      context,
+                      syllabusGoals,
+                      studentId,
+                      allMasteryData,
+                      syllabusBreakdown,
+                      allMasteryAsync.hasValue,
+                      syllabusBreakdownAsync.hasValue,
+                    ),
                   ],
                   if (syllabusBreakdown.isNotEmpty) ...[
                     SizedBox(height: vs),
@@ -551,8 +560,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
     );
   }
 
-  Widget _buildSyllabusProgress(BuildContext context, List<SyllabusGoal> goals, String studentId) {
+  Widget _buildSyllabusProgress(
+    BuildContext context,
+    List<SyllabusGoal> goals,
+    String studentId,
+    List<MasteryState> allMasteryData,
+    List<SyllabusBreakdown> syllabusBreakdown,
+    bool masteryReady,
+    bool breakdownReady,
+  ) {
     final l10n = AppLocalizations.of(context)!;
+    // Only pass pre-computed overrides when the shared fetches have completed.
+    // This eliminates redundant per-card getAllMasteryStates() calls — the
+    // data is already fetched once via dashboardAllMasteryProvider +
+    // dashboardSyllabusBreakdownProvider. Before readiness, each card falls
+    // back to its own FutureBuilder fetch.
+    final useSharedData = masteryReady && breakdownReady;
+
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -567,13 +591,37 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen>
               ],
             ),
             const Divider(),
-            ...goals.map((goal) => Padding(
-              padding: const EdgeInsets.only(bottom: 8),
-              child: SyllabusProgressCard(
-                studentId: studentId,
-                goal: goal,
-              ),
-            )),
+            ...goals.map((goal) {
+              if (useSharedData) {
+                final breakdown = syllabusBreakdown.firstWhere(
+                  (b) => b.subjectId == goal.subjectId,
+                  orElse: () => SyllabusBreakdown(
+                    subjectId: goal.subjectId,
+                    subjectTitle: goal.subjectTitle,
+                  ),
+                );
+                final topicIds = breakdown.topicIds.toSet();
+                final scopedMastery = allMasteryData
+                    .where((m) => topicIds.contains(m.topicId))
+                    .toList();
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: SyllabusProgressCard(
+                    studentId: studentId,
+                    goal: goal,
+                    masteryStatesOverride: scopedMastery,
+                    totalTopicsOverride: breakdown.totalTopics,
+                  ),
+                );
+              }
+              return Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: SyllabusProgressCard(
+                  studentId: studentId,
+                  goal: goal,
+                ),
+              );
+            }),
           ],
         ),
       ),

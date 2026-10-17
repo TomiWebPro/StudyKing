@@ -37,7 +37,12 @@ class SyllabusBreakdownCard extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-            ...visible.map((b) => _buildRow(context, l10n, b)),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: visible.length,
+          itemBuilder: (context, index) => _buildRow(context, l10n, visible[index]),
+        ),
       ],
     );
   }
