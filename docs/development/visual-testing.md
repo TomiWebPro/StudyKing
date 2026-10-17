@@ -31,6 +31,18 @@ accepted criteria.
 
 ---
 
+## Current golden test coverage
+
+| Screen / Widget | Golden test file | Matrix |
+|---|---|---|
+| `DashboardNavCard` | `test/features/dashboard/presentation/widgets/dashboard_nav_card_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+| `SummaryRow` | `test/features/dashboard/presentation/widgets/summary_row_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+| `PlannerScreen` | `test/features/planner/presentation/planner_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+| `MentorScreen` | `test/features/mentor/presentation/mentor_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+| `LessonListScreen` | `test/features/lessons/presentation/lesson_list_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+
+---
+
 ## API reference
 
 ### `renderWidgetToPng`
