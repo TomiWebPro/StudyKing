@@ -206,6 +206,12 @@ abstract class AppLocalizations {
   /// **'Generated plan for {course} over {days} days ({totalHours} total hours)'**
   String generatedPlanOverDays(String course, int days, int totalHours);
 
+  /// Warning when multi-subject daily hours exceed the 24h cap
+  ///
+  /// In en, this message translates to:
+  /// **'Total daily hours ({totalHours}) exceed the {cap} hour limit. They will be capped at {cap}.'**
+  String planHoursExceedsDailyCap(int totalHours, int cap);
+
   /// Pluralized phrase for days
   ///
   /// In en, this message translates to:
@@ -10664,6 +10670,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Set quiet hours'**
   String get setQuietHours;
+
+  /// Snackbar shown after enqueuing files for bulk background ingestion
+  ///
+  /// In en, this message translates to:
+  /// **'{count} file(s) enqueued for background processing. {total} total in queue.'**
+  String bulkUploadEnqueued(int count, int total);
+
+  /// Action label to navigate to the background upload queue view
+  ///
+  /// In en, this message translates to:
+  /// **'View Queue'**
+  String get viewQueue;
+
+  /// Section heading for background ingestion jobs
+  ///
+  /// In en, this message translates to:
+  /// **'Background Queue'**
+  String get backgroundQueue;
+
+  /// Empty state for the background queue section
+  ///
+  /// In en, this message translates to:
+  /// **'No background jobs in progress'**
+  String get noBackgroundJobs;
+
+  /// Placeholder when the file list is empty
+  ///
+  /// In en, this message translates to:
+  /// **'No files selected'**
+  String get noFilesSelected;
+
+  /// Tooltip for the remove-file icon in the multi-file list
+  ///
+  /// In en, this message translates to:
+  /// **'Remove'**
+  String get removeFile;
 }
 
 class _AppLocalizationsDelegate

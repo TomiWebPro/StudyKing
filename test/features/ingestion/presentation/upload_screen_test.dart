@@ -1,5 +1,7 @@
 import 'dart:async';
 
+import 'package:file_picker/file_picker.dart';
+import 'package:file_picker/src/platform/file_picker_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -7,16 +9,18 @@ import 'package:studyking/core/data/enums.dart';
 import '../../../helpers/navigator_observer_helper.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/ingestion/presentation/upload_screen.dart';
+import 'package:studyking/features/ingestion/services/bulk_ingestion_service.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
-import 'package:studyking/features/questions/data/repositories/question_repository.dart';
-import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/core/data/extraction/asr_engine.dart';
 import 'package:studyking/core/data/extraction/ocr_engine.dart';
-import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show whisperAsrEngineProvider;
+import 'package:studyking/features/ingestion/providers/ingestion_providers.dart' show whisperAsrEngineProvider, bulkIngestionServiceProvider;
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/core/data/repositories/topic_repository.dart';
 import 'package:studyking/core/providers/ocr_provider.dart' show ocrModeProvider;
 import '../../../helpers/locale_switch_harness.dart';
 
@@ -280,6 +284,80 @@ class _ThrowingFetchPipeline extends _FakeContentPipeline {
   Future<Result<String>> fetchAndScrapeUrl(String url) async {
     throw Exception('Network error');
   }
+}
+
+/// Fake [IdleExecutor] that executes tasks synchronously so widget tests
+/// can observe the full effect of [BulkIngestionService.enqueueBulk] without
+/// real delays.
+class _SyncIdleExecutor extends IdleExecutor {
+  @override
+  Future<void> enqueue(
+    String description,
+    Future<void> Function() task, {
+    bool requiresHeavy = false,
+  }) async {
+    await task();
+  }
+}
+
+/// A [FilePickerPlatform] fake that returns a configurable number of files.
+class _FakeMultiFilePicker extends FilePickerPlatform {
+  final int fileCount;
+
+  _FakeMultiFilePicker(this.fileCount);
+
+  @override
+  Future<FilePickerResult?> pickFiles({
+    String? dialogTitle,
+    String? initialDirectory,
+    FileType type = FileType.any,
+    List<String>? allowedExtensions,
+    Function(FilePickerStatus)? onFileLoading,
+    int compressionQuality = 0,
+    bool allowMultiple = false,
+    bool withData = false,
+    bool withReadStream = false,
+    bool lockParentWindow = false,
+    bool readSequential = false,
+    bool cancelUploadOnWindowBlur = true,
+  }) async {
+    return FilePickerResult(
+      List.generate(fileCount, (i) => PlatformFile(
+            path: '/test/file_$i.pdf',
+            name: 'file_$i.pdf',
+            size: 1024,
+          )),
+    );
+  }
+}
+
+/// Builds a widget with a [BulkIngestionService] wired in. The service uses
+/// a fake pipeline and a synchronous idle executor so all processing happens
+/// immediately during `pumpAndSettle`.
+Widget _buildWidgetWithBulkService({
+  required BulkIngestionService bulkService,
+  ContentPipeline? pipeline,
+  TestNavigatorObserver? navigatorObserver,
+}) {
+  return ProviderScope(
+    overrides: [
+      whisperAsrEngineProvider.overrideWithValue(NoopAsrEngine()),
+      ocrModeProvider.overrideWith((ref) => OcrMode.hybrid),
+      bulkIngestionServiceProvider.overrideWith((ref) => bulkService),
+    ],
+    child: MaterialApp(
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      navigatorObservers: navigatorObserver != null ? [navigatorObserver] : [],
+      home: UploadScreen(
+        pipeline: pipeline,
+        bulkIngestionService: bulkService,
+        fixedModelId: 'test-model',
+        fixedStudentId: 'test-student',
+      ),
+    ),
+  );
 }
 
 Widget _buildWidget({ContentPipeline? pipeline, TestNavigatorObserver? navigatorObserver}) {
@@ -750,6 +828,149 @@ void main() {
         // With PopScope(canPop=true), the back navigation is allowed
         // when not uploading (canPop: !_isUploading).
         expect(find.byType(UploadScreen), findsOneWidget);
+      });
+    });
+
+    group('bulk ingestion', () {
+      testWidgets('multi-pick enqueues N jobs and shows snackbar',
+          (tester) async {
+        final bulkService = BulkIngestionService(
+          pipeline: _FakeContentPipeline(),
+          idleExecutor: _SyncIdleExecutor(),
+        );
+        final previousPlatform = FilePickerPlatform.instance;
+        FilePickerPlatform.instance = _FakeMultiFilePicker(5);
+
+        try {
+          await tester.pumpWidget(_buildWidgetWithBulkService(
+            bulkService: bulkService,
+          ));
+          await tester.pump();
+
+          // Tap the File button to open the picker (mocked to return 5 files).
+          await tester.ensureVisible(find.text('File'));
+          await tester.pump();
+          await tester.tap(find.text('File'));
+          await tester.pump();
+
+          // The file picker returns 5 files and they are stored in _selectedFiles.
+          // Now submit — files route to enqueueBulk via the bulk service.
+          await tester.enterText(find.byType(TextField).first, 'Bulk Notes');
+          await tester.pump();
+
+          final uploadButton =
+              find.widgetWithText(FilledButton, 'Upload & Analyze');
+          await tester.ensureVisible(uploadButton);
+          await tester.pump();
+          await tester.tap(uploadButton);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          // All 5 jobs should be processed and enqueued.
+          expect(bulkService.totalCount, 5);
+          expect(bulkService.completedCount, 5);
+
+          // Snackbar should mention the count.
+          expect(
+            find.textContaining('5 file'),
+            findsOneWidget,
+          );
+        } finally {
+          FilePickerPlatform.instance = previousPlatform;
+        }
+      });
+
+      testWidgets('bulk upload clears the form after enqueueing',
+          (tester) async {
+        final bulkService = BulkIngestionService(
+          pipeline: _FakeContentPipeline(),
+          idleExecutor: _SyncIdleExecutor(),
+        );
+        final previousPlatform = FilePickerPlatform.instance;
+        FilePickerPlatform.instance = _FakeMultiFilePicker(3);
+
+        try {
+          await tester.pumpWidget(_buildWidgetWithBulkService(
+            bulkService: bulkService,
+          ));
+          await tester.pump();
+
+          await tester.enterText(find.byType(TextField).first, 'Bulk Notes');
+          await tester.pump();
+
+          await tester.tap(find.text('File'));
+          await tester.pump();
+
+          final uploadButton =
+              find.widgetWithText(FilledButton, 'Upload & Analyze');
+          await tester.ensureVisible(uploadButton);
+          await tester.pump();
+          await tester.tap(uploadButton);
+          await tester.pump();
+          await tester.pumpAndSettle();
+
+          // Form should be cleared — title field empty.
+          expect(find.text('Bulk Notes'), findsNothing);
+          expect(bulkService.totalCount, 3);
+        } finally {
+          FilePickerPlatform.instance = previousPlatform;
+        }
+      });
+
+      testWidgets('PopScope allows navigation when only background jobs run',
+          (tester) async {
+        final bulkService = BulkIngestionService(
+          pipeline: _FakeContentPipeline(),
+          idleExecutor: _SyncIdleExecutor(),
+        );
+        final previousPlatform = FilePickerPlatform.instance;
+        FilePickerPlatform.instance = _FakeMultiFilePicker(2);
+
+        try {
+          await tester.pumpWidget(_buildWidgetWithBulkService(
+            bulkService: bulkService,
+          ));
+          await tester.pump();
+
+          // Bulk upload returns immediately (background queue), so _isUploading
+          // is false and canPop is true.
+          expect(find.byType(UploadScreen), findsOneWidget);
+        } finally {
+          FilePickerPlatform.instance = previousPlatform;
+        }
+      });
+
+      testWidgets('renders background jobs section when service has jobs',
+          (tester) async {
+        final bulkService = BulkIngestionService(
+          pipeline: _FakeContentPipeline(),
+          idleExecutor: _SyncIdleExecutor(),
+        );
+
+        // Pre-populate the service with a completed job.
+        await bulkService.enqueueBulk(
+          files: [
+            BulkUploadFile(
+              filePath: '/test/preexisting.pdf',
+              fileName: 'preexisting.pdf',
+              title: 'Pre-existing',
+              sourceType: SourceType.pdf,
+            ),
+          ],
+          studentId: 'test-student',
+          classificationModelId: 'test-model',
+          summarizationModelId: 'test-model',
+          generationModelId: 'test-model',
+        );
+
+        await tester.pumpWidget(_buildWidgetWithBulkService(
+          bulkService: bulkService,
+        ));
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        expect(find.text('Background Queue'), findsOneWidget);
+        expect(find.text('preexisting.pdf'), findsOneWidget);
       });
     });
   });

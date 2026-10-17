@@ -93,6 +93,18 @@
       }
     }
   },
+  "planHoursExceedsDailyCap": "Las horas diarias totales ({totalHours}) exceden el límite de {cap} horas. Se ajustarán a {cap}.",
+  "@planHoursExceedsDailyCap": {
+    "description": "Warning when multi-subject daily hours exceed the 24h cap",
+    "placeholders": {
+      "totalHours": {
+        "type": "int"
+      },
+      "cap": {
+        "type": "int"
+      }
+    }
+  },
   "overDaysPlural": "en {count, plural, =0{0 días} =1{1 día} other{{count} días}}",
   "@overDaysPlural": {
     "description": "Pluralized phrase for days",
@@ -8510,5 +8522,37 @@
   "setQuietHours": "Establecer horas de silencio",
   "@setQuietHours": {
     "description": "Button shown when quiet hours are not configured"
+  },
+  "bulkUploadEnqueued": "{count} archivo(s) encolados para procesamiento en segundo plano. {total} total en cola.",
+  "@bulkUploadEnqueued": {
+    "description": "Snackbar shown after enqueuing files for bulk background ingestion",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
+  "viewQueue": "Ver Cola",
+  "@viewQueue": {
+    "description": "Action label to navigate to the background upload queue view"
+  },
+  "backgroundQueue": "Cola de Segundo Plano",
+  "@backgroundQueue": {
+    "description": "Section heading for background ingestion jobs"
+  },
+  "noBackgroundJobs": "No hay trabajos en segundo plano en progreso",
+  "@noBackgroundJobs": {
+    "description": "Empty state for the background queue section"
+  },
+  "noFilesSelected": "No se han seleccionado archivos",
+  "@noFilesSelected": {
+    "description": "Placeholder when the file list is empty"
+  },
+  "removeFile": "Eliminar",
+  "@removeFile": {
+    "description": "Tooltip for the remove-file icon in the multi-file list"
   }
 }

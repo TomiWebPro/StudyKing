@@ -5,10 +5,14 @@ import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
 import 'package:studyking/core/providers/app_providers.dart' show localeProvider;
 import 'package:studyking/core/providers/llm_providers.dart'
-    show llmServiceProvider, modelRouterProvider;
+    show llmServiceProvider, llmTaskManagerProvider, modelRouterProvider, systemMonitorServiceProvider;
+import 'package:studyking/core/providers/prep_budget_providers.dart'
+    show prepBudgetSettingsProvider;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
+import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/core/providers/ocr_provider.dart';
+import 'package:studyking/features/ingestion/services/bulk_ingestion_service.dart';
 import 'package:studyking/features/ingestion/services/content_pipeline.dart';
 import 'package:studyking/features/ingestion/services/document_extractor.dart';
 import 'package:studyking/features/ingestion/services/page_metadata.dart';
@@ -150,4 +154,38 @@ final contentPipelineProvider = Provider<ContentPipeline>((ref) {
     transcriptionModelId: transcriptionModelId,
     localeName: locale.languageCode,
   );
+});
+
+/// Background queue for off-period ingestion and prep tasks
+/// (Vision Next-Term §4.1/§4.3). Uses the same quiet-hours and CPU/battery
+/// deferral predicates as the agent's [IdleExecutor], so bulk uploads
+/// respect the student's "Prepare while I'm away" settings.
+final idleExecutorProvider = Provider<IdleExecutor>((ref) {
+  final taskManager = ref.watch(llmTaskManagerProvider);
+  final systemMonitor = ref.watch(systemMonitorServiceProvider);
+  final prepBudget = ref.watch(prepBudgetSettingsProvider);
+  final executor = IdleExecutor(
+    llmTaskManager: taskManager,
+    studentId: 'default',
+    systemMonitor: systemMonitor,
+    shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
+    isPrepEnabledForSubject: (subjectId) =>
+        prepBudget.isPrepEnabledForSubject(subjectId),
+  );
+  executor.startIdleMonitoring();
+  ref.onDispose(executor.dispose);
+  return executor;
+});
+
+/// Service that manages bulk ingestion of study materials through the
+/// [IdleExecutor] background queue. The student can multi-select many files,
+/// leave the upload screen, and the queue continues processing in the
+/// background with per-file progress tracking and retry on transient errors.
+final bulkIngestionServiceProvider =
+    ChangeNotifierProvider<BulkIngestionService>((ref) {
+  final service = BulkIngestionService(
+    pipeline: ref.watch(contentPipelineProvider),
+    idleExecutor: ref.watch(idleExecutorProvider),
+  );
+  return service;
 });

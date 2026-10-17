@@ -69,6 +69,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String planHoursExceedsDailyCap(int totalHours, int cap) {
+    return 'Total daily hours ($totalHours) exceed the $cap hour limit. They will be capped at $cap.';
+  }
+
+  @override
   String overDaysPlural(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -6504,4 +6509,24 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get setQuietHours => 'Set quiet hours';
+
+  @override
+  String bulkUploadEnqueued(int count, int total) {
+    return '$count file(s) enqueued for background processing. $total total in queue.';
+  }
+
+  @override
+  String get viewQueue => 'View Queue';
+
+  @override
+  String get backgroundQueue => 'Background Queue';
+
+  @override
+  String get noBackgroundJobs => 'No background jobs in progress';
+
+  @override
+  String get noFilesSelected => 'No files selected';
+
+  @override
+  String get removeFile => 'Remove';
 }

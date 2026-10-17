@@ -14,6 +14,7 @@ import 'package:studyking/core/data/extraction/ocr_engine.dart';
 import 'package:studyking/core/routes/app_router.dart';
 import 'package:studyking/core/providers/service_providers.dart';
 import 'package:studyking/features/ingestion/providers/ingestion_providers.dart';
+import 'package:studyking/features/ingestion/services/bulk_ingestion_service.dart';
 import 'package:studyking/core/utils/responsive.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/core/data/repositories/topic_repository.dart';
@@ -23,6 +24,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class UploadScreen extends ConsumerStatefulWidget {
   final String? preselectedSubjectId;
   final ContentPipeline? pipeline;
+  final BulkIngestionService? bulkIngestionService;
   final String? fixedStudentId;
   final String? fixedModelId;
 
@@ -30,6 +32,7 @@ class UploadScreen extends ConsumerStatefulWidget {
     super.key,
     this.preselectedSubjectId,
     this.pipeline,
+    this.bulkIngestionService,
     this.fixedStudentId,
     this.fixedModelId,
   });
@@ -55,8 +58,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   bool _generateQuestions = true;
   bool _generateLessons = false;
   bool _isSyllabus = false;
-  String? _selectedFilePath;
-  String? _selectedFileName;
+  List<XFile> _selectedFiles = [];
   ProcessingStatus? _processingStage;
   String _processingStageDescription = '';
   String? _lastSourceId;
@@ -69,11 +71,24 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     super.initState();
     _selectedSubjectId = widget.preselectedSubjectId;
     _loadSubjects();
+    // Subscribe to the background queue so the UI rebuilds as jobs transition
+    // through states (pending → running → completed/failed). Only subscribe
+    // when the service is injected via the widget constructor — reading from
+    // the provider during initState (in tests without an override) can
+    // create a real service that then gets disposed, causing use-after-free.
+    widget.bulkIngestionService?.addListener(_onBulkIngestionChanged);
+  }
+
+  void _onBulkIngestionChanged() {
+    if (mounted) {
+      setState(() {});
+    }
   }
 
   @override
   void dispose() {
     _processingStopwatch.stop();
+    widget.bulkIngestionService?.removeListener(_onBulkIngestionChanged);
     _titleController.dispose();
     _contentController.dispose();
     _urlController.dispose();
@@ -119,27 +134,28 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           'mp3', 'mp4', 'wav', 'm4a', 'ogg', 'webm',
         ],
         withData: false,
+        allowMultiple: true,
       );
 
       if (!mounted) return;
-      if (result != null && result.files.single.path != null) {
+      if (result != null && result.files.isNotEmpty) {
         setState(() {
-          _selectedFilePath = result.files.single.path;
-          _selectedFileName = result.files.single.name;
+          _selectedFiles = result.files
+              .map((pf) => XFile(pf.path ?? '', name: pf.name))
+              .toList();
           _useFilePicker = true;
         });
       }
     } catch (e) {
       _logger.w('File picker failed', e);
-      if (mounted) {
-        final l10n = AppLocalizations.of(context)!;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(l10n.filePickerError('')),
-            backgroundColor: Theme.of(context).colorScheme.error,
-          ),
-        );
-      }
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.filePickerError('')),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
     }
   }
 
@@ -154,8 +170,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
       if (!mounted) return;
       if (photo != null) {
         setState(() {
-          _selectedFilePath = photo.path;
-          _selectedFileName = photo.name;
+          _selectedFiles = [photo];
           _useFilePicker = true;
         });
         ScaffoldMessenger.of(context).showSnackBar(
@@ -180,6 +195,119 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
   ContentPipeline _getPipeline() {
     if (widget.pipeline != null) return widget.pipeline!;
     return ref.read(contentPipelineProvider);
+  }
+
+  BulkIngestionService? _getBulkIngestionService() {
+    if (widget.bulkIngestionService != null) {
+      return widget.bulkIngestionService!;
+    }
+    // In production, read from the provider. In tests that don't override
+    // the provider, this may be unavailable — fall back silently so the
+    // legacy single-file pipeline path still works.
+    try {
+      return ref.read(bulkIngestionServiceProvider);
+    } catch (e) {
+      _logger.w('BulkIngestionService not available via provider: $e', e);
+      return null;
+    }
+  }
+
+  /// Enqueues selected files into the background queue via
+  /// [BulkIngestionService]. Shows a snackbar with the count and allows
+  /// the student to navigate away — processing continues in the background.
+  Future<void> _enqueueBulkFiles(
+    String studentId, {
+    bool fullPipeline = true,
+  }) async {
+    final service = _getBulkIngestionService();
+    if (service == null) {
+      // Should not reach here — _submitContent checks service availability
+      // before calling this method. But guard to avoid silent no-ops.
+      _logger.w('BulkIngestionService unavailable; cannot enqueue.');
+      return;
+    }
+
+    final l10n = AppLocalizations.of(context)!;
+    final router = ref.read(modelRouterProvider);
+    final fixedModelId = widget.fixedModelId;
+    final classificationModelId =
+        fixedModelId ?? router.resolve(LlmTaskType.classification);
+    final summarizationModelId =
+        fixedModelId ?? router.resolve(LlmTaskType.summarization);
+    final generationModelId =
+        fixedModelId ?? router.resolve(LlmTaskType.generation);
+
+    List<String> possibleTopics = [];
+    if (_selectedSubjectId != null && _selectedSubjectId!.isNotEmpty) {
+      try {
+        final topicRepo = TopicRepository();
+        await topicRepo.init();
+        final topicsResult = await topicRepo.getBySubject(_selectedSubjectId!);
+        possibleTopics = (topicsResult.data ?? [])
+            .map((t) => t.title)
+            .where((t) => t.isNotEmpty)
+            .toList();
+      } catch (e) {
+        _logger.w('Failed to load topics: $e', e);
+      }
+    }
+
+    final files = _selectedFiles.map((f) {
+      final fileName = f.name;
+      final sourceType = _inferSourceType(fileName);
+      return BulkUploadFile(
+        filePath: f.path,
+        fileName: fileName,
+        title: _titleController.text.trim(),
+        sourceType: sourceType,
+        subjectId: _selectedSubjectId ?? '',
+        generateQuestions: _generateQuestions,
+        generateLessons: _generateLessons,
+        fullPipeline: fullPipeline,
+      );
+    }).where((f) => f.filePath.isNotEmpty).toList();
+
+    if (files.isEmpty) {
+      setState(() => _error = _UploadError.fillRequiredFields);
+      return;
+    }
+
+    final jobs = await service.enqueueBulk(
+      files: files,
+      studentId: studentId,
+      classificationModelId: classificationModelId,
+      summarizationModelId: summarizationModelId,
+      generationModelId: generationModelId,
+      possibleTopics: possibleTopics,
+    );
+
+    // Clear the form — files are now in the background queue.
+    setState(() {
+      _selectedFiles = [];
+      _useFilePicker = false;
+      _titleController.clear();
+      _contentController.clear();
+      _urlController.clear();
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.bulkUploadEnqueued(
+            jobs.length,
+            service.totalCount,
+          )),
+          duration: Timeouts.snackbarSuccess,
+          action: SnackBarAction(
+            label: l10n.viewQueue,
+            onPressed: () {
+              // Scroll to the background queue section
+            },
+          ),
+          showCloseIcon: true,
+        ),
+      );
+    }
   }
 
   Future<void> _fetchUrlContent(String url) async {
@@ -224,9 +352,27 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         ? _urlController.text.trim()
         : _contentController.text.trim();
 
+    // If files are selected and the background service is available, enqueue
+    // them for off-period processing. Otherwise fall through to the legacy
+    // single-file pipeline path (backward compatible with tests that don't
+    // override `bulkIngestionServiceProvider`).
+    if (_useFilePicker && _selectedFiles.isNotEmpty) {
+      final service = _getBulkIngestionService();
+      if (service != null) {
+        final studentId = widget.fixedStudentId ??
+            (ref.read(studentIdServiceProvider).getStudentId().data ?? '');
+        if (studentId.isEmpty) {
+          setState(() => _error = _UploadError.fillRequiredFields);
+          return;
+        }
+        await _enqueueBulkFiles(studentId, fullPipeline: fullPipeline);
+        return;
+      }
+      // No bulk service — fall through to legacy single-file processing.
+    }
+
     if (title.isEmpty ||
-        (!_useFilePicker && content.isEmpty) ||
-        (_useFilePicker && _selectedFilePath == null)) {
+        (!_useFilePicker && content.isEmpty)) {
       setState(() => _error = _UploadError.fillRequiredFields);
       return;
     }
@@ -248,8 +394,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     try {
       final l10n = AppLocalizations.of(context)!;
       final pipeline = _getPipeline();
-      final inferredType = _useFilePicker
-          ? _inferSourceType(_selectedFileName ?? '')
+      final inferredType = _useFilePicker && _selectedFiles.isNotEmpty
+          ? _inferSourceType(_selectedFiles.first.name)
           : _useUrlInput
               ? _inferSourceType(content)
               : SourceType.externalResource;
@@ -334,8 +480,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           }
         }
 
-        final actualContent = _useFilePicker && _selectedFilePath != null
-            ? 'file://$_selectedFilePath'
+        final actualContent = (_useFilePicker && _selectedFiles.isNotEmpty)
+            ? 'file://${_selectedFiles.first.path}'
             : content;
 
         final stageOrder = ProcessingStatus.values
@@ -380,8 +526,8 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
           _lastSourceId = result.data!.id;
         }
       } else {
-        final actualContent = _useFilePicker && _selectedFilePath != null
-            ? 'file://$_selectedFilePath'
+        final actualContent = (_useFilePicker && _selectedFiles.isNotEmpty)
+            ? 'file://${_selectedFiles.first.path}'
             : content;
 
         final result = await pipeline.processUpload(
@@ -417,8 +563,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
         _titleController.clear();
         _contentController.clear();
         _urlController.clear();
-        _selectedFilePath = null;
-        _selectedFileName = null;
+        _selectedFiles = [];
         _useFilePicker = false;
       });
       if (mounted) {
@@ -507,6 +652,9 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
     final l10n = AppLocalizations.of(context)!;
     return PopScope(
       canPop: !_isUploading,
+      // Navigation is blocked only during a foreground (single-file) upload.
+      // Background-bulk uploads return immediately, so the student can freely
+      // navigate away while jobs continue in the [IdleExecutor] queue.
       onPopInvokedWithResult: (didPop, _) {
         if (didPop) return;
         if (!_isUploading) {
@@ -635,7 +783,7 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
               ),
               const SizedBox(height: 16),
 
-              if (_useFilePicker && _selectedFileName != null)
+              if (_useFilePicker && _selectedFiles.isNotEmpty)
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
@@ -645,25 +793,41 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                         .withValues(alpha: 0.3),
                     borderRadius: BorderRadius.circular(8),
                   ),
-                  child: Row(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Icon(Icons.insert_drive_file, size: 24),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _selectedFileName!,
-                          overflow: TextOverflow.ellipsis,
-                        ),
+                      Text(
+                        '${_selectedFiles.length} file(s) selected',
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      IconButton(
-                        icon: const Icon(Icons.close, size: 18),
-                        tooltip: l10n.close,
-                        onPressed: () => setState(() {
-                          _selectedFilePath = null;
-                          _selectedFileName = null;
-                          _useFilePicker = false;
-                        }),
-                      ),
+                      const SizedBox(height: 8),
+                      ..._selectedFiles.asMap().entries.map((entry) {
+                        final index = entry.key;
+                        final file = entry.value;
+                        return Row(
+                          children: [
+                            const Icon(Icons.insert_drive_file, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                file.name,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            if (_selectedFiles.length > 1 || index == 0)
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 18),
+                                tooltip: l10n.removeFile,
+                                onPressed: () => setState(() {
+                                  _selectedFiles.removeAt(index);
+                                  if (_selectedFiles.isEmpty) {
+                                    _useFilePicker = false;
+                                  }
+                                }),
+                              ),
+                          ],
+                        );
+                      }),
                     ],
                   ),
                 ),
@@ -893,10 +1057,141 @@ class _UploadScreenState extends ConsumerState<UploadScreen> {
                     ),
                   ),
                 ),
-              ],
-            ),
+              // Background ingestion jobs — always visible when a service
+              // is present so the student can see progress after navigating
+              // away and returning.
+              if (_getBulkIngestionService() != null) _buildBackgroundJobsSection(),
+            ],
           ),
         ),
+      ),
+    ),
+    );
+  }
+
+  Widget _buildBackgroundJobsSection() {
+    final service = _getBulkIngestionService();
+    if (service == null) return const SizedBox.shrink();
+
+    final jobs = service.jobs;
+    if (jobs.isEmpty) return const SizedBox.shrink();
+
+    final l10n = AppLocalizations.of(context)!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          l10n.backgroundQueue,
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        ListView.separated(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: jobs.length,
+          separatorBuilder: (_, __) => const SizedBox(height: 8),
+          itemBuilder: (context, index) {
+            final job = jobs[index];
+            return _buildJobTile(job);
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildJobTile(BulkIngestionJob job) {
+    final l10n = AppLocalizations.of(context)!;
+    final isCompleted = job.isCompleted;
+    final isFailed = job.isFailed;
+    final isRunning = job.isRunning;
+    final isPending = job.isPending;
+
+    Color? bgColor;
+    if (isCompleted) {
+      bgColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    } else if (isFailed) {
+      bgColor = Theme.of(context).colorScheme.errorContainer;
+    } else if (isRunning) {
+      bgColor = Theme.of(context)
+          .colorScheme
+          .primaryContainer
+          .withValues(alpha: 0.3);
+    } else if (isPending) {
+      bgColor = Theme.of(context).colorScheme.surfaceContainerHighest;
+    }
+
+    IconData statusIcon;
+    if (isCompleted) {
+      statusIcon = Icons.check_circle;
+    } else if (isFailed) {
+      statusIcon = Icons.error;
+    } else if (isRunning) {
+      statusIcon = Icons.sync;
+    } else {
+      statusIcon = Icons.schedule;
+    }
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                statusIcon,
+                size: 20,
+                color: isFailed
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  job.fileName,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              if (isPending || isRunning)
+                IconButton(
+                  icon: const Icon(Icons.close, size: 18),
+                  tooltip: l10n.cancel,
+                  onPressed: () {
+                    _getBulkIngestionService()?.cancelJob(job.id);
+                  },
+                ),
+            ],
+          ),
+          if (job.description.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                job.description,
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+            ),
+          if (isFailed && !job.isCancelled)
+            Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Align(
+                alignment: Alignment.centerRight,
+                child: TextButton.icon(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  label: Text(l10n.retry),
+                  onPressed: () {
+                    _getBulkIngestionService()?.retryJob(job);
+                  },
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
