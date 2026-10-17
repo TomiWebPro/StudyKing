@@ -373,15 +373,14 @@ void main() {
   });
 
   group('Dry-run scenario: provider switch (longterm user)', () {
-    test('Step 3: no agent tool for provider switch → tool audit FAIL', () {
+    test('Step 3: switch_provider agent tool is FOUND', () {
       // Reproduces the tool/context audit from
       // dry-run-test/scenario_longterm_user_accelerates.md Step 3.
       final neededTools = <String>['switch_provider'];
 
       // availableTools reflects the real llmAgentToolsProvider tool set
       // (single source of truth in fakes.dart → registeredToolNames),
-      // which includes all 17 registered tools: schedule_rest_day, the
-      // 4 prep tools, and the 11 domain tools — but NOT switch_provider.
+      // which now includes switch_provider (registered in llm_agent_providers.dart).
       final availableTools = registeredToolNames;
 
       final audit = AgentRunCapture.auditTools(
@@ -389,8 +388,8 @@ void main() {
         available: availableTools,
       );
 
-      expect(audit, contains('switch_provider -> MISSING'));
-      expect(audit, contains('1 tool(s) missing'));
+      expect(audit, contains('switch_provider -> HAD'));
+      expect(audit, contains('all needed tools available'));
     });
   });
 
@@ -749,14 +748,14 @@ void main() {
       expect(response.toolCalls[1].arguments['topicTitle'], 'Basic Fractions');
     });
 
-    test('Tool/context audit: review_mistakes tool is MISSING', () {
+    test('Tool/context audit: review_mistakes tool is FOUND', () {
       final neededTools = <String>['review_mistakes'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('review_mistakes -> MISSING'));
-      expect(audit, contains('1 tool(s) missing'));
+      expect(audit, contains('review_mistakes -> HAD'));
+      expect(audit, contains('all needed tools available'));
     });
 
     test('Verdict trace: practice-review-adaptive scenario produces trace', () {
@@ -765,7 +764,7 @@ void main() {
 
       trace.add('Step 1: PASS — CreatePracticeSessionTool reachable');
       trace.add('Step 2: PARTIAL — readiness scoring exists but not in LLM context');
-      trace.add('Step 3: PARTIAL — markscheme explanations exist but no review-mistakes UI');
+      trace.add('Step 3: PARTIAL — markscheme explanations exist; review_mistakes agent tool now FOUND but no dedicated conversational review screen');
       failureCount += 2;
       trace.add('Step 4: PASS — get_weak_topics + schedule_lesson reachable');
       trace.add('Step 5: PARTIAL — mastery updates exist but review UI is sparse');
@@ -1280,20 +1279,20 @@ void main() {
       expect(response.toolCalls.first.toolName, 'refresh_mastery');
     });
 
-    test('Tool/context audit: review_mistakes tool is MISSING', () {
+    test('Tool/context audit: review_mistakes tool is FOUND', () {
       final neededTools = <String>['review_mistakes'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('review_mistakes -> MISSING'));
+      expect(audit, contains('review_mistakes -> HAD'));
     });
 
     test('Verdict trace: practice-mistake-review scenario produces trace', () {
       final trace = <String>[];
 
       trace.add('Step 1: PASS — get_student_stats is reachable through AgentLoop');
-      trace.add('Step 2: PARTIAL — markscheme explanations exist but no review UI');
+      trace.add('Step 2: PARTIAL — markscheme explanations exist; review_mistakes agent tool now FOUND');
       trace.add('Step 3: PARTIAL — variants enqueued but not immediately served');
       trace.add('Step 4: PASS — get_weak_topics + create_practice_session + schedule_lesson reachable');
       trace.add('Step 5: PASS — refresh_mastery updates mastery state');
@@ -1305,7 +1304,7 @@ void main() {
         print(line);
       }
       // ignore: avoid_print
-      print('Verdict: PARTIAL — no review_mistakes tool for conversational review');
+      print('Verdict: PARTIAL — review_mistakes agent tool now FOUND; no dedicated conversational review screen');
       // ignore: avoid_print
       print('=== End trace ===');
     });
@@ -1343,9 +1342,10 @@ void main() {
 
     test('registeredToolNames matches llmAgentToolsProvider registration count',
         () {
-      // The canonical tool set from fakes.dart must match the 18 tools
-      // registered in llmAgentToolsProvider (llm_agent_providers.dart).
-      expect(registeredToolNames, hasLength(18));
+      // The canonical tool set from fakes.dart must match the 20 tools
+      // registered in llmAgentToolsProvider (llm_agent_providers.dart),
+      // including switch_provider (added for the provider-switch scenario).
+      expect(registeredToolNames, hasLength(20));
       // Verify no duplicate registration by checking the set size.
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });

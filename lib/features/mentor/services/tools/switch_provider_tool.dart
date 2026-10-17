@@ -81,7 +81,7 @@ class SwitchProviderTool extends AgentTool {
     if (name == null || name.isEmpty) return null;
     final normalized = name.normalized;
     for (final p in LlmProvider.values) {
-      if (p.name == normalized) return p;
+      if (p.name.toLowerCase() == normalized) return p;
     }
     return null;
   }
@@ -93,6 +93,8 @@ class SwitchProviderTool extends AgentTool {
 
     if (provider == null) {
       final validNames = LlmProvider.values.map((p) => p.name).join(', ');
+      _logger.w('Unknown provider requested: "$providerName" '
+          '(valid: $validNames)');
       return {
         'success': false,
         'error':
@@ -108,6 +110,7 @@ class SwitchProviderTool extends AgentTool {
     // All other providers require a non-empty API key.
     if (provider != LlmProvider.ollama) {
       if (apiKey == null || apiKey.normalized.isEmpty) {
+        _logger.w('Provider switch to $providerName rejected: API key required');
         return {
           'success': false,
           'error': 'API key is required for provider: $providerName',

@@ -16,6 +16,7 @@ import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/markscheme_model.dart';
+import 'package:studyking/core/data/models/student_attempt_model.dart';
 import 'package:studyking/core/data/models/question_mastery_state_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
@@ -44,10 +45,13 @@ import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.d
 import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
+import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
+import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
+import 'package:studyking/features/practice/services/mistake_review_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
 import 'package:studyking/features/teaching/data/repositories/tutor_session_repository.dart';
@@ -159,6 +163,29 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
       );
     }
     return null;
+  }
+}
+
+/// Fake [MistakeReviewService] that returns canned mistakes without touching
+/// Hive or the LLM — used to isolate the ReviewMistakesTool trace.
+class FakeMistakeReviewService extends MistakeReviewService {
+  final List<MistakeEntry> mistakes;
+  bool throwError = false;
+
+  FakeMistakeReviewService([this.mistakes = const []])
+      : super(
+          attemptRepo: tool_fakes.FakeAttemptRepository(),
+          questionRepo: tool_fakes.FakeQuestionRepository(),
+        );
+
+  @override
+  Future<Result<List<MistakeEntry>>> getMistakesFromSession({
+    required String studentId,
+    required String subjectId,
+    DateTime? after,
+  }) async {
+    if (throwError) return Result.failure('mistake_review_unavailable');
+    return Result.success(mistakes);
   }
 }
 
@@ -988,6 +1015,268 @@ void main() {
       });
     });
 
+    group('SwitchProviderTool', () {
+      test('reachable through AgentLoop from "switch to Ollama"', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: switch_provider\n'
+          r'ARGUMENTS: {"provider": "ollama", "model": "llama3"}',
+          'Switched to Ollama with model llama3. You can update your default '
+          'model in Settings.',
+        ]);
+
+        // Recording callback so we can verify the tool invoked the provider switch.
+        Map<String, dynamic>? receivedArgs;
+        final tool = SwitchProviderTool(
+          onSwitch: ({
+            required LlmProvider provider,
+            required String? apiKey,
+            required String? baseUrl,
+            required String? model,
+          }) async {
+            receivedArgs = {
+              'provider': provider,
+              'apiKey': apiKey,
+              'baseUrl': baseUrl,
+              'model': model,
+            };
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Switch to Ollama instead of OpenRouter.',
+          studentId: 'provider-student',
+          systemPrompt: 'You are a mentor that manages AI provider settings.',
+          feature: 'mentor',
+        );
+
+        // The tool was invoked with parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'switch_provider');
+        expect(response.toolCalls.first.arguments['provider'], 'ollama');
+        expect(response.toolCalls.first.arguments['model'], 'llama3');
+
+        // The callback received the provider switch request.
+        expect(receivedArgs, isNotNull);
+        expect(receivedArgs!['provider'], LlmProvider.ollama);
+        expect(receivedArgs!['model'], 'llama3');
+        // Ollama does not need an API key.
+        expect(receivedArgs!['apiKey'], isNull);
+      });
+
+      test('ollama switch succeeds without API key', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: switch_provider\nARGUMENTS: {"provider": "ollama"}',
+          'Switched to Ollama (local, no API key required).',
+        ]);
+
+        String? receivedProvider;
+        final tool = SwitchProviderTool(
+          onSwitch: ({
+            required LlmProvider provider,
+            required String? apiKey,
+            required String? baseUrl,
+            required String? model,
+          }) async {
+            receivedProvider = provider.name;
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Use Ollama locally.',
+          studentId: 'ollama-student',
+          systemPrompt: 'You are a mentor.',
+          feature: 'mentor',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'switch_provider');
+        expect(receivedProvider, 'ollama');
+        expect(response.error, isNull);
+      });
+
+      test('non-ollama provider without API key returns failure', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: switch_provider\nARGUMENTS: {"provider": "openAI"}',
+          'I could not switch providers — an API key is required for openAI.',
+        ]);
+
+        bool callbackCalled = false;
+        final tool = SwitchProviderTool(
+          onSwitch: ({
+            required LlmProvider provider,
+            required String? apiKey,
+            required String? baseUrl,
+            required String? model,
+          }) async {
+            callbackCalled = true;
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Switch to OpenAI.',
+          studentId: 'openai-student',
+          systemPrompt: 'You are a mentor.',
+          feature: 'mentor',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        // Tool returns failure because API key is missing, but callback is
+        // never invoked — the tool short-circuits before calling onSwitch.
+        expect(callbackCalled, isFalse);
+        final result = jsonDecode(response.toolCalls.first.result!) as Map<String, dynamic>;
+        expect(result['success'], isFalse);
+        expect(result['error'], contains('API key'));
+      });
+
+      test('unknown provider name returns failure', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: switch_provider\nARGUMENTS: {"provider": "unknown_ai"}',
+          'I could not switch providers — "unknown_ai" is not a valid provider.',
+        ]);
+
+        final tool = SwitchProviderTool(
+          onSwitch: ({
+            required LlmProvider provider,
+            required String? apiKey,
+            required String? baseUrl,
+            required String? model,
+          }) async =>
+              Result.success(null),
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Switch to unknown_ai.',
+          studentId: 'unknown-student',
+          systemPrompt: 'You are a mentor.',
+          feature: 'mentor',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        final result = jsonDecode(response.toolCalls.first.result!) as Map<String, dynamic>;
+        expect(result['success'], isFalse);
+        expect(result['error'], contains('Unknown provider'));
+      });
+    });
+
+    group('ReviewMistakesTool', () {
+      test('reachable through AgentLoop from "show me my mistakes"',
+          () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: review_mistakes\n'
+          'ARGUMENTS: {"subjectId": "math-hl", "daysBack": 14, "limit": 5}',
+          'I found 1 mistake on fractions. The correct answer is 1/2, and the '
+          'key concept was equivalent fractions.',
+        ]);
+
+        final now = DateTime.now();
+        final question = Question(
+          id: 'q-frac-1',
+          text: 'What is 1/4 + 1/4?',
+          type: QuestionType.singleChoice,
+          subjectId: 'math-hl',
+          topicId: 'fractions-1',
+          topic: 'Fractions',
+          markscheme: Markscheme(
+            questionId: 'q-frac-1',
+            correctAnswer: '1/2',
+            explanation: 'Adding quarters: 1/4 + 1/4 = 2/4 = 1/2.',
+          ),
+          explanation: 'Adding quarters: 1/4 + 1/4 = 2/4 = 1/2.',
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        final mistakes = [
+          MistakeEntry(
+            question: question,
+            attempt: StudentAttempt(
+              id: 'att-1',
+              studentId: 'review-student',
+              questionId: 'q-frac-1',
+              subjectId: 'math-hl',
+              isCorrect: false,
+              timestamp: now,
+              userAnswer: '1/4',
+            ),
+            correctAnswer: '1/2',
+            explanation: 'Adding quarters: 1/4 + 1/4 = 2/4 = 1/2.',
+          ),
+        ];
+
+        final tool = ReviewMistakesTool(
+          mistakeReviewService: FakeMistakeReviewService(mistakes),
+          studentIdService: tool_fakes.FakeStudentIdService('review-student'),
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Show me my mistakes in math',
+          studentId: 'review-student',
+          systemPrompt: 'You are a mentor that reviews practice mistakes.',
+          feature: 'mentor',
+        );
+
+        // The tool was invoked with the LLM-parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'review_mistakes');
+        expect(response.toolCalls.first.arguments['subjectId'], 'math-hl');
+        expect(response.toolCalls.first.arguments['daysBack'], 14);
+        expect(response.toolCalls.first.arguments['limit'], 5);
+
+        // The result surfaces wrong answers with markscheme explanations and
+        // the linked concept (topicId), not a redirect to a separate UI.
+        final result = response.toolCalls.first.result;
+        expect(result, isNotNull, reason: 'Tool result should be serialized');
+        final resultMap = jsonDecode(result!) as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['subjectId'], 'math-hl');
+        expect(resultMap['totalFound'], 1);
+        expect(resultMap['mistakes'], isNotEmpty);
+        expect(resultMap['mistakes'][0]['concept'], 'fractions-1');
+        expect(resultMap['mistakes'][0]['topic'], 'Fractions');
+        expect(resultMap['mistakes'][0]['userAnswer'], '1/4');
+        expect(resultMap['mistakes'][0]['correctAnswer'], '1/2');
+        expect(resultMap['mistakes'][0]['explanation'], contains('1/2'));
+      });
+    });
+
     group('multi-tool scenario trace', () {
       test(
           'get_syllabus_structure → create_practice_session → get_lesson_history '
@@ -1092,19 +1381,22 @@ void main() {
           'schedule_lesson',
         ]);
 
-        // Tools traced in this file — 14 interactive mentor tools (including
-        // schedule_rest_day and wellbeing_adjust_schedule) + 4 off-period prep
-        // tools registered in llmAgentToolsProvider.
+        // Tools traced in this file — 16 interactive mentor tools (including
+        // schedule_rest_day, wellbeing_adjust_schedule, switch_syllabus_focus,
+        // and switch_provider) + 4 off-period prep tools registered in
+        // llmAgentToolsProvider.
         allToolNames.addAll([
           'search_questions',
           'schedule_rest_day',
           'wellbeing_adjust_schedule',
           'switch_syllabus_focus',
+          'switch_provider',
           'generate_lesson_blocks',
           'modify_plan',
           'get_adherence_trends',
           'get_lesson_history',
           'create_practice_session',
+          'review_mistakes',
           'get_syllabus_structure',
           'ingest_pdf_to_kb',
           'enqueue_question_variants',
@@ -1112,13 +1404,13 @@ void main() {
           'refresh_mastery',
         ]);
 
-        // All 18 tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(18));
+        // All 20 tools from llmAgentToolsProvider are traced.
+        expect(allToolNames, hasLength(20));
 
         // Cross-check against the canonical registered tool-name set from
         // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
         expect(allToolNames, equals(registeredToolNames));
-        expect(registeredToolNames, hasLength(18));
+        expect(registeredToolNames, hasLength(20));
       });
     });
   });

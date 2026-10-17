@@ -131,6 +131,7 @@ const Set<String> registeredToolNames = {
   'schedule_rest_day',
   'wellbeing_adjust_schedule',
   'switch_syllabus_focus',
+  'switch_provider',
   'create_plan',
   'modify_plan',
   'search_questions',
@@ -139,6 +140,7 @@ const Set<String> registeredToolNames = {
   'get_adherence_trends',
   'get_lesson_history',
   'create_practice_session',
+  'review_mistakes',
   'get_syllabus_structure',
   'generate_lesson_blocks',
   // Off-period preparation toolbox (Vision Next-Term §4.3)

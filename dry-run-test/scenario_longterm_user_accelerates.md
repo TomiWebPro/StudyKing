@@ -29,11 +29,12 @@
 | `schedule_lesson` (reschedule a lesson) | YES | `lib/features/mentor/services/tools/schedule_lesson_tool.dart` |
 | `get_syllabus_structure` (switch subject, carry forward topics) | YES | `lib/features/mentor/services/tools/get_syllabus_structure_tool.dart` |
 | `get_lesson_history` (find session to reschedule) | YES | `lib/features/mentor/services/tools/get_lesson_history_tool.dart` |
-| Switch/provider-config tool | NO — settings UI only, no agent tool | `lib/features/settings/data/models/settings_model.dart` — provider config exists but no `AgentTool` wraps it. |
+| Switch/provider-config tool | YES | `lib/features/mentor/services/tools/switch_provider_tool.dart` |
 
-**Gap:** No agent tool for switching AI provider / model at runtime. The mentor
-cannot say "I'll switch you to Ollama" and have the LLM confirm the change.
-→ File `issues/open/e2e-mentor-missing-provider-switch-tool.md`
+**Gap:** — (RESOLVED) The `SwitchProviderTool` is now registered in
+`llmAgentToolsProvider` (`lib/core/providers/llm_agent_providers.dart`). The mentor
+can call `switch_provider` after student confirmation and update the live config.
+Previously filed as `issues/open/e2e-mentor-missing-provider-switch-tool.md` (now closed).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -68,6 +69,5 @@ Traced against code at `lib/features/mentor/services/mentor_service.dart:337-385
 - Step 4: PASS — reschedule intent extraction + confirmation.
 - Step 5: PASS — session persistence is immediate.
 
-Tool audit: `schedule_lesson`, `modify_plan`, `get_lesson_history` all reachable.
-Missing: provider-switch agent tool → new issue.
-Context audit: provider config not injected → new issue.
+Tool audit: `schedule_lesson`, `modify_plan`, `get_lesson_history`, `switch_provider` all reachable.
+Context audit: provider config not injected → see `scenario_provider-config-not-injected.md`.

@@ -344,8 +344,8 @@ void main() {
 
       // availableTools reflects the real llmAgentToolsProvider tool set
       // (single source of truth in fakes.dart → registeredToolNames),
-      // which includes all 17 registered tools including schedule_rest_day
-      // and the 4 prep tools — but NOT switch_provider.
+      // which now includes switch_provider (registered in
+      // llm_agent_providers.dart SwitchProviderTool).
       final availableTools = registeredToolNames;
 
       final audit = AgentRunCapture.auditTools(
@@ -353,8 +353,8 @@ void main() {
         available: availableTools,
       );
 
-      expect(audit, contains('switch_provider -> MISSING'));
-      expect(audit, contains('1 tool(s) missing'));
+      expect(audit, contains('switch_provider -> HAD'));
+      expect(audit, contains('all needed tools available'));
     });
 
     test('Verdict trace: provider-config scenario produces FAIL trace', () {
@@ -369,10 +369,9 @@ void main() {
       trace.add('Step 2: PASS — Settings → AI Provider screen exists '
           '(verified in dry-run-test/scenario_api_key_missing.md)');
 
-      // Step 3: provider switch via agent tool — FAIL
-      trace.add('Step 3: FAIL — no AgentTool wraps provider/model '
-          'configuration; mentor cannot confirm provider switch');
-      allPass = false;
+      // Step 3: provider switch via agent tool — PASS (SwitchProviderTool now registered)
+      trace.add('Step 3: PASS — switch_provider agent tool is registered '
+          'in llmAgentToolsProvider (lib/core/providers/llm_agent_providers.dart)');
 
       // Step 4: B4 failover handles network errors — PASS
       trace.add('Step 4: PASS — B4 failover + timeouts handle network issues '

@@ -11,7 +11,8 @@ import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart'
-    show questionRepositoryProvider, questionVariantServiceProvider;
+    show questionRepositoryProvider, questionVariantServiceProvider,
+        sourceRepositoryProvider;
 import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
 import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
@@ -30,6 +31,10 @@ import 'package:studyking/features/mentor/services/tools/get_adherence_trends_to
 import 'package:studyking/features/mentor/services/tools/get_lesson_history_tool.dart';
 import 'package:studyking/features/mentor/services/tools/create_practice_session_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_syllabus_structure_tool.dart';
+import 'package:studyking/features/mentor/services/tools/read_source_content_tool.dart';
+import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
+import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
 import 'package:studyking/features/lessons/providers/lesson_providers.dart';
 import 'package:studyking/features/subjects/providers/subject_repository_provider.dart';
@@ -52,6 +57,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final examSessionService = ref.watch(examSessionServiceProvider);
   final subjectRepo = ref.watch(subjectRepositoryProvider);
   final topicRepo = ref.watch(topicRepositoryProvider);
+  final sourceRepo = ref.watch(sourceRepositoryProvider);
 
   // Vision Next-Term §4.3 LLM prep toolbox dependencies. These are watched so
   // the prep tools can record spend against the correct [PrepCategory.taskTypeKey]
@@ -64,6 +70,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final budgetService = ref.watch(prepBudgetServiceProvider);
   final questionVariantService = ref.watch(questionVariantServiceProvider);
   final focusService = ref.watch(syllabusFocusServiceProvider);
+  final mistakeReviewService = ref.watch(mistakeReviewServiceProvider);
 
   return [
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
@@ -110,6 +117,30 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
           subjectTitle: subjectTitle,
           days: days,
         );
+        return Result.success(null);
+      },
+    ),
+    // Vision Next-Term §3.1 (scenario_longterm_user_accelerates Step 3):
+    // the mentor agent can switch AI provider at runtime. The callback updates
+    // the Riverpod StateProviders so the new config takes effect for subsequent
+    // LlmService reads, and persists via SettingsController.
+    SwitchProviderTool(
+      onSwitch: ({
+        required LlmProvider provider,
+        required String? apiKey,
+        required String? baseUrl,
+        required String? model,
+      }) async {
+        ref.read(llmProviderProvider.notifier).state = provider;
+        if (apiKey != null && apiKey.isNotEmpty) {
+          ref.read(apiKeyProvider.notifier).state = apiKey;
+        }
+        if (baseUrl != null && baseUrl.isNotEmpty) {
+          ref.read(apiBaseUrlProvider.notifier).state = baseUrl;
+        }
+        if (model != null && model.isNotEmpty) {
+          ref.read(selectedModelProvider.notifier).state = model;
+        }
         return Result.success(null);
       },
     ),
@@ -172,6 +203,22 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
       taskManager: taskManager,
       usageMeter: usageMeter,
       budgetService: budgetService,
+    ),
+    // Vision Next-Term §3.1 / §4.1: source-content reader. Lets the mentor agent
+    // open an ingested source and read its page-cited chunks so lessons and
+    // question banks are grounded in the student's material, not metadata alone.
+    ReadSourceContentTool(
+      sourceRepo: sourceRepo,
+      studentIdService: studentIdService,
+    ),
+    // Vision Next-Term §3.1 (scenario_practice_mistake_review /
+    // scenario_practice_review_adaptive): exposes recent wrong answers with
+    // markscheme explanations and linked concepts so the mentor can review
+    // mistakes conversationally instead of redirecting to a separate UI.
+    ReviewMistakesTool(
+      mistakeReviewService: mistakeReviewService,
+      studentIdService: studentIdService,
+      focusService: focusService,
     ),
   ];
 });
