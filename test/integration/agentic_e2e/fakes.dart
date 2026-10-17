@@ -129,6 +129,7 @@ const Set<String> registeredToolNames = {
   // Interactive mentor tools
   'schedule_lesson',
   'schedule_rest_day',
+  'wellbeing_adjust_schedule',
   'create_plan',
   'modify_plan',
   'search_questions',

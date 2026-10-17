@@ -4008,6 +4008,28 @@ class AppLocalizationsEs extends AppLocalizations {
       'Fecha no válida. Proporciona una fecha en formato ISO 8601 (p. ej. 2025-01-31).';
 
   @override
+  String get toolWellbeingReminderInvalidType =>
+      'Tipo de recordatorio no válido. Usa uno de: bedtime, break, pacing.';
+
+  @override
+  String get toolWellbeingReminderInvalidTime =>
+      'Hora no válida. Proporciona una cadena con formato HH:MM (p. ej. 22:00).';
+
+  @override
+  String toolWellbeingReminderResult(String reminderType, String time) {
+    return 'He establecido un recordatorio de $reminderType para las $time. Te enviaré un recordatorio cuando sea el momento.';
+  }
+
+  @override
+  String toolWellbeingReminderDisabled(String reminderType) {
+    return 'He desactivado el recordatorio de $reminderType.';
+  }
+
+  @override
+  String get toolWellbeingReminderFail =>
+      'No se pudo establecer el recordatorio de bienestar. Por favor, inténtalo de nuevo.';
+
+  @override
   String get toolGenerateBlocksFail => 'Error al generar bloques de lección';
 
   @override

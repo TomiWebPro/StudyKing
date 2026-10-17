@@ -182,6 +182,15 @@ void main() {
       expect(names.length, equals(tools.length));
     });
 
+    test('registers wellbeing_adjust_schedule tool', () {
+      final container = _createContainer();
+      addTearDown(() => container.dispose());
+
+      final tools = container.read(llmAgentToolsProvider);
+      final names = tools.map((t) => t.name).toSet();
+      expect(names, contains('wellbeing_adjust_schedule'));
+    });
+
     test('registers get_syllabus_structure tool with required dependencies', () {
       final container = _createContainer();
       addTearDown(() => container.dispose());

@@ -64,6 +64,44 @@ class LlmConfiguration {
   }
 }
 
+/// Configuration for retry-with-backoff behaviour on transient LLM errors.
+///
+/// Vision-next-term §2.1 (harness rules):
+/// > "Flaky-network resilient: retry with backoff, timeout per step,
+/// > CHECK: PASS/FAIL style verdict per scenario."
+///
+/// When a transient error (5xx, timeout, `SocketException`) is detected by
+/// [LlmService], the transport retries the **same** provider with exponential
+/// backoff before optionally falling over to a backup provider (B4). This
+/// prevents a single transient blip from burning backup-provider budget or
+/// failing the entire turn.
+class LlmRetryConfig {
+  /// Default maximum retry attempts (not counting the initial call).
+  /// Matches the issue's solidification criteria: "max 3 attempts".
+  static const int defaultMaxAttempts = 3;
+
+  /// Default initial backoff delay (1 second → 2s → 4s with multiplier 2.0).
+  static const Duration defaultInitialDelay = Duration(seconds: 1);
+
+  /// Default multiplier for exponential backoff.
+  static const double defaultMultiplier = 2.0;
+
+  /// Maximum number of retry attempts on transient errors.
+  final int maxAttempts;
+
+  /// Initial backoff delay before the first retry.
+  final Duration initialDelay;
+
+  /// Multiplier applied to the delay after each retry.
+  final double multiplier;
+
+  const LlmRetryConfig({
+    this.maxAttempts = defaultMaxAttempts,
+    this.initialDelay = defaultInitialDelay,
+    this.multiplier = defaultMultiplier,
+  });
+}
+
 class TokenBucket {
   final int _capacity;
   final Duration _refillInterval;
@@ -108,6 +146,7 @@ class LlmService {
   final LlmTaskManager? _taskManager;
   final LlmUsageMeter? _usageMeter;
   final LlmResponseCache? _cache;
+  final LlmRetryConfig _retryConfig;
 
   /// Client-side throttling: minimum 500ms between calls (B3)
   DateTime _lastCallTime = DateTime.now().subtract(const Duration(seconds: 1));
@@ -138,10 +177,12 @@ class LlmService {
     LlmTaskManager? taskManager,
     LlmUsageMeter? usageMeter,
     LlmResponseCache? cache,
+    LlmRetryConfig? retryConfig,
   }) : _httpClient = httpClient ?? http.Client(),
        _taskManager = taskManager,
        _usageMeter = usageMeter,
-       _cache = cache;
+       _cache = cache,
+       _retryConfig = retryConfig ?? const LlmRetryConfig();
 
   Uri get _openRouterUrl => ApiConfig.forEnvironment(BuildConfig.environment).openRouterBaseUrl;
 
@@ -177,7 +218,32 @@ class LlmService {
     }
   }
 
+  /// Classifies whether an error string represents a transient error that is
+  /// worth retrying (5xx, timeout, connection failure).
+  /// Extracted from the inline checks that previously lived in
+  /// [_streamWithFallback] and [_callWithFallback] (B5 retry-with-backoff).
+  static bool _isTransientError(String errorStr) {
+    return errorStr.contains('500') ||
+        errorStr.contains('502') ||
+        errorStr.contains('503') ||
+        errorStr.contains('timed out') ||
+        errorStr.contains('ConnectionFailedError') ||
+        errorStr.contains('SocketException');
+  }
+
+  /// Computes the exponential backoff delay for the [retryIndex]-th retry
+  /// (0-based). With defaults [LlmRetryConfig.defaultInitialDelay] of 1s and
+  /// [LlmRetryConfig.defaultMultiplier] of 2.0: 1s → 2s → 4s.
+  Duration _computeBackoffDelay(int retryIndex) {
+    var ms = _retryConfig.initialDelay.inMilliseconds;
+    for (var i = 0; i < retryIndex; i++) {
+      ms = (ms * _retryConfig.multiplier).round();
+    }
+    return Duration(milliseconds: ms);
+  }
+
   /// Attempt streaming with a backup provider if primary fails (B4)
+  /// Also retries the primary with exponential backoff on transient errors (B5).
   Stream<String> _streamWithFallback({
     required String message,
     required String modelId,
@@ -195,40 +261,91 @@ class LlmService {
     }) primaryStream,
     void Function()? onFallback,
   }) async* {
-    try {
-      // NOTE: `yield*` forwards inner-stream errors to the listener rather than
-      // re-throwing them in this generator's body, so the surrounding try/catch
-      // would never see them. Consuming via `await for` routes errors through
-      // the body where failover can handle them.
-      await for (final chunk in primaryStream(
-        message: message,
-        modelId: modelId,
-        systemPrompt: systemPrompt,
-        memory: memory,
-        history: history,
-        feature: feature,
-      )) {
-        yield chunk;
-      }
-    } catch (e) {
-      final errorStr = e.toString();
-      final isServerError = errorStr.contains('500') || errorStr.contains('502') ||
-          errorStr.contains('503') || errorStr.contains('timed out') ||
-          errorStr.contains('ConnectionFailedError') || errorStr.contains('SocketException');
+    var retryCount = 0;
+    var hasEmitted = false;
 
-      if (isServerError && config.hasBackup) {
-        onFallback?.call();
-        yield '\n\n[Primary provider failed. Trying backup provider...]\n\n';
-        yield* _streamBackup(
+    while (true) {
+      try {
+        // NOTE: `yield*` forwards inner-stream errors to the listener rather than
+        // re-throwing them in this generator's body, so the surrounding try/catch
+        // would never see them. Consuming via `await for` routes errors through
+        // the body where failover can handle them.
+        await for (final chunk in primaryStream(
           message: message,
-          modelId: config.backupModel ?? modelId,
+          modelId: modelId,
           systemPrompt: systemPrompt,
           memory: memory,
           history: history,
           feature: feature,
+        )) {
+          yield chunk;
+          hasEmitted = true;
+        }
+        // Stream completed successfully — exit the retry loop.
+        return;
+      } catch (e) {
+        final errorStr = e.toString();
+        final isTransient = _isTransientError(errorStr);
+
+        // Non-transient errors (auth, quota, model-not-found) are not retried.
+        if (!isTransient) {
+          _logger.w('Non-transient streaming error: $errorStr');
+          rethrow;
+        }
+
+        // Once we have emitted any chunks, we cannot safely retry because
+        // re-subscribing would duplicate content to the listener.
+        if (hasEmitted) {
+          _logger.w(
+            'Transient error after partial stream response ($errorStr) — '
+            'cannot retry without duplicating content.',
+          );
+          if (config.hasBackup) {
+            onFallback?.call();
+            yield '\n\n[Primary provider failed mid-stream. Trying backup provider...]\n\n';
+            yield* _streamBackup(
+              message: message,
+              modelId: config.backupModel ?? modelId,
+              systemPrompt: systemPrompt,
+              memory: memory,
+              history: history,
+              feature: feature,
+            );
+            return;
+          }
+          rethrow;
+        }
+
+        // Exhausted all retry attempts — fail over to backup.
+        if (retryCount >= _retryConfig.maxAttempts) {
+          _logger.w(
+            'Exhausted ${_retryConfig.maxAttempts} retry attempts with '
+            'transient error: $errorStr. Failing over to backup if available.',
+          );
+          if (config.hasBackup) {
+            onFallback?.call();
+            yield '\n\n[Primary provider failed after retries. Trying backup provider...]\n\n';
+            yield* _streamBackup(
+              message: message,
+              modelId: config.backupModel ?? modelId,
+              systemPrompt: systemPrompt,
+              memory: memory,
+              history: history,
+              feature: feature,
+            );
+            return;
+          }
+          rethrow;
+        }
+
+        // Backoff delay before the next retry attempt.
+        final delay = _computeBackoffDelay(retryCount);
+        _logger.d(
+          'Retrying stream after transient error (retry ${retryCount + 1}/${_retryConfig.maxAttempts}, '
+          'delay: ${delay.inMilliseconds}ms, error: $errorStr)',
         );
-      } else {
-        rethrow;
+        await Future.delayed(delay);
+        retryCount++;
       }
     }
   }
@@ -253,6 +370,7 @@ class LlmService {
       taskManager: _taskManager,
       usageMeter: _usageMeter,
       cache: _cache,
+      retryConfig: _retryConfig,
     );
     yield* backupService.chatStream(
       message: message,
@@ -264,7 +382,12 @@ class LlmService {
     );
   }
 
-  /// Non-streaming fallback (B4)
+  /// Non-streaming fallback (B4) with retry-with-backoff (B5).
+  ///
+  /// Retries the primary provider on transient errors (5xx, timeout,
+  /// SocketException) with exponential backoff before falling over to
+  /// the backup provider. Non-transient errors (auth, quota) are returned
+  /// immediately without retry or failover.
   Future<Result<String>> _callWithFallback({
     required String message,
     required String modelId,
@@ -282,47 +405,85 @@ class LlmService {
     }) primaryCall,
     void Function()? onFallback,
   }) async {
-    final result = await primaryCall(
-      message: message,
-      modelId: modelId,
-      systemPrompt: systemPrompt,
-      memory: memory,
-      history: history,
-      feature: feature,
-    );
+    Result<String> result;
+    var retryCount = 0;
 
-    if (result.isFailure && config.hasBackup) {
-      final errorStr = result.error ?? '';
-      final isServerError = errorStr.contains('500') || errorStr.contains('502') ||
-          errorStr.contains('503') || errorStr.contains('timed out') ||
-          errorStr.contains('SocketException');
-
-      if (isServerError) {
-        onFallback?.call();
-        final backupConfig = LlmConfiguration(
-          provider: config.backupProvider!,
-          apiKey: config.backupApiKey!,
-          baseUrl: config.backupBaseUrl ?? '',
-          model: config.backupModel ?? modelId,
-        );
-        final backupService = LlmService(
-          config: backupConfig,
-          httpClient: _httpClient,
-          taskManager: _taskManager,
-          usageMeter: _usageMeter,
-          cache: _cache,
-        );
-        return await backupService.chat(
+    // Retry loop: attempt the primary call, retry on transient errors.
+    while (true) {
+      try {
+        result = await primaryCall(
           message: message,
-          modelId: config.backupModel ?? modelId,
+          modelId: modelId,
           systemPrompt: systemPrompt,
           memory: memory,
           history: history,
-          feature: '$feature (fallback)',
+          feature: feature,
         );
+      } catch (e) {
+        // Convert thrown exceptions (e.g. TimeoutException, SocketException)
+        // to Result.failure for uniform retry / failover handling.
+        result = Result.failure(e.toString());
       }
+
+      // Success — return immediately.
+      if (result.isSuccess) {
+        return result;
+      }
+
+      final errorStr = result.error ?? '';
+
+      // Non-transient errors (401, 403, 404, 429, model not found, etc.)
+      // are not retried and not failed over.
+      if (!_isTransientError(errorStr)) {
+        _logger.w('Non-transient LLM error, no retry: $errorStr');
+        return result;
+      }
+
+      // Transient error — check if we can retry.
+      if (retryCount >= _retryConfig.maxAttempts) {
+        // All retries exhausted — fail over to backup if available.
+        _logger.w(
+          'Exhausted ${_retryConfig.maxAttempts} retry attempts with '
+          'transient error: $errorStr. Failing over to backup if available.',
+        );
+        if (config.hasBackup) {
+          onFallback?.call();
+          final backupConfig = LlmConfiguration(
+            provider: config.backupProvider!,
+            apiKey: config.backupApiKey!,
+            baseUrl: config.backupBaseUrl ?? '',
+            model: config.backupModel ?? modelId,
+          );
+          final backupService = LlmService(
+            config: backupConfig,
+            httpClient: _httpClient,
+            taskManager: _taskManager,
+            usageMeter: _usageMeter,
+            cache: _cache,
+            retryConfig: _retryConfig,
+          );
+          return await backupService.chat(
+            message: message,
+            modelId: config.backupModel ?? modelId,
+            systemPrompt: systemPrompt,
+            memory: memory,
+            history: history,
+            feature: '$feature (fallback)',
+          );
+        }
+        // No backup — return the failure.
+        return result;
+      }
+
+      // Backoff delay before the next retry attempt.
+      final delay = _computeBackoffDelay(retryCount);
+      _logger.d(
+        'Retrying LLM call after transient error (retry ${retryCount + 1}/${_retryConfig.maxAttempts}, '
+        'delay: ${delay.inMilliseconds}ms, error: $errorStr)',
+      );
+      await Future.delayed(delay);
+      retryCount++;
     }
-    return result;
   }
 
   Future<Result<String>> chat({

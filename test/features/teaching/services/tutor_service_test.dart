@@ -29,6 +29,9 @@ import 'package:studyking/features/teaching/services/conversation_phase.dart';
 import 'package:studyking/features/teaching/services/exercise_evaluator.dart';
 import 'package:studyking/features/teaching/services/tutor_service.dart';
 import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
+import 'package:uuid/uuid.dart';
+import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
+import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 
 final _logger = Logger('TutorServiceTest');
 
@@ -296,6 +299,155 @@ class _TestLessonBlockAdapter extends TypeAdapter<LessonBlock> {
   @override
   void write(BinaryWriter writer, LessonBlock obj) {
     writer.write(obj.toJson());
+  }
+}
+
+/// Mutable fake [LessonRepository] that captures created lessons for
+/// inspection in tests — overrides persist calls instead of touching Hive.
+class FakeLessonRepository extends LessonRepository {
+  final List<Lesson> _created = [];
+
+  List<Lesson> get createdLessons => List.unmodifiable(_created);
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<void>> create(Lesson lesson) async {
+    _created.add(lesson);
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<Lesson?>> get(String id) async {
+    final matches = _created.where((l) => l.id == id);
+    return Result.success(matches.isNotEmpty ? matches.first : null);
+  }
+
+  @override
+  Future<Result<List<Lesson>>> getAll() async =>
+      Result.success(List.from(_created));
+}
+
+/// Minimal LessonAgentService needed only to satisfy the
+/// [PreGenerateLessonTool] constructor requirement — never invoked because
+/// [FakePreGenerateLessonTool] overrides [execute].
+class _FakeLessonAgentService extends LessonAgentService {
+  _FakeLessonAgentService()
+      : super(
+          llmService: LlmService(
+            config: const LlmConfiguration(
+              provider: LlmProvider.openAI,
+              apiKey: 'test',
+            ),
+          ),
+          modelId: 'test',
+          lessonRepository: LessonRepository(),
+          database: DatabaseService(
+            topicRepository: TopicRepository(),
+            questionRepository: QuestionRepository(),
+            attemptRepository: AttemptRepository(),
+            lessonRepository: LessonRepository(),
+            sessionRepository: SessionRepository(),
+            subjectRepository: SubjectRepository(),
+            conversationRepository: ConversationRepository(),
+            tutorSessionRepository: TutorSessionRepository(),
+          ),
+        );
+}
+
+/// Fake [PreGenerateLessonTool] that overrides [execute] to produce a real
+/// lesson with multiple block types (slides, examples, exercises, quizzes,
+/// summary) and persist it to the provided [FakeLessonRepository].
+///
+/// Mirrors the contract of the real tool — returns a result map with
+/// `success`, `lessonId`, `blockCount`, and `title` — but without any LLM
+/// calls, budget checks, or task-manager involvement.
+class FakePreGenerateLessonTool extends PreGenerateLessonTool {
+  final FakeLessonRepository lessonRepository;
+  final List<Map<String, dynamic>> executedArgs = [];
+
+  FakePreGenerateLessonTool({
+    required this.lessonRepository,
+  }) : super(lessonAgentService: _FakeLessonAgentService());
+
+  @override
+  Future<Map<String, dynamic>> execute(Map<String, dynamic> args) async {
+    executedArgs.add(Map<String, dynamic>.from(args));
+
+    final subjectId = args['subjectId'] as String? ?? '';
+    final topicId = args['topicId'] as String? ?? '';
+    final topicTitle = args['topicTitle'] as String? ?? '';
+
+    final lesson = Lesson(
+      id: const Uuid().v4(),
+      subjectId: subjectId,
+      title: topicTitle,
+      topicId: topicId,
+      blocks: [
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.text,
+          content: 'Introduction to $topicTitle',
+          order: 0,
+        ),
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.slide,
+          content: 'Key concepts: $topicTitle',
+          order: 1,
+        ),
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.example,
+          content: 'Worked example for $topicTitle',
+          order: 2,
+        ),
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.exercise,
+          content: 'Practice problem on $topicTitle',
+          answerKey: 'Correct answer',
+          order: 3,
+        ),
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.quiz,
+          content: 'Quiz: what is $topicTitle?',
+          order: 4,
+        ),
+        LessonBlock(
+          id: const Uuid().v4(),
+          subjectId: subjectId,
+          lessonId: '',
+          type: LessonBlockType.summary,
+          content: 'Recap of $topicTitle',
+          order: 5,
+        ),
+      ],
+      generatedBy: GeneratedBy.ai,
+      createdAt: DateTime.now(),
+    );
+
+    await lessonRepository.init();
+    await lessonRepository.create(lesson);
+
+    return {
+      'success': true,
+      'lessonId': lesson.id,
+      'blockCount': lesson.blocks.length,
+      'title': lesson.title,
+    };
   }
 }
 
@@ -890,6 +1042,156 @@ void main() {
         expect(session.type, equals(SessionType.tutoring));
         expect(session.completed, isTrue);
         expect(session.sourceId, startsWith('tutor_'));
+      });
+    });
+
+    group('generateNextTopicLesson', () {
+      late FakeLessonRepository fakeLessonRepo;
+
+      setUp(() {
+        fakeLessonRepo = FakeLessonRepository();
+      });
+
+      test(
+          'produces lesson with blocks beyond LessonBlockType.text '
+          'when tool is wired', () async {
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+            subjectId: 'math',
+          ),
+        ];
+
+        final fakeTool = FakePreGenerateLessonTool(
+          lessonRepository: fakeLessonRepo,
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          preGenerateLessonTool: fakeTool,
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        final result = await service.generateNextTopicLesson(session);
+
+        // The tool's execute() was invoked with the weak topic info.
+        expect(fakeTool.executedArgs, isNotEmpty);
+        expect(fakeTool.executedArgs.first['topicId'], equals('weak_topic_id'));
+        expect(fakeTool.executedArgs.first['subjectId'], equals('math'));
+
+        // Result map indicates success with block count.
+        expect(result['success'], isTrue);
+        expect(result['blockCount'], greaterThan(1));
+
+        // The lesson persisted by the tool has blocks beyond text.
+        final createdLessons = fakeLessonRepo.createdLessons;
+        expect(createdLessons, isNotEmpty);
+        final lesson = createdLessons.first;
+
+        final blockTypes = lesson.blocks.map((b) => b.type).toSet();
+        expect(blockTypes, contains(LessonBlockType.text));
+        expect(blockTypes.any((t) => t != LessonBlockType.text), isTrue);
+      });
+
+      test('falls back to placeholder when tool is null', () async {
+        masteryService.weakTopicsToReturn = [
+          MasteryState(
+            studentId: 'student-1',
+            topicId: 'weak_topic_id',
+            lastAttempt: DateTime.now(),
+            lastUpdated: DateTime.now(),
+            subjectId: 'math',
+          ),
+        ];
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        final result = await service.generateNextTopicLesson(session);
+
+        expect(result['success'], isTrue);
+        expect(result['lessonId'], isNotEmpty);
+
+        final createdLessons = fakeLessonRepo.createdLessons;
+        expect(createdLessons, isNotEmpty);
+        final lesson = createdLessons.first;
+
+        final blockTypes = lesson.blocks.map((b) => b.type).toSet();
+        expect(blockTypes, equals({LessonBlockType.text}));
+      });
+
+      test('returns success without creating lesson when no weak topics',
+          () async {
+        masteryService.weakTopicsToReturn = [];
+
+        final fakeTool = FakePreGenerateLessonTool(
+          lessonRepository: fakeLessonRepo,
+        );
+
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          preGenerateLessonTool: fakeTool,
+        );
+
+        final session = TutorSession(
+          id: 'session-1',
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'current-topic',
+          topicTitle: 'Current Topic',
+          startTime: DateTime.now(),
+        );
+
+        final result = await service.generateNextTopicLesson(session);
+
+        expect(result['success'], isTrue);
+        expect(fakeLessonRepo.createdLessons, isEmpty);
+        expect(fakeTool.executedArgs, isEmpty);
       });
     });
   });

@@ -6644,6 +6644,36 @@ abstract class AppLocalizations {
   /// **'Invalid date. Provide an ISO 8601 date string (e.g. 2025-01-31).'**
   String get toolScheduleRestDayInvalidDate;
 
+  /// Error message when wellbeing_adjust_schedule receives an unknown reminderType
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid reminder type. Use one of: bedtime, break, pacing.'**
+  String get toolWellbeingReminderInvalidType;
+
+  /// Error message when wellbeing_adjust_schedule receives an unparseable time
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid time. Provide a HH:MM time string (e.g. 22:00).'**
+  String get toolWellbeingReminderInvalidTime;
+
+  /// Success message when a wellbeing reminder is set via tool
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve set a {reminderType} reminder for {time}. You\'ll get a gentle nudge when it\'s time.'**
+  String toolWellbeingReminderResult(String reminderType, String time);
+
+  /// Message when a wellbeing reminder is disabled via tool
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve turned off the {reminderType} reminder.'**
+  String toolWellbeingReminderDisabled(String reminderType);
+
+  /// Failure message when setting a wellbeing reminder
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to set wellbeing reminder. Please try again.'**
+  String get toolWellbeingReminderFail;
+
   /// Result message when lesson block generation fails via tool
   ///
   /// In en, this message translates to:

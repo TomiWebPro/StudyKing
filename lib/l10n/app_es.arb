@@ -5288,6 +5288,33 @@
   "@toolScheduleRestDayInvalidDate": {
     "description": "Error message when schedule_rest_day receives an unparseable date"
   },
+  "toolWellbeingReminderInvalidType": "Tipo de recordatorio no válido. Usa uno de: bedtime, break, pacing.",
+  "@toolWellbeingReminderInvalidType": {
+    "description": "Error message when wellbeing_adjust_schedule receives an unknown reminderType"
+  },
+  "toolWellbeingReminderInvalidTime": "Hora no válida. Proporciona una cadena con formato HH:MM (p. ej. 22:00).",
+  "@toolWellbeingReminderInvalidTime": {
+    "description": "Error message when wellbeing_adjust_schedule receives an unparseable time"
+  },
+  "toolWellbeingReminderResult": "He establecido un recordatorio de {reminderType} para las {time}. Te enviaré un recordatorio cuando sea el momento.",
+  "@toolWellbeingReminderResult": {
+    "description": "Success message when a wellbeing reminder is set via tool",
+    "placeholders": {
+      "reminderType": { "type": "String" },
+      "time": { "type": "String" }
+    }
+  },
+  "toolWellbeingReminderDisabled": "He desactivado el recordatorio de {reminderType}.",
+  "@toolWellbeingReminderDisabled": {
+    "description": "Message when a wellbeing reminder is disabled via tool",
+    "placeholders": {
+      "reminderType": { "type": "String" }
+    }
+  },
+  "toolWellbeingReminderFail": "No se pudo establecer el recordatorio de bienestar. Por favor, inténtalo de nuevo.",
+  "@toolWellbeingReminderFail": {
+    "description": "Failure message when setting a wellbeing reminder"
+  },
   "toolGenerateBlocksFail": "Error al generar bloques de lección",
   "@toolGenerateBlocksFail": {
     "description": "Result message when lesson block generation fails via tool"

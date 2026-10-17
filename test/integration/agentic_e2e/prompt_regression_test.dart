@@ -344,7 +344,7 @@ void main() {
 
       // availableTools reflects the real llmAgentToolsProvider tool set
       // (single source of truth in fakes.dart → registeredToolNames),
-      // which includes all 16 registered tools including schedule_rest_day
+      // which includes all 17 registered tools including schedule_rest_day
       // and the 4 prep tools — but NOT switch_provider.
       final availableTools = registeredToolNames;
 

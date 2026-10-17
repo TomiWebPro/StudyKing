@@ -44,6 +44,92 @@ void main() {
       expect(SettingsService.getTeachingDurationMinutes(), 45);
     });
 
+    group('wellbeing reminders', () {
+      test('returns empty list when Hive is not open', () {
+        expect(SettingsService.getWellbeingReminders(), isEmpty);
+      });
+
+      test('saveWellbeingReminder returns false when Hive is not open', () async {
+        final result = await SettingsService.saveWellbeingReminder({
+          'reminderType': 'bedtime',
+          'time': '22:00',
+          'enabled': true,
+        });
+        expect(result, isFalse);
+      });
+
+      test('saves and retrieves a wellbeing reminder', () async {
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        await box.delete('wellbeing_reminders');
+
+        final saved = await SettingsService.saveWellbeingReminder({
+          'reminderType': 'bedtime',
+          'time': '22:00',
+          'enabled': true,
+        });
+        expect(saved, isTrue);
+
+        final reminders = SettingsService.getWellbeingReminders();
+        expect(reminders, hasLength(1));
+        expect(reminders.first['reminderType'], 'bedtime');
+        expect(reminders.first['time'], '22:00');
+        expect(reminders.first['enabled'], isTrue);
+
+        await box.deleteFromDisk();
+      });
+
+      test('replaces an existing reminder of the same type', () async {
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        await box.delete('wellbeing_reminders');
+
+        await SettingsService.saveWellbeingReminder({
+          'reminderType': 'bedtime',
+          'time': '22:00',
+          'enabled': true,
+        });
+        await SettingsService.saveWellbeingReminder({
+          'reminderType': 'bedtime',
+          'time': '23:00',
+          'enabled': false,
+        });
+
+        final reminders = SettingsService.getWellbeingReminders();
+        expect(reminders, hasLength(1));
+        expect(reminders.first['time'], '23:00');
+        expect(reminders.first['enabled'], isFalse);
+
+        await box.deleteFromDisk();
+      });
+
+      test('stores multiple reminders of different types', () async {
+        final box = await Hive.openBox(HiveBoxNames.settings);
+        await box.delete('wellbeing_reminders');
+
+        await SettingsService.saveWellbeingReminder({
+          'reminderType': 'bedtime',
+          'time': '22:00',
+          'enabled': true,
+        });
+        await SettingsService.saveWellbeingReminder({
+          'reminderType': 'break',
+          'time': '15:30',
+          'enabled': true,
+        });
+        await SettingsService.saveWellbeingReminder({
+          'reminderType': 'pacing',
+          'time': '00:30',
+          'enabled': true,
+        });
+
+        final reminders = SettingsService.getWellbeingReminders();
+        expect(reminders, hasLength(3));
+        final types = reminders.map((r) => r['reminderType']).toSet();
+        expect(types, containsAll(['bedtime', 'break', 'pacing']));
+
+        await box.deleteFromDisk();
+      });
+    });
+
     group('failure logging and graceful defaults', () {
       test('logs and defaults when stored values fail to cast', () async {
         _installLogCapture();

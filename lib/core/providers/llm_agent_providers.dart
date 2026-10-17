@@ -2,8 +2,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/providers/prep_budget_providers.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm_agent/llm_agent.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
+import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
@@ -16,6 +18,7 @@ import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_too
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_rest_day_tool.dart';
+import 'package:studyking/features/mentor/services/tools/wellbeing_adjust_schedule_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
@@ -63,6 +66,25 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   return [
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
     ScheduleRestDayTool(plannerService: plannerService, localeName: localeName),
+    WellbeingAdjustScheduleTool(
+      localeName: localeName,
+      onAdjust: ({
+        required String reminderType,
+        required String time,
+        required bool enabled,
+        String? note,
+      }) async {
+        final ok = await SettingsService.saveWellbeingReminder({
+          'reminderType': reminderType,
+          'time': time,
+          'enabled': enabled,
+          if (note != null) 'note': note,
+        });
+        return ok
+            ? Result.success(null)
+            : Result.failure('Failed to persist wellbeing reminder');
+      },
+    ),
     SearchQuestionsTool(questionRepo: questionRepo),
     GetStudentStatsTool(
       progressTracker: progressTracker,

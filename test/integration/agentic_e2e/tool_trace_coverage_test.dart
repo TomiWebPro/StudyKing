@@ -1024,7 +1024,7 @@ void main() {
     });
 
     group('LlmUsageMeter + LlmTaskManager audit', () {
-      test('all 16 agent tools are traced across the suite', () async {
+      test('all 17 agent tools are traced across the suite', () async {
         final allToolNames = <String>{};
 
         // Tools traced in other files (create_plan, schedule_lesson,
@@ -1036,12 +1036,13 @@ void main() {
           'schedule_lesson',
         ]);
 
-        // Tools traced in this file — 12 interactive mentor tools (including
-        // schedule_rest_day) + 4 off-period prep tools registered in
-        // llmAgentToolsProvider.
+        // Tools traced in this file — 13 interactive mentor tools (including
+        // schedule_rest_day and wellbeing_adjust_schedule) + 4 off-period prep
+        // tools registered in llmAgentToolsProvider.
         allToolNames.addAll([
           'search_questions',
           'schedule_rest_day',
+          'wellbeing_adjust_schedule',
           'generate_lesson_blocks',
           'modify_plan',
           'get_adherence_trends',
@@ -1054,13 +1055,13 @@ void main() {
           'refresh_mastery',
         ]);
 
-        // All 16 tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(16));
+        // All 17 tools from llmAgentToolsProvider are traced.
+        expect(allToolNames, hasLength(17));
 
         // Cross-check against the canonical registered tool-name set from
         // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
         expect(allToolNames, equals(registeredToolNames));
-        expect(registeredToolNames, hasLength(16));
+        expect(registeredToolNames, hasLength(17));
       });
     });
   });

@@ -3965,6 +3965,28 @@ class AppLocalizationsEn extends AppLocalizations {
       'Invalid date. Provide an ISO 8601 date string (e.g. 2025-01-31).';
 
   @override
+  String get toolWellbeingReminderInvalidType =>
+      'Invalid reminder type. Use one of: bedtime, break, pacing.';
+
+  @override
+  String get toolWellbeingReminderInvalidTime =>
+      'Invalid time. Provide a HH:MM time string (e.g. 22:00).';
+
+  @override
+  String toolWellbeingReminderResult(String reminderType, String time) {
+    return 'I\'ve set a $reminderType reminder for $time. You\'ll get a gentle nudge when it\'s time.';
+  }
+
+  @override
+  String toolWellbeingReminderDisabled(String reminderType) {
+    return 'I\'ve turned off the $reminderType reminder.';
+  }
+
+  @override
+  String get toolWellbeingReminderFail =>
+      'Failed to set wellbeing reminder. Please try again.';
+
+  @override
   String get toolGenerateBlocksFail => 'Failed to generate lesson blocks';
 
   @override
