@@ -155,6 +155,24 @@ void main() {
       // 'teaching' is the live tutoring feature passed by ConversationManager;
       // it must classify as tutor, not fall into 'unknown'.
       expect(LlmTaskType.fromFeature('teaching'), equals(LlmTaskType.tutor));
+      // Planner advisor (plan generation / adaptation) is invoked from mentor
+      // agent tools (CreatePlanTool) during Mentor Mode planning journeys
+      // (agent_must_read.md §54-67). Its tokens must attribute to the 'mentor'
+      // task type so they are visible in the task-manager portal (Vision §0:
+      // students must see and steer where tokens go), never 'unknown'.
+      expect(
+        LlmTaskType.fromFeature('planner_advisor_plan_generation'),
+        equals(LlmTaskType.mentor),
+      );
+      expect(
+        LlmTaskType.fromFeature('planner_advisor_plan_adaptation'),
+        equals(LlmTaskType.mentor),
+      );
+      // The fallback path appends ' (fallback)'; it must still classify.
+      expect(
+        LlmTaskType.fromFeature('planner_advisor_plan_generation (fallback)'),
+        equals(LlmTaskType.mentor),
+      );
       // Image analysis during tutoring is a live visual-tutoring modality
       // (ConversationManager.processImage). Its tokens must attribute to the
       // tutor task type instead of leaking into the 'unknown' bucket, so the

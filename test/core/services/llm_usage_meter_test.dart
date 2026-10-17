@@ -289,6 +289,29 @@ void main() {
       expect(meter.getTotalTokens(), equals(260));
     });
 
+    test("'unknown' catch-all never hides planner-advisor plan-generation tokens", () {
+      // Planner advisor calls (PersonalLearningPlanService._buildPlan ->
+      // LlmPlannerAdvisorStrategy._callAndParse) pass feature:
+      // 'planner_advisor_plan_generation' to the LLM service. LlmTaskType
+      // .fromFeature now maps it to mentor, so usage lands in the 'mentor'
+      // bucket — never 'unknown' (Vision §0: students must see and steer
+      // where tokens go).
+      meter.recordUsage(
+        id: 'p1',
+        feature: 'planner_advisor_plan_generation',
+        modelId: 'gpt-4o',
+        inputTokens: 300,
+        outputTokens: 120,
+        taskType: LlmTaskType.fromFeature('planner_advisor_plan_generation')?.name,
+      );
+
+      final byType = meter.getTotalTokensPerTaskType();
+      expect(byType['mentor'], equals(420)); // 300 + 120
+      expect(byType.containsKey('unknown'), isFalse,
+          reason: 'planner-advisor tokens must not fall into the unknown catch-all');
+      expect(meter.getTotalTokens(), equals(420));
+    });
+
     test('pdf_ingestion feature classifies as background — not unknown', () {
       // Vision §0 token principle: students must see where tokens go. Bulk PDF
       // ingestion passes feature: 'pdf_ingestion' to the LLM service;

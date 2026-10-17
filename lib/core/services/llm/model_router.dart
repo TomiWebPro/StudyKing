@@ -69,7 +69,9 @@ enum LlmTaskType {
     if (f.contains('evaluation') || f.contains('_eval')) {
       return LlmTaskType.evaluation;
     }
-    if (f.contains('mentor')) return LlmTaskType.mentor;
+    if (f.contains('mentor') || f.contains('planner_advisor')) {
+      return LlmTaskType.mentor;
+    }
     if (f.contains('tutor') || f.contains('teaching')) {
       return LlmTaskType.tutor;
     }
