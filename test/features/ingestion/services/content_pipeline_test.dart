@@ -572,16 +572,22 @@ void main() {
 
       expect(result.isSuccess, isTrue);
 
-      String modelFor(String feature) {
-        final idx = fakeLlm.capturedFeatures.indexOf(feature);
-        return idx < 0 ? '' : fakeLlm.capturedModelIds[idx];
-      }
+      // All pipeline LLM calls must be attributed to the 'pdf_ingestion' prep
+      // feature so fromFeature maps them to LlmTaskType.background (prep bucket)
+      // instead of classification/summarization/generation (live bucket).
+      expect(fakeLlm.capturedFeatures, everyElement('pdf_ingestion'));
 
-      // Each pipeline stage must call the LLM with its own
-      // per-task model instead of one global model.
-      expect(modelFor('content_classification'), equals('classification-model'));
-      expect(modelFor('content_summarization'), equals('summarization-model'));
-      expect(modelFor('question_generation'), equals('generation-model'));
+      // Each pipeline stage must call the LLM with its own per-task model
+      // instead of one global model. Since all calls share the same feature,
+      // verify via the ordered model ID sequence.
+      expect(
+        fakeLlm.capturedModelIds,
+        equals([
+          'classification-model',
+          'summarization-model',
+          'generation-model',
+        ]),
+      );
     });
 
     test('returns failure when the initial source creation fails', () async {

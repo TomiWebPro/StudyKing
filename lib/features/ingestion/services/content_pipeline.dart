@@ -43,6 +43,7 @@ class ContentPipeline {
   final WebScraper _webScraper;
   final ChunkedContentProcessor _chunkedProcessor;
   final String _localeName;
+  final String _feature;
   static final Logger _logger = const Logger('ContentPipeline');
 
   AppLocalizations get _l10n => lookupAppLocalizations(Locale(_localeName));
@@ -61,6 +62,7 @@ class ContentPipeline {
     required String transcriptionModelId,
     required String localeName,
     AsrEngine? asrEngine,
+    String feature = 'pdf_ingestion',
   })  : _llmService = llmService,
         _sourceRepository = sourceRepository,
         _topicRepository = topicRepository,
@@ -71,8 +73,10 @@ class ContentPipeline {
         _documentExtractor =
             documentExtractor ?? DocumentExtractor(llmService: llmService, modelId: transcriptionModelId, localeName: localeName, asrEngine: asrEngine),
         _webScraper = webScraper ?? WebScraper(),
-        _chunkedProcessor = chunkedProcessor ?? ChunkedContentProcessor(llmService: llmService, localeName: localeName),
-        _localeName = localeName;
+        _chunkedProcessor = chunkedProcessor ??
+            ChunkedContentProcessor(llmService: llmService, localeName: localeName, feature: feature),
+        _localeName = localeName,
+        _feature = feature;
 
   bool _cancelled = false;
 
@@ -756,7 +760,7 @@ class ContentPipeline {
         message: prompt,
         modelId: classificationModelId,
         systemPrompt: l10n.classifySystemPrompt,
-        feature: 'content_classification',
+        feature: _feature,
       );
       if (result.isFailure) return '';
       final response = result.data!;
@@ -825,7 +829,7 @@ class ContentPipeline {
         message: prompt,
         modelId: classificationModelId,
         systemPrompt: 'You are a syllabus parser. Extract topic names as a JSON array of strings.',
-        feature: 'syllabus_topic_extraction',
+        feature: _feature,
       );
       if (result.isFailure) return [];
 
@@ -901,7 +905,7 @@ class ContentPipeline {
         message: prompt,
         modelId: summarizationModelId,
         systemPrompt: l10n.summarizeSystemPrompt,
-        feature: 'content_summarization',
+        feature: _feature,
       );
       if (result.isFailure) return '';
       final response = result.data!;
@@ -952,7 +956,7 @@ class ContentPipeline {
         message: prompt,
         modelId: generationModelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
-        feature: 'question_generation',
+        feature: _feature,
       );
       if (result.isFailure) return [];
       final response = result.data!;

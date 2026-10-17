@@ -121,6 +121,10 @@ void main() {
       expect(cache.ttlForFeature('evaluation'), equals(const Duration(hours: 1)));
       expect(cache.ttlForFeature('generation'), equals(const Duration(hours: 24)));
       expect(cache.ttlForFeature('summarization'), equals(const Duration(hours: 1)));
+      // Bulk PDF ingestion pipeline calls share the 'pdf_ingestion' feature,
+      // so cached pipeline artifacts (per-chunk classify/summarize/generate)
+      // use the generation TTL.
+      expect(cache.ttlForFeature('pdf_ingestion'), equals(const Duration(hours: 24)));
       expect(cache.ttlForFeature('general'), equals(const Duration(minutes: 10)));
       expect(cache.ttlForFeature('unknown_feature'), equals(const Duration(minutes: 10)));
     });

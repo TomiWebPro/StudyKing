@@ -77,6 +77,11 @@ class LlmResponseCache {
       // Classification results are stable per source document.
       'classification' || 'content_classification' =>
         CacheConfig.classificationCacheTtl,
+      // Bulk PDF ingestion pipeline calls share the pdf_ingestion feature
+      // so they are attributed to the background prep bucket in the meter.
+      // Pipeline artifacts (per-chunk classify/summarize/generate) are stable
+      // per source document, so cache them like generation work.
+      'pdf_ingestion' => CacheConfig.generationCacheTtl,
       // Lesson planning and lesson content generation.
       'lesson_plan' ||
       'lessonplan' ||

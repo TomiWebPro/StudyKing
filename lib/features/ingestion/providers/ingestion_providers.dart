@@ -7,7 +7,7 @@ import 'package:studyking/core/providers/app_providers.dart' show localeProvider
 import 'package:studyking/core/providers/llm_providers.dart'
     show llmServiceProvider, llmTaskManagerProvider, llmUsageMeterProvider, modelRouterProvider, systemMonitorServiceProvider;
 import 'package:studyking/core/providers/prep_budget_providers.dart'
-    show prepBudgetSettingsProvider;
+    show prepBudgetSettingsProvider, prepBudgetServiceProvider;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/utils/logger.dart';
@@ -164,6 +164,7 @@ final idleExecutorProvider = Provider<IdleExecutor>((ref) {
   final taskManager = ref.watch(llmTaskManagerProvider);
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
   final prepBudget = ref.watch(prepBudgetSettingsProvider);
+  final prepBudgetService = ref.watch(prepBudgetServiceProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
   final executor = IdleExecutor(
     llmTaskManager: taskManager,
@@ -173,6 +174,7 @@ final idleExecutorProvider = Provider<IdleExecutor>((ref) {
     isPrepEnabledForSubject: (subjectId) =>
         prepBudget.isPrepEnabledForSubject(subjectId),
     usageMeter: usageMeter,
+    prepBudgetService: prepBudgetService,
   );
   executor.startIdleMonitoring();
   ref.onDispose(executor.dispose);

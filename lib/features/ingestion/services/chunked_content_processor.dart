@@ -10,6 +10,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 class ChunkedContentProcessor {
   final LlmService _llmService;
   final String _localeName;
+  final String _feature;
   static final Logger _logger = const Logger('ChunkedContentProcessor');
 
   static const int _maxCharsPerChunk = 3000;
@@ -32,10 +33,12 @@ class ChunkedContentProcessor {
     required String localeName,
     int maxRetryAttempts = 3,
     Duration retryInitialDelay = const Duration(milliseconds: 500),
+    String feature = 'pdf_ingestion',
   })  : _llmService = llmService,
         _localeName = localeName,
         _maxRetryAttempts = maxRetryAttempts,
-        _retryInitialDelay = retryInitialDelay;
+        _retryInitialDelay = retryInitialDelay,
+        _feature = feature;
 
   List<SourceChunk> splitIntoChunks(String text) {
     if (text.isEmpty) return [];
@@ -197,7 +200,7 @@ class ChunkedContentProcessor {
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.classifySystemPrompt,
-        feature: 'content_classification',
+        feature: _feature,
       );
       if (result.isFailure) {
         _logger.w(
@@ -269,7 +272,7 @@ class ChunkedContentProcessor {
           message: consolidatedPrompt,
           modelId: modelId,
           systemPrompt: l10n.summarizeSystemPrompt,
-          feature: 'content_summarization',
+          feature: _feature,
         );
         if (result.isFailure) {
           _logger.w('Summary consolidation failed: ${result.error}');
@@ -294,7 +297,7 @@ class ChunkedContentProcessor {
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.summarizeSystemPrompt,
-        feature: 'content_summarization',
+        feature: _feature,
       );
       if (result.isFailure) {
         _logger.w(
@@ -356,7 +359,7 @@ class ChunkedContentProcessor {
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
-        feature: 'question_generation',
+        feature: _feature,
       );
       if (result.isFailure) {
         _logger.w(
