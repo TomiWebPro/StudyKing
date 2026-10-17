@@ -1,5 +1,5 @@
 import 'dart:async' show TimeoutException;
-import 'dart:convert' show utf8;
+import 'dart:convert' show utf8, jsonDecode;
 import 'dart:io' show Directory;
 import 'package:crypto/crypto.dart' show sha256;
 
@@ -206,6 +206,28 @@ class FakeChunkedContentProcessor extends ChunkedContentProcessor {
   List<SourceChunk> splitIntoChunks(String text) => [
         SourceChunk(chunkIndex: 0, text: text),
       ];
+}
+
+/// Variant of [FakeChunkedContentProcessor] that reports a non-zero
+/// [failedChunkCount] after [generateQuestionsFromChunks] runs, so the
+/// pipeline's partial-failure surfacing can be exercised.
+class PartialFailureChunkedProcessor extends FakeChunkedContentProcessor {
+  final int failureCount;
+
+  PartialFailureChunkedProcessor(
+    super.classificationResult,
+    this.failureCount,
+  );
+
+  @override
+  Future<List<ChunkQuestionResult>> generateQuestionsFromChunks({
+    required List<SourceChunk> chunks,
+    required String modelId,
+    required QuestionParser questionParser,
+  }) async {
+    failedChunkCount = failureCount;
+    return [];
+  }
 }
 
 class FakeSourceRepository extends SourceRepository {
@@ -767,6 +789,56 @@ void main() {
       expect(result.isSuccess, isTrue);
       expect(questionRepo.deletedKeys, ['q-old-1']);
       expect(result.data!.processingStatus, ProcessingStatus.completed.name);
+    });
+
+    test('surfaces partial chunk failures instead of silently completing',
+        () async {
+      final sourceRepo = FakeSourceRepository();
+      final chunked = PartialFailureChunkedProcessor(
+        ClassificationResult(topicId: '', confidence: 0),
+        3,
+      );
+      final pipeline = buildPipeline(
+        docExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'extracted text',
+          extractionMethod: 'pdf_text_direct',
+          chunks: [
+            SourceChunk(chunkIndex: 0, text: 'chunk one text'),
+            SourceChunk(chunkIndex: 1, text: 'chunk two text'),
+          ],
+        )),
+        chunked: chunked,
+        sourceRepo: sourceRepo,
+        topicRepo: FakeTopicRepository([]),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'some content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      final src = result.data!;
+      // Pipeline still completes (partial results generated) but the
+      // failure must be surfaced — never silently swallowed.
+      expect(src.processingStatus, ProcessingStatus.completed.name);
+      expect(src.errorMessage, contains('3 chunk(s) failed'));
+      final stored = sourceRepo.getStored(src.id)!;
+      final meta = jsonDecode(stored.extractionMeta);
+      expect(meta['failedChunkCount'], 3);
+      expect(stored.errorMessage, contains('3 chunk(s) failed'));
     });
 
     test('returns DUPLICATE failure when a matching source already exists',

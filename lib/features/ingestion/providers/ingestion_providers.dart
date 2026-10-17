@@ -5,7 +5,7 @@ import 'package:studyking/core/data/extraction/transcription_extractor.dart';
 import 'package:studyking/core/data/extraction/transcription_pipeline.dart';
 import 'package:studyking/core/providers/app_providers.dart' show localeProvider;
 import 'package:studyking/core/providers/llm_providers.dart'
-    show llmServiceProvider, llmTaskManagerProvider, modelRouterProvider, systemMonitorServiceProvider;
+    show llmServiceProvider, llmTaskManagerProvider, llmUsageMeterProvider, modelRouterProvider, systemMonitorServiceProvider;
 import 'package:studyking/core/providers/prep_budget_providers.dart'
     show prepBudgetSettingsProvider;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
@@ -164,6 +164,7 @@ final idleExecutorProvider = Provider<IdleExecutor>((ref) {
   final taskManager = ref.watch(llmTaskManagerProvider);
   final systemMonitor = ref.watch(systemMonitorServiceProvider);
   final prepBudget = ref.watch(prepBudgetSettingsProvider);
+  final usageMeter = ref.watch(llmUsageMeterProvider);
   final executor = IdleExecutor(
     llmTaskManager: taskManager,
     studentId: 'default',
@@ -171,6 +172,7 @@ final idleExecutorProvider = Provider<IdleExecutor>((ref) {
     shouldDeferForQuietHours: (now) => prepBudget.shouldDeferForQuietHours(now),
     isPrepEnabledForSubject: (subjectId) =>
         prepBudget.isPrepEnabledForSubject(subjectId),
+    usageMeter: usageMeter,
   );
   executor.startIdleMonitoring();
   ref.onDispose(executor.dispose);

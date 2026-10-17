@@ -30,10 +30,9 @@
 | `enqueue_question_variants` (generate follow-up variants) | YES | `lib/features/mentor/services/tools/enqueue_question_variants_tool.dart` |
 | `create_practice_session` (remediation practice) | YES | `lib/features/mentor/services/tools/create_practice_session_tool.dart` |
 | `schedule_lesson` (book remedial lesson) | YES | `lib/features/mentor/services/tools/schedule_lesson_tool.dart` |
-| `review_mistakes` (detailed mistake review UI) | MISSING | No dedicated review-mistakes agent tool. Review is via practice replay. |
+| `review_mistakes` (detailed mistake review UI) | YES | `lib/features/mentor/services/tools/review_mistakes_tool.dart` — returns wrong answers with markscheme explanations and linked concepts, reachable through AgentLoop. |
 
-**Gap:** No `review_mistakes` agent tool for conversational mistake review.
-→ File `issues/open/e2e-practice-missing-review-mistakes-tool.md` (same gap as adaptive-practice scenario)
+**Gap:** None for conversational review — the `review_mistakes` agent tool is now registered in `llmAgentToolsProvider`. (Per-question accuracy and variant availability are still not injected into mentor context.)
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -69,5 +68,5 @@ Traced against code at:
 - Step 4: PASS — `get_weak_topics` + `create_practice_session` + `schedule_lesson` all reachable.
 - Step 5: PASS — `RefreshMasteryTool` + MasteryGraphService update mastery state.
 
-Tool audit: 5 of 6 needed tools exist; `review_mistakes` is missing.
+Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 Context audit: per-question accuracy and variant availability not injected → new issue filed.

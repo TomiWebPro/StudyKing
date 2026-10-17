@@ -175,6 +175,88 @@ void main() {
     });
   });
 
+  group('ChunkedContentProcessor.retry behavior', () {
+    test('retries LLM call on failure and succeeds after backoff', () async {
+      final fake = _RetryingLlmService(failuresBeforeSuccess: 2);
+      final processor = ChunkedContentProcessor(
+        llmService: fake,
+        localeName: 'en',
+        maxRetryAttempts: 3,
+        retryInitialDelay: Duration.zero,
+      );
+
+      final chunks = [SourceChunk(chunkIndex: 0, text: 'content')];
+      await processor.classifyChunks(
+        chunks: chunks,
+        possibleTopics: ['Biology'],
+        modelId: 'm',
+        subjectId: '',
+      );
+
+      // Initial attempt + 2 retries = 3 calls
+      expect(fake.chatCallCount, 3);
+    });
+
+    test('increments failedChunkCount when all retries are exhausted', () async {
+      final processor = ChunkedContentProcessor(
+        llmService: _FailingLlmService(),
+        localeName: 'en',
+        maxRetryAttempts: 2,
+        retryInitialDelay: Duration.zero,
+      );
+
+      final chunks = [SourceChunk(chunkIndex: 0, text: 'content')];
+      await processor.classifyChunks(
+        chunks: chunks,
+        possibleTopics: ['Biology'],
+        modelId: 'm',
+        subjectId: '',
+      );
+
+      expect(processor.failedChunkCount, 1);
+    });
+
+    test('reset clears failedChunkCount', () async {
+      final processor = ChunkedContentProcessor(
+        llmService: _FailingLlmService(),
+        localeName: 'en',
+        maxRetryAttempts: 1,
+        retryInitialDelay: Duration.zero,
+      );
+
+      final chunks = [SourceChunk(chunkIndex: 0, text: 'content')];
+      await processor.classifyChunks(
+        chunks: chunks,
+        possibleTopics: ['Biology'],
+        modelId: 'm',
+        subjectId: '',
+      );
+
+      expect(processor.failedChunkCount, 1);
+      processor.reset();
+      expect(processor.failedChunkCount, 0);
+    });
+
+    test('does not increment failedChunkCount on success', () async {
+      final processor = ChunkedContentProcessor(
+        llmService: FakeLlmService('Biology'),
+        localeName: 'en',
+        maxRetryAttempts: 3,
+        retryInitialDelay: Duration.zero,
+      );
+
+      final chunks = [SourceChunk(chunkIndex: 0, text: 'content')];
+      await processor.classifyChunks(
+        chunks: chunks,
+        possibleTopics: ['Biology'],
+        modelId: 'm',
+        subjectId: '',
+      );
+
+      expect(processor.failedChunkCount, 0);
+    });
+  });
+
   group('QuestionParser', () {
     final parser = QuestionParser();
 
@@ -219,5 +301,37 @@ class _FailingLlmService extends LlmService {
   }) async {
     chatCalled = true;
     return Result.failure('llm down');
+  }
+}
+
+/// Fake LLM service that fails [failuresBeforeSuccess] times, then succeeds.
+/// Used to verify retry-with-backoff behaviour in [ChunkedContentProcessor].
+class _RetryingLlmService extends LlmService {
+  int chatCallCount = 0;
+  final int failuresBeforeSuccess;
+
+  _RetryingLlmService({required this.failuresBeforeSuccess})
+      : super(config: const LlmConfiguration(
+          provider: LlmProvider.ollama,
+          apiKey: 'k',
+          baseUrl: '',
+          model: 'm',
+        ));
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    chatCallCount++;
+    if (chatCallCount <= failuresBeforeSuccess) {
+      return Result.failure('rate limited');
+    }
+    return Result.success('Biology');
   }
 }

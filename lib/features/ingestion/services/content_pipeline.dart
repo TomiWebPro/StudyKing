@@ -410,6 +410,27 @@ class ContentPipeline {
           'Stage 4 complete: ${questionIds.length} questions generated',
         );
 
+        // Surface partial failures from chunk-level LLM processing.
+        // Instead of silently marking as completed, record the failure count
+        // in extractionMeta and surface errorMessage so the student sees a
+        // signal (agent_must_read.md §9: content must not be blindly trusted).
+        final failedChunks = _chunkedProcessor.failedChunkCount;
+        if (failedChunks > 0) {
+          final currentMeta = jsonDecode(updated.extractionMeta.isNotEmpty
+              ? updated.extractionMeta
+              : '{}') as Map<String, dynamic>;
+          currentMeta['failedChunkCount'] = failedChunks;
+          updated = updated.copyWith(
+            extractionMeta: jsonEncode(currentMeta),
+            errorMessage: '$failedChunks chunk(s) failed during LLM processing '
+                'after retries; partial results generated.',
+          );
+          _logger.w(
+            'Partial failure: $failedChunks chunk(s) failed after retries '
+            'for source ${updated.id}',
+          );
+        }
+
         if (_cancelled) return Result.failure('Pipeline cancelled');
         onProgress?.call(ProcessingStatus.validating, _l10n.pipelineStageValidatingQuestions);
         updated = _updateStatus(updated, ProcessingStatus.validating);

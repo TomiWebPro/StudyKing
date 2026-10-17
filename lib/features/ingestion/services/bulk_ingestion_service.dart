@@ -197,7 +197,7 @@ class BulkIngestionService extends ChangeNotifier {
         () => _processJob(job),
         requiresHeavy: true,
         feature: PrepCategory.pdfIngestion.taskTypeKey,
-        taskType: PrepCategory.background.taskTypeKey,
+        taskType: PrepCategory.pdfIngestion.taskTypeKey,
         subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
       );
     }
@@ -303,7 +303,7 @@ class BulkIngestionService extends ChangeNotifier {
             () => _processJob(job),
             requiresHeavy: true,
             feature: PrepCategory.pdfIngestion.taskTypeKey,
-            taskType: PrepCategory.background.taskTypeKey,
+            taskType: PrepCategory.pdfIngestion.taskTypeKey,
             subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
           );
         },
@@ -334,7 +334,7 @@ class BulkIngestionService extends ChangeNotifier {
       () => _processJob(job),
       requiresHeavy: true,
       feature: PrepCategory.pdfIngestion.taskTypeKey,
-      taskType: PrepCategory.background.taskTypeKey,
+      taskType: PrepCategory.pdfIngestion.taskTypeKey,
       subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
     );
   }

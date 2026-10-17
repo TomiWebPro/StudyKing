@@ -22,6 +22,13 @@ import 'package:studyking/features/ingestion/services/page_metadata.dart';
 
 class DocumentExtractor {
   static final Logger _logger = const Logger('DocumentExtractor');
+
+  /// Hard ceiling on extracted text length. Files producing more text than
+  /// this are truncated so ingestion never loads unbounded content into RAM
+  /// or blows the LLM token budget. ~250k chars ≈ 62k tokens, well within
+  /// safe limits for downstream classification/summarization/generation.
+  static const int maxCharsPerSource = 250000;
+
   static final _headingPatterns = [
     RegExp(r'^#{1,6}\s+(.+)$', multiLine: true),
     RegExp(r'^(.+)\n={3,}$', multiLine: true),
@@ -61,24 +68,57 @@ class DocumentExtractor {
     required SourceType sourceType,
     String? sourceUrl,
   }) async {
+    late ExtractionResult result;
     switch (sourceType) {
       case SourceType.pdf:
       case SourceType.document:
       case SourceType.textbook:
       case SourceType.syllabus:
-        return _extractPdfOrDocument(rawContent, sourceType);
+        result = await _extractPdfOrDocument(rawContent, sourceType);
+        break;
       case SourceType.lectureNotes:
       case SourceType.externalResource:
-        return ExtractionResult(text: rawContent, extractionMethod: 'direct');
+        result = ExtractionResult(text: rawContent, extractionMethod: 'direct');
+        break;
       case SourceType.webPage:
-        return _extractWebPage(rawContent, sourceUrl);
+        result = _extractWebPage(rawContent, sourceUrl);
+        break;
       case SourceType.image:
-        return _extractImage(rawContent);
+        result = await _extractImage(rawContent);
+        break;
       case SourceType.video:
-        return _extractVideo(rawContent, sourceUrl);
+        result = await _extractVideo(rawContent, sourceUrl);
+        break;
       case SourceType.audio:
-        return _extractAudio(rawContent, sourceUrl);
+        result = await _extractAudio(rawContent, sourceUrl);
+        break;
     }
+    return _truncateIfExceeds(result);
+  }
+
+  /// Enforces the per-source character ceiling. If the extracted text exceeds
+  /// [maxCharsPerSource], it is truncated and a user-visible note is attached
+  /// so the student understands content was cut off. Error results are never
+  /// truncated — the error must be surfaced as-is.
+  ExtractionResult _truncateIfExceeds(ExtractionResult result) {
+    if (result.isError) return result;
+    if (result.truncated || result.text.length <= maxCharsPerSource) return result;
+
+    final truncatedText = result.text.substring(0, maxCharsPerSource);
+    return ExtractionResult(
+      text: truncatedText,
+      extractionMethod: result.extractionMethod,
+      pageCount: result.pageCount,
+      ocrConfidence: result.ocrConfidence,
+      transcriptionConfidence: result.transcriptionConfidence,
+      durationSeconds: result.durationSeconds,
+      mimeType: result.mimeType,
+      errorMessage: result.errorMessage,
+      chunks: result.chunks,
+      truncated: true,
+      truncationNote: 'Content truncated to $maxCharsPerSource characters '
+          '(source exceeds token ceiling). Some material may be missing.',
+    );
   }
 
   Future<ExtractionResult> _extractPdfOrDocument(

@@ -4,6 +4,8 @@ import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/data/repository.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/logger.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
+import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 
 class SourceRepository extends Repository<Source> {
   SourceRepository() : super(boxName: HiveBoxNames.sources);
@@ -87,5 +89,87 @@ class SourceRepository extends Repository<Source> {
 
   Future<Result<List<Source>>> getCompleted() async {
     return getByStatus(ProcessingStatus.completed);
+  }
+
+  /// Upper bound on the number of excerpt characters injected for a matching
+  /// chunk so the mentor prompt stays bounded.
+  static const int _maxExcerptLength = 300;
+
+  /// Searches the chunks of all of a student's ingested sources for [query].
+  ///
+  /// Returns bounded excerpts (source ID + page range + heading) so the mentor
+  /// context builder can proactively inject relevant textbook material —
+  /// Vision Next-Term §3.1 / §4.1 (scenario_ingestion_pdf_to_knowledge_base
+  /// Step 3: "the mentor should find and quote the relevant chunk").
+  ///
+  /// Uses normalised-substring matching over chunk text — the same strategy as
+  /// `SearchSourcesTool` — so the repository and the agent tool share one search
+  /// path. Semantic / embedding search is a planned future enhancement.
+  Future<Result<List<SourceChunkSearchMatch>>> searchChunks(
+    String query,
+    String studentId, {
+    String? subjectId,
+    int limit = 10,
+  }) async {
+    try {
+      final result = await getByStudent(studentId);
+      if (result.isFailure) {
+        return Result.failure(result.error ?? 'Failed to load sources for search');
+      }
+      final sources = result.data ?? [];
+      final normalizedQuery = query.normalized;
+      if (normalizedQuery.isEmpty || sources.isEmpty) {
+        return Result.success(const []);
+      }
+      return Result.success(
+        _searchChunks(sources, normalizedQuery, subjectId, limit),
+      );
+    } catch (e, stack) {
+      _logger.w('Failed to search chunks for query "$query"', e, stack);
+      return Result.failure(e.toString());
+    }
+  }
+
+  List<SourceChunkSearchMatch> _searchChunks(
+    List<Source> sources,
+    String normalizedQuery,
+    String? subjectId,
+    int limit,
+  ) {
+    final matches = <SourceChunkSearchMatch>[];
+    for (final source in sources) {
+      if (subjectId != null &&
+          subjectId.isNotEmpty &&
+          source.subjectId != subjectId) {
+        continue;
+      }
+      final chunks = SourceChunk.parse(source.chunks);
+      for (final chunk in chunks) {
+        final text = chunk.text;
+        if (text.normalized.contains(normalizedQuery)) {
+          matches.add(SourceChunkSearchMatch(
+            sourceId: source.id,
+            sourceTitle: source.title,
+            sourceType: source.type.name,
+            subjectId: source.subjectId.isNotEmpty ? source.subjectId : null,
+            topicId: source.topicId.isNotEmpty ? source.topicId : null,
+            chunkIndex: chunk.chunkIndex,
+            pageStart: chunk.pageStart,
+            pageEnd: chunk.pageEnd,
+            heading: chunk.heading,
+            excerpt: _boundedExcerpt(text, _maxExcerptLength),
+          ));
+          if (matches.length >= limit) return matches;
+        }
+      }
+    }
+    return matches;
+  }
+
+  /// Truncates [text] to [maxLength] characters (trimmed) and appends an
+  /// ellipsis so chunk excerpts stay digestible for the agent prompt.
+  static String _boundedExcerpt(String text, int maxLength) {
+    if (text.length <= maxLength) return text;
+    return '${text.substring(0, maxLength).trimRight()}…';
   }
 }

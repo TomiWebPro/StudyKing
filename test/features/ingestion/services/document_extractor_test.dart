@@ -170,6 +170,59 @@ void main() {
       // The raw reference is preserved as a fallback rather than crashing.
       expect(result.text, 'file:///x.png');
     });
+
+    test('truncates text exceeding maxCharsPerSource with user-visible note', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final longText = 'a' * (DocumentExtractor.maxCharsPerSource + 100);
+
+      final result = await extractor.extractText(
+        rawContent: longText,
+        sourceType: SourceType.lectureNotes,
+      );
+
+      expect(result.truncated, isTrue);
+      expect(result.truncationNote, isNotNull);
+      expect(result.truncationNote, contains('truncated'));
+      expect(result.text.length, DocumentExtractor.maxCharsPerSource);
+    });
+
+    test('does not truncate text within maxCharsPerSource', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final shortText = 'a' * (DocumentExtractor.maxCharsPerSource - 1);
+
+      final result = await extractor.extractText(
+        rawContent: shortText,
+        sourceType: SourceType.lectureNotes,
+      );
+
+      expect(result.truncated, isFalse);
+      expect(result.truncationNote, isNull);
+      expect(result.text.length, shortText.length);
+    });
+
+    test('does not truncate error results even if text exceeds ceiling', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(
+          text: '',
+          extractionMethod: 'ocr_failed',
+          errorMessage: 'boom',
+        ),
+      );
+
+      final result = await extractor.extractText(
+        rawContent: 'file:///x.png',
+        sourceType: SourceType.image,
+      );
+
+      expect(result.isError, isTrue);
+      expect(result.truncated, isFalse);
+    });
   });
 
   group('DocumentExtractor static helpers', () {

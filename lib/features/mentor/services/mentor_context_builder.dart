@@ -21,6 +21,7 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
@@ -115,6 +116,11 @@ class MentorContextBuilder {
   /// mentor context (Vision Next-Term §3.1 scenario_practice_review_context).
   static const int _maxRecentMistakes = 5;
 
+  /// Upper bound on the number of source chunk excerpts proactively injected
+  /// into the mentor context so the LLM can cite textbook material instead of
+  /// reasoning from metadata alone (Vision Next-Term §3.1 / §4.1).
+  static const int _maxSourceExcerpts = 3;
+
   Future<Result<String>> buildContextPrompt() async {
     try {
       final statsResult = await _progressTracker.getOverallStats(_plannerService.studentId);
@@ -159,6 +165,17 @@ class MentorContextBuilder {
         // source visible to the agent. LLM-facing text -> en-invariant per
         // AGENTS i18n convention (prompts/tutor notes may stay invariant).
         _appendSourceInventory(buffer, sources, syllabusGoals, bullet);
+
+        // Vision Next-Term §3.1 / §4.1 (scenario_ingestion_pdf_to_knowledge_base
+        // Step 3): proactively inject bounded chunk excerpts relevant to the
+        // student's active syllabus topics so the LLM can cite textbook content
+        // ("What did my textbook say about X?") instead of guessing from
+        // metadata. Best-effort: a search failure leaves the prompt unchanged.
+        final sourceExcerpts = await _loadSourceExcerpts(
+          syllabusGoals,
+          upcomingLessons,
+        );
+        _appendSourceExcerpts(buffer, sourceExcerpts, bullet);
       }
     }
 
@@ -717,5 +734,94 @@ class MentorContextBuilder {
     if (unattributed.isNotEmpty) {
       buffer.writeln('  ${bullet}Unattributed materials: ${unattributed.length}');
     }
+  }
+
+  /// Proactively fetches bounded chunk excerpts from the student's ingested
+  /// sources that are relevant to the **active syllabus topics** — upcoming
+  /// lesson topic titles, falling back to syllabus-goal subject titles.
+  ///
+  /// Vision Next-Term §3.1 / §4.1 (scenario_ingestion_pdf_to_knowledge_base
+  /// Step 3): "When the student asks 'What did my textbook say about X?', the
+  /// mentor should find and quote the relevant chunk." Injecting the excerpt
+  /// directly into the system prompt lets the LLM ground answers without a
+  /// separate tool round-trip.
+  ///
+  /// Best-effort: returns an empty list when the repository is unavailable or
+  /// the search yields no matches, so the prompt is never broken.
+  Future<List<SourceChunkSearchMatch>> _loadSourceExcerpts(
+    List<SyllabusGoal> syllabusGoals,
+    List<Session> upcomingLessons,
+  ) async {
+    final sourceRepo = _sourceRepository;
+    if (sourceRepo == null) return const [];
+
+    // Build search queries from the student's active syllabus topics.
+    // Upcoming lesson topic titles are the most specific "active" topics;
+    // fall back to syllabus-goal subject titles when there are no upcoming
+    // lessons on a known topic.
+    final queries = <String>[];
+    for (final lesson in upcomingLessons) {
+      final title = lesson.tutorMetadata?.topicTitle;
+      if (title != null && title.isNotEmpty) queries.add(title);
+    }
+    if (queries.isEmpty) {
+      for (final goal in syllabusGoals) {
+        if (goal.subjectTitle.isNotEmpty) queries.add(goal.subjectTitle);
+      }
+    }
+    if (queries.isEmpty) return const [];
+
+    final studentId = _plannerService.studentId;
+    final seen = <String>{};
+    final matches = <SourceChunkSearchMatch>[];
+
+    for (final query in queries) {
+      if (matches.length >= _maxSourceExcerpts) break;
+      final result = await sourceRepo.searchChunks(
+        query,
+        studentId,
+        limit: _maxSourceExcerpts,
+      );
+      if (result.isFailure || result.data == null) continue;
+      for (final match in result.data!) {
+        final key = '${match.sourceId}:${match.chunkIndex}';
+        if (seen.add(key)) {
+          matches.add(match);
+          if (matches.length >= _maxSourceExcerpts) break;
+        }
+      }
+    }
+    return matches;
+  }
+
+  /// Appends a bounded list of source chunk excerpts to the mentor prompt.
+  /// LLM-facing: invariant English per AGENTS.md i18n convention.
+  void _appendSourceExcerpts(
+    StringBuffer buffer,
+    List<SourceChunkSearchMatch> excerpts,
+    String bullet,
+  ) {
+    if (excerpts.isEmpty) return;
+    buffer.writeln('$bullet Relevant source excerpts:');
+    for (final match in excerpts) {
+      buffer.writeln('  $bullet${_formatExcerptHeader(match)}');
+      buffer.writeln('    ${match.excerpt}');
+    }
+  }
+
+  /// Builds a human-readable, LLM-facing header for a chunk excerpt, including
+  /// the source title, optional heading, and page reference.
+  String _formatExcerptHeader(SourceChunkSearchMatch match) {
+    final parts = <String>[match.sourceTitle];
+    if (match.heading != null && match.heading!.isNotEmpty) {
+      parts.add(match.heading!);
+    }
+    if (match.pageStart != null) {
+      final start = match.pageStart!;
+      final end = match.pageEnd;
+      final page = (end != null && end != start) ? '$start-$end' : '$start';
+      parts.add('p.$page');
+    }
+    return parts.join(' — ');
   }
 }

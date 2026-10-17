@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart' show VoidCallback;
 import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 
@@ -45,6 +46,15 @@ class IdleExecutor {
   final LlmTaskManager? _llmTaskManager;
   final SystemMonitorService? _systemMonitor;
 
+  /// Bridges aggregate prep spend to the [LlmUsageMeter] so that
+  /// [PrepBudgetService.spendingByCategory] attributes off-period work to the
+  /// correct prep category (Vision Next-Term §4.2/§4.4). Without this bridge,
+  /// individual LLM calls inside a prep pipeline record on the meter under
+  /// sub-feature task types (e.g. `classification`), and the parent task's
+  /// `feature`/`taskType` (e.g. `pdf_ingestion`) is invisible to the budget
+  /// layer — spendByCategory reads zero for the category the student configured.
+  final LlmUsageMeter? _usageMeter;
+
   /// Optional callback consulted before running a task. When it returns true
   /// the task is left in the queue and retried on the next poll, implementing
   /// vision §4.2 quiet-hours: heavy prep defers so the student is not
@@ -70,10 +80,12 @@ class IdleExecutor {
     SystemMonitorService? systemMonitor,
     bool Function(DateTime now)? shouldDeferForQuietHours,
     bool Function(String subjectId)? isPrepEnabledForSubject,
+    LlmUsageMeter? usageMeter,
   })  : _llmTaskManager = llmTaskManager,
         _systemMonitor = systemMonitor,
         _shouldDeferForQuietHours = shouldDeferForQuietHours,
-        _isPrepEnabledForSubject = isPrepEnabledForSubject;
+        _isPrepEnabledForSubject = isPrepEnabledForSubject,
+        _usageMeter = usageMeter;
 
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
@@ -229,6 +241,24 @@ class IdleExecutor {
           tokensUsed: totalTokens,
           estimatedCost: totalCost,
         );
+        // Bridge the parent task's feature/taskType onto the LlmUsageMeter so
+        // PrepBudgetService can attribute the spend under the correct prep
+        // category (Vision Next-Term §4.2). Individual LLM calls inside the
+        // task already record on the meter under sub-feature task types
+        // (e.g. 'classification'); this aggregate record makes the parent's
+        // taskType (e.g. 'pdf_ingestion') visible to spendingByCategory().
+        // Only recorded when tokens were actually consumed.
+        if (_usageMeter != null && totalTokens > 0) {
+          final inputTokens = totalTokens ~/ 2;
+          _usageMeter.recordUsage(
+            id: '${taskId}_aggregate_${DateTime.now().millisecondsSinceEpoch}',
+            feature: next.feature ?? 'idle_executor',
+            modelId: 'background',
+            inputTokens: inputTokens,
+            outputTokens: totalTokens - inputTokens,
+            taskType: next.taskType ?? LlmTaskType.background.name,
+          );
+        }
       }
     } catch (e) {
       next.error = e.toString();

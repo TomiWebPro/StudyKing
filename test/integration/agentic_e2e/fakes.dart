@@ -148,6 +148,10 @@ const Set<String> registeredToolNames = {
   'enqueue_question_variants',
   'pre_generate_lesson',
   'refresh_mastery',
+  // Source-content grounding tools (Vision Next-Term §3.1)
+  'read_source_content',
+  'search_sources',
+  'revisit_sources',
 };
 
 /// A tool that always throws, regardless of arguments.

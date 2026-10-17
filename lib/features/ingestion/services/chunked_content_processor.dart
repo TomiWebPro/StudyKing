@@ -16,11 +16,26 @@ class ChunkedContentProcessor {
   static const int _parallelBatchSize = 3;
   static const Duration _delayBetweenBatches = Duration(milliseconds: 500);
 
+  /// Maximum number of retry attempts for transient LLM failures (e.g. 429
+  /// rate-limit, timeouts). Per-chunk failures that exhaust retries are
+  /// counted in [failedChunkCount] so the pipeline can surface partial
+  /// results instead of silently marking everything `completed`.
+  final int _maxRetryAttempts;
+  final Duration _retryInitialDelay;
+
+  /// Number of chunks that failed all retry attempts during the current
+  /// processing run. Reset by [reset].
+  int failedChunkCount = 0;
+
   ChunkedContentProcessor({
     required LlmService llmService,
     required String localeName,
+    int maxRetryAttempts = 3,
+    Duration retryInitialDelay = const Duration(milliseconds: 500),
   })  : _llmService = llmService,
-        _localeName = localeName;
+        _localeName = localeName,
+        _maxRetryAttempts = maxRetryAttempts,
+        _retryInitialDelay = retryInitialDelay;
 
   List<SourceChunk> splitIntoChunks(String text) {
     if (text.isEmpty) return [];
@@ -178,16 +193,24 @@ class ChunkedContentProcessor {
   }) async {
     try {
       final prompt = l10n.classifyUserPrompt(possibleTopics.join(', '), chunk.text);
-      final result = await _llmService.chat(
+      final result = await _chatWithRetry(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.classifySystemPrompt,
         feature: 'content_classification',
       );
-      if (result.isFailure) return '';
+      if (result.isFailure) {
+        _logger.w(
+          'Chunk classification exhausted retries for chunk ${chunk.chunkIndex}',
+          result.error,
+        );
+        failedChunkCount++;
+        return '';
+      }
       return result.data!.trim();
     } catch (e) {
       _logger.w('Chunk classification failed for chunk ${chunk.chunkIndex}', e);
+      failedChunkCount++;
       return '';
     }
   }
@@ -267,16 +290,24 @@ class ChunkedContentProcessor {
     try {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.summarizeUserPrompt(chunk.text);
-      final result = await _llmService.chat(
+      final result = await _chatWithRetry(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.summarizeSystemPrompt,
         feature: 'content_summarization',
       );
-      if (result.isFailure) return '';
+      if (result.isFailure) {
+        _logger.w(
+          'Chunk summarization exhausted retries for chunk ${chunk.chunkIndex}',
+          result.error,
+        );
+        failedChunkCount++;
+        return '';
+      }
       return result.data!.trim();
     } catch (e) {
       _logger.w('Chunk summarization failed for chunk ${chunk.chunkIndex}', e);
+      failedChunkCount++;
       return '';
     }
   }
@@ -321,13 +352,20 @@ class ChunkedContentProcessor {
     try {
       final l10n = lookupAppLocalizations(Locale(_localeName));
       final prompt = l10n.generateQuestionUserPrompt(chunk.text);
-      final result = await _llmService.chat(
+      final result = await _chatWithRetry(
         message: prompt,
         modelId: modelId,
         systemPrompt: l10n.generateQuestionSystemPrompt,
         feature: 'question_generation',
       );
-      if (result.isFailure) return [];
+      if (result.isFailure) {
+        _logger.w(
+          'Chunk question generation exhausted retries for chunk ${chunk.chunkIndex}',
+          result.error,
+        );
+        failedChunkCount++;
+        return [];
+      }
       final response = result.data!;
 
       final parsed = questionParser.parse(response);
@@ -337,6 +375,7 @@ class ChunkedContentProcessor {
       )).toList();
     } catch (e) {
       _logger.w('Chunk question generation failed for chunk ${chunk.chunkIndex}', e);
+      failedChunkCount++;
       return [];
     }
   }
@@ -349,6 +388,45 @@ class ChunkedContentProcessor {
 
   void reset() {
     _cancelled = false;
+    failedChunkCount = 0;
+  }
+
+  /// Calls the LLM with exponential-backoff retry for transient failures
+  /// (rate limits, timeouts). Returns the original [Result] after exhausting
+  /// [_maxRetryAttempts] retries so the caller can decide how to handle a
+  /// persistent failure.
+  Future<Result<String>> _chatWithRetry({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    required String feature,
+  }) async {
+    Result<String> result;
+    var attempt = 0;
+    var delay = _retryInitialDelay;
+
+    while (true) {
+      result = await _llmService.chat(
+        message: message,
+        modelId: modelId,
+        systemPrompt: systemPrompt,
+        feature: feature,
+      );
+
+      if (result.isSuccess || attempt >= _maxRetryAttempts || _cancelled) {
+        break;
+      }
+
+      attempt++;
+      _logger.w(
+        'LLM call failed for feature=$feature, attempt $attempt/$_maxRetryAttempts',
+        result.error,
+      );
+      await Future.delayed(delay);
+      delay *= 2;
+    }
+
+    return result;
   }
 }
 

@@ -475,4 +475,115 @@ void main() {
       });
     });
   });
+
+  group('SourceChunkSearchMatch', () {
+    test('creates with all fields', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 'src-1',
+        sourceTitle: 'Organic Chemistry',
+        sourceType: 'pdf',
+        subjectId: 'chem',
+        topicId: 'orgo',
+        chunkIndex: 2,
+        pageStart: 102,
+        pageEnd: 105,
+        heading: 'Aldol Condensation',
+        excerpt: 'Aldol condensation is a reaction.',
+      );
+
+      expect(match.sourceId, 'src-1');
+      expect(match.sourceTitle, 'Organic Chemistry');
+      expect(match.sourceType, 'pdf');
+      expect(match.subjectId, 'chem');
+      expect(match.topicId, 'orgo');
+      expect(match.chunkIndex, 2);
+      expect(match.pageStart, 102);
+      expect(match.pageEnd, 105);
+      expect(match.heading, 'Aldol Condensation');
+      expect(match.excerpt, 'Aldol condensation is a reaction.');
+    });
+
+    test('toMap includes all fields when present', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Textbook',
+        sourceType: 'textbook',
+        subjectId: 'chem',
+        topicId: 'orgo',
+        chunkIndex: 3,
+        pageStart: 50,
+        pageEnd: 52,
+        heading: 'Introduction',
+        excerpt: 'Chapter 1 content',
+      );
+
+      final map = match.toMap();
+
+      expect(map['sourceId'], 's1');
+      expect(map['title'], 'Textbook');
+      expect(map['type'], 'textbook');
+      expect(map['chunkIndex'], 3);
+      expect(map['pageStart'], 50);
+      expect(map['pageEnd'], 52);
+      expect(map['heading'], 'Introduction');
+      expect(map['excerpt'], 'Chapter 1 content');
+      expect(map['subjectId'], 'chem');
+      expect(map['topicId'], 'orgo');
+    });
+
+    test('toMap omits null optional fields', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Notes',
+        sourceType: 'pdf',
+        chunkIndex: 0,
+        excerpt: 'Some text',
+      );
+
+      final map = match.toMap();
+
+      expect(map['sourceId'], 's1');
+      expect(map['title'], 'Notes');
+      expect(map['type'], 'pdf');
+      expect(map['chunkIndex'], 0);
+      expect(map['excerpt'], 'Some text');
+      expect(map.containsKey('pageStart'), isFalse);
+      expect(map.containsKey('pageEnd'), isFalse);
+      expect(map.containsKey('heading'), isFalse);
+      expect(map.containsKey('subjectId'), isFalse);
+      expect(map.containsKey('topicId'), isFalse);
+    });
+
+    test('toMap omits empty-string subjectId and topicId', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Notes',
+        sourceType: 'pdf',
+        subjectId: '',
+        topicId: '',
+        chunkIndex: 0,
+        excerpt: 'text',
+      );
+
+      final map = match.toMap();
+
+      expect(map.containsKey('subjectId'), isFalse);
+      expect(map.containsKey('topicId'), isFalse);
+    });
+
+    test('toMap omits empty-string heading', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Notes',
+        sourceType: 'pdf',
+        chunkIndex: 0,
+        heading: '',
+        excerpt: 'text',
+      );
+
+      final map = match.toMap();
+
+      expect(map.containsKey('heading'), isFalse);
+    });
+  });
 }

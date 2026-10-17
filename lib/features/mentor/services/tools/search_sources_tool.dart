@@ -1,8 +1,6 @@
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/core/utils/logger.dart';
-import 'package:studyking/core/utils/string_extensions.dart';
-import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 
 /// Lets the mentor agent **search across ingested source material** by keyword,
@@ -83,61 +81,33 @@ class SearchSourcesTool extends AgentTool {
       };
     }
 
-    final result = await _sourceRepo.getByStudent(studentId);
+    // Delegate chunk search to the repository (single source of truth shared
+    // with MentorContextBuilder). Request limit+1 so we can detect whether more
+    // matches exist beyond the requested limit.
+    final result = await _sourceRepo.searchChunks(
+      query,
+      studentId,
+      subjectId: subjectId,
+      limit: limit + 1,
+    );
     if (result.isFailure) {
       _logger.w(
-        'Failed to load sources for student $studentId',
+        'Failed to search sources for query "$query"',
         result.error,
       );
       return {
         'success': false,
-        'error': result.error ?? 'Failed to load sources',
+        'error': result.error ?? 'Failed to search sources',
       };
     }
 
-    final sources = result.data ?? [];
-    final normalizedQuery = query.normalized;
-
-    // Bound the excerpt so responses stay digestible for the agent.
-    const maxExcerptLength = 300;
-
-    final matches = <Map<String, dynamic>>[];
-    var hitLimit = false;
-    for (final source in sources) {
-      if (subjectId.isNotEmpty && source.subjectId != subjectId) continue;
-
-      final chunks = SourceChunk.parse(source.chunks);
-      for (final chunk in chunks) {
-        final text = chunk.text;
-        if (text.normalized.contains(normalizedQuery)) {
-          matches.add({
-            'sourceId': source.id,
-            'title': source.title,
-            'type': source.type.name,
-            'chunkIndex': chunk.chunkIndex,
-            if (chunk.pageStart != null) 'pageStart': chunk.pageStart,
-            if (chunk.pageEnd != null) 'pageEnd': chunk.pageEnd,
-            if (chunk.heading != null && chunk.heading!.isNotEmpty)
-              'heading': chunk.heading,
-            'excerpt': _boundedExcerpt(text, maxExcerptLength),
-            if (source.subjectId.isNotEmpty) 'subjectId': source.subjectId,
-            if (source.topicId.isNotEmpty) 'topicId': source.topicId,
-          });
-          if (matches.length >= limit) {
-            hitLimit = true;
-            break;
-          }
-        }
-      }
-      if (hitLimit) break;
-    }
-
-    return _buildResult(query, matches, hadMore: hitLimit);
-  }
-
-  String _boundedExcerpt(String text, int maxLength) {
-    if (text.length <= maxLength) return text;
-    return '${text.substring(0, maxLength).trimRight()}…';
+    final matches = result.data ?? [];
+    final hasMore = matches.length > limit;
+    return _buildResult(
+      query,
+      matches.take(limit).map((m) => m.toMap()).toList(),
+      hadMore: hasMore,
+    );
   }
 
   Map<String, dynamic> _buildResult(

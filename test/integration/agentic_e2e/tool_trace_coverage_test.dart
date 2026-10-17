@@ -1398,19 +1398,22 @@ void main() {
           'create_practice_session',
           'review_mistakes',
           'get_syllabus_structure',
+          'read_source_content',
+          'search_sources',
+          'revisit_sources',
           'ingest_pdf_to_kb',
           'enqueue_question_variants',
           'pre_generate_lesson',
           'refresh_mastery',
         ]);
 
-        // All 20 tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(20));
+        // All tools from llmAgentToolsProvider are traced.
+        expect(allToolNames, hasLength(registeredToolNames.length));
 
         // Cross-check against the canonical registered tool-name set from
         // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
         expect(allToolNames, equals(registeredToolNames));
-        expect(registeredToolNames, hasLength(20));
+        expect(registeredToolNames, hasLength(23));
       });
     });
   });

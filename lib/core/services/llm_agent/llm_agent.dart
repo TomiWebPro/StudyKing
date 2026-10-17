@@ -5,6 +5,7 @@ import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
 import 'package:studyking/core/services/system_monitor_service.dart';
 
 class LlmAgent {
@@ -123,6 +124,7 @@ class AgentFactory {
     SystemMonitorService? systemMonitor,
     bool Function(DateTime now)? shouldDeferForQuietHours,
     bool Function(String subjectId)? isPrepEnabledForSubject,
+    LlmUsageMeter? usageMeter,
   }) {
     final toolRegistry = ToolRegistry();
     if (tools != null) {
@@ -138,6 +140,7 @@ class AgentFactory {
       systemMonitor: systemMonitor,
       shouldDeferForQuietHours: shouldDeferForQuietHours,
       isPrepEnabledForSubject: isPrepEnabledForSubject,
+      usageMeter: usageMeter,
     );
     idleExecutor.startIdleMonitoring();
 

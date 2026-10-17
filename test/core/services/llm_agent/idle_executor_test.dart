@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
+import 'package:studyking/core/services/llm_usage_meter.dart';
+import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 
 void main() {

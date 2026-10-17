@@ -545,7 +545,7 @@ void main() {
         expect(executor.enqueuedPrepTools.length, 1);
         final captured = executor.enqueuedPrepTools.first;
         expect(captured.feature, PrepCategory.pdfIngestion.taskTypeKey);
-        expect(captured.taskType, PrepCategory.background.taskTypeKey);
+        expect(captured.taskType, PrepCategory.pdfIngestion.taskTypeKey);
         expect(captured.requiresHeavy, isTrue);
       });
 
@@ -623,7 +623,7 @@ void main() {
         expect(executor.enqueuedPrepTools.length, 2);
         final retryCall = executor.enqueuedPrepTools[1];
         expect(retryCall.feature, PrepCategory.pdfIngestion.taskTypeKey);
-        expect(retryCall.taskType, PrepCategory.background.taskTypeKey);
+        expect(retryCall.taskType, PrepCategory.pdfIngestion.taskTypeKey);
         expect(retryCall.subjectId, 'physics');
       });
 
@@ -657,7 +657,7 @@ void main() {
         expect(executor.enqueuedPrepTools.length, 2);
         final retryCall = executor.enqueuedPrepTools[1];
         expect(retryCall.feature, PrepCategory.pdfIngestion.taskTypeKey);
-        expect(retryCall.taskType, PrepCategory.background.taskTypeKey);
+        expect(retryCall.taskType, PrepCategory.pdfIngestion.taskTypeKey);
         expect(retryCall.subjectId, 'math');
       });
     });

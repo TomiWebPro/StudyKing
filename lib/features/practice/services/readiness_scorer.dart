@@ -30,6 +30,32 @@ class ScoredQuestion {
   });
 }
 
+/// Per-topic readiness snapshot surfaced to the mentor LLM
+/// (Vision Next-Term §3.1 scenario audit). Mirrors the readiness signal
+/// [ReadinessScorer] uses internally for difficulty selection so the mentor
+/// reasons over the same data the practice-session tool ([CreatePracticeSessionTool])
+/// sees when picking question difficulty.
+class TopicReadiness {
+  final String topicId;
+  final String subjectId;
+  final double readinessScore;
+  final double accuracy;
+  final int totalAttempts;
+
+  /// Most-recent per-attempt accuracy (0–1), newest last, used to surface a
+  /// short accuracy trend per topic to the mentor.
+  final List<double> recentAccuracy;
+
+  const TopicReadiness({
+    required this.topicId,
+    required this.subjectId,
+    required this.readinessScore,
+    required this.accuracy,
+    required this.totalAttempts,
+    this.recentAccuracy = const [],
+  });
+}
+
 class ReadinessScorer {
   static final Logger _logger = const Logger('ReadinessScorer');
   Map<String, MasteryState> _topicMasteryMap = {};
@@ -149,6 +175,35 @@ class ReadinessScorer {
 
     deduped.sort((a, b) => b.score.compareTo(a.score));
     return deduped;
+  }
+
+  /// Returns per-topic readiness scores for the current student — the SAME
+  /// readiness signal ([MasteryState.readinessScore]) this scorer uses in
+  /// [_computeScore] for difficulty selection. Sorted by readiness ascending
+  /// so the least-ready (most at-risk) topics surface first.
+  ///
+  /// Used by [MentorContextBuilder] to inject readiness context into the mentor
+  /// system prompt (Vision Next-Term §3.1): the mentor must see the readiness
+  /// state that drives practice difficulty rather than only raw weak-topic
+  /// accuracy. Each entry also carries [TopicReadiness.recentAccuracy] so the
+  /// mentor can observe short accuracy trends per topic.
+  Future<List<TopicReadiness>> topicReadiness() async {
+    await _ensureDataLoaded();
+    final topics = [
+      for (final entry in _topicMasteryMap.entries)
+        TopicReadiness(
+          topicId: entry.key,
+          subjectId: entry.value.subjectId,
+          readinessScore: entry.value.readinessScore,
+          accuracy: entry.value.accuracy,
+          totalAttempts: entry.value.totalAttempts,
+          recentAccuracy: entry.value.recentAccuracy,
+        ),
+    ];
+    // Least-ready first — the mentor cares most about what the student is
+    // not ready for, matching the practice tool's urgency-first ordering.
+    topics.sort((a, b) => a.readinessScore.compareTo(b.readinessScore));
+    return topics;
   }
 
   /// True when [question] belongs to the same variant family as any question the

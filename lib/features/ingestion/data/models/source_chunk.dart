@@ -55,3 +55,52 @@ class SourceChunk {
     return const [];
   }
 }
+
+/// A single chunk-level search match returned by [SourceRepository.searchChunks].
+///
+/// Carries enough provenance (source ID + page range + heading) for the mentor
+/// LLM to cite where an excerpt came from in its grounded answers. This is the
+/// typed analogue of the map produced by `SearchSourcesTool.execute`, so both
+/// the reactive agent tool and the proactive mentor-context injection share a
+/// single search path (Vision Next-Term §3.1 / §4.1 — the mentor should be
+/// able to "find and quote the relevant chunk").
+class SourceChunkSearchMatch {
+  final String sourceId;
+  final String sourceTitle;
+  final String sourceType;
+  final String? subjectId;
+  final String? topicId;
+  final int chunkIndex;
+  final int? pageStart;
+  final int? pageEnd;
+  final String? heading;
+  final String excerpt;
+
+  SourceChunkSearchMatch({
+    required this.sourceId,
+    required this.sourceTitle,
+    required this.sourceType,
+    this.subjectId,
+    this.topicId,
+    required this.chunkIndex,
+    this.pageStart,
+    this.pageEnd,
+    this.heading,
+    required this.excerpt,
+  });
+
+  /// Serialises to the map format expected by the agent tool result contract
+  /// (kept compatible with the previous `SearchSourcesTool` output).
+  Map<String, dynamic> toMap() => {
+        'sourceId': sourceId,
+        'title': sourceTitle,
+        'type': sourceType,
+        'chunkIndex': chunkIndex,
+        if (pageStart != null) 'pageStart': pageStart,
+        if (pageEnd != null) 'pageEnd': pageEnd,
+        if (heading != null && heading!.isNotEmpty) 'heading': heading,
+        'excerpt': excerpt,
+        if (subjectId != null && subjectId!.isNotEmpty) 'subjectId': subjectId,
+        if (topicId != null && topicId!.isNotEmpty) 'topicId': topicId,
+      };
+}

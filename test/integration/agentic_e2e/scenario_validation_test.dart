@@ -19,7 +19,10 @@ import 'dart:io';
 
 import 'package:flutter/widgets.dart' show Locale;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/data/models/subject_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
@@ -35,6 +38,8 @@ import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.d
 import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
+import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
@@ -42,6 +47,27 @@ import '../../helpers/fakes.dart';
 import '../../helpers/hive_init_helper.dart';
 import '../../features/mentor/services/tools/test_helpers.dart' as tool_fakes;
 import 'fakes.dart';
+
+/// Minimal hand-written fake [SourceRepository] for the ingestion scenario
+/// trace — AGENTS.md (no mockito/mocktail).
+class FakeSourceRepository extends SourceRepository {
+  final List<Source> _all;
+  FakeSourceRepository([this._all = const []]);
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<Source?>> get(String key) async =>
+      Result.success(_all.where((s) => s.id == key).firstOrNull);
+
+  @override
+  Future<Result<List<Source>>> getByStudent(String studentId) async =>
+      Result.success(_all.where((s) => s.studentId == studentId).toList());
+
+  @override
+  Future<Result<List<Source>>> getAll() async => Result.success(_all);
+}
 
 void main() {
   setUpAll(() async {
@@ -829,15 +855,64 @@ void main() {
       expect(registeredToolNames, contains('generate_lesson_blocks'));
     });
 
-    test('Step 5: no revisit_sources tool → tool audit FAIL', () {
+    test('Step 5: search_sources + revisit_sources tools are now FOUND', () {
       final neededTools = <String>['search_sources', 'revisit_sources'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('search_sources -> MISSING'));
-      expect(audit, contains('revisit_sources -> MISSING'));
-      expect(audit, contains('2 tool(s) missing'));
+      expect(audit, contains('search_sources -> HAD'));
+      expect(audit, contains('revisit_sources -> HAD'));
+      expect(audit, contains('all needed tools available'));
+    });
+
+    test('Step 5: search_sources reachable through AgentLoop', () async {
+      // Reproduces the tool trace: "where does my textbook discuss X?"
+      final fakeLlm = FakeAgentLlmService([
+        'TOOL_CALL: search_sources\n'
+        r'ARGUMENTS: {"query": "aldol condensation", "limit": 5}',
+        'Chapter 4 covers aldol condensation on pages 102-105.',
+      ]);
+
+      final tool = SearchSourcesTool(
+        sourceRepo: FakeSourceRepository([
+          Source(
+            id: 'chem-1',
+            title: 'Organic Chemistry',
+            type: SourceType.pdf,
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 102,
+                'pageEnd': 105,
+                'text': 'Aldol condensation is a carbon-carbon bond-forming reaction.',
+                'heading': 'Aldol Condensation',
+              },
+            ]),
+            studentId: 'ingest-student',
+            subjectId: 'chem',
+          ),
+        ]),
+        studentIdService: FakeStudentIdService()..setStudentId('ingest-student'),
+      );
+
+      final registry = ToolRegistry()..register(tool);
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'Where in my textbook does it discuss aldol condensation?',
+        studentId: 'ingest-student',
+        systemPrompt: 'You are a mentor that grounds answers in source material.',
+      );
+
+      expect(response.toolCalls, hasLength(1));
+      expect(response.toolCalls.first.toolName, 'search_sources');
+      expect(response.toolCalls.first.arguments['query'], 'aldol condensation');
+      expect(response.content, contains('aldol condensation'));
     });
 
     test('Verdict trace: ingestion scenario produces trace', () {
@@ -845,9 +920,9 @@ void main() {
 
       trace.add('Step 1: PASS — IngestPdfToKbTool is registered and reachable');
       trace.add('Step 2: PARTIAL — source-topic linking exists but no confidence scoring');
-      trace.add('Step 3: PARTIAL — source titles injected but no semantic search');
+      trace.add('Step 3: PASS — search_sources tool now FOUND, mentor can cite textbook pages');
       trace.add('Step 4: PASS — generate_lesson_blocks is registered and reachable');
-      trace.add('Step 5: FAIL — no paged revisit view exists');
+      trace.add('Step 5: PASS — search_sources + revisit_sources tools registered and reachable');
 
       // ignore: avoid_print
       print('=== Ingestion scenario trace ===');
@@ -856,7 +931,7 @@ void main() {
         print(line);
       }
       // ignore: avoid_print
-      print('Verdict: PARTIAL — 2 tools missing (search_sources, revisit_sources)');
+      print('Verdict: PARTIAL — 0 tools missing (search_sources, revisit_sources FOUND)');
       // ignore: avoid_print
       print('=== End trace ===');
 
@@ -865,7 +940,7 @@ void main() {
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('2 tool(s) missing'));
+      expect(audit, contains('all needed tools available'));
     });
   });
 
@@ -1342,10 +1417,10 @@ void main() {
 
     test('registeredToolNames matches llmAgentToolsProvider registration count',
         () {
-      // The canonical tool set from fakes.dart must match the 20 tools
+      // The canonical tool set from fakes.dart must match the tools
       // registered in llmAgentToolsProvider (llm_agent_providers.dart),
-      // including switch_provider (added for the provider-switch scenario).
-      expect(registeredToolNames, hasLength(20));
+      // including the newly added search_sources and revisit_sources tools.
+      expect(registeredToolNames, hasLength(23));
       // Verify no duplicate registration by checking the set size.
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });
