@@ -257,6 +257,9 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   // prep toggle. Both predicates are derived from the persisted [PrepBudget]
   // so the executor stays free of a direct budget-model dependency at the
   // service layer (mirrors the existing quiet-hours injection pattern).
+  // The PrepBudgetService is also injected so the IdleExecutor can consult
+  // canSpend() before creating the parent LlmTask (Vision Next-Term §4.2/§4.4),
+  // deferring over-budget prep instead of starting it and failing at the tool level.
   return AgentFactory.create(
     llmService: llmService,
     modelId: modelId,
@@ -268,6 +271,7 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
     isPrepEnabledForSubject: (subjectId) =>
         prepBudget.isPrepEnabledForSubject(subjectId),
     usageMeter: usageMeter,
+    prepBudgetService: ref.watch(prepBudgetServiceProvider),
   );
 });
 

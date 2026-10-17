@@ -684,6 +684,348 @@ void main() {
       executor.dispose();
     });
   });
+
+  group('IdleExecutor prep-budget gate', () {
+    // Vision Next-Term §4.2/§4.4: IdleExecutor must consult
+    // PrepBudgetService.canSpend BEFORE creating the parent LlmTask.
+    // When the category cap is exhausted, the task is deferred (stays
+    // queued, never running/failed) and retried on the next poll.
+
+    test('defers prep task when category budget is exhausted; task never reaches LlmTaskManager', () async {
+      // PDF→KB cap of 10000 is already exhausted in the meter.
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'exhausted',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 10000,
+        outputTokens: 0,
+        taskType: 'pdf_ingestion',
+      );
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: true,
+          caps: {PrepCategory.pdfIngestion: 10000},
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'pdf ingestion over cap',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      // Task is deferred — not created on LlmTaskManager, not executed,
+      // not marked as failed (error is null).
+      expect(taskRan, isFalse, reason: 'Task must not run when over budget');
+      expect(manager.tasks, isEmpty, reason: 'Deferred task must not reach LlmTaskManager');
+      expect(executor.queue.first.isRunning, isFalse);
+      expect(executor.queue.first.isCompleted, isFalse);
+      expect(executor.queue.first.error, isNull, reason: 'Deferral is not a failure');
+
+      executor.dispose();
+    });
+
+    test('runs prep task when category budget has room', () async {
+      final meter = LlmUsageMeter();
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: true,
+          caps: {PrepCategory.pdfIngestion: 100000},
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'pdf ingestion within cap',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      // Budget has room → task runs and completes.
+      expect(taskRan, isTrue);
+      expect(manager.tasks.any((t) => t.feature == 'pdf_ingestion'), isTrue);
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
+
+      executor.dispose();
+    });
+
+    test('halving PDF cap defers PDF task but allows question-variant task (§4.4 acceptance #2)', () async {
+      final meter = LlmUsageMeter();
+      // Simulate the first textbook ingestion exhausting the (halved) PDF cap.
+      meter.recordUsage(
+        id: 'first_pdf',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 100000,
+        outputTokens: 0,
+        taskType: 'pdf_ingestion',
+      );
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: true,
+          caps: {
+            PrepCategory.pdfIngestion: 100000, // halved from 200000
+            PrepCategory.questionVariants: 150000,
+          },
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var pdfRan = false;
+      var qvRan = false;
+
+      // Enqueue question-variant generation first (has budget → runs).
+      // The Q-bank category still has its full 150K cap available.
+      await executor.enqueuePrepTool(
+        'generate question variants',
+        () async {
+          qvRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'question_variants',
+        taskType: 'question_variants',
+        estimatedInputTokens: 5000,
+        estimatedOutputTokens: 3000,
+      );
+
+      expect(qvRan, isTrue, reason: 'Question-variant task must run when its category has budget');
+      expect(manager.tasks.any((t) => t.taskType == 'question_variants'), isTrue);
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
+
+      // Now enqueue PDF ingestion (deferred because cap exhausted from prior work).
+      await executor.enqueuePrepTool(
+        'ingest second textbook',
+        () async {
+          pdfRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 10000,
+        estimatedOutputTokens: 2000,
+      );
+
+      // PDF task deferred; not created on LlmTaskManager, not failed.
+      expect(pdfRan, isFalse, reason: 'PDF task must defer when cap exhausted');
+      expect(manager.tasks.any((t) => t.taskType == 'pdf_ingestion'), isFalse,
+          reason: 'Deferred PDF task must not reach LlmTaskManager');
+      expect(executor.queue.last.isCompleted, isFalse);
+      expect(executor.queue.last.error, isNull, reason: 'Deferral is not a failure');
+      // Q-bank task from earlier is still completed; PDF task is still pending.
+      expect(executor.hasPendingTasks, isTrue, reason: 'PDF task must remain pending for retry');
+
+      executor.dispose();
+    });
+
+    test('task with zero estimates skips the budget gate (backward compatible)', () async {
+      // A task enqueued without estimates (legacy callers) must not be blocked
+      // by the gate when the budget is exhausted — the gate only applies when
+      // an estimate is provided.
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'exhausted',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 10000,
+        outputTokens: 0,
+        taskType: 'pdf_ingestion',
+      );
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: true,
+          caps: {PrepCategory.pdfIngestion: 10000},
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'legacy task, no estimates',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        // No estimatedInputTokens/estimatedOutputTokens — defaults to 0.
+      );
+
+      expect(taskRan, isTrue, reason: 'Zero-estimate task must bypass the budget gate');
+      expect(executor.queue.first.isCompleted, isTrue);
+
+      executor.dispose();
+    });
+
+    test('non-matching taskType falls back to background category for the gate', () async {
+      final meter = LlmUsageMeter();
+      meter.recordUsage(
+        id: 'exhausted_bg',
+        feature: 'prep',
+        modelId: 'gpt-4',
+        inputTokens: 10000,
+        outputTokens: 0,
+        taskType: 'background',
+      );
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: true,
+          caps: {PrepCategory.background: 10000},
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'unknown task type',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'some_feature',
+        taskType: 'unknown_task_type',
+        estimatedInputTokens: 1000,
+        estimatedOutputTokens: 500,
+      );
+
+      // Falls back to PrepCategory.background (exhausted) → deferred.
+      expect(taskRan, isFalse);
+      expect(manager.tasks, isEmpty);
+      expect(executor.queue.first.isCompleted, isFalse);
+      expect(executor.queue.first.error, isNull, reason: 'Deferral is not a failure');
+
+      executor.dispose();
+    });
+
+    test('disabled master budget defers all prep tasks', () async {
+      final meter = LlmUsageMeter();
+      final budget = PrepBudgetService(
+        meter: meter,
+        budget: const PrepBudget(
+          enabled: false, // master switch off
+          caps: {PrepCategory.pdfIngestion: 100000},
+        ),
+      );
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'pdf ingestion with disabled budget',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      expect(taskRan, isFalse);
+      expect(manager.tasks, isEmpty);
+      expect(executor.queue.first.isCompleted, isFalse);
+
+      executor.dispose();
+    });
+
+    test('previously deferred task runs after budget recovers (flip canSpend to true)', () async {
+      // Uses a mutable fake so canSpend can be toggled at runtime to simulate
+      // the budget window resetting or the student raising the cap.
+      final meter = LlmUsageMeter();
+      final budget = MutableFakePrepBudgetService(meter: meter, canSpendValue: false);
+
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(
+        llmTaskManager: manager,
+        prepBudgetService: budget,
+      );
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'pdf ingestion',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      // First attempt: canSpend returns false → deferred.
+      expect(taskRan, isFalse);
+      expect(manager.tasks, isEmpty);
+      expect(executor.queue.first.isCompleted, isFalse);
+
+      // Budget recovers: flip canSpend to true, retry via processNext().
+      budget.canSpendValue = true;
+      await executor.processNext();
+
+      expect(taskRan, isTrue, reason: 'Task must run once budget recovers');
+      expect(manager.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
+
+      executor.dispose();
+    });
+  });
 }
 
 /// Hand-written, mutable fake [SystemMonitorService] for deterministic testing
@@ -728,4 +1070,26 @@ class MutableFakeSystemMonitorService extends SystemMonitorService {
 
   @override
   String? get networkType => networkTypeValue;
+}
+
+/// Hand-written, mutable fake [PrepBudgetService] for deterministic testing
+/// of the IdleExecutor's prep-budget gate (idle_executor.dart prep-budget gate
+/// block). Allows toggling `canSpend` and `remainingFor` at runtime so a
+/// single test can simulate budget exhaustion → recovery, mirroring the
+/// [MutableFakeSystemMonitorService] pattern.
+class MutableFakePrepBudgetService extends PrepBudgetService {
+  bool canSpendValue;
+  int remainingForValue;
+
+  MutableFakePrepBudgetService({
+    this.canSpendValue = true,
+    this.remainingForValue = 0,
+    required super.meter,
+  });
+
+  @override
+  bool canSpend(PrepCategory category, int tokens) => canSpendValue;
+
+  @override
+  int remainingFor(PrepCategory category) => remainingForValue;
 }

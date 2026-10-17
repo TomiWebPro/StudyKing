@@ -77,6 +77,8 @@ class FakeIdleExecutor extends IdleExecutor {
   String? prepEnqueuedFeature;
   String? prepEnqueuedTaskType;
   String? prepEnqueuedSubjectId;
+  int? prepEnqueuedEstimatedInputTokens;
+  int? prepEnqueuedEstimatedOutputTokens;
 
   @override
   Future<void> enqueue(
@@ -97,6 +99,8 @@ class FakeIdleExecutor extends IdleExecutor {
     required String feature,
     required String taskType,
     String? subjectId,
+    int estimatedInputTokens = 0,
+    int estimatedOutputTokens = 0,
   }) async {
     prepEnqueuedDescription = description;
     prepEnqueuedTask = task;
@@ -104,6 +108,8 @@ class FakeIdleExecutor extends IdleExecutor {
     prepEnqueuedFeature = feature;
     prepEnqueuedTaskType = taskType;
     prepEnqueuedSubjectId = subjectId;
+    prepEnqueuedEstimatedInputTokens = estimatedInputTokens;
+    prepEnqueuedEstimatedOutputTokens = estimatedOutputTokens;
   }
 
   @override

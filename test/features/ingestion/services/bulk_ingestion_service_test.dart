@@ -169,6 +169,8 @@ class _SyncIdleExecutor extends IdleExecutor {
     required String feature,
     required String taskType,
     String? subjectId,
+    int estimatedInputTokens = 0,
+    int estimatedOutputTokens = 0,
   }) async {
     enqueuedDescriptions.add(description);
     enqueuedPrepTools.add(_EnqueuedPrepTool(
@@ -177,6 +179,8 @@ class _SyncIdleExecutor extends IdleExecutor {
       feature: feature,
       taskType: taskType,
       subjectId: subjectId,
+      estimatedInputTokens: estimatedInputTokens,
+      estimatedOutputTokens: estimatedOutputTokens,
     ));
     await task();
   }
@@ -189,6 +193,8 @@ class _EnqueuedPrepTool {
   final String feature;
   final String taskType;
   final String? subjectId;
+  final int estimatedInputTokens;
+  final int estimatedOutputTokens;
 
   _EnqueuedPrepTool({
     required this.description,
@@ -196,6 +202,8 @@ class _EnqueuedPrepTool {
     required this.feature,
     required this.taskType,
     this.subjectId,
+    this.estimatedInputTokens = 0,
+    this.estimatedOutputTokens = 0,
   });
 }
 

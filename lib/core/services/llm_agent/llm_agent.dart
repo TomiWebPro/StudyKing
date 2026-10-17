@@ -6,6 +6,7 @@ import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
+import 'package:studyking/core/services/prep_budget.dart' show PrepBudgetService;
 import 'package:studyking/core/services/system_monitor_service.dart';
 
 class LlmAgent {
@@ -94,6 +95,8 @@ class LlmAgent {
     required String feature,
     required String taskType,
     String? subjectId,
+    int estimatedInputTokens = 0,
+    int estimatedOutputTokens = 0,
   }) {
     return _idleExecutor.enqueuePrepTool(
       description,
@@ -102,6 +105,8 @@ class LlmAgent {
       feature: feature,
       taskType: taskType,
       subjectId: subjectId,
+      estimatedInputTokens: estimatedInputTokens,
+      estimatedOutputTokens: estimatedOutputTokens,
     );
   }
 
@@ -125,6 +130,7 @@ class AgentFactory {
     bool Function(DateTime now)? shouldDeferForQuietHours,
     bool Function(String subjectId)? isPrepEnabledForSubject,
     LlmUsageMeter? usageMeter,
+    PrepBudgetService? prepBudgetService,
   }) {
     final toolRegistry = ToolRegistry();
     if (tools != null) {
@@ -141,6 +147,7 @@ class AgentFactory {
       shouldDeferForQuietHours: shouldDeferForQuietHours,
       isPrepEnabledForSubject: isPrepEnabledForSubject,
       usageMeter: usageMeter,
+      prepBudgetService: prepBudgetService,
     );
     idleExecutor.startIdleMonitoring();
 

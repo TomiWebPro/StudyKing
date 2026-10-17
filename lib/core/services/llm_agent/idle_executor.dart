@@ -4,6 +4,7 @@ import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
+import 'package:studyking/core/services/prep_budget.dart' show PrepBudgetService, PrepCategory;
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 
@@ -26,6 +27,15 @@ class IdleTask {
   bool isCompleted;
   String? error;
 
+  /// Pre-run token estimate supplied by the enqueuing [PrepTool] so the
+  /// [IdleExecutor] budget gate can consult
+  /// [PrepBudgetService.canSpend] *before* creating the parent
+  /// [LlmTask] on [LlmTaskManager]. When both are zero (the default)
+  /// the gate is skipped — tasks that carry no estimate are assumed to
+  /// be non-prep background work.
+  final int estimatedInputTokens;
+  final int estimatedOutputTokens;
+
   IdleTask({
     required this.id,
     required this.description,
@@ -38,6 +48,8 @@ class IdleTask {
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
+    this.estimatedInputTokens = 0,
+    this.estimatedOutputTokens = 0,
   });
 }
 
@@ -70,6 +82,14 @@ class IdleExecutor {
   /// `PrepBudget` whose `disabledSubjects` contains the subject.
   final bool Function(String subjectId)? _isPrepEnabledForSubject;
 
+  /// Vision Next-Term §4.2 prep-budget gate. When present,
+  /// [_tryExecuteNext] consults [PrepBudgetService.canSpend] *before*
+  /// creating the parent [LlmTask] on [LlmTaskManager], so that an
+  /// exhausted category cap defers the task (task stays `queued`) instead
+  /// of starting the task and only failing at the [PrepTool.execute] level.
+  /// Inject in tests with a fake whose `canSpend` can be toggled.
+  final PrepBudgetService? _prepBudgetService;
+
   final List<IdleTask> _queue = [];
   Timer? _idleCheckTimer;
   bool _isExecuting = false;
@@ -81,11 +101,13 @@ class IdleExecutor {
     bool Function(DateTime now)? shouldDeferForQuietHours,
     bool Function(String subjectId)? isPrepEnabledForSubject,
     LlmUsageMeter? usageMeter,
+    PrepBudgetService? prepBudgetService,
   })  : _llmTaskManager = llmTaskManager,
         _systemMonitor = systemMonitor,
         _shouldDeferForQuietHours = shouldDeferForQuietHours,
         _isPrepEnabledForSubject = isPrepEnabledForSubject,
-        _usageMeter = usageMeter;
+        _usageMeter = usageMeter,
+        _prepBudgetService = prepBudgetService;
 
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
@@ -126,6 +148,8 @@ class IdleExecutor {
     required String feature,
     required String taskType,
     String? subjectId,
+    int estimatedInputTokens = 0,
+    int estimatedOutputTokens = 0,
   }) async {
     final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
     _queue.add(IdleTask(
@@ -143,6 +167,8 @@ class IdleExecutor {
       feature: feature,
       taskType: taskType,
       subjectId: subjectId,
+      estimatedInputTokens: estimatedInputTokens,
+      estimatedOutputTokens: estimatedOutputTokens,
     ));
     if (_queue.length > 50) {
       _queue.removeAt(0);
@@ -199,6 +225,33 @@ class IdleExecutor {
         'Deferring task "${next.description}" — subject "$subjectId" prep disabled by student',
       );
       return;
+    }
+
+    // Vision Next-Term §4.2/§4.4: prep-budget gate. Before creating the parent
+    // [LlmTask] on [LlmTaskManager], consult [PrepBudgetService.canSpend] with
+    // the task's pre-run token estimate. When the category cap is exhausted the
+    // task is left in the queue (status `queued`, never `running`/`failed`) and
+    // retried on the next poll — so the student sees a deferred task that
+    // resumes when the budget window resets, rather than a failure that
+    // requires manual retry. Only applies when the task's [IdleTask.taskType]
+    // maps to a recognised [PrepCategory]; non-prep background tasks skip this
+    // gate entirely (they carry `taskType: 'background'` which maps to
+    // [PrepCategory.background], so they are still covered by the cap).
+    if (_prepBudgetService != null && next.taskType != null) {
+      final category = PrepCategory.values.firstWhere(
+        (c) => c.taskTypeKey == next.taskType,
+        orElse: () => PrepCategory.background,
+      );
+      final estimatedTokens = next.estimatedInputTokens + next.estimatedOutputTokens;
+      if (estimatedTokens > 0 &&
+          !_prepBudgetService.canSpend(category, estimatedTokens)) {
+        _logger.d(
+          'Deferring task "${next.description}" — ${category.taskTypeKey} budget exhausted '
+          '(${_prepBudgetService.remainingFor(category)} tokens remaining; '
+          'estimated $estimatedTokens needed, will retry on next poll)',
+        );
+        return;
+      }
     }
 
     _isExecuting = true;
