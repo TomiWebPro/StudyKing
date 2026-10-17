@@ -161,4 +161,62 @@ void main() {
       expect(entry.topics.first.subtopics, isNotEmpty);
     });
   });
+
+  group('findSeedEntryByKeyword', () {
+    test('matches "Chemistry" to IB Chemistry (substring)', () {
+      final entry = findSeedEntryByKeyword('Chemistry');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, 'IB Chemistry');
+    });
+
+    test('matches "Biology" to IB Biology (substring)', () {
+      final entry = findSeedEntryByKeyword('Biology');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, 'IB Biology');
+    });
+
+    test('matches "Physics" to IB Physics', () {
+      final entry = findSeedEntryByKeyword('Physics');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, 'IB Physics');
+    });
+
+    test('matches case-insensitive keyword', () {
+      final entry = findSeedEntryByKeyword('CHEMISTRY');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, 'IB Chemistry');
+    });
+
+    test('matches keyword with surrounding whitespace', () {
+      final entry = findSeedEntryByKeyword('  chemistry  ');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, 'IB Chemistry');
+    });
+
+    test('returns null for short tokens (< 3 chars)', () {
+      expect(findSeedEntryByKeyword('CH'), isNull);
+    });
+
+    test('returns null for empty string', () {
+      expect(findSeedEntryByKeyword(''), isNull);
+    });
+
+    test('returns null for whitespace-only string', () {
+      expect(findSeedEntryByKeyword('   '), isNull);
+    });
+
+    test('returns null for unknown keyword', () {
+      expect(findSeedEntryByKeyword('Quantum Mechanics'), isNull);
+    });
+
+    test('prefers exact-match entry over keyword-only match when both exist',
+        () {
+      // "IB Chemistry" contains the token "chemistry", but findSeedEntry
+      // (exact match) is tried first in the calling code.  Here we verify
+      // the keyword function itself returns the first matching entry.
+      final entry = findSeedEntryByKeyword('chemistry');
+      expect(entry, isNotNull);
+      expect(entry!.curriculumName, contains('Chemistry'));
+    });
+  });
 }

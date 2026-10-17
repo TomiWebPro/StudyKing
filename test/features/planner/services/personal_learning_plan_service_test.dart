@@ -647,6 +647,97 @@ void main() {
         expect(result.error, contains('add a subject'));
       });
 
+      test('uses seed curriculum topics (not placeholders) for empty-start Chemistry', () async {
+        final emptyRepo = _EmptyMasteryGraphRepository();
+        final emptyService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(emptyRepo),
+          repository: emptyRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 3),
+          l10n: AppLocalizationsEn(),
+        );
+
+        final result = await emptyService.generatePlan(
+          'student1',
+          courseName: 'Chemistry',
+        );
+
+        expect(result.isSuccess, isTrue);
+        final plan = result.data!;
+
+        // No placeholder titles like "Chemistry - Topic 1".
+        final topicTitles = plan.dailyPlans
+            .expand((dp) => dp.priorityTopics)
+            .map((t) => t.topicTitle)
+            .toList();
+        expect(
+          topicTitles.any((t) => t.contains('Topic 1') && t.contains('Chemistry - ')),
+          isFalse,
+          reason: 'Should not contain placeholder topics',
+        );
+        // Should contain real seed curriculum topic titles.
+        expect(topicTitles, contains('Stoichiometric Relationships'));
+
+        // Topic IDs should be seed-based, not "generated_*".
+        final topicIds = plan.dailyPlans
+            .expand((dp) => dp.priorityTopics)
+            .map((t) => t.topicId)
+            .toList();
+        expect(
+          topicIds.any((id) => id.startsWith('generated_')),
+          isFalse,
+          reason: 'Should use seed-based topic IDs, not generated placeholders',
+        );
+        expect(
+          topicIds.any((id) => id.startsWith('seed_')),
+          isTrue,
+        );
+
+        // Metadata should mark the plan as AI-generated with seed validation.
+        expect(plan.metadata, isNotNull);
+        expect(plan.metadata!['ai-generated'], isTrue);
+        expect(plan.metadata!['validation_status'], 'seed_curriculum');
+        expect(plan.metadata!['seed_curriculum_name'], 'IB Chemistry');
+      });
+
+      test('falls back to placeholders when no seed curriculum matches', () async {
+        final emptyRepo = _EmptyMasteryGraphRepository();
+        final emptyService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(emptyRepo),
+          repository: emptyRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 3),
+          l10n: AppLocalizationsEn(),
+        );
+
+        final result = await emptyService.generatePlan(
+          'student1',
+          courseName: 'Quantum Mechanics',
+        );
+
+        expect(result.isSuccess, isTrue);
+        final plan = result.data!;
+
+        // No seed match → placeholders remain.
+        final topicTitles = plan.dailyPlans
+            .expand((dp) => dp.priorityTopics)
+            .map((t) => t.topicTitle)
+            .toList();
+        expect(
+          topicTitles.any((t) => t.contains('Quantum Mechanics - Topic')),
+          isTrue,
+        );
+        // Placeholder topic IDs.
+        final topicIds = plan.dailyPlans
+            .expand((dp) => dp.priorityTopics)
+            .map((t) => t.topicId)
+            .toList();
+        expect(
+          topicIds.any((id) => id.startsWith('generated_')),
+          isTrue,
+        );
+      });
+
       test('generates plan with advisor metadata when advisor is provided', () async {
         final advisor = FakePlannerAdvisorStrategy();
         final serviceWithAdvisor = PersonalLearningPlanService(

@@ -1,4 +1,5 @@
 import 'package:studyking/core/utils/answer_comparator.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/utils/localization_helpers.dart';
 import 'package:studyking/core/utils/clock.dart';
@@ -13,6 +14,7 @@ import 'package:studyking/core/data/repositories/plan_adherence_repository.dart'
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
+import 'package:studyking/features/subjects/data/curriculum_seed_data.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
 import 'package:studyking/core/data/models/topic_model.dart';
@@ -375,17 +377,36 @@ class PersonalLearningPlanService {
       _logger.w('Failed to resolve subject/topics for empty mastery plan', e);
     }
 
+    // When no real subject exists, try to find a seed curriculum that
+    // matches the course name (e.g. "Chemistry" → "IB Chemistry").
+    // This lets a student start from scratch with real topics instead
+    // of placeholder titles. Per vision_next_term.md §4.3, auto-created
+    // artefacts are marked with validation status until reviewed.
     final bool useRealTopics = resolvedSubjectId != null && realTopics.isNotEmpty;
+
+    CurriculumSeedEntry? seedEntry;
+    if (!useRealTopics) {
+      seedEntry = findSeedEntry(courseName) ?? findSeedEntryByKeyword(courseName);
+    }
+    final useSeedTopics = seedEntry != null;
 
     final defaultTopicCount = useRealTopics
         ? realTopics.length
         : (totalDays / 7).ceil().clamp(3, 20);
 
     final topicNames = <String>[];
+    final topicIds = <String>[];
     if (useRealTopics) {
       for (final topic in realTopics) {
         topicNames.add(topic.title);
+        topicIds.add(topic.id);
       }
+    } else if (useSeedTopics) {
+      for (final topic in seedEntry.topics) {
+        topicNames.add(topic.title);
+        topicIds.add('seed_${courseName.normalized}_${topic.sortOrder}');
+      }
+      // If the course is longer than the seed topics, cycle through them.
     } else {
       for (var i = 1; i <= defaultTopicCount; i++) {
         topicNames.add('$courseName - Topic $i');
@@ -413,8 +434,11 @@ class PersonalLearningPlanService {
       final topicIndex = (day - 1) % topicNames.length;
       final topicId = useRealTopics
           ? realTopics[topicIndex].id
-          : 'generated_${day}_$studentId';
+          : (useSeedTopics ? topicIds[topicIndex] : 'generated_${day}_$studentId');
       final effectiveSubjectId = resolvedSubjectId ?? '';
+      final topicReason = useSeedTopics
+          ? 'Seed curriculum topic for $courseName'
+          : 'New topic from $courseName';
       dailyPlans.add(DailyPlan(
         date: addCalendarDays(now, day - 1),
         dayNumber: day,
@@ -423,7 +447,7 @@ class PersonalLearningPlanService {
             topicId: topicId,
             topicTitle: topicNames[topicIndex],
             priority: 1.0,
-            reason: 'New topic from $courseName',
+            reason: topicReason,
             readinessScore: 0.5,
             reviewUrgency: 0.0,
             estimatedQuestions: config.targetQuestionsPerDay,
@@ -447,9 +471,19 @@ class PersonalLearningPlanService {
       totalMinutes: (config.targetMinutesPerDay * totalDays).round(),
       newTopics: topicNames.length,
       reviewTopics: 0,
-      estimatedCoverage: useRealTopics ? 0.5 : 0.3,
+      estimatedCoverage: useRealTopics ? 0.5 : (useSeedTopics ? 0.5 : 0.3),
       focusAreas: topicNames.take(3).toList(),
     );
+
+    final metadata = <String, dynamic>{
+      'course_name': courseName,
+      'empty_mastery_fallback': true,
+    };
+    if (useSeedTopics) {
+      metadata['ai-generated'] = true;
+      metadata['validation_status'] = 'seed_curriculum';
+      metadata['seed_curriculum_name'] = seedEntry.curriculumName;
+    }
 
     final plan = PersonalLearningPlan(
       studentId: studentId,
@@ -460,10 +494,7 @@ class PersonalLearningPlanService {
       planDurationDays: config.planDurationDays,
       targetMinutesPerDay: config.targetMinutesPerDay,
       targetQuestionsPerDay: config.targetQuestionsPerDay,
-      metadata: {
-        'course_name': courseName,
-        'empty_mastery_fallback': true,
-      },
+      metadata: metadata,
     );
 
     try {

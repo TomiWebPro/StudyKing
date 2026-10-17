@@ -1,5 +1,6 @@
 
 import 'package:studyking/core/utils/answer_comparator.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 class CurriculumSeedEntry {
   final String curriculumName;
@@ -623,6 +624,28 @@ CurriculumSeedEntry? findSeedEntry(String curriculumName) {
   for (final entry in curriculumSeedData) {
     if (AnswerComparator.areEquivalent(entry.curriculumName, curriculumName)) {
       return entry;
+    }
+  }
+  return null;
+}
+
+/// Fuzzy lookup: returns the first seed entry whose [curriculumName]
+/// *contains* any token of [keyword] (case-insensitive, trimmed).
+///
+/// This lets an empty-start student type "Chemistry" or "biology" and
+/// receive a real curriculum (e.g. "IB Chemistry", "A-Level Biology")
+/// instead of placeholder topics.  Returns `null` when no seed
+/// curriculum is a match.
+CurriculumSeedEntry? findSeedEntryByKeyword(String keyword) {
+  final normalized = keyword.normalized;
+  if (normalized.isEmpty) return null;
+  final tokens = normalized.split(RegExp(r'\s+'));
+  for (final entry in curriculumSeedData) {
+    final entryNormalized = entry.curriculumName.normalized;
+    for (final token in tokens) {
+      if (token.length >= 3 && entryNormalized.contains(token)) {
+        return entry;
+      }
     }
   }
   return null;
