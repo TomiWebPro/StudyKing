@@ -580,6 +580,108 @@ void main() {
       executor.dispose();
     });
   });
+
+  group('IdleExecutor token aggregation', () {
+    test('aggregates per-call tokens onto the parent idle task', () async {
+      // When a prep task's taskFn invokes the LLM service, the service records
+      // its own per-call LlmTask on the shared LlmTaskManager with real token
+      // counts (just like _TaskTrackingFakeLlmService in agent_loop_test.dart).
+      // IdleExecutor must aggregate those onto the parent idle task so the
+      // task-manager portal shows non-zero spend (vision §4.2 token
+      // transparency). The parent idle task always has modelId 'background'.
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+
+      await executor.enqueuePrepTool(
+        'lesson prep consuming per-call tokens',
+        () async {
+          // Simulate the LLM service creating a per-call task with tokens.
+          final callId = manager.createTask(
+            feature: 'lesson_prep',
+            modelId: 'gpt-4o',
+            taskType: 'lesson_prep',
+          );
+          manager.startTask(callId);
+          manager.completeTask(
+            callId,
+            tokensUsed: 1500,
+            estimatedCost: 0.002,
+          );
+          return {'success': true, 'lessonId': 'l1'};
+        },
+        requiresHeavy: false,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+      );
+
+      // The parent idle task is the one with modelId 'background'.
+      final parentTask = manager.tasks.firstWhere((t) => t.modelId == 'background');
+      expect(parentTask.status, LlmTaskStatus.done);
+      expect(parentTask.tokensUsed, greaterThanOrEqualTo(1500));
+      expect(parentTask.estimatedCost, closeTo(0.002, 0.0001));
+
+      executor.dispose();
+    });
+
+    test('aggregates tokens from multiple per-call tasks', () async {
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+
+      await executor.enqueuePrepTool(
+        'multi-step prep with 3 LLM calls',
+        () async {
+          for (var i = 0; i < 3; i++) {
+            final callId = manager.createTask(
+              feature: 'question_variants',
+              modelId: 'gpt-4o',
+              taskType: 'question_variants',
+            );
+            manager.startTask(callId);
+            manager.completeTask(
+              callId,
+              tokensUsed: 400,
+              estimatedCost: 0.0005,
+            );
+          }
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'question_variants',
+        taskType: 'question_variants',
+      );
+
+      final parentTask = manager.tasks.firstWhere((t) => t.modelId == 'background');
+      expect(parentTask.tokensUsed, 1200);
+      expect(parentTask.estimatedCost, closeTo(0.0015, 0.0001));
+
+      executor.dispose();
+    });
+
+    test('parent task shows 0 tokens when taskFn makes no LLM calls', () async {
+      // If the taskFn does not invoke the LLM service, the parent idle task
+      // completes normally with tokensUsed 0 (no regression from aggregation
+      // logic that should only count real per-call tasks).
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+
+      await executor.enqueuePrepTool(
+        'pure local prep, no LLM calls',
+        () async {
+          return {'success': true, 'chunkCount': 42};
+        },
+        requiresHeavy: false,
+        feature: 'mastery_refresh',
+        taskType: 'background',
+      );
+
+      final parentTask = manager.tasks.firstWhere((t) => t.modelId == 'background');
+      expect(parentTask.status, LlmTaskStatus.done);
+      expect(parentTask.tokensUsed, 0);
+      expect(parentTask.estimatedCost, 0.0);
+
+      executor.dispose();
+    });
+  });
 }
 
 /// Hand-written, mutable fake [SystemMonitorService] for deterministic testing

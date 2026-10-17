@@ -192,21 +192,47 @@ class IdleExecutor {
     _isExecuting = true;
     next.isRunning = true;
 
-    final taskId = _llmTaskManager?.createTask(
+    final manager = _llmTaskManager;
+    final taskId = manager?.createTask(
           feature: next.feature ?? 'idle_executor',
           modelId: 'background',
           taskType: next.taskType ?? LlmTaskType.background.name,
         ) ??
         '';
-    if (taskId.isNotEmpty) _llmTaskManager?.startTask(taskId);
+    if (taskId.isNotEmpty) manager?.startTask(taskId);
+
+    // Snapshot task IDs that already existed so we can aggregate token counts
+    // from per-call LLM tasks created during execution onto the parent idle
+    // task (mirrors agent_loop.dart:57-59 and agent_loop.dart:150-167).
+    final preRunTaskIds = manager != null
+        ? Set<String>.from(manager.tasks.map((t) => t.id))
+        : const <String>{};
 
     try {
       await _executeTask(next);
       next.isCompleted = true;
-      if (taskId.isNotEmpty) _llmTaskManager?.completeTask(taskId);
+      // Aggregate tokens from per-call LLM tasks created during execution that
+      // were not in the pre-snapshot, so the task-manager portal surfaces real
+      // per-task token spend instead of 0 (vision §4.2 token transparency).
+      var totalTokens = 0;
+      var totalCost = 0.0;
+      if (manager != null) {
+        for (final t in manager.tasks) {
+          if (preRunTaskIds.contains(t.id) || t.id == taskId) continue;
+          totalTokens += t.tokensUsed;
+          totalCost += t.estimatedCost;
+        }
+      }
+      if (taskId.isNotEmpty) {
+        manager?.completeTask(
+          taskId,
+          tokensUsed: totalTokens,
+          estimatedCost: totalCost,
+        );
+      }
     } catch (e) {
       next.error = e.toString();
-      if (taskId.isNotEmpty) _llmTaskManager?.failTask(taskId, e.toString());
+      if (taskId.isNotEmpty) manager?.failTask(taskId, e.toString());
       _logger.w('Idle task failed: ${next.description}', e);
     } finally {
       next.isRunning = false;
