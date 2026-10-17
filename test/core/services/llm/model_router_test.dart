@@ -155,6 +155,14 @@ void main() {
       // 'teaching' is the live tutoring feature passed by ConversationManager;
       // it must classify as tutor, not fall into 'unknown'.
       expect(LlmTaskType.fromFeature('teaching'), equals(LlmTaskType.tutor));
+      // Image analysis during tutoring is a live visual-tutoring modality
+      // (ConversationManager.processImage). Its tokens must attribute to the
+      // tutor task type instead of leaking into the 'unknown' bucket, so the
+      // prep-vs-live ratio and the task-manager portal stay accurate.
+      expect(
+        LlmTaskType.fromFeature('teaching_image_analysis'),
+        equals(LlmTaskType.tutor),
+      );
       // Conversation-memory compression is live summarization work, not an
       // unclassified 'general' chat turn.
       expect(

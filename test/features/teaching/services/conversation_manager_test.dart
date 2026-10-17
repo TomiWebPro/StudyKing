@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart';
 import 'package:studyking/core/utils/clock.dart';
 import 'package:studyking/features/teaching/data/models/conversation_message_model.dart';
 import 'package:studyking/features/teaching/data/repositories/conversation_repository.dart';
@@ -45,6 +46,10 @@ class FakeLlmService extends LlmService {
   /// Captures the last systemPrompt passed to chatStream, for asserting prompt directives.
   String? lastSystemPrompt;
 
+  /// Captures the last `feature` passed to chatStream / chat, for asserting
+  /// token attribution (Vision Next-Term §0: students must see where tokens go).
+  String? lastFeature;
+
   @override
   Future<Result<String>> chat({
     required String message,
@@ -73,6 +78,7 @@ class FakeLlmService extends LlmService {
     String feature = 'general',
   }) async* {
     lastSystemPrompt = systemPrompt;
+    lastFeature = feature;
     if (shouldThrowStream) throw Exception('Simulated stream error');
     if (streamChunks != null) {
       for (final chunk in streamChunks!) {
@@ -963,6 +969,22 @@ void main() {
         expect(
           () => manager.processImage('fakeBase64Data').toList(),
           throwsA(isA<Exception>()),
+        );
+      });
+
+      test('attributes image-analysis tokens under the tutor task type', () async {
+        // processImage is visual tutoring; its chatStream call must pass a
+        // feature that classifies as LlmTaskType.tutor (Vision Next-Term §0:
+        // students steer where tokens go), not the 'general' default that
+        // leaks into the 'unknown' bucket.
+        await manager.processImage('fakeBase64Data').toList();
+
+        expect(llmService.lastFeature, isNotNull);
+        expect(llmService.lastFeature, contains('teaching'));
+        expect(llmService.lastFeature, isNot('general'));
+        expect(
+          LlmTaskType.fromFeature(llmService.lastFeature!),
+          equals(LlmTaskType.tutor),
         );
       });
     });

@@ -352,11 +352,17 @@ class ConversationManager {
 
     final buffer = StringBuffer();
     try {
+      // Image analysis is live visual tutoring; attribute its tokens under the
+      // tutor task type so the LLM task-manager portal reflects visual-tutoring
+      // spend (Vision Next-Term §0 thesis: students steer where tokens go).
+      // 'teaching_image_analysis' maps to LlmTaskType.tutor via
+      // LlmTaskType.fromFeature('teaching'), instead of leaking into 'unknown'.
       await for (final chunk in _llmService.chatStream(
         message: message,
         modelId: _modelId,
         memory: _memory,
         systemPrompt: l10n.tutorImageAnalysisSystemPrompt,
+        feature: 'teaching_image_analysis',
       )) {
         buffer.write(chunk);
         if (buffer.length > 0) {
