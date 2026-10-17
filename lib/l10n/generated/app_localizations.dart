@@ -8567,6 +8567,12 @@ abstract class AppLocalizations {
   /// **'{count} consecutive study days - good consistency!'**
   String mentorContextStreakGood(int count);
 
+  /// Warning for streak at risk in mentor context — student has a streak but hasn't studied today
+  ///
+  /// In en, this message translates to:
+  /// **'Your {count}-day streak is at risk — you haven't studied today. A quick review will keep it alive.'**
+  String mentorContextStreakAtRisk(int count);
+
   /// Label for sessions today count in mentor context
   ///
   /// In en, this message translates to:

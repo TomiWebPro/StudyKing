@@ -5254,6 +5254,11 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
+  String mentorContextStreakAtRisk(int count) {
+    return 'Tu racha de $count días está en riesgo — no has estudiado hoy. Una revisión rápida mantendrá la racha.';
+  }
+
+  @override
   String mentorContextSessionsToday(int count) {
     return 'Sesiones hoy: $count';
   }

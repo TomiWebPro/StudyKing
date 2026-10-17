@@ -31,7 +31,7 @@
 | `modify_plan` (adjust pacing for a specific syllabus) | YES | `lib/features/mentor/services/tools/modify_plan_tool.dart` |
 | `schedule_lesson` (book under the correct subject) | YES | `lib/features/mentor/services/tools/schedule_lesson_tool.dart` |
 | `get_student_stats` (per-subject progress breakdown) | YES | `lib/features/mentor/services/tools/get_student_stats_tool.dart` |
-| `switch_syllabus_focus` (set active syllabus for upcoming scheduling) | MISSING | No dedicated tool for switching the active syllabus focus. |
+| `switch_syllabus_focus` (set active syllabus for upcoming scheduling) | YES | `lib/features/mentor/services/tools/switch_syllabus_focus_tool.dart` |
 
 **Gap:** No `switch_syllabus_focus` agent tool — the mentor cannot explicitly set which syllabus is "active" for subsequent tool calls.
 → File `issues/open/e2e-mentor-missing-switch-syllabus-focus-tool.md`

@@ -103,6 +103,9 @@ void main() {
         return http.Response('', 500);
       });
 
+      // Disable retries so exactly one task is created for this failure test.
+      // The retry-with-backoff (B5) creates a new task per attempt; here we want
+      // a single task to assert the failure lifecycle (create → start → fail).
       final llmService = LlmService(
         config: const LlmConfiguration(
           provider: LlmProvider.openRouter,
@@ -110,6 +113,7 @@ void main() {
         ),
         httpClient: mockClient,
         taskManager: taskManager,
+        retryConfig: const LlmRetryConfig(maxAttempts: 0),
       );
 
       final result = await llmService.chat(

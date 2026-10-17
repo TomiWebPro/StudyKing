@@ -130,6 +130,7 @@ const Set<String> registeredToolNames = {
   'schedule_lesson',
   'schedule_rest_day',
   'wellbeing_adjust_schedule',
+  'switch_syllabus_focus',
   'create_plan',
   'modify_plan',
   'search_questions',

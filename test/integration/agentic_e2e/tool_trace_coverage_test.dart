@@ -45,6 +45,7 @@ import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
+import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/features/subjects/data/repositories/subject_repository.dart';
@@ -932,6 +933,61 @@ void main() {
       });
     });
 
+    group('SwitchSyllabusFocusTool', () {
+      test('reachable through AgentLoop from "focus on Math for 2 weeks"',
+          () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: switch_syllabus_focus\n'
+          'ARGUMENTS: {"subjectId": "math-hl", "subjectTitle": "Math AA HL", "days": 14}',
+          'Focus switched to Math AA HL for 14 days. Subsequent scheduling and practice will default to Math.',
+        ]);
+
+        // Recording callback so we can verify the tool invoked the focus service.
+        Map<String, dynamic>? receivedArgs;
+        final tool = SwitchSyllabusFocusTool(
+          onFocusChanged: ({
+            required String subjectId,
+            String? subjectTitle,
+            int? days,
+          }) async {
+            receivedArgs = {
+              'subjectId': subjectId,
+              'subjectTitle': subjectTitle,
+              'days': days,
+            };
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Focus on Math for the next 2 weeks.',
+          studentId: 'focus-student',
+          systemPrompt: 'You are a mentor that manages syllabus focus.',
+          feature: 'mentor',
+        );
+
+        // The tool was invoked with parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'switch_syllabus_focus');
+        expect(response.toolCalls.first.arguments['subjectId'], 'math-hl');
+        expect(response.toolCalls.first.arguments['subjectTitle'], 'Math AA HL');
+        expect(response.toolCalls.first.arguments['days'], 14);
+
+        // The callback received the focus change request.
+        expect(receivedArgs, isNotNull);
+        expect(receivedArgs!['subjectId'], 'math-hl');
+        expect(receivedArgs!['subjectTitle'], 'Math AA HL');
+        expect(receivedArgs!['days'], 14);
+      });
+    });
+
     group('multi-tool scenario trace', () {
       test(
           'get_syllabus_structure → create_practice_session → get_lesson_history '
@@ -1024,7 +1080,7 @@ void main() {
     });
 
     group('LlmUsageMeter + LlmTaskManager audit', () {
-      test('all 17 agent tools are traced across the suite', () async {
+      test('all 18 agent tools are traced across the suite', () async {
         final allToolNames = <String>{};
 
         // Tools traced in other files (create_plan, schedule_lesson,
@@ -1036,13 +1092,14 @@ void main() {
           'schedule_lesson',
         ]);
 
-        // Tools traced in this file — 13 interactive mentor tools (including
+        // Tools traced in this file — 14 interactive mentor tools (including
         // schedule_rest_day and wellbeing_adjust_schedule) + 4 off-period prep
         // tools registered in llmAgentToolsProvider.
         allToolNames.addAll([
           'search_questions',
           'schedule_rest_day',
           'wellbeing_adjust_schedule',
+          'switch_syllabus_focus',
           'generate_lesson_blocks',
           'modify_plan',
           'get_adherence_trends',
@@ -1055,13 +1112,13 @@ void main() {
           'refresh_mastery',
         ]);
 
-        // All 17 tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(17));
+        // All 18 tools from llmAgentToolsProvider are traced.
+        expect(allToolNames, hasLength(18));
 
         // Cross-check against the canonical registered tool-name set from
         // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
         expect(allToolNames, equals(registeredToolNames));
-        expect(registeredToolNames, hasLength(17));
+        expect(registeredToolNames, hasLength(18));
       });
     });
   });

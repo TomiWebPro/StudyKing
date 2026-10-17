@@ -19,6 +19,7 @@ import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.da
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_rest_day_tool.dart';
 import 'package:studyking/features/mentor/services/tools/wellbeing_adjust_schedule_tool.dart';
+import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.dart';
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
@@ -62,6 +63,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final usageMeter = ref.watch(llmUsageMeterProvider);
   final budgetService = ref.watch(prepBudgetServiceProvider);
   final questionVariantService = ref.watch(questionVariantServiceProvider);
+  final focusService = ref.watch(syllabusFocusServiceProvider);
 
   return [
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
@@ -93,6 +95,24 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
     GenerateLessonBlocksTool(lessonAgentService: lessonAgentService, localeName: localeName),
     CreatePlanTool(plannerService: plannerService, localeName: localeName),
     ModifyPlanTool(plannerService: plannerService, localeName: localeName),
+    // Vision Next-Term §3.1: explicit syllabus focus so the mentor can honor a
+    // "switch focus to Math" request from the student and scope subsequent tool
+    // calls. The callback writes to the shared SyllabusFocusService that
+    // MentorContextBuilder reads on the next context rebuild.
+    SwitchSyllabusFocusTool(
+      onFocusChanged: ({
+        required String subjectId,
+        String? subjectTitle,
+        int? days,
+      }) async {
+        focusService.setFocus(
+          subjectId,
+          subjectTitle: subjectTitle,
+          days: days,
+        );
+        return Result.success(null);
+      },
+    ),
     GetWeakTopicsTool(
       masteryService: masteryService,
       studentIdService: studentIdService,

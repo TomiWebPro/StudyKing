@@ -9,6 +9,7 @@ import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/providers/llm_agent_providers.dart' show llmAgentProvider, longTermMemoryProvider;
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
+import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
     show masteryGraphServiceProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart'
@@ -59,6 +60,13 @@ final mentorModelIdProvider = Provider<String>((ref) {
   return ref.watch(modelRouterProvider).resolve(LlmTaskType.mentor);
 });
 
+/// Shared, mutable holder for the student's explicit syllabus focus, set
+/// mid-conversation by the [SwitchSyllabusFocusTool] and read by the
+/// [MentorContextBuilder] on every context rebuild (Vision Next-Term §3.1).
+final syllabusFocusServiceProvider = Provider<SyllabusFocusService>((ref) {
+  return SyllabusFocusService();
+});
+
 final mentorServiceProvider = Provider.family<MentorService, String>((ref, studentId) {
   final l10n = ref.watch(l10nProvider);
   return MentorService(
@@ -76,5 +84,6 @@ final mentorServiceProvider = Provider.family<MentorService, String>((ref, stude
     agent: ref.watch(llmAgentProvider(studentId)),
     longTermMemory: ref.watch(longTermMemoryProvider),
     systemMonitor: ref.watch(systemMonitorServiceProvider),
+    focusService: ref.watch(syllabusFocusServiceProvider),
   );
 });

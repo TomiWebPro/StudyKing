@@ -6851,6 +6851,13 @@
       "count": { "type": "int" }
     }
   },
+  "mentorContextStreakAtRisk": "Tu racha de {count} días está en riesgo — no has estudiado hoy. Una revisión rápida mantendrá la racha.",
+  "@mentorContextStreakAtRisk": {
+    "description": "Warning for streak at risk in mentor context — student has a streak but hasn't studied today",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "mentorContextSessionsToday": "Sesiones hoy: {count}",
   "@mentorContextSessionsToday": {
     "description": "Label for sessions today count in mentor context",
