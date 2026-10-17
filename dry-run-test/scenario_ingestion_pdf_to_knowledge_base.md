@@ -15,9 +15,9 @@
 |------|------------|-------------|--------|
 | 1. Student uploads a PDF textbook | The ingestion pipeline should accept the file, extract text, chunk it, and persist as `Source` entries with subject/topic links. | `lib/features/ingestion/` — ingestion exists. `lib/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart:9` — `IngestPdfToKbTool` registered (`llp_agent_providers.dart:107-113`). Calls `LlmService.chat()` for chunk parsing. | PASS |
 | 2. System extracts chunks and links to syllabus topics | After ingestion, each chunk should be linked to the relevant syllabus topic so the mentor can cite it. Topics come from the plan's `SyllabusGoal` list. | `lib/features/ingestion/data/repositories/source_repository.dart` — `Source` model persists ingested content. `lib/features/planner/data/models/personal_learning_plan_model.dart:1` — `SyllabusGoal` lists subjects/topics. `get_syllabus_structure_tool.dart` surfaces structure. | PARTIAL |
-| 3. Mentor can cite the textbook when answering questions | When the student asks "What did my textbook say about aldol condensation?", the mentor should find and quote the relevant chunk. | `lib/features/mentor/services/mentor_context_builder.dart:405-463` — `_getSourceInventory()` and `_appendSourceInventory()` now inject uploaded-material titles into the mentor context. Source search/retrieval is limited — no semantic search tool is registered. | PARTIAL |
+| 3. Mentor can cite the textbook when answering questions | When the student asks "What did my textbook say about aldol condensation?", the mentor should find and quote the relevant chunk. | `lib/features/mentor/services/mentor_context_builder.dart:405-463` — `_getSourceInventory()` and `_appendSourceInventory()` inject uploaded-material titles into the mentor context. `search_sources` tool (`lib/features/mentor/services/tools/search_sources_tool.dart`) and `read_source_content` tool (`lib/features/mentor/services/tools/read_source_content_tool.dart`) are registered and traced through AgentLoop in `tool_trace_coverage_test.dart`. | PASS |
 | 4. System generates lesson blocks from ingested material | After ingestion, the mentor can call `generate_lesson_blocks` to create lesson content from the parsed textbook chunks. | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart:6` — registered (`llp_agent_providers.dart:71`). Calls `LessonAgentService.generateLesson()` which calls the LLM. | PASS |
-| 5. Student revisits source content later | A "revisit" view lists all ingested sources with search, so the student can re-read specific textbook sections. | `dry-run-test/scenario_new_user_learn_chemistry.md:step2` references `ingestion-revisit-view-missing-no-paged-ux.md`. No paged revisit UI exists. | FAIL |
+| 5. Student revisits source content later | A "revisit" view lists all ingested sources with search, so the student can re-read specific textbook sections. | `lib/features/mentor/services/tools/revisit_sources_tool.dart` — `RevisitSourcesTool` registered and traced through AgentLoop in `tool_trace_coverage_test.dart`. Paged, recency-ordered listing with source search via `search_sources` tool. | PASS |
 
 ## Tool/context audit
 
@@ -28,11 +28,11 @@
 | `ingest_pdf_to_kb` (parse PDF into knowledge base) | YES | `lib/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart` |
 | `get_syllabus_structure` (map source to syllabus topics) | YES | `lib/features/mentor/services/tools/get_syllabus_structure_tool.dart` |
 | `generate_lesson_blocks` (create lessons from ingested content) | YES | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart` |
-| `search_sources` (semantic/keyword search across ingested content) | MISSING | No agent tool wraps source content search. |
-| `revisit_sources` (paged revisit view of ingested materials) | MISSING | No agent tool for the revisit view. |
+| `search_sources` (semantic/keyword search across ingested content) | YES | `lib/features/mentor/services/tools/search_sources_tool.dart` — registered and traced in `tool_trace_coverage_test.dart`. |
+| `revisit_sources` (paged revisit view of ingested materials) | YES | `lib/features/mentor/services/tools/revisit_sources_tool.dart` — registered and traced in `tool_trace_coverage_test.dart`. |
+| `read_source_content` (read specific chunk/page of a source) | YES | `lib/features/mentor/services/tools/read_source_content_tool.dart` — registered and traced in `tool_trace_coverage_test.dart`. |
 
-**Gap:** No `search_sources` or `revisit_sources` agent tools — the mentor cannot search or surface ingested content conversationally.
-→ File `issues/open/e2e-ingestion-missing-search-sources-tool.md`
+**Gap:** All 5 needed tools now exist (search_sources, revisit_sources, and read_source_content were added since this scenario was first written).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -64,9 +64,9 @@ Traced against code at:
 
 - Step 1: PASS — `IngestPdfToKbTool` is registered and callable.
 - Step 2: PARTIAL — source-topic linking exists but confidence is not scored.
-- Step 3: PARTIAL — source titles are injected but no content search is available.
+- Step 3: PASS — `search_sources` and `read_source_content` tools are registered and traced through AgentLoop.
 - Step 4: PASS — `GenerateLessonBlocksTool` is reachable through AgentLoop.
-- Step 5: FAIL — no paged revisit view exists.
+- Step 5: PASS — `revisit_sources` tool provides paged, recency-ordered listing.
 
-Tool audit: 3 of 5 needed tools exist; `search_sources` and `revisit_sources` are missing.
-Context audit: source content search and chunking quality not injected → new issues filed.
+Tool audit: all 5 needed tools exist and are traced (ingest_pdf_to_kb, get_syllabus_structure, search_sources, read_source_content, revisit_sources, generate_lesson_blocks).
+Context audit: source content search now available via agent tools; chunking quality and source-topic link confidence not yet scored → potential enhancement issues.

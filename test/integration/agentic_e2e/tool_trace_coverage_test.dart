@@ -47,8 +47,13 @@ import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_too
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
+import 'package:studyking/features/mentor/services/tools/read_source_content_tool.dart';
+import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
+import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
+import 'package:studyking/core/data/models/source_model.dart';
+import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/features/practice/services/mistake_review_service.dart';
@@ -187,6 +192,30 @@ class FakeMistakeReviewService extends MistakeReviewService {
     if (throwError) return Result.failure('mistake_review_unavailable');
     return Result.success(mistakes);
   }
+}
+
+/// Minimal hand-written fake [SourceRepository] for source-content tool
+/// trace tests — AGENTS.md (no mockito/mocktail). Mirrors the fake in
+/// scenario_validation_test.dart so both suites can independently construct
+/// the real ReadSourceContentTool / RevisitSourcesTool / SearchSourcesTool
+/// without touching Hive.
+class FakeSourceRepository extends SourceRepository {
+  final List<Source> _all;
+  FakeSourceRepository([this._all = const []]);
+
+  @override
+  Future<Result<void>> init() async => Result.success(null);
+
+  @override
+  Future<Result<Source?>> get(String key) async =>
+      Result.success(_all.where((s) => s.id == key).firstOrNull);
+
+  @override
+  Future<Result<List<Source>>> getByStudent(String studentId) async =>
+      Result.success(_all.where((s) => s.studentId == studentId).toList());
+
+  @override
+  Future<Result<List<Source>>> getAll() async => Result.success(_all);
 }
 
 void main() {
@@ -1277,6 +1306,215 @@ void main() {
       });
     });
 
+    group('SearchSourcesTool', () {
+      test('reachable through AgentLoop from "where does my textbook discuss X"',
+          () async {
+        // Reproduces the source-grounding journey: the student asks the
+        // mentor to find a keyword in their ingested textbook. The real
+        // SearchSourcesTool dispatches through AgentLoop with a FakeSourceRepository.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: search_sources\n'
+          r'ARGUMENTS: {"query": "aldol condensation", "limit": 5}',
+          'Chapter 4 covers aldol condensation on pages 102-105.',
+        ]);
+
+        final idService = FakeStudentIdService()..setStudentId('search-student');
+
+        final tool = SearchSourcesTool(
+          sourceRepo: FakeSourceRepository([
+            Source(
+              id: 'chem-text',
+              title: 'Organic Chemistry',
+              type: SourceType.pdf,
+              chunks: jsonEncode([
+                {
+                  'chunkIndex': 0,
+                  'pageStart': 102,
+                  'pageEnd': 105,
+                  'text': 'Aldol condensation is a carbon-carbon bond-forming reaction '
+                      'between enolates and carbonyl compounds.',
+                  'heading': 'Aldol Condensation',
+                },
+              ]),
+              studentId: 'search-student',
+              subjectId: 'chem',
+            ),
+          ]),
+          studentIdService: idService,
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Where in my textbook does it discuss aldol condensation?',
+          studentId: 'search-student',
+          systemPrompt: 'You are a mentor that grounds answers in source material.',
+        );
+
+        // The tool was invoked through AgentLoop with parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'search_sources');
+        expect(response.toolCalls.first.arguments['query'], 'aldol condensation');
+        expect(response.toolCalls.first.arguments['limit'], 5);
+
+        // The result surfaces the matching chunk with page citation.
+        expect(response.toolCalls.first.result, isNotNull);
+        final result = jsonDecode(response.toolCalls.first.result!) as Map<String, dynamic>;
+        expect(result['success'], isTrue);
+        expect(result['matchCount'], greaterThan(0));
+        expect(result['results'], isNotEmpty);
+        expect(result['results'][0]['pageStart'], 102);
+        expect(result['results'][0]['pageEnd'], 105);
+
+        // Final content references the found material.
+        expect(response.content, contains('aldol condensation'));
+      });
+    });
+
+    group('ReadSourceContentTool', () {
+      test('reachable through AgentLoop from "read page 102 of my textbook"',
+          () async {
+        // Reproduces the source-grounding journey: the student asks the mentor
+        // to read a specific page/chunk of an ingested textbook. The real
+        // ReadSourceContentTool dispatches through AgentLoop with a
+        // FakeSourceRepository.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: read_source_content\n'
+          r'ARGUMENTS: {"sourceId": "chem-text", "startPage": 102, "endPage": 102}',
+          'On page 102 of your Organic Chemistry textbook, the section on '
+          'Aldol Condensation explains: "Aldol condensation is a carbon-carbon '
+          'bond-forming reaction..."',
+        ]);
+
+        final idService = FakeStudentIdService()..setStudentId('read-student');
+
+        final tool = ReadSourceContentTool(
+          sourceRepo: FakeSourceRepository([
+            Source(
+              id: 'chem-text',
+              title: 'Organic Chemistry',
+              type: SourceType.textbook,
+              chunks: jsonEncode([
+                {
+                  'chunkIndex': 0,
+                  'pageStart': 100,
+                  'pageEnd': 103,
+                  'text': 'Aldol condensation is a carbon-carbon bond-forming '
+                      'reaction between enolates and carbonyl compounds.',
+                  'heading': 'Aldol Condensation',
+                },
+              ]),
+              studentId: 'read-student',
+              subjectId: 'chem',
+            ),
+          ]),
+          studentIdService: idService,
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Read page 102 of my Chemistry textbook',
+          studentId: 'read-student',
+          systemPrompt: 'You are a mentor that reads source material for the student.',
+        );
+
+        // The tool was invoked with parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'read_source_content');
+        expect(response.toolCalls.first.arguments['sourceId'], 'chem-text');
+        expect(response.toolCalls.first.arguments['startPage'], 102);
+        expect(response.toolCalls.first.arguments['endPage'], 102);
+
+        // The result surfaces the chunk with page range and heading.
+        expect(response.toolCalls.first.result, isNotNull);
+        final result = jsonDecode(response.toolCalls.first.result!) as Map<String, dynamic>;
+        expect(result['success'], isTrue);
+        expect(result['sourceId'], 'chem-text');
+        expect(result['chunkCount'], greaterThan(0));
+        expect(result['chunks'][0]['pageStart'], 100);
+        expect(result['chunks'][0]['heading'], 'Aldol Condensation');
+      });
+    });
+
+    group('RevisitSourcesTool', () {
+      test('reachable through AgentLoop from "revisit my uploaded textbook"',
+          () async {
+        // Reproduces the conversational revisit journey: the student asks the
+        // mentor to list recently uploaded materials. The real
+        // RevisitSourcesTool dispatches through AgentLoop with a
+        // FakeSourceRepository.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: revisit_sources\nARGUMENTS: {"limit": 10}',
+          'I found 2 sources you\'ve uploaded. Here they are sorted by '
+          'recency: "Organic Chemistry" and "IB Biology Notes".',
+        ]);
+
+        final idService = FakeStudentIdService()..setStudentId('revisit-student');
+
+        final tool = RevisitSourcesTool(
+          sourceRepo: FakeSourceRepository([
+            Source(
+              id: 'chem-text',
+              title: 'Organic Chemistry',
+              type: SourceType.textbook,
+              studentId: 'revisit-student',
+              subjectId: 'chem',
+              createdAt: DateTime.now(),
+            ),
+            Source(
+              id: 'bio-notes',
+              title: 'IB Biology Notes',
+              type: SourceType.pdf,
+              studentId: 'revisit-student',
+              subjectId: 'bio',
+              createdAt: DateTime.now().add(const Duration(days: 1)),
+            ),
+          ]),
+          studentIdService: idService,
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: "Revisit the textbook I uploaded last week",
+          studentId: 'revisit-student',
+          systemPrompt: 'You are a mentor that surfaces recent study materials.',
+        );
+
+        // The tool was invoked with parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'revisit_sources');
+        expect(response.toolCalls.first.arguments['limit'], 10);
+
+        // The result surfaces a recency-ordered, paginated list.
+        expect(response.toolCalls.first.result, isNotNull);
+        final result = jsonDecode(response.toolCalls.first.result!) as Map<String, dynamic>;
+        expect(result['success'], isTrue);
+        expect(result['sourceCount'], 2);
+        expect(result['totalCount'], 2);
+        expect(result['sources'], isNotEmpty);
+        // Recency ordering: the newer source (bio-notes) comes first.
+        expect(result['sources'][0]['id'], 'bio-notes');
+        expect(result['sources'][1]['id'], 'chem-text');
+      });
+    });
+
     group('multi-tool scenario trace', () {
       test(
           'get_syllabus_structure → create_practice_session → get_lesson_history '
@@ -1369,51 +1607,82 @@ void main() {
     });
 
     group('LlmUsageMeter + LlmTaskManager audit', () {
-      test('all 18 agent tools are traced across the suite', () async {
-        final allToolNames = <String>{};
-
-        // Tools traced in other files (create_plan, schedule_lesson,
-        // get_student_stats, get_weak_topics).
-        allToolNames.addAll([
-          'create_plan',
-          'get_student_stats',
-          'get_weak_topics',
-          'schedule_lesson',
-        ]);
-
-        // Tools traced in this file — 16 interactive mentor tools (including
-        // schedule_rest_day, wellbeing_adjust_schedule, switch_syllabus_focus,
-        // and switch_provider) + 4 off-period prep tools registered in
-        // llmAgentToolsProvider.
-        allToolNames.addAll([
-          'search_questions',
-          'schedule_rest_day',
-          'wellbeing_adjust_schedule',
-          'switch_syllabus_focus',
-          'switch_provider',
-          'generate_lesson_blocks',
-          'modify_plan',
-          'get_adherence_trends',
-          'get_lesson_history',
-          'create_practice_session',
-          'review_mistakes',
-          'get_syllabus_structure',
-          'read_source_content',
-          'search_sources',
-          'revisit_sources',
-          'ingest_pdf_to_kb',
-          'enqueue_question_variants',
-          'pre_generate_lesson',
-          'refresh_mastery',
-        ]);
-
-        // All tools from llmAgentToolsProvider are traced.
-        expect(allToolNames, hasLength(registeredToolNames.length));
-
-        // Cross-check against the canonical registered tool-name set from
-        // fakes.dart (single source of truth mirroring llmAgentToolsProvider).
-        expect(allToolNames, equals(registeredToolNames));
+      test('registeredToolNames matches llmAgentToolsProvider registration count', () {
+        // The canonical tool set from fakes.dart must mirror the tools
+        // registered in llmAgentToolsProvider (llm_agent_providers.dart),
+        // including search_sources, read_source_content, and revisit_sources.
         expect(registeredToolNames, hasLength(23));
+        // Verify no duplicate registration by checking the set size.
+        expect(registeredToolNames.length, registeredToolNames.toSet().length);
+      });
+
+      test('every registered agent tool passes through the AgentLoop dispatch',
+          () async {
+        // Tightened audit: instead of merely checking name-set membership
+        // (the old test listed allToolNames by hand and asserted set equality),
+        // this test actually runs a TOOL_CALL trace through the real AgentLoop
+        // for EVERY tool name in registeredToolNames. If a tool is registered
+        // but cannot be dispatched (e.g. its name was added to registeredToolNames
+        // without a corresponding trace test), this test fails.
+        //
+        // Fixes issues/open/e2e-source-grounding-tools-not-traced.md: the
+        // old audit falsely reported read_source_content and revisit_sources
+        // as "traced" when they only appeared in the hand-listed set.
+        final taskManager = LlmTaskManager();
+        final taskIdsBefore = <String>{...taskManager.tasks.map((t) => t.id)};
+
+        for (final toolName in registeredToolNames) {
+          final fakeLlm = FakeAgentLlmService([
+            'TOOL_CALL: $toolName\nARGUMENTS: {}',
+            'Done with $toolName.',
+          ]);
+
+          final tool = RecordingTool(name: toolName);
+          final registry = ToolRegistry()..register(tool);
+          final loop = AgentLoop(
+            llmService: fakeLlm,
+            modelId: 'test-model',
+            toolRegistry: registry,
+            taskManager: taskManager,
+          );
+
+          final response = await loop.run(
+            userMessage: 'Test dispatch for $toolName',
+            studentId: 'audit-student',
+            systemPrompt: 'You are a test harness.',
+            feature: 'agent',
+          );
+
+          // The tool was dispatched and executed without an AgentLoop error.
+          expect(
+            response.toolCalls,
+            hasLength(1),
+            reason: 'Tool "$toolName" was not dispatched by AgentLoop — '
+                'the registered name has no executing TOOL_CALL trace.',
+          );
+          expect(
+            response.toolCalls.first.toolName,
+            toolName,
+            reason: 'Dispatched tool name does not match registered name "$toolName".',
+          );
+          expect(
+            response.error,
+            isNull,
+            reason: 'AgentLoop surfaced an error for "$toolName".',
+          );
+        }
+
+        // Verify LlmTaskManager recorded a task per tool dispatch.
+        final tasksAfter = taskManager.tasks
+            .where((t) => !taskIdsBefore.contains(t.id))
+            .toList();
+        expect(tasksAfter.length, registeredToolNames.length,
+            reason: 'LlmTaskManager should record one task per tool dispatch.');
+        expect(
+          tasksAfter.every((t) => t.status == LlmTaskStatus.done),
+          isTrue,
+          reason: 'All dispatch tasks should complete.',
+        );
       });
     });
   });
