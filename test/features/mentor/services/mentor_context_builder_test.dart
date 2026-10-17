@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
@@ -229,6 +231,23 @@ void main() {
   });
 
   group('MentorContextBuilder', () {
+    PersonalLearningPlan planWithGoals(List<Map<String, dynamic>> goals) =>
+        PersonalLearningPlan(
+          studentId: 'test-student',
+          generatedAt: DateTime.now(),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {'syllabus_goals': goals},
+        );
+
     group('buildContextPrompt', () {
       test('includes stats and accuracy in output', () async {
         final builder = _createBuilder();
@@ -468,23 +487,6 @@ void main() {
     });
 
     group('source inventory', () {
-      PersonalLearningPlan planWithGoals(List<Map<String, dynamic>> goals) =>
-          PersonalLearningPlan(
-            studentId: 'test-student',
-            generatedAt: DateTime.now(),
-            dailyPlans: [],
-            summary: PlanSummary(
-              totalQuestions: 0,
-              totalMinutes: 0,
-              newTopics: 0,
-              reviewTopics: 0,
-              estimatedCoverage: 0,
-              focusAreas: [],
-            ),
-            recommendations: [],
-            metadata: {'syllabus_goals': goals},
-          );
-
       test('includes per-syllabus source titles when sources exist', () async {
         final planner = _FakePlannerService();
         planner.setPlan(planWithGoals([
@@ -589,6 +591,202 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, contains('Second Note'));
         expect(result.data, contains('Math: 2'));
+      });
+    });
+
+    group('source content excerpts', () {
+      test('injects relevant chunk excerpts from active syllabus topics',
+          () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'Aldol Condensation'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        final chunksJson = jsonEncode([
+          {
+            'chunkIndex': 0,
+            'pageStart': 102,
+            'pageEnd': 105,
+            'text': 'Aldol condensation is a carbon-carbon bond-forming reaction between enolates and carbonyl compounds.',
+            'heading': 'Aldol Condensation',
+          },
+          {
+            'chunkIndex': 1,
+            'pageStart': 200,
+            'pageEnd': 203,
+            'text': 'SN2 reactions proceed through a backside attack mechanism.',
+            'heading': 'SN2',
+          },
+        ]);
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: chunksJson,
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // The search for 'Aldol Condensation' should match chunk 0.
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('Organic Chemistry Textbook'));
+        expect(result.data, contains('Aldol Condensation'));
+        expect(result.data, contains('p.102-105'));
+        expect(result.data, contains('Aldol condensation is a carbon-carbon'));
+      });
+
+      test('also searches by syllabus subject title when no upcoming lessons',
+          () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {
+                'chunkIndex': 0,
+                'pageStart': 10,
+                'pageEnd': 12,
+                'text': 'Organic Chemistry covers aldehydes and ketones.',
+                'heading': 'Intro',
+              },
+            ]),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Relevant source excerpts'));
+        expect(result.data, contains('Organic Chemistry covers aldehydes'));
+      });
+
+      test('omits excerpts block when no matching content found', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'Aldol Condensation'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 'chem-textbook',
+            title: 'Organic Chemistry Textbook',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode([
+              {'chunkIndex': 0, 'text': 'SN2 reactions proceed through backside attack.'},
+            ]),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Relevant source excerpts')));
+      });
+
+      test('omits excerpts block when sourceRepository is null', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: null,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Relevant source excerpts')));
+      });
+
+      test('caps the number of injected excerpts at 3', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'chem-1', 'subjectTitle': 'Organic Chemistry'},
+        ]));
+        planner.setScheduledLessons([
+          Session(
+            id: 's1',
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            startTime: DateTime.now().add(const Duration(hours: 2)),
+            tutorMetadata: const TutorMetadata(topicTitle: 'Aldol'),
+          ),
+        ]);
+
+        final sourceRepo = _FakeSourceRepo();
+        // 5 chunks all matching 'aldol' → only 3 injected.
+        sourceRepo.setSources([
+          Source(
+            id: 's1',
+            title: 'Source 1',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'chem-1',
+            chunks: jsonEncode(List.generate(5, (i) => {
+                  'chunkIndex': i,
+                  'pageStart': i + 1,
+                  'pageEnd': i + 1,
+                  'text': 'Aldol condensation discussion $i',
+                })),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          sourceRepository: sourceRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // Only 3 excerpts should appear; the 4th and 5th should be omitted.
+        expect(result.data, contains('Aldol condensation discussion 0'));
+        expect(result.data, contains('Aldol condensation discussion 2'));
+        expect(result.data, isNot(contains('Aldol condensation discussion 3')));
+        expect(result.data, isNot(contains('Aldol condensation discussion 4')));
       });
     });
 

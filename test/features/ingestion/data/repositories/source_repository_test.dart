@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
@@ -418,6 +419,195 @@ void main() {
 
       test('getAll on empty store returns empty list', () async {
         final result = await repo.getAll();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+    });
+
+    group('searchChunks', () {
+      String chunksJson(List<Map<String, dynamic>> chunks) =>
+          jsonEncode(chunks);
+
+      test('finds matching chunks by keyword', () async {
+        final jsonStr = chunksJson([
+          {
+            'chunkIndex': 0,
+            'pageStart': 102,
+            'pageEnd': 105,
+            'text': 'Aldol condensation is a carbon-carbon bond-forming reaction.',
+            'heading': 'Aldol Condensation',
+          },
+          {
+            'chunkIndex': 1,
+            'pageStart': 200,
+            'pageEnd': 203,
+            'text': 'SN2 reactions proceed through a backside attack.',
+          },
+        ]);
+        await repo.create(Source(
+          id: 's1',
+          title: 'Organic Chemistry',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          subjectId: 'chem',
+          topicId: 'orgo',
+          chunks: jsonStr,
+        ));
+
+        final result = await repo.searchChunks('aldol', 'stu1');
+        expect(result.isSuccess, isTrue);
+        final matches = result.data!;
+        expect(matches.length, 1);
+        expect(matches[0].sourceId, 's1');
+        expect(matches[0].sourceTitle, 'Organic Chemistry');
+        expect(matches[0].sourceType, 'pdf');
+        expect(matches[0].subjectId, 'chem');
+        expect(matches[0].topicId, 'orgo');
+        expect(matches[0].chunkIndex, 0);
+        expect(matches[0].pageStart, 102);
+        expect(matches[0].pageEnd, 105);
+        expect(matches[0].heading, 'Aldol Condensation');
+        expect(matches[0].excerpt, contains('Aldol condensation'));
+      });
+
+      test('search is case-insensitive via normalized matching', () async {
+        await repo.create(Source(
+          id: 's1',
+          title: 'Org Chem',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'text': 'Aldol condensation mechanism'},
+          ]),
+        ));
+
+        final result = await repo.searchChunks('ALDOL CONDENSATION', 'stu1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 1);
+        expect(result.data![0].sourceId, 's1');
+      });
+
+      test('filters by subjectId when provided', () async {
+        await repo.create(Source(
+          id: 's1',
+          title: 'Chem',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          subjectId: 'chem',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'text': 'aldol condensation'},
+          ]),
+        ));
+        await repo.create(Source(
+          id: 's2',
+          title: 'Bio',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          subjectId: 'bio',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'text': 'aldol condensation'},
+          ]),
+        ));
+
+        final result = await repo.searchChunks('aldol', 'stu1', subjectId: 'bio');
+        expect(result.data!.length, 1);
+        expect(result.data![0].sourceId, 's2');
+      });
+
+      test('returns empty list for non-matching query', () async {
+        await repo.create(Source(
+          id: 's1',
+          title: 'Chem',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'text': 'Some chemistry content'},
+          ]),
+        ));
+
+        final result = await repo.searchChunks('quantum mechanics', 'stu1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('bounds the excerpt length to 300 chars + ellipsis', () async {
+        final longText = 'Aldol ' * 200; // 1000 chars
+        await repo.create(Source(
+          id: 'long-1',
+          title: 'Long Text',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'pageStart': 1, 'pageEnd': 1, 'text': longText},
+          ]),
+        ));
+
+        final result = await repo.searchChunks('aldol', 'stu1');
+        final excerpt = result.data![0].excerpt;
+        expect(excerpt.length, lessThanOrEqualTo(301));
+        expect(excerpt, contains('…'));
+      });
+
+      test('respects the limit parameter', () async {
+        final buffer = StringBuffer();
+        for (var i = 0; i < 5; i++) {
+          buffer.writeln('aldol condensation paragraph $i');
+        }
+        await repo.create(Source(
+          id: 's1',
+          title: 'Chem',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson(List.generate(5, (i) => {
+                'chunkIndex': i,
+                'text': 'aldol condensation paragraph $i',
+              })),
+        ));
+
+        final result = await repo.searchChunks('aldol', 'stu1', limit: 2);
+        expect(result.data!.length, 2);
+      });
+
+      test('returns success with empty list for empty query', () async {
+        await repo.create(Source(
+          id: 's1',
+          title: 'Chem',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson([{'chunkIndex': 0, 'text': 'content'}]),
+        ));
+
+        final result = await repo.searchChunks('   ', 'stu1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isEmpty);
+      });
+
+      test('skips sources with malformed chunks JSON', () async {
+        await repo.create(Source(
+          id: 'bad',
+          title: 'Bad',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: 'not valid json',
+        ));
+        await repo.create(Source(
+          id: 'good',
+          title: 'Good',
+          type: SourceType.pdf,
+          studentId: 'stu1',
+          chunks: chunksJson([
+            {'chunkIndex': 0, 'text': 'aldol condensation here'},
+          ]),
+        ));
+
+        final result = await repo.searchChunks('aldol', 'stu1');
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.length, 1);
+        expect(result.data![0].sourceId, 'good');
+      });
+
+      test('returns success for student with no sources', () async {
+        final result = await repo.searchChunks('aldol', 'nobody');
         expect(result.isSuccess, isTrue);
         expect(result.data, isEmpty);
       });
