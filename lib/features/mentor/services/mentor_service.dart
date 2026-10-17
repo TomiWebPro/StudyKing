@@ -26,6 +26,7 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'mentor_context_builder.dart';
 import 'mentor_wellbeing_service.dart';
 import 'mentor_schedule_handler.dart';
+import 'syllabus_focus_service.dart';
 
 class PlanProposal {
   final int days;
@@ -53,6 +54,7 @@ class MentorService {
   final String _localeName;
   final LlmAgent? _agent;
   final LongTermMemory? _longTermMemory;
+  final SyllabusFocusService? _focusService;
 
   late final MentorContextBuilder _contextBuilder;
   late final MentorWellbeingService _wellbeingService;
@@ -79,6 +81,7 @@ class MentorService {
     LlmAgent? agent,
     LongTermMemory? longTermMemory,
     SystemMonitorService? systemMonitor,
+    SyllabusFocusService? focusService,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
@@ -93,6 +96,7 @@ class MentorService {
         _localeName = localeName,
         _agent = agent,
         _longTermMemory = longTermMemory,
+        _focusService = focusService,
         _memory = ConversationMemory(
           maxTurns: 50,
           sessionId: 'mentor_$studentId',
@@ -107,6 +111,8 @@ class MentorService {
       sourceRepository: _sourceRepository,
       localeName: _localeName,
       systemMonitor: systemMonitor,
+      focusService: _focusService,
+      llmConfig: _llmService.config,
     );
     _wellbeingService = MentorWellbeingService(
       sessionRepository: _sessionRepository,

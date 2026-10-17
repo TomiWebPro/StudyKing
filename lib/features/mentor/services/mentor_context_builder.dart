@@ -21,6 +21,8 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/l10n/generated/app_localizations.dart';
 
 class MentorContextBuilder {
@@ -41,6 +43,19 @@ class MentorContextBuilder {
   /// without sensors (web) or when monitoring is unavailable — never throws.
   final SystemMonitorService? _systemMonitor;
 
+  /// Holds the student's explicitly-set syllabus focus, set mid-conversation
+  /// by the [SwitchSyllabusFocusTool]. When present, it overrides the
+  /// implicit resolution in [_buildSyllabusContext] (Vision Next-Term §3.1).
+  final SyllabusFocusService? _focusService;
+
+  /// The student's configured LLM provider and backup/failover (Vision
+  /// Next-Term §3.1 scenario audit: "List context the LLM needed vs what the
+  /// system prompt actually injects"). When present, the active provider and
+  /// backup status are injected into the mentor context so the LLM can advise
+  /// on provider status and failover instead of guessing. Null when no config
+  /// is available (tests/fallback) so existing context is untouched.
+  final LlmConfiguration? _llmConfig;
+
   /// Human-readable summary of the student's active syllabi, so the mentor can
   /// understand which syllabus the student is referring to when they chat.
   String get currentSyllabusContext => _currentSyllabusContext;
@@ -55,6 +70,8 @@ class MentorContextBuilder {
     SourceRepository? sourceRepository,
     required String localeName,
     SystemMonitorService? systemMonitor,
+    SyllabusFocusService? focusService,
+    LlmConfiguration? llmConfig,
   })  : _progressTracker = progressTracker,
         _masteryService = masteryService,
         _plannerService = plannerService,
@@ -62,6 +79,8 @@ class MentorContextBuilder {
         _learningAnalyticsService = learningAnalyticsService,
         _sourceRepository = sourceRepository,
         _localeName = localeName,
+        _focusService = focusService,
+        _llmConfig = llmConfig,
         _systemMonitor = systemMonitor;
 
   Future<Result<String>> buildContextPrompt() async {
@@ -84,7 +103,7 @@ class MentorContextBuilder {
 
     final syllabusGoals = (await loadSyllabusGoals()).data ?? [];
     final upcomingLessonsForSyllabus = upcomingLessons;
-    _buildSyllabusContext(syllabusGoals, upcomingLessonsForSyllabus, l10n);
+    buildSyllabusContext(syllabusGoals, upcomingLessonsForSyllabus, l10n);
 
     final sources = await _getSourceInventory();
 
@@ -126,6 +145,14 @@ class MentorContextBuilder {
       // can disambiguate which syllabus a student utterance refers to when
       // multiple syllabi are active.
       buffer.writeln('$bullet$_currentSyllabusContext');
+      // Vision Next-Term §3.1: surface an explicit focus set mid-conversation
+      // so the LLM knows the student deliberately chose this syllabus.
+      if (_focusService?.hasFocus == true) {
+        final focus = _focusService!;
+        final focusLabel = focus.subjectTitle ?? focus.subjectId;
+        final daysNote = focus.days != null ? ' for ${focus.days} days' : '';
+        buffer.writeln('$bullet Syllabus focus explicitly set to "$focusLabel"$daysNote');
+      }
       for (final goal in syllabusGoals) {
         buffer.writeln('  $bullet${l10n.mentorContextActiveSyllabus}: ${goal.subjectTitle}');
       }
@@ -217,7 +244,22 @@ class MentorContextBuilder {
       buffer.writeln('$bullet${_buildDeviceStatusLine()}');
     }
 
-    if (consecutiveDays >= 7) {
+    // Vision Next-Term §3.1 (scenario_provider_config): inject the active LLM
+    // provider and backup/failover status so the mentor LLM can reason about
+    // provider status ("I see you're on OpenRouter — switch to Ollama?") rather
+    // than guessing. Omitted when no config is available so existing context is
+    // untouched. LLM-facing: invariant English per AGENTS.md i18n convention
+    // (prompt context lines, like the device-status line above).
+    if (_llmConfig != null) {
+      buffer.writeln('$bullet${_buildProviderStatusLine()}');
+    }
+
+    if (consecutiveDays >= 1 && todayMinutes == 0) {
+      // Streak at risk: student has a streak but hasn't studied today.
+      // Inject the at-risk directive so the LLM can proactively nudge
+      // (Vision Next-Term §3.1 scenario audit: streak-risk context injection).
+      buffer.writeln('$bullet${l10n.mentorContextStreakAtRisk(consecutiveDays)}');
+    } else if (consecutiveDays >= 7) {
       buffer.writeln('$bullet${l10n.mentorContextStreak(consecutiveDays)}');
     } else if (consecutiveDays >= 3) {
       buffer.writeln('$bullet${l10n.mentorContextStreakGood(consecutiveDays)}');
@@ -293,19 +335,34 @@ class MentorContextBuilder {
   /// agent tool calls (Vision §3.1 tool/context audit).
   ///
   /// Resolution order:
+  /// 0. If the [SwitchSyllabusFocusTool] has set an explicit focus, that
+  ///    goal takes priority over implicit resolution.
   /// 1. If upcoming scheduled lessons map to a syllabus goal, that goal is the
   ///    active syllabus.
   /// 2. If there is exactly one syllabus goal, it is the active syllabus.
   /// 3. If multiple syllabi are active with no upcoming lesson to pin one,
   ///    surface an ambiguity notice so the LLM can ask the student to
   ///    disambiguate.
-  void _buildSyllabusContext(
+  void buildSyllabusContext(
     List<SyllabusGoal> goals,
     List<Session> upcomingLessons,
     AppLocalizations l10n,
   ) {
     if (goals.isEmpty) {
       _currentSyllabusContext = '';
+      return;
+    }
+
+    // Vision Next-Term §3.1: honor an explicit syllabus focus set by the
+    // switch_syllabus_focus tool over implicit (upcoming-lesson) resolution.
+    if (_focusService?.hasFocus == true) {
+      final focusSubjectId = _focusService!.subjectId;
+      final focusedGoal = goals.firstWhere(
+        (g) => g.subjectId == focusSubjectId,
+        orElse: () => goals.first,
+      );
+      _currentSyllabusContext =
+          '${l10n.mentorContextActiveSyllabus}: ${focusedGoal.subjectTitle}';
       return;
     }
 
@@ -389,6 +446,35 @@ class MentorContextBuilder {
         ? 'heavy prep available'
         : 'heavy prep deferred';
     return 'Device status: ${parts.join(', ')} — $prepNote';
+  }
+
+  /// Human-readable label for an [LlmProvider] (LLM-facing context line).
+  static String _providerLabel(LlmProvider provider) {
+    switch (provider) {
+      case LlmProvider.openRouter:
+        return 'OpenRouter';
+      case LlmProvider.ollama:
+        return 'Ollama';
+      case LlmProvider.openAI:
+        return 'OpenAI';
+      case LlmProvider.custom:
+        return 'Custom';
+    }
+  }
+
+  /// Builds a concise LLM-provider status line for the mentor context prompt
+  /// (Vision Next-Term §3.1 scenario audit). Surfaces the active provider and
+  /// whether a backup/failover provider is configured so the LLM can advise on
+  /// provider status and failover instead of guessing. LLM-facing: invariant
+  /// English per AGENTS.md i18n convention.
+  String _buildProviderStatusLine() {
+    final config = _llmConfig!;
+    final active = _providerLabel(config.provider);
+    if (config.hasBackup && config.backupProvider != null) {
+      final backup = _providerLabel(config.backupProvider!);
+      return 'LLM provider: $active. Backup: $backup configured.';
+    }
+    return 'LLM provider: $active. Backup: not configured.';
   }
 
   Future<Result<int>> _getConsecutiveStudyDays() async {

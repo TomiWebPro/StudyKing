@@ -8,12 +8,14 @@ import 'package:studyking/core/data/repositories/session_repository.dart';
 import 'package:studyking/core/data/repositories/attempt_repository.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/errors/result.dart';
+import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/mastery_graph_service.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
+import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
@@ -170,6 +172,8 @@ MentorContextBuilder _createBuilder({
   SourceRepository? sourceRepository,
   String localeName = 'en',
   SystemMonitorService? systemMonitor,
+  SyllabusFocusService? focusService,
+  LlmConfiguration? llmConfig,
 }) {
   return MentorContextBuilder(
     progressTracker: progressTracker ?? _FakeProgressTracker(),
@@ -179,6 +183,8 @@ MentorContextBuilder _createBuilder({
     sourceRepository: sourceRepository,
     localeName: localeName,
     systemMonitor: systemMonitor,
+    focusService: focusService,
+    llmConfig: llmConfig,
   );
 }
 
@@ -606,7 +612,7 @@ void main() {
     });
 
     group('streak messages', () {
-      test('shows streak congratulations for 7+ consecutive days', () async {
+      test('shows streak congratulations for 7+ consecutive days when studied today', () async {
         final sessionRepo = _FakeSessionRepo();
         final now = DateTime.now();
         sessionRepo.setAllSessions(List.generate(7, (i) => Session(
@@ -614,15 +620,18 @@ void main() {
           startTime: now.subtract(Duration(days: i)),
           completed: true,
         )));
-        sessionRepo.setTodayDurationMs(0);
+        // Student studied today — streak is safe, show milestone message
+        sessionRepo.setTodayDurationMs(1800000); // 30 min
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
         expect(result.isSuccess, isTrue);
         expect(result.data, contains('day study streak'));
+        // No at-risk warning when student has studied today
+        expect(result.data, isNot(contains('streak is at risk')));
       });
 
-      test('shows good consistency for 3-6 consecutive days', () async {
+      test('shows good consistency for 3-6 consecutive days when studied today', () async {
         final sessionRepo = _FakeSessionRepo();
         final now = DateTime.now();
         sessionRepo.setAllSessions(List.generate(3, (i) => Session(
@@ -630,6 +639,8 @@ void main() {
           startTime: now.subtract(Duration(days: i)),
           completed: true,
         )));
+        // Student studied today — streak is safe
+        sessionRepo.setTodayDurationMs(1800000); // 30 min
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
@@ -637,17 +648,75 @@ void main() {
         expect(result.data, contains('consecutive study days'));
       });
 
-      test('does not show streak for fewer than 3 consecutive days', () async {
+      test('does not show streak milestone for fewer than 3 consecutive days when studied today', () async {
         final sessionRepo = _FakeSessionRepo();
         sessionRepo.setAllSessions([
           Session(id: 's1', studentId: 'test-student', startTime: DateTime.now(), completed: true),
         ]);
+        // Student studied today — no at-risk, no milestone (only 1 day)
+        sessionRepo.setTodayDurationMs(1800000);
 
         final builder = _createBuilder(sessionRepository: sessionRepo);
         final result = await builder.buildContextPrompt();
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('day study streak')));
         expect(result.data, isNot(contains('consecutive study days')));
+        expect(result.data, isNot(contains('streak is at risk')));
+      });
+
+      test('shows streak-at-risk warning when streak exists but no study session today', () async {
+        // Reproduces scenario_overworked_student.md Step 2 (PARTIAL → now
+        // addressed): streak tracking now injects an at-risk directive into
+        // the mentor context when the student has a streak but hasn't studied
+        // today, enabling proactive nudge guidance.
+        final sessionRepo = _FakeSessionRepo();
+        final now = DateTime.now();
+        sessionRepo.setAllSessions(List.generate(5, (i) => Session(
+          id: 's$i', studentId: 'test-student',
+          startTime: now.subtract(Duration(days: i)),
+          completed: true,
+        )));
+        // No study session today — streak is at risk
+        sessionRepo.setTodayDurationMs(0);
+
+        final builder = _createBuilder(sessionRepository: sessionRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('streak is at risk'));
+        expect(result.data, contains('5'));
+        // Should NOT show the positive streak message (milestone) since
+        // the student hasn't studied today
+        expect(result.data, isNot(contains('good consistency')));
+        expect(result.data, isNot(contains('day study streak')));
+      });
+
+      test('does not show streak-at-risk when streak exists and student studied today', () async {
+        final sessionRepo = _FakeSessionRepo();
+        final now = DateTime.now();
+        sessionRepo.setAllSessions(List.generate(2, (i) => Session(
+          id: 's$i', studentId: 'test-student',
+          startTime: now.subtract(Duration(days: i)),
+          completed: true,
+        )));
+        // Student studied today — streak is safe
+        sessionRepo.setTodayDurationMs(1200000); // 20 min
+
+        final builder = _createBuilder(sessionRepository: sessionRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // No at-risk warning
+        expect(result.data, isNot(contains('streak is at risk')));
+      });
+
+      test('does not show streak-at-risk when no streak exists', () async {
+        final sessionRepo = _FakeSessionRepo();
+        sessionRepo.setAllSessions([]);
+        sessionRepo.setTodayDurationMs(0);
+
+        final builder = _createBuilder(sessionRepository: sessionRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('streak is at risk')));
       });
     });
 
@@ -694,6 +763,41 @@ void main() {
         final result = await builder.buildContextPrompt();
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('Device status')));
+      });
+    });
+
+    group('LLM provider status', () {
+      test('injects active provider and backup when configured', () async {
+        final config = LlmConfiguration(
+          provider: LlmProvider.openRouter,
+          apiKey: 'sk-test',
+          backupProvider: LlmProvider.ollama,
+          backupApiKey: 'sk-backup',
+        );
+        final builder = _createBuilder(llmConfig: config);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('LLM provider: OpenRouter'));
+        expect(result.data, contains('Backup: Ollama configured'));
+      });
+
+      test('reports no backup when hasBackup is false', () async {
+        final config = LlmConfiguration(
+          provider: LlmProvider.openAI,
+          apiKey: 'sk-test',
+        );
+        final builder = _createBuilder(llmConfig: config);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('LLM provider: OpenAI'));
+        expect(result.data, contains('Backup: not configured'));
+      });
+
+      test('omits provider status when llmConfig is null', () async {
+        final builder = _createBuilder(); // llmConfig defaults to null
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('LLM provider:')));
       });
     });
 
@@ -918,6 +1022,69 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data, isNot(contains('Syllabus goals')));
         expect(builder.currentSyllabusContext, isEmpty);
+      });
+
+      test('honors explicit syllabus focus over implicit upcoming-lesson resolution', () async {
+        final focusService = SyllabusFocusService();
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals());
+        // Implicit resolution would pick Math (subj1) because it has the
+        // upcoming lesson — but the explicit focus on Science (subj2) wins.
+        planner.setScheduledLessons([
+          Session(
+            id: 's-1',
+            studentId: 'test-student',
+            subjectId: 'subj1',
+            startTime: DateTime.now().add(const Duration(days: 1)),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          focusService: focusService,
+        );
+
+        // Without focus: implicit resolution picks Math (upcoming lesson).
+        var result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(builder.currentSyllabusContext, contains('Math'));
+        expect(builder.currentSyllabusContext, contains('Active syllabus'));
+
+        // Set explicit focus to Science.
+        focusService.setFocus('subj2', subjectTitle: 'Science');
+
+        // With focus: explicit override wins — Science, not Math.
+        result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(builder.currentSyllabusContext, contains('Science'));
+        expect(builder.currentSyllabusContext, isNot(contains('Math')));
+      });
+
+      test('clearing focus reverts to implicit resolution', () async {
+        final focusService = SyllabusFocusService();
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals());
+        planner.setScheduledLessons([
+          Session(
+            id: 's-1',
+            studentId: 'test-student',
+            subjectId: 'subj1',
+            startTime: DateTime.now().add(const Duration(days: 1)),
+          ),
+        ]);
+
+        final builder = _createBuilder(
+          plannerService: planner,
+          focusService: focusService,
+        );
+
+        focusService.setFocus('subj2', subjectTitle: 'Science');
+        await builder.buildContextPrompt();
+        expect(builder.currentSyllabusContext, contains('Science'));
+
+        focusService.clearFocus();
+        await builder.buildContextPrompt();
+        expect(builder.currentSyllabusContext, contains('Math'));
       });
     });
   });
