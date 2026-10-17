@@ -2310,6 +2310,7 @@ class _QuietHoursSection extends ConsumerWidget {
       ),
     ).then((start) {
       if (start == null) return;
+      if (!context.mounted) return;
       _showEndHourPicker(context, start);
     });
   }

@@ -40,6 +40,17 @@ enum PrepCategory {
         return 'background';
     }
   }
+
+  /// Reverse lookup: returns the [PrepCategory] whose [taskTypeKey] matches
+  /// [key], or `null` when [key] is not a recognised preparation category.
+  /// Used by the LlmTaskManagerScreen filter dropdown to map raw task-type
+  /// strings to localized category labels.
+  static PrepCategory? fromTaskTypeKey(String key) {
+    for (final category in PrepCategory.values) {
+      if (category.taskTypeKey == key) return category;
+    }
+    return null;
+  }
 }
 
 /// Student-steerable preparation budget (docs/vision_next_term.md §4.2).

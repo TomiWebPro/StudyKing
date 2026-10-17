@@ -6306,6 +6306,10 @@
   "@allTypes": {
     "description": "Filter label showing all question types"
   },
+  "taskTypeFilterLabel": "Filter",
+  "@taskTypeFilterLabel": {
+    "description": "Label for the task-type filter dropdown in the LLM task manager"
+  },
   "allSources": "All sources",
   "@allSources": {
     "description": "Filter label showing all sources"

@@ -6280,6 +6280,10 @@
   "@allTypes": {
     "description": "Filter label showing all question types"
   },
+  "taskTypeFilterLabel": "Filtro",
+  "@taskTypeFilterLabel": {
+    "description": "Label for the task-type filter dropdown in the LLM task manager"
+  },
   "allSources": "Todas las fuentes",
   "@allSources": {
     "description": "Filter label showing all sources"

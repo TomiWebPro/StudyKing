@@ -711,6 +711,9 @@ class _LlmTaskManagerScreenState extends ConsumerState<LlmTaskManagerScreen> {
 
 /// Dropdown to filter the task list by [LlmTask.taskType].
 /// Shows "All types" plus one entry per distinct taskType present in [allTasks].
+/// When a taskType matches a [PrepCategory] key (e.g. `pdf_ingestion`), the
+/// option is labelled with the localized category name; unknown taskTypes
+/// fall back to their raw string.
 class _TaskTypeFilterDropdown extends StatelessWidget {
   final String? taskType;
   final void Function(String?) onChanged;
@@ -724,6 +727,7 @@ class _TaskTypeFilterDropdown extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final distinctTypes = allTasks
         .where((t) => t.taskType != null)
         .map((t) => t.taskType!)
@@ -732,18 +736,38 @@ class _TaskTypeFilterDropdown extends StatelessWidget {
       ..sort();
 
     final items = <DropdownMenuEntry<String>>[
-      const DropdownMenuEntry(value: 'all', label: 'All types'),
+      DropdownMenuEntry(value: 'all', label: l10n.allTypes),
       ...distinctTypes.map(
-        (t) => DropdownMenuEntry(value: t, label: t),
+        (t) => DropdownMenuEntry(
+          value: t,
+          label: _taskTypeFilterLabel(t, l10n),
+        ),
       ),
     ];
 
     return DropdownMenu<String>(
-      label: const Text('Filter'),
+      label: Text(l10n.taskTypeFilterLabel),
       initialSelection: taskType ?? 'all',
       onSelected: (String? newValue) => onChanged(newValue == 'all' ? null : newValue),
       dropdownMenuEntries: items,
       leadingIcon: const Icon(Icons.filter_alt, size: 20),
     );
   }
+}
+
+/// Maps a raw taskType string to a display label:
+/// - If it matches a [PrepCategory] key, returns the localized category name.
+/// - Otherwise, returns the raw key unchanged.
+String _taskTypeFilterLabel(String taskType, AppLocalizations l10n) {
+  final category = PrepCategory.fromTaskTypeKey(taskType);
+  if (category != null) {
+    return switch (category) {
+      PrepCategory.pdfIngestion => l10n.prepCategoryPdfIngestion,
+      PrepCategory.questionVariants => l10n.prepCategoryQuestionVariants,
+      PrepCategory.lessonPrep => l10n.prepCategoryLessonPrep,
+      PrepCategory.embeddings => l10n.prepCategoryEmbeddings,
+      PrepCategory.background => l10n.prepCategoryBackground,
+    };
+  }
+  return taskType;
 }

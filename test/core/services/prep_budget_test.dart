@@ -18,6 +18,26 @@ void main() {
       // under the same key.
       expect(PrepCategory.background.taskTypeKey, 'background');
     });
+
+    test('fromTaskTypeKey returns the matching category', () {
+      expect(PrepCategory.fromTaskTypeKey('pdf_ingestion'),
+          equals(PrepCategory.pdfIngestion));
+      expect(PrepCategory.fromTaskTypeKey('question_variants'),
+          equals(PrepCategory.questionVariants));
+      expect(PrepCategory.fromTaskTypeKey('lesson_prep'),
+          equals(PrepCategory.lessonPrep));
+      expect(PrepCategory.fromTaskTypeKey('embeddings'),
+          equals(PrepCategory.embeddings));
+      expect(PrepCategory.fromTaskTypeKey('background'),
+          equals(PrepCategory.background));
+    });
+
+    test('fromTaskTypeKey returns null for unknown keys', () {
+      expect(PrepCategory.fromTaskTypeKey('mentor'), isNull);
+      expect(PrepCategory.fromTaskTypeKey('tutor'), isNull);
+      expect(PrepCategory.fromTaskTypeKey(''), isNull);
+      expect(PrepCategory.fromTaskTypeKey('unknown'), isNull);
+    });
   });
 
   group('PrepBudget', () {

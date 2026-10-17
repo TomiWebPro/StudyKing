@@ -1265,6 +1265,112 @@ void main() {
     });
 
     // =====================
+    // LOCALE-AWARE FILTER LABELS
+    // =====================
+    testWidgets(
+        'filter dropdown uses localized PrepCategory label for known task types',
+        (tester) async {
+      manager.createTask(
+        feature: 'prep',
+        modelId: 'gpt-4',
+        taskType: 'pdf_ingestion',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Open the dropdown
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+
+      // The PrepCategory key 'pdf_ingestion' should be displayed with the
+      // localized label 'PDF → Knowledge base', not the raw key string.
+      expect(find.text('PDF → Knowledge base'), findsWidgets);
+      expect(find.text('pdf_ingestion'), findsNothing);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('filter dropdown uses localized All types option', (tester) async {
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Open the dropdown
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+
+      // The 'all' entry should show the localized 'All types' label.
+      expect(find.text('All types'), findsWidgets);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets('filter dropdown unknown taskType falls back to raw key',
+        (tester) async {
+      manager.createTask(
+        feature: 'chat',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Open the dropdown
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+
+      // 'mentor' is not a PrepCategory key, so it falls back to the raw string.
+      expect(find.text('mentor'), findsWidgets);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    testWidgets(
+        'selecting a localized PrepCategory label still filters tasks by key',
+        (tester) async {
+      manager.createTask(
+        feature: 'prep',
+        modelId: 'gpt-4',
+        taskType: 'pdf_ingestion',
+      );
+      manager.createTask(
+        feature: 'mentor',
+        modelId: 'gpt-4',
+        taskType: 'mentor',
+      );
+
+      await tester.pumpWidget(_buildTestApp(manager));
+      await tester.pumpAndSettle();
+
+      // Open dropdown and select the localized 'PDF → Knowledge base' option
+      await tester.tap(find.byType(DropdownMenu<String>));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('PDF → Knowledge base').last);
+      await tester.pumpAndSettle();
+
+      // Only the pdf_ingestion task should remain
+      expect(find.text('Type: pdf_ingestion'), findsOneWidget);
+      expect(find.text('Type: mentor'), findsNothing);
+
+      // Tap outside to close dropdown
+      await tester.tapAt(Offset.zero);
+      await tester.pumpAndSettle();
+    });
+
+    // =====================
     // ACTIVE CHIP TEXT
     // =====================
     testWidgets('active chip displays correct count for single active task',

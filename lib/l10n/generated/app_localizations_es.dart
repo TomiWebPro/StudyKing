@@ -4801,6 +4801,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get allTypes => 'Todos los tipos';
 
   @override
+  String get taskTypeFilterLabel => 'Filtro';
+
+  @override
   String get allSources => 'Todas las fuentes';
 
   @override

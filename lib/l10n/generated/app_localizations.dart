@@ -7890,6 +7890,12 @@ abstract class AppLocalizations {
   /// **'All types'**
   String get allTypes;
 
+  /// Label for the task-type filter dropdown in the LLM task manager
+  ///
+  /// In en, this message translates to:
+  /// **'Filter'**
+  String get taskTypeFilterLabel;
+
   /// Filter label showing all sources
   ///
   /// In en, this message translates to:
