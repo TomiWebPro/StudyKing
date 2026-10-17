@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:studyking/core/data/models/mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_mastery_state_model.dart';
+import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/data/models/session_model.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
@@ -14,6 +16,7 @@ import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
 import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -43,11 +46,21 @@ class _FakeSessionRepo extends SessionRepository {
 
 class _FakeMasteryGraphService extends MasteryGraphService {
   List<MasteryState> _weakTopics = [];
+  List<QuestionMasteryState> _atRiskQuestions = [];
+  bool _atRiskFailure = false;
 
   void setWeakTopics(List<MasteryState> topics) => _weakTopics = topics;
+  void setAtRiskQuestions(List<QuestionMasteryState> qs) => _atRiskQuestions = qs;
+  void setAtRiskFailure(bool v) => _atRiskFailure = v;
 
   @override
   Future<Result<List<MasteryState>>> getWeakTopics(String studentId, {String? subjectId}) async => Result.success(_weakTopics);
+
+  @override
+  Future<Result<List<QuestionMasteryState>>> getAtRiskQuestions(String studentId, {double threshold = 0.5}) async {
+    if (_atRiskFailure) return Result.failure('simulated getAtRiskQuestions failure');
+    return Result.success(_atRiskQuestions);
+  }
 }
 
 class _FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
@@ -73,6 +86,19 @@ class _FakeSourceRepo extends SourceRepository {
     if (_throwOnGetByStudent) throw Exception('Simulated source read failure');
     return Result.success(_sources);
   }
+}
+
+/// Hand-written fake [QuestionRepository] for deterministic testing of the
+/// per-question mistake context injection (no Hive I/O).
+class _FakeQuestionRepository extends QuestionRepository {
+  final Map<String, Question> _questions = {};
+
+  void setQuestions(Map<String, Question> qs) => _questions
+    ..clear()
+    ..addAll(qs);
+
+  @override
+  Future<Result<Question?>> get(String key) async => Result.success(_questions[key]);
 }
 
 class _FakePlannerService extends PlannerService {
@@ -170,6 +196,7 @@ MentorContextBuilder _createBuilder({
   PlannerService? plannerService,
   SessionRepository? sessionRepository,
   SourceRepository? sourceRepository,
+  QuestionRepository? questionRepository,
   String localeName = 'en',
   SystemMonitorService? systemMonitor,
   SyllabusFocusService? focusService,
@@ -181,6 +208,7 @@ MentorContextBuilder _createBuilder({
     plannerService: plannerService ?? _FakePlannerService(),
     sessionRepository: sessionRepository ?? _FakeSessionRepo(),
     sourceRepository: sourceRepository,
+    questionRepository: questionRepository,
     localeName: localeName,
     systemMonitor: systemMonitor,
     focusService: focusService,
@@ -1085,6 +1113,113 @@ void main() {
         focusService.clearFocus();
         await builder.buildContextPrompt();
         expect(builder.currentSyllabusContext, contains('Math'));
+      });
+    });
+
+    group('recent mistakes', () {
+      test('injects per-question accuracy snapshot with concept labels and variant counts', () async {
+        final now = DateTime.now();
+        final mastery = _FakeMasteryGraphService();
+        mastery.setAtRiskQuestions([
+          QuestionMasteryState(
+            studentId: 'test-student',
+            questionId: 'q-aldol',
+            correctCount: 2,
+            incorrectCount: 3,
+            lastIncorrect: now,
+            lastAttempt: now,
+          ),
+        ]);
+        final questionRepo = _FakeQuestionRepository();
+        questionRepo.setQuestions({
+          'q-aldol': Question(
+            id: 'q-aldol',
+            text: 'What is the product of the aldol condensation?',
+            type: QuestionType.singleChoice,
+            subjectId: 'chem-1',
+            topicId: 'aldol',
+            topic: 'aldol condensation',
+            variantIds: ['v1', 'v2'],
+            createdAt: now,
+            updatedAt: now,
+          ),
+        });
+
+        final builder = _createBuilder(
+          masteryService: mastery,
+          questionRepository: questionRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Recent mistakes'));
+        expect(result.data, contains('q-aldol'));
+        expect(result.data, contains('aldol condensation'));
+        expect(result.data, contains('40% accuracy'));
+        expect(result.data, contains('2/5 correct'));
+        expect(result.data, contains('3 wrong'));
+        expect(result.data, contains('2 variant'));
+      });
+
+      test('falls back to questionId when concept label cannot be resolved', () async {
+        final now = DateTime.now();
+        final mastery = _FakeMasteryGraphService();
+        mastery.setAtRiskQuestions([
+          QuestionMasteryState(
+            studentId: 'test-student',
+            questionId: 'q-7',
+            correctCount: 1,
+            incorrectCount: 1,
+            lastIncorrect: now,
+            lastAttempt: now,
+          ),
+        ]);
+        // Empty repo -> question cannot be resolved, no concept label, no
+        // variant count emitted, but the per-question accuracy line still shows.
+        final questionRepo = _FakeQuestionRepository();
+        final builder = _createBuilder(
+          masteryService: mastery,
+          questionRepository: questionRepo,
+        );
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('q-7: 50% accuracy'));
+        expect(result.data, isNot(contains('variant')));
+      });
+
+      test('omits the recent mistakes block when no at-risk questions', () async {
+        final builder = _createBuilder(); // default fakes: empty at-risk
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Recent mistakes')));
+      });
+
+      test('degrades gracefully when the mastery service fails', () async {
+        final mastery = _FakeMasteryGraphService();
+        mastery.setAtRiskFailure(true);
+        final builder = _createBuilder(masteryService: mastery);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Recent mistakes')));
+      });
+
+      test('caps the number of per-question mistake lines', () async {
+        final now = DateTime.now();
+        final mastery = _FakeMasteryGraphService();
+        mastery.setAtRiskQuestions(List.generate(8, (i) => QuestionMasteryState(
+          studentId: 'test-student',
+          questionId: 'q-$i',
+          correctCount: 1,
+          incorrectCount: 4,
+          lastIncorrect: now,
+          lastAttempt: now,
+        )));
+        final builder = _createBuilder(masteryService: mastery);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // Only the first 5 at-risk questions are surfaced (see _maxRecentMistakes).
+        expect(result.data, contains('q-0'));
+        expect(result.data, isNot(contains('q-6')));
+        expect(result.data, isNot(contains('q-7')));
       });
     });
   });

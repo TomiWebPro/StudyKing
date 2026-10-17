@@ -18,6 +18,7 @@ import 'package:studyking/features/planner/data/models/personal_learning_plan_mo
 import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/data/repositories/session_repository.dart';
+import 'package:studyking/features/questions/data/repositories/question_repository.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/services/learning_method_analytics_service.dart';
@@ -34,6 +35,13 @@ class MentorContextBuilder {
   final SessionRepository _sessionRepository;
   final LearningMethodAnalyticsService? _learningAnalyticsService;
   final SourceRepository? _sourceRepository;
+
+  /// Optional question repository used to resolve question IDs to concept
+  /// labels (topic/topicId) and to surface already-generated variant counts
+  /// in the recent-mistakes context block (Vision Next-Term §3.1
+  /// scenario_practice_review_context). Null when unavailable — the per-question
+  /// accuracy snapshot still injects question IDs so the prompt is never broken.
+  final QuestionRepository? _questionRepository;
   final String _localeName;
 
   /// Device/system-load awareness (Vision Next-Term §4.3). When present, a
@@ -68,6 +76,7 @@ class MentorContextBuilder {
     required SessionRepository sessionRepository,
     LearningMethodAnalyticsService? learningAnalyticsService,
     SourceRepository? sourceRepository,
+    QuestionRepository? questionRepository,
     required String localeName,
     SystemMonitorService? systemMonitor,
     SyllabusFocusService? focusService,
@@ -78,10 +87,15 @@ class MentorContextBuilder {
         _sessionRepository = sessionRepository,
         _learningAnalyticsService = learningAnalyticsService,
         _sourceRepository = sourceRepository,
+        _questionRepository = questionRepository,
         _localeName = localeName,
         _focusService = focusService,
         _llmConfig = llmConfig,
         _systemMonitor = systemMonitor;
+
+  /// Upper bound on the number of per-question mistake lines injected into the
+  /// mentor context (Vision Next-Term §3.1 scenario_practice_review_context).
+  static const int _maxRecentMistakes = 5;
 
   Future<Result<String>> buildContextPrompt() async {
     try {
@@ -226,6 +240,20 @@ class MentorContextBuilder {
       }
     }
 
+    // Vision Next-Term §3.1 (scenario_practice_review_context): inject a
+    // bounded per-question accuracy snapshot of the student's most recent
+    // incorrect answers, plus per-question variant availability, so the mentor
+    // can cite specific wrong questions and offer variant remediation instead
+    // of redirecting to UI navigation. Best-effort: a mastery/repo failure
+    // leaves the prompt unchanged.
+    final mistakeLines = await _buildMistakeLines(bullet);
+    if (mistakeLines.isNotEmpty) {
+      buffer.writeln('$bullet Recent mistakes (per-question accuracy):');
+      for (final line in mistakeLines) {
+        buffer.writeln(line);
+      }
+    }
+
     if (todayMinutes > 0) {
       buffer.writeln('$bullet${l10n.mentorContextStudyTimeToday(todayMinutes)}');
       if (dailyCap > 0 && todayMinutes > dailyCap) {
@@ -314,6 +342,60 @@ class MentorContextBuilder {
       final result = await _masteryService.getWeakTopics(_plannerService.studentId);
       return result.isSuccess ? result.data! : [];
     }, context: '_loadWeakTopics');
+  }
+
+  /// Builds a bounded, per-question accuracy snapshot of the student's most
+  /// recently-incorrect questions for the mentor context prompt
+  /// (Vision Next-Term §3.1 scenario_practice_review_context).
+  ///
+  /// Each emitted line states the question ID, an optional concept label
+  /// (resolved from [_questionRepository] when present), accuracy,
+  /// correct/total counts, and how many variants have already been generated
+  /// for that question's family. Returns an empty list when at-risk questions
+  /// are unavailable so the prompt is left unchanged.
+  Future<List<String>> _buildMistakeLines(String bullet) async {
+    final result = await _masteryService.getAtRiskQuestions(
+      _plannerService.studentId,
+    );
+    if (result.isFailure || result.data == null) return const <String>[];
+
+    final recent = result.data!
+        .where((s) => s.incorrectCount > 0 && s.totalAttempts > 0)
+        .toList()
+      ..sort((a, b) {
+        final da = a.lastIncorrect ?? DateTime.fromMicrosecondsSinceEpoch(0);
+        final db = b.lastIncorrect ?? DateTime.fromMicrosecondsSinceEpoch(0);
+        return db.compareTo(da);
+      });
+
+    final lines = <String>[];
+    for (final s in recent.take(_maxRecentMistakes)) {
+      String? conceptLabel;
+      int variantCount = 0;
+      if (_questionRepository != null) {
+        final qResult = await _questionRepository.get(s.questionId);
+        if (qResult.isSuccess && qResult.data != null) {
+          final q = qResult.data!;
+          conceptLabel = q.topic?.isNotEmpty == true
+              ? q.topic
+              : (q.topicId.isNotEmpty ? q.topicId : null);
+          variantCount = q.variantIds.length;
+        }
+      }
+      final total = s.correctCount + s.incorrectCount;
+      final accPct = formatPercent(
+        s.accuracy * 100,
+        _localeName,
+        minFractionDigits: 0,
+      );
+      final conceptPart = conceptLabel != null ? ' ($conceptLabel)' : '';
+      final variantPart = variantCount > 0
+          ? ' — $variantCount variant(s) already generated'
+          : '';
+      lines.add('  $bullet${s.questionId}$conceptPart: $accPct accuracy, '
+          '${s.correctCount}/$total correct, ${s.incorrectCount} wrong$variantPart');
+    }
+    return lines;
   }
 
   Future<Result<PersonalLearningPlan?>> _loadPlan() async {
