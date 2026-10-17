@@ -125,8 +125,20 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
         targetHoursPerDay: int.parse(e.hoursController.text),
       )).toList();
 
-      final overallDays = syllabusGoals.fold<int>(0, (sum, g) => sum + g.targetDays) ~/ syllabusGoals.length;
+      // Duration must be the longest goal's target — averaging silently
+      // truncates long subjects (see PlannerService.addSubjectToPlan for the
+      // same rule). Hours are summed (concurrent study); if they exceed the
+      // 24h/day cap, warn the student instead of silently clamping.
+      final overallDays = syllabusGoals.fold<int>(
+          0, (longest, g) => g.targetDays > longest ? g.targetDays : longest);
       final overallHours = syllabusGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
+
+      if (overallHours > 24) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10nGen.planHoursExceedsDailyCap(overallHours, 24))),
+        );
+      }
 
       await ref.read(plannerProvider.notifier).generatePlanFromSyllabus(
         syllabusGoals: syllabusGoals,

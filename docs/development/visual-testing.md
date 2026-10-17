@@ -126,12 +126,14 @@ Or target a specific test file:
 
 ```bash
 flutter test test/features/lessons/presentation/lesson_list_screen_golden_test.dart --update-goldens
+flutter test test/features/mentor/presentation/mentor_screen_golden_test.dart --update-goldens
 ```
 
 ### Running golden tests
 
 ```bash
 flutter test test/features/lessons/presentation/lesson_list_screen_golden_test.dart
+flutter test test/features/mentor/presentation/mentor_screen_golden_test.dart
 ```
 
 If a golden file does not exist, the test **fails** (it does not auto-generate).
@@ -178,6 +180,46 @@ class _FakeLessonRepository extends LessonRepository {
 }
 ```
 
+### Wrappers for screens that need an Overlay
+
+The `flutter_to_image` package wraps widgets in `Theme`, `MediaQuery`,
+`Directionality`, `SizedBox`, `RepaintBoundary`, and `View` — but **not**
+`MaterialApp`/`Navigator`/`Overlay`. Screens whose `AppBar` contains a
+`Tooltip` or `IconButton` need an `Overlay` ancestor, which `MaterialApp`
+provides internally.
+
+When a screen has such widgets, wrap it in `MaterialApp` inside the
+`ProviderScope` and loop manually (one `MaterialApp` per matrix cell)
+instead of using `renderGoldenMatrixFull`:
+
+```dart
+Widget _buildScreen(Locale locale, ThemeMode theme, double textScale) {
+  final themeData = theme == ThemeMode.dark ? ThemeData.dark() : ThemeData.light();
+  return MaterialApp(
+    locale: locale,
+    localizationsDelegates: AppLocalizations.localizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    theme: themeData,
+    darkTheme: themeData,
+    themeMode: theme,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: child!,
+    ),
+    home: ProviderScope(
+      overrides: [/* fakes */],
+      child: const MentorScreen(),
+    ),
+  );
+}
+```
+
+Each matrix cell builds a fresh `MaterialApp`, avoiding
+`OverlayEntry` reuse errors ("entry already present in a different Overlay")
+when `renderWidgetToPng` is called multiple times.
+
 ### Unit vs widget tests
 
 - **Unit tests** (pure logic): package tests for `buildGoldenPath`, etc.
@@ -213,6 +255,24 @@ test/goldens/lesson_list_es_1200_dark.png
 
 Use `renderGoldenMatrix` to render all combinations in one call, or loop
 manually for full control over `textScale` and `pixelRatio`.
+
+### `buildGoldenPathWithTextScale`
+
+```dart
+String buildGoldenPathWithTextScale(
+  String name,
+  Locale locale,
+  Size size,
+  double textScale,
+  ThemeMode theme,
+)
+```
+
+Returns a path following the convention:
+`test/goldens/<name>_<locale>_<width>x<textScale>_<theme>.png`
+
+Used by `renderGoldenTextScaleSweep` to produce unique, sortable filenames
+for each text scale (e.g. `mentor_screen_en_1200x1.5_light.png`).
 
 ---
 
