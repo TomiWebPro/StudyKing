@@ -242,6 +242,118 @@ Future<ImageResult> renderWidgetToImageResult(
   }
 }
 
+/// Renders a full-screen widget to a PNG image (`Uint8List`).
+///
+/// Unlike [renderWidgetToPng], which wraps the widget in bare `Theme` /
+/// `MediaQuery` / `Directionality`, this helper wraps [screen] in a
+/// [MaterialApp] with the specified [locale], [themeMode], [textScale],
+/// [localizationsDelegates], and [supportedLocales]. This matches the structure
+/// used by every screen-level golden test that renders a top-level screen
+/// (dashboard, planner, mentor, practice, etc.), so visual tests can render
+/// full `MaterialApp`-rooted screens without hand-rolling the same boilerplate.
+///
+/// The [screen] widget is placed as `home` in the MaterialApp. If the screen
+/// does not include its own [Scaffold], wrap it first:
+///
+/// ```dart
+/// final png = await renderScreenToPng(
+///   Scaffold(body: MyScreen()),
+///   size: const Size(375, 800),
+///   locale: const Locale('en'),
+///   themeMode: ThemeMode.light,
+///   localizationsDelegates: AppLocalizations.localizationsDelegates,
+///   supportedLocales: AppLocalizations.supportedLocales,
+/// );
+/// ```
+///
+/// For dependency injection, wrap [screen] in a `ProviderScope` (or other
+/// inherited-widget providers) before passing it in — `renderScreenToPng`
+/// places whatever you pass as `home`, so any ancestor providers the screen
+/// expects should be present in [screen] itself.
+///
+/// Text direction is driven by [locale] through MaterialApp's built-in
+/// [Directionality] resolution.
+///
+/// Must be called from within a `testWidgets` callback so that the
+/// `TestWidgetsFlutterBinding` is in the "in test" state.
+Future<Uint8List> renderScreenToPng(
+  Widget screen, {
+  required Size size,
+  double pixelRatio = kDefaultPixelRatio,
+  required Locale locale,
+  required ThemeMode themeMode,
+  double textScale = 1.0,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+}) async {
+  final result = await renderScreenToImageResult(
+    screen,
+    size: size,
+    pixelRatio: pixelRatio,
+    locale: locale,
+    themeMode: themeMode,
+    textScale: textScale,
+    localizationsDelegates: localizationsDelegates,
+    supportedLocales: supportedLocales,
+  );
+  return result.pngBytes;
+}
+
+/// Renders a full-screen widget to a PNG and returns [ImageResult] with
+/// metadata.
+///
+/// See [renderScreenToPng] for parameter documentation.
+///
+/// Must be called from within a `testWidgets` callback.
+Future<ImageResult> renderScreenToImageResult(
+  Widget screen, {
+  required Size size,
+  double pixelRatio = kDefaultPixelRatio,
+  required Locale locale,
+  required ThemeMode themeMode,
+  double textScale = 1.0,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+}) async {
+  final themeData = themeMode == ThemeMode.dark
+      ? ThemeData.dark()
+      : ThemeData.light();
+
+  // Build a MaterialApp root that carries the locale, theme, text-scale, and
+  // localisation delegates — exactly the wrapper every screen-level golden
+  // test currently hand-rolls. The [screen] is placed as `home`; callers wrap
+  // it in ProviderScope / Scaffold as needed before passing it in.
+  final app = MaterialApp(
+    locale: locale,
+    localizationsDelegates: localizationsDelegates,
+    supportedLocales: supportedLocales,
+    theme: themeData,
+    darkTheme: themeData,
+    themeMode: themeMode,
+    builder: (context, child) => MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaler: TextScaler.linear(textScale),
+      ),
+      child: child!,
+    ),
+    home: screen,
+  );
+
+  // Delegate to renderWidgetToImageResult for the pixel capture. We pass
+  // locale/themeMode/textScale so the returned ImageResult metadata is correct.
+  // The MaterialApp's own Theme/MediaQuery/Localizations override the bare
+  // wrappers that renderWidgetToImageResult applies externally — this is
+  // intentional and matches the existing per-screen golden test pattern.
+  return renderWidgetToImageResult(
+    app,
+    size: size,
+    pixelRatio: pixelRatio,
+    locale: locale,
+    themeMode: themeMode,
+    textScale: textScale,
+  );
+}
+
 /// Pumps frames until no more are scheduled, mirroring
 /// `WidgetTester.pumpAndSettle` but operating directly on the binding.
 ///

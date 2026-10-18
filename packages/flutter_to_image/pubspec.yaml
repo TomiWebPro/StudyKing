@@ -19,6 +19,8 @@ dependencies:
 # The package is itself exercised with flutter_test via its own test/ dir.
 dev_dependencies:
   flutter_lints: ^5.0.0
+  flutter_localizations:
+    sdk: flutter
 
 flutter:
   uses-material-design: true

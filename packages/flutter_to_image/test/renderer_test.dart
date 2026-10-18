@@ -2,8 +2,18 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_to_image/flutter_to_image.dart';
+
+/// Built-in Flutter localizations delegates that support both `en` and `es`.
+/// Used by `renderScreenToPng` tests so MaterialApp doesn't warn about
+/// unsupported locales.
+const List<LocalizationsDelegate<dynamic>> _kTestDelegates = [
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
 
 void main() {
   group('renderWidgetToPng', () {
@@ -175,6 +185,184 @@ void main() {
       expect(result.pngBytes, isNotEmpty);
       expect(result.size, const Size(200, 200));
       expect(result.pixelRatio, 2.0);
+    });
+  });
+
+  group('renderScreenToPng', () {
+    // renderScreenToPng wraps in MaterialApp, so these are widget-level
+    // tests and must use testWidgets.
+    testWidgets('produces non-empty PNG bytes for a simple screen', (tester) async {
+      final png = await renderScreenToPng(
+        const Center(child: Text('Hello')),
+        size: const Size(375, 800),
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(png, isNotEmpty);
+      // PNG magic bytes (first 4 bytes): 0x89 0x50 0x4E 0x47
+      expect(png[0], 0x89);
+      expect(png[1], 0x50);
+      expect(png[2], 0x4E);
+      expect(png[3], 0x47);
+    });
+
+    testWidgets('returns ImageResult with correct metadata via renderScreenToImageResult',
+        (tester) async {
+      final result = await renderScreenToImageResult(
+        const Center(child: Text('Result')),
+        size: const Size(375, 800),
+        locale: const Locale('es'),
+        themeMode: ThemeMode.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('es')],
+      );
+
+      expect(result, isA<ImageResult>());
+      expect(result.pngBytes, isNotEmpty);
+      expect(result.size, const Size(375, 800));
+      expect(result.pixelRatio, kDefaultPixelRatio);
+      expect(result.locale, const Locale('es'));
+    });
+
+    testWidgets('renders at custom size with correct pixel dimensions', (tester) async {
+      final result = await renderScreenToImageResult(
+        Container(width: 100, height: 100, color: Colors.red),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final image = await _decodePng(result.pngBytes);
+      expect(image.width, 100);
+      expect(image.height, 100);
+    });
+
+    testWidgets('higher pixelRatio produces larger image dimensions', (tester) async {
+      final result = await renderScreenToImageResult(
+        Container(width: 100, height: 100, color: Colors.blue),
+        size: const Size(100, 100),
+        pixelRatio: 3.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final image = await _decodePng(result.pngBytes);
+      expect(image.width, 300); // 100 * 3
+      expect(image.height, 300);
+    });
+
+    testWidgets('light and dark themes produce different output', (tester) async {
+      final light = await renderScreenToPng(
+        const Material(child: Center(child: Text('Theme'))),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final dark = await renderScreenToPng(
+        const Material(child: Center(child: Text('Theme'))),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(light, isNotEmpty);
+      expect(dark, isNotEmpty);
+      expect(light, isNot(equals(dark)));
+    });
+
+    testWidgets('textScale affects rendering without error', (tester) async {
+      final normal = await renderScreenToPng(
+        const Center(child: Text('Scale')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        textScale: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final largeText = await renderScreenToPng(
+        const Center(child: Text('Scale')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        textScale: 3.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(normal, isNotEmpty);
+      expect(largeText, isNotEmpty);
+    });
+
+    testWidgets('different locales render without error', (tester) async {
+      final en = await renderScreenToPng(
+        const Center(child: Text('Hello')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final es = await renderScreenToPng(
+        const Center(child: Text('Hola')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        locale: const Locale('es'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en'), Locale('es')],
+      );
+
+      expect(en, isNotEmpty);
+      expect(es, isNotEmpty);
+    });
+
+    testWidgets('can render twice without window state bleeding between calls', (tester) async {
+      // If the test window values (physicalSize, devicePixelRatio) were not
+      // restored after the first render, the second render at a different
+      // size/pixelRatio would produce mismatched or corrupted output.
+      final first = await renderScreenToPng(
+        const Center(child: Text('First')),
+        size: const Size(375, 800),
+        pixelRatio: 2.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.light,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      final second = await renderScreenToPng(
+        const Center(child: Text('Second')),
+        size: const Size(1200, 800),
+        pixelRatio: 2.0,
+        locale: const Locale('en'),
+        themeMode: ThemeMode.dark,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+      );
+
+      expect(first, isNotEmpty);
+      expect(second, isNotEmpty);
     });
   });
 }

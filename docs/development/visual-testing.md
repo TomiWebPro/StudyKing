@@ -71,6 +71,60 @@ Renders `widget` to PNG bytes. The widget is wrapped internally with
 Like `renderWidgetToPng` but returns an `ImageResult` carrying metadata
 (`size`, `pixelRatio`, `locale`).
 
+### `renderScreenToPng`
+
+Like `renderWidgetToPng` but wraps the supplied `screen` widget in a
+`MaterialApp` with the given locale, theme, text-scale, and localisation
+delegates before rendering. Use this for **screen-level** golden tests where
+the widget expects a `MaterialApp` ancestor (for `Theme`, `Overlay`,
+`ScaffoldMessenger`, or `Localizations`).
+
+```dart
+Future<Uint8List> renderScreenToPng(
+  Widget screen, {
+  required Size size,
+  double pixelRatio = 2.0,
+  required Locale locale,
+  required ThemeMode themeMode,
+  double textScale = 1.0,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+})
+```
+
+Example — rendering a full screen golden:
+
+```dart
+final png = await renderScreenToPng(
+  ProviderScope(
+    overrides: [
+      sessionRepositoryProvider.overrideWithValue(fakeSessionRepo),
+    ],
+    child: const MyScreen(),
+  ),
+  size: const Size(375, 800),
+  locale: const Locale('es'),
+  themeMode: ThemeMode.dark,
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+);
+expectLater(png, matchesGoldenFile('test/goldens/my_screen_es_375_dark.png'));
+```
+
+If the screen does not include its own `Scaffold`, wrap it:
+
+```dart
+await renderScreenToPng(
+  Scaffold(body: MyScreen()),
+  ...
+);
+```
+
+### `renderScreenToImageResult`
+
+Like `renderScreenToPng` but returns an `ImageResult` carrying metadata
+(`size`, `pixelRatio`, `locale`).
+
 ### Golden matrix helpers
 
 ```dart

@@ -49,6 +49,34 @@ Renders `widget` to PNG bytes. The widget is wrapped internally with a
 Like `renderWidgetToPng` but returns an `ImageResult` that also carries
 metadata (size, pixelRatio, locale).
 
+### `renderScreenToPng`
+
+Like [renderWidgetToPng] but wraps the supplied `screen` in a `MaterialApp`
+with the given locale, theme, text-scale, and localisation delegates before
+rendering — for screen-level golden tests that need MaterialApp context.
+
+```dart
+Future<Uint8List> renderScreenToPng(
+  Widget screen, {
+  required Size size,
+  double pixelRatio = 2.0,
+  required Locale locale,
+  required ThemeMode themeMode,
+  double textScale = 1.0,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+})
+```
+
+The `screen` is placed as `home` in the MaterialApp. If it needs a `Scaffold`
+ancestor that it doesn't provide itself, wrap it before passing. For
+dependency injection, wrap `screen` in a `ProviderScope` first.
+
+### `renderScreenToImageResult`
+
+Like `renderScreenToPng` but returns an `ImageResult` that also carries
+metadata (size, pixelRatio, locale).
+
 ### Golden matrix helpers
 
 ```dart
