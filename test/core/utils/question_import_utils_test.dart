@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/utils/question_import_utils.dart';
+import 'package:studyking/core/utils/string_extensions.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -92,6 +93,53 @@ void main() {
       final questions = result.data!;
       final ids = questions.map((q) => q.id).toSet();
       expect(ids.length, 3);
+    });
+
+    test('dedups duplicate text lines within a single text import (normalized)', () async {
+      // The third line has different casing + surrounding whitespace but the
+      // same normalized text as the first; the .normalized extension must
+      // collapse them so the student never gets duplicate bank entries.
+      final text = 'What is 2+2?\nWhat is 2+2?\n  what is 2+2?  \nDifferent question';
+      final result = await QuestionImportUtils.importFromText(text);
+      expect(result.isSuccess, true);
+      final questions = result.data!;
+      expect(questions.length, 2);
+      expect(questions[0].text, 'What is 2+2?');
+      expect(questions[1].text, 'Different question');
+    });
+
+    test('skips questions whose text already exists in the bank (existingTexts)', () async {
+      // Text import assigns fresh random ids per line (see IdGenerator), so it
+      // can never dedup by id. Bank-level dedup works on normalized text instead.
+      final text = 'First question\nSecond question\nThird question';
+      final firstResult = await QuestionImportUtils.importFromText(text);
+      expect(firstResult.isSuccess, true);
+      final existingTexts = firstResult.data!.map((q) => q.text.normalized).toSet();
+      expect(existingTexts.length, 3);
+
+      // Re-importing the same lines with those texts in the bank must skip all.
+      final secondResult = await QuestionImportUtils.importFromText(
+        text,
+        existingTexts: existingTexts,
+      );
+      expect(secondResult.isSuccess, true);
+      expect(secondResult.data, isEmpty);
+    });
+
+    test('preserves distinct questions while deduping text + within-batch', () async {
+      final firstResult = await QuestionImportUtils.importFromText('Alpha\nBeta');
+      expect(firstResult.isSuccess, true);
+      final existingTexts = firstResult.data!.map((q) => q.text.normalized).toSet();
+
+      final result = await QuestionImportUtils.importFromText(
+        'Alpha\nBeta\nBeta\nGamma',
+        existingTexts: existingTexts,
+      );
+      expect(result.isSuccess, true);
+      // Alpha + Beta skipped by bank text match; one duplicate "Beta" skipped
+      // within the batch; only Gamma remains.
+      expect(result.data!.length, 1);
+      expect(result.data!.first.text, 'Gamma');
     });
   });
 
@@ -295,6 +343,26 @@ q_good2,Second good,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Exp,tag1,,easy
       expect(result.isSuccess, true);
       expect(result.data!.questions, isEmpty);
       expect(result.data!.malformedCount, 0);
+
+      await file.delete();
+    });
+
+    test('skips existing IDs when existingIds provided (skipExisting)', () async {
+      final csv = '''id,text,type,difficulty,subjectId,topicId,variantIds,sourceIds,options,allowedAnswerTypes,correctAnswer,explanation,tags,model,difficultyText,nextReview,createdAt,updatedAt
+q_keep,Keep this,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Explanation,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000
+q_dup,Import duplicate,0,1,subj_1,topic_1,,src_1,opt1|opt2,text,opt1,Exp,tag1,,easy,2026-06-01T00:00:00.000,2026-01-01T00:00:00.000,2026-05-20T00:00:00.000''';
+      final file = File('${Directory.systemTemp.path}/test_import_existing_${DateTime.now().millisecondsSinceEpoch}.csv');
+      await file.writeAsString(csv);
+
+      final result = await QuestionImportUtils.importFromCsv(
+        file.path,
+        existingIds: {'q_dup'},
+      );
+      expect(result.isSuccess, true);
+      final report = result.data!;
+      expect(report.questions.length, 1);
+      expect(report.questions[0].id, 'q_keep');
+      expect(report.skippedDueToConflict, 1);
 
       await file.delete();
     });

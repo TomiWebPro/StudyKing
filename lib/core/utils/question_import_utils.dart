@@ -274,28 +274,51 @@ class QuestionImportUtils {
   static Future<Result<List<Question>>> importFromText(
     String text, {
     Set<String> existingIds = const {},
+    Set<String> existingTexts = const {},
+    ConflictStrategy strategy = ConflictStrategy.skipExisting,
   }) async {
     try {
       final lines = text.trim().split('\n').map((l) => l.trim()).where((l) => l.isNotEmpty).toList();
       if (lines.isEmpty) return Result.success([]);
       final questions = <Question>[];
+      final seenTexts = <String>{};
+      var skippedDuplicate = 0;
       for (final line in lines) {
         final q = _parseTextLine(line);
-        if (q == null) {
-          final fallback = Question(
-            id: IdGenerator.generate('question'),
-            text: line,
-            type: QuestionType.typedAnswer,
-            subjectId: '',
-            topicId: '',
-            createdAt: DateTime.now(),
-            updatedAt: DateTime.now(),
-          );
-          questions.add(fallback);
-        } else {
-          questions.add(q);
+        final question = q ?? Question(
+          id: IdGenerator.generate('question'),
+          text: line,
+          type: QuestionType.typedAnswer,
+          subjectId: '',
+          topicId: '',
+          createdAt: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        // Skip re-imports of questions already in the bank (ID match).
+        if (existingIds.contains(question.id) &&
+            strategy == ConflictStrategy.skipExisting) {
+          skippedDuplicate++;
+          continue;
         }
+        // Skip text duplicates: already in the bank (text match) or repeated
+        // within this batch. Normalized comparison collapses casing/whitespace
+        // variants so "What is 2+2?" and "  what is 2+2?  " are the same question.
+        // Text-level dedup is the primary mechanism for text import, since each
+        // line is assigned a fresh random id (see IdGenerator) and can never
+        // match an existing id.
+        final normalizedText = question.text.normalized;
+        if (seenTexts.contains(normalizedText) ||
+            existingTexts.contains(normalizedText)) {
+          skippedDuplicate++;
+          continue;
+        }
+        seenTexts.add(normalizedText);
+        questions.add(question);
       }
+      if (skippedDuplicate > 0) {
+        _logger.i('Skipped $skippedDuplicate duplicate question(s) on text import');
+      }
+      _logger.i('Imported ${questions.length} questions from text ($skippedDuplicate duplicates skipped)');
       return Result.success(questions);
     } catch (e) {
       _logger.w('Failed to import from text', e);

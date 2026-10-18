@@ -367,7 +367,11 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
       if (result != true || !mounted) return;
       final text = textController.text.trim();
       if (text.isEmpty) return;
-      final importResult = await QuestionImportUtils.importFromText(text);
+      final importResult = await QuestionImportUtils.importFromText(
+        text,
+        existingIds: _allQuestions.map((q) => q.id).toSet(),
+        existingTexts: _allQuestions.map((q) => q.text.normalized).toSet(),
+      );
       if (importResult.isSuccess && importResult.data != null && mounted) {
         var saved = 0;
         for (final q in importResult.data!) {
@@ -410,7 +414,10 @@ class _QuestionBankScreenState extends ConsumerState<QuestionBankScreen> {
   // ignore: unused_element
   Future<void> _importFromCsvFile(String filePath) async {
     final l10n = AppLocalizations.of(context)!;
-    final importResult = await QuestionImportUtils.importFromCsv(filePath);
+    final importResult = await QuestionImportUtils.importFromCsv(
+      filePath,
+      existingIds: _allQuestions.map((q) => q.id).toSet(),
+    );
     if (!mounted) return;
     if (importResult.isFailure) {
       ScaffoldMessenger.of(context).showSnackBar(
