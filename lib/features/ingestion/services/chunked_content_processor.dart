@@ -17,6 +17,17 @@ class ChunkedContentProcessor {
   static const int _parallelBatchSize = 3;
   static const Duration _delayBetweenBatches = Duration(milliseconds: 500);
 
+  /// Per-chunk question cap (K). A single dense page can yield hundreds of
+  /// questions from one LLM call; we keep at most this many per chunk so token
+  /// spend and the question bank are bounded. Excess is logged as follow-up prep
+  /// (agent_must_read.md §9: generated content must not be blindly trusted).
+  static const int maxQuestionsPerChunk = 8;
+
+  /// Per-source question cap (M). Total questions produced for a single source
+  /// across all chunks; once reached, remaining chunks are skipped (early break
+  /// saves tokens) and the overflow is logged for follow-up prep.
+  static const int maxQuestionsPerSource = 48;
+
   /// Maximum number of retry attempts for transient LLM failures (e.g. 429
   /// rate-limit, timeouts). Per-chunk failures that exhaust retries are
   /// counted in [failedChunkCount] so the pipeline can surface partial
@@ -375,6 +386,21 @@ class ChunkedContentProcessor {
         allResults.addAll(result);
       }
 
+      // Per-source cap (M): once we have enough questions for this source,
+      // stop processing remaining chunks — this saves tokens on dense inputs —
+      // and clamp to the cap. The overflow is logged for follow-up prep.
+      if (allResults.length >= maxQuestionsPerSource) {
+        if (allResults.length > maxQuestionsPerSource) {
+          _logger.i(
+            'Capping question bank for this source to $maxQuestionsPerSource '
+            '(generated ${allResults.length}); remaining questions queued '
+            'for follow-up prep',
+          );
+          allResults.removeRange(maxQuestionsPerSource, allResults.length);
+        }
+        break;
+      }
+
       if (batchEnd < chunks.length) {
         await Future.delayed(_delayBetweenBatches);
       }
@@ -408,7 +434,17 @@ class ChunkedContentProcessor {
       final response = result.data!;
 
       final parsed = questionParser.parse(response);
-      return parsed.map((qData) => ChunkQuestionResult(
+      // Per-chunk cap (K): clamp a dense page's response so the bank is not
+      // flooded in a single call; overflow is logged for follow-up prep.
+      final clamped = parsed.take(maxQuestionsPerChunk).toList();
+      if (parsed.length > maxQuestionsPerChunk) {
+        _logger.i(
+          'Clamping ${parsed.length} questions from chunk ${chunk.chunkIndex} '
+          'to per-chunk cap of $maxQuestionsPerChunk; overflow queued '
+          'for follow-up prep',
+        );
+      }
+      return clamped.map((qData) => ChunkQuestionResult(
         questionData: qData,
         chunkIndex: chunk.chunkIndex,
       )).toList();

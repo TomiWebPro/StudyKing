@@ -962,7 +962,18 @@ class ContentPipeline {
       final response = result.data!;
 
       final parsed = _parseQuestionResponse(response);
-      for (final qData in parsed) {
+      // Single-chunk path: this chunk represents the whole source, so apply the
+      // per-chunk cap to prevent a dense page from flooding the bank in one
+      // call. Excess is logged for follow-up prep.
+      final clamped = parsed.take(ChunkedContentProcessor.maxQuestionsPerChunk).toList();
+      if (parsed.length > ChunkedContentProcessor.maxQuestionsPerChunk) {
+        _logger.i(
+          'Clamping ${parsed.length} generated questions to per-chunk cap of '
+          '${ChunkedContentProcessor.maxQuestionsPerChunk}; overflow queued '
+          'for follow-up prep',
+        );
+      }
+      for (final qData in clamped) {
         if (!_isValidGeneratedQuestion(qData, validator: validator, allowedTypes: allowedTypes)) {
           _logger.w('Skipping invalid question: ${qData['text']}');
           continue;

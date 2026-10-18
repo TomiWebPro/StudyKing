@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/features/ingestion/data/models/source_chunk.dart';
 import 'package:studyking/core/errors/result.dart';
@@ -324,6 +326,77 @@ void main() {
       expect(result, isEmpty);
     });
   });
+
+  group('ChunkedContentProcessor.generateQuestionsFromChunks caps', () {
+    test('clamps a dense chunk to maxQuestionsPerChunk (K)', () async {
+      // A dense page makes the LLM dump hundreds of questions in one response.
+      final processor = ChunkedContentProcessor(
+        llmService: FakeLlmService(_questionBankJson(200)),
+        localeName: 'en',
+        retryInitialDelay: Duration.zero,
+      );
+
+      final result = await processor.generateQuestionsFromChunks(
+        chunks: [SourceChunk(chunkIndex: 0, text: 'dense page')],
+        modelId: 'm',
+        questionParser: QuestionParser(),
+      );
+
+      // Per-chunk cap (K) bounds the bank even when the LLM over-generates.
+      expect(result.length, ChunkedContentProcessor.maxQuestionsPerChunk);
+    });
+
+    test('caps total questions across chunks to maxQuestionsPerSource (M)',
+        () async {
+      // 7 chunks × K(8) = 56 > M(48); the per-source cap must stop at 48 and
+      // skip the remaining chunks (early break saves tokens).
+      final processor = ChunkedContentProcessor(
+        llmService: FakeLlmService(_questionBankJson(200)),
+        localeName: 'en',
+        retryInitialDelay: Duration.zero,
+      );
+
+      final chunks = List.generate(
+        7,
+        (i) => SourceChunk(chunkIndex: i, text: 'chunk $i'),
+      );
+      final result = await processor.generateQuestionsFromChunks(
+        chunks: chunks,
+        modelId: 'm',
+        questionParser: QuestionParser(),
+      );
+
+      expect(result.length, ChunkedContentProcessor.maxQuestionsPerSource);
+    });
+
+    test('does not clamp when the LLM returns within caps', () async {
+      final processor = ChunkedContentProcessor(
+        llmService: FakeLlmService(_questionBankJson(5)),
+        localeName: 'en',
+        retryInitialDelay: Duration.zero,
+      );
+
+      final result = await processor.generateQuestionsFromChunks(
+        chunks: [SourceChunk(chunkIndex: 0, text: 'normal page')],
+        modelId: 'm',
+        questionParser: QuestionParser(),
+      );
+
+      expect(result.length, 5);
+    });
+  });
+}
+
+/// Builds a JSON array of [n] minimal, valid question objects for cap tests.
+String _questionBankJson(int n) {
+  final items = List.generate(n, (i) => jsonEncode({
+        'text': 'Question $i',
+        'type': 'singleChoice',
+        'correctAnswer': 'a',
+        'options': ['a', 'b'],
+        'explanation': 'explanation $i',
+      }));
+  return '[${items.join(',')}]';
 }
 
 class _FailingLlmService extends LlmService {

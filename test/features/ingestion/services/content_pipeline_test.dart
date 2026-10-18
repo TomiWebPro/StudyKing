@@ -1,5 +1,5 @@
 import 'dart:async' show TimeoutException;
-import 'dart:convert' show utf8, jsonDecode;
+import 'dart:convert' show utf8, jsonDecode, jsonEncode;
 import 'dart:io' show Directory;
 import 'package:crypto/crypto.dart' show sha256;
 
@@ -31,12 +31,15 @@ import 'package:studyking/features/subjects/data/adapters/subject_adapter.dart';
 import 'package:studyking/features/subjects/data/adapters/topic_adapter.dart';
 
 class FakeLlmService extends LlmService {
-  FakeLlmService() : super(config: const LlmConfiguration(
-    provider: LlmProvider.ollama,
-    apiKey: 'k',
-    baseUrl: '',
-    model: 'm',
-  ));
+  final String response;
+
+  FakeLlmService([this.response = 'llm-response'])
+      : super(config: const LlmConfiguration(
+          provider: LlmProvider.ollama,
+          apiKey: 'k',
+          baseUrl: '',
+          model: 'm',
+        ));
 
   @override
   Future<Result<String>> chat({
@@ -48,7 +51,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
-    return Result.success('llm-response');
+    return Result.success(response);
   }
 }
 
@@ -331,6 +334,18 @@ class RecordingQuestionRepository extends FakeQuestionRepository {
   Future<Result<void>> delete(String key) async {
     deletedKeys.add(key);
     return super.delete(key);
+  }
+}
+
+/// QuestionRepository that records every created question so tests can
+/// assert how many questions were actually persisted to the bank.
+class CountingQuestionRepository extends FakeQuestionRepository {
+  final List<Question> createdQuestions = [];
+
+  @override
+  Future<Result<void>> create(Question question) async {
+    createdQuestions.add(question);
+    return super.create(question);
   }
 }
 
@@ -890,6 +905,56 @@ void main() {
       expect(result.isFailure, isTrue);
       expect(result.error, contains('DUPLICATE'));
     });
+
+    test('clamps dense-page questions to per-chunk cap in single-chunk path',
+        () async {
+      // The dense-page scenario: one chunk = whole source (single-chunk path),
+      // and the LLM dumps far more questions than the per-chunk cap (K=8).
+      final questionRepo = CountingQuestionRepository();
+      final pipeline = ContentPipeline(
+        llmService: FakeLlmService(_questionBankJson(200)),
+        sourceRepository: FakeSourceRepository(),
+        topicRepository: FakeTopicRepository([]),
+        questionRepository: questionRepo,
+        documentExtractor: FakeDocumentExtractor(ExtractionResult(
+          text: 'dense page content',
+          extractionMethod: 'pdf_text_direct',
+        )),
+        webScraper: FakeWebScraper(
+          Result.success(ScrapedPage(
+            content: '',
+            metadata: const PageMetadata(),
+          )),
+        ),
+        chunkedProcessor: FakeChunkedContentProcessor(
+          ClassificationResult(topicId: '', confidence: 0),
+        ),
+        transcriptionModelId: 'm',
+        localeName: 'en',
+      );
+
+      final result = await pipeline.processFullPipeline(
+        title: 'T',
+        content: 'dense page content',
+        type: SourceType.pdf,
+        studentId: 's1',
+        classificationModelId: 'm',
+        summarizationModelId: 'm',
+        generationModelId: 'm',
+        generateQuestions: true,
+      );
+
+      expect(result.isSuccess, isTrue);
+      // Per-chunk cap (K=8) must bound the bank even when the LLM dumps 200.
+      expect(
+        result.data!.generatedQuestionIds.length,
+        ChunkedContentProcessor.maxQuestionsPerChunk,
+      );
+      expect(
+        questionRepo.createdQuestions,
+        hasLength(ChunkedContentProcessor.maxQuestionsPerChunk),
+      );
+    });
   });
 
   group('ContentPipeline topic auto-creation failures', () {
@@ -1239,4 +1304,16 @@ void main() {
       expect(stored.errorMessage, l10n.pipelineErrorTimeout);
     });
   });
+}
+
+/// Builds a JSON array of [n] minimal, valid question objects for cap tests.
+String _questionBankJson(int n) {
+  final items = List.generate(n, (i) => jsonEncode({
+        'text': 'Question $i',
+        'type': 'singleChoice',
+        'correctAnswer': 'a',
+        'options': ['a', 'b'],
+        'explanation': 'explanation $i',
+      }));
+  return '[${items.join(',')}]';
 }
