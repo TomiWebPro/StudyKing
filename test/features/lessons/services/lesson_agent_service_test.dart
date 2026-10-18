@@ -289,6 +289,59 @@ void main() {
       });
     });
 
+    group('validationStatus', () {
+      test('AI-generated lesson is flagged pending (not silently approved)', () async {
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.generatedBy, GeneratedBy.ai);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+      });
+
+      test('gappy/fallback lesson (LLM failure) is flagged pending, never approved', () async {
+        // A real student journey: the LLM fails or returns unparseable content,
+        // so the lesson falls back to generic blocks. Per vision §4.3, this
+        // gappy transcript must be flagged for review — never silently treated
+        // as a trusted, completed lesson.
+        fakeLlm.setResult(Result.failure('LLM error'));
+
+        final lesson = await service.generateLesson(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'Calculus',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.generatedBy, GeneratedBy.ai);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+        expect(lesson.blocks.isNotEmpty, isTrue);
+      });
+
+      test('source-generated lesson is flagged pending', () async {
+        fakeLlm.setResult(Result.success(jsonEncode([
+          {'type': 'slide', 'content': 'Source-based slide', 'order': 0},
+        ])));
+
+        final lesson = await service.generateLessonFromSource(
+          subjectId: 'sub-1',
+          topicId: 'topic-1',
+          topicTitle: 'From Source',
+          sourceContent: 'Chapter 1 content',
+          localeName: 'en',
+        );
+
+        expect(lesson, isNotNull);
+        expect(lesson!.generatedBy, GeneratedBy.ai);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+      });
+    });
+
     group('_parseBlock malformed handling', () {
       test('skips malformed block, logs warning, and returns valid blocks', () async {
         // LLM returns one valid block and one malformed block (non-map) to trigger

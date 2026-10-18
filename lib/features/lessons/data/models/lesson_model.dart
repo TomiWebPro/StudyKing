@@ -34,6 +34,12 @@ class Lesson extends HiveObject {
   @HiveField(9, defaultValue: '')
   final String? sessionId;
 
+  /// Whether this lesson has been reviewed and approved. Auto-created (AI)
+  /// lessons default to [ValidationStatus.pending] until a human/validator
+  /// approves them (vision_next_term.md §4.3).
+  @HiveField(10, defaultValue: ValidationStatus.pending)
+  final ValidationStatus validationStatus;
+
   Lesson({
     required this.id,
     required this.subjectId,
@@ -45,6 +51,7 @@ class Lesson extends HiveObject {
     required this.createdAt,
     this.markscheme,
     this.sessionId,
+    this.validationStatus = ValidationStatus.pending,
   }) : blocks = blocks ?? [];
 
   Map<String, dynamic> toJson() => {
@@ -58,6 +65,7 @@ class Lesson extends HiveObject {
     'createdAt': createdAt.toIso8601String(),
     'markscheme': markscheme,
     'sessionId': sessionId,
+    'validationStatus': validationStatus.index,
   };
 
   factory Lesson.fromJson(Map<String, dynamic> json) => Lesson(
@@ -71,7 +79,15 @@ class Lesson extends HiveObject {
     createdAt: DateTime.parse(json['createdAt']),
     markscheme: json['markscheme'],
     sessionId: json['sessionId'],
+    validationStatus: _parseValidationStatus(json['validationStatus']),
   );
+
+  static ValidationStatus _parseValidationStatus(dynamic raw) {
+    if (raw is int && raw >= 0 && raw < ValidationStatus.values.length) {
+      return ValidationStatus.values[raw];
+    }
+    return ValidationStatus.pending;
+  }
 
   Lesson copyWith({
     String? id,
@@ -84,6 +100,7 @@ class Lesson extends HiveObject {
     DateTime? createdAt,
     String? markscheme,
     String? sessionId,
+    ValidationStatus? validationStatus,
   }) {
     return Lesson(
       id: id ?? this.id,
@@ -96,6 +113,7 @@ class Lesson extends HiveObject {
       createdAt: createdAt ?? this.createdAt,
       markscheme: markscheme ?? this.markscheme,
       sessionId: sessionId ?? this.sessionId,
+      validationStatus: validationStatus ?? this.validationStatus,
     );
   }
 }

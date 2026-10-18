@@ -81,6 +81,17 @@ void main() {
         );
         expect(lesson.markscheme, '');
       });
+
+      test('defaults validationStatus to pending', () {
+        final lesson = Lesson(
+          id: 'lesson-1',
+          subjectId: 's1',
+          title: 'Title',
+          topicId: 't1',
+          createdAt: now,
+        );
+        expect(lesson.validationStatus, ValidationStatus.pending);
+      });
     });
 
     group('toJson', () {
@@ -167,6 +178,25 @@ void main() {
         );
         final json = lesson.toJson();
         expect(json['sessionId'], isNull);
+      });
+
+      test('serializes validationStatus by index', () {
+        final lesson = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        expect(lesson.toJson()['validationStatus'], ValidationStatus.approved.index);
+      });
+
+      test('serializes all ValidationStatus values correctly', () {
+        for (final vs in ValidationStatus.values) {
+          final lesson = Lesson(
+            id: 'l1', subjectId: 's1', title: 'T',
+            topicId: 't1', createdAt: now, validationStatus: vs,
+          );
+          expect(lesson.toJson()['validationStatus'], vs.index);
+        }
       });
     });
 
@@ -277,6 +307,38 @@ void main() {
         expect(lesson.blocks[1].type, LessonBlockType.quiz);
         expect(lesson.generatedBy, GeneratedBy.hybrid);
       });
+
+      test('deserializes all ValidationStatus enum indices', () {
+        for (final vs in ValidationStatus.values) {
+          final json = {
+            'id': 'l1', 'subjectId': 's1', 'title': 'T',
+            'topicId': 't1', 'validationStatus': vs.index,
+            'createdAt': now.toIso8601String(),
+          };
+          final lesson = Lesson.fromJson(json);
+          expect(lesson.validationStatus, vs);
+        }
+      });
+
+      test('handles missing validationStatus key, falls back to pending', () {
+        final json = {
+          'id': 'l1', 'subjectId': 's1', 'title': 'T',
+          'topicId': 't1',
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+      });
+
+      test('handles null validationStatus, falls back to pending', () {
+        final json = {
+          'id': 'l1', 'subjectId': 's1', 'title': 'T',
+          'topicId': 't1', 'validationStatus': null,
+          'createdAt': now.toIso8601String(),
+        };
+        final lesson = Lesson.fromJson(json);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+      });
     });
 
     group('serialization roundtrip', () {
@@ -359,6 +421,25 @@ void main() {
         );
         final restored = Lesson.fromJson(original.toJson());
         expect(restored.sessionId, isNull);
+      });
+
+      test('roundtrip preserves pending validationStatus (default)', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.validationStatus, ValidationStatus.pending);
+      });
+
+      test('roundtrip preserves approved validationStatus', () {
+        final original = Lesson(
+          id: 'l1', subjectId: 's1', title: 'T',
+          topicId: 't1', createdAt: now,
+          validationStatus: ValidationStatus.approved,
+        );
+        final restored = Lesson.fromJson(original.toJson());
+        expect(restored.validationStatus, ValidationStatus.approved);
       });
     });
 
@@ -715,6 +796,14 @@ void main() {
         final copy = lesson.copyWith(blocks: []);
         expect(copy.blocks, isEmpty);
         expect(lesson.blocks.length, 1);
+      });
+
+      test('updates validationStatus from pending to approved', () {
+        final lesson = Lesson(id: 'l1', subjectId: 's1', title: 'T', topicId: 't1', createdAt: now);
+        expect(lesson.validationStatus, ValidationStatus.pending);
+        final copy = lesson.copyWith(validationStatus: ValidationStatus.approved);
+        expect(copy.validationStatus, ValidationStatus.approved);
+        expect(lesson.validationStatus, ValidationStatus.pending);
       });
     });
 

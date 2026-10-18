@@ -35,6 +35,15 @@ class _GeneratedByAdapter extends TypeAdapter<GeneratedBy> {
   void write(BinaryWriter w, GeneratedBy v) => w.writeByte(v.index);
 }
 
+class _ValidationStatusAdapter extends TypeAdapter<ValidationStatus> {
+  @override
+  final int typeId = 204;
+  @override
+  ValidationStatus read(BinaryReader r) => ValidationStatus.values[r.readByte()];
+  @override
+  void write(BinaryWriter w, ValidationStatus v) => w.writeByte(v.index);
+}
+
 late String _hivePath;
 
 void main() {
@@ -46,6 +55,7 @@ void main() {
     Hive.registerAdapter(_LessonBlockTypeAdapter());
     Hive.registerAdapter(_SlideTypeAdapter());
     Hive.registerAdapter(_GeneratedByAdapter());
+    Hive.registerAdapter(_ValidationStatusAdapter());
     Hive.registerAdapter(LessonBlockAdapter());
     Hive.registerAdapter(LessonAdapter());
   });
@@ -116,6 +126,41 @@ void main() {
       expect(restored.generatedBy, GeneratedBy.manual);
       expect(restored.blocks, isEmpty);
       expect(restored.markscheme, isNull);
+      await box.close();
+    });
+
+    test('write/read round-trips validationStatus', () async {
+      final box = await Hive.openBox<Lesson>('lessons_vs');
+      final created = DateTime(2026, 7, 23);
+      final lesson = Lesson(
+        id: 'l3',
+        subjectId: 'sub1',
+        title: 'Approved Lesson',
+        topicId: 't1',
+        createdAt: created,
+        generatedBy: GeneratedBy.ai,
+        validationStatus: ValidationStatus.approved,
+      );
+      await box.put('l3', lesson);
+      final restored = box.get('l3')!;
+      expect(restored.validationStatus, ValidationStatus.approved);
+      await box.close();
+    });
+
+    test('write/read round-trips default pending validationStatus', () async {
+      final box = await Hive.openBox<Lesson>('lessons_vs_def');
+      final created = DateTime(2026, 7, 23);
+      final lesson = Lesson(
+        id: 'l4',
+        subjectId: 'sub1',
+        title: 'Pending Lesson',
+        topicId: 't1',
+        createdAt: created,
+        generatedBy: GeneratedBy.ai,
+      );
+      await box.put('l4', lesson);
+      final restored = box.get('l4')!;
+      expect(restored.validationStatus, ValidationStatus.pending);
       await box.close();
     });
   });

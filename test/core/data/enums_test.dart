@@ -90,13 +90,15 @@ void main() {
 
   group('LessonBlockType', () {
     test('has all expected values', () {
-      expect(LessonBlockType.values.length, 6);
+      expect(LessonBlockType.values.length, 8);
       expect(LessonBlockType.text.index, 0);
       expect(LessonBlockType.example.index, 1);
       expect(LessonBlockType.exercise.index, 2);
       expect(LessonBlockType.slide.index, 3);
       expect(LessonBlockType.quiz.index, 4);
       expect(LessonBlockType.summary.index, 5);
+      expect(LessonBlockType.visual.index, 6);
+      expect(LessonBlockType.analogy.index, 7);
     });
 
     test('index round-trip from values list', () {
@@ -130,6 +132,27 @@ void main() {
     test('name round-trip via values lookup', () {
       for (final type in GeneratedBy.values) {
         final found = GeneratedBy.values.firstWhere((e) => e.name == type.name);
+        expect(found, type);
+      }
+    });
+  });
+
+  group('ValidationStatus', () {
+    test('has all expected values', () {
+      expect(ValidationStatus.values.length, 2);
+      expect(ValidationStatus.pending.index, 0);
+      expect(ValidationStatus.approved.index, 1);
+    });
+
+    test('index round-trip from values list', () {
+      for (final type in ValidationStatus.values) {
+        expect(ValidationStatus.values[type.index], type);
+      }
+    });
+
+    test('name round-trip via values lookup', () {
+      for (final type in ValidationStatus.values) {
+        final found = ValidationStatus.values.firstWhere((e) => e.name == type.name);
         expect(found, type);
       }
     });

@@ -237,6 +237,9 @@ class TutorService {
           difficulty: 3,
           generatedBy: GeneratedBy.ai,
           createdAt: _clock.now(),
+          // Plan-built lessons are AI-generated and unreviewed until
+          // validated (vision_next_term.md §4.3).
+          validationStatus: ValidationStatus.pending,
         );
         final createResult = await _lessonRepository.create(lesson);
         if (createResult.isFailure) {
@@ -562,6 +565,9 @@ class TutorService {
           difficulty: 3,
           generatedBy: GeneratedBy.ai,
           createdAt: _clock.now(),
+          // Placeholder lesson (prep tool not wired) is gappy/unreviewed
+          // content — flag for validation rather than silently trusted.
+          validationStatus: ValidationStatus.pending,
         );
         await _lessonRepository.init();
         await _lessonRepository.create(lesson);

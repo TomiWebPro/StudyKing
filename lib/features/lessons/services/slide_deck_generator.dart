@@ -198,6 +198,7 @@ class SlideDeckGenerator {
         difficulty: 3,
         generatedBy: GeneratedBy.ai,
         createdAt: DateTime.now(),
+        validationStatus: ValidationStatus.pending,
       );
 
       lessons.add(lesson);
@@ -471,6 +472,7 @@ class SlideDeckGenerator {
       difficulty: 1,
       generatedBy: GeneratedBy.ai,
       createdAt: DateTime.now(),
+      validationStatus: ValidationStatus.pending,
     );
   }
 

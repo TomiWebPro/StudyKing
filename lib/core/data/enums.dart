@@ -45,6 +45,8 @@ enum LessonBlockType {
   slide,
   quiz,
   summary,
+  visual,
+  analogy,
 }
 
 enum SlideType {
@@ -63,4 +65,15 @@ enum GeneratedBy {
   ai,
   manual,
   hybrid,
+}
+
+/// Validation status for AI-generated artefacts (vision_next_term.md §4.3:
+/// "every auto-created artefact is marked `ai-generated + validation status`
+/// until human/validator approves").
+///
+/// - `pending`: artefact was auto-created and has not yet been reviewed/approved.
+/// - `approved`: artefact has been validated and is trustworthy.
+enum ValidationStatus {
+  pending,
+  approved,
 }

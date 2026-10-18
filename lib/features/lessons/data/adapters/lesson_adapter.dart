@@ -33,13 +33,24 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       createdAt: fields[7] as DateTime,
       markscheme: fields[8] as String?,
       sessionId: fields[9] as String?,
+      validationStatus: _parseValidationStatus(fields[10]),
     );
+  }
+
+  static ValidationStatus _parseValidationStatus(dynamic raw) {
+    if (raw is int && raw >= 0 && raw < ValidationStatus.values.length) {
+      return ValidationStatus.values[raw];
+    }
+    // Fall back to pending for legacy data written before the field existed,
+    // so older AI-generated lessons are flagged for review rather than
+    // silently trusted (vision_next_term.md §4.3).
+    return ValidationStatus.pending;
   }
 
   @override
   void write(BinaryWriter writer, Lesson obj) {
     writer
-      ..writeByte(10)
+      ..writeByte(11)
       ..writeByte(0)
       ..write(obj.id)
       ..writeByte(1)
@@ -60,6 +71,9 @@ class LessonAdapter extends TypeAdapter<Lesson> {
       ..write(obj.markscheme)
       ..writeByte(9)
       ..write(obj.sessionId);
+    writer
+      ..writeByte(10)
+      ..write(obj.validationStatus.index);
   }
 
   @override

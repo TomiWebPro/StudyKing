@@ -65,6 +65,9 @@ class LessonAgentService {
         difficulty: 3,
         generatedBy: GeneratedBy.ai,
         createdAt: DateTime.now(),
+        // AI-generated lessons are not yet reviewed — flag for validation
+        // until a human/validator approves (vision_next_term.md §4.3).
+        validationStatus: ValidationStatus.pending,
       );
 
       final createResult = await _lessonRepository.create(lesson);
@@ -321,6 +324,9 @@ class LessonAgentService {
       blocks: blocks,
       generatedBy: GeneratedBy.ai,
       createdAt: DateTime.now(),
+      // Source-grounded lessons are AI-generated and unreviewed until
+      // validated (vision_next_term.md §4.3).
+      validationStatus: ValidationStatus.pending,
     );
 
     final createResult = await _lessonRepository.create(lesson);
