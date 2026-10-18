@@ -283,6 +283,7 @@ Widget sessionApp({
   QuestionRepository? questionRepository,
   QuestionVariantService? variantService,
   ReadinessScorer? readinessScorer,
+  RouteFactory? onGenerateRoute,
 }) {
   return ProviderScope(
     overrides: [
@@ -315,6 +316,7 @@ Widget sessionApp({
       supportedLocales: AppLocalizations.supportedLocales,
       locale: const Locale('en'),
       navigatorObservers: observer == null ? const [] : [observer],
+      onGenerateRoute: onGenerateRoute,
       home: Scaffold(
         body: Builder(
           builder: (context) => Center(

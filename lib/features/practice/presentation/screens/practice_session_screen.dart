@@ -793,6 +793,13 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
             child: LinearProgressIndicator(value: progress),
           ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.lightbulb_outline),
+            tooltip: l10n.askTutorHelp,
+            onPressed: _askTutorForHelp,
+          ),
+        ],
       ),
       body: SafeArea(
         child: Column(
@@ -939,6 +946,47 @@ class _PracticeSessionScreenState extends ConsumerState<PracticeSessionScreen> {
       value: _currentConfidence,
       onChanged: (rating) => setState(() => _currentConfidence = rating),
     );
+  }
+
+  /// One-tap handoff to the AI tutor carrying the current question +
+  /// attempt context so the student never has to re-describe what they're
+  /// stuck on. (issues/open/practice-ask-tutor-help-missing.md)
+  void _askTutorForHelp() {
+    if (_questions.isEmpty || _currentIndex >= _questions.length) return;
+    final question = _questions[_currentIndex];
+    final topicTitle =
+        (question.topic != null && question.topic!.isNotEmpty)
+            ? question.topic!
+            : question.topicId;
+    final attemptContext = _currentAnswer != null
+        ? 'I have attempted: "${_answerPreview(_currentAnswer!)}".'
+        : 'I have not attempted an answer yet.';
+    final initialPrompt =
+        'I am stuck on this practice question and need help understanding '
+        'it (not just the answer). Question: "${question.text}". '
+        '$attemptContext '
+        'Please explain the underlying concept step by step, using a '
+        'different approach than the markscheme, and guide me toward the '
+        'answer without giving it away directly.';
+
+    if (!mounted) return;
+    Navigator.pushNamed(
+      context,
+      AppRoutes.tutor,
+      arguments: TutorArgs(
+        topicId: question.topicId,
+        topicTitle: topicTitle,
+        subjectId: question.subjectId,
+        initialPrompt: initialPrompt,
+        contextQuestionId: question.id,
+      ),
+    );
+  }
+
+  String _answerPreview(String answer) {
+    final trimmed = answer.trim();
+    if (trimmed.length <= 80) return trimmed;
+    return '${trimmed.substring(0, 77)}...';
   }
 
   Future<void> _showCreateQuestionDialog() async {

@@ -1210,6 +1210,10 @@
   "@skip": {
     "description": "Skip button label"
   },
+  "askTutorHelp": "Pedir Ayuda al Tutor",
+  "@askTutorHelp": {
+    "description": "Button label to request AI tutor help on the current question"
+  },
   "graphRenderer": "Renderizador de Gráficos",
   "@graphRenderer": {
     "description": "Title for graph rendering page"

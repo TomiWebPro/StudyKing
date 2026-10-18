@@ -1987,6 +1987,83 @@ void main() {
         expect(find.text('Second'), findsOneWidget);
       },
     );
+
+    group('ask tutor help', () {
+      testWidgets('shows ask-tutor button pre-submit', (tester) async {
+        await tester.pumpWidget(sessionApp(
+          result: Result.success([
+            question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+          ]),
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        expect(find.byIcon(Icons.lightbulb_outline), findsOneWidget);
+      });
+
+      testWidgets('ask-tutor preserves questionId and navigates to tutor', (tester) async {
+        TutorArgs? capturedArgs;
+        await tester.pumpWidget(sessionApp(
+          result: Result.success([
+            question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+          ]),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.tutor) {
+              capturedArgs = settings.arguments as TutorArgs?;
+              return MaterialPageRoute(
+                builder: (_) => const Scaffold(
+                  body: Center(child: Text('Tutor Screen')),
+                ),
+              );
+            }
+            return null;
+          },
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.lightbulb_outline));
+        await tester.pumpAndSettle();
+
+        expect(capturedArgs, isNotNull);
+        expect(capturedArgs!.contextQuestionId, 'q1');
+        expect(capturedArgs!.subjectId, 'subject-a');
+        expect(capturedArgs!.topicId, 'topic-a');
+        expect(capturedArgs!.initialPrompt, contains('What is 2+2?'));
+        expect(find.text('Tutor Screen'), findsOneWidget);
+      });
+
+      testWidgets('returns to practice after asking tutor', (tester) async {
+        await tester.pumpWidget(sessionApp(
+          result: Result.success([
+            question(id: 'q1', text: 'What is 2+2?', type: QuestionType.typedAnswer, markschemeText: '4'),
+          ]),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRoutes.tutor) {
+              return MaterialPageRoute(
+                builder: (_) => Scaffold(
+                  appBar: AppBar(),
+                  body: const Center(child: Text('Tutor Screen')),
+                ),
+              );
+            }
+            return null;
+          },
+        ));
+        await tester.tap(find.text('Open Session'));
+        await tester.pumpAndSettle();
+
+        await tester.tap(find.byIcon(Icons.lightbulb_outline));
+        await tester.pumpAndSettle();
+
+        expect(find.text('Tutor Screen'), findsOneWidget);
+
+        await tester.tap(find.byType(BackButton));
+        await tester.pumpAndSettle();
+
+        expect(find.text('What is 2+2?'), findsOneWidget);
+      });
+    });
   });
 }
 

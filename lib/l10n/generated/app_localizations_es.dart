@@ -968,6 +968,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get skip => 'Omitir';
 
   @override
+  String get askTutorHelp => 'Pedir Ayuda al Tutor';
+
+  @override
   String get graphRenderer => 'Renderizador de Gráficos';
 
   @override

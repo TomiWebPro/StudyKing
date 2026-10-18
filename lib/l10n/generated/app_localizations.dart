@@ -1682,6 +1682,12 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get skip;
 
+  /// Button label to request AI tutor help on the current question
+  ///
+  /// In en, this message translates to:
+  /// **'Ask Tutor for Help'**
+  String get askTutorHelp;
+
   /// Title for graph rendering page
   ///
   /// In en, this message translates to:

@@ -125,12 +125,25 @@ class TutorArgs {
   final int durationMinutes;
   final String? scheduledSessionId;
 
+  /// Optional pre-roll prompt injected into the conversation so the tutor can
+  /// pick up from a specific student context (e.g. "I'm stuck on practice
+  /// question q42 …"). Carried over from the launching screen so the mentor
+  /// never has to ask the student to re-describe the question.
+  final String? initialPrompt;
+
+  /// Optional question id the prompt refers to, so the tutor (and later
+  /// lesson-recap / mistake-review) can correlate the session with the
+  /// question the student was stuck on.
+  final String? contextQuestionId;
+
   const TutorArgs({
     required this.topicId,
     required this.topicTitle,
     required this.subjectId,
     this.durationMinutes = 45,
     this.scheduledSessionId,
+    this.initialPrompt,
+    this.contextQuestionId,
   });
 }
 
@@ -242,6 +255,7 @@ Route<dynamic>? onGenerateRoute(RouteSettings routeSettings, [StudentIdService? 
             subjectId: args.subjectId,
             durationMinutes: args.durationMinutes,
             scheduledSessionId: args.scheduledSessionId,
+            initialPrompt: args.initialPrompt,
           ),
           routeSettings,
         );

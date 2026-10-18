@@ -40,6 +40,13 @@ class TutorScreen extends ConsumerStatefulWidget {
   final TutorService? tutorService;
   final String? scheduledSessionId;
 
+  /// Optional pre-roll prompt injected into the conversation after the initial
+  /// greeting so the tutor can pick up from a specific student context (e.g.
+  /// "I'm stuck on practice question q42 …"). Carried over from the launching
+  /// screen so the mentor never has to ask the student to re-describe the
+  /// question.
+  final String? initialPrompt;
+
   const TutorScreen({
     super.key,
     required this.topicId,
@@ -48,6 +55,7 @@ class TutorScreen extends ConsumerStatefulWidget {
     this.durationMinutes = Timeouts.defaultLessonDurationMinutes,
     this.tutorService,
     this.scheduledSessionId,
+    this.initialPrompt,
   });
 
   @override
@@ -229,6 +237,14 @@ class _TutorScreenState extends ConsumerState<TutorScreen> with AutomaticKeepAli
       }
     }
     _scrollToBottom();
+
+    // If this session was launched with a pre-roll context prompt (e.g. from
+    // the practice screen "Ask Tutor" button), deliver it as the first user
+    // message so the tutor explains the question instead of asking the student
+    // to re-describe it.
+    if (mounted && widget.initialPrompt != null && _manager != null) {
+      await _sendText(widget.initialPrompt!);
+    }
   }
 
   Future<void> _sendMessage() async {
