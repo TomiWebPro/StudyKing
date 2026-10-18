@@ -113,8 +113,21 @@ Future<Map<String, dynamic>> verifyTranscriptArtifact(String scenarioName) async
   expect(json, containsPair('feature', isNotNull));
   expect(json, containsPair('toolCalls', isA<List>()));
   expect(json, containsPair('finalContent', isA<String>()));
+  expect(json, containsPair('error', anyOf(isNull, isA<String>())));
+  expect(json, containsPair('input', isA<Map>()));
   expect(json, containsPair('tokenUsage', isA<Map>()));
   expect(json, containsPair('taskLifecycle', isA<List>()));
+
+  // input sub-fields
+  final input = json['input'] as Map<String, dynamic>;
+  expect(input, containsPair('userMessage', isA<String>()));
+  expect(input, containsPair('systemPrompt', isA<String>()));
+
+  // tokenUsage sub-fields
+  final tokenUsage = json['tokenUsage'] as Map<String, dynamic>;
+  expect(tokenUsage, containsPair('totalTokens', isA<int>()));
+  expect(tokenUsage, containsPair('totalCost', isA<double>()));
+  expect(tokenUsage, containsPair('records', isA<List>()));
 
   return json;
 }

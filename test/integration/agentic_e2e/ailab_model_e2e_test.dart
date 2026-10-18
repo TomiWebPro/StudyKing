@@ -721,6 +721,72 @@ void main() {
         final tokenUsage = json['tokenUsage'] as Map<String, dynamic>;
         expect(tokenUsage['totalTokens'], greaterThan(0));
       });
+
+      test(
+        'error path transcript is persisted with error field populated',
+        () async {
+          // Simulates: LLM service returns a failure (e.g. 503 / timeout /
+          // malformed response). The transcript must still be written to disk
+          // so a reviewer can audit the failure.
+          final taskManager = LlmTaskManager();
+          final usageMeter = LlmUsageMeter();
+
+          final failingLlm = FailingAgentLlmService('API key is empty');
+          final registry = ToolRegistry();
+          final loop = AgentLoop(
+            llmService: failingLlm,
+            modelId: e2eModel.isNotEmpty ? e2eModel : 'gemini-2.0-flash',
+            toolRegistry: registry,
+            taskManager: taskManager,
+          );
+
+          const userMessage = 'I want to learn Organic Chemistry in 30 days.';
+          const systemPrompt = 'You are a helpful academic mentor.';
+
+          final response = await loop.run(
+            userMessage: userMessage,
+            studentId: 'transcript-error-student',
+            systemPrompt: systemPrompt,
+            feature: 'teaching',
+          );
+
+          // AgentLoop surfaces the error without crashing.
+          expect(response.error, isNotNull);
+          expect(response.error, contains('API key is empty'));
+
+          // Task manager recorded the failed task.
+          expect(taskManager.tasks, isNotEmpty);
+          expect(
+            taskManager.tasks.any((t) => t.status == LlmTaskStatus.failed),
+            isTrue,
+          );
+
+          // Persist the transcript artifact even on error.
+          await dumpTranscript(
+            scenarioName: 'teaching_error_path',
+            userMessage: userMessage,
+            systemPrompt: systemPrompt,
+            modelId: e2eModel.isNotEmpty ? e2eModel : 'gemini-2.0-flash',
+            feature: 'teaching',
+            response: response,
+            usageMeter: usageMeter,
+            taskManager: taskManager,
+          );
+
+          // Verify the artifact exists and is well-formed with error info.
+          final json = await verifyTranscriptArtifact('teaching_error_path');
+
+          // The error field is populated in the persisted artifact.
+          expect(json['error'], isNotNull);
+          expect(json['error'], contains('API key is empty'));
+
+          // No tool calls were made (LLM never returned content to parse).
+          expect(json['toolCalls'], isEmpty);
+
+          // The final content is the error fallback message.
+          expect(json['finalContent'], contains('error'));
+        },
+      );
     });
   });
 }

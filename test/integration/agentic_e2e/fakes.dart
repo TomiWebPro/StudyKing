@@ -157,6 +157,38 @@ const Set<String> registeredToolNames = {
   'revisit_sources',
 };
 
+/// Fake [LlmService] that always returns a failure from [chat].
+///
+/// Used to test transcript persistence when the AgentLoop encounters a
+/// network/API error — the transcript must still be written to disk
+/// with the `error` field populated.
+class FailingAgentLlmService extends LlmService {
+  final String errorMessage;
+  final List<String> chatMessages = [];
+
+  FailingAgentLlmService(this.errorMessage)
+      : super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'fake-key-for-agentic-e2e',
+          ),
+        );
+
+  @override
+  Future<Result<String>> chat({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+  }) async {
+    chatMessages.add(message);
+    return Result.failure(errorMessage);
+  }
+}
+
 /// A tool that always throws, regardless of arguments.
 class AlwaysThrowTool extends AgentTool {
   @override
