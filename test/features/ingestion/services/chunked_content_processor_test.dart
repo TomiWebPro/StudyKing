@@ -54,6 +54,54 @@ void main() {
         expect(chunks[i].chunkIndex, i);
       }
     });
+
+    test('splits textbook text at chapter boundaries and detects headings', () {
+      final content = 'A' * 1500;
+      final textbookText = 'Chapter 1 Introduction to Biology\n\n'
+          '$content\n\n'
+          'Chapter 2 The Cell Structure\n\n'
+          '$content';
+
+      final chunks = processor.splitIntoChunks(textbookText);
+
+      expect(chunks.length, greaterThan(1));
+      final chapterHeadings = chunks.where((c) => c.heading != null).toList();
+      expect(chapterHeadings, isNotEmpty);
+      expect(chapterHeadings.any((c) => c.heading!.contains('Chapter 1')), isTrue);
+      expect(chapterHeadings.any((c) => c.heading!.contains('Chapter 2')), isTrue);
+    });
+
+    test('splits textbook text at numbered section boundaries', () {
+      final content = 'B' * 1500;
+      final textbookText = '1.1 The Scientific Method\n\n'
+          '$content\n\n'
+          '2.3 Experimental Results\n\n'
+          '$content';
+
+      final chunks = processor.splitIntoChunks(textbookText);
+
+      expect(chunks.length, greaterThan(1));
+      final numberHeadings = chunks.where((c) => c.heading != null).toList();
+      expect(numberHeadings.any((c) => c.heading!.contains('1.1')), isTrue);
+      expect(numberHeadings.any((c) => c.heading!.contains('2.3')), isTrue);
+    });
+
+    test('does not split on decimal value at start of prose paragraph', () {
+      final content = 'C' * 1500;
+      final textbookText = 'The value of pi is approximately 3.14 in math.\n\n'
+          '$content\n\n'
+          'Another paragraph here.\n\n'
+          '$content';
+
+      final chunks = processor.splitIntoChunks(textbookText);
+
+      expect(chunks.length, greaterThan(1));
+      // "3.14" appears mid-paragraph, should not be detected as a heading
+      final falsePositives = chunks.where(
+        (c) => c.heading != null && c.heading!.contains('3.14'),
+      ).toList();
+      expect(falsePositives, isEmpty);
+    });
   });
 
   group('ChunkedContentProcessor.classifyChunks', () {

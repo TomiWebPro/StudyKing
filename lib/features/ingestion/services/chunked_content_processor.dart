@@ -115,9 +115,16 @@ class ChunkedContentProcessor {
   }
 
   List<String> _splitBySections(String text) {
+    // Lookahead alternatives that mark a section boundary at the position
+    // after a newline (or start of string):
+    //   • Markdown ATX headers (#..######)
+    //   • Markdown Setext headers (text + === / --- on the next line)
+    //   • Textbook chapter/section headings (Chapter 1, Section 2.3, Unit I…)
+    //   • Multi-level numbered headings (1.1 Title, 2.3.4 Deep Dive)
     final headingPattern = RegExp(
-      r'(?:^|\n)(?=#{1,6}\s|.{1,80}\n={3,}|.{1,80}\n-{3,})',
+      r'(?:^|\n)(?=#{1,6}\s|.{1,80}\n={3,}|.{1,80}\n-{3,}|(?:Chapter|Section|Unit|Lesson|Appendix)[ \t]+[0-9IVXLCDMivxlcdm]+(?:[.]\d+)*(?:[.:]?[ \t]+)?|[ \t]*[1-9]\d{0,7}(?:[.]\d+){1}[.:]?[ \t]+[^\n])',
       multiLine: true,
+      caseSensitive: false,
     );
     final sections = text.split(headingPattern);
     return sections.where((s) => s.trim().isNotEmpty).toList();
@@ -127,12 +134,41 @@ class ChunkedContentProcessor {
     final lines = text.split('\n').take(3);
     for (final line in lines) {
       final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
       if (trimmed.startsWith('#')) {
         return trimmed.replaceFirst(RegExp(r'^#{1,6}\s+'), '');
+      }
+      final chapterHeading = _detectChapterHeading(trimmed);
+      if (chapterHeading != null) {
+        return chapterHeading;
       }
       if (trimmed.isNotEmpty && trimmed.length < 100 && trimmed == trimmed.toUpperCase()) {
         return trimmed;
       }
+    }
+    return null;
+  }
+
+  /// Detects textbook-style chapter/section headings on a single line.
+  /// Recognizes:
+  /// - "Chapter 1", "Section 2.3", "Unit I", "Lesson 3", "Appendix A"
+  /// - "Chapter 1 Introduction", "Section 2.3 The Nervous System"
+  /// - Numbered headings: "1.1 Introduction", "2.3.4 Deep Dive" (multi-level)
+  static final _chapterHeadingRegex = RegExp(
+    r'^(?:Chapter|Section|Unit|Lesson|Appendix)\s+[IVXLCDMivxlcdm\d]+(?:\.\d+)*(?:\.|\s|$)',
+    caseSensitive: false,
+  );
+
+  static final _numberedHeadingRegex = RegExp(
+    r'^[1-9]\d{0,7}(?:\.\d+){1,}\.?\s+\S',
+  );
+
+  static String? _detectChapterHeading(String line) {
+    if (_chapterHeadingRegex.hasMatch(line)) {
+      return line.trim();
+    }
+    if (_numberedHeadingRegex.hasMatch(line)) {
+      return line.trim();
     }
     return null;
   }

@@ -225,6 +225,113 @@ void main() {
     });
   });
 
+  group('DocumentExtractor chapter heading detection', () {
+    test('detects chapter heading with title in PDF text', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = 'Chapter 1 Introduction to Biology\n\n'
+          'This chapter covers cell biology fundamentals.\n\n'
+          'Section 1.1 The Scientific Method\n\n'
+          'The scientific method is a systematic approach.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      expect(result.chunks.first.heading, 'Chapter 1 Introduction to Biology');
+    });
+
+    test('detects chapter heading without title', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = 'Chapter 1\n\n'
+          'Content of the first chapter in the textbook.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      expect(result.chunks.first.heading, 'Chapter 1');
+    });
+
+    test('detects section heading with sub-number', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = 'Section 2.3 The Cell Structure\n\n'
+          'Cells have a nucleus and cytoplasm.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      expect(result.chunks.first.heading, 'Section 2.3 The Cell Structure');
+    });
+
+    test('detects case-insensitive Chapter heading', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = 'chapter 1 introduction\n\n'
+          'Some content here.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      expect(result.chunks.first.heading, 'chapter 1 introduction');
+    });
+
+    test('detects numbered section heading (1.1 style)', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = '1.1 The Scientific Method\n\n'
+          'This section describes the scientific method in detail.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      expect(result.chunks.first.heading, '1.1 The Scientific Method');
+    });
+
+    test('ignores decimal value in prose as heading', () async {
+      final extractor = buildExtractor(
+        const OcrExtractionResult(text: '', extractionMethod: 'x'),
+      );
+
+      final textbookText = 'The value of pi is 3.14 and is irrational.\n\n'
+          'Some content here.';
+
+      final result = await extractor.extractText(
+        rawContent: textbookText,
+        sourceType: SourceType.pdf,
+      );
+
+      expect(result.chunks, isNotEmpty);
+      // "3.14" starts mid-line, not at start of a paragraph, so should not be a heading
+      expect(result.chunks.first.heading, isNull);
+    });
+  });
+
   group('DocumentExtractor static helpers', () {
     test('stripHtmlToText extracts main readable content', () {
       final text = DocumentExtractor.stripHtmlToText(

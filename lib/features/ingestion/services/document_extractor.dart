@@ -35,6 +35,21 @@ class DocumentExtractor {
     RegExp(r'^(.+)\n-{3,}$', multiLine: true),
   ];
 
+  /// Matches textbook-style chapter/section headings (case-insensitive).
+  /// "Chapter 1", "Section 2.3", "Unit I", "Lesson 3", "Appendix B",
+  /// "Chapter 1.2 Title", "Section 3.1 The Methods".
+  static final _chapterHeadingRegex = RegExp(
+    r'^(?:Chapter|Section|Unit|Lesson|Appendix)\s+[IVXLCDMivxlcdm\d]+(?:\.\d+)*(?:\.|\s+-\s+)?(?:[ \t]+.+)?$',
+    caseSensitive: false,
+  );
+
+  /// Matches multi-level numbered headings (e.g. "1.1 Intro", "2.3.4 Deep Dive").
+  /// Requires at least one decimal sub-level ({1,}) to avoid matching bare
+  /// values like "1.5" in running prose.
+  static final _numberedHeadingRegex = RegExp(
+    r'^[1-9]\d{0,7}(?:\.\d+){1,}\.?\s+\S[^\n]*$',
+  );
+
   final PdfExtractor _pdfExtractor;
   final OcrExtractor _ocrExtractor;
   final TranscriptionExtractor _transcriptionExtractor;
@@ -397,6 +412,10 @@ class DocumentExtractor {
         return match.group(1)?.trim();
       }
     }
+    final chapterHeading = _detectChapterHeading(text);
+    if (chapterHeading != null) {
+      return chapterHeading;
+    }
     final lines = text.split('\n');
     for (final line in lines) {
       final trimmed = line.trim();
@@ -404,6 +423,24 @@ class DocumentExtractor {
           trimmed.length < 100 &&
           !trimmed.endsWith('.') &&
           trimmed == trimmed.toUpperCase()) {
+        return trimmed;
+      }
+    }
+    return null;
+  }
+
+  /// Detects textbook-style chapter/section/numbered headings on any line
+  /// within [text]. Returns the trimmed heading line, or null if no
+  /// chapter or numbered heading is found.
+  String? _detectChapterHeading(String text) {
+    final lines = text.split('\n');
+    for (final line in lines) {
+      final trimmed = line.trim();
+      if (trimmed.isEmpty) continue;
+      if (_chapterHeadingRegex.hasMatch(trimmed)) {
+        return trimmed;
+      }
+      if (_numberedHeadingRegex.hasMatch(trimmed)) {
         return trimmed;
       }
     }
