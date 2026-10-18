@@ -37,6 +37,7 @@ import 'package:studyking/features/lessons/data/repositories/lesson_repository.d
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/features/mentor/services/tools/create_practice_session_tool.dart';
 import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
+import 'package:studyking/features/mentor/services/tools/explain_differently_tool.dart';
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_adherence_trends_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_lesson_history_tool.dart';
@@ -51,6 +52,7 @@ import 'package:studyking/features/mentor/services/tools/read_source_content_too
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
+import 'package:studyking/features/mentor/services/tools/suggest_practice_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
@@ -1606,12 +1608,207 @@ void main() {
       });
     });
 
+    // ---------------------------------------------------------------------------
+    // Vision Next-Term §3.1: explanation-variation tools
+    // (issues/open/e2e-teaching-missing-explanation-variation-tool.md)
+    // ---------------------------------------------------------------------------
+    group('ExplainDifferentlyTool', () {
+      test('reachable through AgentLoop from "explain fractions differently"',
+          () async {
+        // Simulates the confused-student journey: the LLM calls
+        // explain_differently with style=analogy and concept=fractions.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: explain_differently\n'
+          r'ARGUMENTS: {"concept": "fractions", "style": "analogy"}',
+          // The LLM inside the tool generates the alternative explanation.
+          'Think of fractions like pizza slices: if you cut a pizza into 4 '
+              'equal slices and eat 1, you have eaten 1/4 of the pizza.',
+          // AgentLoop final response surfacing the explanation to the student.
+          "Here's a different way to think about fractions: imagine a pizza "
+              'cut into 4 equal slices...',
+        ]);
+
+        final tool = ExplainDifferentlyTool(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'I do not get fractions. Explain differently.',
+          studentId: 'explain-student',
+          systemPrompt: 'You are a tutor that adapts explanation style.',
+          feature: 'teaching_explanation',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'explain_differently');
+        expect(response.toolCalls.first.arguments['concept'], 'fractions');
+        expect(response.toolCalls.first.arguments['style'], 'analogy');
+        expect(response.toolCalls.first.result, isNotNull);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['concept'], 'fractions');
+        expect(resultMap['style'], 'analogy');
+        expect(resultMap['blockType'], 'analogy');
+        expect(resultMap['explanation'], contains('pizza'));
+      });
+
+      test('maps visual style to LessonBlockType.visual', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: explain_differently\n'
+          r'ARGUMENTS: {"concept": "fractions", "style": "visual"}',
+          'Picture a pie chart: the whole pie is 1, each slice is a fraction.',
+          'Here is a visual explanation for fractions...',
+        ]);
+
+        final tool = ExplainDifferentlyTool(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Explain fractions with a diagram.',
+          studentId: 'visual-student',
+          systemPrompt: 'You are a tutor.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'explain_differently');
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['style'], 'visual');
+        expect(resultMap['blockType'], 'visual');
+        expect(resultMap['explanation'], contains('pie chart'));
+
+        // Verify the LessonBlockType enum has the new variant.
+        expect(LessonBlockType.values, contains(LessonBlockType.visual));
+      });
+    });
+
+    group('SuggestPracticeTool', () {
+      test('reachable through AgentLoop from "I still do not get it"', () async {
+        // Simulates the escalation journey: the LLM calls suggest_practice
+        // to redirect the student to prerequisite practice on fractions.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: suggest_practice\n'
+          r'ARGUMENTS: {"subjectId": "math-hl", "topicId": "fractions"}',
+          'Done with suggest_practice.',
+        ]);
+
+        Map<String, dynamic>? receivedArgs;
+
+        final tool = SuggestPracticeTool(
+          onSuggestPractice: ({
+            required String subjectId,
+            String? topicId,
+          }) async {
+            receivedArgs = {'subjectId': subjectId, 'topicId': topicId};
+            return Result.success(
+              PracticeRecommendation(
+                topicId: 'fractions',
+                message: 'I found 5 practice questions on fractions. '
+                    'Let\'s start there.',
+                questionIds: ['q1', 'q2', 'q3', 'q4', 'q5'],
+              ),
+            );
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'I still do not get fractions. Suggest practice.',
+          studentId: 'practice-student',
+          systemPrompt:
+              'You are a tutor that redirects to prerequisite practice.',
+          feature: 'teaching_explanation',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'suggest_practice');
+        expect(response.toolCalls.first.arguments['subjectId'], 'math-hl');
+        expect(response.toolCalls.first.arguments['topicId'], 'fractions');
+        expect(response.toolCalls.first.result, isNotNull);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['subjectId'], 'math-hl');
+        expect(resultMap['recommendedTopicId'], 'fractions');
+        expect(resultMap['questionIds'], hasLength(5));
+        expect(resultMap['message'], contains('fractions'));
+
+        // The callback received the parsed arguments.
+        expect(receivedArgs, isNotNull);
+        expect(receivedArgs!['subjectId'], 'math-hl');
+        expect(receivedArgs!['topicId'], 'fractions');
+      });
+
+      test('returns failure when subjectId is empty', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: suggest_practice\nARGUMENTS: {"subjectId": ""}',
+          'I need a subject to suggest practice for.',
+        ]);
+
+        final tool = SuggestPracticeTool(
+          onSuggestPractice: ({
+            required String subjectId,
+            String? topicId,
+          }) async =>
+              Result.success(
+            PracticeRecommendation(topicId: '', message: ''),
+          ),
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Suggest practice for nothing.',
+          studentId: 'fail-student',
+          systemPrompt: 'You are a tutor.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isFalse);
+        expect(resultMap['error'], contains('subjectId'));
+      });
+    });
+
     group('LlmUsageMeter + LlmTaskManager audit', () {
       test('registeredToolNames matches llmAgentToolsProvider registration count', () {
         // The canonical tool set from fakes.dart must mirror the tools
         // registered in llmAgentToolsProvider (llm_agent_providers.dart),
         // including search_sources, read_source_content, and revisit_sources.
-        expect(registeredToolNames, hasLength(23));
+        expect(registeredToolNames, hasLength(25));
         // Verify no duplicate registration by checking the set size.
         expect(registeredToolNames.length, registeredToolNames.toSet().length);
       });

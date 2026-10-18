@@ -127,6 +127,8 @@ class RecordingTool extends AgentTool {
 /// current tooling without manual edits to individual test assertions.
 const Set<String> registeredToolNames = {
   // Interactive mentor tools
+  'explain_differently',
+  'suggest_practice',
   'schedule_lesson',
   'schedule_rest_day',
   'wellbeing_adjust_schedule',

@@ -14,6 +14,7 @@ import 'package:studyking/features/questions/providers/question_providers.dart'
     show questionRepositoryProvider, questionVariantServiceProvider,
         sourceRepositoryProvider;
 import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
+import 'package:studyking/features/mentor/services/tools/explain_differently_tool.dart';
 import 'package:studyking/features/mentor/services/tools/enqueue_question_variants_tool.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
@@ -35,6 +36,7 @@ import 'package:studyking/features/mentor/services/tools/read_source_content_too
 import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
+import 'package:studyking/features/mentor/services/tools/suggest_practice_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart' show LlmProvider;
 import 'package:studyking/features/mentor/providers/mentor_providers.dart';
@@ -74,7 +76,60 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final focusService = ref.watch(syllabusFocusServiceProvider);
   final mistakeReviewService = ref.watch(mistakeReviewServiceProvider);
 
+  // Vision Next-Term §3.1 (scenario_confused_student_fractions): teaching-mode
+  // explanation-variation tools. explain_differently is LLM-backed (generates an
+  // alternative explanation); suggest_practice is callback-based (delegates to
+  // MasteryGraphService + QuestionRepository for a weak-topic-driven practice
+  // recommendation). Both are now registered so the agent can invoke them via
+  // the AgentLoop tool-calling infrastructure.
   return [
+    ExplainDifferentlyTool(llmService: llmService, modelId: modelId),
+    SuggestPracticeTool(
+      onSuggestPractice: ({
+        required String subjectId,
+        String? topicId,
+      }) async {
+        final sid = studentIdService.getStudentId().data ?? '';
+        await masteryService.init();
+        final weakResult = await masteryService.getWeakTopics(
+          sid,
+          subjectId: subjectId,
+        );
+        final weakTopics = weakResult.data ?? [];
+
+        if (weakTopics.isEmpty) {
+          return Result.success(PracticeRecommendation(
+            topicId: topicId ?? '',
+            message: 'No weak areas detected in $subjectId — great job! '
+                'Keep practicing to build mastery.',
+            questionIds: [],
+          ));
+        }
+
+        final selected = topicId != null
+            ? weakTopics.where((t) => t.topicId == topicId).toList()
+            : weakTopics;
+        final target =
+            (selected.isNotEmpty ? selected : weakTopics).first;
+
+        final questionsResult = await questionRepo.getBySubject(subjectId);
+        final topicQuestions = (questionsResult.data ?? [])
+            .where((q) => q.topicId == target.topicId)
+            .toList();
+        final questionIds = topicQuestions
+            .take(10)
+            .map((q) => q.id)
+            .toList();
+
+        final topicLabel = target.topicId;
+        return Result.success(PracticeRecommendation(
+          topicId: target.topicId,
+          questionIds: questionIds,
+          message: 'I found $questionIds.length practice questions on '
+              '$topicLabel ($subjectId). Let\'s start there.',
+        ));
+      },
+    ),
     ScheduleLessonTool(plannerService: plannerService, localeName: localeName),
     ScheduleRestDayTool(plannerService: plannerService, localeName: localeName),
     WellbeingAdjustScheduleTool(

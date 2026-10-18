@@ -27,10 +27,13 @@
 | `search_questions` (find simpler prerequisite questions) | YES | `lib/features/mentor/services/tools/search_questions_tool.dart` |
 | `create_practice_session` (suggest practice on prerequisite) | YES | `lib/features/mentor/services/tools/create_practice_session_tool.dart` |
 | `get_weak_topics` (identify prerequisite gaps) | YES | `lib/features/mentor/services/tools/get_weak_topics_tool.dart` |
-| Repeat-explanation tool (request a different style) | NO | No agent tool for varying explanation modality. |
+| `explain_differently` (request a different explanation style) | YES | `lib/features/mentor/services/tools/explain_differently_tool.dart` — LLM-backed tool registered in `llmAgentToolsProvider`. Generates visual, analogy, or step-by-step explanations. |
+| `suggest_practice` (redirect to prerequisite practice) | YES | `lib/features/mentor/services/tools/suggest_practice_tool.dart` — callback-based tool registered in `llmAgentToolsProvider`. Queries mastery data for weak-topic recommendations. |
 
-**Gap:** No teaching-mode tool for "explain this concept in a different way."
-→ File `issues/open/e2e-teaching-missing-explanation-variation-tool.md`
+**Gap:** Teaching mode calls `LlmService.chatStream()` directly and does not use
+`AgentLoop`/`ToolRegistry`, so it cannot invoke these tools at runtime. The tools
+exist in the agent registry but are not wired into the teaching flow.
+→ Tracked by `issues/open/e2e-teaching-missing-context-injection.md` (context injection).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -60,12 +63,16 @@ Traced against code at:
 `lib/features/teaching/services/tutor_service.dart:59-110`,
 `lib/features/lessons/data/models/lesson_block_model.dart` (LessonBlockType),
 `lib/features/practice/services/readiness_scorer.dart:16`,
-`lib/features/mentor/services/tools/create_practice_session_tool.dart`.
+`lib/features/mentor/services/tools/create_practice_session_tool.dart`,
+`lib/features/mentor/services/tools/explain_differently_tool.dart`,
+`lib/features/mentor/services/tools/suggest_practice_tool.dart`,
+`lib/core/data/enums.dart` (LessonBlockType: visual, analogy added).
 
 - Step 1: FAIL — no confusion detection in teaching prompt.
-- Step 2: FAIL — no explanation-style variation mechanism.
-- Step 3: FAIL — no escalation to prerequisite practice.
-- Step 4: FAIL — teaching mode cannot invoke practice/session tools.
+- Step 2: PARTIAL — `LessonBlockType` now has `visual`/`analogy` and `explain_differently`
+  tool is registered, but teaching mode bypasses AgentLoop (context injection issue).
+- Step 3: PARTIAL — `suggest_practice` tool is registered but teaching mode does not invoke it.
+- Step 4: FAIL — teaching mode cannot invoke practice/session tools (bypasses AgentLoop).
 
-Tool audit: 4 of 5 needed tools exist; `repeat-explanation-variation` tool is missing.
-Context audit: teaching context lacks conversation history and modality options.
+Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
+Context audit: teaching context lacks conversation history injection and modality options in system prompt → tracked by `e2e-teaching-missing-context-injection.md`.

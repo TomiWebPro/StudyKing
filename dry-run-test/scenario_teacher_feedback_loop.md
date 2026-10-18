@@ -28,11 +28,13 @@
 | `generate_lesson_blocks` (adapt lesson content on feedback) | YES | `lib/features/mentor/services/tools/generate_lesson_blocks_tool.dart` |
 | `get_weak_topics` (identify prerequisite gaps) | YES | `lib/features/mentor/services/tools/get_weak_topics_tool.dart` |
 | `get_lesson_history` (reference past explanations) | YES | `lib/features/mentor/services/tools/get_lesson_history_tool.dart` |
-| `explain_differently` (request a different explanation modality) | MISSING | No agent tool for varying explanation style. See `e2e-teaching-missing-explanation-variation-tool.md`. |
-| `suggest_practice` (redirect to prerequisite practice) | MISSING | No teaching-mode tool for suggesting a practice session on a prerequisite. See `e2e-teaching-missing-explanation-variation-tool.md`. |
+| `explain_differently` (request a different explanation modality) | YES | `lib/features/mentor/services/tools/explain_differently_tool.dart` — LLM-backed tool generating visual, analogy, or step-by-step explanations. `LessonBlockType` now has `visual` and `analogy` variants. |
+| `suggest_practice` (redirect to prerequisite practice) | YES | `lib/features/mentor/services/tools/suggest_practice_tool.dart` — callback-based tool querying mastery data for weak-topic recommendations. |
 
-**Gap:** Teaching mode has no `explain_differently` or `suggest_practice` agent tools.
-→ File `issues/open/e2e-teaching-missing-explanation-variation-tool.md` (already open)
+**Gap:** Teaching mode has no `explain_differently` or `suggest_practice` agent tools
+in its system prompt, and teaching mode bypasses `AgentLoop` — so even though the tools
+are registered in the agent registry, they cannot be invoked during lessons.
+→ Teaching-mode context-injection (`e2e-teaching-missing-context-injection.md`).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -61,13 +63,15 @@ Traced against code at:
 `lib/features/teaching/services/prompts/prompts.dart:70-89`,
 `lib/features/lessons/data/models/lesson_block_model.dart` (LessonBlockType enum),
 `lib/core/services/learning_method_analytics_service.dart:1`,
-`lib/features/mentor/services/tools/explain_differently_tool.dart` (does not exist).
+`lib/features/mentor/services/tools/explain_differently_tool.dart`,
+`lib/features/mentor/services/tools/suggest_practice_tool.dart`,
+`lib/core/data/enums.dart` (LessonBlockType: visual, analogy added).
 
 - Step 1: PARTIAL — pacing feedback not explicitly handled in teaching prompt.
-- Step 2: FAIL — no explanation-style variation mechanism.
+- Step 2: PASS — `explain_differently` tool registered; `LessonBlockType` has `visual`/`analogy`.
 - Step 3: FAIL — teaching mode does not invoke readiness scoring or weak-topic tools.
 - Step 4: PARTIAL — mastery stats exist but not surfaced post-lesson automatically.
 - Step 5: PARTIAL — feedback is logged but not fed back into lesson generation.
 
-Tool audit: 3 of 5 needed tools exist; `explain_differently` and `suggest_practice` are missing.
-Context audit: active lesson blocks and modality options not injected → issues already open.
+Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
+Context audit: active lesson blocks and modality options not injected → issue open.

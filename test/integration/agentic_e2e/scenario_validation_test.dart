@@ -175,37 +175,46 @@ void main() {
       },
     );
 
-    test('Tool/context audit: teaching mode is starved of tools and context',
+    test('Tool/context audit: explanation-variation tools now registered',
         () async {
-      // Reproduce the audit from dry-run-test/scenario_confused_student_fractions.md
-      // Tool/context audit section.
+      // Reproduces the audit from dry-run-test/scenario_confused_student_fractions.md
+      // Tool/context audit section. Now that explain_differently and
+      // suggest_practice are registered in llmAgentToolsProvider, both are HAD.
 
       final neededTools = <String>[
         'explain_differently', // Repeat-explanation tool
+        'suggest_practice', // Escalation to prerequisite practice
       ];
 
-      final availableTools = <String>{}; // teaching mode registers no tools
+      // The canonical tool set from fakes.dart → registeredToolNames mirrors
+      // llmAgentToolsProvider, so adding a tool to the provider automatically
+      // extends this audit.
+      final availableTools = registeredToolNames;
 
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: availableTools,
       );
 
-      // The audit must report the missing tool.
-      expect(audit, contains('explain_differently -> MISSING'));
-      expect(audit, contains('1 tool(s) missing'));
+      // Both tools are now registered.
+      expect(audit, contains('explain_differently -> HAD'));
+      expect(audit, contains('suggest_practice -> HAD'));
+      expect(audit, contains('all needed tools available'));
 
       // Context the LLM needs vs what AgentLoop injects:
       // - Conversation history (prior failed explanations): YES (via ConversationMemory)
-      // - Available explanation modalities (text, example, visual, analogy): NO
       // - Student's prerequisite mastery gaps: YES (partial — readiness scorer
       //   not invoked during teaching)
+      // The teaching system prompt still does NOT include modality options
+      // (visual, analogy, step-by-step) — that gap is tracked separately by
+      // e2e-teaching-missing-context-injection.md.
       final promptHasModalityOptions =
           currentTeachingSystemPrompt.contains('visual') ||
               currentTeachingSystemPrompt.contains('analogy') ||
               currentTeachingSystemPrompt.contains('step-by-step');
       expect(promptHasModalityOptions, isFalse,
-          reason: 'No explanation-modality options in teaching system prompt');
+          reason: 'No explanation-modality options in teaching system prompt '
+              '(tracked by e2e-teaching-missing-context-injection.md)');
     });
 
     test('Verdict trace: confused-student scenario produces FAIL trace', () {
@@ -225,23 +234,36 @@ void main() {
         allPass = false;
       }
 
-      // Step 2: no explanation-style variation mechanism → FAIL
-      final variationTools = ['visual', 'analogy', 'step_by_step'];
-      final hasVariation =
-          variationTools.any((t) => currentTeachingSystemPrompt.contains(t));
-      if (hasVariation) {
-        trace.add('Step 2: PASS — explanation-style variation available');
-      } else {
-        trace.add('Step 2: FAIL — no explanation-style variation mechanism '
-            '(LessonBlockType lacks visual/analogy)');
-        allPass = false;
-      }
+       // Step 2: LessonBlockType now has visual/analogy variants and
+       // ExplainDifferentlyTool is registered — but teaching system prompt
+       // still doesn't inject modality options (context-injection issue).
+       final variationModalities = ['visual', 'analogy', 'step_by_step'];
+       final hasModalityInPrompt =
+           variationModalities.any((t) => currentTeachingSystemPrompt.contains(t));
+       final hasVariationTool = registeredToolNames.contains('explain_differently');
+       if (hasVariationTool && !hasModalityInPrompt) {
+         trace.add('Step 2: PARTIAL — variation tool exists (explain_differently) '
+             'and LessonBlockType has visual/analogy, but teaching prompt '
+             'does not inject modality options');
+       } else if (hasModalityInPrompt) {
+         trace.add('Step 2: PASS — explanation-style variation available');
+         allPass = true;
+       } else {
+         trace.add('Step 2: FAIL — no explanation-style variation mechanism '
+             '(LessonBlockType lacks visual/analogy)');
+         allPass = false;
+       }
 
-      // Step 3: no escalation tool → FAIL
+      // Step 3: escalation tool now registered — but teaching system prompt
+      // doesn't invoke it (teaching mode bypasses AgentLoop).
       final escalationTools = ['suggest_practice', 'ask_working', 'switch_mode'];
-      final hasEscalation = escalationTools
+      final hasEscalationTool = registeredToolNames.contains('suggest_practice');
+      final hasEscalationInPrompt = escalationTools
           .any((t) => currentTeachingSystemPrompt.toLowerCase().contains(t));
-      if (hasEscalation) {
+      if (hasEscalationTool && !hasEscalationInPrompt) {
+        trace.add('Step 3: PARTIAL — suggest_practice tool registered, but '
+            'teaching mode does not invoke it');
+      } else if (hasEscalationInPrompt) {
         trace.add('Step 3: PASS — escalation mechanism available');
       } else {
         trace.add('Step 3: FAIL — no escalation to prerequisite practice or '
@@ -264,13 +286,15 @@ void main() {
         print(line);
       }
       // ignore: avoid_print
-      print('Verdict: FAILURES DETECTED');
+      print('Verdict: PARTIAL — tools now registered but teaching mode still '
+          'bypasses AgentLoop (context injection tracked separately)');
       // ignore: avoid_print
       print('=== End trace ===');
 
-      // All four steps are FAIL — the scenario gap is real and traced.
+      // The scenario still has 1 FAIL step (Step 4: teaching mode bypasses
+      // AgentLoop), so allPass is false.
       expect(allPass, isFalse,
-          reason: 'Confused-student scenario has 4 FAIL steps — '
+          reason: 'Confused-student scenario still has 1 FAIL step (Step 4) — '
               'see dry-run-test/scenario_confused_student_fractions.md');
     });
   });
@@ -1082,15 +1106,15 @@ void main() {
       expect(currentTeachingSystemPrompt.contains('escalat'), isFalse);
     });
 
-    test('Step 2: no explanation-modality variation mechanism → FAIL', () {
-      // LessonBlockType has no visual/analogy variant (enums.dart:41-48).
-      // No agent tool for varying explanation style.
+    test('Step 2: explanation-modality variation mechanism is now available → PASS', () {
+      // LessonBlockType now has visual/analogy variants (enums.dart).
+      // ExplainDifferentlyTool is registered in the agent tool registry.
       final neededTools = <String>['explain_differently'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('explain_differently -> MISSING'));
+      expect(audit, contains('explain_differently -> HAD'));
     });
 
     test('Step 3-4: no escalation tool in teaching mode → FAIL', () {
@@ -1104,22 +1128,25 @@ void main() {
           reason: 'Teaching mode does not register any tools with AgentLoop');
     });
 
-    test('Tool/context audit: teaching mode is starved of tools and context', () {
+    test('Tool/context audit: explanation-variation tools are now registered', () {
+      // Teaching mode itself still calls chatStream() directly (not AgentLoop),
+      // but explain_differently and suggest_practice are now registered in the
+      // agent tool registry so the mentor LLM can invoke them.
       final neededTools = <String>['explain_differently', 'suggest_practice'];
       final audit = AgentRunCapture.auditTools(
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('explain_differently -> MISSING'));
-      expect(audit, contains('suggest_practice -> MISSING'));
-      expect(audit, contains('2 tool(s) missing'));
+      expect(audit, contains('explain_differently -> HAD'));
+      expect(audit, contains('suggest_practice -> HAD'));
+      expect(audit, contains('all needed tools available'));
     });
 
-    test('Verdict trace: teacher-feedback-loop scenario produces FAIL trace', () {
+    test('Verdict trace: teacher-feedback-loop scenario produces PARTIAL trace', () {
       final trace = <String>[];
 
       trace.add('Step 1: PARTIAL — pacing feedback not explicitly handled in teaching prompt');
-      trace.add('Step 2: FAIL — no explanation-style variation mechanism');
+      trace.add('Step 2: PASS — explanation-style variation now available (explain_differently tool + LessonBlockType.visual/analogy)');
       trace.add('Step 3: FAIL — teaching mode does not invoke readiness scoring');
       trace.add('Step 4: PARTIAL — mastery stats exist but not surfaced post-lesson');
       trace.add('Step 5: PARTIAL — feedback logged but not fed back into lesson generation');
@@ -1131,7 +1158,7 @@ void main() {
         print(line);
       }
       // ignore: avoid_print
-      print('Verdict: FAILURES DETECTED — 2 tools missing (explain_differently, suggest_practice)');
+      print('Verdict: PARTIAL — 0 tools missing (explain_differently and suggest_practice are registered)');
       // ignore: avoid_print
       print('=== End trace ===');
 
@@ -1140,7 +1167,7 @@ void main() {
         needed: neededTools,
         available: registeredToolNames,
       );
-      expect(audit, contains('2 tool(s) missing'));
+      expect(audit, contains('all needed tools available'));
     });
   });
 
@@ -1542,8 +1569,9 @@ void main() {
         () {
       // The canonical tool set from fakes.dart must match the tools
       // registered in llmAgentToolsProvider (llm_agent_providers.dart),
-      // including the newly added search_sources and revisit_sources tools.
-      expect(registeredToolNames, hasLength(23));
+      // including explain_differently and suggest_practice (teaching-mode
+      // explanation-variation tools from e2e-teaching-missing-explanation-variation-tool.md).
+      expect(registeredToolNames, hasLength(25));
       // Verify no duplicate registration by checking the set size.
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });

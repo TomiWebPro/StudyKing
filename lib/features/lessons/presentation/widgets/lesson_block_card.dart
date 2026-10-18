@@ -45,6 +45,10 @@ class _LessonBlockCardState extends State<LessonBlockCard> {
         return _buildSummaryCard(context);
       case LessonBlockType.text:
         return _buildTextCard(context);
+      case LessonBlockType.visual:
+        return _buildTextCard(context);
+      case LessonBlockType.analogy:
+        return _buildTextCard(context);
     }
   }
 
