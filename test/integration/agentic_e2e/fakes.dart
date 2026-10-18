@@ -136,6 +136,7 @@ const Set<String> registeredToolNames = {
   'switch_provider',
   'create_plan',
   'modify_plan',
+  'add_subject_to_plan',
   'search_questions',
   'get_student_stats',
   'get_weak_topics',

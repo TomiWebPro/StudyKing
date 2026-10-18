@@ -321,6 +321,22 @@ class FakePlannerService extends PlannerService {
     if (markRestDayNoMatch) return Result.success(false);
     return Result.success(markRestDayResult);
   }
+
+  // addSubjectToPlan (AddSubjectToPlanTool — Vision §3.1 / longterm-user Step 2).
+  final List<SyllabusGoal> recordedAddSubjectGoals = [];
+  bool addSubjectToPlanShouldFail = false;
+
+  @override
+  Future<Result<PersonalLearningPlan?>> addSubjectToPlan({
+    required SyllabusGoal newGoal,
+    required PersonalLearningPlan existingPlan,
+  }) async {
+    recordedAddSubjectGoals.add(newGoal);
+    if (addSubjectToPlanShouldFail) {
+      return Result.failure('addSubjectToPlan failed');
+    }
+    return Result.success(existingPlan);
+  }
 }
 
 class FakeSpacedRepetitionService extends SpacedRepetitionService {

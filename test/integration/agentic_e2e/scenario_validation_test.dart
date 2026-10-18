@@ -425,6 +425,21 @@ void main() {
   });
 
   group('Dry-run scenario: provider switch (longterm user)', () {
+    test('Step 2: add_subject_to_plan agent tool is FOUND', () {
+      // Reproduces the tool audit from
+      // dry-run-test/scenario_longterm_user_accelerates.md Step 2.
+      // Previously PARTIAL: addSubjectToPlan existed but no agent tool wrapped
+      // it, so the mentor could not add a subject from conversation.
+      // Now AddSubjectToPlanTool is registered, re-tracing Step 2 to PASS.
+      final neededTools = <String>['add_subject_to_plan'];
+      final audit = AgentRunCapture.auditTools(
+        needed: neededTools,
+        available: registeredToolNames,
+      );
+      expect(audit, contains('add_subject_to_plan -> HAD'));
+      expect(audit, contains('all needed tools available'));
+    });
+
     test('Step 3: switch_provider agent tool is FOUND', () {
       // Reproduces the tool/context audit from
       // dry-run-test/scenario_longterm_user_accelerates.md Step 3.
@@ -1570,8 +1585,9 @@ void main() {
       // The canonical tool set from fakes.dart must match the tools
       // registered in llmAgentToolsProvider (llm_agent_providers.dart),
       // including explain_differently and suggest_practice (teaching-mode
-      // explanation-variation tools from e2e-teaching-missing-explanation-variation-tool.md).
-      expect(registeredToolNames, hasLength(25));
+      // explanation-variation tools from e2e-teaching-missing-explanation-variation-tool.md)
+      // and add_subject_to_plan (Vision §3.1 / longterm-user Step 2).
+      expect(registeredToolNames, hasLength(26));
       // Verify no duplicate registration by checking the set size.
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });

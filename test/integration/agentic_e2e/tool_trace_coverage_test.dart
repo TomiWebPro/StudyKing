@@ -54,6 +54,8 @@ import 'package:studyking/features/mentor/services/tools/search_sources_tool.dar
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
 import 'package:studyking/features/mentor/services/tools/suggest_practice_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
+import 'package:studyking/features/mentor/services/tools/add_subject_to_plan_tool.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
@@ -1046,6 +1048,63 @@ void main() {
       });
     });
 
+    group('AddSubjectToPlanTool', () {
+      test('reachable through AgentLoop from "add Biology to my plan"', () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: add_subject_to_plan\n'
+          'ARGUMENTS: {"subjectId": "biology", "subjectTitle": "Biology", "targetDays": 90, "targetHoursPerDay": 2}',
+          'I added Biology to your existing plan, merging it with Physics '
+              'while preserving your mastered topics.',
+        ]);
+
+        // Recording callback so we can verify the tool invoked the plan merger
+        // with the correct SyllabusGoal (delegates to PlannerService.addSubjectToPlan
+        // in production via the provider wiring).
+        SyllabusGoal? receivedGoal;
+        final tool = AddSubjectToPlanTool(
+          onAddSubject: ({required SyllabusGoal newGoal}) async {
+            receivedGoal = newGoal;
+            return Result.success(
+              tool_fakes.sampleLearningPlan(studentId: 'add-subject-student'),
+            );
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'I want to study Biology instead of Physics.',
+          studentId: 'add-subject-student',
+          systemPrompt: 'You are a mentor that expands study plans.',
+          feature: 'mentor',
+        );
+
+        // The tool was invoked with the LLM-parsed arguments.
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'add_subject_to_plan');
+        expect(response.toolCalls.first.arguments['subjectId'], 'biology');
+        expect(response.toolCalls.first.arguments['subjectTitle'], 'Biology');
+        expect(response.toolCalls.first.arguments['targetDays'], 90);
+
+        // The callback received the SyllabusGoal built from the parsed args.
+        expect(receivedGoal, isNotNull);
+        expect(receivedGoal!.subjectId, 'biology');
+        expect(receivedGoal!.subjectTitle, 'Biology');
+        expect(receivedGoal!.targetDays, 90);
+        expect(receivedGoal!.targetHoursPerDay, 2);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['subjectId'], 'biology');
+      });
+    });
+
     group('SwitchProviderTool', () {
       test('reachable through AgentLoop from "switch to Ollama"', () async {
         final fakeLlm = FakeAgentLlmService([
@@ -1808,7 +1867,7 @@ void main() {
         // The canonical tool set from fakes.dart must mirror the tools
         // registered in llmAgentToolsProvider (llm_agent_providers.dart),
         // including search_sources, read_source_content, and revisit_sources.
-        expect(registeredToolNames, hasLength(25));
+        expect(registeredToolNames, hasLength(26));
         // Verify no duplicate registration by checking the set size.
         expect(registeredToolNames.length, registeredToolNames.toSet().length);
       });

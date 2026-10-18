@@ -13,6 +13,7 @@ import 'package:studyking/core/providers/prep_budget_providers.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
+import 'package:studyking/features/mentor/services/tools/add_subject_to_plan_tool.dart';
 import 'package:studyking/features/questions/services/question_variant_service.dart';
 import 'package:studyking/features/mentor/services/tools/get_syllabus_structure_tool.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
@@ -189,6 +190,22 @@ void main() {
       final tools = container.read(llmAgentToolsProvider);
       final names = tools.map((t) => t.name).toSet();
       expect(names, contains('wellbeing_adjust_schedule'));
+    });
+
+    test('registers add_subject_to_plan tool wired to the planner', () {
+      final container = _createContainer();
+      addTearDown(() => container.dispose());
+
+      final tools = container.read(llmAgentToolsProvider);
+      final names = tools.map((t) => t.name).toSet();
+      expect(names, contains('add_subject_to_plan'));
+
+      final addTool = tools
+          .where((t) => t.name == 'add_subject_to_plan')
+          .cast<AgentTool>()
+          .single;
+      expect(addTool, isA<AddSubjectToPlanTool>());
+      expect(addTool.parameters['required'], contains('subjectId'));
     });
 
     test('registers get_syllabus_structure tool with required dependencies', () {

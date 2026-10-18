@@ -9,6 +9,7 @@ import 'package:studyking/core/services/settings_service.dart';
 import 'package:studyking/core/services/long_term_memory.dart';
 import 'package:studyking/core/services/student_id_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart';
 import 'package:studyking/features/questions/providers/question_providers.dart'
     show questionRepositoryProvider, questionVariantServiceProvider,
@@ -27,6 +28,7 @@ import 'package:studyking/features/mentor/services/tools/get_student_stats_tool.
 import 'package:studyking/features/mentor/services/tools/generate_lesson_blocks_tool.dart';
 import 'package:studyking/features/mentor/services/tools/create_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
+import 'package:studyking/features/mentor/services/tools/add_subject_to_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_weak_topics_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_adherence_trends_tool.dart';
 import 'package:studyking/features/mentor/services/tools/get_lesson_history_tool.dart';
@@ -159,6 +161,28 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
     GenerateLessonBlocksTool(lessonAgentService: lessonAgentService, localeName: localeName),
     CreatePlanTool(plannerService: plannerService, localeName: localeName),
     ModifyPlanTool(plannerService: plannerService, localeName: localeName),
+    // Vision Next-Term §3.1 (scenario_longterm_user_accelerates Step 2): add a
+    // new subject to the student's existing plan. The callback loads the active
+    // plan and delegates to PlannerService.addSubjectToPlan, which merges the
+    // SyllabusGoal list, regenerates the plan, and preserves the plan id and
+    // prior date ranges (carrying forward mastered topics and relevant plan
+    // fragments). Failure when no existing plan exists, directing the student to
+    // create_plan first.
+    AddSubjectToPlanTool(
+      onAddSubject: ({required SyllabusGoal newGoal}) async {
+        final existingResult = await plannerService.loadExistingPlan();
+        final existingPlan = existingResult.data;
+        if (existingPlan == null) {
+          return Result.failure(
+            'No existing plan found. Use create_plan first to establish a study plan.',
+          );
+        }
+        return plannerService.addSubjectToPlan(
+          newGoal: newGoal,
+          existingPlan: existingPlan,
+        );
+      },
+    ),
     // Vision Next-Term §3.1: explicit syllabus focus so the mentor can honor a
     // "switch focus to Math" request from the student and scope subsequent tool
     // calls. The callback writes to the shared SyllabusFocusService that
