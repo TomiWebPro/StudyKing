@@ -334,7 +334,10 @@ void main() {
         expect(tm.tasks.any((t) => t.status == LlmTaskStatus.done), isTrue);
       });
 
-      test('fails the LlmTask when question is not found', () async {
+      test('does not create a task when question is not found', () async {
+        // The question is fetched before task creation so that a
+        // not-found question returns a failure without registering a
+        // spurious failed task on the task manager.
         final tm = LlmTaskManager();
         final tool = EnqueueQuestionVariantsTool(
           variantService: fakeVariantService,
@@ -342,13 +345,109 @@ void main() {
           taskManager: tm,
         );
 
-        await tool.execute({'questionId': 'nonexistent'});
+        final result = await tool.execute({'questionId': 'nonexistent'});
 
-        // Task is created and started but not completed — it should not
-        // have a 'done' status.
+        expect(result['success'], isFalse);
+        expect(result['error'], contains('not found'));
+        expect(tm.tasks, isEmpty);
+      });
+    });
+
+    group('per-subject opt-in enforcement', () {
+      // Vision §4.2: "per-syllabus opt-in." A student who toggles a subject
+      // off must not have tokens spent on it. Mirrors the enforcement in
+      // IngestPdfToKbTool and PreGenerateLessonTool.
+
+      test(
+          'skips variant generation and records no tokens when subject is disabled',
+          () async {
+        var variantServiceCalled = false;
+        final question = _buildTestQuestion('q1');
+        final repo = _FakeQuestionRepoWithGet({'q1': question});
+        final meter = LlmUsageMeter();
+        final budget = PrepBudgetService(
+          meter: meter,
+          budget: PrepBudget.defaults.copyWith(disabledSubjects: {'math'}),
+        );
+        // If the subject gate fails, this should never be invoked.
+        fakeVariantService.onGenerate = (source, {count = 3}) async {
+          variantServiceCalled = true;
+          return Result.success([]);
+        };
+
+        final tool = EnqueueQuestionVariantsTool(
+          variantService: fakeVariantService,
+          questionRepo: repo,
+          budgetService: budget,
+          usageMeter: meter,
+        );
+
+        final result = await tool.execute({'questionId': 'q1'});
+
+        // Vision §4.2: a paused syllabus must never invoke the variant
+        // service or record tokens.
+        expect(result['success'], isFalse);
+        expect(result['error'], contains('disabled by student'));
+        expect(result['deferrable'], isTrue);
+        expect(variantServiceCalled, isFalse,
+            reason: 'Variant service must not be called for a disabled subject');
+        expect(meter.getTotalTokens(), equals(0));
+      });
+
+      test('does not register a disabled-subject task on LlmTaskManager',
+          () async {
+        final question = _buildTestQuestion('q1');
+        final repo = _FakeQuestionRepoWithGet({'q1': question});
+        final meter = LlmUsageMeter();
+        final budget = PrepBudgetService(
+          meter: meter,
+          budget: PrepBudget.defaults.copyWith(disabledSubjects: {'math'}),
+        );
+
+        final tm = LlmTaskManager();
+        final tool = EnqueueQuestionVariantsTool(
+          variantService: fakeVariantService,
+          questionRepo: repo,
+          taskManager: tm,
+          budgetService: budget,
+          usageMeter: meter,
+        );
+
+        await tool.execute({'questionId': 'q1'});
+
         expect(
-          tm.tasks.any((t) => t.status == LlmTaskStatus.failed),
-          isTrue,
+          tm.tasks,
+          isEmpty,
+          reason: 'Disabled-subject task must never reach the task manager',
+        );
+      });
+
+      test('proceeds for an enabled subject within budget', () async {
+        final question = _buildTestQuestion('q1'); // subjectId == 'math' by default
+        final repo = _FakeQuestionRepoWithGet({'q1': question});
+        fakeVariantService.onGenerate = (source, {count = 3}) async {
+          return Result.success([_buildTestQuestion('v1')]);
+        };
+        final meter = LlmUsageMeter();
+        final budget = PrepBudgetService(
+          meter: meter,
+          budget: PrepBudget.defaults.copyWith(disabledSubjects: {'other'}),
+        );
+
+        final tool = EnqueueQuestionVariantsTool(
+          variantService: fakeVariantService,
+          questionRepo: repo,
+          budgetService: budget,
+          usageMeter: meter,
+        );
+
+        final result = await tool.execute({'questionId': 'q1'});
+
+        expect(result['success'], isTrue);
+        expect(result['variantCount'], 1);
+        expect(
+          meter.getTotalTokensPerTaskType()['question_variants'],
+          greaterThan(0),
         );
       });
     });

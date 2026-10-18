@@ -98,6 +98,34 @@ class EnqueueQuestionVariantsTool extends PrepTool {
       };
     }
 
+    // Fetch the source question before creating an LlmTask so the per-subject
+    // opt-in gate can be consulted before any task is registered. A subject
+    // the student has paused must never appear as a running/failed prep job in
+    // the task-manager portal (Vision §4.2). Mirrors the guard pattern in
+    // IngestPdfToKbTool and PreGenerateLessonTool.
+    final fetchResult = await _questionRepo.get(questionId);
+    final question = fetchResult.data;
+
+    if (question == null) {
+      return {'success': false, 'error': 'Question not found: $questionId'};
+    }
+
+    // Vision §4.2: per-subject opt-in. The question carries its subjectId;
+    // if the student toggled that syllabus off, skip variant generation
+    // entirely — no LLM call, no token spend, no task created.
+    if (budget != null &&
+        question.subjectId.isNotEmpty &&
+        !budget.isPrepEnabledForSubject(question.subjectId)) {
+      _logger.d(
+        'Question variant generation skipped: subject "${question.subjectId}" disabled by student',
+      );
+      return {
+        'success': false,
+        'error': 'Subject ${question.subjectId} prep disabled by student',
+        'deferrable': true,
+      };
+    }
+
     final taskId = _taskManager?.createTask(
           feature: 'question_variants',
           modelId: 'variant_generation',
@@ -107,14 +135,6 @@ class EnqueueQuestionVariantsTool extends PrepTool {
     if (taskId.isNotEmpty) _taskManager?.startTask(taskId);
 
     try {
-      final fetchResult = await _questionRepo.get(questionId);
-      final question = fetchResult.data;
-
-      if (question == null) {
-        if (taskId.isNotEmpty) _taskManager?.failTask(taskId, 'Question not found');
-        return {'success': false, 'error': 'Question not found: $questionId'};
-      }
-
       final variantResult = await _generateVariants(question, count);
 
       if (taskId.isNotEmpty) {
