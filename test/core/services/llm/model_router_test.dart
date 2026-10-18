@@ -187,6 +187,12 @@ void main() {
         LlmTaskType.fromFeature('conversation_memory_compression'),
         equals(LlmTaskType.summarization),
       );
+      // Quick Guide is a teaching aid (just-in-time reference during a lesson),
+      // so its tokens must attribute to the 'tutor' task type, not 'unknown'.
+      expect(
+        LlmTaskType.fromFeature('tutor_quick_guide'),
+        equals(LlmTaskType.tutor),
+      );
       expect(
         LlmTaskType.fromFeature('content_classification'),
         equals(LlmTaskType.classification),

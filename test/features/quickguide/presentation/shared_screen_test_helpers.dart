@@ -18,6 +18,7 @@ class FakeLlmService extends LlmService {
   Duration chunkDelay = Duration.zero;
   String? capturedSystemPrompt;
   String? capturedModelId;
+  String? capturedFeature;
   ConversationMemory? capturedMemory;
 
   FakeLlmService({String apiKey = 'fake-key-for-testing'})
@@ -41,6 +42,7 @@ class FakeLlmService extends LlmService {
     if (shouldThrow) throw Exception('Simulated LLM error');
     capturedSystemPrompt = systemPrompt;
     capturedModelId = modelId;
+    capturedFeature = feature;
     capturedMemory = memory;
     for (final chunk in chunks) {
       await Future<void>.delayed(chunkDelay);

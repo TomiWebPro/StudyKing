@@ -673,6 +673,32 @@ void main() {
 
       expect(llm.capturedModelId, equals(customModelId));
     });
+
+    testWidgets('chatStream call passes feature containing tutor for token attribution',
+        (tester) async {
+      final llm = FakeLlmService();
+      llm.chunks.add('Token classification response');
+
+      await tester.pumpWidget(buildTestApp(
+        screen: QuickGuideScreen(
+          llmService: llm,
+          showModeNavigation: false,
+        ),
+        llmService: llm,
+      ));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await tester.enterText(find.byType(TextField), 'Explain fractions');
+      await tester.tap(find.byIcon(Icons.send_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
+
+      // The feature parameter must contain 'tutor' so that LlmTaskType.fromFeature
+      // classifies quick-guide tokens under the 'tutor' task type instead of 'unknown'.
+      expect(llm.capturedFeature, contains('tutor'));
+      expect(llm.capturedFeature, equals('tutor_quick_guide'));
+    });
   });
 
   group('QuickGuideScreen - provider path', () {

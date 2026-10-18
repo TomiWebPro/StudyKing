@@ -173,6 +173,7 @@ class _QuickGuideScreenState extends ConsumerState<QuickGuideScreen> {
         modelId: effectiveModelId,
         memory: _getMemory(),
         systemPrompt: effectiveSystem,
+        feature: 'tutor_quick_guide',
       )) {
         buffer.write(chunk);
         if (mounted) {
