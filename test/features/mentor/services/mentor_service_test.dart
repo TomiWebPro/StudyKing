@@ -456,6 +456,7 @@ class _FakeThrowingInitLTM extends LongTermMemory {
 class _FakeStreamingAgent extends LlmAgent {
   final List<String> _chunks;
   final List<String> capturedMessages = [];
+  final List<String> capturedSystemPrompts = [];
   int chatStreamCallCount = 0;
 
   _FakeStreamingAgent(List<String> chunks)
@@ -482,6 +483,7 @@ class _FakeStreamingAgent extends LlmAgent {
   }) async* {
     chatStreamCallCount++;
     capturedMessages.add(message);
+    capturedSystemPrompts.add(systemPrompt);
     for (final chunk in _chunks) {
       yield chunk;
     }
@@ -1660,7 +1662,7 @@ void main() {
     });
 
     group('chat - no meaningful data', () {
-      test('returns mentorNoSubjects message when no data', () async {
+      test('returns guided choice for empty-start user without agent', () async {
         final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
         tracker.setStats({
           'totalAttempts': 0,
@@ -1675,7 +1677,35 @@ void main() {
         final service = createMentorService(progressTracker: tracker);
         final chunks = await service.chat('hello').toList();
         expect(chunks, isNotEmpty);
-        expect(chunks.first, contains("haven't added any subjects"));
+        final first = chunks.first.toLowerCase();
+        expect(first, contains("haven't added any subjects"));
+        expect(first, contains('plan'));
+        expect(first, contains('curriculum'));
+        expect(first, contains('upload'));
+      });
+
+      test('routes empty-start user to agent with onboarding guidance', () async {
+        final tracker = FakeProgressTracker(attemptRepo: AttemptRepository());
+        tracker.setStats({
+          'totalAttempts': 0,
+          'correctAttempts': 0,
+          'accuracy': 0,
+          'avgTimePerQuestion': 0,
+          'totalStudyTimeHours': 0,
+          'weeklyActivity': 0,
+          'dailyActivity': 0,
+          'topicsStudied': 0,
+        });
+        final agent = _FakeStreamingAgent(['Welcome!']);
+        final service = createMentorService(progressTracker: tracker, agent: agent);
+
+        final chunks = await service.chat('hello').toList();
+
+        expect(chunks, isNotEmpty);
+        expect(chunks.join(), equals('Welcome!'));
+        expect(agent.chatStreamCallCount, 1);
+        expect(agent.capturedSystemPrompts, isNotEmpty);
+        expect(agent.capturedSystemPrompts.first, contains('STUDENT ONBOARDING NOTE'));
       });
     });
 

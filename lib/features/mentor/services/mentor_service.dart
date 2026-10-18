@@ -236,6 +236,18 @@ class MentorService {
       return;
     }
 
+    // Vision §2.1: empty-start users (no agent) must NOT fall through to a
+    // key-less LLM call that can dead-end. Instead, yield an explicit guided
+    // choice so they can reach plan / curriculum / upload tooling directly.
+    if (isEmptyUser) {
+      final guidedMessage = _buildEmptyStartGuidedMessage();
+      yield guidedMessage;
+      await _memory.addAssistantMessage(guidedMessage);
+      await _storeMentorSessionSummary(guidedMessage);
+      await _checkAndHandlePlanningIntent(message);
+      return;
+    }
+
     final contextResult2 = await _contextBuilder.buildContextPrompt();
     if (contextResult2.isFailure) {
       _logger.w('Failed to build mentor context: ${contextResult2.error}');
@@ -289,6 +301,22 @@ class MentorService {
         '(e.g. "learn chemistry in a year"), offer to create a study plan via '
         'create_plan, suggest a standard curriculum seed, or guide them to upload '
         'materials. Surface a clear next step — do not dead-end.';
+  }
+
+  /// Direct guided message for empty-start users (no subjects, no attempts,
+  /// no materials) when no agent is available. Reuses the localized
+  /// `mentorNoSubjects` string and surfaces explicit next steps (plan,
+  /// curriculum seed, or upload) rather than delegating to a key-less LLM
+  /// call that could dead-end (Vision §2.1 + agent_must_read.md §2.1).
+  String _buildEmptyStartGuidedMessage() {
+    final l10n = lookupAppLocalizations(Locale(_localeName));
+    final noSubjects = l10n.mentorNoSubjects;
+    return '$noSubjects\n\n'
+        'Here are your options:\n'
+        '• Create a study plan — say "plan my studies for 30 days"\n'
+        '• Seed a standard curriculum — say "suggest a curriculum"\n'
+        '• Upload materials — share a syllabus or notes and I will set it up\n\n'
+        'Which would you like to start with?';
   }
 
   Future<String> _buildLongTermMemoryContext() async {
