@@ -109,6 +109,25 @@ class _StreamableMockHttpClient extends http.BaseClient {
   }
 }
 
+/// MPEG-1 Layer III, 128 kbps, 44100 Hz: 1152 samples/frame, 417 bytes/frame.
+const _kMp3FrameSize = 417;
+
+/// Builds a synthetic MP3 byte stream of [numFrames] MPEG-1 Layer III frames.
+/// Each frame uses a valid header (`0xFF 0xFB 0x90 0x00`); the body is zeroed
+/// but the chunker only inspects headers, so this is sufficient to exercise
+/// frame-aware splitting.
+Uint8List _buildSyntheticMp3(int numFrames) {
+  final bytes = Uint8List(numFrames * _kMp3FrameSize);
+  for (var f = 0; f < numFrames; f++) {
+    final off = f * _kMp3FrameSize;
+    bytes[off] = 0xFF;
+    bytes[off + 1] = 0xFB;
+    bytes[off + 2] = 0x90;
+    bytes[off + 3] = 0x00;
+  }
+  return bytes;
+}
+
 void main() {
   group('TranscriptionPipeline', () {
     test('processes YouTube URL through extractor', () async {
@@ -534,130 +553,178 @@ void main() {
       pipeline.dispose();
     });
 
-    test('chunked ASR is attempted for large files', () async {
+    test('chunked ASR frame-splits a large MP3 into valid chunks', () async {
       final dir = Directory.systemTemp.createTempSync('pipeline_chunk_test_');
-      try {
-        final largeFile = File('${dir.path}/large.mp3');
-        final largeBytes = Uint8List(30 * 1024 * 1024);
-        for (var i = 0; i < largeBytes.length; i++) {
-          largeBytes[i] = 0xFF;
-        }
-        await largeFile.writeAsBytes(largeBytes);
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final chunkerBytes = _buildSyntheticMp3(1200); // ~31s of audio
+      final largeFile = File('${dir.path}/large.mp3');
+      await largeFile.writeAsBytes(chunkerBytes);
 
-        var callCount = 0;
-        final asrEngine = _FakeAsrEngine(
-          available: true,
-          onTranscribeFile: (filePath) async {
-            callCount++;
-            return TranscriptionResult(
-              text: 'chunk $callCount',
-              extractionMethod: 'whisper_api',
-              confidence: 0.90,
-            );
-          },
-        );
+      var callCount = 0;
+      final asrEngine = _FakeAsrEngine(
+        available: true,
+        onTranscribeFile: (filePath) async {
+          callCount++;
+          return TranscriptionResult(
+            text: 'chunk $callCount',
+            extractionMethod: 'whisper_api',
+            confidence: 0.90,
+          );
+        },
+      );
 
-        final extractor = TranscriptionExtractor(
-          modelId: 'test-model',
-          localeName: 'en',
-          httpClient: _MockHttpClient((_) async => http.Response('', 404)),
-        );
+      final extractor = TranscriptionExtractor(
+        modelId: 'test-model',
+        localeName: 'en',
+        httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+      );
 
-        final pipeline = TranscriptionPipeline(
-          extractor: extractor,
-          asrEngine: asrEngine,
-        );
+      final pipeline = TranscriptionPipeline(
+        extractor: extractor,
+        asrEngine: asrEngine,
+        // Use a small threshold so the chunked path engages without a 25MB
+        // allocation: the file (~500KB) is well over 1KB.
+        maxFileSizeBytes: 1024,
+      );
 
-        final result = await pipeline.transcribe(
-          rawContent: 'file://${largeFile.path}',
-        );
+      final result = await pipeline.transcribe(
+        rawContent: 'file://${largeFile.path}',
+      );
 
-        expect(result.text, isNotEmpty);
-        expect(result.extractionMethod, 'chunked_asr');
-        expect(result.segments, isNotNull);
-        expect(result.segments!.length, greaterThan(1));
-        pipeline.dispose();
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
+      expect(result.text, isNotEmpty);
+      expect(result.extractionMethod, 'chunked_asr');
+      expect(result.segments, isNotNull);
+      expect(result.segments!.length, greaterThan(1));
+      // The ASR engine was invoked once per frame-aware chunk (not once per
+      // raw byte slice, and never on a corrupted chunk).
+      expect(callCount, result.segments!.length);
+      pipeline.dispose();
     });
 
     test('chunked ASR keeps segment offsets when a chunk yields no text',
         () async {
-      final dir = Directory.systemTemp.createTempSync('pipeline_chunk_offset_test_');
-      try {
-        final largeFile = File('${dir.path}/large.mp3');
-        final largeBytes = Uint8List(30 * 1024 * 1024);
-        for (var i = 0; i < largeBytes.length; i++) {
-          largeBytes[i] = 0xFF;
-        }
-        await largeFile.writeAsBytes(largeBytes);
+      // ~90s of audio → 3 chunks at a 30s target. The middle (2nd) chunk
+      // returns empty text; later segments must keep their real timeline offset.
+      final dir = Directory.systemTemp.createTempSync('pipeline_chunk_test_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final chunkerBytes = _buildSyntheticMp3(3444); // ~90s of audio → 3 chunks
+      final largeFile = File('${dir.path}/large.mp3');
+      await largeFile.writeAsBytes(chunkerBytes);
 
-        // 30MB / (30s * 128kbps) = 8 chunks. Simulate chunk #1 (the
-        // second chunk) returning no text, e.g. silence or a
-        // transient failure on that slice of the audio.
-        var callCount = 0;
-        final asrEngine = _FakeAsrEngine(
-          available: true,
-          onTranscribeFile: (_) async {
-            final chunkIndex = callCount++;
-            if (chunkIndex == 1) {
-              return const TranscriptionResult(
-                text: '',
-                extractionMethod: 'whisper_api',
-              );
-            }
-            return TranscriptionResult(
-              text: 'chunk $chunkIndex',
+      var callCount = 0;
+      final asrEngine = _FakeAsrEngine(
+        available: true,
+        onTranscribeFile: (filePath) async {
+          final index = ++callCount;
+          if (index == 2) {
+            // Empty result on the middle chunk (silence / transient failure).
+            return const TranscriptionResult(
+              text: '',
               extractionMethod: 'whisper_api',
-              confidence: 0.90,
-              segments: [
-                TranscriptionSegment(
-                  text: 'chunk $chunkIndex',
-                  startSeconds: 0.0,
-                  endSeconds: 30.0,
-                  confidence: 0.90,
-                ),
-              ],
             );
-          },
-        );
+          }
+          return TranscriptionResult(
+            text: 'segment $index',
+            extractionMethod: 'whisper_api',
+            confidence: 0.90,
+          );
+        },
+      );
 
-        final extractor = TranscriptionExtractor(
-          modelId: 'test-model',
-          localeName: 'en',
-          httpClient: _MockHttpClient((_) async => http.Response('', 404)),
-        );
+      final extractor = TranscriptionExtractor(
+        modelId: 'test-model',
+        localeName: 'en',
+        httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+      );
 
-        final pipeline = TranscriptionPipeline(
-          extractor: extractor,
-          asrEngine: asrEngine,
-        );
+      final pipeline = TranscriptionPipeline(
+        extractor: extractor,
+        asrEngine: asrEngine,
+        maxFileSizeBytes: 1024,
+      );
 
-        final result = await pipeline.transcribe(
-          rawContent: 'file://${largeFile.path}',
-        );
+      final result = await pipeline.transcribe(
+        rawContent: 'file://${largeFile.path}',
+      );
 
-        expect(result.extractionMethod, 'chunked_asr');
-        // Chunk 1 contributed nothing; the rest are joined in order.
-        expect(
-          result.text,
-          'chunk 0 chunk 2 chunk 3 chunk 4 chunk 5 chunk 6 chunk 7',
-        );
-        expect(result.segments, hasLength(7));
-        // Chunk 0 keeps its position...
-        expect(result.segments![0].startSeconds, 0.0);
-        // ...and chunk 2 starts at 60s, not 30s: the empty chunk 1
-        // still occupies its 30s slice of the timeline.
-        expect(result.segments![1].startSeconds, 60.0);
-        expect(result.segments![1].endSeconds, 90.0);
-        // Duration covers all 8 chunks (8 * 30s), not just the 7
-        // chunks that produced text.
-        expect(result.durationSeconds, 240);
-        pipeline.dispose();
-      } finally {
-        dir.deleteSync(recursive: true);
-      }
+      expect(result.extractionMethod, 'chunked_asr');
+      expect(result.segments, isNotNull);
+      expect(result.segments!.length, 2);
+      expect(result.segments![0].text, 'segment 1');
+      expect(result.segments![1].text, 'segment 3');
+      // The empty chunk still occupies ~30s of timeline, so segment 3 starts
+      // just under 60s — not 30s (which would be the drift bug).
+      expect(result.segments![1].startSeconds, closeTo(60.0, 1.5));
+      expect(result.segments![1].endSeconds, closeTo(90.0, 1.5));
+      pipeline.dispose();
+    });
+
+    test('fails loud for an oversized unsupported format (no valid frames)',
+        () async {
+      final dir = Directory.systemTemp.createTempSync('pipeline_unsupported_test_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final largeFile = File('${dir.path}/large.bin');
+      await largeFile
+          .writeAsBytes(Uint8List.fromList(List.filled(2048, 0xAB)));
+
+      final asrEngine = _FakeAsrEngine(
+        available: true,
+        onTranscribeFile: (_) async => const TranscriptionResult(
+          text: 'should not be transcribed',
+          extractionMethod: 'whisper_api',
+        ),
+      );
+
+      final extractor = TranscriptionExtractor(
+        modelId: 'test-model',
+        localeName: 'en',
+        httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+      );
+
+      final pipeline = TranscriptionPipeline(
+        extractor: extractor,
+        asrEngine: asrEngine,
+        maxFileSizeBytes: 1024,
+      );
+
+      final result = await pipeline.transcribe(
+        rawContent: 'file://${largeFile.path}',
+      );
+
+      // The chunker rejects the format rather than byte-splitting it.
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'asr_unsupported_format');
+      expect(result.errorMessage, isNotNull);
+      expect(result.errorMessage, contains('Unsupported audio format'));
+      pipeline.dispose();
+    });
+
+    test('fails loud for oversized file when no ASR key is configured', () async {
+      final dir = Directory.systemTemp.createTempSync('pipeline_noops_test_');
+      addTearDown(() => dir.deleteSync(recursive: true));
+      final largeFile = File('${dir.path}/large.mp3');
+      await largeFile.writeAsBytes(_buildSyntheticMp3(1200));
+
+      final extractor = TranscriptionExtractor(
+        modelId: 'test-model',
+        localeName: 'en',
+        httpClient: _MockHttpClient((_) async => http.Response('', 404)),
+      );
+
+      final pipeline = TranscriptionPipeline(
+        extractor: extractor,
+        asrEngine: NoopAsrEngine(),
+        maxFileSizeBytes: 1024,
+      );
+
+      final result = await pipeline.transcribe(
+        rawContent: 'file://${largeFile.path}',
+      );
+
+      expect(result.text, isEmpty);
+      expect(result.extractionMethod, 'asr_file_too_large');
+      expect(result.errorMessage, isNotNull);
+      pipeline.dispose();
     });
 
     test('detects content type from URL extension', () async {
