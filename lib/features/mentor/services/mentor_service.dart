@@ -28,6 +28,7 @@ import 'mentor_context_builder.dart';
 import 'mentor_wellbeing_service.dart';
 import 'mentor_schedule_handler.dart';
 import 'syllabus_focus_service.dart';
+import 'package:studyking/features/practice/services/readiness_scorer.dart';
 
 class PlanProposal {
   final int days;
@@ -57,6 +58,7 @@ class MentorService {
   final LlmAgent? _agent;
   final LongTermMemory? _longTermMemory;
   final SyllabusFocusService? _focusService;
+  final ReadinessScorer? _readinessScorer;
 
   late final MentorContextBuilder _contextBuilder;
   late final MentorWellbeingService _wellbeingService;
@@ -85,6 +87,7 @@ class MentorService {
     LongTermMemory? longTermMemory,
     SystemMonitorService? systemMonitor,
     SyllabusFocusService? focusService,
+    ReadinessScorer? readinessScorer,
   })  : _database = database,
         _llmService = llmService,
         _masteryService = masteryService,
@@ -101,6 +104,7 @@ class MentorService {
         _agent = agent,
         _longTermMemory = longTermMemory,
         _focusService = focusService,
+        _readinessScorer = readinessScorer,
         _memory = ConversationMemory(
           maxTurns: 50,
           sessionId: 'mentor_$studentId',
@@ -118,6 +122,7 @@ class MentorService {
       systemMonitor: systemMonitor,
       focusService: _focusService,
       llmConfig: _llmService.config,
+      readinessScorer: _readinessScorer,
     );
     _wellbeingService = MentorWellbeingService(
       sessionRepository: _sessionRepository,

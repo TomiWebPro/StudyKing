@@ -19,6 +19,7 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/ingestion/data/repositories/source_repository.dart';
 import 'package:studyking/features/questions/data/repositories/question_repository.dart';
+import 'package:studyking/features/practice/services/readiness_scorer.dart';
 import 'package:studyking/features/mentor/services/mentor_context_builder.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
@@ -210,6 +211,7 @@ MentorContextBuilder _createBuilder({
   SystemMonitorService? systemMonitor,
   SyllabusFocusService? focusService,
   LlmConfiguration? llmConfig,
+  ReadinessScorer? readinessScorer,
 }) {
   return MentorContextBuilder(
     progressTracker: progressTracker ?? _FakeProgressTracker(),
@@ -222,6 +224,7 @@ MentorContextBuilder _createBuilder({
     systemMonitor: systemMonitor,
     focusService: focusService,
     llmConfig: llmConfig,
+    readinessScorer: readinessScorer,
   );
 }
 
@@ -1501,6 +1504,74 @@ void main() {
         expect(result.data, contains('q-0'));
         expect(result.data, isNot(contains('q-6')));
         expect(result.data, isNot(contains('q-7')));
+      });
+    });
+
+    group('readiness scores', () {
+      test('injects per-topic readiness scores matching CreatePracticeSessionTool signal', () async {
+        final now = DateTime.now();
+        final mastery = MasteryState(
+          studentId: 'test-student',
+          topicId: 'topic_alpha',
+          subjectId: 'subj1',
+          accuracy: 0.6,
+          totalAttempts: 10,
+          readinessScore: 0.45,
+          recentAccuracy: [0.7, 0.6, 0.5],
+          lastAttempt: now,
+          lastUpdated: now,
+        );
+        // Inject the mastery maps directly so the scorer does not hit the
+        // MasteryGraphService / Hive — same pattern CreatePracticeSessionTool
+        // tests use for deterministic readiness data.
+        final scorer = ReadinessScorer(
+          topicMasteryMap: {'topic_alpha': mastery},
+        );
+
+        final builder = _createBuilder(readinessScorer: scorer);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // Readiness block header present.
+        expect(result.data, contains('Readiness to practice'));
+        // Topic id and its readiness score (0.45 → 45%) surface.
+        expect(result.data, contains('topic_alpha'));
+        expect(result.data, contains('45%'));
+        // Recent accuracy trend (per-topic past-session accuracy) is injected.
+        expect(result.data, contains('recent:'));
+        expect(result.data, contains('70%'));
+      });
+
+      test('omits readiness block when no scorer is wired', () async {
+        final builder = _createBuilder(); // no readinessScorer
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Readiness to practice')));
+      });
+
+      test('caps the number of per-topic readiness lines', () async {
+        final now = DateTime.now();
+        final scorer = ReadinessScorer(
+          topicMasteryMap: {
+            for (int i = 0; i < 10; i++)
+              'topic_$i': MasteryState(
+                studentId: 'test-student',
+                topicId: 'topic_$i',
+                subjectId: 'subj1',
+                accuracy: 0.5,
+                totalAttempts: 5,
+                readinessScore: 0.3 + (i * 0.05),
+                lastAttempt: now,
+                lastUpdated: now,
+              ),
+          },
+        );
+        final builder = _createBuilder(readinessScorer: scorer);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        // Only _maxReadinessTopics (5) topic lines are injected.
+        expect(result.data, contains('topic_0'));
+        expect(result.data, isNot(contains('topic_9')));
+        expect(result.data, isNot(contains('topic_8')));
       });
     });
   });

@@ -11,7 +11,7 @@ import 'package:studyking/core/services/study_progress_tracker.dart';
 import 'package:studyking/features/mentor/services/mentor_service.dart';
 import 'package:studyking/features/mentor/services/syllabus_focus_service.dart';
 import 'package:studyking/features/practice/providers/practice_providers.dart'
-    show masteryGraphServiceProvider;
+    show masteryGraphServiceProvider, readinessScorerProvider;
 import 'package:studyking/features/questions/providers/question_providers.dart'
     show sourceRepositoryProvider;
 import 'package:studyking/features/planner/providers/planner_providers.dart' show plannerServiceProvider;
@@ -85,5 +85,6 @@ final mentorServiceProvider = Provider.family<MentorService, String>((ref, stude
     longTermMemory: ref.watch(longTermMemoryProvider),
     systemMonitor: ref.watch(systemMonitorServiceProvider),
     focusService: ref.watch(syllabusFocusServiceProvider),
+    readinessScorer: ref.watch(readinessScorerProvider),
   );
 });
