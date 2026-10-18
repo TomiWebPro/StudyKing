@@ -40,6 +40,7 @@ accepted criteria.
 | `PlannerScreen` | `test/features/planner/presentation/planner_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
 | `MentorScreen` | `test/features/mentor/presentation/mentor_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
 | `LessonListScreen` | `test/features/lessons/presentation/lesson_list_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
+| `PracticeScreen` | `test/features/practice/presentation/screens/practice_screen_golden_test.dart` | en/es × 375/1200 × light/dark + text-scale sweep |
 
 ---
 
