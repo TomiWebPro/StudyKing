@@ -29,18 +29,25 @@ class DailyPlansSection extends ConsumerWidget {
           Text(l10n.yourStudySchedule,
               style: Theme.of(context).textTheme.titleLarge),
           SizedBox(height: ResponsiveUtils.verticalSpacing(context)),
-          ...state.plan!.dailyPlans.map(
-            (day) => DailyPlanCard(
-              day: day,
-              onStartTutoring: (topicId, topicTitle, subjectId) {
-                onStartTutoring(
-                  topicId, topicTitle, subjectId,
+          Expanded(
+            child: ListView.builder(
+              itemCount: state.plan!.dailyPlans.length,
+              itemBuilder: (context, index) {
+                final day = state.plan!.dailyPlans[index];
+                return DailyPlanCard(
+                  key: ValueKey('daily_plan_${day.dayNumber}'),
+                  day: day,
+                  onStartTutoring: (topicId, topicTitle, subjectId) {
+                    onStartTutoring(
+                      topicId, topicTitle, subjectId,
+                    );
+                  },
+                  onScheduleLesson: onScheduleLesson,
+                  onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
+                      ? () => _showCatchUpSheet(context, ref, l10n, state)
+                      : null,
                 );
               },
-              onScheduleLesson: onScheduleLesson,
-              onCatchUp: !day.isCompleted && day.date.isBefore(DateTime(DateTime.now().year, DateTime.now().month, DateTime.now().day))
-                  ? () => _showCatchUpSheet(context, ref, l10n, state)
-                  : null,
             ),
           ),
         ],

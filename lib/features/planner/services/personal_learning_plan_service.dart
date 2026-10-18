@@ -889,6 +889,48 @@ class PersonalLearningPlanService {
   }
 
 
+  /// Pre-fetches readiness, title, review-urgency, and subject ID for every
+  /// unique topic in [topicIds] concurrently. Each topic's four lookups are
+  /// batched with `Future.wait`, and the whole set is dispatched in a single
+  /// `Future.wait` so generation is O(unique_topics) async calls instead of
+  /// O(days × topics).
+  Future<Map<String, _TopicData>> _prefetchTopicData(
+    Set<String> topicIds,
+    String studentId,
+  ) async {
+    if (topicIds.isEmpty) return {};
+
+    final results = await Future.wait(
+      topicIds.map((topicId) async {
+        final data = await _fetchTopicData(topicId);
+        return MapEntry(topicId, data);
+      }),
+    );
+    return Map.fromEntries(results);
+  }
+
+  /// Fetches all four data points for a single topic in one batched call.
+  Future<_TopicData> _fetchTopicData(String topicId) async {
+    final readiness = _getReadinessScore(topicId);
+    final title = _getTopicTitle(topicId);
+    final urgency = _getReviewUrgency(topicId);
+    final subject = _getSubjectId(topicId);
+
+    final resolved = await Future.wait<double>([
+      readiness,
+      urgency,
+    ]);
+    final titleStr = await title;
+    final subjectStr = await subject;
+    return _TopicData(
+      readinessScore: resolved[0],
+      title: titleStr,
+      reviewUrgency: resolved[1],
+      subjectId: subjectStr,
+    );
+  }
+
+
   Future<List<DailyPlan>> _generateDailyPlans({
     required String studentId,
     required List<PlanRecommendation> recommendations,
@@ -923,6 +965,12 @@ class PersonalLearningPlanService {
       });
     }
 
+    // Pre-fetch per-topic data (readiness, title, urgency, subjectId) for all
+    // unique topics in parallel, so the day loop is O(days×topics) cache
+    // lookups rather than O(days×topics) sequential async round-trips.
+    final uniqueTopicIds = sortedRecs.map((r) => r.topicId).toSet();
+    final topicData = await _prefetchTopicData(uniqueTopicIds, studentId);
+
     for (var day = 1; day <= config.planDurationDays; day++) {
       final isRestDay = config.includeRestDays && day % config.restDayFrequency == 0;
 
@@ -954,7 +1002,7 @@ class PersonalLearningPlanService {
         final rec = sortedRecs[recommendationIndex];
         final dependency = dependencyMap[rec.topicId];
 
-        final readinessScore = await _getReadinessScore(rec.topicId);
+        final readinessScore = topicData[rec.topicId]?.readinessScore ?? 0.5;
         final isReady = dependency?.isReady(
               completedTopicIds.toList(),
               readinessScore,
@@ -975,9 +1023,9 @@ class PersonalLearningPlanService {
         final estimatedQuestions = (dependency?.estimatedQuestions ?? 5).clamp(1, config.maxQuestionsPerTopic - currentCount);
         final estimatedMinutes = dependency?.estimatedMinutes ?? 15;
 
-        final topicTitle = await _getTopicTitle(rec.topicId);
-        final reviewUrgency = await _getReviewUrgency(rec.topicId);
-        final subjectId = await _getSubjectId(rec.topicId);
+        final topicTitle = topicData[rec.topicId]?.title ?? rec.topicId;
+        final reviewUrgency = topicData[rec.topicId]?.reviewUrgency ?? 0.3;
+        final subjectId = topicData[rec.topicId]?.subjectId ?? '';
 
         priorityTopics.add(PlannedTopic(
           topicId: rec.topicId,
@@ -1212,4 +1260,19 @@ class PersonalLearningPlanService {
       return Result.failure(e.toString());
     }
   }
+}
+
+/// Cached per-topic lookup result used during plan generation to avoid
+/// repeated per-day-per-topic async round-trips.
+class _TopicData {
+  final double readinessScore;
+  final String title;
+  final double reviewUrgency;
+  final String subjectId;
+  const _TopicData({
+    required this.readinessScore,
+    required this.title,
+    required this.reviewUrgency,
+    required this.subjectId,
+  });
 }

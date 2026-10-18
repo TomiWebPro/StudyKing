@@ -105,12 +105,14 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
   /// Mastery states returned by [getAllMasteryStates]; when null the
   /// default two-topic fixture below is used.
   List<MasteryState>? injectedMasteryStates;
+  int getMasteryStateCallCount = 0;
 
   @override
   Future<Result<void>> init() async => Result.success(null);
 
   @override
   Future<Result<MasteryState>> getMasteryState(String studentId, String topicId, {String? subjectId}) async {
+    getMasteryStateCallCount++;
     final state = MasteryState.initial(studentId: studentId, topicId: topicId).copyWith(
       accuracy: 0.8,
       currentStreak: 5,
@@ -198,6 +200,7 @@ class FakeMasteryGraphRepository extends MasteryGraphRepository {
 
 class FakeTopicRepository extends TopicRepository {
   final Map<String, Topic> _topics = {};
+  int getCallCount = 0;
 
   void addTopic(Topic topic) {
     _topics[topic.id] = topic;
@@ -216,6 +219,7 @@ class FakeTopicRepository extends TopicRepository {
 
   @override
   Future<Result<Topic?>> get(String id) async {
+    getCallCount++;
     return Result.success(_topics[id]);
   }
 
@@ -754,6 +758,44 @@ void main() {
         expect(result.isSuccess, isTrue);
         expect(result.data!.metadata, isNotNull);
         expect(result.data!.metadata!.containsKey('advisor_analysis'), isTrue);
+      });
+
+      test('pre-fetches topic data once per unique topic, not per day', () async {
+        // With a long plan, topic lookups must be batched (pre-fetched for all
+        // unique topics before the day loop), not repeated per-day-per-topic.
+        mockTopicRepo.getCallCount = 0;
+        mockRepo.getMasteryStateCallCount = 0;
+
+        mockTopicRepo.addTopic(Topic(
+          id: 'topic1', subjectId: 'subj', title: 'Topic 1',
+          description: '', syllabusText: '',
+        ));
+        mockTopicRepo.addTopic(Topic(
+          id: 'topic2', subjectId: 'subj', title: 'Topic 2',
+          description: '', syllabusText: '',
+        ));
+
+        // 365-day plan with only 2 unique topics.
+        final largeService = PersonalLearningPlanService(
+          masteryService: FakeMasteryGraphService(mockRepo),
+          repository: mockRepo,
+          topicRepository: mockTopicRepo,
+          config: PlanGenerationConfig(planDurationDays: 365),
+          l10n: AppLocalizationsEn(),
+        );
+
+        final result = await largeService.generatePlan('student1');
+
+        expect(result.isSuccess, isTrue);
+        expect(result.data!.dailyPlans.length, equals(365));
+
+        // _getTopicTitle + _getSubjectId each call _topicRepository.get once
+        // per unique topic = 2 × 2 = 4, NOT 2 × 365 × 2.
+        expect(mockTopicRepo.getCallCount, lessThanOrEqualTo(4));
+
+        // _getReadinessScore + _getReviewUrgency each call
+        // getMasteryState once per unique topic = 2 × 2 = 4, NOT 2 × 365 × 2.
+        expect(mockRepo.getMasteryStateCallCount, lessThanOrEqualTo(4));
       });
     });
 
