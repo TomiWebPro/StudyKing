@@ -32,6 +32,8 @@ import 'package:studyking/features/teaching/data/models/evaluation_result.dart';
 import 'package:uuid/uuid.dart';
 import 'package:studyking/features/mentor/services/tools/pre_generate_lesson_tool.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
+import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 
 final _logger = Logger('TutorServiceTest');
 
@@ -202,6 +204,24 @@ class FakeMasteryGraphService extends MasteryGraphService {
     });
     return Result.success(null);
   }
+}
+
+/// Hand-written fake of [PlannerService] that returns a fixed plan from
+/// [loadExistingPlan] without touching Hive. Used to assert that
+/// [TutorService.startLesson] forwards the student's syllabus goals to the
+/// [ConversationManager] (teaching-syllabus-context solidification).
+class FakePlannerService extends PlannerService {
+  PersonalLearningPlan? plan;
+
+  FakePlannerService([this.plan])
+      : super(
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          fixedStudentId: 'student-1',
+        );
+
+  @override
+  Future<Result<PersonalLearningPlan?>> loadExistingPlan() async =>
+      Result.success(plan);
 }
 
 class FixedClock extends Clock {
@@ -705,6 +725,124 @@ void main() {
         );
 
         expect(manager.masteryContext, isNull);
+      });
+
+      test('forwards planner syllabus goals to ConversationManager', () async {
+        // Solidification for teaching-syllabus-context: TutorService.startLesson
+        // must fetch the student's SyllabusGoal[] from PlannerService and pass
+        // them as availableSyllabi so SyllabusSwitchParser receives a non-empty
+        // title list (agent_must_read.md §100: "Student can dynamically switch
+        // syllabi"). Previously the argument was omitted and defaulted to [].
+        final plan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime(2024, 1, 1),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              SyllabusGoal(subjectId: 'chem', subjectTitle: 'Chemistry').toJson(),
+              SyllabusGoal(subjectId: 'phys', subjectTitle: 'Physics').toJson(),
+            ],
+          },
+        );
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          plannerService: FakePlannerService(plan),
+        );
+
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'chem',
+          topicId: 'topic-1',
+          topicTitle: 'Atoms',
+          durationMinutes: 45,
+          localeName: 'en',
+        );
+
+        // availableSyllabi is exactly the list the parser reads as
+        // availableTitles (conversation_manager.dart:208). Non-empty here
+        // means the previously-dead switch path is now reachable.
+        expect(manager.availableSyllabi, isNotEmpty);
+        expect(
+          manager.availableSyllabi.map((g) => g.subjectTitle),
+          containsAll(['Chemistry', 'Physics']),
+        );
+        expect(
+          manager.availableSyllabi
+              .firstWhere((g) => g.subjectTitle == 'Physics')
+              .subjectId,
+          equals('phys'),
+        );
+      });
+
+      test('switches syllabus mid-lesson when planner provides goals', () async {
+        // End-to-end solidification: with syllabi forwarded by TutorService,
+        // a student syllabus-switch utterance is recognised by the parser and
+        // the manager re-scopes — the behaviour that was dead when the title
+        // list was always const [].
+        final plan = PersonalLearningPlan(
+          studentId: 'student-1',
+          generatedAt: DateTime(2024, 1, 1),
+          dailyPlans: [],
+          summary: PlanSummary(
+            totalQuestions: 0,
+            totalMinutes: 0,
+            newTopics: 0,
+            reviewTopics: 0,
+            estimatedCoverage: 0.0,
+            focusAreas: [],
+          ),
+          recommendations: [],
+          metadata: {
+            'syllabus_goals': [
+              SyllabusGoal(subjectId: 'chem', subjectTitle: 'Chemistry').toJson(),
+              SyllabusGoal(subjectId: 'phys', subjectTitle: 'Physics').toJson(),
+            ],
+          },
+        );
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+          plannerService: FakePlannerService(plan),
+        );
+
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'chem',
+          topicId: 'topic-1',
+          topicTitle: 'Atoms',
+          durationMinutes: 45,
+          localeName: 'en',
+        );
+
+        final responses = <String>[];
+        await for (final chunk in manager.sendMessage('/syllabus Physics')) {
+          responses.add(chunk);
+        }
+        expect(responses.join(), contains('Physics'));
+        expect(manager.currentSyllabusId, equals('phys'));
+        expect(manager.currentSyllabusTitle, equals('Physics'));
       });
     });
 
