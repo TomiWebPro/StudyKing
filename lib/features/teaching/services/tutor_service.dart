@@ -388,6 +388,11 @@ class TutorService {
       await _planOrchestrator.recordActivity(
         studentId: session.studentId,
         actualMinutes: _elapsedMinutes(session).clamp(1, 480),
+        // Forwarding actualQuestions keeps tutor-session question participation
+        // visible to the adherence score, matching the practice path and the
+        // vision requirement that all study activities (tutoring, practice,
+        // review) feed daily totals.
+        actualQuestions: session.questionsAsked,
       );
     } catch (e) {
       _logger.w('Failed to record tutor session to plan adapter', e);

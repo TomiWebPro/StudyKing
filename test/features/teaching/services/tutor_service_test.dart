@@ -154,6 +154,9 @@ class FakeExerciseEvaluator extends ExerciseEvaluator {
 
 class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
   bool recordActivityCalled = false;
+  String? lastStudentId;
+  int? lastActualMinutes;
+  int? lastActualQuestions;
 
   FakePlanAdherenceOrchestrator() : super();
 
@@ -165,6 +168,9 @@ class FakePlanAdherenceOrchestrator extends PlanAdherenceOrchestrator {
     String? planId,
   }) async {
     recordActivityCalled = true;
+    lastStudentId = studentId;
+    lastActualMinutes = actualMinutes;
+    lastActualQuestions = actualQuestions;
     return Result.success(null);
   }
 }
@@ -993,6 +999,44 @@ void main() {
         await tutorService.endLesson();
 
         expect(masteryService.recordedAttempts, isEmpty);
+      });
+
+      test('forwards questionsAsked to adherence recordActivity', () async {
+        // Solidification for tutor-lesson-questions-not-recorded-in-adherence:
+        // vision requires all study activities (tutoring, practice, review) to
+        // feed daily adherence totals. The tutor endLesson path was passing
+        // only actualMinutes to recordActivity, leaving actualQuestions at 0.
+        final fakePlan = FakePlanAdherenceOrchestrator();
+        final service = TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          planOrchestrator: fakePlan,
+        );
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          localeName: 'en',
+        );
+        await manager.sendMessage('Hello').toList();
+        manager.recordCorrectAnswer();
+        manager.recordCorrectAnswer();
+        manager.recordCorrectAnswer();
+
+        await service.endLesson();
+
+        expect(fakePlan.recordActivityCalled, isTrue);
+        expect(fakePlan.lastStudentId, equals('student-1'));
+        // actualQuestions must equal session.questionsAsked (== 3 correct
+        // answers recorded), not the default 0 — matching the practice path.
+        expect(fakePlan.lastActualQuestions, equals(3));
+        expect(fakePlan.lastActualMinutes, greaterThan(0));
       });
     });
 
