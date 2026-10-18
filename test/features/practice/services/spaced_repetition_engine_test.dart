@@ -122,6 +122,27 @@ void main() {
       );
       expect(engine.isConceptDue([result.updatedData], now: now), isFalse);
     });
+
+    test('interval growth is capped at maxInterval after many correct reviews',
+        () {
+      QuestionSRData data = const QuestionSRData();
+      for (var i = 0; i < 30; i++) {
+        final result = engine.scheduleReview(
+          questionId: 'q1',
+          grade: 5,
+          currentData: data,
+          now: now,
+        );
+        expect(result.updatedData.previousInterval,
+            lessThanOrEqualTo(SpacedRepetitionEngine.maxInterval));
+        data = result.updatedData;
+      }
+      // After enough correct reviews the interval saturates at the cap
+      // rather than growing indefinitely toward multi-year gaps.
+      expect(data.previousInterval,
+          SpacedRepetitionEngine.maxInterval);
+      expect(data.reviewLog, hasLength(30));
+    });
   });
 
   group('SpacedRepetitionEngine.computeRecallProbability', () {

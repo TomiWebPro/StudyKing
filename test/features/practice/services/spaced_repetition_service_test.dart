@@ -208,6 +208,9 @@ void main() {
       expect(updated.nextReview!.isAfter(DateTime(2026, 1, 1)), isTrue);
       expect(updated.srDataJson, isNotNull);
       expect(updated.srDataJson!.isNotEmpty, isTrue);
+      // The review log must travel with the persisted payload so scheduling
+      // decisions survive a restart (regression guard for the dropped-log bug).
+      expect(updated.srDataJson!, contains('"log"'));
     });
 
     test('returns a failure when the question does not exist', () async {

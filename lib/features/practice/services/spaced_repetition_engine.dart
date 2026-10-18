@@ -128,6 +128,13 @@ class SpacedRepetitionEngine {
   static const Duration initialInterval = Duration(days: 1);
   static const Duration secondInterval = Duration(days: 6);
 
+  /// Maximum interval between reviews. SM-2 intervals grow by `prev × EF`
+  /// on every correct review with no inherent upper bound; without a cap a
+  /// well-known item can drift to multi-year gaps and effectively stop being
+  /// reviewed, which defeats "optimize for retention and mastery" (vision §86).
+  /// 200 days keeps every item revisited at least ~twice a year.
+  static const Duration maxInterval = Duration(days: 200);
+
   const SpacedRepetitionEngine();
 
   SM2Result scheduleReview({
@@ -156,6 +163,9 @@ class SpacedRepetitionEngine {
         newInterval = Duration(
           milliseconds: (prevMs * data.easeFactor).round(),
         );
+        if (newInterval > maxInterval) {
+          newInterval = maxInterval;
+        }
       }
     } else {
       newRepetitions = 0;
@@ -238,6 +248,12 @@ class SpacedRepetitionEngine {
       initialRepetitions = 0;
       initialEaseFactor = defaultEaseFactor;
       initialInterval = null;
+    }
+
+    // Clamp legacy intervals to the same ceiling as live scheduling so a
+    // migrated item does not start with a multi-year gap.
+    if (initialInterval != null && initialInterval > maxInterval) {
+      initialInterval = maxInterval;
     }
 
     final nextReview = initialInterval != null
