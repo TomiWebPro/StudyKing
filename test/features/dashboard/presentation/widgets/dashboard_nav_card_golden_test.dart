@@ -130,5 +130,45 @@ void main() {
         await _expectGolden(entry.value, entry.key);
       }
     });
+
+    // RTL coverage: the card's chevron flips direction based on
+    // `Directionality.of(context)` (lib/features/dashboard/presentation/widgets/
+    // dashboard_nav_card.dart:49). This golden guards that the RTL chevron is
+    // the mirror icon (`chevron_left`) and that layout stays single-line.
+    testWidgets('RTL chevron flips compared to LTR', (tester) async {
+      const locale = Locale('en');
+      const size = Size(375, 120);
+      const theme = ThemeMode.light;
+
+      final ltrPng = await renderWidgetToPng(
+        buildCard(locale),
+        size: size,
+        pixelRatio: 2.0,
+        themeMode: theme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        textDirection: TextDirection.ltr,
+      );
+
+      final rtlPng = await renderWidgetToPng(
+        buildCard(locale),
+        size: size,
+        pixelRatio: 2.0,
+        themeMode: theme,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(rtlPng, isNotEmpty);
+      // LTR and RTL must differ — the chevron icon changes direction.
+      expect(rtlPng, isNot(equals(ltrPng)));
+
+      // Golden assertion for the RTL variant.
+      await _expectGolden(
+        rtlPng,
+        'test/goldens/dashboard_nav_card_en_375_light_rtl.png',
+      );
+    });
   });
 }
