@@ -6,7 +6,13 @@
 /// These tests run **only when the ailab grant model is configured** via:
 ///   flutter test test/integration/agentic_e2e/ailab_model_e2e_test.dart \
 ///     --dart-define=STUDYKING_E2E_MODEL=gemini-2.0-flash \
-///     --dart-define=OPENROUTER_API_KEY=sk-...
+///     --dart-define=OPENROUTER_API_KEY=sk-... \
+///     --dart-define=STUDYKING_E2E_BASE_URL=https://openrouter.ai/api/v1
+///
+/// `STUDYKING_E2E_MODEL` and `OPENROUTER_API_KEY` are required; the tests
+/// skip otherwise. `STUDYKING_E2E_BASE_URL` is optional — set it to point
+/// the grant-model transport at a self-hosted or ailab endpoint, otherwise
+/// the OpenRouter provider default base URL is used.
 ///
 /// When the env vars are absent, tests skip with a clear message —
 /// no crash, no hardcoded keys, no real network calls.
@@ -51,7 +57,9 @@ const String e2eModel = String.fromEnvironment('STUDYKING_E2E_MODEL');
 /// The API key provided via `--dart-define=OPENROUTER_API_KEY=...`.
 const String apiKey = String.fromEnvironment('OPENROUTER_API_KEY');
 
-/// The base URL override for self-hosted or ailab grant endpoints.
+/// The base URL override for self-hosted or ailab grant endpoints, provided
+/// via `--dart-define=STUDYKING_E2E_BASE_URL=...`. Optional — when empty, the
+/// OpenRouter provider's standard base URL is used.
 const String e2eBaseUrl = String.fromEnvironment('STUDYKING_E2E_BASE_URL');
 
 /// Whether the ailab grant model is fully configured.
@@ -63,7 +71,9 @@ const String skipReason =
     'Run with: '
     'flutter test test/integration/agentic_e2e/ailab_model_e2e_test.dart '
     '--dart-define=STUDYKING_E2E_MODEL=gemini-2.0-flash '
-    '--dart-define=OPENROUTER_API_KEY=sk-...';
+    '--dart-define=OPENROUTER_API_KEY=sk-...'
+    ' (--dart-define=STUDYKING_E2E_BASE_URL=https://openrouter.ai/api/v1'
+    ' to override the API base URL)';
 
 /// Tracks how many times the MockClient interceptor was invoked.
 /// Reset at the start of every [buildGrantLlmService] call so each
