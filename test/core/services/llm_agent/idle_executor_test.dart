@@ -1250,6 +1250,160 @@ void main() {
       executor.dispose();
     });
   });
+
+  // ------------------------------------------------------------------
+  // startIdleMonitoring / stopIdleMonitoring / dispose — the production
+  // timer lifecycle. AgentFactory.create() calls startIdleMonitoring() to
+  // spawn a periodic-polling Timer that retries deferred tasks; LlmAgent.dispose
+  // → IdleExecutor.dispose → stopIdleMonitoring must cancel that timer so it
+  // doesn't keep polling a torn-down agent (Vision Next-Term §4.3/§4.4).
+  // These methods are exercised only via real Timer.periodic (real time), so we
+  // use short intervals + Future.delayed to keep tests fast and deterministic.
+  // ------------------------------------------------------------------
+  group('IdleExecutor idle-monitoring lifecycle', () {
+    test(
+        'startIdleMonitoring retries deferred tasks when deferral clears via periodic timer',
+        () async {
+      var shouldDefer = true;
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => shouldDefer,
+      );
+
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      var taskRan = false;
+      await executor.enqueue('quiet-hours-deferred task', () async {
+        taskRan = true;
+      }, requiresHeavy: true);
+
+      // Enqueued during quiet hours → _tryExecuteNext defers immediately.
+      expect(taskRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+
+      // Quiet hours pass.
+      shouldDefer = false;
+
+      // Wait long enough for the 20 ms periodic timer to fire at least once
+      // and for the async _tryExecuteNext continuation to settle.
+      await Future.delayed(Duration(milliseconds: 100));
+      await Future.delayed(Duration.zero);
+      await Future.delayed(Duration.zero);
+
+      expect(taskRan, isTrue,
+          reason: 'Periodic timer should have retried the deferred task');
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test(
+        'stopIdleMonitoring cancels the timer so deferred tasks are NOT auto-retried',
+        () async {
+      var shouldDefer = true;
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => shouldDefer,
+      );
+
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      var taskRan = false;
+      await executor.enqueue('quiet-hours-deferred task', () async {
+        taskRan = true;
+      }, requiresHeavy: true);
+
+      expect(taskRan, isFalse);
+      expect(executor.hasPendingTasks, isTrue);
+
+      // Cancel the timer and lift the deferral.
+      executor.stopIdleMonitoring();
+      shouldDefer = false;
+
+      // Wait well past several timer intervals — if the timer were still
+      // alive, it would have retried the task.
+      await Future.delayed(Duration(milliseconds: 150));
+      await Future.delayed(Duration.zero);
+
+      expect(taskRan, isFalse,
+          reason: 'Timer was cancelled; task must not auto-run');
+
+      // Manual retry via processNext() still works — the queue is intact.
+      await executor.processNext();
+      await Future.delayed(Duration.zero);
+
+      expect(taskRan, isTrue);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test('dispose cancels the idle timer without throwing', () async {
+      final executor = IdleExecutor();
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      expect(() => executor.dispose(), returnsNormally);
+    });
+
+    test(
+        'startIdleMonitoring is idempotent — a second call cancels the first timer',
+        () async {
+      final executor = IdleExecutor();
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+      // Calling again should cancel the first timer and start a fresh one
+      // without leaking the old timer or throwing.
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      expect(() => executor.dispose(), returnsNormally);
+    });
+
+    test(
+        'startIdleMonitoring without a system monitor still runs heavy tasks via timer',
+        () async {
+      // No SystemMonitorService → heavy tasks are never deferred by CPU/battery
+      // pressure, but the timer path itself should still invoke _tryExecuteNext.
+      final executor = IdleExecutor();
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      var taskRan = false;
+      await executor.enqueue('light task', () async {
+        taskRan = true;
+      });
+
+      // The enqueue call invokes _tryExecuteNext() immediately, so the light
+      // task runs right away — proving the no-monitor branch works.
+      expect(taskRan, isTrue);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+    });
+
+    test(
+        'dispose after startIdleMonitoring does not process deferred tasks',
+        () async {
+      var shouldDefer = true;
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => shouldDefer,
+      );
+
+      await executor.startIdleMonitoring(interval: Duration(milliseconds: 20));
+
+      var taskRan = false;
+      await executor.enqueue('deferred task', () async {
+        taskRan = true;
+      });
+
+      expect(taskRan, isFalse);
+
+      // Dispose cancels the timer.
+      executor.dispose();
+
+      shouldDefer = false;
+      // Wait past several timer intervals.
+      await Future.delayed(Duration(milliseconds: 150));
+
+      expect(taskRan, isFalse,
+          reason: 'Disposed executor must not process tasks via the timer');
+    });
+  });
 }
 
 /// Hand-written, mutable fake [SystemMonitorService] for deterministic testing

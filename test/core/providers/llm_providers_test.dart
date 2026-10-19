@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/constants/app_constants.dart';
@@ -5,6 +6,7 @@ import 'package:studyking/core/providers/app_providers.dart';
 import 'package:studyking/core/providers/llm_providers.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm/model_router.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 
 void main() {
   group('llm providers - default values', () {
@@ -247,6 +249,67 @@ void main() {
       addTearDown(() => container.dispose());
       final router = container.read(modelRouterProvider);
       expect(router.resolve(LlmTaskType.classification), equals('google/gemma-2-2b-it'));
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Vision Next-Term §4.3 / §4.4: SystemMonitorService provider wiring.
+  // On web it returns the healthy NoopSystemMonitorService; on other
+  // platforms it returns PlatformSystemMonitorService.
+  // ------------------------------------------------------------------
+  group('systemMonitorServiceProvider', () {
+    test('returns a SystemMonitorService instance', () {
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+
+      final monitor = container.read(systemMonitorServiceProvider);
+      expect(monitor, isA<SystemMonitorService>());
+    });
+
+    test('canRunHeavyPrepNow returns a boolean without throwing', () {
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+
+      final monitor = container.read(systemMonitorServiceProvider);
+      // Must not throw regardless of platform sensor availability.
+      expect(monitor.canRunHeavyPrepNow, isA<bool>());
+    });
+
+    test('on non-web returns PlatformSystemMonitorService', () {
+      if (kIsWeb) return; // Skip on web — provider returns Noop there.
+
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+
+      final monitor = container.read(systemMonitorServiceProvider);
+      expect(monitor, isA<PlatformSystemMonitorService>());
+    });
+
+    test('on web returns NoopSystemMonitorService', () {
+      if (!kIsWeb) return; // Skip on non-web — provider returns Platform there.
+
+      final container = ProviderContainer();
+      addTearDown(() => container.dispose());
+
+      final monitor = container.read(systemMonitorServiceProvider);
+      expect(monitor, isA<NoopSystemMonitorService>());
+      expect(monitor.canRunHeavyPrepNow, isTrue);
+    });
+
+    test('supports dependency injection via overrideWithValue', () {
+      final fake = NoopSystemMonitorService();
+      final container = ProviderContainer(
+        overrides: [
+          systemMonitorServiceProvider.overrideWithValue(fake),
+        ],
+      );
+      addTearDown(() => container.dispose());
+
+      // Behavioural assertion: the override is honoured, proving the provider
+      // supports Riverpod DI so the IdleExecutor tests can inject fakes.
+      expect(container.read(systemMonitorServiceProvider), same(fake));
+      expect(container.read(systemMonitorServiceProvider).canRunHeavyPrepNow,
+          isTrue);
     });
   });
 }
