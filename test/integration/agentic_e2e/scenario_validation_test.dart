@@ -38,6 +38,8 @@ import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.d
 import 'package:studyking/features/mentor/services/tools/modify_plan_tool.dart';
 import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.dart';
 import 'package:studyking/features/mentor/services/tools/schedule_lesson_tool.dart';
+import 'package:studyking/features/mentor/services/tools/schedule_rest_day_tool.dart';
+import 'package:studyking/features/mentor/services/tools/wellbeing_adjust_schedule_tool.dart';
 import 'package:studyking/features/mentor/services/tools/read_source_content_tool.dart';
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
@@ -330,6 +332,111 @@ void main() {
       expect(audit, contains('all needed tools available'));
     });
 
+    test('Step 4: schedule_rest_day real-implementation trace through AgentLoop',
+        () async {
+      // Reproduces the trace from dry-run-test/scenario_overworked_student.md
+      // Step 4: "The system should recommend an automatic rest day."
+      // The real ScheduleRestDayTool is wired through AgentLoop and delegates
+      // to PlannerService.markRestDay(). This proves the tool is reachable
+      // from a realistic student utterance, not just name-listed.
+      final fakeLlm = FakeAgentLlmService([
+        'TOOL_CALL: schedule_rest_day\n'
+        'ARGUMENTS: {"date": "2026-03-01T08:00:00Z"}',
+        'I scheduled a rest day for 2026-03-01 to protect your wellbeing. '
+        'Your streak is preserved and tomorrow\'s lesson is moved.',
+      ]);
+
+      final plannerService = tool_fakes.FakePlannerService();
+      final tool = ScheduleRestDayTool(
+        plannerService: plannerService,
+        localeName: 'en',
+      );
+
+      final registry = ToolRegistry()..register(tool);
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'I am exhausted. Schedule a rest day for tomorrow.',
+        studentId: 'overworked-trace-student',
+        systemPrompt: 'You are a mentor that protects students from burnout.',
+        feature: 'mentor',
+      );
+
+      expect(response.toolCalls, hasLength(1));
+      expect(response.toolCalls.first.toolName, 'schedule_rest_day');
+      expect(response.toolCalls.first.arguments['date'], '2026-03-01T08:00:00Z');
+      expect(plannerService.markRestDayCallCount, 1);
+
+      final result = jsonDecode(response.toolCalls.first.result!);
+      final resultMap = result as Map<String, dynamic>;
+      expect(resultMap['success'], isTrue);
+    });
+
+    test('Step 4: wellbeing_adjust_schedule real-implementation trace through AgentLoop',
+        () async {
+      // Reproduces the trace from dry-run-test/scenario_overworked_student.md
+      // Step 4: the student asks the mentor to set a wellbeing reminder.
+      // The real WellbeingAdjustScheduleTool validates the reminder type and
+      // delegates to the onAdjust callback. This proves the tool is reachable
+      // from a realistic student utterance with argument validation.
+      final fakeLlm = FakeAgentLlmService([
+        'TOOL_CALL: wellbeing_adjust_schedule\n'
+        r'ARGUMENTS: {"reminderType": "break", "time": "15:00"}',
+        'I set a break reminder for 15:00 each day. This helps prevent study '
+        'fatigue and maintains consistent focus.',
+      ]);
+
+      Map<String, dynamic>? receivedArgs;
+      final tool = WellbeingAdjustScheduleTool(
+        localeName: 'en',
+        onAdjust: ({
+          required String reminderType,
+          required String time,
+          required bool enabled,
+          String? note,
+        }) async {
+          receivedArgs = {
+            'reminderType': reminderType,
+            'time': time,
+            'enabled': enabled,
+            'note': note,
+          };
+          return Result.success(null);
+        },
+      );
+
+      final registry = ToolRegistry()..register(tool);
+      final loop = AgentLoop(
+        llmService: fakeLlm,
+        modelId: 'test-model',
+        toolRegistry: registry,
+      );
+
+      final response = await loop.run(
+        userMessage: 'I need a break reminder at 3pm every day.',
+        studentId: 'overworked-wellbeing-trace-student',
+        systemPrompt: 'You are a mentor that protects student wellbeing.',
+        feature: 'mentor',
+      );
+
+      expect(response.toolCalls, hasLength(1));
+      expect(response.toolCalls.first.toolName, 'wellbeing_adjust_schedule');
+      expect(response.toolCalls.first.arguments['reminderType'], 'break');
+      expect(response.toolCalls.first.arguments['time'], '15:00');
+      expect(receivedArgs, isNotNull);
+      expect(receivedArgs!['reminderType'], 'break');
+      expect(receivedArgs!['time'], '15:00');
+
+      final result = jsonDecode(response.toolCalls.first.result!);
+      final resultMap = result as Map<String, dynamic>;
+      expect(resultMap['success'], isTrue);
+      expect(resultMap['reminderType'], 'break');
+    });
+
     test('Step 2: streak-at-risk context IS now injected into mentor prompt', () {
       // Reproduces the context audit from
       // dry-run-test/scenario_overworked_student.md Step 2 (was PARTIAL,
@@ -401,7 +508,7 @@ void main() {
       trace.add('Step 3: PARTIAL — mentor can respond but no wellbeing-specific branching');
       partialCount++;
 
-      trace.add('Step 4: PASS — schedule_rest_day + wellbeing_adjust_schedule tools registered');
+      trace.add('Step 4: PASS — schedule_rest_day + wellbeing_adjust_schedule tools registered and traced through AgentLoop with real implementations');
       trace.add('Step 5: PASS — SystemMonitorService implemented, heavy prep defers under load');
 
       // ignore: avoid_print

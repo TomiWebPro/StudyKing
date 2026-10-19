@@ -54,6 +54,8 @@ import 'package:studyking/features/mentor/services/tools/search_sources_tool.dar
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
 import 'package:studyking/features/mentor/services/tools/suggest_practice_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_provider_tool.dart';
+import 'package:studyking/features/mentor/services/tools/schedule_rest_day_tool.dart';
+import 'package:studyking/features/mentor/services/tools/wellbeing_adjust_schedule_tool.dart';
 import 'package:studyking/features/mentor/services/tools/add_subject_to_plan_tool.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/core/data/models/source_model.dart';
@@ -1859,6 +1861,251 @@ void main() {
         final resultMap = result as Map<String, dynamic>;
         expect(resultMap['success'], isFalse);
         expect(resultMap['error'], contains('subjectId'));
+      });
+    });
+
+    // ---------------------------------------------------------------------------
+    // Wellbeing rest-day and reminder tools (Vision Next-Term §3.1 / §4.3)
+    // (issues/open/e2e-wellbeing-tools-missing-trace.md)
+    // ---------------------------------------------------------------------------
+    group('ScheduleRestDayTool', () {
+      test('reachable through AgentLoop from "schedule a rest day for tomorrow"',
+          () async {
+        // Feeds a realistic student utterance through the real
+        // ScheduleRestDayTool → AgentLoop → PlannerService.markRestDay path.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: schedule_rest_day\n'
+          'ARGUMENTS: {"date": "2026-02-20T10:00:00Z"}',
+          'I scheduled a rest day for you on 2026-02-20. This preserves your '
+          'streak while giving you a planned break — confirm or adjust if needed.',
+        ]);
+
+        final plannerService = tool_fakes.FakePlannerService();
+        final tool = ScheduleRestDayTool(
+          plannerService: plannerService,
+          localeName: 'en',
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'I am overworked — schedule a rest day for tomorrow.',
+          studentId: 'rest-day-student',
+          systemPrompt: 'You are a mentor that protects students from burnout.',
+          feature: 'mentor',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'schedule_rest_day');
+        expect(response.toolCalls.first.arguments['date'], '2026-02-20T10:00:00Z');
+
+        // The real PlannerService.markRestDay was invoked exactly once.
+        expect(plannerService.markRestDayCallCount, 1);
+        expect(plannerService.lastMarkRestDayDate,
+            DateTime.parse('2026-02-20T10:00:00Z'));
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        // DateTime.toIso8601String() includes milliseconds.
+        expect(resultMap['date'], startsWith('2026-02-20T10:00:00'));
+      });
+
+      test('invalid date string returns failure without crashing', () async {
+        // The LLM may emit a relative date like "tomorrow". The tool must
+        // parse defensively and return success: false, not throw.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: schedule_rest_day\nARGUMENTS: {"date": "tomorrow"}',
+        ]);
+
+        final plannerService = tool_fakes.FakePlannerService();
+        final tool = ScheduleRestDayTool(
+          plannerService: plannerService,
+          localeName: 'en',
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Schedule a rest day for tomorrow.',
+          studentId: 'rest-day-fail-student',
+          systemPrompt: 'You are a mentor.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'schedule_rest_day');
+
+        // Tool did NOT call PlannerService.markRestDay — date was unparseable.
+        expect(plannerService.markRestDayCallCount, 0);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isFalse);
+        expect(resultMap['message'], isNotEmpty);
+      });
+    });
+
+    group('WellbeingAdjustScheduleTool', () {
+      test('reachable through AgentLoop from "set a bedtime reminder for 22:00"',
+          () async {
+        // Feeds a realistic student utterance through the real
+        // WellbeingAdjustScheduleTool → callback pattern.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: wellbeing_adjust_schedule\n'
+          r'ARGUMENTS: {"reminderType": "bedtime", "time": "22:00"}',
+          'I set a bedtime reminder for 22:00 to help you wind down earlier. '
+          'This will trigger 10 minutes before bedtime.',
+        ]);
+
+        // Recording callback so we can verify the tool invoked onAdjust
+        // with the correct, validated parameters.
+        Map<String, dynamic>? receivedArgs;
+        final tool = WellbeingAdjustScheduleTool(
+          localeName: 'en',
+          onAdjust: ({
+            required String reminderType,
+            required String time,
+            required bool enabled,
+            String? note,
+          }) async {
+            receivedArgs = {
+              'reminderType': reminderType,
+              'time': time,
+              'enabled': enabled,
+              'note': note,
+            };
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'I keep studying past midnight. Set a bedtime reminder for 22:00.',
+          studentId: 'wellbeing-student',
+          systemPrompt: 'You are a mentor that protects student wellbeing.',
+          feature: 'mentor',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'wellbeing_adjust_schedule');
+
+        // The tool validated and forwarded the parsed arguments to onAdjust.
+        expect(receivedArgs, isNotNull);
+        expect(receivedArgs!['reminderType'], 'bedtime');
+        expect(receivedArgs!['time'], '22:00');
+        expect(receivedArgs!['enabled'], isTrue);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['reminderType'], 'bedtime');
+        expect(resultMap['time'], '22:00');
+      });
+
+      test('invalid reminderType returns failure without invoking onAdjust',
+          () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: wellbeing_adjust_schedule\n'
+          r'ARGUMENTS: {"reminderType": "invalid_type", "time": "22:00"}',
+        ]);
+
+        bool callbackCalled = false;
+        final tool = WellbeingAdjustScheduleTool(
+          localeName: 'en',
+          onAdjust: ({
+            required String reminderType,
+            required String time,
+            required bool enabled,
+            String? note,
+          }) async {
+            callbackCalled = true;
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Set an invalid wellbeing reminder.',
+          studentId: 'wellbeing-fail-student',
+          systemPrompt: 'You are a mentor.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'wellbeing_adjust_schedule');
+
+        // onAdjust was never called — invalid type rejected before persistence.
+        expect(callbackCalled, isFalse);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isFalse);
+        expect(resultMap['message'], isNotEmpty);
+      });
+
+      test('invalid time format returns failure without invoking onAdjust',
+          () async {
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: wellbeing_adjust_schedule\n'
+          r'ARGUMENTS: {"reminderType": "bedtime", "time": "not-a-time"}',
+        ]);
+
+        bool callbackCalled = false;
+        final tool = WellbeingAdjustScheduleTool(
+          localeName: 'en',
+          onAdjust: ({
+            required String reminderType,
+            required String time,
+            required bool enabled,
+            String? note,
+          }) async {
+            callbackCalled = true;
+            return Result.success(null);
+          },
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Set bedtime at an invalid time.',
+          studentId: 'wellbeing-time-fail-student',
+          systemPrompt: 'You are a mentor.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'wellbeing_adjust_schedule');
+        expect(callbackCalled, isFalse);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isFalse);
+        expect(resultMap['message'], isNotEmpty);
       });
     });
 
