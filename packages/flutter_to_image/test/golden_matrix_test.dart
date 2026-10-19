@@ -1,6 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_to_image/flutter_to_image.dart';
+
+/// Built-in Flutter localizations delegates that support both `en` and `es`.
+/// Used by `renderScreenToPng` / `renderScreenGoldenMatrixFull` tests so
+/// MaterialApp doesn't warn about unsupported locales.
+const List<LocalizationsDelegate<dynamic>> _kTestDelegates = [
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
 
 void main() {
   group('buildGoldenPath', () {
@@ -374,6 +384,168 @@ void main() {
       );
 
       expect(result, isEmpty);
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // textDirection (RTL) coverage for the matrix helpers.
+  //
+  // `renderGoldenMatrix` threads `textDirection` through to `renderWidgetToPng`,
+  // but the package's own suite never exercised it. This closes the package-level
+  // RTL gap for the matrix API surface (the main-repo RTL golden
+  // `dashboard_nav_card_golden_test.dart:160` relies on this path).
+  // ---------------------------------------------------------------------------
+  group('renderGoldenMatrix textDirection', () {
+    /// A `Row` with two coloured boxes. `Row` children align to `start`, which
+    /// is the left edge in LTR and the right edge in RTL, so the rendered
+    /// pixels differ between the two directions.
+    Widget directionSensitiveBox() {
+      return SizedBox(
+        width: 100,
+        height: 20,
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.red),
+            ),
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.blue),
+            ),
+          ],
+        ),
+      );
+    }
+
+    testWidgets('rtl produces different bytes from ltr for a direction-sensitive widget',
+        (tester) async {
+      final ltr = await renderGoldenMatrix(
+        directionSensitiveBox(),
+        locales: [const Locale('en')],
+        sizes: [const Size(100, 50)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        pathBuilder: (l, s, t) => buildGoldenPath('dir', l, s, t),
+      );
+      final rtl = await renderGoldenMatrix(
+        directionSensitiveBox(),
+        locales: [const Locale('en')],
+        sizes: [const Size(100, 50)],
+        themeMode: ThemeMode.light,
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+        pathBuilder: (l, s, t) => buildGoldenPath('dir', l, s, t),
+      );
+
+      expect(ltr.values.first, isNotEmpty);
+      expect(rtl.values.first, isNotEmpty);
+      // The Row's `start`-aligned children flip sides, so the pixels differ.
+      expect(rtl.values.first, isNot(equals(ltr.values.first)));
+    });
+  });
+
+  // ---------------------------------------------------------------------------
+  // renderScreenGoldenMatrixFull — the screen-level full matrix helper.
+  //
+  // Each cell builds a FRESH MaterialApp via `screenBuilder`, which is what
+  // prevents the Overlay-entry reuse errors that `renderGoldenMatrixFull`
+  // triggers for screens whose AppBar uses Tooltip/PopupMenuButton. The tests
+  // below render exactly that scenario.
+  // ---------------------------------------------------------------------------
+  group('renderScreenGoldenMatrixFull', () {
+    /// A screen whose `AppBar` has a `Tooltip` (needs an Overlay ancestor,
+    /// provided by the MaterialApp `renderScreenToPng` builds internally).
+    Widget tooltipScreen() {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Demo'),
+          actions: [
+            Tooltip(
+              message: 'Action',
+              child: const Icon(Icons.star),
+            ),
+          ],
+        ),
+        body: const Center(child: Text('Body')),
+      );
+    }
+
+    testWidgets('renders one PNG per locale x size x theme combination', (tester) async {
+      final matrix = await renderScreenGoldenMatrixFull(
+        (_, __) => tooltipScreen(),
+        locales: [const Locale('en'), const Locale('es')],
+        sizes: [const Size(375, 800), const Size(1200, 800)],
+        themeModes: [ThemeMode.light, ThemeMode.dark],
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en'), Locale('es')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('tooltip_screen', locale, size, theme),
+      );
+
+      // 2 locales x 2 sizes x 2 themes = 8 entries.
+      expect(matrix.length, 8);
+
+      for (final entry in matrix.entries) {
+        expect(entry.value, isNotEmpty);
+        // PNG magic bytes (first 4 bytes): 0x89 0x50 0x4E 0x47
+        expect(entry.value[0], 0x89);
+        expect(entry.value[1], 0x50);
+        expect(entry.value[2], 0x4E);
+        expect(entry.value[3], 0x47);
+        expect(entry.key, startsWith('test/goldens/tooltip_screen_'));
+        expect(entry.key, endsWith('.png'));
+      }
+
+      // All matrix dimensions represented in the paths.
+      expect(matrix.keys.where((k) => k.contains('_en_')), hasLength(4));
+      expect(matrix.keys.where((k) => k.contains('_es_')), hasLength(4));
+      expect(matrix.keys.where((k) => k.contains('_light.png')), hasLength(4));
+      expect(matrix.keys.where((k) => k.contains('_dark.png')), hasLength(4));
+    });
+
+    testWidgets('builds a fresh screen per cell (no shared Overlay entry)', (tester) async {
+      var buildCount = 0;
+      final matrix = await renderScreenGoldenMatrixFull(
+        (_, __) {
+          buildCount++;
+          return tooltipScreen();
+        },
+        locales: [const Locale('en')],
+        sizes: [const Size(375, 800), const Size(1200, 800)],
+        themeModes: [ThemeMode.light, ThemeMode.dark],
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('fresh_cell', locale, size, theme),
+      );
+
+      // 1 locale x 2 sizes x 2 themes = 4 cells => 4 distinct builds.
+      expect(matrix.length, 4);
+      expect(buildCount, 4);
+      for (final entry in matrix.entries) {
+        expect(entry.value, isNotEmpty);
+      }
+    });
+
+    testWidgets('returns empty map when a dimension list is empty', (tester) async {
+      final matrix = await renderScreenGoldenMatrixFull(
+        (_, __) => tooltipScreen(),
+        locales: const [],
+        sizes: [const Size(375, 800)],
+        themeModes: [ThemeMode.light],
+        pixelRatio: 1.0,
+        localizationsDelegates: _kTestDelegates,
+        supportedLocales: const [Locale('en')],
+        pathBuilder: (locale, size, theme) =>
+            buildGoldenPath('empty_dim', locale, size, theme),
+      );
+
+      expect(matrix, isEmpty);
     });
   });
 }

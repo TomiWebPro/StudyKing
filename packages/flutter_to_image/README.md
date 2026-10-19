@@ -114,6 +114,34 @@ final goldens = await renderGoldenMatrixFull(
 // goldens now contains 8 entries (2×2×2).
 ```
 
+### `renderScreenGoldenMatrixFull`
+
+Screen-level counterpart of `renderGoldenMatrixFull`. Use this for a
+`MaterialApp`-rooted screen across the full `en`/`es` × phone/desktop ×
+light/dark matrix. Unlike `renderGoldenMatrixFull` (which reuses a single widget
+instance and therefore hits `OverlayEntry`-reuse errors for screens whose
+`AppBar` uses `Tooltip`/`PopupMenuButton`), this helper takes a `screenBuilder`
+invoked **once per cell**, producing a fresh `MaterialApp` (and `Overlay`) each
+time:
+
+```dart
+final goldens = await renderScreenGoldenMatrixFull(
+  (locale, theme) => Scaffold(
+    appBar: AppBar(title: Text('Demo')),
+    body: MyScreen(),
+  ),
+  locales: [const Locale('en'), const Locale('es')],
+  sizes: [const Size(375, 800), const Size(1200, 800)],
+  themeModes: [ThemeMode.light, ThemeMode.dark],
+  localizationsDelegates: AppLocalizations.localizationsDelegates,
+  supportedLocales: AppLocalizations.supportedLocales,
+  pathBuilder: (locale, size, theme) => buildGoldenPath(
+    'my_screen', locale, size, theme,
+  ),
+);
+// goldens now contains 8 entries (2×2×2).
+```
+
 ## Usage in a golden test
 
 ```dart

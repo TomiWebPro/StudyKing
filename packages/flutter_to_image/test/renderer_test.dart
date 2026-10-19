@@ -365,6 +365,101 @@ void main() {
       expect(second, isNotEmpty);
     });
   });
+
+  // ---------------------------------------------------------------------------
+  // textDirection (RTL) coverage.
+  //
+  // `renderWidgetToPng`/`renderWidgetToImageResult` expose a `textDirection`
+  // parameter (a `Directionality` wrapper in renderer.dart) that the main-repo
+  // RTL golden (`dashboard_nav_card_golden_test.dart:150,160`) relies on — yet
+  // the package's own suite never exercised it. These tests close that gap:
+  // RTL must render a valid PNG, must differ from LTR for a direction-sensitive
+  // layout, and must be reflected in `ImageResult`.
+  // ---------------------------------------------------------------------------
+  group('textDirection (RTL)', () {
+    /// A `Row` with two coloured boxes. `Row` children align to `start`, which
+    /// is the left edge in LTR and the right edge in RTL, so this widget's
+    /// pixels differ between the two directions.
+    Widget directionSensitiveBox() {
+      return SizedBox(
+        width: 100,
+        height: 20,
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.red),
+            ),
+            SizedBox(
+              width: 30,
+              height: 30,
+              child: ColoredBox(color: Colors.blue),
+            ),
+          ],
+        ),
+      );
+    }
+
+    testWidgets('RTL produces a valid non-empty PNG', (tester) async {
+      final png = await renderWidgetToPng(
+        const Center(child: Text('RTL')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(png, isNotEmpty);
+      // PNG magic bytes (first 8 bytes).
+      expect(png[0], 0x89);
+      expect(png[1], 0x50);
+      expect(png[2], 0x4E);
+      expect(png[3], 0x47);
+    });
+
+    testWidgets('ImageResult reflects the requested textDirection', (tester) async {
+      final result = await renderWidgetToImageResult(
+        const Center(child: Text('RTL')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(result.pngBytes, isNotEmpty);
+      expect(result.textDirection, TextDirection.rtl);
+    });
+
+    testWidgets('RTL produces different bytes from LTR for a direction-sensitive widget',
+        (tester) async {
+      final ltr = await renderWidgetToPng(
+        directionSensitiveBox(),
+        size: const Size(100, 50),
+        pixelRatio: 1.0,
+        textDirection: TextDirection.ltr,
+      );
+      final rtl = await renderWidgetToPng(
+        directionSensitiveBox(),
+        size: const Size(100, 50),
+        pixelRatio: 1.0,
+        textDirection: TextDirection.rtl,
+      );
+
+      expect(ltr, isNotEmpty);
+      expect(rtl, isNotEmpty);
+      // The Row's `start`-aligned children flip sides, so the pixels differ.
+      expect(rtl, isNot(equals(ltr)));
+    });
+
+    testWidgets('default textDirection is LTR', (tester) async {
+      final result = await renderWidgetToImageResult(
+        const Center(child: Text('Hi')),
+        size: const Size(100, 100),
+        pixelRatio: 1.0,
+      );
+
+      expect(result.textDirection, TextDirection.ltr);
+    });
+  });
 }
 
 /// Decodes PNG bytes back into a ui.Image so we can check dimensions.

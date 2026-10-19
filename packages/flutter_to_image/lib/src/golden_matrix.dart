@@ -206,3 +206,60 @@ Future<Map<String, Uint8List>> renderGoldenTextScaleSweep(
   }
   return results;
 }
+
+/// Renders a full-screen widget (wrapped in a fresh [MaterialApp] per cell)
+/// across a matrix of [locales] × [sizes] × [themeModes] and returns a map of
+/// golden-path → PNG bytes.
+///
+/// This is the screen-level counterpart of [renderGoldenMatrixFull]. Unlike
+/// that helper — which reuses a *single* widget instance across cells (and so
+/// triggers `OverlayEntry` reuse errors for `MaterialApp`-rooted screens whose
+/// `AppBar` uses `Tooltip`/`PopupMenuButton`) — this function takes a
+/// [screenBuilder] that is invoked **once per cell**, producing a fresh widget
+/// tree each time. Each fresh tree is handed to [renderScreenToPng], which builds
+/// its own `MaterialApp`, so `Overlay` entries never collide. This removes the
+/// boilerplate the top-level screen golden tests currently hand-roll (see
+/// `test/features/dashboard/presentation/dashboard_screen_golden_test.dart` and
+/// `test/features/teaching/presentation/tutor_screen_golden_test.dart`).
+///
+/// Every screen placed as `home` must already be wrapped in any needed
+/// `ProviderScope` / `Scaffold` ancestors by [screenBuilder] — `renderScreenToPng`
+/// only adds the `MaterialApp` root.
+///
+/// Must be called from within a `testWidgets` callback so that the
+/// `TestWidgetsFlutterBinding` is in the "in test" state (see
+/// [renderScreenToPng]).
+Future<Map<String, Uint8List>> renderScreenGoldenMatrixFull(
+  Widget Function(Locale locale, ThemeMode theme) screenBuilder, {
+  required List<Locale> locales,
+  required List<Size> sizes,
+  required List<ThemeMode> themeModes,
+  double pixelRatio = kDefaultPixelRatio,
+  double textScale = 1.0,
+  required List<LocalizationsDelegate<dynamic>> localizationsDelegates,
+  required List<Locale> supportedLocales,
+  required GoldenPathBuilder pathBuilder,
+}) async {
+  final results = <String, Uint8List>{};
+
+  for (final locale in locales) {
+    for (final size in sizes) {
+      for (final theme in themeModes) {
+        final path = pathBuilder(locale, size, theme);
+        final png = await renderScreenToPng(
+          screenBuilder(locale, theme),
+          size: size,
+          pixelRatio: pixelRatio,
+          locale: locale,
+          themeMode: theme,
+          textScale: textScale,
+          localizationsDelegates: localizationsDelegates,
+          supportedLocales: supportedLocales,
+        );
+        results[path] = png;
+      }
+    }
+  }
+
+  return results;
+}
