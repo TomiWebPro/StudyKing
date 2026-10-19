@@ -914,6 +914,47 @@ void main() {
         expect(notifier.currentState.isGenerating, false);
         expect(notifier.currentState.error, l10n.failedToGenerateSyllabusPlan);
       });
+
+      test('multi-create 12-subject mixed-duration uses max days and unclamped sum hours', () async {
+        // 12 subjects: mix of 7d/30d/90d at 3h/day — matches issue criteria.
+        final goals = List<SyllabusGoal>.generate(12, (i) {
+          final days = i % 3 == 0 ? 7 : (i % 3 == 1 ? 30 : 90);
+          return SyllabusGoal(
+            subjectId: 'sub-$i',
+            subjectTitle: 'Subject $i',
+            targetDays: days,
+            targetHoursPerDay: 3,
+          );
+        });
+        final dims = PlannerService.computeSyllabusDimensions(goals);
+
+        await notifier.generatePlanFromSyllabus(
+          syllabusGoals: goals,
+          daysValue: dims.days.clamp(1, 365),
+          hoursValue: dims.hours,
+          l10n: l10n,
+        );
+
+        // max days = 90, sum hours = 36 (NOT clamped to 24)
+        expect(fakePlanService.config.planDurationDays, equals(90));
+        expect(fakePlanService.config.targetMinutesPerDay, equals(36 * 60));
+        expect(notifier.currentState.error, isNull);
+      });
+
+      test('rejects duplicate subjects with subjectAlreadyInPlan error', () async {
+        final goals = [
+          SyllabusGoal(subjectId: 'dup', subjectTitle: 'Math', targetDays: 7, targetHoursPerDay: 2),
+          SyllabusGoal(subjectId: 'dup', subjectTitle: 'Science', targetDays: 14, targetHoursPerDay: 3),
+        ];
+        await notifier.generatePlanFromSyllabus(
+          syllabusGoals: goals,
+          daysValue: 14,
+          hoursValue: 5,
+          l10n: l10n,
+        );
+        expect(notifier.currentState.error, l10n.subjectAlreadyInPlan);
+        expect(notifier.currentState.isGenerating, false);
+      });
     });
 
     group('createRoadmap', () {

@@ -18,6 +18,34 @@ class PdfPageText {
   });
 }
 
+/// A single image (figure, chart, diagram) extracted from a PDF page.
+///
+/// Created when the page's `/Resources /XObject` contains an image XObject
+/// (`/Subtype /Image`). The image bytes are the decoded pixel data; for
+/// `DCTDecode` (JPEG) streams the bytes are the raw JPEG file and for
+/// `FlateDecode` streams they are decompressed via zlib.
+class PdfPageImage {
+  final int pageNumber;
+  final Uint8List bytes;
+  final int width;
+  final int height;
+  final int bitsPerComponent;
+  final String colorSpace;
+  final String? filter;
+  final String? name;
+
+  PdfPageImage({
+    required this.pageNumber,
+    required this.bytes,
+    this.width = 0,
+    this.height = 0,
+    this.bitsPerComponent = 0,
+    this.colorSpace = 'Unknown',
+    this.filter,
+    this.name,
+  });
+}
+
 /// Result of extracting text from a PDF document.
 class PdfExtractionResult {
   final String text;
@@ -27,11 +55,17 @@ class PdfExtractionResult {
   /// Per-page text with metadata. `null` when page tracking was not performed.
   final List<PdfPageText>? pages;
 
+  /// Images (figures, charts, diagrams) found on pages. `null` when image
+  /// extraction was not performed; an empty list when the document had no
+  /// images.
+  final List<PdfPageImage>? images;
+
   const PdfExtractionResult({
     required this.text,
     this.pageCount,
     required this.extractionMethod,
     this.pages,
+    this.images,
   });
 }
 
@@ -97,6 +131,7 @@ class PdfExtractor {
           pageCount: parsed.pageCount,
           extractionMethod: 'pdf_text_extracted',
           pages: parsed.pages,
+          images: parsed.images,
         ),
       );
     } catch (e, st) {
@@ -110,8 +145,9 @@ class _ParsedPdf {
   final String text;
   final int? pageCount;
   final List<PdfPageText> pages;
+  final List<PdfPageImage> images;
 
-  _ParsedPdf(this.text, this.pageCount, this.pages);
+  _ParsedPdf(this.text, this.pageCount, this.pages, this.images);
 }
 
 /// Minimal but correct PDF object parser tailored to text extraction.
@@ -150,7 +186,8 @@ class _PdfParser {
     final pagesNode = _parseDict(pagesObj.dict);
 
     final pageTexts = <PdfPageText>[];
-    _collectPages(pagesNode, pageTexts, 0);
+    final pageImages = <PdfPageImage>[];
+    _collectPages(pagesNode, pageTexts, pageImages, 0);
 
     final buffer = StringBuffer();
     for (var i = 0; i < pageTexts.length; i++) {
@@ -162,6 +199,7 @@ class _PdfParser {
       buffer.toString().trim(),
       pageTexts.isNotEmpty ? pageTexts.length : null,
       pageTexts,
+      pageImages,
     );
   }
 
@@ -199,6 +237,7 @@ class _PdfParser {
   void _collectPages(
     Map<String, dynamic> pagesNode,
     List<PdfPageText> out,
+    List<PdfPageImage> imagesOut,
     int depth,
   ) {
     if (depth > 64) {
@@ -212,19 +251,145 @@ class _PdfParser {
       final kidObj = _objects[kidNum];
       if (kidObj == null) continue;
       if (_hasType(kidObj.dict, 'Page')) {
+        final pageNumber = out.length + 1;
         final text = _extractPageText(kidObj);
         out.add(
           PdfPageText(
-            pageNumber: out.length + 1,
+            pageNumber: pageNumber,
             text: text,
             charCount: text.length,
           ),
         );
+        imagesOut.addAll(_extractPageImages(kidObj, pageNumber));
       } else if (_hasType(kidObj.dict, 'Pages')) {
         final childNode = _parseDict(kidObj.dict);
-        _collectPages(childNode, out, depth + 1);
+        _collectPages(childNode, out, imagesOut, depth + 1);
       }
     }
+  }
+
+  // --- Image (figure/chart) extraction for vision-solidification ---
+
+  /// Extracts the `<< ... >>` dictionary following [key] in [dictBody],
+  /// correctly handling nested dictionaries. Returns `null` if not found.
+  String? _findDictValue(String dictBody, String key) {
+    final pattern = RegExp('${RegExp.escape(key)}\\s*<<');
+    final match = pattern.firstMatch(dictBody);
+    if (match == null) return null;
+    final start = match.end - 2; // position of first '<'
+
+    var depth = 0;
+    var i = start;
+    while (i < dictBody.length) {
+      if (i + 1 < dictBody.length &&
+          dictBody[i] == '<' && dictBody[i + 1] == '<') {
+        depth++;
+        i += 2;
+      } else if (i + 1 < dictBody.length &&
+          dictBody[i] == '>' && dictBody[i + 1] == '>') {
+        depth--;
+        i += 2;
+        if (depth == 0) {
+          return dictBody.substring(start, i);
+        }
+      } else {
+        i++;
+      }
+    }
+    return null;
+  }
+
+  /// Finds image XObjects declared in a page's `/Resources /XObject` and
+  /// decodes each into a [PdfPageImage].
+  List<PdfPageImage> _extractPageImages(_PdfObject pageObj, int pageNumber) {
+    final result = <PdfPageImage>[];
+    final pageDict = pageObj.dict;
+
+    final resources = _findDictValue(pageDict, '/Resources');
+    if (resources == null) return result;
+
+    final xobject = _findDictValue(resources, '/XObject');
+    if (xobject == null) return result;
+
+    // Each entry: /Name N N R  (XObject name → indirect object reference)
+    final refRe = RegExp(r'/([A-Za-z][A-Za-z0-9]*)\s+(\d+)\s+(\d+)\s+R');
+    for (final m in refRe.allMatches(xobject)) {
+      final name = m.group(1)!;
+      final objNum = int.parse(m.group(2)!);
+      final imageObj = _objects[objNum];
+      if (imageObj == null) continue;
+
+      // Image XObjects have /Subtype /Image
+      if (!RegExp(r'/Subtype\s*/Image(?![\w])').hasMatch(imageObj.dict)) {
+        continue;
+      }
+
+      final image = _decodeImage(imageObj, pageNumber, name);
+      if (image != null) {
+        result.add(image);
+      }
+    }
+
+    return result;
+  }
+
+  static int? _getInt(String dict, String key) {
+    final m = RegExp('${RegExp.escape(key)}\\s+(\\d+)').firstMatch(dict);
+    return m != null ? int.tryParse(m.group(1)!) : null;
+  }
+
+  static String? _getName(String dict, String key) {
+    final m =
+        RegExp('${RegExp.escape(key)}\\s*/([A-Za-z][A-Za-z0-9]*)')
+            .firstMatch(dict);
+    return m?.group(1);
+  }
+
+  /// Decodes an image XObject's stream bytes into raw pixel data.
+  /// Handles `FlateDecode` (zlib), `DCTDecode` (JPEG), `ASCII85Decode`,
+  /// and uncompressed streams.
+  PdfPageImage? _decodeImage(_PdfObject imageObj, int pageNumber, String name) {
+    final dict = imageObj.dict;
+
+    final width = _getInt(dict, '/Width');
+    final height = _getInt(dict, '/Height');
+    final bitsPerComponent = _getInt(dict, '/BitsPerComponent');
+    final colorSpace = _getName(dict, '/ColorSpace');
+    final filter = _getName(dict, '/Filter');
+
+    final streamBytes = imageObj.streamBytes;
+    if (streamBytes == null) return null;
+
+    Uint8List decodedBytes;
+    if (filter == 'FlateDecode' || filter == 'Fl') {
+      try {
+        decodedBytes = Uint8List.fromList(
+          const ZLibDecoder().decodeBytes(streamBytes),
+        );
+      } catch (e) {
+        PdfExtractor._logger.w(
+          'FlateDecode decompression failed for image $name on page $pageNumber: $e',
+        );
+        decodedBytes = streamBytes;
+      }
+    } else if (filter == 'DCTDecode' || filter == 'DCT') {
+      decodedBytes = streamBytes; // JPEG data — use bytes directly
+    } else if (filter == 'ASCII85Decode' || filter == 'A85') {
+      decodedBytes = _ascii85Decode(streamBytes);
+    } else {
+      decodedBytes = streamBytes; // uncompressed or unknown filter
+    }
+
+    return PdfPageImage(
+      pageNumber: pageNumber,
+      bytes: decodedBytes,
+      width: width ?? 0,
+      height: height ?? 0,
+      bitsPerComponent: bitsPerComponent ?? 0,
+      colorSpace: colorSpace ?? 'Unknown',
+      filter: filter,
+      name: name,
+    );
   }
 
   String _extractPageText(_PdfObject pageObj) {

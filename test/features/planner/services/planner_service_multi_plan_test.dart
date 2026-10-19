@@ -195,4 +195,42 @@ void main() {
       expect((await service.loadExistingPlan()).data?.planId, equals('plan-b'));
     });
   });
+
+  group('PlannerService.computeSyllabusDimensions', () {
+    test('uses max days and sum hours, not average', () {
+      final goals = [
+        SyllabusGoal(subjectId: 's1', subjectTitle: 'Math', targetDays: 7, targetHoursPerDay: 2),
+        SyllabusGoal(subjectId: 's2', subjectTitle: 'Physics', targetDays: 90, targetHoursPerDay: 3),
+        SyllabusGoal(subjectId: 's3', subjectTitle: 'Chemistry', targetDays: 30, targetHoursPerDay: 4),
+      ];
+      final dims = PlannerService.computeSyllabusDimensions(goals);
+      // max days = 90 (not average = 42)
+      expect(dims.days, equals(90));
+      // sum hours = 9 (not clamped to 24 or averaged to 3)
+      expect(dims.hours, equals(9));
+    });
+
+    test('handles 12 subjects with mixed durations', () {
+      // Mix of 7d, 30d, and 90d subjects at 3h/day — exercises the
+      // multi-create mixed-duration scenario from the issue criteria.
+      final goals = List<SyllabusGoal>.generate(12, (i) {
+        final days = i % 3 == 0 ? 7 : (i % 3 == 1 ? 30 : 90);
+        return SyllabusGoal(
+          subjectId: 'sub-$i',
+          subjectTitle: 'Subject $i',
+          targetDays: days,
+          targetHoursPerDay: 3,
+        );
+      });
+      final dims = PlannerService.computeSyllabusDimensions(goals);
+      expect(dims.days, equals(90)); // max
+      expect(dims.hours, equals(36)); // 12 * 3, not clamped
+    });
+
+    test('returns zeros for empty list', () {
+      final dims = PlannerService.computeSyllabusDimensions([]);
+      expect(dims.days, equals(0));
+      expect(dims.hours, equals(0));
+    });
+  });
 }

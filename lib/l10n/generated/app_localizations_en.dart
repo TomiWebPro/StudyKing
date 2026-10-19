@@ -70,7 +70,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String planHoursExceedsDailyCap(int totalHours, int cap) {
-    return 'Total daily hours ($totalHours) exceed the $cap hour limit. They will be capped at $cap.';
+    return 'Total daily hours ($totalHours) exceed the $cap hour recommendation. Consider reducing study load; the plan will still be generated with the full schedule.';
   }
 
   @override

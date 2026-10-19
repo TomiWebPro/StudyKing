@@ -315,6 +315,15 @@ class PlannerNotifier extends StateNotifier<PlannerState> {
     String? name,
     String? existingPlanId,
   }) async {
+    // Reject duplicate subjects within the input — same guard as
+    // addSubjectToPlan (planner_providers.dart). The widget also checks
+    // for immediate feedback, but this keeps the provider self-protecting.
+    final subjectIds = syllabusGoals.map((g) => g.subjectId).toSet();
+    if (subjectIds.length != syllabusGoals.length) {
+      state = state.copyWith(error: l10n.subjectAlreadyInPlan);
+      return;
+    }
+
     state = state.copyWith(isGenerating: true, error: null, successMessage: null);
 
     try {

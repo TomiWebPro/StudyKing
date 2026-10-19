@@ -209,7 +209,7 @@ abstract class AppLocalizations {
   /// Warning when multi-subject daily hours exceed the 24h cap
   ///
   /// In en, this message translates to:
-  /// **'Total daily hours ({totalHours}) exceed the {cap} hour limit. They will be capped at {cap}.'**
+  /// **'Total daily hours ({totalHours}) exceed the {cap} hour recommendation. Consider reducing study load; the plan will still be generated with the full schedule.'**
   String planHoursExceedsDailyCap(int totalHours, int cap);
 
   /// Pluralized phrase for days

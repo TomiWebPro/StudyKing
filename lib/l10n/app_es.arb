@@ -93,7 +93,7 @@
       }
     }
   },
-  "planHoursExceedsDailyCap": "Las horas diarias totales ({totalHours}) exceden el límite de {cap} horas. Se ajustarán a {cap}.",
+  "planHoursExceedsDailyCap": "Las horas diarias totales ({totalHours}) exceden la recomendación de {cap} horas. Considere reducir la carga de estudio; el plan se generará igual con el horario completo.",
   "@planHoursExceedsDailyCap": {
     "description": "Warning when multi-subject daily hours exceed the 24h cap",
     "placeholders": {

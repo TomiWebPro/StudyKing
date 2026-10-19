@@ -8,6 +8,7 @@ import 'package:studyking/features/subjects/providers/subject_repository_provide
 import 'package:studyking/features/subjects/providers/topic_repository_provider.dart';
 import 'package:studyking/features/planner/data/models/personal_learning_plan_model.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
+import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/core/widgets/loading_indicator.dart';
 import 'package:studyking/core/widgets/error_retry_widget.dart';
 import 'package:studyking/features/planner/presentation/widgets/progress_overlay_widget.dart';
@@ -125,13 +126,22 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
         targetHoursPerDay: int.parse(e.hoursController.text),
       )).toList();
 
+      // Duplicate subjects must be rejected — same rule as add-subject path.
+      final subjectIds = syllabusGoals.map((g) => g.subjectId).toSet();
+      if (subjectIds.length != syllabusGoals.length) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10nGen.subjectAlreadyInPlan)),
+        );
+        return;
+      }
+
       // Duration must be the longest goal's target — averaging silently
-      // truncates long subjects (see PlannerService.addSubjectToPlan for the
-      // same rule). Hours are summed (concurrent study); if they exceed the
-      // 24h/day cap, warn the student instead of silently clamping.
-      final overallDays = syllabusGoals.fold<int>(
-          0, (longest, g) => g.targetDays > longest ? g.targetDays : longest);
-      final overallHours = syllabusGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
+      // truncates long subjects (matches PlannerService.addSubjectToPlan).
+      // Hours are summed (not clamped) so the multi-create path and the
+      // add-subject path produce identical plan dimensions for identical inputs.
+      final dims = PlannerService.computeSyllabusDimensions(syllabusGoals);
+      final overallHours = dims.hours;
 
       if (overallHours > 24) {
         if (!mounted) return;
@@ -142,8 +152,8 @@ class _StudyPlanTabState extends ConsumerState<StudyPlanTab> {
 
       await ref.read(plannerProvider.notifier).generatePlanFromSyllabus(
         syllabusGoals: syllabusGoals,
-        daysValue: overallDays.clamp(1, 365),
-        hoursValue: overallHours.clamp(1, 24),
+        daysValue: dims.days.clamp(1, 365),
+        hoursValue: overallHours,
         name: _planNameController.text.trim(),
         l10n: l10nGen,
       );

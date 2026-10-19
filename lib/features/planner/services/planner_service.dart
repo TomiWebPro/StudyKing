@@ -30,6 +30,32 @@ import 'action_executor.dart';
 import 'planner_advisor_strategy.dart';
 class PlannerService {
   static final Logger _logger = const Logger('PlannerService');
+
+  /// Computes the plan duration (longest goal's `targetDays`) and total
+  /// daily hours (sum of per-subject `targetHoursPerDay`) from a list of
+  /// `SyllabusGoal`s.
+  ///
+  /// Goals are studied concurrently, so the plan must last as long as the
+  /// longest goal — averaging silently truncates long subjects. Daily hours
+  /// are summed without clamping; the caller shows a warning when the total
+  /// exceeds a sensible ceiling (see `planHoursExceedsDailyCap`).
+  ///
+  /// Shared by `PlannerService.addSubjectToPlan` (incremental path) and
+  /// `StudyPlanTab._generatePlan` (multi-create path) so both produce
+  /// identical durations for identical inputs.
+  static ({int days, int hours}) computeSyllabusDimensions(
+    List<SyllabusGoal> goals,
+  ) {
+    if (goals.isEmpty) return (days: 0, hours: 0);
+    var maxDays = 0;
+    var sumHours = 0;
+    for (final g in goals) {
+      if (g.targetDays > maxDays) maxDays = g.targetDays;
+      sumHours += g.targetHoursPerDay;
+    }
+    return (days: maxDays, hours: sumHours);
+  }
+
   final PlanRepository planRepo;
   final MasteryGraphService masteryService;
   final MasteryGraphRepository? repository;
@@ -324,20 +350,14 @@ class PlannerService {
     try {
       await planRepo.init();
       await roadmapRepo.init();
-
+      
       final existingGoals = existingPlan.syllabusGoals;
       final combinedGoals = [...existingGoals, newGoal];
-      // Goals are studied concurrently (per-day hours are summed below),
-      // so the plan must last as long as the longest goal. Averaging the
-      // durations would shorten the plan below that goal and silently drop
-      // its remaining topics from every daily plan.
-      final overallDays = combinedGoals.fold<int>(
-          0, (longest, g) => g.targetDays > longest ? g.targetDays : longest);
-      final overallHours = combinedGoals.fold<int>(0, (sum, g) => sum + g.targetHoursPerDay);
+      final dims = PlannerService.computeSyllabusDimensions(combinedGoals);
 
       planService.config = PlanGenerationConfig(
-        planDurationDays: overallDays.clamp(1, 365),
-        targetMinutesPerDay: (overallHours * 60).toDouble(),
+        planDurationDays: dims.days.clamp(1, 365),
+        targetMinutesPerDay: (dims.hours * 60).toDouble(),
         targetQuestionsPerDay: defaultQuestionsPerDay,
       );
 
