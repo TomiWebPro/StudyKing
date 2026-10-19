@@ -374,9 +374,24 @@ class PlannerService {
             .toList();
         final updatedMetadata = Map<String, dynamic>.from(newPlan.metadata ?? {});
         updatedMetadata['previous_plan_dates'] = oldDateRanges;
+        // Preserve pacing state that regeneration would otherwise discard:
+        // the last redistribution marker (so catch-up work already moved onto
+        // future days is not silently re-triggered) plus the student's manual
+        // rest-day/completed-day flags, matched by calendar date so the
+        // monthly subject-add does not reset scheduling decisions the student
+        // already made. (vision §83-84: adapt plans as progress changes;
+        // track actual adherence vs intended schedule.)
+        final lastRedistribution =
+            existingPlan.metadata?['lastRedistributionDate'];
+        if (lastRedistribution != null) {
+          updatedMetadata['lastRedistributionDate'] = lastRedistribution;
+        }
+        final mergedDailyPlans = _mergeDailyPlanState(
+          existingPlan.dailyPlans, newPlan.dailyPlans);
         final preservedNewPlan = newPlan.copyWith(
           planId: existingPlan.planId,
           name: existingPlan.name,
+          dailyPlans: mergedDailyPlans,
           metadata: updatedMetadata,
         );
         await planRepo.savePlan(preservedNewPlan);
@@ -393,6 +408,41 @@ class PlannerService {
       _logger.w('addSubjectToPlan failed', e);
       return Result.failure(e.toString());
     }
+  }
+
+  /// Carries the student's scheduling decisions (manual rest days and
+  /// completed-day flags) from [previous] into [regenerated] by matching
+  /// calendar dates, so a monthly subject-add does not silently reset the
+  /// rest days and completion state already chosen by the student.
+  ///
+  /// Only matching calendar dates are touched; the regenerated plan's
+  /// freshly-derived topics/exercises for the added subject are preserved.
+  /// Days the student left untouched (no rest-day, not completed) are passed
+  /// through unchanged.
+  List<DailyPlan> _mergeDailyPlanState(
+    List<DailyPlan> previous,
+    List<DailyPlan> regenerated,
+  ) {
+    if (previous.isEmpty) return regenerated;
+
+    final stateByDate = <DateTime, ({bool isRestDay, bool isCompleted})>{};
+    for (final d in previous) {
+      stateByDate[d.date.dateOnly] = (
+        isRestDay: d.isRestDay,
+        isCompleted: d.isCompleted,
+      );
+    }
+    if (stateByDate.isEmpty) return regenerated;
+
+    return regenerated.map((d) {
+      final prev = stateByDate[d.date.dateOnly];
+      if (prev == null) return d;
+      if (!prev.isRestDay && !prev.isCompleted) return d;
+      return d.copyWith(
+        isRestDay: prev.isRestDay,
+        isCompleted: prev.isCompleted,
+      );
+    }).toList();
   }
 
   Future<Result<RoadmapModel?>> createRoadmap({

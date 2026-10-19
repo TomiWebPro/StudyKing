@@ -611,6 +611,80 @@ void main() {
       // would yield 18 days and silently drop the physics topics.
       expect(result.data!.planDurationDays, 30);
     });
+
+    test('preserves rest days, completed flags and redistribution marker across regen',
+        () async {
+      // A monthly subject-add regenerates the plan; the student's manually
+      // chosen rest days and completion state — and the redistribution
+      // marker — must survive, matched by calendar date. (vision §83-84:
+      // adapt plans as progress changes; track adherence vs intended schedule.)
+      final existingResult = await service.generatePlanFromSyllabus(
+        syllabusGoals: const [
+          SyllabusGoal(
+            subjectId: 'sub_physics',
+            subjectTitle: 'IB Physics',
+            targetDays: 30,
+            targetHoursPerDay: 2,
+          ),
+        ],
+        daysValue: 30,
+        hoursValue: 2,
+      );
+      expect(existingResult.data, isNotNull);
+      final existingPlan = existingResult.data!;
+
+      // Student manually set a rest day (day 6) and completed day 3, and a
+      // redistribution had already moved catch-up load onto future days.
+      final marked = List<DailyPlan>.generate(existingPlan.dailyPlans.length,
+          (i) {
+        final d = existingPlan.dailyPlans[i];
+        if (i == 5) return d.copyWith(isRestDay: true);
+        if (i == 2) return d.copyWith(isCompleted: true);
+        return d;
+      });
+      final withState = existingPlan.copyWith(
+        dailyPlans: marked,
+        metadata: {'lastRedistributionDate': '2026-01-01T00:00:00Z'},
+      );
+
+      topicRepo.addTopic(Topic(
+        id: 'topic-new',
+        subjectId: 'sub_new',
+        title: 'New Subject',
+        description: '',
+        syllabusText: '',
+      ));
+      masteryRepo.addMasteryState(
+        MasteryState.initial(studentId: 'test-student', topicId: 'topic-new'),
+      );
+
+      final result = await service.addSubjectToPlan(
+        newGoal: const SyllabusGoal(
+          subjectId: 'sub_new',
+          subjectTitle: 'New Subject',
+          targetDays: 90,
+          targetHoursPerDay: 1,
+        ),
+        existingPlan: withState,
+      );
+
+      expect(result.isSuccess, isTrue);
+      expect(result.data, isNotNull);
+      final regenerated = result.data!;
+      // previous_plan_dates and the redistribution marker survive regen.
+      expect(regenerated.metadata?['lastRedistributionDate'],
+          '2026-01-01T00:00:00Z');
+      expect(regenerated.metadata?['previous_plan_dates'], isNotNull);
+      // Day 6 keeps the manual rest-day flag; day 3 keeps completed.
+      final restDay = regenerated.dailyPlans.firstWhere(
+        (d) => d.date.dateOnly == existingPlan.dailyPlans[5].date.dateOnly,
+      );
+      expect(restDay.isRestDay, isTrue);
+      final completedDay = regenerated.dailyPlans.firstWhere(
+        (d) => d.date.dateOnly == existingPlan.dailyPlans[2].date.dateOnly,
+      );
+      expect(completedDay.isCompleted, isTrue);
+    });
   });
 
   group('updateRoadmap catch block', () {
