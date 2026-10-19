@@ -59,6 +59,11 @@ class Timeouts {
   // Default lesson duration (minutes)
   static const int defaultLessonDurationMinutes = 45;
 
+  // Lead time before a lesson at which the upcoming-lesson reminder is
+  // delivered. Matched to the engagement window the foreground
+  // EngagementScheduler scans every 5 minutes (:340 `diff.inMinutes > 30`).
+  static const int lessonReminderLeadMinutes = 30;
+
   // Overwork threshold in hours
   static const double overworkThresholdHours = 4.0;
 }

@@ -7,6 +7,7 @@ import 'package:timezone/data/latest.dart' as tz_data;
 import 'package:timezone/timezone.dart' as tz;
 import '../../l10n/generated/app_localizations.dart';
 import '../constants/app_constants.dart';
+import '../constants/notification_ids.dart';
 import '../errors/result.dart';
 import '../utils/logger.dart';
 import '../utils/number_format_utils.dart';
@@ -440,6 +441,103 @@ class NotificationService {
       _logger.w('Failed to show badge unlocked notification $id', e);
       return Result.failure(e.toString());
     }
+  }
+
+  /// Derives a stable OS notification ID for a lesson session.
+  ///
+  /// Uses a deterministic string hash (not Dart's runtime-salted
+  /// [String.hashCode]) so an alarm scheduled in one process can be
+  /// cancelled from a later process (e.g. after an app restart killed
+  /// the Dart isolate).
+  static int lessonNotificationId(String sessionId) {
+    var hash = 5381;
+    for (final c in sessionId.codeUnits) {
+      hash = ((hash << 5) + hash + c) & 0x7FFFFFFF;
+    }
+    return NotificationIds.lessonReminderBase + hash;
+  }
+
+  /// Schedules a one-shot OS-level lesson-reminder alarm via
+  /// `zonedSchedule` so it fires while the app is backgrounded or
+  /// terminated — independent of the foreground `EngagementScheduler` timer.
+  ///
+  /// The alarm fires [Timeouts.lessonReminderLeadMinutes] before
+  /// [startTime], clamped to at least 1 second in the future so the OS
+  /// does not silently drop a past target when a lesson is booked in the
+  /// final lead window.
+  ///
+  /// The derived ID (see [lessonNotificationId]) is returned so the caller
+  /// can track or cancel it later with [cancelLessonReminder].
+  Future<Result<void>> scheduleLessonReminder({
+    required String sessionId,
+    required String lessonTitle,
+    required DateTime startTime,
+  }) async {
+    try {
+      final l10n = _l10n;
+      if (l10n == null) return Result.failure('l10n not initialized');
+
+      final id = lessonNotificationId(sessionId);
+      final lead = Timeouts.lessonReminderLeadMinutes;
+      final targetTime = startTime.subtract(Duration(minutes: lead));
+
+      final location = await _resolveLocalLocation();
+      final scheduledDate = tz.TZDateTime(
+        location,
+        targetTime.year,
+        targetTime.month,
+        targetTime.day,
+        targetTime.hour,
+        targetTime.minute,
+        targetTime.second,
+      );
+
+      final now = tz.TZDateTime.now(location);
+      final fireDate =
+          scheduledDate.isBefore(now) ? now.add(const Duration(seconds: 1)) : scheduledDate;
+
+      final localeName = l10n.localeName;
+      final timeStr = DateFormat.jm(localeName).format(startTime);
+
+      final androidDetails = AndroidNotificationDetails(
+        NotificationChannelIds.lessons,
+        l10n.notifChannelLessons,
+        channelDescription: l10n.notifChannelLessonsDesc,
+        importance: Importance.high,
+        priority: Priority.high,
+      );
+      final iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
+      final details = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await plugin.zonedSchedule(
+        id,
+        l10n.notifTitleUpcomingLesson,
+        l10n.notificationUpcomingLessonBody(lessonTitle, timeStr),
+        fireDate,
+        details,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+        payload: 'lesson_reminder_$sessionId',
+      );
+      return Result.success(null);
+    } catch (e) {
+      _logger.w('Failed to schedule lesson reminder $sessionId', e);
+      return Result.failure(e.toString());
+    }
+  }
+
+  /// Cancels a previously-armed lesson reminder scheduled by
+  /// [scheduleLessonReminder].
+  Future<Result<void>> cancelLessonReminder(String sessionId) async {
+    return cancelNotification(lessonNotificationId(sessionId));
   }
 
   Future<Result<void>> showLessonReady({

@@ -17,7 +17,9 @@ import 'package:studyking/core/data/repositories/plan_adherence_repository.dart'
 import 'package:studyking/features/planner/data/models/plan_adherence_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/plan_adherence_orchestrator.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/planner/providers/planner_providers.dart';
+import 'package:studyking/core/providers/app_providers.dart' show notificationServiceProvider;
 import 'package:studyking/features/planner/services/planner_service.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
@@ -1919,6 +1921,24 @@ void main() {
 
       final service = container.read(plannerServiceProvider);
       expect(service, isA<PlannerService>());
+    });
+
+    test('consumes notificationServiceProvider via override', () {
+      var wasRead = false;
+      final container = ProviderContainer(
+        overrides: [
+          notificationServiceProvider.overrideWith((ref) {
+            wasRead = true;
+            return NotificationService();
+          }),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container.read(plannerServiceProvider);
+      // The notificationServiceProvider must be read by
+      // plannerServiceProvider; if the wiring is removed this fails.
+      expect(wasRead, isTrue);
     });
   });
 

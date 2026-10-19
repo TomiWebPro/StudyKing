@@ -20,6 +20,7 @@ import 'package:studyking/features/planner/data/repositories/plan_context_reposi
 import 'package:studyking/features/planner/data/repositories/roadmap_repository.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
 import 'package:studyking/features/planner/services/planner_service.dart';
+import 'package:studyking/core/services/notification_service.dart';
 import 'package:studyking/features/planner/services/syllabus_resolver.dart';
 import 'package:studyking/features/practice/data/repositories/mastery_graph_repository.dart';
 import 'package:studyking/features/subjects/data/models/topic_dependency_model.dart';
@@ -383,6 +384,7 @@ PlannerService createPlannerService({
   PlanAdherenceRepository? adherenceRepo,
   PlanContextRepository? planContextRepo,
   LessonAgentService? lessonAgentService,
+  NotificationService? notificationService,
   String? fixedStudentId,
   Clock? clock,
 }) {
@@ -402,5 +404,32 @@ PlannerService createPlannerService({
     lessonAgentService: lessonAgentService,
     fixedStudentId: fixedStudentId ?? 'test-student',
     clock: clock,
+    notificationService: notificationService,
   );
+}
+
+/// Notification service stub that records lesson-reminder arm/cancel
+/// calls instead of touching the platform channel.
+class RecordingNotificationService extends NotificationService {
+  final List<({String sessionId, String lessonTitle, DateTime startTime})>
+      scheduled = [];
+  final List<String> cancelled = [];
+
+  @override
+  Future<Result<void>> scheduleLessonReminder({
+    required String sessionId,
+    required String lessonTitle,
+    required DateTime startTime,
+  }) async {
+    scheduled.add(
+      (sessionId: sessionId, lessonTitle: lessonTitle, startTime: startTime),
+    );
+    return Result.success(null);
+  }
+
+  @override
+  Future<Result<void>> cancelLessonReminder(String sessionId) async {
+    cancelled.add(sessionId);
+    return Result.success(null);
+  }
 }

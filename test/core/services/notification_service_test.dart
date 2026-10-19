@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:intl/date_symbol_data_local.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/notification_service.dart';
@@ -9,6 +10,8 @@ import 'package:studyking/l10n/generated/app_localizations.dart';
 import 'package:studyking/l10n/generated/app_localizations_en.dart';
 import 'package:studyking/l10n/generated/app_localizations_es.dart';
 import 'package:timezone/data/latest.dart' as tz_data;
+import 'package:studyking/core/constants/app_constants.dart';
+import 'package:studyking/core/constants/notification_ids.dart';
 import 'package:timezone/timezone.dart' as tz;
 
 void main() {
@@ -122,8 +125,10 @@ void main() {
     group('showDailyReminder scheduling semantics', () {
       final List<MethodCall> notificationCalls = [];
 
-      setUp(() {
+      setUp(() async {
         notificationCalls.clear();
+        tz_data.initializeTimeZones();
+        await initializeDateFormatting();
         TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
             .setMockMethodCallHandler(
           const MethodChannel('flutter_timezone'),
@@ -766,6 +771,199 @@ void main() {
       expect(service.cancelNotification, isA<Function>());
       expect(service.cancelAll, isA<Function>());
       expect(service.setAppLocalizations, isA<Function>());
+      expect(service.scheduleLessonReminder, isA<Function>());
+      expect(service.cancelLessonReminder, isA<Function>());
+    });
+
+    group('scheduleLessonReminder', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('flutter_timezone'),
+          (MethodCall methodCall) async {
+            if (methodCall.method == 'getLocalTimezone') {
+              return 'Europe/Berlin';
+            }
+            return null;
+          },
+        );
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            if (methodCall.method == 'initialize') return true;
+            return null;
+          },
+        );
+      });
+
+      NotificationService serviceWithLocalizations() {
+        final service = NotificationService();
+        service.setAppLocalizations(AppLocalizationsEn());
+        return service;
+      }
+
+      test('lessonNotificationId is deterministic and offset by the base', () {
+        final id1 = NotificationService.lessonNotificationId('session-abc');
+        final id2 = NotificationService.lessonNotificationId('session-abc');
+        expect(id1, equals(id2));
+        final id3 = NotificationService.lessonNotificationId('session-xyz');
+        expect(id3, isNot(equals(id1)));
+        expect(id1, greaterThanOrEqualTo(NotificationIds.lessonReminderBase));
+        expect(id1, lessThan(NotificationIds.lessonReminderBase + (1 << 31)));
+      });
+
+      test('lessonNotificationId is stable across Dart process restarts', () {
+        final id = NotificationService.lessonNotificationId('test-session-id');
+        expect(id, equals(906197488));
+      });
+
+      test('schedules a one-shot zonedSchedule alarm on the lessons channel with a future TZDateTime',
+          () async {
+        final service = serviceWithLocalizations();
+        final lessonStart = DateTime.now().add(const Duration(hours: 2));
+
+        final result = await service.scheduleLessonReminder(
+          sessionId: 'test-session',
+          lessonTitle: 'Kinematics',
+          startTime: lessonStart,
+        );
+
+        expect(result.isSuccess, isTrue);
+
+        final zonedCalls =
+            notificationCalls.where((c) => c.method == 'zonedSchedule').toList();
+        expect(zonedCalls, hasLength(1));
+
+        final args = zonedCalls.single.arguments as Map<Object?, Object?>;
+
+        final scheduled = DateTime.parse(args['scheduledDateTime'] as String);
+        expect(scheduled.isAfter(DateTime.now()), isTrue,
+            reason: 'the alarm must be scheduled for the future');
+
+        final expectedReminderTime = lessonStart.subtract(
+          Duration(minutes: Timeouts.lessonReminderLeadMinutes),
+        );
+        expect(
+          scheduled.difference(expectedReminderTime).abs() <
+              const Duration(seconds: 2),
+          isTrue,
+        );
+
+        // Verify the notification is posted on the lessons channel.
+        // The zonedSchedule arguments serialize NotificationDetails
+        // under 'platformSpecifics' with an 'android' sub-map.
+        final specifics = args['platformSpecifics'] as Map<Object?, Object?>? ??
+            args['notificationDetails'] as Map<Object?, Object?>?;
+        expect(specifics, isNotNull);
+        final android = specifics!['android'] as Map<Object?, Object?>?;
+        if (android != null) {
+          expect(android['channelId'], NotificationChannelIds.lessons);
+          expect(android['channelName'], 'Lesson Notifications');
+        }
+      });
+
+      test('does not pass matchDateTimeComponents so the alarm is one-shot',
+          () async {
+        final service = serviceWithLocalizations();
+        final lessonStart = DateTime.now().add(const Duration(hours: 2));
+
+        final result = await service.scheduleLessonReminder(
+          sessionId: 'test-session',
+          lessonTitle: 'Kinematics',
+          startTime: lessonStart,
+        );
+
+        expect(result.isSuccess, isTrue);
+
+        final zonedCalls =
+            notificationCalls.where((c) => c.method == 'zonedSchedule').toList();
+        expect(zonedCalls, hasLength(1));
+
+        final args = zonedCalls.single.arguments as Map<Object?, Object?>;
+        expect(args['matchDateTimeComponents'], isNull);
+      });
+
+      test('clamps a past target to now + 1 second', () async {
+        final service = serviceWithLocalizations();
+        final lessonStart = DateTime.now().add(const Duration(minutes: 10));
+
+        final result = await service.scheduleLessonReminder(
+          sessionId: 'test-session',
+          lessonTitle: 'Kinematics',
+          startTime: lessonStart,
+        );
+
+        expect(result.isSuccess, isTrue);
+
+        final zonedCalls =
+            notificationCalls.where((c) => c.method == 'zonedSchedule').toList();
+        expect(zonedCalls, hasLength(1));
+
+        final args = zonedCalls.single.arguments as Map<Object?, Object?>;
+        final scheduled = DateTime.parse(args['scheduledDateTime'] as String);
+        expect(scheduled.isAfter(DateTime.now()), isTrue);
+        expect(
+          scheduled.difference(DateTime.now()).abs() <
+              const Duration(seconds: 3),
+          isTrue,
+        );
+        final expectedPast = lessonStart.subtract(
+          Duration(minutes: Timeouts.lessonReminderLeadMinutes),
+        );
+        expect(scheduled.isAfter(expectedPast), isTrue);
+      });
+
+      test('returns failure when l10n is not set', () async {
+        final service = NotificationService();
+
+        final result = await service.scheduleLessonReminder(
+          sessionId: 'test-session',
+          lessonTitle: 'Kinematics',
+          startTime: DateTime.now().add(const Duration(hours: 1)),
+        );
+
+        expect(result.isFailure, isTrue);
+        expect(result.error, contains('l10n not initialized'));
+        expect(
+          notificationCalls.where((c) => c.method == 'zonedSchedule'),
+          isEmpty,
+        );
+      });
+    });
+
+    group('cancelLessonReminder', () {
+      final List<MethodCall> notificationCalls = [];
+
+      setUp(() {
+        notificationCalls.clear();
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+            .setMockMethodCallHandler(
+          const MethodChannel('dexterous.com/flutter/local_notifications'),
+          (MethodCall methodCall) async {
+            notificationCalls.add(methodCall);
+            if (methodCall.method == 'initialize') return true;
+            return null;
+          },
+        );
+      });
+
+      test('cancels the notification derived from the session id', () async {
+        final service = NotificationService();
+
+        await service.cancelLessonReminder('session-abc');
+
+        final cancelCalls =
+            notificationCalls.where((c) => c.method == 'cancel').toList();
+        expect(cancelCalls, hasLength(1));
+        final args = cancelCalls.single.arguments as Map<Object?, Object?>;
+        expect(args['id'],
+            NotificationService.lessonNotificationId('session-abc'));
+      });
     });
   });
 }

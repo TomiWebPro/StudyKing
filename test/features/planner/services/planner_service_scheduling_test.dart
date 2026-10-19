@@ -714,4 +714,143 @@ void main() {
       expect(missed.where((m) => m.topicId == 'dismiss-fail-topic'), isNotEmpty);
     });
   });
+
+  group('lesson reminder OS scheduling', () {
+    late RecordingNotificationService notifService;
+    late FakeSessionRepository sessionRepo;
+    late PlannerService svc;
+
+    setUp(() {
+      notifService = RecordingNotificationService();
+      sessionRepo = FakeSessionRepository();
+      svc = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: sessionRepo,
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+        notificationService: notifService,
+      );
+    });
+
+    test('scheduleLesson arms an OS reminder and sets reminderScheduled flag', () async {
+      final futureTime = DateTime.now().add(const Duration(days: 1));
+
+      final result = await svc.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: futureTime,
+        durationMinutes: 45,
+      );
+
+      expect(result.data, isTrue);
+
+      // The OS reminder was armed with the correct lesson title and start.
+      expect(notifService.scheduled, hasLength(1));
+      expect(notifService.scheduled.single.lessonTitle, 'Kinematics');
+      expect(notifService.scheduled.single.startTime, futureTime);
+
+      // The persisted session has the reminderScheduled flag set.
+      final saved = (await sessionRepo.getAll()).data!;
+      expect(saved, hasLength(1));
+      expect(saved.first.reminderScheduled, isTrue);
+    });
+
+    test('scheduleLesson does not arm a reminder for past lessons', () async {
+      final pastTime = DateTime.now().subtract(const Duration(hours: 1));
+
+      final result = await svc.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Past Topic',
+        subjectId: 'sub_physics',
+        scheduledTime: pastTime,
+        durationMinutes: 45,
+      );
+
+      expect(result.data, isTrue);
+      // No OS reminder is armed for past lessons.
+      expect(notifService.scheduled, isEmpty);
+
+      // The session is saved but without the flag.
+      final saved = (await sessionRepo.getAll()).data!;
+      expect(saved.first.reminderScheduled, isFalse);
+    });
+
+    test('cancelLesson cancels the armed OS reminder', () async {
+      final futureTime = DateTime.now().add(const Duration(days: 1));
+      await svc.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: futureTime,
+      );
+
+      final sessionId = (await sessionRepo.getAll()).data!.single.id;
+      await svc.cancelLesson(sessionId);
+
+      // The OS reminder was cancelled.
+      expect(notifService.cancelled, hasLength(1));
+      expect(notifService.cancelled.single, sessionId);
+    });
+
+    test('rescheduleLesson cancels the old alarm and arms a new one', () async {
+      final originalTime = DateTime.now().add(const Duration(days: 1));
+      await svc.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: originalTime,
+      );
+
+      final sessionId = (await sessionRepo.getAll()).data!.single.id;
+      notifService.scheduled.clear();
+      notifService.cancelled.clear();
+
+      final newTime = DateTime.now().add(const Duration(days: 5));
+      await svc.rescheduleLesson(
+        sessionId: sessionId,
+        newStartTime: newTime,
+        durationMinutes: 45,
+      );
+
+      // Old alarm cancelled, new one armed.
+      expect(notifService.cancelled, hasLength(1));
+      expect(notifService.cancelled.single, sessionId);
+      expect(notifService.scheduled, hasLength(1));
+      expect(notifService.scheduled.single.startTime, newTime);
+
+      // The persisted session has the flag set again.
+      final saved = (await sessionRepo.getAll()).data!.single;
+      expect(saved.reminderScheduled, isTrue);
+      expect(saved.startTime, newTime);
+    });
+
+    test('scheduleLesson without notificationService does not arm reminders', () async {
+      // A service created without a NotificationService should still work
+      // and simply skip OS reminder arming.
+      final svcNoNs = createPlannerService(
+        repository: masteryRepo,
+        topicRepository: topicRepo,
+        planRepo: planRepo,
+        roadmapRepo: roadmapRepo,
+        sessionRepo: FakeSessionRepository(),
+        pendingActionRepo: pendingActionRepo,
+        planOrchestrator: planOrchestrator,
+      );
+
+      final result = await svcNoNs.scheduleLesson(
+        topicId: 'topic-1',
+        topicTitle: 'Kinematics',
+        subjectId: 'sub_physics',
+        scheduledTime: DateTime.now().add(const Duration(days: 1)),
+      );
+
+      expect(result.data, isTrue);
+      // No crash, no reminder scheduled.
+      expect(notifService.scheduled, isEmpty);
+    });
+  });
 }

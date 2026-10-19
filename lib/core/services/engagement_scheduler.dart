@@ -330,6 +330,14 @@ class EngagementScheduler {
           _notifiedLessonKeys.remove(lessonKey);
           continue;
         }
+        // Skip lessons whose upcoming-lesson reminder is already armed as
+        // an OS-level one-shot alarm (see PlannerService._armLessonReminder).
+        // The OS alarm fires while the app is backgrounded/terminated and
+        // the foreground timer would otherwise double-fire.
+        if (lesson.reminderScheduled) {
+          _notifiedLessonKeys.remove(lessonKey);
+          continue;
+        }
         final diff = lesson.startTime.difference(now);
         if (diff.inMinutes <= 0) {
           // The reminder window has passed; drop the key so the

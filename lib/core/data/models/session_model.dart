@@ -112,6 +112,13 @@ class Session {
   final String? tutorSessionId;
   final SessionStatus status;
   final TutorMetadata? tutorMetadata;
+  /// Whether an OS-level upcoming-lesson reminder (a one-shot
+  /// `zonedSchedule` alarm) has been armed for this lesson at booking
+  /// time. Persisted so the foreground `EngagementScheduler` can avoid
+  /// double-firing a notification the alarm will already deliver while the
+  /// app is backgrounded/terminated (see `NotificationService.scheduleLessonReminder`
+  /// and `PlannerService._armLessonReminder`).
+  final bool reminderScheduled;
 
   Session({
     required this.id,
@@ -135,6 +142,7 @@ class Session {
     this.tutorSessionId,
     this.status = SessionStatus.planned,
     this.tutorMetadata,
+    this.reminderScheduled = false,
   }) : createdAt = createdAt ?? DateTime.now();
 
   bool get isActive => !completed && endTime == null;
@@ -166,6 +174,7 @@ class Session {
     'tags': tags,
     'createdAt': createdAt.toIso8601String(),
     'tutorMetadata': tutorMetadata?.toJson(),
+    'reminderScheduled': reminderScheduled,
   };
 
   factory Session.fromJson(Map<String, dynamic> json) => Session(
@@ -202,6 +211,7 @@ class Session {
     tutorMetadata: json['tutorMetadata'] != null
         ? TutorMetadata.fromJson(json['tutorMetadata'])
         : null,
+    reminderScheduled: json['reminderScheduled'] as bool? ?? false,
   );
 
   Session copyWith({
@@ -233,6 +243,7 @@ class Session {
     bool clearTutorSessionId = false,
     bool clearPlannedDuration = false,
     bool clearTutorMetadata = false,
+    bool? reminderScheduled,
   }) {
     return Session(
       id: id ?? this.id,
@@ -258,6 +269,7 @@ class Session {
       tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       tutorMetadata: clearTutorMetadata ? null : (tutorMetadata ?? this.tutorMetadata),
+      reminderScheduled: reminderScheduled ?? this.reminderScheduled,
     );
   }
 

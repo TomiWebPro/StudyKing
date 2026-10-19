@@ -46,6 +46,7 @@ class SessionAdapter extends TypeAdapter<Session> {
       lessonReady: fields[18] as bool? ?? true,
       tutorSessionId: fields[19] as String?,
       status: _readStatus(fields[20] as int?),
+      reminderScheduled: fields[21] as bool? ?? false,
     );
   }
 
@@ -86,7 +87,7 @@ class SessionAdapter extends TypeAdapter<Session> {
 
   @override
   void write(BinaryWriter writer, Session obj) {
-    writer.writeByte(21);
+    writer.writeByte(22);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -131,5 +132,7 @@ class SessionAdapter extends TypeAdapter<Session> {
     writer.write(obj.tutorSessionId);
     writer.writeByte(20);
     writer.write(obj.status.index);
+    writer.writeByte(21);
+    writer.write(obj.reminderScheduled);
   }
 }

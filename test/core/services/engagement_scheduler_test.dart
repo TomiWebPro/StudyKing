@@ -1299,6 +1299,45 @@ void main() {
         // retried while the lesson is still inside the window.
         expect(notif.lessonReminderAttempts, 3);
       });
+
+      test('an OS-armed lesson (reminderScheduled == true) is skipped by the foreground timer to avoid double-firing',
+          () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(Session(
+            id: 'lesson-os',
+            studentId: 'test-student',
+            topicId: 'lesson-os',
+            startTime: DateTime.now().add(const Duration(minutes: 20)),
+            status: SessionStatus.planned,
+            reminderScheduled: true,
+          ));
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        // The foreground check should skip lessons already handled by
+        // the OS-level alarm, so no foreground reminder fires.
+        await scheduler.runDailyChecksNow();
+
+        expect(notif.lessonReminders, isEmpty);
+      });
+
+      test('a lesson transitioning from reminderScheduled true to false is notified by the foreground timer',
+          () async {
+        final planner = _FakePlannerService()
+          ..lessons.add(upcomingLesson('lesson-fallback'));
+        final notif = _LessonReminderRecordingNotificationService();
+        final scheduler = lessonScheduler(
+          plannerService: planner,
+          notificationService: notif,
+        );
+
+        // First tick: reminderScheduled is false → foreground fires.
+        await scheduler.runDailyChecksNow();
+        expect(notif.lessonReminders, hasLength(1));
+      });
     });
 
     group('daily reminder schedule sync', () {

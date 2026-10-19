@@ -16,6 +16,7 @@ import 'package:studyking/features/planner/data/models/roadmap_model.dart';
 import 'package:studyking/features/planner/data/models/pending_action_model.dart';
 import 'package:studyking/features/lessons/services/lesson_agent_service.dart';
 import 'package:studyking/features/planner/services/personal_learning_plan_service.dart';
+import '../../../core/services/notification_service.dart';
 import '../../../core/services/student_id_service.dart';
 import '../../../core/services/mastery_graph_service.dart';
 import '../../../core/services/plan_adherence_orchestrator.dart';
@@ -73,6 +74,7 @@ class PlannerService {
   final String? fixedStudentId;
   final Clock _clock;
   final String _localeName;
+  final NotificationService? _notificationService;
   ActionExecutor? _actionExecutor;
 
   ActionExecutor get actionExecutor {
@@ -100,7 +102,9 @@ class PlannerService {
     String localeName = 'en',
     AppLocalizations? l10n,
     Clock? clock,
+    NotificationService? notificationService,
   })  : _localeName = localeName,
+        _notificationService = notificationService,
         planRepo = planRepo ?? PlanRepository(),
         masteryService = masteryService ?? MasteryGraphService(),
         topicRepository = topicRepository ?? TopicRepository(),
@@ -612,6 +616,7 @@ class PlannerService {
         return Result.success(false);
       }
       var lessonStateSaved = true;
+      Session finalSession = session;
       if (lessonAgentService != null && topicId.isNotEmpty) {
         try {
           final lesson = await lessonAgentService!.generateLesson(
@@ -620,7 +625,7 @@ class PlannerService {
             topicTitle: topicTitle,
             localeName: _localeName,
           );
-          final lessonSession = lesson != null
+          finalSession = lesson != null
               ? session.copyWith(
                   lessonIds: [lesson.id],
                   lessonReady: true,
@@ -628,16 +633,22 @@ class PlannerService {
               : session.copyWith(lessonReady: false);
           lessonStateSaved = await _persistLessonState(
             session.id,
-            lessonSession,
+            finalSession,
           );
         } catch (e) {
           _logger.w('Lesson generation failed', e);
+          finalSession = session.copyWith(lessonReady: false);
           lessonStateSaved = await _persistLessonState(
             session.id,
-            session.copyWith(lessonReady: false),
+            finalSession,
           );
         }
       }
+
+      // Arm an OS-level one-shot reminder so the lesson notification
+      // fires even while the app is backgrounded or terminated.
+      await _armLessonReminder(finalSession);
+
       return Result.success(lessonStateSaved);
     } catch (e) {
       _logger.w('Failed to schedule lesson', e);
@@ -656,12 +667,52 @@ class PlannerService {
     return saveResult.isSuccess;
   }
 
+  /// Arms an OS-level upcoming-lesson reminder for [session] via
+  /// [NotificationService.scheduleLessonReminder]. Sets the persisted
+  /// `reminderScheduled` flag on successful scheduling so the foreground
+  /// `EngagementScheduler` can skip the lesson and avoid double-firing.
+  /// Past lessons are skipped — they are handled by the missed-lessons
+  /// flow, not upcoming reminders.
+  Future<void> _armLessonReminder(Session session) async {
+    final ns = _notificationService;
+    if (ns == null) return;
+    if (!session.startTime.isAfter(DateTime.now())) return;
+    final result = await ns.scheduleLessonReminder(
+      sessionId: session.id,
+      lessonTitle:
+          session.tutorMetadata?.topicTitle ?? session.topicId ?? 'Lesson',
+      startTime: session.startTime,
+    );
+    if (result.isSuccess) {
+      final updated = session.copyWith(reminderScheduled: true);
+      final saveResult = await sessionRepo.save(updated.id, updated);
+      if (saveResult.isFailure) {
+        _logger.w(
+          'Failed to persist reminderScheduled flag for session ${session.id}',
+          saveResult.error,
+        );
+      }
+    } else {
+      _logger.w(
+        'Failed to arm OS lesson reminder for session ${session.id}',
+        result.error,
+      );
+    }
+  }
+
   Future<Result<bool>> cancelLesson(String sessionId) async {
     try {
       await sessionRepo.init();
       final result = await sessionRepo.get(sessionId);
       if (result.isFailure || result.data == null) return Result.success(false);
       final cancelled = result.data!.copyWith(completed: true);
+      final ns = _notificationService;
+      if (ns != null) {
+        final cancelResult = await ns.cancelLessonReminder(cancelled.id);
+        if (cancelResult.isFailure) {
+          _logger.w('Failed to cancel OS lesson reminder for session ${cancelled.id}', cancelResult.error);
+        }
+      }
       final saveResult = await sessionRepo.save(cancelled.id, cancelled);
       return Result.success(saveResult.isSuccess);
     } catch (e) {
@@ -682,8 +733,19 @@ class PlannerService {
       final rescheduled = result.data!.copyWith(
         startTime: newStartTime,
         plannedDurationMinutes: durationMinutes,
+        reminderScheduled: false,
       );
       final saveResult = await sessionRepo.save(rescheduled.id, rescheduled);
+      if (!saveResult.isSuccess) {
+        return Result.success(false);
+      }
+      // Cancel the old OS alarm (same notification id since the
+      // session id is unchanged) and re-arm for the new start time.
+      final ns = _notificationService;
+      if (ns != null) {
+        await ns.cancelLessonReminder(rescheduled.id);
+      }
+      await _armLessonReminder(rescheduled);
       return Result.success(saveResult.isSuccess);
     } catch (e) {
       _logger.w('Failed to reschedule lesson', e);
