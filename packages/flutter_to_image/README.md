@@ -216,10 +216,33 @@ The returned `ImageComparisonResult` carries:
 ```dart
 final result = await compareImages(expectedPng, actualPng, tolerance: 0.05);
 if (!result.matches) {
-  // result.diffPng is a visual diff you can attach to an issue.
+  // Persist the expected, actual, and diff PNGs to attach to an issue.
+  await savePng(expectedPng, 'issues/open/my_issue_expected.png');
+  await savePng(actualPng, 'issues/open/my_issue_actual.png');
+  await result.saveDiff('issues/open/my_issue_diff.png');
   print('${result.differingPixels} pixels differ (${result.percentDifferent}%)');
 }
 ```
+
+### `savePng` / `ImageComparisonResult.saveDiff`
+
+```dart
+String savePng(Uint8List pngBytes, String path)
+```
+
+Writes any PNG byte array (a rendered screen, an `expected` image, or an
+`actual` image) to `path`, creating parent directories recursively, and
+returns the path. Intended for the vision §1.1 "agent loop" workflow where
+"expected vs actual PNG + diff" artifacts are attached to issues.
+
+The write is synchronous (`dart:io`), so it is unaffected by the `flutter_test`
+`FakeAsync` clock — it may be called from any `test`/`testWidgets` context or
+from dev tooling. Uses `dart:io`, so it is for `flutter test` (VM) / dev
+contexts only, not release app code or the web. A write failure (e.g. `path`
+collides with an existing directory) throws `StateError`.
+
+`ImageComparisonResult.saveDiff(String path)` is a convenience that persists the
+diff PNG returned by `compareImages` (it delegates to `savePng`).
 
 ## Usage in a golden test
 
@@ -243,4 +266,7 @@ testWidgets('DashboardNavCard golden - en, light', (tester) async {
 
 * Font rendering uses the Flutter test font — deterministic across runs.
 * `pixelRatio` is fixed per call so dimensions are stable.
-* No real I/O, network, or GPU calls are made.
+* Rendering makes no real network or GPU calls.
+* `renderWidgetToPng` / `renderScreenToPng` make no disk writes; the optional
+  `savePng` helper performs synchronous `dart:io` file writes for persisting
+  rendered/diff PNGs to disk (intended for test/dev tooling, not rendering).

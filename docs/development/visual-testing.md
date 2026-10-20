@@ -299,21 +299,64 @@ final actual = await renderScreenToPng(/* same args */);
 
 final result = await compareImages(expected, actual);
 if (!result.matches) {
-  // Save result.diffPng + expected + actual as issue attachments.
+  // Persist the expected, actual, and diff PNGs so they can be attached to
+  // an issue for visual review (vision_next_term.md §1.1 agent loop).
+  await savePng(expected, 'issues/open/visual-foo_expected.png');
+  await savePng(actual, 'issues/open/visual-foo_actual.png');
+  await result.saveDiff('issues/open/visual-foo_diff.png');
   print('${result.differingPixels}/${result.totalPixels} pixels differ '
-        '(${result.percentDifferent.toStringAsFixed(2)}%)');
+        '(${result.percentDifferent}%)');
 }
 ```
 
 Must be called from within a `testWidgets` callback (same as
 `renderWidgetToPng`) because PNG decoding and PNG encoding perform real
 engine async work that the test binding's FakeAsync clock cannot drive.
+`savePng` / `ImageComparisonResult.saveDiff` may be called outside
+`runAsync`: their underlying write is synchronous (`dart:io` `File` APIs), so
+it is unaffected by the FakeAsync clock — unlike `compareImages`, they do not
+need a `testWidgets` binding and are safe to call from dev tooling.
 
 The package's own test suite (`packages/flutter_to_image/test/diff_test.dart`)
 verifies: identical images match, different images differ, diff PNG is a
 valid PNG with correct dimensions, tolerance boundary behaviour, custom
 highlight colour, dimension-mismatch throws `StateError`, and `percentDifferent`
-is correct for 0 % and 100 % diffs.
+is correct for 0 % and 100 % diffs. (`packages/flutter_to_image/test/file_io_test.dart`)
+verifies `savePng` writes byte-exact files, creates nested parent dirs, and
+that `ImageComparisonResult.saveDiff` persists the diff PNG.
+
+### `savePng` / `ImageComparisonResult.saveDiff`
+
+```dart
+String savePng(Uint8List pngBytes, String path)
+Future<String> ImageComparisonResult.saveDiff(String path)
+```
+
+`savePng` writes any PNG byte array — a rendered screen, an `expected` image,
+or an `actual` image — to `path` on disk, creating parent directories
+recursively, and returns the path. `ImageComparisonResult.saveDiff` is a
+convenience that persists the diff PNG returned by `compareImages` (delegating
+to `savePng`). Together they let an agent/loop emit the
+"expected vs actual PNG + diff" artifacts the vision calls for to attach to
+issues (see `docs/vision_next_term.md` §1.1 agent loop):
+
+```dart
+final expected = await renderScreenToPng(...);
+final actual = await renderScreenToPng(...);
+final result = await compareImages(expected, actual);
+if (!result.matches) {
+  await savePng(expected, 'issues/open/visual-foo_expected.png');
+  await savePng(actual, 'issues/open/visual-foo_actual.png');
+  await result.saveDiff('issues/open/visual-foo_diff.png');
+}
+```
+
+Both helpers perform a synchronous `dart:io` write, so they are unaffected by
+the `flutter_test` `FakeAsync` clock and need no `runAsync` — they can be
+called from any `test`/`testWidgets` context or from dev tooling. They use
+`dart:io` and are therefore for `flutter test` (VM) / dev contexts only, not
+release app code or the web. A write failure (e.g. `path` is an existing
+directory) throws `StateError`.
 
 ---
 

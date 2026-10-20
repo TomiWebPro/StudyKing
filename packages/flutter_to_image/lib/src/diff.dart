@@ -4,6 +4,8 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'file_io.dart';
+
 /// Result of comparing two images with [compareImages].
 ///
 /// Provides pixel-level difference metadata and a visual diff PNG that can
@@ -50,6 +52,24 @@ class ImageComparisonResult {
     required this.width,
     required this.height,
   });
+
+  /// Persists this comparison's [diffPng] to [path] on disk and returns [path].
+  ///
+  /// Convenience for the vision §1.1 agent loop: when [compareImages] detects a
+  /// difference, save the highlighted diff PNG to attach to an issue for visual
+  /// review (alongside the `expected` and `actual` PNGs, each saved via
+  /// [savePng]). Delegates to [savePng]; see it for FakeAsync / `dart:io`
+  /// caveats.
+  ///
+  /// ```dart
+  /// final result = await compareImages(expected, actual);
+  /// if (!result.matches) {
+  ///   await savePng(expected, 'issues/open/visual-foo_expected.png');
+  ///   await savePng(actual, 'issues/open/visual-foo_actual.png');
+  ///   await result.saveDiff('issues/open/visual-foo_diff.png');
+  /// }
+  /// ```
+  Future<String> saveDiff(String path) => savePng(diffPng, path);
 }
 
 /// Compares two PNG images pixel-by-pixel and returns an [ImageComparisonResult].
@@ -84,9 +104,10 @@ class ImageComparisonResult {
 ///
 /// final result = await compareImages(expected, actual);
 /// if (!result.matches) {
-///   // Attach result.diffPng to the issue for visual review.
-///   print('${result.differingPixels}/${result.totalPixels} pixels differ '
-///         '(${result.percentDifferent.toStringAsFixed(2)}%)');
+///   // Persist expected / actual / diff PNGs to attach to the issue.
+///   await savePng(expected, 'issues/open/my_issue_expected.png');
+///   await savePng(actual, 'issues/open/my_issue_actual.png');
+///   await result.saveDiff('issues/open/my_issue_diff.png');
 /// }
 /// ```
 ///
