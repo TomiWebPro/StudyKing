@@ -451,6 +451,7 @@ void main() {
           studentId: 'stu1',
           subjectId: 'chem',
           topicId: 'orgo',
+          topicConfidence: '0.85',
           chunks: jsonStr,
         ));
 
@@ -463,6 +464,7 @@ void main() {
         expect(matches[0].sourceType, 'pdf');
         expect(matches[0].subjectId, 'chem');
         expect(matches[0].topicId, 'orgo');
+        expect(matches[0].topicConfidence, '0.85');
         expect(matches[0].chunkIndex, 0);
         expect(matches[0].pageStart, 102);
         expect(matches[0].pageEnd, 105);
@@ -830,6 +832,7 @@ void main() {
           chunks: '[{"idx":0}]',
           extractionMeta: '{"pages":3}',
           createdAt: now,
+          topicConfidence: '0.92',
         );
         await repo.create(source);
         final result = await repo.get('full');
@@ -852,6 +855,7 @@ void main() {
         expect(result.data!.chunks, '[{"idx":0}]');
         expect(result.data!.extractionMeta, '{"pages":3}');
         expect(result.data!.createdAt, now);
+        expect(result.data!.topicConfidence, '0.92');
       });
 
       test('empty generatedQuestionIds round-trips', () async {
@@ -1023,12 +1027,13 @@ class _TestSourceAdapter extends TypeAdapter<Source> {
       chunks: fields[15] as String? ?? '',
       extractionMeta: fields[16] as String? ?? '',
       createdAt: fields[17] as DateTime?,
+      topicConfidence: fields[24] as String? ?? '',
     );
   }
 
   @override
   void write(BinaryWriter writer, Source obj) {
-    writer.writeByte(18);
+    writer.writeByte(19);
     writer.writeByte(0);
     writer.write(obj.id);
     writer.writeByte(1);
@@ -1065,5 +1070,7 @@ class _TestSourceAdapter extends TypeAdapter<Source> {
     writer.write(obj.extractionMeta);
     writer.writeByte(17);
     writer.write(obj.createdAt);
+    writer.writeByte(24);
+    writer.write(obj.topicConfidence);
   }
 }

@@ -137,5 +137,44 @@ void main() {
 
       expect(restored.figuresJson, figuresJson);
     });
+
+    test('round-trips topicConfidence field', () {
+      final adapter = SourceAdapter();
+      final source = Source(
+        id: 'src5',
+        title: 'Confidence Source',
+        type: SourceType.pdf,
+        topicId: 'topic-1',
+        topicConfidence: '0.92',
+      );
+
+      final writeCache = <int, dynamic>{};
+      final writer = TestBinaryWriter(writeCache);
+      adapter.write(writer, source);
+
+      final reader = TestBinaryReader(writeCache);
+      final restored = adapter.read(reader);
+
+      expect(restored.topicConfidence, '0.92');
+      expect(restored.topicId, 'topic-1');
+    });
+
+    test('round-trips default topicConfidence when empty', () {
+      final adapter = SourceAdapter();
+      final source = Source(
+        id: 'src6',
+        title: 'No Confidence',
+        type: SourceType.pdf,
+      );
+
+      final writeCache = <int, dynamic>{};
+      final writer = TestBinaryWriter(writeCache);
+      adapter.write(writer, source);
+
+      final reader = TestBinaryReader(writeCache);
+      final restored = adapter.read(reader);
+
+      expect(restored.topicConfidence, '');
+    });
   });
 }

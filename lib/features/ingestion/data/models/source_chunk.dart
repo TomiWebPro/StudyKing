@@ -70,6 +70,7 @@ class SourceChunkSearchMatch {
   final String sourceType;
   final String? subjectId;
   final String? topicId;
+  final String? topicConfidence;
   final int chunkIndex;
   final int? pageStart;
   final int? pageEnd;
@@ -82,6 +83,7 @@ class SourceChunkSearchMatch {
     required this.sourceType,
     this.subjectId,
     this.topicId,
+    this.topicConfidence,
     required this.chunkIndex,
     this.pageStart,
     this.pageEnd,
@@ -102,5 +104,6 @@ class SourceChunkSearchMatch {
         'excerpt': excerpt,
         if (subjectId != null && subjectId!.isNotEmpty) 'subjectId': subjectId,
         if (topicId != null && topicId!.isNotEmpty) 'topicId': topicId,
+        if (topicConfidence != null && topicConfidence!.isNotEmpty) 'topicConfidence': topicConfidence,
       };
 }

@@ -84,6 +84,16 @@ class Source extends HiveObject {
   @HiveField(23, defaultValue: '')
   final String figuresJson;
 
+  /// Confidence (0.0–1.0) that the chunk→topic classification assigned to this
+  /// source's [topicId] is correct — the winning vote share from
+  /// [ChunkedContentProcessor.classifyChunks]. Persisted so the mentor LLM can
+  /// hedge low-confidence citations instead of treating every topic link as
+  /// authoritative (agent_must_read.md §9 correctness mandate;
+  /// vision_next_term.md §4.3 validation status). Empty string when no
+  /// classification has run (e.g. single-chunk path or syllabus-only source).
+  @HiveField(24, defaultValue: '')
+  final String topicConfidence;
+
   Source({
     required this.id,
     required this.title,
@@ -109,6 +119,7 @@ class Source extends HiveObject {
     this.generatedStudyGuideId = '',
     this.generatedConceptMapId = '',
     this.figuresJson = '',
+    this.topicConfidence = '',
   });
 
   ProcessingStatus get statusEnum => ProcessingStatus.values.firstWhere(
@@ -158,6 +169,7 @@ class Source extends HiveObject {
     'generatedStudyGuideId': generatedStudyGuideId,
     'generatedConceptMapId': generatedConceptMapId,
     'figuresJson': figuresJson,
+    'topicConfidence': topicConfidence,
   };
 
   factory Source.fromJson(Map<String, dynamic> json) => Source(
@@ -194,6 +206,7 @@ class Source extends HiveObject {
     generatedStudyGuideId: json['generatedStudyGuideId'] as String? ?? '',
     generatedConceptMapId: json['generatedConceptMapId'] as String? ?? '',
     figuresJson: json['figuresJson'] as String? ?? '',
+    topicConfidence: json['topicConfidence'] as String? ?? '',
   );
 
   Source copyWith({
@@ -221,6 +234,7 @@ class Source extends HiveObject {
     String? generatedStudyGuideId,
     String? generatedConceptMapId,
     String? figuresJson,
+    String? topicConfidence,
   }) {
     return Source(
       id: id ?? this.id,
@@ -247,6 +261,7 @@ class Source extends HiveObject {
       generatedStudyGuideId: generatedStudyGuideId ?? this.generatedStudyGuideId,
       generatedConceptMapId: generatedConceptMapId ?? this.generatedConceptMapId,
       figuresJson: figuresJson ?? this.figuresJson,
+      topicConfidence: topicConfidence ?? this.topicConfidence,
     );
   }
 }

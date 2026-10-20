@@ -595,6 +595,58 @@ void main() {
         expect(result.data, contains('Second Note'));
         expect(result.data, contains('Math: 2'));
       });
+
+       test('injects classification confidence summary when sources have topicConfidence', () async {
+        final planner = _FakePlannerService();
+        planner.setPlan(planWithGoals([
+          {'subjectId': 'math-1', 'subjectTitle': 'Math'},
+        ]));
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 's1',
+            title: 'Algebra Notes',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'math-1',
+            topicId: 'topic-1',
+            topicConfidence: '0.85',
+          ),
+          Source(
+            id: 's2',
+            title: 'Geometry Guide',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+            subjectId: 'math-1',
+            topicId: 'topic-2',
+            topicConfidence: '0.70',
+          ),
+        ]);
+
+        final builder = _createBuilder(plannerService: planner, sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, contains('Source-topic classification confidence'));
+        expect(result.data, contains('2 sources classified'));
+        expect(result.data, contains('avg 77%'));
+      });
+
+       test('omits confidence summary when no sources have topicConfidence', () async {
+        final sourceRepo = _FakeSourceRepo();
+        sourceRepo.setSources([
+          Source(
+            id: 's1',
+            title: 'Untopiced Note',
+            type: SourceType.pdf,
+            studentId: 'test-student',
+          ),
+        ]);
+
+        final builder = _createBuilder(sourceRepository: sourceRepo);
+        final result = await builder.buildContextPrompt();
+        expect(result.isSuccess, isTrue);
+        expect(result.data, isNot(contains('Source-topic classification confidence')));
+      });
     });
 
     group('source content excerpts', () {

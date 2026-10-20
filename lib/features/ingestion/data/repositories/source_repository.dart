@@ -153,6 +153,7 @@ class SourceRepository extends Repository<Source> {
             sourceType: source.type.name,
             subjectId: source.subjectId.isNotEmpty ? source.subjectId : null,
             topicId: source.topicId.isNotEmpty ? source.topicId : null,
+            topicConfidence: source.topicConfidence.isNotEmpty ? source.topicConfidence : null,
             chunkIndex: chunk.chunkIndex,
             pageStart: chunk.pageStart,
             pageEnd: chunk.pageEnd,

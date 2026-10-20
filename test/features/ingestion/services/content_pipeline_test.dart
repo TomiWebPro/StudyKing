@@ -542,6 +542,7 @@ void main() {
       expect(chunked.classifyCalled, isTrue);
       expect(chunked.summarizeCalled, isTrue);
       expect(src.topicId, 'topic-1');
+      expect(src.topicConfidence, '1.00');
       expect(src.summary, 'fake summary');
       expect(src.processingStatus, 'completed');
     });

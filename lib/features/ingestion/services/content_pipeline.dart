@@ -317,6 +317,7 @@ class ContentPipeline {
         updated = _updateStatus(updated, ProcessingStatus.classifying);
 
         String matchedTopicId;
+        String matchedTopicConfidence;
         if (chunks.length > 1) {
           final classificationResult = await _chunkedProcessor.classifyChunks(
             chunks: chunks,
@@ -329,6 +330,7 @@ class ContentPipeline {
             possibleTopics,
             subjectId,
           );
+          matchedTopicConfidence = classificationResult.confidence.toStringAsFixed(2);
           _logger.d('Chunked classification: topic="${classificationResult.topicId}" confidence=${classificationResult.confidence.toStringAsFixed(2)}');
         } else {
           matchedTopicId = await _classifyTopic(
@@ -337,10 +339,14 @@ class ContentPipeline {
             classificationModelId,
             subjectId,
           );
+          matchedTopicConfidence = '';
         }
 
         if (matchedTopicId.isNotEmpty) {
-          updated = updated.copyWith(topicId: matchedTopicId);
+          updated = updated.copyWith(
+            topicId: matchedTopicId,
+            topicConfidence: matchedTopicConfidence,
+          );
           final topicSave = await _saveSource(updated);
           if (topicSave.isFailure) {
             return Result.failure(topicSave.error);

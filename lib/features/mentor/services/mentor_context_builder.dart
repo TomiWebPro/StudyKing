@@ -734,6 +734,40 @@ class MentorContextBuilder {
     if (unattributed.isNotEmpty) {
       buffer.writeln('  ${bullet}Unattributed materials: ${unattributed.length}');
     }
+
+    _appendClassificationConfidence(buffer, sources, bullet);
+  }
+
+  /// Appends a bounded summary of source→topic classification confidence
+  /// (the vote-share score persisted during ingestion) so the mentor LLM can
+  /// assess reliability of topic-link assignments instead of treating every
+  /// citation as authoritative (agent_must_read.md §9 correctness mandate;
+  /// vision_next_term.md §4.3 validation status).
+  ///
+  /// LLM-facing: invariant English per AGENTS.md i18n convention.
+  void _appendClassificationConfidence(
+    StringBuffer buffer,
+    List<Source> sources,
+    String bullet,
+  ) {
+    final scored = sources.where((s) => s.topicId.isNotEmpty && s.topicConfidence.isNotEmpty);
+    final count = scored.length;
+    if (count == 0) return;
+
+    double sum = 0;
+    int parsed = 0;
+
+    for (final s in scored) {
+      final conf = double.tryParse(s.topicConfidence);
+      if (conf == null) continue;
+      sum += conf;
+      parsed++;
+    }
+    if (parsed == 0) return;
+
+    final avg = sum / parsed;
+    final avgPct = formatPercent(avg * 100, _localeName, minFractionDigits: 0, maxFractionDigits: 0);
+    buffer.writeln('$bullet Source-topic classification confidence: $count sources classified, avg $avgPct');
   }
 
   /// Proactively fetches bounded chunk excerpts from the student's ingested
@@ -815,6 +849,15 @@ class MentorContextBuilder {
     final parts = <String>[match.sourceTitle];
     if (match.heading != null && match.heading!.isNotEmpty) {
       parts.add(match.heading!);
+    }
+    if (match.topicConfidence != null && match.topicConfidence!.isNotEmpty) {
+      final confPct = formatPercent(
+        double.parse(match.topicConfidence!) * 100,
+        _localeName,
+        minFractionDigits: 0,
+        maxFractionDigits: 0,
+      );
+      parts.add('topic-confidence $confPct');
     }
     if (match.pageStart != null) {
       final start = match.pageStart!;

@@ -484,6 +484,7 @@ void main() {
         sourceType: 'pdf',
         subjectId: 'chem',
         topicId: 'orgo',
+        topicConfidence: '0.85',
         chunkIndex: 2,
         pageStart: 102,
         pageEnd: 105,
@@ -496,6 +497,7 @@ void main() {
       expect(match.sourceType, 'pdf');
       expect(match.subjectId, 'chem');
       expect(match.topicId, 'orgo');
+      expect(match.topicConfidence, '0.85');
       expect(match.chunkIndex, 2);
       expect(match.pageStart, 102);
       expect(match.pageEnd, 105);
@@ -531,6 +533,51 @@ void main() {
       expect(map['topicId'], 'orgo');
     });
 
+    test('toMap includes topicConfidence when present', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Textbook',
+        sourceType: 'pdf',
+        chunkIndex: 0,
+        topicId: 'orgo',
+        topicConfidence: '0.90',
+        excerpt: 'content',
+      );
+
+      final map = match.toMap();
+
+      expect(map['topicConfidence'], '0.90');
+    });
+
+    test('toMap omits null or empty topicConfidence', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Notes',
+        sourceType: 'pdf',
+        chunkIndex: 0,
+        excerpt: 'Some text',
+      );
+
+      final map = match.toMap();
+
+      expect(map.containsKey('topicConfidence'), isFalse);
+    });
+
+    test('toMap includes empty-string topicConfidence only when non-empty', () {
+      final match = SourceChunkSearchMatch(
+        sourceId: 's1',
+        sourceTitle: 'Notes',
+        sourceType: 'pdf',
+        chunkIndex: 0,
+        topicConfidence: '',
+        excerpt: 'Some text',
+      );
+
+      final map = match.toMap();
+
+      expect(map.containsKey('topicConfidence'), isFalse);
+    });
+
     test('toMap omits null optional fields', () {
       final match = SourceChunkSearchMatch(
         sourceId: 's1',
@@ -552,6 +599,7 @@ void main() {
       expect(map.containsKey('heading'), isFalse);
       expect(map.containsKey('subjectId'), isFalse);
       expect(map.containsKey('topicId'), isFalse);
+      expect(map.containsKey('topicConfidence'), isFalse);
     });
 
     test('toMap omits empty-string subjectId and topicId', () {

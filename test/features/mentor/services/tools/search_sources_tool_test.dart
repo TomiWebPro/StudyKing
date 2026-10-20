@@ -116,6 +116,7 @@ void main() {
           studentId: 'student-1',
           subjectId: 'chem',
           topicId: 'orgo',
+          topicConfidence: '0.85',
         ));
         sourceRepo.add(Source(
           id: 'bio-1',
@@ -255,6 +256,7 @@ void main() {
         final entry = (result['results'] as List)[0] as Map<String, dynamic>;
         expect(entry['subjectId'], 'chem');
         expect(entry['topicId'], 'orgo');
+        expect(entry['topicConfidence'], '0.85');
       });
     });
 

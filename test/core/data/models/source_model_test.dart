@@ -32,6 +32,7 @@ void main() {
         expect(source.extractionMeta, '');
         expect(source.createdAt, isNull);
         expect(source.figuresJson, '');
+        expect(source.topicConfidence, '');
       });
 
       test('creates with all fields', () {
@@ -56,6 +57,7 @@ void main() {
           extractionMeta: '{"pages": 5}',
           createdAt: createdAt,
           figuresJson: '[{"pageNumber":1,"bytes":"abc","caption":"Chart","mimeType":"image/png","source":"pdf"}]',
+          topicConfidence: '0.85',
         );
 
         expect(source.id, 'source-2');
@@ -77,6 +79,7 @@ void main() {
         expect(source.extractionMeta, '{"pages": 5}');
         expect(source.createdAt, createdAt);
         expect(source.figuresJson, contains('Chart'));
+        expect(source.topicConfidence, '0.85');
       });
 
       test('applies default values for optional fields', () {
@@ -102,6 +105,7 @@ void main() {
         expect(source.extractionMeta, '');
         expect(source.createdAt, isNull);
         expect(source.figuresJson, '');
+        expect(source.topicConfidence, '');
       });
     });
 
@@ -177,6 +181,7 @@ void main() {
         expect(json['extractionMeta'], '');
         expect(json['createdAt'], isNull);
         expect(json['figuresJson'], '');
+        expect(json['topicConfidence'], '');
       });
 
       test('serializes all fields correctly', () {
@@ -200,6 +205,7 @@ void main() {
           chunks: '[]',
           extractionMeta: '{}',
           createdAt: createdAt,
+          topicConfidence: '0.72',
         );
 
         final json = source.toJson();
@@ -207,6 +213,7 @@ void main() {
         expect(json['id'], 'source-2');
         expect(json['title'], 'Chemistry Notes');
         expect(json['type'], 'document');
+        expect(json['topicConfidence'], '0.72');
       });
     });
 
@@ -226,6 +233,7 @@ void main() {
         expect(source.content, '');
         expect(source.processingStatus, 'pending');
         expect(source.figuresJson, '');
+        expect(source.topicConfidence, '');
       });
 
       test('parses all fields correctly', () {
@@ -249,6 +257,7 @@ void main() {
           'extractionMeta': '{}',
           'createdAt': '2024-01-15T10:30:00.000',
           'figuresJson': '[{"pageNumber":1,"bytes":"abc","caption":"Chart"}]',
+          'topicConfidence': '0.91',
         };
 
         final source = Source.fromJson(json);
@@ -272,6 +281,7 @@ void main() {
         expect(source.extractionMeta, '{}');
         expect(source.createdAt, DateTime(2024, 1, 15, 10, 30));
         expect(source.figuresJson, contains('Chart'));
+        expect(source.topicConfidence, '0.91');
       });
 
       test('handles null createdAt', () {
@@ -437,6 +447,29 @@ void main() {
         final copy = original.copyWith(figuresJson: null);
         expect(copy.figuresJson, '[{"pageNumber":1}]');
       });
+
+      test('creates copy with updated topicConfidence', () {
+        final original = Source(
+          id: 's1',
+          title: 'Test',
+          type: SourceType.pdf,
+        );
+        final copy = original.copyWith(topicConfidence: '0.77');
+
+        expect(copy.topicConfidence, '0.77');
+        expect(original.topicConfidence, '');
+      });
+
+      test('preserves topicConfidence when null is passed', () {
+        final original = Source(
+          id: 's1',
+          title: 'Test',
+          type: SourceType.pdf,
+          topicConfidence: '0.55',
+        );
+        final copy = original.copyWith(topicConfidence: null);
+        expect(copy.topicConfidence, '0.55');
+      });
     });
 
     group('Hive annotations', () {
@@ -467,6 +500,7 @@ void main() {
           chunks: '[]',
           extractionMeta: '{"pages": 10}',
           createdAt: DateTime(2024, 1, 15, 10, 30),
+          topicConfidence: '0.63',
         );
 
         final json = original.toJson();
@@ -490,6 +524,7 @@ void main() {
         expect(restored.chunks, original.chunks);
         expect(restored.extractionMeta, original.extractionMeta);
         expect(restored.createdAt, original.createdAt);
+        expect(restored.topicConfidence, original.topicConfidence);
       });
 
       test('round-trip with minimal fields', () {
@@ -508,7 +543,7 @@ void main() {
         expect(restored.processingStatus, original.processingStatus);
       });
 
-      test('full round-trip preserves figuresJson', () {
+      test('full round-trip preserves figuresJson and topicConfidence', () {
         final figuresJson =
             '[{"pageNumber":1,"bytes":"AQID","caption":"Chart","mimeType":"image/png","source":"pdf"}]';
         final original = Source(
@@ -516,12 +551,14 @@ void main() {
           title: 'Physics Textbook',
           type: SourceType.pdf,
           figuresJson: figuresJson,
+          topicConfidence: '0.85',
         );
 
         final json = original.toJson();
         final restored = Source.fromJson(json);
 
         expect(restored.figuresJson, figuresJson);
+        expect(restored.topicConfidence, '0.85');
       });
     });
 
