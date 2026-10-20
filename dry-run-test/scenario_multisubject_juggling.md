@@ -18,7 +18,7 @@
 | 2. Student asks "How's my Chemistry progress?" | The mentor should resolve "Chemistry" to the right syllabus and report progress without confusion from other subjects. | `lib/features/mentor/services/mentor_context_builder.dart:285-336` — `_buildSyllabusContext` resolves the active syllabus from upcoming lessons or single-goal state. Resolves by `subjectId` mapping. Multi-syllabus ambiguity is surfaced as a notice. | PASS |
 | 3. Student says "Switch my focus to Math for the next 2 weeks" | The mentor should adjust the plan's pacing for Math, preserving Physics and Chemistry schedules. Requires confirmation. | `lib/features/mentor/services/tools/switch_syllabus_focus_tool.dart:20` — `SwitchSyllabusFocusTool` sets the active syllabus focus. `lib/features/mentor/services/tools/modify_plan_tool.dart:9` — `ModifyPlanTool` can adjust duration. `MentorService._pendingPlan` enforces confirmation (`mentor_service.dart:359-370`). `PlannerService.updatePlan` (`planner_service.dart:241`) uses calendar days. | PARTIAL |
 | 4. Student schedules a lesson on "Atoms" and a lesson on "Quanta" | Each lesson should land under the correct subject with no cross-contamination. | `lib/features/mentor/services/tools/schedule_lesson_tool.dart:9` — `ScheduleLessonTool` registered (`llp_agent_providers.dart:64`). Requires `subjectId` arg. No syllabus-aware scheduling guidance in the tool description. | PARTIAL |
-| 5. Dashboard shows progress per subject | The dashboard should show accuracy, streak, and mastery per subject, not aggregated. | `lib/features/dashboard/` — dashboard reads from `LessonRepository` and `SessionRepository`. `lib/core/services/study_progress_tracker.dart:1` aggregates stats. Multi-subject breakdown is limited in the current dashboard summary. `vision-multi-subject-navigation-juggling-hard.md` — open issue. | PARTIAL |
+| 5. Dashboard shows progress per subject | The dashboard should show accuracy, streak, and mastery per subject, not aggregated. | `lib/features/dashboard/` — dashboard reads from `LessonRepository` and `SessionRepository`. `lib/core/services/study_progress_tracker.dart:1` aggregates stats. Multi-subject breakdown is limited in the current dashboard summary. → File `issues/open/scenario-multisubject-study-time-not-injected.md` | PARTIAL |
 
 ## Tool/context audit
 
@@ -50,7 +50,7 @@ honors the explicit focus over implicit upcoming-lesson resolution (verified in
 | Daily study cap adherence per subject | NO | `adherence` is tracked at the plan level, not per-subject. No per-subject cap injection. |
 
 **Gap:** No per-subject study time / daily cap context injected into mentor prompt.
-→ File `issues/closed/scenario-multisubject-context-not-injected.md`
+→ File `issues/open/scenario-multisubject-study-time-not-injected.md`
 
 ## Comprehension rubric
 
@@ -76,5 +76,5 @@ Traced against code at:
 
 Tool audit: 6 of 6 needed tools exist; `switch_syllabus_focus` is FOUND (registered + traced).
 RESULT: all needed tools available (0 missing).
-Context audit: per-subject study time and daily cap not injected → issue closed.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `switch_syllabus_focus_tool.dart`, `llm_agent_providers.dart`).
+Context audit: per-subject study time and daily cap not injected → open issue (`scenario-multisubject-study-time-not-injected.md`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `switch_syllabus_focus_tool.dart`, `llm_agent_providers.dart`).

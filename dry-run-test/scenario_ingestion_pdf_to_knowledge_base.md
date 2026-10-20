@@ -43,8 +43,8 @@
 | Chunking quality (density of content per chunk) | NO | `ingestion-pdf-figures-dropped-no-chart-tool.md` — figures are dropped; no per-chunk quality signal. |
 | Source-topic link confidence | NO | Ingestion does not score confidence of topic assignment; the mentor sees titles only. |
 
-**Gap:** No semantic search context — the mentor cannot cite specific textbook content.
-→ File `issues/closed/scenario-ingestion-search-context-not-injected.md`
+**Gap:** No semantic search context — the mentor cannot cite specific textbook content proactively.
+→ File `issues/open/scenario-ingestion-search-context-gap.md`
 
 ## Comprehension rubric
 
@@ -70,5 +70,5 @@ Traced against code at:
 
 Tool audit: all 5 needed tools exist and are traced (ingest_pdf_to_kb, get_syllabus_structure, search_sources, read_source_content, revisit_sources, generate_lesson_blocks).
 RESULT: all needed tools available (0 missing).
-Context audit: source content search now available via agent tools; chunking quality and source-topic link confidence not yet scored → enhancement issues.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart`, `ingest_pdf_to_kb_tool.dart:9`).
+Context audit: source content search now available via agent tools; chunking quality and source-topic link confidence not yet scored → open issue (`scenario-ingestion-search-context-gap.md`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart`, `ingest_pdf_to_kb_tool.dart:9`).

@@ -44,7 +44,7 @@
 | Lesson history (remediation links) | YES | `mentor_context_builder.dart` — `loadUpcomingLessons`; `get_lesson_history_tool.dart` available |
 
 **Gap:** Past session accuracy and readiness scores are not injected into the mentor context prompt.
-→ File `issues/closed/scenario-practice-context-not-injected.md`
+→ File `issues/open/scenario-practice-readiness-not-injected.md`
 
 ## Comprehension rubric
 
@@ -71,5 +71,5 @@ Traced against code at:
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 RESULT: all needed tools available (0 missing).
-Context audit: readiness scores and past session accuracy not injected → issue closed.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:318`, `review_mistakes_tool.dart:22`).
+Context audit: readiness scores and past session accuracy not injected → open issue (`scenario-practice-readiness-not-injected.md`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:318`, `review_mistakes_tool.dart:22`).

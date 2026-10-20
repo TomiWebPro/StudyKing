@@ -1,6 +1,6 @@
 /// Retry-with-backoff e2e tests for the [AgentLoop] → [LlmService] → HTTP stack.
 ///
-/// Solidification criteria from `issues/open/e2e-llm-grant-no-retry-backoff.md`:
+/// Solidification criteria from `issues/closed/e2e-llm-grant-no-retry-backoff.md`:
 /// "An e2e test in `test/integration/agentic_e2e/` injects a transient 503 /
 /// SocketException (`MockClient` that fails the first N calls then succeeds)
 /// and asserts:

@@ -47,7 +47,7 @@ missing materials, so it cannot proactively ask the student to upload them.
 | Existing plan / roadmap status | PARTIAL | `lib/features/mentor/services/mentor_context_builder.dart` — loads upcoming lessons and plan context but not ingestion state. |
 
 **Gap:** AgentLoop system prompt does not inject a "missing materials" check.
-Context audit: missing "uploaded materials" context injection → `issues/closed/scenario-new-user-missing-materials-nudge.md`.
+Context audit: missing "uploaded materials" context injection → `issues/open/scenario-new-user-materials-not-injected.md`.
 
 ## Comprehension rubric
 
@@ -72,4 +72,4 @@ Traced against code at `lib/features/onboarding/`, `lib/features/ingestion/`,
 
 Tool audit: all 6 mentor tools exist and are registered. No missing-tools issue.
 RESULT: all needed tools available (0 missing).
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart:2171-2176`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `tool_trace_coverage_test.dart:2171-2176`).

@@ -1,5 +1,5 @@
 /// E2E traces for the 7 agent tools previously missing from the fake-mode
-/// agentic suite (see `issues/open/e2e-missing-tool-trace-coverage.md`).
+/// agentic suite (see `issues/closed/e2e-missing-tool-trace-coverage.md`).
 ///
 /// Each test feeds a realistic student utterance through the real [AgentLoop]
 /// parser with the **real** mentor tool registered — not a generic stub —
@@ -1678,7 +1678,7 @@ void main() {
 
     // ---------------------------------------------------------------------------
     // Vision Next-Term §3.1: explanation-variation tools
-    // (issues/open/e2e-teaching-missing-explanation-variation-tool.md)
+    // (issues/closed/e2e-teaching-missing-explanation-variation-tool.md)
     // ---------------------------------------------------------------------------
     group('ExplainDifferentlyTool', () {
       test('reachable through AgentLoop from "explain fractions differently"',
@@ -1924,7 +1924,7 @@ void main() {
 
     // ---------------------------------------------------------------------------
     // Wellbeing rest-day and reminder tools (Vision Next-Term §3.1 / §4.3)
-    // (issues/open/e2e-wellbeing-tools-missing-trace.md)
+    // (issues/closed/e2e-wellbeing-tools-missing-trace.md)
     // ---------------------------------------------------------------------------
     group('ScheduleRestDayTool', () {
       test('reachable through AgentLoop from "schedule a rest day for tomorrow"',
@@ -2187,7 +2187,7 @@ void main() {
         // but cannot be dispatched (e.g. its name was added to registeredToolNames
         // without a corresponding trace test), this test fails.
         //
-        // Fixes issues/open/e2e-source-grounding-tools-not-traced.md: the
+        // Fixes issues/closed/e2e-source-grounding-tools-not-traced.md: the
         // old audit falsely reported read_source_content and revisit_sources
         // as "traced" when they only appeared in the hand-listed set.
         final taskManager = LlmTaskManager();

@@ -35,14 +35,14 @@ No missing-tools issue for this scenario — all needed tools exist.
 
 | Context needed | Injected? | File |
 |---|---|---|
-| Provider / model / failover configuration | NO | No context builder queries LLM settings. |
-| Offline / low-battery status | NO | `SystemMonitorService` does not exist yet (vision §4.3). |
-| Network connectivity type | NO | Not tracked. |
+| Provider / model / failover configuration | YES | `lib/features/mentor/services/mentor_context_builder.dart:358-366` — `_buildProviderStatusLine` injects active provider and backup/failover status when `_llmConfig` is non-null. |
+| Offline / low-battery status | YES | `lib/features/mentor/services/mentor_context_builder.dart:211-234` — `_buildDeviceStatusLine` injects battery, CPU, and network status via `SystemMonitorService`. |
+| Network connectivity type | YES | `lib/core/services/system_monitor_service.dart:41` — `networkType` reports wifi/cellular/null, surfaced in device-status line. |
 
-**Gap:** AgentLoop cannot inform the LLM about offline status or provider
-configuration, so it cannot proactively suggest "switch to Ollama" or
-"wait until you're online."
-→ File `issues/closed/scenario-offline-context-not-injected.md`
+**Gap:** Provider configuration and device status are now injected into the mentor
+context (`mentor_context_builder.dart:211-234,358-366`), so the agent can proactively
+suggest "switch to Ollama" and defer heavy prep under load. No remaining open gap
+for this scenario.
 
 ## Comprehension rubric
 
@@ -67,9 +67,9 @@ Traced against code at:
 - Step 3: PASS — Ollama works without API key.
 - Step 4: PASS — B4 failover + timeouts handle network issues.
 - Step 5: PASS — SystemMonitorService implemented at `system_monitor_service.dart:20` with `canRunHeavyPrepNow`, consulted by `IdleExecutor` before heavy tasks.
-- Step 6: PARTIAL — `mentorNoSubjects` guides but doesn't suggest creating a plan inline.
+- Step 6: PARTIAL — `mentorNoSubjects` guides but doesn't suggest creating a plan inline (`→ issues/open/scenario-new-user-materials-not-injected.md`).
 
-Context audit: provider/offline/battery status not injected into mentor context → closed issue.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–6, `system_monitor_service.dart:20`).
+Context audit: provider config + device status + network type now injected (resolved); new-user guidance gap still present → `issues/open/scenario-new-user-materials-not-injected.md`.
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–6, `system_monitor_service.dart:20`, `mentor_context_builder.dart:211-234,358-366`).
 Tool audit: no missing tools for this scenario.
 RESULT: all needed tools available (0 missing).

@@ -8,10 +8,9 @@
 /// PASS / PARTIAL / FAIL trace and a tool-context audit (needed vs. available).
 ///
 /// It confirms the gap recorded in
-/// `issues/open/e2e-teaching-missing-context-injection.md`: the teaching mode
-/// has no confusion-detection directive in its system prompt and no
-/// explanation-variation tooling, so repeated "I don't get it" calls produce
-/// no escalation.
+/// `issues/open/scenario-teaching-agentloop-bypass.md`: the confusion-detection
+/// directive IS now present (prompts.dart:89-92) but teaching mode bypasses
+/// AgentLoop, so repeated "I don't get it" calls produce no escalation.
 library;
 
 import 'dart:convert';
@@ -139,7 +138,7 @@ void main() {
     /// with confusionCount >= 2, so the confusion-detection directive IS
     /// injected (prompts.dart:89-92 — _buildConfusionDirective). This replaces
     /// the previously hardcoded simplified prompt that produced a false FAIL
-    /// verdict (see issues/open/scenario-validation-hardcoded-prompts-false-verdicts.md).
+    /// verdict (see issues/closed/scenario-validation-hardcoded-prompts-false-verdicts.md).
     final String currentTeachingSystemPrompt =
         buildTeachingSystemPromptWithConfusion();
 
@@ -275,7 +274,7 @@ void main() {
               '(prompts.dart:89-92, _buildConfusionDirective)');
     });
 
-    test('Verdict trace: confused-student scenario produces FAIL trace', () {
+    test('Verdict trace: confused-student scenario produces PARTIAL trace', () {
       // Produce a human-readable trace that maps to the scenario file's
       // Validation Results section. This serves as the "executable spec"
       // that validates the dry-run-test scenario.
@@ -283,9 +282,12 @@ void main() {
       final trace = <String>[];
       var allPass = true;
 
-      // Step 1: confusion detection directive missing → FAIL
+      // Step 1: confusion detection directive IS injected (prompts.dart:89-92)
+      // but teaching mode bypasses AgentLoop — PARTIAL.
       if (currentTeachingSystemPrompt.contains('confusion')) {
-        trace.add('Step 1: PASS — confusion detection directive found');
+        trace.add('Step 1: PARTIAL — confusion detection directive IS injected '
+            '(prompts.dart:89-92) but teaching bypasses AgentLoop');
+        allPass = false;
       } else {
         trace.add('Step 1: FAIL — no confusion detection directive in '
             'prompts.dart buildTutorPrompt');
@@ -293,8 +295,9 @@ void main() {
       }
 
        // Step 2: LessonBlockType now has visual/analogy variants and
-       // ExplainDifferentlyTool is registered — but teaching system prompt
-       // still doesn't inject modality options (context-injection issue).
+       // ExplainDifferentlyTool is registered. The confusion directive
+       // (prompts.dart:89-92) injects modality options, but teaching mode
+       // bypasses AgentLoop so tools cannot be invoked at runtime.
        final variationModalities = ['visual', 'analogy', 'step_by_step'];
        final hasModalityInPrompt =
            variationModalities.any((t) => currentTeachingSystemPrompt.contains(t));
@@ -303,9 +306,12 @@ void main() {
          trace.add('Step 2: PARTIAL — variation tool exists (explain_differently) '
              'and LessonBlockType has visual/analogy, but teaching prompt '
              'does not inject modality options');
+         allPass = false;
        } else if (hasModalityInPrompt) {
-         trace.add('Step 2: PASS — explanation-style variation available');
-         allPass = true;
+         trace.add('Step 2: PARTIAL — variation tool exists (explain_differently) '
+             'and confusion directive injects modality options, but teaching '
+             'mode bypasses AgentLoop so tools cannot be invoked at runtime');
+         allPass = false;
        } else {
          trace.add('Step 2: FAIL — no explanation-style variation mechanism '
              '(LessonBlockType lacks visual/analogy)');
@@ -336,8 +342,7 @@ void main() {
           'cannot invoke CreatePracticeSessionTool');
       allPass = false;
 
-      // Log the full trace for visibility — verdict is always FAILURES
-      // because the gap is real (see expect below).
+      // Log the full trace for visibility.
       // ignore: avoid_print
       print('=== Confused-student scenario trace ===');
       for (final line in trace) {
@@ -346,15 +351,15 @@ void main() {
       }
       // ignore: avoid_print
       print('Verdict: PARTIAL — tools now registered but teaching mode still '
-          'bypasses AgentLoop (context injection tracked separately)');
+          'bypasses AgentLoop (tracked by issues/open/scenario-teaching-agentloop-bypass.md)');
       // ignore: avoid_print
       print('=== End trace ===');
 
       // The scenario still has 1 FAIL step (Step 4: teaching mode bypasses
-      // AgentLoop), so allPass is false.
+      // AgentLoop) and PARTIAL steps (Steps 1–3), so allPass is false.
       expect(allPass, isFalse,
-          reason: 'Confused-student scenario still has 1 FAIL step (Step 4) — '
-              'see dry-run-test/scenario_confused_student_fractions.md');
+          reason: 'Confused-student scenario has PARTIAL steps (1–3) and FAIL '
+              '(Step 4) — see dry-run-test/scenario_confused_student_fractions.md');
     });
   });
 
@@ -1534,7 +1539,7 @@ void main() {
       trace.add('Step 1: PASS — SystemMonitorService implemented, heavy prep defers');
       trace.add('Step 2: PASS — retry-with-backoff implemented in LlmService');
       trace.add('Step 3: PASS — Ollama backup works without API key (B4 failover)');
-      trace.add('Step 4: PASS — device status + provider config injected into mentor context (mentor_context_builder.dart:354-366)');
+      trace.add('Step 4: PASS — device status + provider config injected into mentor context (mentor_context_builder.dart:211-234,358-366)');
       trace.add('Step 5: FAIL — ingest_pdf_to_kb tool IS registered but no device-aware file-size ceiling (closed issue ingestion-file-size-token-ceiling-missing tracked the real gap)');
 
       // ignore: avoid_print
@@ -1853,6 +1858,177 @@ void main() {
         );
       }
     });
+
+    // ---------------------------------------------------------------------------
+    // §3.2 enforcement: verdict-to-issue traceability.
+    // Per vision_next_term.md §3.2: "Every FAIL/PARTIAL maps to one
+    // issues/open/*.md with Status: open." These three lints guard against
+    // stale references that break the traceability contract.
+    // ---------------------------------------------------------------------------
+
+    test('§3.2: no scenario .md references issues/closed/ for a context-audit gap',
+        () {
+      // A `→ File \`issues/closed/...\`` or `→ Tracked by \`issues/closed/...\``
+      // reference in a scenario .md means a gap is attributed to a closed issue.
+      // Per §3.2, FAIL/PARTIAL verdicts must map to issues/open/, not issues/closed/.
+      // If the gap is resolved, the step verdict should be PASS and the reference
+      // removed entirely.
+      final violations = <String>[];
+      final closedRefPattern = RegExp(
+        r'→\s+(?:File|Tracked by)\s+`issues/closed/[-\w]+\.md`',
+      );
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        final matches = closedRefPattern.allMatches(content);
+        for (final m in matches) {
+          violations.add(
+            '$name.md: stale reference to a CLOSED issue as an active gap '
+            '(${m.group(0)}). Per §3.2, FAIL/PARTIAL gaps must reference '
+            'issues/open/, not issues/closed/.',
+          );
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('§3.2: every issues/open/ reference in scenario .md files resolves to a real open issue', () {
+      // Every `issues/open/<name>.md` reference in a scenario .md must
+      // resolve to an actual file in issues/open/. Broken references create
+      // a false trail for builders.
+      final violations = <String>[];
+      final openRefPattern = RegExp(
+        r'`issues/open/([-\w]+)\.md`',
+      );
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+        final matches = openRefPattern.allMatches(content);
+        for (final m in matches) {
+          final issueFile = File('issues/open/${m.group(1)!}.md');
+          if (!issueFile.existsSync()) {
+            violations.add(
+              '$name.md: references issues/open/${m.group(1)!}.md but the file '
+              'does not exist.',
+            );
+          }
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test(
+        '§3.2: every issues/open/ reference in agentic e2e test comments resolves to a real open issue',
+        () {
+      // Scans all test files in test/integration/agentic_e2e/ for
+      // open-issue references (pattern: issues/open/<name>.md) and verifies
+      // each resolves to an actual file in issues/open/. This prevents builders from following
+      // stale links to issues that were moved to issues/closed/.
+      final violations = <String>[];
+      final openRefPattern = RegExp(
+        r'issues/open/([-\w]+)\.md',
+      );
+      final testDir = Directory('test/integration/agentic_e2e');
+      final testFiles = testDir.listSync()
+          .where((e) => e.path.endsWith('.dart'))
+          .cast<File>();
+
+      for (final testFile in testFiles) {
+        final content = testFile.readAsStringSync();
+        final matches = openRefPattern.allMatches(content);
+        for (final m in matches) {
+          final issueFile = File('issues/open/${m.group(1)!}.md');
+          if (!issueFile.existsSync()) {
+            violations.add(
+              '${testFile.path}: references issues/open/${m.group(1)!}.md '
+              'but the file does not exist in issues/open/.',
+            );
+          }
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('§3.2: every FAIL/PARTIAL step verdict maps to an issues/open/ reference', () {
+      // Per vision_next_term.md §3.2: "Every FAIL/PARTIAL maps to one
+      // issues/open/*.md with Status: open." This lint parses the Validation
+      // Results section of each scenario .md, extracts PASS/PARTIAL/FAIL
+      // step verdicts, and asserts that every FAIL/PARTIAL has a
+      // `→ File`, `→ Tracked by`, or inline `→ issues/open/` reference
+      // somewhere in the .md file. Scenarios where all steps are PASS need
+      // no issue reference.
+      final violations = <String>[];
+      final verdictPattern = RegExp(
+        r'^-\s*Step\s*(\d+):\s*(PASS|PARTIAL|FAIL)\s*—',
+      );
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+
+        final resultsSection = _extractSection(content, '## Validation Results');
+        if (resultsSection == null) {
+          violations.add('$name.md: missing "## Validation Results" section.');
+          continue;
+        }
+
+        final hasOpenRef = content.contains('→ File `issues/open/') ||
+            content.contains('→ Tracked by `issues/open/') ||
+            content.contains('→ issues/open/');
+
+        var hasFailOrPartial = false;
+        for (final m in verdictPattern.allMatches(resultsSection)) {
+          final verdict = m.group(2)!;
+          if (verdict == 'PASS') continue;
+          hasFailOrPartial = true;
+        }
+
+        if (hasFailOrPartial && !hasOpenRef) {
+          violations.add(
+            '$name.md: has FAIL/PARTIAL step(s) but no issues/open/ reference '
+            'found. Per §3.2, every FAIL/PARTIAL must map to an issues/open/*.md.',
+          );
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
+
+    test('step verdict freshness: cited code files exist at referenced paths', () {
+      // Per §3.1 (validator loop): a scheduled agent re-traces scenarios against
+      // current code. This lint verifies that file:line references cited in the
+      // "Traced against code at" section and in step verdict text point to
+      // files that still exist in the repo. A missing file means the verdict
+      // is stale (the code moved or was deleted).
+      final violations = <String>[];
+      final fileRefPattern = RegExp(r'`(lib/[a-z_/]+\.dart)(?::[\d,-]+)?`');
+
+      for (final name in scenarios) {
+        final file = File('dry-run-test/$name.md');
+        final content = file.readAsStringSync();
+
+        final resultsSection = _extractSection(content, '## Validation Results');
+        if (resultsSection == null) continue;
+
+        for (final m in fileRefPattern.allMatches(resultsSection)) {
+          final path = m.group(1)!;
+          final refFile = File(path);
+          if (!refFile.existsSync()) {
+            violations.add(
+              '$name.md: cites $path in Validation Results but the file '
+              'does not exist — verdict may be stale.',
+            );
+          }
+        }
+      }
+
+      expect(violations, isEmpty, reason: violations.join('\n'));
+    });
   });
 
   group('Scenario coverage completeness', () {
@@ -1905,4 +2081,29 @@ class _ToolAuditEntry {
   final String toolName;
   final String status;
   _ToolAuditEntry({required this.toolName, required this.status});
+}
+
+/// Extracts the content of a markdown section delimited by a heading line.
+///
+/// [heading] must be the exact heading text including `#` prefixes (e.g.
+/// `## Validation Results`). Returns the section content from the line after
+/// the heading until the next heading of equal or greater level, or `null` if
+/// the heading is not found.
+String? _extractSection(String content, String heading) {
+  final lines = content.split('\n');
+  final headingIndex = lines.indexWhere((l) => l.trim() == heading);
+  if (headingIndex == -1) return null;
+
+  // Determine the heading level (number of # chars).
+  final level = heading.indexOf(RegExp(r'[^\s#]'));
+  final buffer = <String>[];
+  for (var i = headingIndex + 1; i < lines.length; i++) {
+    final line = lines[i];
+    if (line.startsWith('#')) {
+      final lineLevel = line.indexOf(RegExp(r'[^\s#]'));
+      if (lineLevel <= level) break;
+    }
+    buffer.add(line);
+  }
+  return buffer.join('\n');
 }

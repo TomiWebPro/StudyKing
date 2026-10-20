@@ -34,7 +34,7 @@
 **Gap:** — (RESOLVED) The `SwitchProviderTool` is now registered in
 `llmAgentToolsProvider` (`lib/core/providers/llm_agent_providers.dart`). The mentor
 can call `switch_provider` after student confirmation and update the live config.
-Previously filed as `issues/open/e2e-mentor-missing-provider-switch-tool.md` (now closed).
+Previously filed as `issues/closed/e2e-mentor-missing-provider-switch-tool.md` (resolved).
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -43,10 +43,11 @@ Previously filed as `issues/open/e2e-mentor-missing-provider-switch-tool.md` (no
 | Current plan / roadmap state (subjects, days remaining) | YES | `lib/features/mentor/services/mentor_context_builder.dart` — loads plan context. |
 | Scheduled lessons (for reschedule target) | YES | `mentor_context_builder.dart` — `loadUpcomingLessons`. |
 | Mastery state of topics (which can be carried forward) | YES | `mentor_context_builder.dart` — `_masteryService.getWeakTopics`. |
-| Configured provider / model / failover status | NO | No context builder queries LLM configuration. The agent may suggest "try Ollama" without knowing it's already configured as a backup. |
+| Configured provider / model / failover status | YES | `lib/features/mentor/services/mentor_context_builder.dart:358-366` — `_buildProviderStatusLine` injects provider config into mentor context. |
 
-**Gap:** Provider configuration is not injected into the agent context.
-→ File `issues/closed/scenario-provider-config-not-injected.md`
+**Gap:** Provider configuration is now injected into the agent context
+(`mentor_context_builder.dart:358-366`), so the agent can reason about the
+active provider and failover status. No remaining open gap for this scenario.
 
 ## Comprehension rubric
 
@@ -71,5 +72,5 @@ Traced against code at `lib/features/mentor/services/mentor_service.dart:337-385
 
 Tool audit: `schedule_lesson`, `modify_plan`, `get_lesson_history`, `switch_provider` all reachable.
 RESULT: all needed tools available (0 missing).
-Context audit: provider config not injected → issue closed (`scenario-provider-config-not-injected.md`).
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:176`).
+Context audit: provider config now injected (resolved — no open issue).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `llm_agent_providers.dart:176`, `mentor_context_builder.dart:358-366`).

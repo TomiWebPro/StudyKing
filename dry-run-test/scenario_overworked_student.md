@@ -12,7 +12,7 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. Student studies past 22:00 on multiple days | The system should detect late-night sessions and generate a wellbeing nudge: "You've been studying past 10pm a lot lately. Consider taking a break to protect your sleep." | `lib/features/mentor/services/mentor_wellbeing_service.dart` — `_checkLateNightSessions` exists. `lib/features/mentor/services/mentor_service.dart:15` — `checkWellbeingAndGenerateNudges()` is called proactively. | PASS |
-| 2. Student has a streak at risk of breaking | The system should send a gentle streak-reminder, not a guilt-trip: "Your 7-day streak is in reach — you can continue tomorrow or take a scheduled rest day." | `lib/features/dashboard/` — streak tracking exists in dashboard. No dedicated streak-preservation nudge in `EngagementNudgeModel`. | PARTIAL |
+| 2. Student has a streak at risk of breaking | The system should send a gentle streak-reminder, not a guilt-trip: "Your 7-day streak is in reach — you can continue tomorrow or take a scheduled rest day." | `lib/features/mentor/services/mentor_context_builder.dart:368-377` — streak-at-risk directive IS injected into mentor context when `consecutiveDays >= 1 && todayMinutes == 0` (`mentorContextStreakAtRisk` L10n). `schedule_rest_day` tool available for rest-day scheduling. | PASS |
 | 3. Student opens the mentor and says "I'm exhausted" | The mentor should empathize, review recent study logs, and suggest: "You studied X hours last night. Let's reschedule tomorrow's lesson to 11am and set a bedtime reminder." | `lib/features/mentor/services/mentor_service.dart:158` — `chat()` routes to `_agent?.chat()` when agent is configured. No wellbeing-specific prompt branch. System prompt is from `l10n.mentorSystemPrompt`. | PARTIAL |
 | 4. Student's session data shows >3 hours/day for 5+ days | System should recommend an automatic rest day: "Your study load has been high. I've scheduled a rest day for you tomorrow — confirm or adjust." Must require confirmation (no silent schedule change). | `schedule_rest_day_tool.dart` — `ScheduleRestDayTool` registered at `llm_agent_providers.dart:136`. `PlannerService.markRestDay()` exists. Agent calls tool after student confirms (non-silent). `wellbeing_adjust_schedule_tool.dart` — `WellbeingAdjustScheduleTool` registered at `llm_agent_providers.dart:137`. Both traced through `AgentLoop` in `tool_trace_coverage_test.dart`. | PASS |
 | 5. Student on a low-end device with battery < 20% | Heavy prep tasks (question generation, embeddings) should pause. A notification: "Background prep paused — battery low. Will resume when charging." | `system_monitor_service.dart:20` — `SystemMonitorService` implemented with `canRunHeavyPrepNow`, battery/CPU/load-avg reads; wired at `llm_providers.dart:28`. `IdleExecutor` defers heavy tasks when false. | PASS |
@@ -40,13 +40,13 @@ type, invalid time format).
 | Context needed | Injected? | File |
 |---|---|---|
 | Recent session start/end times (for late-night detection) | YES | `lib/features/mentor/services/mentor_context_builder.dart:49` — `loadSessionSummary` provides session data. |
-| Streak count and streak risk status | NO | Streak data is in the dashboard but not injected into mentor context. |
-| Battery level and charging status | PARTIAL | `system_monitor_service.dart:20` — `SystemMonitorService` exists with battery/CPU reads, but not injected into mentor context prompt. |
+| Streak count and streak risk status | YES | `lib/features/mentor/services/mentor_context_builder.dart:368-377` — streak-at-risk directive injected when `consecutiveDays >= 1 && todayMinutes == 0`. |
+| Battery level and charging status | YES | `lib/features/mentor/services/mentor_context_builder.dart:211-234` — `_buildDeviceStatusLine` injects battery/CPU/network status. |
 | Student self-reported wellbeing (fatigue level) | NO | No wellbeing input mechanism in mentor chat. |
 
-**Gap:** Streak status and self-reported wellbeing are not injected into
-the mentor agent's context.
-→ File `issues/closed/scenario-wellbeing-context-not-injected.md`
+**Gap:** Self-reported wellbeing (fatigue level) is not injected into the mentor
+agent's context. Streak-at-risk and device status ARE now injected.
+→ File `issues/open/scenario-overworked-wellbeing-not-injected.md`
 
 ## Comprehension rubric
 
@@ -66,7 +66,7 @@ Traced against code at:
 `lib/features/dashboard/` (streak tracking).
 
 - Step 1: PASS — late-night session detection + nudge generation.
-- Step 2: PARTIAL — streak exists in dashboard, no streak-preservation nudge.
+- Step 2: PASS — streak-at-risk context now injected into mentor prompt (`mentor_context_builder.dart:368-377`).
 - Step 3: PARTIAL — mentor can respond but no wellbeing-specific branching.
 - Step 4: PASS — `schedule_rest_day` and `wellbeing_adjust_schedule` tools
   are registered and have real-implementation e2e traces through `AgentLoop`
@@ -79,5 +79,5 @@ Traced against code at:
 
 Tool audit: 5 of 5 needed tools exist (including `wellbeing_adjust_schedule`).
 RESULT: all needed tools available (0 missing).
-Context audit: streak + wellbeing input not injected → issue closed.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `system_monitor_service.dart:20`, `mentor_wellbeing_service.dart`).
+Context audit: streak-at-risk + device status now injected; self-reported wellbeing still missing → open issue (`scenario-overworked-wellbeing-not-injected.md`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `system_monitor_service.dart:20`, `mentor_wellbeing_service.dart`, `mentor_context_builder.dart:211-234,368-377`).

@@ -34,7 +34,8 @@
 **Gap:** Teaching mode has no `explain_differently` or `suggest_practice` agent tools
 in its system prompt, and teaching mode bypasses `AgentLoop` — so even though the tools
 are registered in the agent registry, they cannot be invoked during lessons.
-→ Teaching-mode context-injection (`e2e-teaching-missing-context-injection.md`).
+→ Teaching-mode context-injection tracked as OPEN gap.
+→ File `issues/open/scenario-teaching-agentloop-bypass.md`
 
 ### Context the LLM needs vs. what AgentLoop injects
 
@@ -46,7 +47,7 @@ are registered in the agent registry, they cannot be invoked during lessons.
 | Learning method analytics (prefers visual, optimal session length) | PARTIAL | `learning_method_analytics_service.dart:1` exists but is not injected into teaching prompt. |
 
 **Gap:** Teaching context lacks active lesson block info and explanation modality options.
-→ File `issues/closed/e2e-teaching-missing-context-injection.md`
+→ File `issues/open/scenario-teaching-agentloop-bypass.md`
 
 ## Comprehension rubric
 
@@ -75,5 +76,5 @@ Traced against code at:
 
 Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
 RESULT: all needed tools available (0 missing).
-Context audit: active lesson blocks and modality options not injected into teaching prompt → closed issue.
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `enums.dart:48-49`, `llm_agent_providers.dart:282`).
+Context audit: active lesson blocks and modality options not injected into teaching prompt → open issue (`scenario-teaching-agentloop-bypass.md`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `prompts.dart:89-92`, `enums.dart:48-49`, `llm_agent_providers.dart:282`).

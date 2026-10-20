@@ -8,7 +8,7 @@
 /// (non-streaming), but [AgentLoop.runStream()] — the **production** conversation
 /// path used by [LlmAgent.chatStream] (`llm_agent.dart:64`) and
 /// [ConversationManager] (`conversation_manager.dart:442`) — had zero fake-mode
-/// coverage (see `issues/open/e2e-agent-loop-runstream-not-tested.md`).
+/// coverage (see `issues/closed/e2e-agent-loop-runstream-not-tested.md`).
 ///
 /// These tests exercise [AgentLoop.runStream()] with [FakeStreamingLlmService],
 /// which emits deterministic `Stream<String>` chunks containing `TOOL_CALL:` /

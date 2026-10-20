@@ -14,7 +14,7 @@
 | Step | Expectation | Current code | Status |
 |------|------------|-------------|--------|
 | 1. Student completes a practice session | After the last question, the system shows a summary: correct answers, wrong answers, time spent, and weak topics. | `lib/core/services/study_progress_tracker.dart:1` — tracks attempts/sessions. `lib/core/data/models/mastery_state_model.dart:1` — `MasteryState` tracks accuracy per topic. `lib/features/mentor/services/tools/get_student_stats_tool.dart:9` — surfaces stats. | PASS |
-| 2. System shows wrong answers with explanations | Each incorrect question should display with the markscheme explanation and a link to the concept it tested. | `lib/features/questions/data/models/question_model.dart:1` — `Markscheme` has `correctAnswer` and `acceptableAnswers`. `lib/features/questions/data/models/markscheme_model.dart:1` — markscheme model. No explicit "review mistakes" UI — review is via practice session replay. | PARTIAL |
+| 2. System shows wrong answers with explanations | Each incorrect question should display with the markscheme explanation and a link to the concept it tested. | `lib/core/data/models/question_model.dart:1` — `Markscheme` has `correctAnswer` and `acceptableAnswers`. `lib/core/data/models/markscheme_model.dart:1` — markscheme model. No explicit "review mistakes" UI — review is via practice session replay. | PARTIAL |
 | 3. System offers variant questions on the same concept | For each wrong answer, the system should generate or fetch variant questions from the same difficulty/difficulty-adjusted to reinforce. | `lib/features/questions/services/question_variant_service.dart:1` — generates variants. `lib/features/mentor/services/tools/enqueue_question_variants_tool.dart:9` — registered (`llp_agent_providers.dart:114-120`). Variants are enqueued, not immediately served. | PARTIAL |
 | 4. Student still struggles after variants | The mentor should propose scheduling a lesson or practice session on the prerequisite concept, with confirmation. | `lib/features/mentor/services/tools/get_weak_topics_tool.dart:9` — identifies weak areas. `ScheduleLessonTool` and `CreatePracticeSessionTool` are registered. `MentorService._pendingSchedule` enforces confirmation. | PASS |
 | 5. Mistake review updates mastery | After the review, the mastery state for the concept should reflect the remediation attempt (improved or still-at-risk). | `lib/features/practice/data/repositories/mastery_graph_repository.dart` — persists mastery updates. `lib/core/services/mastery_graph_service.dart` — `updateMasteryState`. `RefreshMasteryTool` registered (`llp_agent_providers.dart:127-133`). | PASS |
@@ -43,7 +43,7 @@
 | Remediation history (prior review attempts) | YES | `get_lesson_history_tool.dart` shows past lessons. `conversation_repository.dart` persists conversation data. |
 
 **Gap:** Per-question accuracy and variant availability are not injected into mentor context.
-→ File `issues/closed/scenario-practice-review-context-not-injected.md`
+→ File `issues/open/scenario-practice-readiness-not-injected.md`
 
 ## Comprehension rubric
 
@@ -60,7 +60,7 @@ Traced against code at:
 `lib/features/questions/services/question_variant_service.dart:1`,
 `lib/features/mentor/services/tools/get_weak_topics_tool.dart:9`,
 `lib/features/practice/data/repositories/mastery_graph_repository.dart`,
-`lib/features/questions/data/models/markscheme_model.dart:1`.
+`lib/core/data/models/markscheme_model.dart:1`.
 
 - Step 1: PASS — session summary stats are available via `get_student_stats`.
 - Step 2: PARTIAL — markscheme explanations exist but no dedicated review-mistakes UI.
@@ -70,4 +70,4 @@ Traced against code at:
 
 Tool audit: 6 of 6 needed tools exist; `review_mistakes` is FOUND.
 RESULT: all needed tools available (0 missing).
-**Last re-traced:** 2026-10-20 against commit `5732329` (`scenario_validation_test.dart` Steps 1–5, `review_mistakes_tool.dart:22`, `llm_agent_providers.dart:318`).
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `review_mistakes_tool.dart:22`, `llm_agent_providers.dart:318`).
