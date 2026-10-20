@@ -881,6 +881,41 @@ void main() {
         expect(llmService.lastSystemPrompt, isNotNull);
         expect(llmService.lastSystemPrompt!, isNot(contains('STUDENT CONFUSION DETECTED')));
       });
+
+      test('injects confusion directive via repeated free-text confusion signals',
+          () async {
+        await manager.sendMessage('Hello').toList();
+        expect(manager.phase, equals(ConversationPhase.teaching));
+
+        // First confusion signal → count = 1, directive not yet fired (needs >= 2)
+        await manager.sendMessage("I don't get it").toList();
+        expect(manager.confusionSignalCount, equals(1));
+        expect(llmService.lastSystemPrompt!, isNot(contains('STUDENT CONFUSION DETECTED')));
+
+        // Second confusion signal → count = 2, directive fires
+        await manager.sendMessage("I'm confused").toList();
+        expect(manager.confusionSignalCount, equals(2));
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(llmService.lastSystemPrompt!, contains('STUDENT CONFUSION DETECTED'));
+        expect(llmService.lastSystemPrompt!, contains('Switch explanation modality'));
+      });
+
+      test('resets confusion signal when student indicates understanding',
+          () async {
+        await manager.sendMessage('Hello').toList();
+
+        // Accumulate two confusion signals
+        await manager.sendMessage("I don't get it").toList();
+        await manager.sendMessage("I'm confused").toList();
+        expect(manager.confusionSignalCount, equals(2));
+        expect(llmService.lastSystemPrompt!, contains('STUDENT CONFUSION DETECTED'));
+
+        // Understanding marker resets the signal and clears the directive
+        await manager.sendMessage('I understand now').toList();
+        expect(manager.confusionSignalCount, equals(0));
+        expect(llmService.lastSystemPrompt!, isNot(contains('STUDENT CONFUSION DETECTED')));
+      });
     });
 
     group('mastery context injection', () {

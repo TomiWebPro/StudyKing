@@ -119,7 +119,12 @@ class ConversationPromptSet {
 
   /// Builds an LLM-facing confusion-adaptation directive that is injected
   /// into the tutor system prompt when the student shows repeated difficulty
-  /// (two or more consecutive incorrect exercise answers).
+  /// (two or more consecutive signals). The confusion count is derived from
+  /// `max(_consecutiveIncorrect, _consecutiveConfusionSignals)`, so the
+  /// directive fires for either pathway: consecutive incorrect exercise
+  /// answers, or free-text confusion signals ("I don't get it",
+  /// "I'm confused", …) expressed during a teaching/feedback turn
+  /// (agent_must_read.md §36).
   ///
   /// Per AGENTS.md, LLM-facing prompt strings may remain in invariant English.
   String _buildConfusionDirective(int confusionCount) {

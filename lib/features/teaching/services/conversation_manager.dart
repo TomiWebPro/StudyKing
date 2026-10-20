@@ -94,6 +94,21 @@ class ConversationManager {
   /// Exposed so behaviour (confusion detection, §4.1 prep triggers) can be
   /// asserted in tests without reaching into private state.
   int get consecutiveIncorrectCount => _consecutiveIncorrect;
+
+  /// Consecutive free-text confusion signals ("I don't get it", "I'm confused",
+  /// ...) expressed by the student during a teaching/feedback turn, independent
+  /// of exercise-answer correctness. Combined with [_consecutiveIncorrect] so
+  /// the confusion-adaptation directive (prompts.dart:89-92) fires for both
+  /// pathways — realising agent_must_read.md §36 ("adapt explanations to student
+  /// understanding") for the free-text confused-student journey
+  /// (dry-run-test/scenario_confused_student_fractions.md Step 1).
+  int _consecutiveConfusionSignals = 0;
+
+  /// Number of consecutive free-text confusion signals in the current streak,
+  /// exposed for assertion in tests without reaching into private state. Resets
+  /// to zero when the student indicates understanding.
+  int get confusionSignalCount => _consecutiveConfusionSignals;
+
   int _adaptiveReviewExchanges = 0;
   double adaptivePace = 1.0;
   LessonPlan? lessonPlan;
@@ -284,6 +299,7 @@ class ConversationManager {
         _adaptiveReviewExchanges = 0;
       }
       _consecutiveIncorrect = 0;
+      _consecutiveConfusionSignals = 0;
     }
 
     // Detect exercise requests BEFORE building the prompt so that:
@@ -292,6 +308,7 @@ class ConversationManager {
     //     already set, storing the generated exercise question (not the
     //     follow-up teaching reply) in _lastExerciseQuestion.
     _detectExerciseRequest(content);
+    _updateConfusionSignal(content);
 
     final buffer = StringBuffer();
     var emittedLength = 0;
@@ -303,7 +320,7 @@ class ConversationManager {
       scheduledSessionId: scheduledSessionId,
       learningPreferences: learningPreferences,
       feedbackContext: feedbackContext,
-      confusionCount: _consecutiveIncorrect,
+      confusionCount: max(_consecutiveIncorrect, _consecutiveConfusionSignals),
       masteryContext: masteryContext,
     );
 
@@ -508,12 +525,14 @@ class ConversationManager {
     if (result.score >= _masteryThreshold) {
       correctCount++;
       _consecutiveIncorrect = 0;
+      _consecutiveConfusionSignals = 0;
       adaptivePace = min(adaptivePace + _paceIncrement, _maxPace);
     } else if (result.score <= _struggleThreshold) {
       _consecutiveIncorrect++;
       adaptivePace = max(adaptivePace - _paceIncrement, _minPace);
     } else {
       _consecutiveIncorrect = 0;
+      _consecutiveConfusionSignals = 0;
     }
 
     if (result.score >= _masteryThreshold && phase == ConversationPhase.adaptiveReview) {
@@ -536,6 +555,45 @@ class ConversationManager {
     'es': ['ejercicio', 'práctica', 'práct', 'examen', 'quiz'],
   };
 
+  /// Free-text confusion signals (e.g. "I don't get it", "I'm confused") that
+  /// a student may express directly during a teaching/feedback turn, rather than
+  /// through a wrong exercise answer. Detected via [.normalized] (lowercase,
+  /// trimmed) so casing/formatting differences do not matter.
+  ///
+  /// agent_must_read.md §36: the tutor must adapt explanations to the student's
+  /// understanding; detecting these signals escalates the same confusion
+  /// directive (prompts.dart:89-92) that consecutive incorrect exercise answers
+  /// trigger, so the confused-student free-text journey is handled, not left
+  /// to the LLM noticing the complaint in history.
+  static const Map<String, List<String>> _confusionKeywordsByLocale = {
+    'en': [
+      "don't get",
+      "dont get",
+      "don't understand",
+      "dont understand",
+      "don't get it",
+      "still don't",
+      "still dont",
+      "i'm confused",
+      'im confused',
+      'i am confused',
+      'confused',
+      'hard to understand',
+      'not making sense',
+      "can't follow",
+    ],
+    'es': [
+      'no entiendo',
+      'no comprendo',
+      'estoy confundido',
+      'estoy confundida',
+      'todavía no entiendo',
+      'todavia no entiendo',
+      'confundido',
+      'no me queda claro',
+    ],
+  };
+
   List<String> _getContinueKeywords() {
     if (!_continueKeywordsByLocale.containsKey(localeName)) {
       _logger.w('No continue keywords for locale $localeName, falling back to en');
@@ -553,6 +611,32 @@ class ConversationManager {
       _logTransition(phase, ConversationPhase.exercise, 'keyword detected in student message');
       phase = ConversationPhase.exercise;
       _pendingExerciseQuestionCapture = true;
+    }
+  }
+
+  List<String> _getConfusionKeywords() {
+    if (!_confusionKeywordsByLocale.containsKey(localeName)) {
+      _logger.w('No confusion keywords for locale $localeName, falling back to en');
+    }
+    return _confusionKeywordsByLocale[localeName] ?? _confusionKeywordsByLocale['en']!;
+  }
+
+  /// Tracks free-text confusion signals expressed during a teaching/feedback
+  /// turn (agent_must_read.md §36). Increments [_consecutiveConfusionSignals]
+  /// when the student expresses confusion ("I don't get it", "I'm confused",
+  /// …) and resets it when the student indicates understanding, so the
+  /// confusion-adaptation directive (prompts.dart:89) fires for repeated
+  /// free-text confusion as well as for consecutive incorrect exercise answers.
+  void _updateConfusionSignal(String content) {
+    // Exercise-answer correctness governs confusion during the exercise phase;
+    // free-text signals are only counted outside it to avoid double-counting.
+    if (phase == ConversationPhase.exercise) return;
+    final lower = content.normalized;
+    if (_getConfusionKeywords().any((k) => lower.contains(k))) {
+      _consecutiveConfusionSignals++;
+      _logger.i('Free-text confusion signal detected (${_consecutiveConfusionSignals}th)');
+    } else if (_getContinueKeywords().any((k) => lower.contains(k))) {
+      _consecutiveConfusionSignals = 0;
     }
   }
 
@@ -576,6 +660,7 @@ class ConversationManager {
     correctCount++;
     exerciseCount++;
     _consecutiveIncorrect = 0;
+    _consecutiveConfusionSignals = 0;
     adaptivePace = min(adaptivePace + _paceIncrement, _maxPace);
   }
 
