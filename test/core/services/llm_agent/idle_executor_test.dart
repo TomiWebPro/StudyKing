@@ -1,4 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
@@ -1477,6 +1481,218 @@ void main() {
 
       expect(taskRan, isFalse,
           reason: 'Disposed executor must not process tasks via the timer');
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Hive persistence for IdleTask queue (Vision Next-Term §4.2: queue
+  // survives termination). Mirrors LlmTaskManager persistence tests.
+  // ------------------------------------------------------------------
+  group('IdleExecutor Hive persistence', () {
+    late String hivePath;
+
+    setUp(() async {
+      hivePath =
+          (await Directory.systemTemp.createTemp('idle_exec_persist_')).path;
+      Hive.init(hivePath);
+      await Hive.openBox(HiveBoxNames.idleTasks);
+      await Hive.box(HiveBoxNames.idleTasks).clear();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        try {
+          await Directory(hivePath).delete(recursive: true);
+        } catch (_) {
+          // Best-effort cleanup.
+        }
+      }
+    });
+
+    test('IdleTask toPersistJson/fromPersistJson round-trips all fields', () {
+      final original = IdleTask(
+        id: 'persist_test_1',
+        description: 'PDF ingestion prep task',
+        createdAt: DateTime(2024, 1, 1, 12, 0, 0),
+        requiresHeavy: true,
+        taskType: 'pdf_ingestion',
+        feature: 'pdf_ingestion',
+        subjectId: 'math',
+        jobId: 'bulk_job_1',
+        payload: '{"topicId":"weak_1"}',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+      final json = original.toPersistJson();
+      final restored = IdleTask.fromPersistJson(json);
+
+      expect(restored.id, equals('persist_test_1'));
+      expect(restored.description, equals('PDF ingestion prep task'));
+      expect(restored.createdAt, equals(DateTime(2024, 1, 1, 12, 0, 0)));
+      expect(restored.requiresHeavy, isTrue);
+      expect(restored.taskType, equals('pdf_ingestion'));
+      expect(restored.feature, equals('pdf_ingestion'));
+      expect(restored.subjectId, equals('math'));
+      expect(restored.jobId, equals('bulk_job_1'));
+      expect(restored.payload, equals('{"topicId":"weak_1"}'));
+      expect(restored.estimatedInputTokens, equals(8000));
+      expect(restored.estimatedOutputTokens, equals(2000));
+      expect(restored.taskFn, isNull,
+          reason: 'taskFn closure must not survive persistence');
+    });
+
+    test(
+        'queue with deferred tasks survives dispose + re-init '
+        '(simulated app restart)', () async {
+      final executor = IdleExecutor(
+        // Always defer so tasks stay in the queue and are not executed.
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor.init();
+
+      await executor.enqueuePrepTool(
+        'deferred prep task 1',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+        jobId: 'job_1',
+        payload: '{"topic":"biology"}',
+      );
+      await executor.enqueuePrepTool(
+        'deferred prep task 2',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'math',
+        jobId: 'job_2',
+      );
+
+      // Wait for persistence writes, then flush on dispose.
+      await executor.persistenceComplete;
+      executor.dispose();
+      await executor.persistenceComplete;
+
+      // Simulate app restart: fresh executor reads the box on init().
+      final restored = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await restored.init();
+
+      expect(restored.queue.length, equals(2));
+      expect(
+        restored.queue.any((t) => t.description == 'deferred prep task 1'),
+        isTrue,
+      );
+      expect(
+        restored.queue.any((t) => t.description == 'deferred prep task 2'),
+        isTrue,
+      );
+
+      final task1 = restored.queue.firstWhere((t) => t.jobId == 'job_1');
+      expect(task1.feature, equals('pdf_ingestion'));
+      expect(task1.taskType, equals('pdf_ingestion'));
+      expect(task1.jobId, equals('job_1'));
+      expect(task1.payload, equals('{"topic":"biology"}'));
+      expect(task1.subjectId, isNull);
+      expect(task1.taskFn, isNull,
+          reason: 'Restored tasks must have no closure — '
+              'reconstructor re-attaches at execution time');
+
+      final task2 = restored.queue.firstWhere((t) => t.jobId == 'job_2');
+      expect(task2.feature, equals('lesson_prep'));
+      expect(task2.subjectId, equals('math'));
+      expect(task2.taskFn, isNull);
+
+      restored.dispose();
+      await restored.persistenceComplete;
+    });
+
+    test('removeTasksWhere persists removal to disk', () async {
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor.init();
+
+      await executor.enqueuePrepTool(
+        'task to keep',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+      );
+      await executor.enqueuePrepTool(
+        'task to remove',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'pdf_ingestion',
+        taskType: 'pdf_ingestion',
+      );
+
+      await executor.persistenceComplete;
+      executor.removeTasksWhere((t) => t.description == 'task to remove');
+      await executor.persistenceComplete;
+      executor.dispose();
+      await executor.persistenceComplete;
+
+      final restored = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await restored.init();
+
+      expect(restored.queue.length, equals(1));
+      expect(restored.queue.first.description, equals('task to keep'));
+
+      restored.dispose();
+      await restored.persistenceComplete;
+    });
+
+    test(
+        'completed task is persisted and not treated as pending after '
+        'restore', () async {
+      final manager = LlmTaskManager();
+      final executor = IdleExecutor(llmTaskManager: manager);
+      await executor.init();
+
+      var taskRan = false;
+      await executor.enqueuePrepTool(
+        'completes immediately',
+        () async {
+          taskRan = true;
+          return {'success': true};
+        },
+        requiresHeavy: false,
+        feature: 'background',
+        taskType: 'background',
+      );
+
+      expect(taskRan, isTrue);
+      await executor.persistenceComplete;
+      executor.dispose();
+      await executor.persistenceComplete;
+
+      final restored = IdleExecutor(llmTaskManager: manager);
+      await restored.init();
+
+      expect(restored.queue.length, equals(1));
+      expect(restored.queue.first.isCompleted, isTrue);
+      expect(restored.hasPendingTasks, isFalse);
+
+      restored.dispose();
+      await restored.persistenceComplete;
+    });
+
+    test('empty queue on init when box is empty', () async {
+      final executor = IdleExecutor();
+      await executor.init();
+
+      expect(executor.queue, isEmpty);
+      expect(executor.hasPendingTasks, isFalse);
+
+      executor.dispose();
+      await executor.persistenceComplete;
     });
   });
 }

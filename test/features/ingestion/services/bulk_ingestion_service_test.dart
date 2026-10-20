@@ -1,5 +1,9 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
@@ -127,6 +131,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.success('llm-response');
   }
@@ -172,6 +177,8 @@ class _SyncIdleExecutor extends IdleExecutor {
     String? subjectId,
     int estimatedInputTokens = 0,
     int estimatedOutputTokens = 0,
+    String? jobId,
+    String? payload,
   }) async {
     enqueuedDescriptions.add(description);
     enqueuedPrepTools.add(_EnqueuedPrepTool(
@@ -182,6 +189,8 @@ class _SyncIdleExecutor extends IdleExecutor {
       subjectId: subjectId,
       estimatedInputTokens: estimatedInputTokens,
       estimatedOutputTokens: estimatedOutputTokens,
+      jobId: jobId,
+      payload: payload,
     ));
     await task();
   }
@@ -196,6 +205,8 @@ class _EnqueuedPrepTool {
   final String? subjectId;
   final int estimatedInputTokens;
   final int estimatedOutputTokens;
+  final String? jobId;
+  final String? payload;
 
   _EnqueuedPrepTool({
     required this.description,
@@ -205,6 +216,8 @@ class _EnqueuedPrepTool {
     this.subjectId,
     this.estimatedInputTokens = 0,
     this.estimatedOutputTokens = 0,
+    this.jobId,
+    this.payload,
   });
 }
 
@@ -711,6 +724,265 @@ void main() {
 
         realExecutor.dispose();
       });
+    });
+  });
+
+  // ------------------------------------------------------------------
+  // Hive persistence for BulkIngestionJob list (Vision Next-Term §4.2:
+  // jobs survive termination). Mirrors LlmTaskManager persistence
+  // tests — enqueue + dispose + re-init restores the job list.
+  // ------------------------------------------------------------------
+  group('BulkIngestionService Hive persistence', () {
+    late String hivePath;
+
+    setUp(() async {
+      hivePath =
+          (await Directory.systemTemp.createTemp('bulk_ingest_persist_')).path;
+      Hive.init(hivePath);
+      await Hive.openBox(HiveBoxNames.bulkIngestionJobs);
+      await Hive.openBox(HiveBoxNames.idleTasks);
+      await Hive.box(HiveBoxNames.bulkIngestionJobs).clear();
+      await Hive.box(HiveBoxNames.idleTasks).clear();
+    });
+
+    tearDown(() async {
+      await Hive.close();
+      if (hivePath.isNotEmpty) {
+        try {
+          await Directory(hivePath).delete(recursive: true);
+        } catch (_) {
+          // Best-effort cleanup.
+        }
+      }
+    });
+
+    test(
+        'BulkIngestionJob toPersistJson/fromPersistJson round-trips all '
+        'fields', () {
+      final original = BulkIngestionJob(
+        id: 'bulk_rt_1',
+        fileName: 'textbook.pdf',
+        title: 'Textbook',
+        filePath: '/docs/textbook.pdf',
+        sourceType: SourceType.pdf,
+        studentId: 'student-1',
+        classificationModelId: 'clf-1',
+        summarizationModelId: 'sum-1',
+        generationModelId: 'gen-1',
+        subjectId: 'math',
+        generateQuestions: true,
+        generateLessons: false,
+        fullPipeline: true,
+        possibleTopics: ['algebra', 'geometry'],
+        createdAt: DateTime(2024, 1, 1, 10, 0, 0),
+      );
+      // Simulate runtime state that should round-trip.
+      original.processingStage = ProcessingStatus.classifying;
+      original.description = 'Classifying content';
+      original.status = BulkJobStatus.deferred;
+      original.error = '429 rate limited';
+      original.retryCount = 2;
+      original.startedAt = DateTime(2024, 1, 1, 10, 5, 0);
+      original.completedAt = DateTime(2024, 1, 1, 11, 0, 0);
+      original.sourceId = 'src_1';
+
+      final json = original.toPersistJson();
+      final restored = BulkIngestionJob.fromPersistJson(json);
+
+      expect(restored.id, equals('bulk_rt_1'));
+      expect(restored.fileName, equals('textbook.pdf'));
+      expect(restored.title, equals('Textbook'));
+      expect(restored.filePath, equals('/docs/textbook.pdf'));
+      expect(restored.sourceType, equals(SourceType.pdf));
+      expect(restored.studentId, equals('student-1'));
+      expect(restored.classificationModelId, equals('clf-1'));
+      expect(restored.summarizationModelId, equals('sum-1'));
+      expect(restored.generationModelId, equals('gen-1'));
+      expect(restored.subjectId, equals('math'));
+      expect(restored.generateQuestions, isTrue);
+      expect(restored.generateLessons, isFalse);
+      expect(restored.fullPipeline, isTrue);
+      expect(restored.possibleTopics, equals(['algebra', 'geometry']));
+      expect(restored.createdAt, equals(DateTime(2024, 1, 1, 10, 0, 0)));
+      // Mutable pipeline state.
+      expect(restored.processingStage, equals(ProcessingStatus.classifying));
+      expect(restored.description, equals('Classifying content'));
+      expect(restored.status, equals(BulkJobStatus.deferred));
+      expect(restored.error, equals('429 rate limited'));
+      expect(restored.retryCount, equals(2));
+      expect(restored.startedAt, equals(DateTime(2024, 1, 1, 10, 5, 0)));
+      expect(restored.completedAt, equals(DateTime(2024, 1, 1, 11, 0, 0)));
+      expect(restored.sourceId, equals('src_1'));
+    });
+
+    test(
+        'enqueued jobs survive dispose + re-init '
+        '(simulated app restart)', () async {
+      final pipeline = FakeContentPipeline();
+      // Real IdleExecutor with quiet-hours always deferring so tasks
+      // stay in the queue (not executed) and jobs stay pending.
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor.init();
+
+      final service = BulkIngestionService(
+        pipeline: pipeline,
+        idleExecutor: executor,
+      );
+      await service.init();
+
+      final jobs = await service.enqueueBulk(
+        files: [
+          BulkUploadFile(
+            filePath: '/test/persist_a.pdf',
+            fileName: 'persist_a.pdf',
+            title: 'Persist A',
+            sourceType: SourceType.pdf,
+            subjectId: 'math',
+          ),
+          BulkUploadFile(
+            filePath: '/test/persist_b.pdf',
+            fileName: 'persist_b.pdf',
+            title: 'Persist B',
+            sourceType: SourceType.pdf,
+            subjectId: 'physics',
+          ),
+        ],
+        studentId: 'student-1',
+        classificationModelId: 'clf',
+        summarizationModelId: 'sum',
+        generationModelId: 'gen',
+      );
+
+      expect(jobs.length, 2);
+      // Pipeline should NOT have been called — tasks are deferred for quiet-hours.
+      expect(pipeline.callCount, 0,
+          reason: 'Deferred tasks must not trigger pipeline');
+
+      // Flush persistence writes, then dispose (flushes again).
+      await service.persistenceComplete;
+      await executor.persistenceComplete;
+      service.dispose();
+      await executor.persistenceComplete;
+
+      // Simulate app restart.
+      final executor2 = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor2.init();
+
+      final restoredService = BulkIngestionService(
+        pipeline: pipeline,
+        idleExecutor: executor2,
+      );
+      await restoredService.init();
+
+      // Both jobs restored with correct fields.
+      expect(restoredService.jobs.length, equals(2));
+      final jobA = restoredService.jobs
+          .firstWhere((j) => j.fileName == 'persist_a.pdf');
+      expect(jobA.title, equals('Persist A'));
+      expect(jobA.subjectId, equals('math'));
+      expect(jobA.isPending, isTrue);
+      expect(jobA.sourceId, isNull);
+
+      final jobB = restoredService.jobs
+          .firstWhere((j) => j.fileName == 'persist_b.pdf');
+      expect(jobB.title, equals('Persist B'));
+      expect(jobB.subjectId, equals('physics'));
+      expect(jobB.isPending, isTrue);
+
+      // The idle task queue should also be restored — the two deferred
+      // prep tasks that BulkIngestionService enqueued.
+      expect(executor2.queue.length, equals(2));
+      // Restored idle tasks carry their jobId so the reconstructor can
+      // re-attach the closure after restart.
+      expect(
+        executor2.queue.any((t) => t.jobId == jobA.id),
+        isTrue,
+      );
+      expect(
+        executor2.queue.any((t) => t.jobId == jobB.id),
+        isTrue,
+      );
+
+      restoredService.dispose();
+      await restoredService.persistenceComplete;
+      await executor2.persistenceComplete;
+    });
+
+    test(
+        'restored idle tasks carry jobId so the reconstructor can '
+        're-attach closures after restart', () async {
+      final pipeline = FakeContentPipeline();
+      final executor = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor.init();
+
+      final service = BulkIngestionService(
+        pipeline: pipeline,
+        idleExecutor: executor,
+      );
+      await service.init();
+
+      await service.enqueueBulk(
+        files: [
+          BulkUploadFile(
+            filePath: '/test/resume.pdf',
+            fileName: 'resume.pdf',
+            title: 'Resume Test',
+            sourceType: SourceType.pdf,
+            subjectId: 'biology',
+          ),
+        ],
+        studentId: 's',
+        classificationModelId: 'c',
+        summarizationModelId: 's2',
+        generationModelId: 'g',
+      );
+
+      await service.persistenceComplete;
+      await executor.persistenceComplete;
+      service.dispose();
+      await executor.persistenceComplete;
+
+      // Restart.
+      final executor2 = IdleExecutor(
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await executor2.init();
+
+      final service2 = BulkIngestionService(
+        pipeline: pipeline,
+        idleExecutor: executor2,
+      );
+      await service2.init();
+
+      // The idle task is restored without a closure but carries its jobId,
+      // which the service's reconstructor uses to look up the restored job
+      // and rebuild the _processJob(job) closure at execution time.
+      expect(executor2.queue.length, equals(1));
+      final idleTask = executor2.queue.first;
+      expect(idleTask.taskFn, isNull,
+          reason: 'On-disk tasks arrive without a closure; the '
+              'reconstructor re-attaches it on processNext()');
+      expect(idleTask.jobId, isNotNull);
+      expect(idleTask.isCompleted, isFalse);
+      expect(idleTask.error, isNull);
+
+      // The restored job has the same id as the idle task's jobId, so the
+      // reconstructor can find it.
+      final restoredJob =
+          service2.jobs.firstWhere((j) => j.id == idleTask.jobId);
+      expect(restoredJob.fileName, equals('resume.pdf'));
+      expect(restoredJob.subjectId, equals('biology'));
+      expect(restoredJob.isPending, isTrue);
+
+      service2.dispose();
+      await service2.persistenceComplete;
+      await executor2.persistenceComplete;
     });
   });
 }

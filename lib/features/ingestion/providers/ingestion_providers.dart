@@ -176,6 +176,7 @@ final idleExecutorProvider = Provider<IdleExecutor>((ref) {
     usageMeter: usageMeter,
     prepBudgetService: prepBudgetService,
   );
+  executor.init();
   executor.startIdleMonitoring();
   ref.onDispose(executor.dispose);
   return executor;
@@ -191,5 +192,6 @@ final bulkIngestionServiceProvider =
     pipeline: ref.watch(contentPipelineProvider),
     idleExecutor: ref.watch(idleExecutorProvider),
   );
+  service.init();
   return service;
 });

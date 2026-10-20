@@ -30,6 +30,7 @@ class FakeAgentLoop extends AgentLoop {
     required String systemPrompt,
     String feature = 'agent',
     List<Map<String, String>>? history,
+    String? sessionId,
   }) async {
     capturedMessage = userMessage;
     capturedStudentId = studentId;
@@ -85,6 +86,8 @@ class FakeIdleExecutor extends IdleExecutor {
     String description,
     Future<void> Function() task, {
     bool requiresHeavy = false,
+    String? jobId,
+    String? payload,
   }) async {
     enqueuedDescription = description;
     enqueuedTask = task;
@@ -101,6 +104,8 @@ class FakeIdleExecutor extends IdleExecutor {
     String? subjectId,
     int estimatedInputTokens = 0,
     int estimatedOutputTokens = 0,
+    String? jobId,
+    String? payload,
   }) async {
     prepEnqueuedDescription = description;
     prepEnqueuedTask = task;

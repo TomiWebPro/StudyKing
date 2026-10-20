@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart' show VoidCallback;
+import 'package:hive_flutter/hive_flutter.dart';
 import 'package:meta/meta.dart' show visibleForTesting;
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart' show LlmUsageMeter;
@@ -8,11 +10,30 @@ import 'package:studyking/core/services/prep_budget.dart' show PrepBudgetService
 import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 
+/// Rebuilds the executable closure for an [IdleTask] that was restored from
+/// persistence without one.
+///
+/// Closures cannot be serialized to Hive (Vision Next-Term §4.1: "the task
+/// closure must be reconstructed from taskType/feature, not serialized
+/// directly"). Services that own a class of prep task register a
+/// [TaskReconstructor] with the [IdleExecutor]; at execution time the executor
+/// consults it to (re)attach a fresh closure for any restored task that carries
+/// a `feature`/`jobId` it recognises. Returns `null` when the task cannot be
+/// resumed in this process (e.g. it belonged to a service that has no
+/// registered reconstructor).
+typedef TaskReconstructor = Future<void> Function()? Function(IdleTask task);
+
 class IdleTask {
   final String id;
   final String description;
   final DateTime createdAt;
-  final Future<void> Function()? taskFn;
+
+  /// Executable closure. NOT persisted: functions cannot be serialised to
+  /// Hive. Restored tasks carry `null` here and are re-attached via the
+  /// [IdleExecutor]'s [TaskReconstructor] at execution time. Mutable so the
+  /// reconstructor can set it after construction.
+  Future<void> Function()? taskFn;
+
   final bool requiresHeavy;
   final String? taskType;
   final String? feature;
@@ -23,6 +44,19 @@ class IdleTask {
   /// task so no tokens are spent on a syllabus the student paused.
   final String? subjectId;
 
+  /// Optional opaque identifier linking this idle task to the durable entity
+  /// that owns it (e.g. a `BulkIngestionJob.id`). The owning service's
+  /// [TaskReconstructor] uses it to look up the config needed to rebuild the
+  /// executable closure after a restart.
+  final String? jobId;
+
+  /// Optional serialisable payload blob carrying whatever extra context a
+  /// [TaskReconstructor] needs to rebuild the closure (Vision Next-Term §4.1
+  /// PrepTool registry - the taskType/feature key, plus a payload). Stored as
+  /// a raw string so future tools can evolve their own encoding without a new
+  /// adapter.
+  final String? payload;
+
   bool isRunning;
   bool isCompleted;
   String? error;
@@ -31,7 +65,7 @@ class IdleTask {
   /// [IdleExecutor] budget gate can consult
   /// [PrepBudgetService.canSpend] *before* creating the parent
   /// [LlmTask] on [LlmTaskManager]. When both are zero (the default)
-  /// the gate is skipped — tasks that carry no estimate are assumed to
+  /// the gate is skipped - tasks that carry no estimate are assumed to
   /// be non-prep background work.
   final int estimatedInputTokens;
   final int estimatedOutputTokens;
@@ -45,12 +79,53 @@ class IdleTask {
     this.taskType,
     this.feature,
     this.subjectId,
+    this.jobId,
+    this.payload,
     this.isRunning = false,
     this.isCompleted = false,
     this.error,
     this.estimatedInputTokens = 0,
     this.estimatedOutputTokens = 0,
   });
+
+  /// Serialisable snapshot used for Hive persistence. The `taskFn` closure is
+  /// intentionally excluded - it is reconstructed at load time via the
+  /// [TaskReconstructor].
+  Map<String, dynamic> toPersistJson() => {
+        'id': id,
+        'description': description,
+        'createdAt': createdAt.toIso8601String(),
+        'requiresHeavy': requiresHeavy,
+        'taskType': taskType,
+        'feature': feature,
+        'subjectId': subjectId,
+        'jobId': jobId,
+        'payload': payload,
+        'isRunning': isRunning,
+        'isCompleted': isCompleted,
+        'error': error,
+        'estimatedInputTokens': estimatedInputTokens,
+        'estimatedOutputTokens': estimatedOutputTokens,
+      };
+
+  factory IdleTask.fromPersistJson(Map<String, dynamic> json) => IdleTask(
+        id: json['id'] as String,
+        description: json['description'] as String,
+        createdAt: DateTime.parse(json['createdAt'] as String),
+        requiresHeavy: json['requiresHeavy'] as bool? ?? false,
+        taskType: json['taskType'] as String?,
+        feature: json['feature'] as String?,
+        subjectId: json['subjectId'] as String?,
+        jobId: json['jobId'] as String?,
+        payload: json['payload'] as String?,
+        // A task that was `isRunning` at termination never reached completion;
+        // reset it so the next poll retries it instead of skipping it.
+        isRunning: false,
+        isCompleted: json['isCompleted'] as bool? ?? false,
+        error: json['error'] as String?,
+        estimatedInputTokens: (json['estimatedInputTokens'] as num?)?.toInt() ?? 0,
+        estimatedOutputTokens: (json['estimatedOutputTokens'] as num?)?.toInt() ?? 0,
+      );
 }
 
 class IdleExecutor {
@@ -64,21 +139,21 @@ class IdleExecutor {
   /// individual LLM calls inside a prep pipeline record on the meter under
   /// sub-feature task types (e.g. `classification`), and the parent task's
   /// `feature`/`taskType` (e.g. `pdf_ingestion`) is invisible to the budget
-  /// layer — spendByCategory reads zero for the category the student configured.
+  /// layer - spendByCategory reads zero for the category the student configured.
   final LlmUsageMeter? _usageMeter;
 
   /// Optional callback consulted before running a task. When it returns true
   /// the task is left in the queue and retried on the next poll, implementing
-  /// vision §4.2 quiet-hours: heavy prep defers so the student is not
-  /// disturbed at night. Inject in tests with a stubbed [DateTime] for a
-  /// deterministic fake-clock (e.g. 2am within a 22–8 window).
+  /// vision Next-Term §4.2 quiet-hours: heavy prep defers so the student is
+  /// not disturbed at night. Inject in tests with a stubbed [DateTime] for a
+  /// deterministic fake-clock (e.g. 2am within a 22-8 window).
   final bool Function(DateTime now)? _shouldDeferForQuietHours;
 
   /// Optional callback consulted before running a task that carries a
   /// [IdleTask.subjectId]. When it returns false the task is left in the queue
-  /// (deferred) and no tokens are spent, realising vision §4.2 "per-syllabus
-  /// opt-in": a student who toggles a subject off gets no prep for that
-  /// syllabus while away. Inject in tests with a predicate mirroring a
+  /// (deferred) and no tokens are spent, realising vision Next-Term §4.2
+  /// "per-syllabus opt-in": a student who toggles a subject off gets no prep
+  /// for that syllabus while away. Inject in tests with a predicate mirroring a
   /// `PrepBudget` whose `disabledSubjects` contains the subject.
   final bool Function(String subjectId)? _isPrepEnabledForSubject;
 
@@ -90,9 +165,28 @@ class IdleExecutor {
   /// Inject in tests with a fake whose `canSpend` can be toggled.
   final PrepBudgetService? _prepBudgetService;
 
+  /// Optional closure reconstructor consulted lazily by [_tryExecuteNext] for
+  /// tasks restored from persistence with no executable [IdleTask.taskFn]
+  /// (Vision Next-Term §4.1: the closure must be rebuilt from taskType/feature,
+  /// never serialised). Set post-construction by owning services via
+  /// [setTaskReconstructor] so they can build on top of the IdleExecutor once
+  /// their own state has been restored.
+  TaskReconstructor? _taskReconstructor;
+
   final List<IdleTask> _queue = [];
+  int _counter = 0;
   Timer? _idleCheckTimer;
   bool _isExecuting = false;
+
+  // --- Hive persistence (Vision Next-Term §4.2: queue survives termination) ---
+  Box? _box;
+  // Trailing save future: serialises box writes so overlapping mutations
+  // cannot interleave their clear/put sequences (mirrors LlmTaskManager).
+  Future<void> _saveChain = Future<void>.value();
+
+  /// Completes once every box save scheduled so far has finished.
+  @visibleForTesting
+  Future<void> get persistenceComplete => _saveChain;
 
   IdleExecutor({
     LlmTaskManager? llmTaskManager,
@@ -102,12 +196,92 @@ class IdleExecutor {
     bool Function(String subjectId)? isPrepEnabledForSubject,
     LlmUsageMeter? usageMeter,
     PrepBudgetService? prepBudgetService,
+    TaskReconstructor? taskReconstructor,
   })  : _llmTaskManager = llmTaskManager,
         _systemMonitor = systemMonitor,
         _shouldDeferForQuietHours = shouldDeferForQuietHours,
         _isPrepEnabledForSubject = isPrepEnabledForSubject,
         _usageMeter = usageMeter,
-        _prepBudgetService = prepBudgetService;
+        _prepBudgetService = prepBudgetService,
+        _taskReconstructor = taskReconstructor;
+
+  /// Opens the idle-tasks box and restores any queued/running tasks left over
+  /// from a previous process. Restored tasks carry no executable closure; they
+  /// are re-attached lazily by [_tryExecuteNext] via [_taskReconstructor].
+  Future<void> init() async {
+    _box = await Hive.openBox(HiveBoxNames.idleTasks);
+    _loadFromBox();
+  }
+
+  /// Registers (or replaces) the closure reconstructor consulted by
+  /// [_tryExecuteNext] for tasks restored without an executable
+  /// [IdleTask.taskFn]. Owning services call this from their own `init()`
+  /// after they have restored the durable state the reconstructor needs to
+  /// look up.
+  void setTaskReconstructor(TaskReconstructor? reconstructor) {
+    _taskReconstructor = reconstructor;
+  }
+
+  void _loadFromBox() {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    _queue.clear();
+    for (final entry in box.values) {
+      if (entry is Map) {
+        try {
+          _queue.add(IdleTask.fromPersistJson(Map<String, dynamic>.from(entry)));
+        } catch (e) {
+          _logger.w('Failed to restore an idle task from box', e);
+        }
+      }
+    }
+    if (_queue.isNotEmpty) {
+      _logger.d('Restored ${_queue.length} idle task(s) from persistence');
+    }
+    // Restore the monotonic counter from the highest stored id so newly
+    // generated ids never collide with restored ones across a restart
+    // (mirrors LlmTaskManager._loadFromBox).
+    if (_queue.isNotEmpty) {
+      final maxId = _queue.map((t) {
+        final parts = t.id.split('_');
+        return parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+      }).fold(0, (a, b) => a > b ? a : b);
+      _counter = maxId;
+    }
+  }
+
+  Future<void> _saveToBox() async {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    try {
+      // The clear must fully complete before the puts start. Firing both
+      // unawaited lets Hive's async keystore updates interleave, which
+      // nondeterministically drops just-written tasks or leaves stale ones
+      // behind for the next init() (mirrors LlmTaskManager._saveToBox).
+      await box.clear();
+      for (final task in _queue) {
+        await box.put(task.id, task.toPersistJson());
+      }
+    } catch (e) {
+      _logger.w('Failed to persist idle tasks to box', e);
+    }
+  }
+
+  /// Schedules an ordered box save. Saves run one after another, each writing
+  /// the full current state, so rapid successive mutations coalesce without
+  /// ever interleaving their writes. No-op when no box is open (e.g. tests).
+  void _persist() {
+    _saveChain = _saveChain.then((_) => _saveToBox());
+  }
+
+  /// Evicts queued/persisted tasks matching [test] and persists the removal.
+  /// Used by owning services (e.g. [BulkIngestionService]) to drop stale tasks
+  /// they re-own before re-enqueuing fresh ones after a restart.
+  void removeTasksWhere(bool Function(IdleTask task) test) {
+    _queue.removeWhere(test);
+    _persist();
+    _notify();
+  }
 
   List<IdleTask> get queue => List.unmodifiable(_queue);
   bool get hasPendingTasks => _queue.any((t) => !t.isCompleted && !t.isRunning);
@@ -126,22 +300,27 @@ class IdleExecutor {
     String description,
     Future<void> Function() task, {
     bool requiresHeavy = false,
+    String? jobId,
+    String? payload,
   }) async {
-    final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
+    final id = 'idle_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _queue.add(IdleTask(
       id: id,
       description: description,
       createdAt: DateTime.now(),
       taskFn: task,
       requiresHeavy: requiresHeavy,
+      jobId: jobId,
+      payload: payload,
     ));
     if (_queue.length > 50) {
       _queue.removeAt(0);
     }
+    _persist();
     _tryExecuteNext();
   }
 
-   Future<void> enqueuePrepTool(
+  Future<void> enqueuePrepTool(
     String description,
     Future<Map<String, dynamic>> Function() task, {
     required bool requiresHeavy,
@@ -150,8 +329,10 @@ class IdleExecutor {
     String? subjectId,
     int estimatedInputTokens = 0,
     int estimatedOutputTokens = 0,
+    String? jobId,
+    String? payload,
   }) async {
-    final id = 'idle_${DateTime.now().millisecondsSinceEpoch}';
+    final id = 'idle_${++_counter}_${DateTime.now().millisecondsSinceEpoch}';
     _queue.add(IdleTask(
       id: id,
       description: description,
@@ -169,10 +350,13 @@ class IdleExecutor {
       subjectId: subjectId,
       estimatedInputTokens: estimatedInputTokens,
       estimatedOutputTokens: estimatedOutputTokens,
+      jobId: jobId,
+      payload: payload,
     ));
     if (_queue.length > 50) {
       _queue.removeAt(0);
     }
+    _persist();
     _tryExecuteNext();
   }
 
@@ -189,13 +373,13 @@ class IdleExecutor {
     // Vision Next-Term §4.2 quiet-hours: defer ALL off-period prep tasks when
     // the student has configured a quiet-hours window and the current time is
     // within it. This prevents notifications, network traffic, and CPU use
-    // during sleep hours — not just heavy tasks (a light task at 2am is still
+    // during sleep hours - not just heavy tasks (a light task at 2am is still
     // disruptive). The check is delegated to the injected callback so tests
     // can supply a fake clock deterministically.
     if (_shouldDeferForQuietHours != null &&
         _shouldDeferForQuietHours(DateTime.now())) {
       _logger.d(
-        'Deferring task "${next.description}" — within quiet hours',
+        'Deferring task "${next.description}" - within quiet hours',
       );
       return;
     }
@@ -205,7 +389,7 @@ class IdleExecutor {
     // left in the queue and retried on the next poll / enqueue.
     if (next.requiresHeavy && _systemMonitor != null && !_systemMonitor.canRunHeavyPrepNow) {
       _logger.w(
-        'Deferring heavy prep task "${next.description}" — system under load',
+        'Deferring heavy prep task "${next.description}" - system under load',
       );
       return;
     }
@@ -222,7 +406,7 @@ class IdleExecutor {
         _isPrepEnabledForSubject != null &&
         !_isPrepEnabledForSubject(subjectId)) {
       _logger.d(
-        'Deferring task "${next.description}" — subject "$subjectId" prep disabled by student',
+        'Deferring task "${next.description}" - subject "$subjectId" prep disabled by student',
       );
       return;
     }
@@ -231,7 +415,7 @@ class IdleExecutor {
     // [LlmTask] on [LlmTaskManager], consult [PrepBudgetService.canSpend] with
     // the task's pre-run token estimate. When the category cap is exhausted the
     // task is left in the queue (status `queued`, never `running`/`failed`) and
-    // retried on the next poll — so the student sees a deferred task that
+    // retried on the next poll - so the student sees a deferred task that
     // resumes when the budget window resets, rather than a failure that
     // requires manual retry. Only applies when the task's [IdleTask.taskType]
     // maps to a recognised [PrepCategory]; non-prep background tasks skip this
@@ -246,7 +430,7 @@ class IdleExecutor {
       if (estimatedTokens > 0 &&
           !_prepBudgetService.canSpend(category, estimatedTokens)) {
         _logger.d(
-          'Deferring task "${next.description}" — ${category.taskTypeKey} budget exhausted '
+          'Deferring task "${next.description}" - ${category.taskTypeKey} budget exhausted '
           '(${_prepBudgetService.remainingFor(category)} tokens remaining; '
           'estimated $estimatedTokens needed, will retry on next poll)',
         );
@@ -254,8 +438,34 @@ class IdleExecutor {
       }
     }
 
+    // Vision Next-Term §4.1: the executable closure cannot be serialised to
+    // Hive, so tasks restored from persistence arrive here with `taskFn == null`.
+    // Consult the optional [TaskReconstructor] to rebuild the closure from the
+    // task's taskType/feature (+ jobId/payload). When no reconstructor can
+    // reattach a closure the task is drained as a no-op (logged at `d`) so it
+    // does not clog the queue; an owning service that can reconstruct the
+    // closure keeps the task runnable across restarts.
+    if (next.taskFn == null) {
+      final closure = _taskReconstructor?.call(next);
+      if (closure == null) {
+        _logger.d(
+          'Idle task "${next.description}" has no reconstructable closure '
+          '(feature=${next.feature}, taskType=${next.taskType}, '
+          'jobId=${next.jobId}); draining as no-op',
+        );
+        next.isCompleted = true;
+        _persist();
+        _notify();
+        return;
+      }
+      // The reconstructor returns the closure directly (a pure lookup); attach
+      // it so the normal execution path below runs the restored task.
+      next.taskFn = closure;
+    }
+
     _isExecuting = true;
     next.isRunning = true;
+    _persist();
 
     final manager = _llmTaskManager;
     final taskId = manager?.createTask(
@@ -278,14 +488,15 @@ class IdleExecutor {
       next.isCompleted = true;
       // Aggregate tokens from per-call LLM tasks created during execution that
       // were not in the pre-snapshot, so the task-manager portal surfaces real
-      // per-task token spend instead of 0 (vision §4.2 token transparency).
+      // per-task token spend instead of 0 (vision Next-Term §4.2 token
+      // transparency).
       var totalTokens = 0;
       var totalCost = 0.0;
       // Track whether any per-call LlmTask already recorded on the meter under
       // a PrepCategory key. If so, those tokens are already attributed on the
-      // meter and the aggregate bridge must NOT re-record them — that would
+      // meter and the aggregate bridge must NOT re-record them - that would
       // double-count the same physical tokens on the shared LlmUsageMeter,
-      // inflating totalPrepTokens() and burning per-category caps at 2× the
+      // inflating totalPrepTokens() and burning per-category caps at 2x the
       // real rate (Issue: idle-executor-aggregate-double-counts-meter).
       var perCallHasPrepCategory = false;
       if (manager != null) {
@@ -309,7 +520,7 @@ class IdleExecutor {
         // PrepBudgetService can attribute the spend under the correct prep
         // category (Vision Next-Term §4.2). This is ONLY needed when per-call
         // recordings did NOT already cover the tokens under a PrepCategory key
-        // — e.g. pipeline internal calls using non-prep features that resolve
+        // - e.g. pipeline internal calls using non-prep features that resolve
         // to classification/generation/summarization. When per-call recordings
         // already used a PrepCategory key (e.g. 'pdf_ingestion' via the
         // taskType override in chat()), re-recording would double-count the
@@ -329,14 +540,17 @@ class IdleExecutor {
           );
         }
       }
+      _persist();
     } catch (e) {
       next.error = e.toString();
       if (taskId.isNotEmpty) manager?.failTask(taskId, e.toString());
       _logger.w('Idle task failed: ${next.description}', e);
+      _persist();
     } finally {
       next.isRunning = false;
       _isExecuting = false;
       _notify();
+      _persist();
     }
   }
 
@@ -357,6 +571,11 @@ class IdleExecutor {
   }
 
   void dispose() {
+    // Flush the in-memory queue to disk so queued/pending tasks survive the
+    // process termination (Vision Next-Term §4.2). Best-effort: when no box is
+    // open (e.g. tests) this is a no-op. Schedules on the ordered save chain
+    // mirroring LlmTaskManager (which persists on each mutation).
+    _persist();
     stopIdleMonitoring();
     _listeners.clear();
   }

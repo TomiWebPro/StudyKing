@@ -1,5 +1,8 @@
 import 'package:flutter/foundation.dart' show ChangeNotifier;
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:meta/meta.dart' show visibleForTesting;
 import 'package:studyking/core/data/enums.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/data/models/source_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm_agent/idle_executor.dart';
@@ -45,7 +48,7 @@ enum BulkJobStatus {
   /// Actively being processed through [ContentPipeline].
   running,
 
-  /// Processed successfully — a [Source] was created and stored.
+  /// Processed successfully - a [Source] was created and stored.
   completed,
 
   /// Failed and not eligible for further automatic retry.
@@ -77,7 +80,7 @@ class BulkIngestionJob {
   final List<String> possibleTopics;
   final DateTime createdAt;
 
-  /// Pipeline stage (extracting, classifying, …) reported by the
+  /// Pipeline stage (extracting, classifying, ...) reported by the
   /// pipeline's `onProgress` callback.
   ProcessingStatus? processingStage;
 
@@ -113,7 +116,101 @@ class BulkIngestionJob {
     this.generateLessons = false,
     this.fullPipeline = true,
     this.possibleTopics = const [],
-  }) : createdAt = DateTime.now();
+    DateTime? createdAt,
+  }) : createdAt = createdAt ?? DateTime.now();
+
+  /// Serialisable snapshot used for Hive persistence. The job is a pure data
+  /// object (no executable closures) so all fields round-trip cleanly; the
+  /// `IdleExecutor` task closure that drives `_processJob` is rebuilt from the
+  /// `id` by the [TaskReconstructor] registered in [BulkIngestionService.init]
+  /// (Vision Next-Term §4.1).
+  Map<String, dynamic> toPersistJson() => {
+        'id': id,
+        'fileName': fileName,
+        'title': title,
+        'filePath': filePath,
+        'sourceType': sourceType.name,
+        'subjectId': subjectId,
+        'generateQuestions': generateQuestions,
+        'generateLessons': generateLessons,
+        'fullPipeline': fullPipeline,
+        'studentId': studentId,
+        'classificationModelId': classificationModelId,
+        'summarizationModelId': summarizationModelId,
+        'generationModelId': generationModelId,
+        'possibleTopics': possibleTopics,
+        'createdAt': createdAt.toIso8601String(),
+        'processingStage': processingStage?.name,
+        'description': description,
+        'status': status.name,
+        'error': error,
+        'retryCount': retryCount,
+        'startedAt': startedAt?.toIso8601String(),
+        'completedAt': completedAt?.toIso8601String(),
+        'sourceId': sourceId,
+      };
+
+  factory BulkIngestionJob.fromPersistJson(Map<String, dynamic> json) {
+    final job = BulkIngestionJob(
+      id: json['id'] as String,
+      fileName: json['fileName'] as String,
+      title: json['title'] as String,
+      filePath: json['filePath'] as String,
+      sourceType: _sourceTypeFromName(json['sourceType'] as String?),
+      studentId: json['studentId'] as String,
+      classificationModelId: json['classificationModelId'] as String,
+      summarizationModelId: json['summarizationModelId'] as String,
+      generationModelId: json['generationModelId'] as String,
+      subjectId: json['subjectId'] as String? ?? '',
+      generateQuestions: json['generateQuestions'] as bool? ?? false,
+      generateLessons: json['generateLessons'] as bool? ?? false,
+      fullPipeline: json['fullPipeline'] as bool? ?? true,
+      possibleTopics: (json['possibleTopics'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const [],
+      createdAt: DateTime.parse(json['createdAt'] as String),
+    );
+    // Mutable pipeline state is restored via cascade (the constructor only
+    // captures the immutable configuration above).
+    return job
+      ..processingStage = _processingStatusFromName(json['processingStage'] as String?)
+      ..description = json['description'] as String? ?? ''
+      ..status = _bulkJobStatusFromName(json['status'] as String?)
+      ..error = json['error'] as String? ?? ''
+      ..retryCount = (json['retryCount'] as num?)?.toInt() ?? 0
+      ..startedAt = json['startedAt'] != null
+          ? DateTime.parse(json['startedAt'] as String)
+          : null
+      ..completedAt = json['completedAt'] != null
+          ? DateTime.parse(json['completedAt'] as String)
+          : null
+      ..sourceId = json['sourceId'] as String?;
+  }
+
+  static SourceType _sourceTypeFromName(String? name) {
+    if (name == null) return SourceType.document;
+    return SourceType.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => SourceType.document,
+    );
+  }
+
+  static ProcessingStatus? _processingStatusFromName(String? name) {
+    if (name == null) return null;
+    return ProcessingStatus.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => ProcessingStatus.pending,
+    );
+  }
+
+  static BulkJobStatus _bulkJobStatusFromName(String? name) {
+    if (name == null) return BulkJobStatus.pending;
+    return BulkJobStatus.values.firstWhere(
+      (e) => e.name == name,
+      orElse: () => BulkJobStatus.pending,
+    );
+  }
 }
 
 /// Manages bulk ingestion of study materials (PDFs, notes, etc.) through a
@@ -124,8 +221,10 @@ class BulkIngestionJob {
 /// blocking the UI thread. Progress is tracked per file, and failed files
 /// are retried on transient errors (429, timeout, network).
 ///
-/// The service is a [ChangeNotifier] so widgets can `ref.watch` it and
-/// rebuild as jobs transition through states.
+/// The job list is persisted to the `bulkIngestionJobs` Hive box so that
+/// "Prepare while I'm away" survives app termination (Vision Next-Term §4.2):
+/// on `init()` the jobs are restored and their executable closures re-attached
+/// via the [IdleExecutor]'s [TaskReconstructor].
 class BulkIngestionService extends ChangeNotifier {
   static final Logger _logger = const Logger('BulkIngestionService');
 
@@ -148,11 +247,111 @@ class BulkIngestionService extends ChangeNotifier {
   int get failedCount => _jobs.where((j) => j.isFailed).length;
   int get totalCount => _jobs.length;
 
+  // --- Hive persistence (Vision Next-Term §4.2: jobs survive termination) ---
+  Box? _box;
+  Future<void> _saveChain = Future<void>.value();
+  bool _disposed = false;
+
+  /// Completes once every box save scheduled so far has finished.
+  @visibleForTesting
+  Future<void> get persistenceComplete => _saveChain;
+
   BulkIngestionService({
     required ContentPipeline pipeline,
     required IdleExecutor idleExecutor,
   })  : _pipeline = pipeline,
         _idleExecutor = idleExecutor;
+
+  /// Opens the jobs box, restores persisted jobs and registers a
+  /// [TaskReconstructor] with the [IdleExecutor] so that idle tasks for these
+  /// jobs can be re-attached (and thus resumed) after a restart.
+  Future<void> init() async {
+    try {
+      _box = await Hive.openBox(HiveBoxNames.bulkIngestionJobs);
+    } catch (e) {
+      _logger.w('Failed to open bulk ingestion jobs box', e);
+      return;
+    }
+    _loadJobsFromBox();
+    _registerTaskReconstructor();
+  }
+
+  void _loadJobsFromBox() {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    _jobs.clear();
+    for (final entry in box.values) {
+      if (entry is Map) {
+        try {
+          final job = BulkIngestionJob.fromPersistJson(
+            Map<String, dynamic>.from(entry),
+          );
+          // A job that was `running` at termination never finished; reset it
+          // to pending so it is retried instead of stuck in a running state.
+          if (job.isRunning && !job.isCompleted) {
+            job.status = BulkJobStatus.pending;
+          }
+          _jobs.add(job);
+        } catch (e) {
+          _logger.w('Failed to restore a bulk ingestion job from box', e);
+        }
+      }
+    }
+    if (_jobs.isNotEmpty) {
+      notifyListeners();
+    }
+  }
+
+  Future<void> _saveJobsToBox() async {
+    final box = _box;
+    if (box == null || !box.isOpen) return;
+    try {
+      await box.clear();
+      for (final job in _jobs) {
+        await box.put(job.id, job.toPersistJson());
+      }
+    } catch (e) {
+      _logger.w('Failed to persist bulk ingestion jobs to box', e);
+    }
+  }
+
+  /// Schedules an ordered box save. No-op when no box is open (e.g. tests).
+  void _persistJobs() {
+    if (_disposed) return;
+    _saveChain = _saveChain.then((_) => _saveJobsToBox());
+  }
+
+  /// Registers a [TaskReconstructor] that re-attaches a `_processJob(job)`
+  /// closure for restored `pdf_ingestion` idle tasks whose owning job is still
+  /// pending/deferred. This is what lets a deferred bulk upload resume after
+  /// the process restarts (Vision Next-Term §4.2).
+  void _registerTaskReconstructor() {
+    _idleExecutor.setTaskReconstructor((task) {
+      if (task.feature != PrepCategory.pdfIngestion.taskTypeKey) return null;
+      final jobId = task.jobId;
+      if (jobId == null) return null;
+      if (_disposed) return null;
+      // Look up the restored job the closure belonged to.
+      BulkIngestionJob? job;
+      for (final j in _jobs) {
+        if (j.id == jobId) {
+          job = j;
+          break;
+        }
+      }
+      if (job == null) return null;
+      // Only reattach a closure for jobs that are still awaiting execution.
+      if (!job.isPending) return null;
+      final jobToProcess = job;
+      return () async {
+        final result = await _processJob(jobToProcess);
+        final success = result['success'] as bool? ?? false;
+        if (!success) {
+          throw Exception(result['error'] ?? 'Bulk ingestion returned failure');
+        }
+      };
+    });
+  }
 
   /// Enqueues a list of files for background processing.
   ///
@@ -192,6 +391,8 @@ class BulkIngestionService extends ChangeNotifier {
       created.add(job);
       notifyListeners();
 
+      // Stamp the job id onto the idle task so the [TaskReconstructor] can
+      // rebuild the `_processJob(job)` closure after a restart.
       await _idleExecutor.enqueuePrepTool(
         'Ingest "${file.fileName}"',
         () => _processJob(job),
@@ -199,9 +400,11 @@ class BulkIngestionService extends ChangeNotifier {
         feature: PrepCategory.pdfIngestion.taskTypeKey,
         taskType: PrepCategory.pdfIngestion.taskTypeKey,
         subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
+        jobId: job.id,
       );
     }
 
+    _persistJobs();
     return created;
   }
 
@@ -264,7 +467,7 @@ class BulkIngestionService extends ChangeNotifier {
           return {'success': false, 'error': job.error};
         }
         // Retry was scheduled by [_handleTransientFailure]; this execution
-        // is done — the retry will run as a separate prep task.
+        // is done - the retry will run as a separate prep task.
         return {'success': true};
       }
     } catch (e) {
@@ -277,6 +480,7 @@ class BulkIngestionService extends ChangeNotifier {
       return {'success': true};
     } finally {
       notifyListeners();
+      _persistJobs();
     }
   }
 
@@ -305,6 +509,7 @@ class BulkIngestionService extends ChangeNotifier {
             feature: PrepCategory.pdfIngestion.taskTypeKey,
             taskType: PrepCategory.pdfIngestion.taskTypeKey,
             subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
+            jobId: job.id,
           );
         },
       );
@@ -336,7 +541,9 @@ class BulkIngestionService extends ChangeNotifier {
       feature: PrepCategory.pdfIngestion.taskTypeKey,
       taskType: PrepCategory.pdfIngestion.taskTypeKey,
       subjectId: job.subjectId.isNotEmpty ? job.subjectId : null,
+      jobId: job.id,
     );
+    _persistJobs();
   }
 
   /// Cancel a job. If it is currently running, the underlying pipeline
@@ -355,6 +562,7 @@ class BulkIngestionService extends ChangeNotifier {
     // pipeline to abort on its next cancellation checkpoint.
     _pipeline.cancel();
     notifyListeners();
+    _persistJobs();
   }
 
   /// Whether [error] represents a transient condition (rate limit, timeout,
@@ -375,7 +583,12 @@ class BulkIngestionService extends ChangeNotifier {
 
   @override
   void dispose() {
-    _jobs.clear();
+    _disposed = true;
+    // Flush the current job list to disk so queued/failed jobs are not lost
+    // when the service is torn down (Vision Next-Term §4.2). Best-effort:
+    // no-op when no box is open (e.g. tests). The jobs themselves are NOT
+    // cleared - they persist for the next init().
+    _persistJobs();
     _idleExecutor.dispose();
     super.dispose();
   }

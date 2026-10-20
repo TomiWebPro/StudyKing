@@ -559,6 +559,8 @@ class CapturingIdleExecutor extends IdleExecutor {
     String? subjectId,
     int estimatedInputTokens = 0,
     int estimatedOutputTokens = 0,
+    String? jobId,
+    String? payload,
   }) async {
     capturedPrepTasks.add(PrepTaskCapture(
       description: description,
@@ -576,6 +578,8 @@ class CapturingIdleExecutor extends IdleExecutor {
     String description,
     Future<void> Function() task, {
     bool requiresHeavy = false,
+    String? jobId,
+    String? payload,
   }) async {
     capturedEnqueuedDescriptions.add(description);
   }

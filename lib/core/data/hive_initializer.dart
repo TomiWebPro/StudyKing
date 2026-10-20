@@ -67,6 +67,9 @@ class HiveInitializer {
 
     await Hive.openBox(HiveBoxNames.learningPreferences);
 
+    await Hive.openBox(HiveBoxNames.idleTasks);
+    await Hive.openBox(HiveBoxNames.bulkIngestionJobs);
+
     await Hive.openBox<LessonFeedbackModel>(HiveBoxNames.lessonFeedback);
 
     await SessionMigrationService.migrateIfNeeded().then((r) {

@@ -47,6 +47,8 @@ class HiveBoxNames {
   static const String llmResponseCache = 'llm_response_cache';
   static const String lessonFeedback = 'lesson_feedback';
   static const String lessonRecaps = 'lesson_recaps';
+  static const String idleTasks = 'idle_tasks';
+  static const String bulkIngestionJobs = 'bulk_ingestion_jobs';
 
   /// All boxes included in a full backup (all boxes except those excluded).
   static List<String> get allBackupBoxes => [
@@ -54,12 +56,14 @@ class HiveBoxNames {
         answers,
         attempts,
         badges,
+        bulkIngestionJobs,
         conversations,
         dashboardLayoutPrefs,
         dbVersion,
         engagementNudges,
         examResults,
         focusSessions,
+        idleTasks,
         learningPlans,
         lessonBlocks,
         lessons,
@@ -98,10 +102,12 @@ class HiveBoxNames {
         answers,
         attempts,
         badges,
+        bulkIngestionJobs,
         conversations,
         engagementNudges,
         examResults,
         focusSessions,
+        idleTasks,
         learningPlans,
         lessonBlocks,
         lessons,

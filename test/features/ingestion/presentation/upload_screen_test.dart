@@ -41,6 +41,7 @@ class _FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
     String? taskType,
+    String? sessionId,
   }) async {
     return Result.success('');
   }
@@ -296,6 +297,8 @@ class _SyncIdleExecutor extends IdleExecutor {
     String description,
     Future<void> Function() task, {
     bool requiresHeavy = false,
+    String? jobId,
+    String? payload,
   }) async {
     await task();
   }
