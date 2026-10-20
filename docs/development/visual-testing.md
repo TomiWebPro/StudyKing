@@ -709,6 +709,19 @@ The `flutter_to_image` package passes the `locale` to a `Localizations`
 wrapper. Combine with `AppLocalizations.localizationsDelegates` and
 `AppLocalizations.supportedLocales` from `lib/l10n/generated/app_localizations.dart`.
 
+### Package-level locale-fidelity guarantee
+
+The package itself guarantees that the `locale` parameter actually changes
+pixels: `packages/flutter_to_image/test/locale_fidelity_test.dart` renders the
+*same* locale-aware widget under `Locale('en')` and `Locale('es')` (via a
+hand-written `LocalizationsDelegate` fake) and asserts the resulting PNGs
+**differ** — across `renderWidgetToPng`, `renderScreenToPng`, and
+`renderScreenGoldenMatrixFull`. This catches regressions that would otherwise
+silently collapse every `es` golden to its `en` twin (the exact stale-l10n
+class this matrix exists to detect). New localisation-sensitive helpers
+should extend this guarantee rather than rely solely on `matchesGoldenFile`
+path distinctness.
+
 ---
 
 ## RTL / text-direction testing
