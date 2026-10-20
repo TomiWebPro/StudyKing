@@ -90,6 +90,7 @@ class FakeTutorSessionRepository extends TutorSessionRepository {
 
 class FakeLlmService extends LlmService {
   bool _shouldThrowOnChat = false;
+  int chatCalls = 0;
 
   FakeLlmService()
       : super(
@@ -111,6 +112,7 @@ class FakeLlmService extends LlmService {
     List<Map<String, String>>? history,
     String feature = 'general',
   }) async {
+    chatCalls++;
     if (_shouldThrowOnChat) throw Exception('LLM failure');
     return Result.success('{"goals":["Learn"],"sections":[{"title":"Intro","duration":10,"type":"explanation"}],"checkpoints":["ck"],"estimatedDifficulty":2}');
   }
@@ -263,10 +265,15 @@ class FakeSessionRepository extends SessionRepository {
   List<Session> get savedSessions => List.unmodifiable(_savedSessions);
 
   @override
-  @override
   Future<Result<void>> save(String key, Session session) async {
     _savedSessions.add(session);
     return Result.success(null);
+  }
+
+  @override
+  Future<Result<Session?>> get(String key) async {
+    final matches = _savedSessions.where((s) => s.id == key);
+    return Result.success(matches.isNotEmpty ? matches.first : null);
   }
 
   @override
@@ -849,6 +856,210 @@ void main() {
         expect(responses.join(), contains('Physics'));
         expect(manager.currentSyllabusId, equals('phys'));
         expect(manager.currentSyllabusTitle, equals('Physics'));
+      });
+    });
+
+    group('startLesson with pre-generated lesson', () {
+      /// A pre-generated lesson with multiple block types, persisted by the
+      /// planner / PreGenerateLessonTool ahead of the scheduled time.
+      Lesson buildPreGeneratedLesson() {
+        const lessonId = 'pregen-lesson-1';
+        return Lesson(
+          id: lessonId,
+          subjectId: 'math',
+          title: 'Algebra',
+          topicId: 'topic-1',
+          blocks: [
+            LessonBlock(
+              id: 'b1',
+              subjectId: 'math',
+              lessonId: lessonId,
+              type: LessonBlockType.slide,
+              content: 'Pre-built slide: atoms',
+              order: 0,
+            ),
+            LessonBlock(
+              id: 'b2',
+              subjectId: 'math',
+              lessonId: lessonId,
+              type: LessonBlockType.exercise,
+              content: 'Pre-built exercise: solve',
+              answerKey: 'x = 2',
+              order: 1,
+            ),
+            LessonBlock(
+              id: 'b3',
+              subjectId: 'math',
+              lessonId: lessonId,
+              type: LessonBlockType.summary,
+              content: 'Pre-built recap: key points',
+              order: 2,
+            ),
+          ],
+          difficulty: 3,
+          generatedBy: GeneratedBy.ai,
+          createdAt: DateTime.now(),
+          validationStatus: ValidationStatus.pending,
+        );
+      }
+
+      TutorService serviceWithFakeRepo(FakeLessonRepository fakeLessonRepo) {
+        return TutorService(
+          database: database,
+          llmService: llmService,
+          masteryService: masteryService,
+          spacedRepetitionService: FakeSpacedRepetitionService(),
+          modelId: 'test-model',
+          exerciseEvaluator: exerciseEvaluator,
+          conversationRepository: conversationRepo,
+          lessonRepository: fakeLessonRepo,
+          planOrchestrator: FakePlanAdherenceOrchestrator(),
+        );
+      }
+
+      test('reuses pre-generated lesson blocks and skips live LLM plan generation',
+          () async {
+        final fakeLessonRepo = FakeLessonRepository();
+        final preLesson = buildPreGeneratedLesson();
+        await fakeLessonRepo.create(preLesson);
+
+        // Scheduled session carries the pre-generated lesson, marked ready.
+        fakeSessionRepo.save(
+          'scheduled-session-1',
+          Session(
+            id: 'scheduled-session-1',
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            type: SessionType.tutoring,
+            startTime: DateTime.now().subtract(const Duration(hours: 1)),
+            completed: false,
+            lessonReady: true,
+            lessonIds: [preLesson.id],
+            tutorMetadata: TutorMetadata(topicTitle: 'Algebra'),
+          ),
+        );
+
+        final service = serviceWithFakeRepo(fakeLessonRepo);
+
+        final callsBefore = llmService.chatCalls;
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          durationMinutes: 45,
+          scheduledSessionId: 'scheduled-session-1',
+          localeName: 'en',
+        );
+
+        // The pre-generated lesson's blocks are adopted verbatim (same ids),
+        // not re-generated blocks with fresh uuids.
+        expect(service.currentLessonBlocks, isNotNull);
+        expect(service.currentLessonBlocks!.length, equals(3));
+        expect(
+          service.currentLessonBlocks!.map((b) => b.id),
+          containsAll(['b1', 'b2', 'b3']),
+        );
+        expect(
+          service.currentLessonBlocks!.map((b) => b.content),
+          containsAll([
+            'Pre-built slide: atoms',
+            'Pre-built exercise: solve',
+            'Pre-built recap: key points',
+          ]),
+        );
+
+        // The live plan-generation LLM call was skipped: no LessonPlan is set
+        // on the manager and the fake LLM chat was not invoked for it
+        // (Vision Next-Term §4.3 prep-vs-live token economy).
+        expect(manager.lessonPlan, isNull);
+        expect(llmService.chatCalls - callsBefore, equals(0));
+        expect(service.currentManager, same(manager));
+      });
+
+      test('falls back to live generation when lessonReady is false', () async {
+        final fakeLessonRepo = FakeLessonRepository();
+        final preLesson = buildPreGeneratedLesson();
+        await fakeLessonRepo.create(preLesson);
+
+        // Scheduled session is NOT lesson-ready → must generate live.
+        fakeSessionRepo.save(
+          'scheduled-session-not-ready',
+          Session(
+            id: 'scheduled-session-not-ready',
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            type: SessionType.tutoring,
+            startTime: DateTime.now().subtract(const Duration(hours: 1)),
+            completed: false,
+            lessonReady: false,
+            lessonIds: [],
+            tutorMetadata: TutorMetadata(topicTitle: 'Algebra'),
+          ),
+        );
+
+        final service = serviceWithFakeRepo(fakeLessonRepo);
+        final callsBefore = llmService.chatCalls;
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          durationMinutes: 45,
+          scheduledSessionId: 'scheduled-session-not-ready',
+          localeName: 'en',
+        );
+
+        // Live path generated a plan via the LLM.
+        expect(manager.lessonPlan, isNotNull);
+        expect(llmService.chatCalls - callsBefore, greaterThan(0));
+        // The adopted blocks come from the freshly-generated live lesson
+        // (new uuid ids), not the pre-generated lesson's original 'b1..' blocks.
+        expect(
+          service.currentLessonBlocks!.any((b) => b.id == 'b1'),
+          isFalse,
+        );
+      });
+
+      test('falls back to live generation when pre-generated lesson is missing',
+          () async {
+        final fakeLessonRepo = FakeLessonRepository();
+
+        // Scheduled session is ready but references a lesson id that was
+        // never persisted (e.g. cleared between prep and start). Must not
+        // crash — gracefully fall back to live generation.
+        fakeSessionRepo.save(
+          'scheduled-session-missing',
+          Session(
+            id: 'scheduled-session-missing',
+            studentId: 'student-1',
+            subjectId: 'math',
+            topicId: 'topic-1',
+            type: SessionType.tutoring,
+            startTime: DateTime.now().subtract(const Duration(hours: 1)),
+            completed: false,
+            lessonReady: true,
+            lessonIds: ['does-not-exist'],
+            tutorMetadata: TutorMetadata(topicTitle: 'Algebra'),
+          ),
+        );
+
+        final service = serviceWithFakeRepo(fakeLessonRepo);
+        final manager = await service.startLesson(
+          studentId: 'student-1',
+          subjectId: 'math',
+          topicId: 'topic-1',
+          topicTitle: 'Algebra',
+          durationMinutes: 45,
+          scheduledSessionId: 'scheduled-session-missing',
+          localeName: 'en',
+        );
+
+        expect(manager.lessonPlan, isNotNull);
+        expect(service.currentLessonBlocks, isNotNull);
+        expect(service.currentLessonBlocks, isNotEmpty);
       });
     });
 

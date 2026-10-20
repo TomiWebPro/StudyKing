@@ -154,11 +154,15 @@ class TutorService {
     );
     await _database.tutorSessionRepository.saveSession(session);
 
+    // Capture the scheduled session so startLesson can check whether a
+    // pre-generated lesson is ready to consume (Vision Next-Term §4.3).
+    Session? scheduledSession;
     if (scheduledSessionId != null) {
       try {
         final existingResult = await _database.sessionRepository.get(scheduledSessionId);
         if (existingResult.isSuccess && existingResult.data != null) {
-          final updatedSession = existingResult.data!.copyWith(
+          scheduledSession = existingResult.data;
+          final updatedSession = scheduledSession!.copyWith(
             status: SessionStatus.inProgress,
           );
           await _database.sessionRepository.save(updatedSession.id, updatedSession);
@@ -218,47 +222,66 @@ class TutorService {
       // so the context is set before the lesson is handed off to the tutor UI.
       await _injectMasteryContext(manager, studentId, subjectId);
 
-      final lessonPlanResult = await manager.generateLessonPlan(
-        durationMinutes: actualDuration,
-      );
-      // generateLessonPlan falls back to a default plan on LLM failure, so
-      // a failure here means no plan could be built at all.
-      if (lessonPlanResult.isFailure) {
-        lessonPlanError =
-            lessonPlanResult.error ?? 'Lesson plan generation failed';
+      // Vision Next-Term §4.3: live lessons consume pre-built plans, blocks,
+      // and knowledge — not raw reasoning from scratch. When the scheduled
+      // session already carries a pre-generated lesson (lessonReady +
+      // lessonIds, populated by PlannerService.scheduleLesson and
+      // PreGenerateLessonTool post-lesson), reuse its stored blocks and skip
+      // the live plan-generation LLM call. When no pre-generated lesson is
+      // available (lessonReady false, no ids, or lesson missing), fall back
+      // to live generation below.
+      final preGenerated = scheduledSession != null
+          ? await _loadPreGeneratedLesson(scheduledSession)
+          : null;
+
+      if (preGenerated != null) {
+        // Reuse the pre-built lesson's blocks directly — no fresh LLM call.
+        _currentLessonId = preGenerated.id;
+        _currentLessonBlocks = preGenerated.blocks;
+        _currentManager = manager;
       } else {
-        final lessonPlan = lessonPlanResult.data!;
-
-        await _database.tutorSessionRepository.saveSession(
-          session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
+        final lessonPlanResult = await manager.generateLessonPlan(
+          durationMinutes: actualDuration,
         );
-
-        await _lessonRepository.init();
-        final lesson = Lesson(
-          id: const Uuid().v4(),
-          subjectId: subjectId,
-          title: topicTitle,
-          topicId: topicId,
-          blocks: _lessonPlanToBlocks(lessonPlan, subjectId, topicId),
-          difficulty: 3,
-          generatedBy: GeneratedBy.ai,
-          createdAt: _clock.now(),
-          // Plan-built lessons are AI-generated and unreviewed until
-          // validated (vision_next_term.md §4.3).
-          validationStatus: ValidationStatus.pending,
-        );
-        final createResult = await _lessonRepository.create(lesson);
-        if (createResult.isFailure) {
-          _logger.w(
-            'Failed to persist lesson ${lesson.id}',
-            createResult.error,
-          );
-          lessonPlanError = createResult.error ?? 'Failed to create lesson';
+        // generateLessonPlan falls back to a default plan on LLM failure, so
+        // a failure here means no plan could be built at all.
+        if (lessonPlanResult.isFailure) {
+          lessonPlanError =
+              lessonPlanResult.error ?? 'Lesson plan generation failed';
         } else {
-          _currentLessonId = lesson.id;
-          _currentLessonBlocks = lesson.blocks;
+          final lessonPlan = lessonPlanResult.data!;
 
-          _currentManager = manager;
+          await _database.tutorSessionRepository.saveSession(
+            session.copyWith(lessonPlanJson: lessonPlan.toJsonString()),
+          );
+
+          await _lessonRepository.init();
+          final lesson = Lesson(
+            id: const Uuid().v4(),
+            subjectId: subjectId,
+            title: topicTitle,
+            topicId: topicId,
+            blocks: _lessonPlanToBlocks(lessonPlan, subjectId, topicId),
+            difficulty: 3,
+            generatedBy: GeneratedBy.ai,
+            createdAt: _clock.now(),
+            // Plan-built lessons are AI-generated and unreviewed until
+            // validated (vision_next_term.md §4.3).
+            validationStatus: ValidationStatus.pending,
+          );
+          final createResult = await _lessonRepository.create(lesson);
+          if (createResult.isFailure) {
+            _logger.w(
+              'Failed to persist lesson ${lesson.id}',
+              createResult.error,
+            );
+            lessonPlanError = createResult.error ?? 'Failed to create lesson';
+          } else {
+            _currentLessonId = lesson.id;
+            _currentLessonBlocks = lesson.blocks;
+
+            _currentManager = manager;
+          }
         }
       }
     } catch (e) {
@@ -637,6 +660,44 @@ class TutorService {
       );
     } catch (e) {
       _logger.w('Failed to generate session summary', e);
+    }
+  }
+
+  /// Loads the pre-generated [Lesson] for a scheduled session, when one exists.
+  ///
+  /// The planner ([PlannerService.scheduleLesson]) and post-lesson prep
+  /// ([PreGenerateLessonTool]) store a pre-built lesson ahead of the
+  /// scheduled time and record its id on [Session.lessonIds] with
+  /// [Session.lessonReady] true. This reads the first available lesson back
+  /// from the [LessonRepository] so [startLesson] can reuse its blocks
+  /// instead of synthesising a plan from scratch (Vision Next-Term §4.3).
+  ///
+  /// Returns null when the session is not lesson-ready, has no lesson ids,
+  /// or the lesson cannot be found — signalling the caller to fall back to
+  /// live generation.
+  Future<Lesson?> _loadPreGeneratedLesson(Session scheduledSession) async {
+    if (!scheduledSession.lessonReady || scheduledSession.lessonIds.isEmpty) {
+      return null;
+    }
+    try {
+      await _lessonRepository.init();
+      for (final lessonId in scheduledSession.lessonIds) {
+        final result = await _lessonRepository.get(lessonId);
+        if (result.isSuccess && result.data != null) {
+          return result.data;
+        }
+      }
+      _logger.w(
+        'Pre-generated lesson not found for session '
+        '${scheduledSession.id} (ids: ${scheduledSession.lessonIds.join(', ')})',
+      );
+      return null;
+    } catch (e) {
+      _logger.w(
+        'Failed to load pre-generated lesson for session ${scheduledSession.id}',
+        e,
+      );
+      return null;
     }
   }
 
