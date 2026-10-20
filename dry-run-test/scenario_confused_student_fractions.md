@@ -43,16 +43,21 @@ tool-call trace: "I don't get X" ×3 → `TOOL_CALL: explain_differently` /
 | Context needed | Injected? | File |
 |---|---|---|
 | Conversation history (prior failed explanations) | YES | `lib/core/services/conversation_memory.dart` — ConversationMemory persists history. |
-| Current lesson block type being delivered | NO | No context builder for active lesson blocks. |
+| Current lesson block type being delivered | YES | `LessonPlanContextBuilder` (lib/features/teaching/services/lesson_plan_context_builder.dart) serialises active `LessonBlock`s into a bounded "Current lesson plan" note (capped to 5 blocks, 200-char snippets); `TutorService._injectLessonPlanContext` (tutor_service.dart:399, 439-445) injects it via `ConversationManager.lessonPlanContext` (conversation_manager.dart:93), and `prompts.tutorMessage` (prompts.dart:100-107) appends it to the tutor system prompt after `masteryContext`. |
 | Available explanation modalities (text, example, visual, analogy) | YES | `lib/features/teaching/services/prompts/prompts.dart:89-92` — confusion directive injects modality guidance (analogy, visual, step-by-step) at confusionCount >= 2. |
 | Student's prerequisite mastery gaps | YES (partial) | `lib/features/practice/services/readiness_scorer.dart` — but not injected into teaching context. |
 | Uploaded materials relevant to the topic | YES (partial) | `lib/features/mentor/services/mentor_context_builder.dart` — sources loaded but not for teaching. |
 
 **Gap:** RESOLVED — Teaching mode now routes through `AgentLoop`
-(`conversation_manager.dart:446-459`, `tutor_service.dart:306`), and the
-confusion directive injects modality options (`prompts.dart:89-92`). The
+(`conversation_manager.dart:446-459`, `tutor_service.dart:306`), the
+confusion directive injects modality options (`prompts.dart:89-92`), and
+active lesson block content is now injected into the tutor system prompt via
+`LessonPlanContextBuilder` (lesson_plan_context_builder.dart) →
+`ConversationManager.lessonPlanContext` (conversation_manager.dart:93) →
+`prompts.tutorMessage` (prompts.dart:100-107). The
 `ExplainDifferentlyTool` can switch between analogy, visual, and step-by-step
-explanations at runtime.
+explanations at runtime. Prerequisite mastery gaps remain partial
+(not injected into teaching prompt).
 
 ## Comprehension rubric
 
@@ -65,8 +70,10 @@ explanations at runtime.
 ## Validation Results
 
 Traced against code at:
-`lib/features/teaching/services/tutor_service.dart:59-110,306`,
-`lib/features/teaching/services/conversation_manager.dart:446-459`,
+`lib/features/teaching/services/tutor_service.dart:59-110,306,399,439-445`,
+`lib/features/teaching/services/conversation_manager.dart:93,343,446-459`,
+`lib/features/teaching/services/prompts/prompts.dart:89-92,100-107`,
+`lib/features/teaching/services/lesson_plan_context_builder.dart` (new builder),
 `lib/features/lessons/data/models/lesson_block_model.dart` (LessonBlockType),
 `lib/features/practice/services/readiness_scorer.dart:16`,
 `lib/features/mentor/services/tools/create_practice_session_tool.dart`,
@@ -81,5 +88,5 @@ Traced against code at:
 
 Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
 RESULT: all needed tools available (0 missing).
-Context audit: all needed context is now available through AgentLoop routing + confusion directive. Modality options (analogy, visual, step-by-step) are injected via `prompts.dart:89-92`. **RESOLUTION:** `scenario-teaching-agentloop-bypass.md` closed.
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–4, `prompts.dart:89-92`, `enums.dart:48-49`, `llm_agent_providers.dart:90-95`, `conversation_manager.dart:446-459`, `tutor_service.dart:306`).
+Context audit: all needed context is now available through AgentLoop routing + confusion directive + lesson plan block injection. Active lesson block content is injected via `LessonPlanContextBuilder` (lesson_plan_context_builder.dart) → `ConversationManager.lessonPlanContext` (conversation_manager.dart:93) → `prompts.tutorMessage` (prompts.dart:100-107). Modality options (analogy, visual, step-by-step) are injected via `prompts.dart:89-92`. **RESOLUTION:** `scenario-teaching-agentloop-bypass.md` closed. Prerequisite mastery gaps remain partial.
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–4, `prompts.dart:89-92,100-107`, `enums.dart:48-49`, `llm_agent_providers.dart:90-95`, `conversation_manager.dart:93,343,446-459`, `tutor_service.dart:306,399,439-445`, `lesson_plan_context_builder.dart`).

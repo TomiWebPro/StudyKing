@@ -46,13 +46,16 @@ lesson block info is not injected into the teaching context prompt.
 | Context needed | Injected? | File |
 |---|---|---|
 | Conversation history (prior failed explanations) | YES | `lib/core/services/conversation_memory.dart` — `ConversationMemory` persists history. |
-| Current lesson block type and content | NO | No context builder for active lesson blocks in teaching mode. |
+| Current lesson block type and content | YES | `LessonPlanContextBuilder` (lib/features/teaching/services/lesson_plan_context_builder.dart) builds a bounded "Current lesson plan" note from active `LessonBlock`s (capped to 5 blocks, 200-char snippets); `TutorService._injectLessonPlanContext` (tutor_service.dart:399, 439-445) sets `ConversationManager.lessonPlanContext` (conversation_manager.dart:93), and `prompts.tutorMessage` (prompts.dart:100-107) appends it to the system prompt after `masteryContext`. |
 | Available explanation modalities (text, example, visual, analogy) | YES | `prompts.dart:89-92` — confusion directive injects modality guidance (analogy, visual, step-by-step) at `confusionCount >= 2`. AgentLoop wiring (`conversation_manager.dart:446-459`, `tutor_service.dart:306`) allows tools to act on it. |
 | Learning method analytics (prefers visual, optimal session length) | PARTIAL | `learning_method_analytics_service.dart:1` exists but is not injected into teaching prompt. |
 
-**Gap:** Teaching context still lacks active lesson block info and readiness scores
-(not injected into the teaching prompt). Explanation modality options are now
-resolved via the confusion directive + AgentLoop wiring.
+**Gap:** Active lesson block info is now injected into the tutor system prompt
+via `LessonPlanContextBuilder` (lesson_plan_context_builder.dart) →
+`ConversationManager.lessonPlanContext` (conversation_manager.dart:93) →
+`prompts.tutorMessage` (prompts.dart:100-107), so the live tutor reads pre-built
+artefacts instead of synthesising from scratch. The remaining gap is readiness
+scores not yet injected into the teaching prompt.
 → File `issues/open/scenario-practice-readiness-not-injected.md`
 
 ## Comprehension rubric
@@ -66,9 +69,10 @@ resolved via the confusion directive + AgentLoop wiring.
 ## Validation Results
 
 Traced against code at:
-`lib/features/teaching/services/tutor_service.dart:59-110,306`,
-`lib/features/teaching/services/conversation_manager.dart:446-459`,
-`lib/features/teaching/services/prompts/prompts.dart:89-92`,
+`lib/features/teaching/services/tutor_service.dart:59-110,306,399,439-445`,
+`lib/features/teaching/services/conversation_manager.dart:93,343,446-459`,
+`lib/features/teaching/services/prompts/prompts.dart:89-92,100-107`,
+`lib/features/teaching/services/lesson_plan_context_builder.dart` (new builder),
 `lib/features/lessons/data/models/lesson_block_model.dart` (LessonBlockType enum),
 `lib/core/services/learning_method_analytics_service.dart:1`,
 `lib/features/mentor/services/tools/explain_differently_tool.dart`,
@@ -83,5 +87,5 @@ Traced against code at:
 
 Tool audit: 5 of 5 needed tools exist (`explain_differently` and `suggest_practice` registered).
 RESULT: all needed tools available (0 missing).
-Context audit: active lesson block info and readiness scores not injected into teaching prompt → open issue (`scenario-practice-readiness-not-injected.md`). Modality options now resolved.
-**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `prompts.dart:89-92`, `enums.dart:48-49`, `llm_agent_providers.dart:90-95`, `conversation_manager.dart:446-459`, `tutor_service.dart:306`).
+Context audit: active lesson block info now injected into the teaching prompt via `LessonPlanContextBuilder` (lesson_plan_context_builder.dart) → `ConversationManager.lessonPlanContext` (conversation_manager.dart:93) → `prompts.tutorMessage` (prompts.dart:100-107). Readiness scores still not injected → open issue (`scenario-practice-readiness-not-injected.md`). Modality options resolved.
+**Last re-traced:** 2026-10-20 against commit `dc19534` (`scenario_validation_test.dart` Steps 1–5, `prompts.dart:89-92,100-107`, `enums.dart:48-49`, `llm_agent_providers.dart:90-95`, `conversation_manager.dart:93,343,446-459`, `tutor_service.dart:306,399,439-445`, `lesson_plan_context_builder.dart`).

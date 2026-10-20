@@ -85,6 +85,13 @@ class ConversationManager {
   /// student has no recorded mastery data yet, so nothing is injected.
   String? masteryContext;
 
+  /// Optional note built from the active lesson's pre-built blocks
+  /// (examples, exercises, analogies, …) and injected into the tutor system
+  /// prompt so the live tutor reads prepared artefacts instead of
+  /// synthesising the course from scratch (docs/vision_next_term.md §4.3).
+  /// Null/empty means no pre-built lesson is loaded, so nothing is injected.
+  String? lessonPlanContext;
+
   ConversationPhase phase = ConversationPhase.greeting;
   int exerciseCount = 0;
   int correctCount = 0;
@@ -333,6 +340,7 @@ class ConversationManager {
       feedbackContext: feedbackContext,
       confusionCount: max(_consecutiveIncorrect, _consecutiveConfusionSignals),
       masteryContext: masteryContext,
+      lessonPlanContext: lessonPlanContext,
     );
 
     try {

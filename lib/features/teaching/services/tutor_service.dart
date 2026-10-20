@@ -39,6 +39,7 @@ import 'package:studyking/features/planner/services/planner_service.dart';
 import 'conversation_manager.dart';
 import 'exercise_evaluator.dart';
 import 'feedback_analyzer.dart';
+import 'lesson_plan_context_builder.dart';
 import 'mastery_context_builder.dart';
 
 class TutorService {
@@ -388,6 +389,15 @@ class TutorService {
           }
         }
       }
+      // Vision Next-Term §4.3: inject the active lesson blocks into the tutor
+      // prompt so the LLM consumes pre-built artefacts instead of synthesising
+      // the course from scratch — a sibling injection to _injectMasteryContext.
+      // Both the pre-generated path (preGenerated.blocks) and the live path
+      // (lesson.blocks) populate _currentLessonBlocks, so this covers both and
+      // lets the tutor cite "the example from my lesson" from pre-built content.
+      if (_currentLessonBlocks != null) {
+        _injectLessonPlanContext(manager, _currentLessonBlocks!);
+      }
     } catch (e) {
       await _rollbackFailedLessonStart(session, scheduledSessionId, e);
       rethrow;
@@ -417,6 +427,22 @@ class TutorService {
     );
     if (context != null && context.isNotEmpty) {
       manager.masteryContext = context;
+    }
+  }
+
+  /// Builds a bounded "Current lesson plan" note from the active lesson's
+  /// pre-built blocks and attaches it to manager.lessonPlanContext so
+  /// ConversationPromptSet.tutorMessage serialises it into the tutor system
+  /// prompt (Vision Next-Term section 4.3: live lessons consume pre-built
+  /// artefacts, not raw reasoning from scratch). Pure, synchronous logic
+  /// delegated to LessonPlanContextBuilder; mirrors _injectMasteryContext.
+  void _injectLessonPlanContext(
+    ConversationManager manager,
+    List<LessonBlock> blocks,
+  ) {
+    final context = LessonPlanContextBuilder().build(blocks: blocks);
+    if (context != null && context.isNotEmpty) {
+      manager.lessonPlanContext = context;
     }
   }
 

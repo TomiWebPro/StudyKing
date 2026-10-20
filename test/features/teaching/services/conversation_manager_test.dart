@@ -1012,6 +1012,35 @@ void main() {
       });
     });
 
+    group('lesson plan context injection', () {
+      setUp(() async {
+        await manager.initialize();
+      });
+
+      test('injects lessonPlanContext into the tutor system prompt', () async {
+        await manager.sendMessage('Hello').toList();
+        manager.lessonPlanContext =
+            'Current lesson plan:\n- Type: example\n  Section: Worked Example';
+
+        await manager.sendMessage('Show me the example from my lesson').toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(llmService.lastSystemPrompt!, contains('Current lesson plan'));
+        expect(llmService.lastSystemPrompt!, contains('Type: example'));
+        expect(llmService.lastSystemPrompt!, contains('Section: Worked Example'));
+      });
+
+      test('omits lesson-plan context when unset', () async {
+        await manager.sendMessage('Hello').toList();
+
+        expect(llmService.lastSystemPrompt, isNotNull);
+        expect(
+          llmService.lastSystemPrompt!,
+          isNot(contains('Current lesson plan')),
+        );
+      });
+    });
+
     group('adaptive streaming chunks', () {
       setUp(() async {
         await manager.initialize();

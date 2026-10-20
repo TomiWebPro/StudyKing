@@ -332,6 +332,50 @@ void main() {
         );
         expect(entry.systemPrompt, isNot(contains('STUDENT CONFUSION DETECTED')));
       });
+
+      group('lesson plan context injection', () {
+        test('injects lessonPlanContext with block type label and section title', () {
+          const planContext = 'Current lesson plan: '
+              '- Type: example '
+              'Section: Worked Example '
+              'Content: A pizza represents a pie';
+          final entry = promptSet.tutorMessage(
+            subjectId: _testSubjectId,
+            topicTitle: _testTopicTitle,
+            adaptivePace: 1.0,
+            phase: ConversationPhase.teaching,
+            lessonPlanContext: planContext,
+          );
+
+          expect(entry.systemPrompt, contains('Current lesson plan'));
+          expect(entry.systemPrompt, contains('Type: example'));
+          expect(entry.systemPrompt, contains('Section: Worked Example'));
+          expect(entry.systemPrompt, contains('A pizza represents a pie'));
+        });
+
+        test('omits lesson-plan section when lessonPlanContext is null', () {
+          final entry = promptSet.tutorMessage(
+            subjectId: _testSubjectId,
+            topicTitle: _testTopicTitle,
+            adaptivePace: 1.0,
+            phase: ConversationPhase.teaching,
+          );
+
+          expect(entry.systemPrompt, isNot(contains('Current lesson plan')));
+        });
+
+        test('omits lesson-plan section when lessonPlanContext is empty', () {
+          final entry = promptSet.tutorMessage(
+            subjectId: _testSubjectId,
+            topicTitle: _testTopicTitle,
+            adaptivePace: 1.0,
+            phase: ConversationPhase.teaching,
+            lessonPlanContext: '',
+          );
+
+          expect(entry.systemPrompt, isNot(contains('Current lesson plan')));
+        });
+      });
     });
 
     group('summary', () {

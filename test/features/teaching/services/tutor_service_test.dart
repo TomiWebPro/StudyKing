@@ -1168,9 +1168,22 @@ void main() {
           ]),
         );
 
+        // Vision Next-Term section 4.3: the pre-built blocks are serialised into
+        // a "Current lesson plan" context on the manager so they reach the tutor
+        // LLM prompt -- the prep tokens spent off-period are not wasted and a
+        // student asking "show me the example from my lesson" gets the pre-built
+        // artefact, not a fresh hallucination.
+        expect(manager.lessonPlanContext, isNotNull);
+        expect(manager.lessonPlanContext, contains('Current lesson plan'));
+        expect(manager.lessonPlanContext, contains('Type: slide'));
+        expect(manager.lessonPlanContext, contains('Type: exercise'));
+        expect(manager.lessonPlanContext, contains('Type: summary'));
+        expect(manager.lessonPlanContext, contains('Pre-built slide: atoms'));
+        expect(manager.lessonPlanContext, contains('Pre-built exercise: solve'));
+
         // The live plan-generation LLM call was skipped: no LessonPlan is set
         // on the manager and the fake LLM chat was not invoked for it
-        // (Vision Next-Term §4.3 prep-vs-live token economy).
+        // (Vision Next-Term section 4.3 prep-vs-live token economy).
         expect(manager.lessonPlan, isNull);
         expect(llmService.chatCalls - callsBefore, equals(0));
         expect(service.currentManager, same(manager));
@@ -1213,6 +1226,10 @@ void main() {
         // Live path generated a plan via the LLM.
         expect(manager.lessonPlan, isNotNull);
         expect(llmService.chatCalls - callsBefore, greaterThan(0));
+        // Even on the live path the adopted blocks are serialised into the
+        // tutor prompt context (Vision Next-Term section 4.3).
+        expect(manager.lessonPlanContext, isNotNull);
+        expect(manager.lessonPlanContext, contains('Current lesson plan'));
         // The adopted blocks come from the freshly-generated live lesson
         // (new uuid ids), not the pre-generated lesson's original 'b1..' blocks.
         expect(

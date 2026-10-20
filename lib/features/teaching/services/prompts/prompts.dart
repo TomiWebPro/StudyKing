@@ -58,6 +58,7 @@ class ConversationPromptSet {
     String? feedbackContext,
     int confusionCount = 0,
     String? masteryContext,
+    String? lessonPlanContext,
   }) {
     final l10n = lookupAppLocalizations(Locale(localeName));
     final paceContext = switch (adaptivePace) {
@@ -95,6 +96,14 @@ class ConversationPromptSet {
     // (agent_must_read.md §32-45, §86-96). LLM-facing: invariant English OK.
     if (masteryContext != null && masteryContext.isNotEmpty) {
       systemPrompt = '$systemPrompt\n\n$masteryContext';
+    }
+    // Vision Next-Term §4.3: inject the active pre-built lesson plan so the
+    // live tutor reads prepared artefacts (examples, exercises, analogies)
+    // instead of synthesising the course from scratch — realising the
+    // "preparation dominates tokens" thesis. Built by LessonPlanContextBuilder
+    // (capped to avoid prompt bloat). LLM-facing: invariant English OK.
+    if (lessonPlanContext != null && lessonPlanContext.isNotEmpty) {
+      systemPrompt = '$systemPrompt\n\n$lessonPlanContext';
     }
     final userPrompt = l10n.tutorInstructionPrompt(timeContext, paceContext);
     return PromptEntry(systemPrompt: systemPrompt, userPrompt: userPrompt);
