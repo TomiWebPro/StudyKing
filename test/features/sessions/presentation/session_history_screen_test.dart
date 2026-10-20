@@ -1528,4 +1528,124 @@ void main() {
       expect(find.text('An error occurred. Please try again.'), findsNothing);
     });
   });
+
+  group('SessionHistoryScreen - Token usage display', () {
+    setUp(() {
+      final binding = TestWidgetsFlutterBinding.ensureInitialized();
+      final view = binding.platformDispatcher.implicitView!;
+      view.physicalSize = const Size(1080, 2400);
+      view.devicePixelRatio = 1.0;
+    });
+
+    testWidgets('shows per-session token usage in the session row', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1',
+          studentId: 'u1',
+          subjectId: 'math',
+          startTime: now,
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.tutoring,
+          tutorMetadata: TutorMetadata(
+            totalMessages: 16,
+            totalTokensUsed: 3247,
+            topicsCovered: const ['Newton\'s Laws'],
+          ),
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // The per-session token line should show the compact-formatted count.
+      // formatCompactNumber(3247, 'en') → "3.25K" via NumberFormat.compact.
+      expect(find.text('3.25K tokens'), findsOneWidget);
+    });
+
+    testWidgets('shows total tokens aggregate in the summary stat', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1',
+          studentId: 'u1',
+          subjectId: 'math',
+          startTime: now,
+          questionsAnswered: 10,
+          correctAnswers: 8,
+          actualDurationMs: 1800000,
+          type: SessionType.tutoring,
+          tutorMetadata: TutorMetadata(
+            totalMessages: 16,
+            totalTokensUsed: 3247,
+          ),
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // The summary stat row should include "Total Tokens" with the aggregate.
+      // formatCompactNumber(3247, 'en') → "3.25K" via NumberFormat.compact.
+      expect(find.text('Total Tokens'), findsOneWidget);
+      expect(find.text('3.25K'), findsOneWidget);
+    });
+
+    testWidgets('omits token line for sessions without tutor metadata', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1',
+          studentId: 'u1',
+          subjectId: 'math',
+          startTime: now,
+          questionsAnswered: 5,
+          correctAnswers: 3,
+          actualDurationMs: 600000,
+          type: SessionType.practice,
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // No per-session token line should appear for practice sessions.
+      expect(find.textContaining('K tokens'), findsNothing);
+      // The summary stat still shows "Total Tokens" label with "0" value.
+      expect(find.text('Total Tokens'), findsOneWidget);
+    });
+
+    testWidgets('aggregates total tokens across multiple tutoring sessions', (tester) async {
+      final now = DateTime.now();
+      final repo = _FakeSessionRepository(seed: [
+        Session(
+          id: 's1',
+          studentId: 'u1',
+          subjectId: 'math',
+          startTime: now,
+          actualDurationMs: 1800000,
+          type: SessionType.tutoring,
+          tutorMetadata: TutorMetadata(totalTokensUsed: 3247),
+        ),
+        Session(
+          id: 's2',
+          studentId: 'u1',
+          subjectId: 'science',
+          startTime: now.subtract(const Duration(days: 1)),
+          actualDurationMs: 1200000,
+          type: SessionType.tutoring,
+          tutorMetadata: TutorMetadata(totalTokensUsed: 800),
+        ),
+      ]);
+
+      await tester.pumpWidget(_buildTestApp(repo));
+      await tester.pumpAndSettle();
+
+      // 3247 + 800 = 4047 → compact "4.05K" (NumberFormat.compact in en).
+      expect(find.text('Total Tokens'), findsOneWidget);
+      expect(find.text('4.05K'), findsOneWidget);
+    });
+  });
 }

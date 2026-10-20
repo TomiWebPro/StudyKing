@@ -347,6 +347,10 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
       0,
       (sum, s) => sum + s.actualDurationMs,
     );
+    final totalTokens = _filteredSessions.fold<int>(
+      0,
+      (sum, s) => sum + (s.tutorMetadata?.totalTokensUsed ?? 0),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -448,6 +452,12 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                             ? formatDurationFromContext(context, Duration(milliseconds: totalMs ~/ _filteredSessions.length))
                             : formatDurationFromContext(context, Duration.zero),
                         Icons.schedule,
+                      ),
+                      _buildSummaryStat(
+                        context,
+                        l10n.totalTokens,
+                        formatCompactNumber(totalTokens, l10n.localeName),
+                        Icons.token,
                       ),
                     ],
                   ),
@@ -648,6 +658,14 @@ class _SessionHistoryScreenState extends State<SessionHistoryScreen> with Automa
                                 session.correctAnswers >= (session.questionsAnswered / 2)
                             ? theme.colorScheme.primary
                             : theme.colorScheme.tertiary,
+                      ),
+                    ),
+                  if (session.tutorMetadata?.totalTokensUsed != null &&
+                      session.tutorMetadata!.totalTokensUsed > 0)
+                    Text(
+                      l10n.tokensLabel(formatCompactNumber(session.tutorMetadata!.totalTokensUsed, l10n.localeName)),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
                       ),
                     ),
                 ],
