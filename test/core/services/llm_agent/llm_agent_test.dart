@@ -1,6 +1,9 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:studyking/core/data/hive_box_names.dart';
 import 'package:studyking/core/services/llm_agent/agent_loop.dart';
 import 'package:studyking/core/services/llm_agent/agent_memory.dart';
 import 'package:studyking/core/services/llm_agent/agent_tool.dart';
@@ -294,6 +297,31 @@ void main() {
   });
 
   group('AgentFactory', () {
+    late String hivePath;
+
+    setUp(() async {
+      // AgentFactory.create() now calls IdleExecutor.init(), which opens the
+      // idle-tasks Hive box. Give each test a fresh, isolated box so the
+      // persistence tests below are deterministic and the existing
+      // construction tests are Hive-clean (no "box not open" warnings).
+      hivePath =
+          (await Directory.systemTemp.createTemp('sk_agent_factory_')).path;
+      Hive.init(hivePath);
+      await Hive.openBox(HiveBoxNames.idleTasks);
+      await Hive.box(HiveBoxNames.idleTasks).clear();
+    });
+
+    tearDown(() async {
+      // Let any fire-and-forget init()/persist box writes settle before closing.
+      await Future.delayed(const Duration(milliseconds: 5));
+      await Hive.close();
+      try {
+        await Directory(hivePath).delete(recursive: true);
+      } catch (_) {
+        // Best-effort temp cleanup.
+      }
+    });
+
     test('create returns a fully wired LlmAgent', () {
       final llmService = _FakeLlmService();
       final agent = AgentFactory.create(
@@ -332,6 +360,89 @@ void main() {
       );
 
       expect(agent.idleExecutor.hasPendingTasks, isFalse);
+    });
+
+    test(
+        'create initializes the IdleExecutor so post-lesson prep tasks '
+        'survive a simulated app restart', () async {
+      // Vision Next-Term §4.2: TutorService.endLesson() enqueues post-lesson
+      // prep tasks via LlmAgent.enqueuePrepTask -> IdleExecutor.enqueuePrepTool.
+      // Those tasks must be restored by init() after a process termination.
+      // This test reproduces the journey end-to-end through AgentFactory.create()
+      // (which must call init(), otherwise the box is never opened and the tasks
+      // are silently lost on termination — the bug tracked by this issue).
+      final agent = AgentFactory.create(
+        llmService: _FakeLlmService(),
+        modelId: 'gpt-4',
+        studentId: 'student-1',
+        taskManager: LlmTaskManager(),
+        shouldDeferForQuietHours: (_) => true, // keep tasks queued
+      );
+
+      // create() fires init() fire-and-forget; await the shared init future so
+      // the box is open before enqueueing. If create() did NOT call init(),
+      // initComplete resolves immediately and the box stays closed — the
+      // enqueue/dispose/re-create sequence then persists nothing, restoring an
+      // empty queue below (test fails, surfacing the bug).
+      await agent.idleExecutor.initComplete;
+
+      await agent.enqueuePrepTask(
+        'post-lesson adherence check',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'background',
+        taskType: 'background',
+      );
+      await agent.enqueuePrepTask(
+        'next-topic lesson pre-generation',
+        () async => {'success': true},
+        requiresHeavy: true,
+        feature: 'lesson_prep',
+        taskType: 'lesson_prep',
+        subjectId: 'chemistry',
+        estimatedInputTokens: 8000,
+        estimatedOutputTokens: 2000,
+      );
+
+      // Tasks are deferred (quiet hours) -> still queued and persisted.
+      expect(agent.idleExecutor.queue.length, equals(2));
+      await agent.idleExecutor.persistenceComplete;
+
+      // Simulate process termination: dispose flushes the queue to disk and
+      // cancels the polling timer.
+      agent.idleExecutor.dispose();
+      await agent.idleExecutor.persistenceComplete;
+
+      // Simulate app relaunch: a fresh factory instance reuses the same box;
+      // create() calls init() again, which opens the box and restores the queue.
+      final restored = AgentFactory.create(
+        llmService: _FakeLlmService(),
+        modelId: 'gpt-4',
+        studentId: 'student-1',
+        taskManager: LlmTaskManager(),
+        shouldDeferForQuietHours: (_) => true,
+      );
+      await restored.idleExecutor.initComplete;
+
+      expect(restored.idleExecutor.queue.length, equals(2),
+          reason: 'init() must restore queued prep tasks across a restart');
+
+      final adherence = restored.idleExecutor.queue
+          .firstWhere((t) => t.feature == 'background');
+      expect(adherence.id, isNotEmpty);
+      expect(adherence.taskType, equals('background'));
+
+      final prep = restored.idleExecutor.queue
+          .firstWhere((t) => t.feature == 'lesson_prep');
+      expect(prep.subjectId, equals('chemistry'));
+      expect(prep.taskType, equals('lesson_prep'));
+      expect(prep.estimatedInputTokens, equals(8000));
+      expect(prep.estimatedOutputTokens, equals(2000));
+      expect(prep.taskFn, isNull,
+          reason: 'restored tasks must carry no executable closure');
+
+      restored.idleExecutor.dispose();
+      await restored.idleExecutor.persistenceComplete;
     });
   });
 }

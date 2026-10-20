@@ -180,6 +180,9 @@ class IdleExecutor {
 
   // --- Hive persistence (Vision Next-Term §4.2: queue survives termination) ---
   Box? _box;
+  // In-flight init future: lets tests await the fire-and-forget init() that
+  // owning providers/factories invoke. Null until the first init() call.
+  Future<void>? _initFuture;
   // Trailing save future: serialises box writes so overlapping mutations
   // cannot interleave their clear/put sequences (mirrors LlmTaskManager).
   Future<void> _saveChain = Future<void>.value();
@@ -187,6 +190,22 @@ class IdleExecutor {
   /// Completes once every box save scheduled so far has finished.
   @visibleForTesting
   Future<void> get persistenceComplete => _saveChain;
+
+  /// Completes once the in-flight [init()] (box open + queue restore) has
+  /// finished. Lets tests deterministically await the fire-and-forget init()
+  /// that [AgentFactory.create] invokes, so they can prove the box is opened by
+  /// production code rather than by an explicit test-side init() call.
+  /// Resolves immediately (as a completed future) if init() was never called.
+  @visibleForTesting
+  Future<void> get initComplete => _initFuture ?? Future.value();
+
+  /// Whether the background polling timer spawned by [startIdleMonitoring] is
+  /// currently live. True between [startIdleMonitoring] and [stopIdleMonitoring];
+  /// false otherwise (including before monitoring starts and after disposal).
+  /// Used by provider tests to assert the timer is cancelled on scope teardown
+  /// (Vision Next-Term §4.3/§4.4).
+  @visibleForTesting
+  bool get isMonitoring => _idleCheckTimer?.isActive == true;
 
   IdleExecutor({
     LlmTaskManager? llmTaskManager,
@@ -208,9 +227,30 @@ class IdleExecutor {
   /// Opens the idle-tasks box and restores any queued/running tasks left over
   /// from a previous process. Restored tasks carry no executable closure; they
   /// are re-attached lazily by [_tryExecuteNext] via [_taskReconstructor].
-  Future<void> init() async {
-    _box = await Hive.openBox(HiveBoxNames.idleTasks);
-    _loadFromBox();
+  ///
+  /// This is invoked fire-and-forget by owning providers/factories (mirroring
+  /// `ingestion_providers.dart:179`), so it must never throw: an unawaited
+  /// failure here would surface as an unhandled async error and crash the app.
+  /// When the box cannot be opened (e.g. Hive is not initialised, or a test
+  /// runs without Hive), the failure is logged and persistence is disabled for
+  /// this instance rather than propagating. Idempotent: concurrent/retry calls
+  /// share the same in-flight future (see [initComplete]).
+  Future<void> init() {
+    _initFuture ??= _doInit();
+    return _initFuture!;
+  }
+
+  Future<void> _doInit() async {
+    try {
+      _box = await Hive.openBox(HiveBoxNames.idleTasks);
+      _loadFromBox();
+    } catch (e) {
+      _logger.w(
+        'IdleExecutor.init could not open the idle-tasks box; '
+        'persistence disabled for this instance',
+        e,
+      );
+    }
   }
 
   /// Registers (or replaces) the closure reconstructor consulted by

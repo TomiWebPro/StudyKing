@@ -157,6 +157,12 @@ class AgentFactory {
       usageMeter: usageMeter,
       prepBudgetService: prepBudgetService,
     );
+    // Vision Next-Term §4.2: open the idle-tasks box and restore any queued
+    // prep tasks before starting the polling monitor, so post-lesson work
+    // enqueued by TutorService.endLesson() survives process termination.
+    // Mirrors ingestion_providers.dart:179 (init() before startIdleMonitoring).
+    // init() is fire-and-forget and non-throwing (see IdleExecutor.init).
+    idleExecutor.init();
     idleExecutor.startIdleMonitoring();
 
     final loop = AgentLoop(

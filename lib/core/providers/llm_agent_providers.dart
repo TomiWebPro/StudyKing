@@ -344,7 +344,7 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
   // The PrepBudgetService is also injected so the IdleExecutor can consult
   // canSpend() before creating the parent LlmTask (Vision Next-Term §4.2/§4.4),
   // deferring over-budget prep instead of starting it and failing at the tool level.
-  return AgentFactory.create(
+  final agent = AgentFactory.create(
     llmService: llmService,
     modelId: modelId,
     studentId: studentId,
@@ -357,6 +357,15 @@ final llmAgentProvider = Provider.family<LlmAgent?, String>((ref, studentId) {
     usageMeter: usageMeter,
     prepBudgetService: ref.watch(prepBudgetServiceProvider),
   );
+
+  // Vision Next-Term §4.3/§4.4: cancel the polling timer and flush the queue
+  // when this agent is no longer observed (e.g. the screen is popped). Without
+  // this the 30s Timer.periodic created in AgentFactory.create() leaks for the
+  // lifetime of the process. AgentFactory.create() already opens the box via
+  // IdleExecutor.init(); here we only attach the scope teardown. Mirrors
+  // ingestion_providers.dart:181 `ref.onDispose(executor.dispose)`.
+  ref.onDispose(() => agent.idleExecutor.dispose());
+  return agent;
 });
 
 final longTermMemoryProvider = Provider<LongTermMemory>((ref) {
