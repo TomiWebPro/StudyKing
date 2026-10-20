@@ -5,6 +5,7 @@ import 'package:studyking/core/services/llm/llm_chat_service.dart';
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/core/utils/logger.dart';
 import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 
@@ -24,6 +25,7 @@ class IngestPdfToKbTool extends PrepTool {
   // ignore: unused_field
   final LlmUsageMeter? _usageMeter;
   final PrepBudgetService? _budgetService;
+  final SystemMonitorService? _systemMonitor;
 
   IngestPdfToKbTool({
     required LlmService llmService,
@@ -31,11 +33,13 @@ class IngestPdfToKbTool extends PrepTool {
     LlmTaskManager? taskManager,
     LlmUsageMeter? usageMeter,
     PrepBudgetService? budgetService,
+    SystemMonitorService? systemMonitor,
   })  : _llmService = llmService,
         _modelId = modelId,
         _taskManager = taskManager,
         _usageMeter = usageMeter,
-        _budgetService = budgetService;
+        _budgetService = budgetService,
+        _systemMonitor = systemMonitor;
 
   @override
   String get name => 'ingest_pdf_to_kb';
@@ -92,6 +96,25 @@ class IngestPdfToKbTool extends PrepTool {
 
     if (textContent.trim().isEmpty) {
       return {'success': false, 'error': 'textContent is required'};
+    }
+
+    // Vision Next-Term §4.3: this is a heavy (CPU + LLM) prep tool. The
+    // [IdleExecutor] gates enqueued tasks on [SystemMonitorService.canRunHeavyPrepNow],
+    // but the agent can invoke this tool *directly* during conversation, bypassing
+    // that queue. Enforce the device gate here too, so a constrained device (low
+    // battery, high CPU, battery-saver) never starts an LLM parse it cannot finish.
+    // The failure is `deferrable` so an idle queue can retry it once conditions recover.
+    if (cpuClass == PrepCpuClass.heavy &&
+        _systemMonitor != null &&
+        !_systemMonitor.canRunHeavyPrepNow) {
+      _logger.w(
+        'PDF ingestion deferred: device under load (cpuClass=$cpuClass)',
+      );
+      return {
+        'success': false,
+        'error': 'Device constrained: heavy prep deferred until conditions recover',
+        'deferrable': true,
+      };
     }
 
     // Vision §4.2: per-subject opt-in. The IdleExecutor gates enqueued tasks,

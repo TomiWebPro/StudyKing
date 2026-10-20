@@ -75,6 +75,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
   final taskManager = ref.watch(llmTaskManagerProvider);
   final usageMeter = ref.watch(llmUsageMeterProvider);
   final budgetService = ref.watch(prepBudgetServiceProvider);
+  final systemMonitor = ref.watch(systemMonitorServiceProvider);
   final questionVariantService = ref.watch(questionVariantServiceProvider);
   final focusService = ref.watch(syllabusFocusServiceProvider);
   final mistakeReviewService = ref.watch(mistakeReviewServiceProvider);
@@ -269,6 +270,7 @@ final llmAgentToolsProvider = Provider<List<AgentTool>>((ref) {
       taskManager: taskManager,
       usageMeter: usageMeter,
       budgetService: budgetService,
+      systemMonitor: systemMonitor,
     ),
     EnqueueQuestionVariantsTool(
       variantService: questionVariantService,

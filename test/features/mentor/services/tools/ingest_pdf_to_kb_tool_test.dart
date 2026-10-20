@@ -5,6 +5,7 @@ import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
+import 'package:studyking/core/services/system_monitor_service.dart';
 import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
 import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 
@@ -53,6 +54,34 @@ class FakeLlmService extends LlmService {
     );
     return chatResult;
   }
+}
+
+/// Hand-written fake [SystemMonitorService] for deterministic testing of the
+/// device-constraint gate in [IngestPdfToKbTool]. Mirrors the pattern
+/// documented in `lib/core/services/system_monitor_service.dart` and the fake
+/// in `test/core/services/system_monitor_service_test.dart`.
+class FakeSystemMonitorService extends SystemMonitorService {
+  final bool canRun;
+
+  FakeSystemMonitorService({required this.canRun});
+
+  @override
+  bool get canRunHeavyPrepNow => canRun;
+
+  @override
+  int get batteryLevel => -1;
+
+  @override
+  bool get isCharging => false;
+
+  @override
+  double get cpuLoad => -1;
+
+  @override
+  bool get isBatterySaver => false;
+
+  @override
+  String? get networkType => null;
 }
 
 void main() {
@@ -308,6 +337,75 @@ void main() {
           meter.getTotalTokensPerTaskType()['pdf_ingestion'],
           greaterThan(0),
         );
+      });
+    });
+
+    // Vision Next-Term §4.3: heavy prep must defer on a constrained device.
+    // The agent can invoke this tool directly during conversation (bypassing
+    // the IdleExecutor queue), so the tool enforces the device gate itself.
+    group('device-constraint deferral', () {
+      test('defers heavy ingestion and skips the LLM when device is constrained', () async {
+        final llm = FakeLlmService(
+          Result.success('[{"heading":"A","content":"B"}]'),
+        );
+        final meter = LlmUsageMeter();
+        final budget = PrepBudgetService(meter: meter);
+        final monitor = FakeSystemMonitorService(canRun: false);
+        final tool = IngestPdfToKbTool(
+          llmService: llm,
+          modelId: 'test',
+          budgetService: budget,
+          usageMeter: meter,
+          systemMonitor: monitor,
+        );
+
+        final result = await tool.execute({'textContent': 'some content'});
+
+        expect(result['success'], isFalse);
+        expect(result['deferrable'], isTrue);
+        // The LLM must never be called on a constrained device — no token spend.
+        expect(llm.lastFeature, isNull,
+            reason: 'LLM must not be called on a constrained device');
+        expect(meter.getTotalTokens(), equals(0));
+      });
+
+      test('proceeds with the LLM parse when device can run heavy prep', () async {
+        final meter = LlmUsageMeter();
+        final llm = FakeLlmService(
+          Result.success('[{"heading":"A","content":"B"}]'),
+          meter: meter,
+        );
+        final budget = PrepBudgetService(meter: meter);
+        final monitor = FakeSystemMonitorService(canRun: true);
+        final tool = IngestPdfToKbTool(
+          llmService: llm,
+          modelId: 'test',
+          budgetService: budget,
+          usageMeter: meter,
+          systemMonitor: monitor,
+        );
+
+        final result = await tool.execute({'textContent': 'some content'});
+
+        expect(result['success'], isTrue);
+        expect(result['chunkCount'], 1);
+        expect(llm.lastFeature, 'pdf_ingestion');
+        expect(
+          meter.getTotalTokensPerTaskType()['pdf_ingestion'],
+          greaterThan(0),
+        );
+      });
+
+      test('skips the device gate (proceeds) when no monitor is injected', () async {
+        // Backward-compatible: without a monitor the tool behaves as before.
+        final llm = FakeLlmService(
+          Result.success('[{"heading":"A","content":"B"}]'),
+        );
+        final tool = IngestPdfToKbTool(llmService: llm, modelId: 'test');
+
+        final result = await tool.execute({'textContent': 'some content'});
+        expect(result['success'], isTrue);
+        expect(llm.lastFeature, 'pdf_ingestion');
       });
     });
   });
