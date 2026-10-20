@@ -135,6 +135,7 @@ class PreGenerateLessonTool extends PrepTool {
         // 'generation' bucket. Without this, actual lesson-prep tokens leak
         // into totalLiveTokens() and corrupt the prep-vs-live ratio.
         feature: PrepCategory.lessonPrep.taskTypeKey,
+        taskType: PrepCategory.lessonPrep.taskTypeKey,
       );
 
       if (taskId.isNotEmpty) {
@@ -143,19 +144,6 @@ class PreGenerateLessonTool extends PrepTool {
           tokensUsed: estimatedInputTokens + estimatedOutputTokens,
         );
       }
-
-      // Record estimated usage under the correct taskType so
-      // PrepBudgetService can track spend per category.
-      _usageMeter?.recordUsage(
-        id: taskId.isNotEmpty
-            ? taskId
-            : 'lesson_prep_${DateTime.now().millisecondsSinceEpoch}',
-        feature: 'lesson_prep',
-        modelId: 'lesson_generation',
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-        taskType: prepCategory.taskTypeKey,
-      );
 
       if (lesson == null) {
         return {'success': false, 'message': 'Failed to generate lesson'};

@@ -251,6 +251,7 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
     required Stream<String> Function({
       required String message,
       required String modelId,
@@ -258,6 +259,7 @@ class LlmService {
       ConversationMemory? memory,
       List<Map<String, String>>? history,
       String feature,
+      String? taskType,
     }) primaryStream,
     void Function()? onFallback,
   }) async* {
@@ -277,6 +279,7 @@ class LlmService {
           memory: memory,
           history: history,
           feature: feature,
+          taskType: taskType,
         )) {
           yield chunk;
           hasEmitted = true;
@@ -310,6 +313,7 @@ class LlmService {
               memory: memory,
               history: history,
               feature: feature,
+              taskType: taskType,
             );
             return;
           }
@@ -332,6 +336,7 @@ class LlmService {
               memory: memory,
               history: history,
               feature: feature,
+              taskType: taskType,
             );
             return;
           }
@@ -357,6 +362,7 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     final backupConfig = LlmConfiguration(
       provider: config.backupProvider!,
@@ -379,6 +385,7 @@ class LlmService {
       memory: memory,
       history: history,
       feature: feature,
+      taskType: taskType,
     );
   }
 
@@ -395,6 +402,7 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
     required Future<Result<String>> Function({
       required String message,
       required String modelId,
@@ -402,6 +410,7 @@ class LlmService {
       ConversationMemory? memory,
       List<Map<String, String>>? history,
       String feature,
+      String? taskType,
     }) primaryCall,
     void Function()? onFallback,
   }) async {
@@ -418,6 +427,7 @@ class LlmService {
           memory: memory,
           history: history,
           feature: feature,
+          taskType: taskType,
         );
       } catch (e) {
         // Convert thrown exceptions (e.g. TimeoutException, SocketException)
@@ -469,6 +479,7 @@ class LlmService {
             memory: memory,
             history: history,
             feature: '$feature (fallback)',
+            taskType: taskType,
           );
         }
         // No backup — return the failure.
@@ -494,6 +505,7 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     if (config.apiKey.isEmpty) {
       return Result.failure('API key is empty');
@@ -520,6 +532,7 @@ class LlmService {
       memory: memory,
       history: history,
       feature: feature,
+      taskType: taskType,
       onFallback: () => usedBackup = true,
       primaryCall: ({
         required String message,
@@ -528,16 +541,17 @@ class LlmService {
         ConversationMemory? memory,
         List<Map<String, String>>? history,
         String feature = 'general',
+        String? taskType,
       }) async {
         switch (config.provider) {
           case LlmProvider.openRouter:
-            return await _callOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return await _callOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.ollama:
-            return await _callOllama(message, modelId, memory: memory, history: history, feature: feature);
+            return await _callOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.openAI:
-            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.custom:
-            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return await _callOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
         }
       },
     );
@@ -562,6 +576,7 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
     if (config.apiKey.isEmpty) {
       yield 'API key not configured. Please set up an API key in Settings to use AI features.';
@@ -590,6 +605,7 @@ class LlmService {
       memory: memory,
       history: history,
       feature: feature,
+      taskType: taskType,
       onFallback: () => usedBackup = true,
       primaryStream: ({
         required String message,
@@ -598,16 +614,17 @@ class LlmService {
         ConversationMemory? memory,
         List<Map<String, String>>? history,
         String feature = 'general',
+        String? taskType,
       }) {
         switch (config.provider) {
           case LlmProvider.openRouter:
-            return _streamOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return _streamOpenRouter(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.ollama:
-            return _streamOllama(message, modelId, memory: memory, history: history, feature: feature);
+            return _streamOllama(message, modelId, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.openAI:
-            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
           case LlmProvider.custom:
-            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature);
+            return _streamOpenAI(message, modelId, systemPrompt, memory: memory, history: history, feature: feature, taskType: taskType);
         }
       },
     ).transform(
@@ -685,6 +702,7 @@ class LlmService {
     required int inputTokens,
     required int outputTokens,
     int? tokensUsed,
+    String? taskType,
   }) {
     _completeTask(
       taskId,
@@ -698,7 +716,7 @@ class LlmService {
       modelId: modelId,
       inputTokens: inputTokens,
       outputTokens: outputTokens,
-      taskType: LlmTaskType.fromFeature(feature)?.name,
+      taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name,
     );
   }
 
@@ -715,8 +733,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -742,7 +761,7 @@ class LlmService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
-      _trackUsage(data, modelId, feature, taskId: taskId);
+      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType);
       return Result.success(content);
     }
     final errorMsg = _errorForStatusCode(response.statusCode, 'OpenRouter');
@@ -757,8 +776,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final url = _openRouterUrl;
@@ -835,6 +855,7 @@ class LlmService {
         modelId: modelId,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        taskType: taskType,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -848,8 +869,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -881,6 +903,7 @@ class LlmService {
         modelId: modelId,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        taskType: taskType,
       );
       return Result.success(content);
     }
@@ -895,8 +918,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.ollamaDefaultUrl;
@@ -970,6 +994,7 @@ class LlmService {
         modelId: modelId,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        taskType: taskType,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -984,8 +1009,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
@@ -1010,7 +1036,7 @@ class LlmService {
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
       final content = data['choices'][0]['message']['content'] as String;
-      _trackUsage(data, modelId, feature, taskId: taskId);
+      _trackUsage(data, modelId, feature, taskId: taskId, taskType: taskType);
       return Result.success(content);
     }
     final errorMsg = _errorForStatusCode(response.statusCode, 'OpenAI');
@@ -1025,8 +1051,9 @@ class LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async* {
-    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: LlmTaskType.fromFeature(feature)?.name) ?? '';
+    final taskId = _taskManager?.createTask(feature: feature, modelId: modelId, taskType: taskType ?? LlmTaskType.fromFeature(feature)?.name) ?? '';
     _initTask(taskId);
     await _throttle();
     final baseUrl = config.baseUrl.isNotEmpty ? config.baseUrl : ApiConfig.openAIDefaultUrl;
@@ -1102,6 +1129,7 @@ class LlmService {
         modelId: modelId,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        taskType: taskType,
       );
     } catch (e) {
       _failTask(taskId, e.toString());
@@ -1113,7 +1141,7 @@ class LlmService {
     return (systemPrompt.length + message.length) ~/ 4;
   }
 
-  void _trackUsage(Map<String, dynamic> responseData, String modelId, String feature, {String taskId = ''}) {
+  void _trackUsage(Map<String, dynamic> responseData, String modelId, String feature, {String taskId = '', String? taskType}) {
     final usage = responseData['usage'] as Map<String, dynamic>?;
     if (usage != null && config.onTokenUsage != null) {
       final inputTokens = usage['prompt_tokens'] as int? ?? 0;
@@ -1129,6 +1157,7 @@ class LlmService {
         modelId: modelId,
         inputTokens: inputTokens,
         outputTokens: outputTokens,
+        taskType: taskType,
       );
     } else {
       _completeTask(taskId);

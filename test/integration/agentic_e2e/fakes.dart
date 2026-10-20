@@ -51,6 +51,7 @@ class FakeAgentLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     chatMessages.add(message);
     chatModels.add(modelId);
@@ -64,6 +65,67 @@ class FakeAgentLlmService extends LlmService {
 
   /// Returns the number of `chat()` calls remaining in the script.
   int get remainingResponses => _script.length;
+}
+
+/// Streaming counterpart to [FakeAgentLlmService] — overrides
+/// `chatStream` to emit deterministic `Stream<String>` chunks instead of
+/// hitting the network.
+///
+/// Each entry in `_chunkScript` is the **full list of chunks** for one
+/// `chatStream()` call. This lets tests simulate:
+///   - a single chunk containing the entire response,
+///   - a complete `TOOL_CALL:` + `ARGUMENTS:` split across multiple chunks
+///     (partial-marker detection),
+///   - text followed by a tool call, etc.
+///
+/// When the script is exhausted, the service yields the last received
+/// message — so multi-turn loops that exceed expectations degrade
+/// deterministically rather than throwing.
+class FakeStreamingLlmService extends LlmService {
+  final List<List<String>> _chunkScript;
+  final List<String> chatMessages = [];
+  final List<String> chatModels = [];
+  final List<String> chatFeatures = [];
+
+  FakeStreamingLlmService(
+    List<List<String>> chunkScript, {
+    super.taskManager,
+    super.usageMeter,
+  })  : _chunkScript = chunkScript.map((e) => List<String>.of(e)).toList(),
+        super(
+          config: const LlmConfiguration(
+            provider: LlmProvider.openRouter,
+            apiKey: 'fake-key-for-agentic-e2e',
+            model: 'test-model',
+          ),
+        );
+
+  @override
+  Stream<String> chatStream({
+    required String message,
+    required String modelId,
+    String? systemPrompt,
+    String localeName = 'en',
+    ConversationMemory? memory,
+    List<Map<String, String>>? history,
+    String feature = 'general',
+    String? taskType,
+  }) async* {
+    chatMessages.add(message);
+    chatModels.add(modelId);
+    chatFeatures.add(feature);
+
+    final chunks = _chunkScript.isNotEmpty
+        ? _chunkScript.removeAt(0)
+        : (chatMessages.isNotEmpty ? [chatMessages.last] : <String>[]);
+
+    for (final chunk in chunks) {
+      yield chunk;
+    }
+  }
+
+  /// Returns the number of `chatStream()` responses remaining in the script.
+  int get remainingResponses => _chunkScript.length;
 }
 
 /// A test [AgentTool] that records every invocation.
@@ -155,6 +217,8 @@ const Set<String> registeredToolNames = {
   'read_source_content',
   'search_sources',
   'revisit_sources',
+  // Vision Next-Term §24: reconstruct described charts/diagrams into Mermaid specs
+  'reconstruct_chart',
 };
 
 /// Fake [LlmService] that always returns a failure from [chat].
@@ -183,6 +247,7 @@ class FailingAgentLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     chatMessages.add(message);
     return Result.failure(errorMessage);

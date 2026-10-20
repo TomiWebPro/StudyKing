@@ -1,17 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
 import 'package:studyking/features/mentor/services/tools/ingest_pdf_to_kb_tool.dart';
 import 'package:studyking/features/mentor/services/tools/prep_tool.dart';
 
-/// Hand-written fake [LlmService] that returns a canned chat response.
+/// Hand-written fake [LlmService] that returns a canned chat response
+/// and records usage on the meter (mirroring what the real LlmService does
+/// via _recordCompletion). The recorded [taskType] defaults to
+/// `LlmTaskType.fromFeature(feature)?.name` when [taskType] is null,
+/// matching the real service's fallback behaviour.
 class FakeLlmService extends LlmService {
   final Result<String> chatResult;
+  final LlmUsageMeter? meter;
 
-  FakeLlmService(this.chatResult)
+  String? lastFeature;
+  String? lastTaskType;
+
+  FakeLlmService(this.chatResult, {this.meter})
       : super(
           config: LlmConfiguration(
             provider: LlmProvider.openAI,
@@ -28,23 +37,37 @@ class FakeLlmService extends LlmService {
     ConversationMemory? memory,
     List<Map<String, String>>? history,
     String feature = 'general',
+    String? taskType,
   }) async {
     lastFeature = feature;
+    lastTaskType = taskType ?? LlmTaskType.fromFeature(feature)?.name;
+    // Simulate _recordCompletion: record actual tokens on the meter.
+    meter?.recordUsage(
+      id: 'fake_usage_${DateTime.now().millisecondsSinceEpoch}',
+      feature: feature,
+      modelId: modelId,
+      inputTokens: 800,
+      outputTokens: 200,
+      taskType: lastTaskType,
+    );
     return chatResult;
   }
-
-  String? lastFeature;
 }
 
 void main() {
   group('IngestPdfToKbTool', () {
     late FakeLlmService fakeLlm;
+    late LlmUsageMeter meter;
 
     setUp(() {
-      fakeLlm = FakeLlmService(Result.success(
-        '[{"heading":"Section 1","content":"Content of section 1"},'
-        '{"heading":"Section 2","content":"Content of section 2"}]',
-      ));
+      meter = LlmUsageMeter();
+      fakeLlm = FakeLlmService(
+        Result.success(
+          '[{"heading":"Section 1","content":"Content of section 1"},'
+          '{"heading":"Section 2","content":"Content of section 2"}]',
+        ),
+        meter: meter,
+      );
     });
 
     group('tool metadata', () {
@@ -114,10 +137,14 @@ void main() {
         expect(result['topicId'], 'atoms');
       });
 
-      test('uses feature string pdf_ingestion for the LLM chat call', () async {
-        final tool = IngestPdfToKbTool(llmService: fakeLlm, modelId: 'test');
+      test('passes feature string pdf_ingestion and taskType to the LLM chat call', () async {
+        final tool = IngestPdfToKbTool(llmService: fakeLlm, modelId: 'test', usageMeter: meter);
         await tool.execute({'textContent': 'some content'});
         expect(fakeLlm.lastFeature, 'pdf_ingestion');
+        // The PrepTool must pass its prepCategory.taskTypeKey as the taskType
+        // override so actual tokens are recorded under 'pdf_ingestion' — not
+        // 'background' (which fromFeature would produce without the override).
+        expect(fakeLlm.lastTaskType, equals(PrepCategory.pdfIngestion.taskTypeKey));
       });
 
       test('handles non-JSON LLM response gracefully', () async {
@@ -196,9 +223,11 @@ void main() {
     });
 
     group('usage metering', () {
-      test('records usage with correct taskType', () async {
-        final llm = FakeLlmService(Result.success('[{"heading":"A","content":"B"}]'));
-        final meter = LlmUsageMeter();
+      test('records actual usage under pdf_ingestion taskType (no double-count)', () async {
+        final llm = FakeLlmService(
+          Result.success('[{"heading":"A","content":"B"}]'),
+          meter: meter,
+        );
         final tool = IngestPdfToKbTool(
           llmService: llm,
           modelId: 'test',
@@ -207,7 +236,15 @@ void main() {
         await tool.execute({'textContent': 'content'});
         final byType = meter.getTotalTokensPerTaskType();
         final key = PrepCategory.pdfIngestion.taskTypeKey;
+        // Actual tokens recorded by the LLM service under 'pdf_ingestion'
+        // (via the taskType override), not 'background' (via fromFeature).
         expect(byType[key], greaterThan(0));
+        // No estimated tokens should be double-counted: 'background' bucket
+        // must remain empty for this prep tool's LLM call.
+        expect(byType['background'], isNull);
+        // totalPrepTokens equals the actual tokens — no double-counting.
+        final service = PrepBudgetService(meter: meter);
+        expect(service.totalPrepTokens(), equals(byType[key]));
       });
     });
 
@@ -245,8 +282,8 @@ void main() {
       test('proceeds for an enabled subject within budget', () async {
         final llm = FakeLlmService(
           Result.success('[{"heading":"A","content":"B"}]'),
+          meter: meter,
         );
-        final meter = LlmUsageMeter();
         final budget = PrepBudgetService(
           meter: meter,
           budget: PrepBudget.defaults.copyWith(disabledSubjects: {'other'}),
@@ -265,6 +302,7 @@ void main() {
         expect(result['success'], isTrue);
         expect(result['chunkCount'], 1);
         expect(llm.lastFeature, 'pdf_ingestion');
+        expect(llm.lastTaskType, 'pdf_ingestion');
         expect(
           meter.getTotalTokensPerTaskType()['pdf_ingestion'],
           greaterThan(0),

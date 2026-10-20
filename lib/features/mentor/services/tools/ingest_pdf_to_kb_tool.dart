@@ -142,19 +142,6 @@ class IngestPdfToKbTool extends PrepTool {
         );
       }
 
-      // Record estimated usage under the correct taskType so
-      // PrepBudgetService can track spend per category.
-      _usageMeter?.recordUsage(
-        id: taskId.isNotEmpty
-            ? taskId
-            : 'pdf_ingestion_${DateTime.now().millisecondsSinceEpoch}',
-        feature: 'pdf_ingestion',
-        modelId: _modelId,
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-        taskType: prepCategory.taskTypeKey,
-      );
-
       return {
         'success': result.isSuccess,
         'chunkCount': result.data?.length ?? 0,
@@ -184,6 +171,7 @@ class IngestPdfToKbTool extends PrepTool {
       modelId: _modelId,
       localeName: localeName,
       feature: 'pdf_ingestion',
+      taskType: prepCategory.taskTypeKey,
     );
 
     if (llmResult.isFailure) {

@@ -1763,7 +1763,8 @@ void main() {
       // including explain_differently and suggest_practice (teaching-mode
       // explanation-variation tools from e2e-teaching-missing-explanation-variation-tool.md)
       // and add_subject_to_plan (Vision §3.1 / longterm-user Step 2).
-      expect(registeredToolNames, hasLength(26));
+      // reconstruct_chart (Vision Next-Term §24) is also registered.
+      expect(registeredToolNames, hasLength(27));
       // Verify no duplicate registration by checking the set size.
       expect(registeredToolNames.length, registeredToolNames.toSet().length);
     });

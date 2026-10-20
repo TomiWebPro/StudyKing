@@ -49,6 +49,7 @@ import 'package:studyking/features/mentor/services/tools/refresh_mastery_tool.da
 import 'package:studyking/features/mentor/services/tools/review_mistakes_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_questions_tool.dart';
 import 'package:studyking/features/mentor/services/tools/read_source_content_tool.dart';
+import 'package:studyking/features/mentor/services/tools/reconstruct_chart_tool.dart';
 import 'package:studyking/features/mentor/services/tools/revisit_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/search_sources_tool.dart';
 import 'package:studyking/features/mentor/services/tools/switch_syllabus_focus_tool.dart';
@@ -98,6 +99,7 @@ class FakeQuestionVariantService extends QuestionVariantService {
   Future<Result<List<Question>>> generateVariants(
     Question source, {
     int count = 3,
+    String? taskType,
   }) async {
     if (onGenerate != null) return onGenerate!(source, count: count);
     return Result.success([]);
@@ -166,6 +168,7 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
     required String topicTitle,
     String localeName = 'en',
     String feature = 'lesson_agent',
+    String? taskType,
   }) async {
     if (onGenerateLesson != null) {
       return onGenerateLesson!(
@@ -1767,6 +1770,57 @@ void main() {
       });
     });
 
+    group('ReconstructChartTool', () {
+      test('reachable through AgentLoop from "reconstruct the bar chart showing Q1 revenue"', () async {
+        // Simulates a student asking the mentor to reconstruct a chart from a
+        // textbook figure: the LLM calls reconstruct_chart with chartDescription
+        // and chartType, the tool calls the LLM internally for a Mermaid spec,
+        // and AgentLoop surfaces the result as feedback.
+        final fakeLlm = FakeAgentLlmService([
+          'TOOL_CALL: reconstruct_chart\n'
+          r'ARGUMENTS: {"chartDescription": "a bar chart showing Q1 revenue", "chartType": "bar"}',
+          // The LLM inside the tool generates the Mermaid spec.
+          '```mermaid\nbarChart\nQ1 30\nQ2 45\n```',
+          // AgentLoop final response surfacing the chart spec to the student.
+          'Here is the reconstructed bar chart showing Q1 revenue: '
+              '```mermaid\nbarChart\nQ1 30\nQ2 45\n```',
+        ]);
+
+        final tool = ReconstructChartTool(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+        );
+
+        final registry = ToolRegistry()..register(tool);
+        final loop = AgentLoop(
+          llmService: fakeLlm,
+          modelId: 'test-model',
+          toolRegistry: registry,
+        );
+
+        final response = await loop.run(
+          userMessage: 'Reconstruct the bar chart showing Q1 revenue.',
+          studentId: 'chart-student',
+          systemPrompt: 'You are a tutor that can reconstruct charts.',
+        );
+
+        expect(response.toolCalls, hasLength(1));
+        expect(response.toolCalls.first.toolName, 'reconstruct_chart');
+        expect(response.toolCalls.first.arguments['chartDescription'],
+            'a bar chart showing Q1 revenue');
+        expect(response.toolCalls.first.arguments['chartType'], 'bar');
+        expect(response.toolCalls.first.result, isNotNull);
+
+        final result = jsonDecode(response.toolCalls.first.result!);
+        final resultMap = result as Map<String, dynamic>;
+        expect(resultMap['success'], isTrue);
+        expect(resultMap['blockType'], 'diagram');
+        expect(resultMap['chartType'], 'bar');
+        expect(resultMap['mermaidSpec'], contains('mermaid'));
+        expect(resultMap['description'], 'a bar chart showing Q1 revenue');
+      });
+    });
+
     group('SuggestPracticeTool', () {
       test('reachable through AgentLoop from "I still do not get it"', () async {
         // Simulates the escalation journey: the LLM calls suggest_practice
@@ -2117,8 +2171,9 @@ void main() {
       test('registeredToolNames matches llmAgentToolsProvider registration count', () {
         // The canonical tool set from fakes.dart must mirror the tools
         // registered in llmAgentToolsProvider (llm_agent_providers.dart),
-        // including search_sources, read_source_content, and revisit_sources.
-        expect(registeredToolNames, hasLength(26));
+        // including search_sources, read_source_content, revisit_sources,
+        // and reconstruct_chart (Vision Next-Term §24).
+        expect(registeredToolNames, hasLength(27));
         // Verify no duplicate registration by checking the set size.
         expect(registeredToolNames.length, registeredToolNames.toSet().length);
       });

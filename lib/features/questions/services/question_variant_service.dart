@@ -52,6 +52,7 @@ class QuestionVariantService {
   Future<Result<List<Question>>> generateVariants(
     Question source, {
     int count = 3,
+    String? taskType,
   }) async {
       if (count <= 0) {
       return Result.failure('Variant count must be positive');
@@ -76,6 +77,7 @@ class QuestionVariantService {
         modelId: _modelId,
         feature: 'question_variants',
         localeName: _localeName,
+        taskType: taskType,
       );
 
       if (llmResult.isFailure) {

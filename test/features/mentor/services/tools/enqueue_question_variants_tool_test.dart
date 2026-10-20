@@ -4,6 +4,7 @@ import 'package:studyking/core/data/models/markscheme_model.dart';
 import 'package:studyking/core/data/models/question_model.dart';
 import 'package:studyking/core/errors/result.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
@@ -13,10 +14,16 @@ import 'package:studyking/features/questions/services/question_variant_service.d
 import 'test_helpers.dart';
 
 /// Hand-written fake [QuestionVariantService] that returns canned variants.
+/// When [meter] is provided, it records simulated LLM usage on the meter
+/// (mirroring what the real QuestionVariantService does via LlmService.chat
+/// → _recordCompletion), so tests can verify token attribution without
+/// double-counting.
 class FakeQuestionVariantService extends QuestionVariantService {
-  Future<Result<List<Question>>> Function(Question source, {int? count})? onGenerate;
+  Future<Result<List<Question>>> Function(Question source, {int? count, String? taskType})? onGenerate;
+  String? lastTaskType;
+  final LlmUsageMeter? meter;
 
-  FakeQuestionVariantService()
+  FakeQuestionVariantService({this.meter})
       : super(
           questionRepo: FakeQuestionRepository(),
           llmService: LlmService(
@@ -32,9 +39,20 @@ class FakeQuestionVariantService extends QuestionVariantService {
   Future<Result<List<Question>>> generateVariants(
     Question source, {
     int count = 3,
+    String? taskType,
   }) async {
+    lastTaskType = taskType ?? LlmTaskType.fromFeature('question_variants')?.name;
+    // Simulate _recordCompletion: record actual tokens on the meter.
+    meter?.recordUsage(
+      id: 'qv_fake_${DateTime.now().millisecondsSinceEpoch}',
+      feature: 'question_variants',
+      modelId: 'variant_generation',
+      inputTokens: 500,
+      outputTokens: 300,
+      taskType: lastTaskType,
+    );
     if (onGenerate != null) {
-      return onGenerate!(source, count: count);
+      return onGenerate!(source, count: count, taskType: taskType);
     }
     return Result.success([]);
   }
@@ -154,7 +172,7 @@ void main() {
           () async {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           return Result.success([
             _buildTestQuestion('v1'),
             _buildTestQuestion('v2'),
@@ -218,7 +236,7 @@ void main() {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
         var capturedCount = 0;
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           capturedCount = count ?? 3;
           return Result.success([]);
         };
@@ -237,7 +255,7 @@ void main() {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
         var capturedCount = 0;
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           capturedCount = count ?? 3;
           return Result.success([]);
         };
@@ -293,7 +311,7 @@ void main() {
       test('allows when budget is enabled', () async {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           return Result.success([_buildTestQuestion('v1')]);
         };
 
@@ -317,7 +335,7 @@ void main() {
       test('creates, starts, and completes an LlmTask on success', () async {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           return Result.success([_buildTestQuestion('v1')]);
         };
 
@@ -370,7 +388,7 @@ void main() {
           budget: PrepBudget.defaults.copyWith(disabledSubjects: {'math'}),
         );
         // If the subject gate fails, this should never be invoked.
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        fakeVariantService.onGenerate = (source, {count = 3, String? taskType}) async {
           variantServiceCalled = true;
           return Result.success([]);
         };
@@ -425,17 +443,18 @@ void main() {
       test('proceeds for an enabled subject within budget', () async {
         final question = _buildTestQuestion('q1'); // subjectId == 'math' by default
         final repo = _FakeQuestionRepoWithGet({'q1': question});
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        final meter = LlmUsageMeter();
+        final service = FakeQuestionVariantService(meter: meter);
+        service.onGenerate = (source, {count = 3, String? taskType}) async {
           return Result.success([_buildTestQuestion('v1')]);
         };
-        final meter = LlmUsageMeter();
         final budget = PrepBudgetService(
           meter: meter,
           budget: PrepBudget.defaults.copyWith(disabledSubjects: {'other'}),
         );
 
         final tool = EnqueueQuestionVariantsTool(
-          variantService: fakeVariantService,
+          variantService: service,
           questionRepo: repo,
           budgetService: budget,
           usageMeter: meter,
@@ -445,6 +464,7 @@ void main() {
 
         expect(result['success'], isTrue);
         expect(result['variantCount'], 1);
+        expect(service.lastTaskType, equals(PrepCategory.questionVariants.taskTypeKey));
         expect(
           meter.getTotalTokensPerTaskType()['question_variants'],
           greaterThan(0),
@@ -453,25 +473,36 @@ void main() {
     });
 
     group('usage metering', () {
-      test('records usage with taskType question_variants', () async {
+      test('records actual usage under question_variants taskType (no double-count)', () async {
         final question = _buildTestQuestion('q1');
         final repo = _FakeQuestionRepoWithGet({'q1': question});
-        fakeVariantService.onGenerate = (source, {count = 3}) async {
+        final meter = LlmUsageMeter();
+        // Wire the meter into the fake service so it records actual tokens
+        // under the taskType override (simulating LlmService._recordCompletion).
+        final service = FakeQuestionVariantService(meter: meter);
+        service.onGenerate = (source, {count = 3, String? taskType}) async {
           return Result.success([_buildTestQuestion('v1')]);
         };
 
-        final meter = LlmUsageMeter();
         final tool = EnqueueQuestionVariantsTool(
-          variantService: fakeVariantService,
+          variantService: service,
           questionRepo: repo,
           usageMeter: meter,
         );
 
         await tool.execute({'questionId': 'q1'});
 
+        // The PrepTool passed taskType: 'question_variants' to generateVariants,
+        // so the fake recorded actual tokens under 'question_variants' — not
+        // 'background' (the fromFeature fallback).
+        expect(service.lastTaskType, equals(PrepCategory.questionVariants.taskTypeKey));
         final byType = meter.getTotalTokensPerTaskType();
         final key = PrepCategory.questionVariants.taskTypeKey;
         expect(byType[key], greaterThan(0));
+        // No double-counting: 'background' must be empty for this call.
+        expect(byType['background'], isNull);
+        final budget = PrepBudgetService(meter: meter);
+        expect(budget.totalPrepTokens(), equals(byType[key]));
       });
     });
   });

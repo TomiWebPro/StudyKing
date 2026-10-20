@@ -38,12 +38,13 @@ class LessonAgentService {
     required String topicTitle,
     required String localeName,
     String feature = 'lesson_agent',
+    String? taskType,
   }) async {
-    final taskType = LlmTaskType.fromFeature(feature)?.name;
+    final effectiveTaskType = taskType ?? LlmTaskType.fromFeature(feature)?.name;
     final taskId = _taskManager?.createTask(
           feature: feature,
           modelId: _modelId,
-          taskType: taskType,
+          taskType: effectiveTaskType,
         ) ??
         '';
     _taskManager?.startTask(taskId);
@@ -55,7 +56,7 @@ class LessonAgentService {
         : const <String>{};
 
     try {
-      final blocks = await _generateLessonBlocks(subjectId, topicId, topicTitle, localeName, feature);
+      final blocks = await _generateLessonBlocks(subjectId, topicId, topicTitle, localeName, feature, taskType);
 
       final lesson = Lesson(
         id: const Uuid().v4(),
@@ -106,6 +107,7 @@ class LessonAgentService {
     String topicTitle,
     String localeName,
     String feature,
+    String? taskType,
   ) async {
     final prompt = _buildLessonPrompt(topicTitle, localeName);
 
@@ -114,6 +116,7 @@ class LessonAgentService {
       modelId: _modelId,
       systemPrompt: _lessonSystemPrompt(localeName),
       feature: feature,
+      taskType: taskType,
     );
 
     if (result.isFailure || result.data == null) {
@@ -332,6 +335,7 @@ class LessonAgentService {
     required String sourceContent,
     required String localeName,
     String feature = 'lesson_agent',
+    String? taskType,
   }) async {
     final prompt = lookupAppLocalizations(Locale(localeName)).lessonBuildPromptFromSource(sourceContent, topicTitle, localeName);
 
@@ -340,6 +344,7 @@ class LessonAgentService {
       modelId: _modelId,
       systemPrompt: _lessonSystemPrompt(localeName),
       feature: feature,
+      taskType: taskType,
     );
 
     if (result.isFailure || result.data == null) return null;

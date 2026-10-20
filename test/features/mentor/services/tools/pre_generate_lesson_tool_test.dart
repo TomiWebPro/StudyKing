@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:studyking/core/data/enums.dart';
 import 'package:studyking/core/data/database_service.dart';
 import 'package:studyking/core/services/llm/llm_chat_service.dart';
+import 'package:studyking/core/services/llm/model_router.dart' show LlmTaskType;
 import 'package:studyking/core/services/llm_task_manager.dart';
 import 'package:studyking/core/services/llm_usage_meter.dart';
 import 'package:studyking/core/services/prep_budget.dart';
@@ -17,15 +18,19 @@ import 'test_helpers.dart';
 /// pattern so we don't depend on another test file's fakes.
 class FakeLessonAgentServicePrep extends LessonAgentService {
   String lastFeature = 'lesson_agent';
+  String? lastTaskType;
+  final LlmUsageMeter? meter;
+
   Future<Lesson?> Function({
     required String subjectId,
     required String topicId,
     required String topicTitle,
     String localeName,
     String feature,
+    String? taskType,
   })? onGenerateLesson;
 
-  FakeLessonAgentServicePrep()
+  FakeLessonAgentServicePrep({this.meter})
       : super(
           llmService: LlmService(
             config: LlmConfiguration(
@@ -54,8 +59,19 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
     required String topicTitle,
     String localeName = 'en',
     String feature = 'lesson_agent',
+    String? taskType,
   }) async {
     lastFeature = feature;
+    lastTaskType = taskType ?? LlmTaskType.fromFeature(feature)?.name;
+    // Simulate _recordCompletion: record actual tokens on the meter.
+    meter?.recordUsage(
+      id: 'lesson_prep_fake_${DateTime.now().millisecondsSinceEpoch}',
+      feature: feature,
+      modelId: 'gpt-4o',
+      inputTokens: 1000,
+      outputTokens: 500,
+      taskType: lastTaskType,
+    );
     if (onGenerateLesson != null) {
       return onGenerateLesson!(
         subjectId: subjectId,
@@ -63,6 +79,7 @@ class FakeLessonAgentServicePrep extends LessonAgentService {
         topicTitle: topicTitle,
         localeName: localeName,
         feature: feature,
+        taskType: taskType,
       );
     }
     return null;
@@ -151,6 +168,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -205,6 +223,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           capturedLocale = localeName;
           return null;
@@ -228,6 +247,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           capturedLocale = localeName;
           return null;
@@ -258,6 +278,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -274,6 +295,7 @@ void main() {
         });
 
         expect(fakeService.lastFeature, 'lesson_prep');
+        expect(fakeService.lastTaskType, PrepCategory.lessonPrep.taskTypeKey);
       });
     });
 
@@ -306,6 +328,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -338,6 +361,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -378,13 +402,16 @@ void main() {
     });
 
     group('usage metering', () {
-      test('records usage with taskType lesson_prep', () async {
-        fakeService.onGenerateLesson = ({
+      test('records actual usage under lesson_prep taskType (no double-count)', () async {
+        final meter = LlmUsageMeter();
+        final service = FakeLessonAgentServicePrep(meter: meter);
+        service.onGenerateLesson = ({
           required String subjectId,
           required String topicId,
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,
@@ -393,9 +420,8 @@ void main() {
           );
         };
 
-        final meter = LlmUsageMeter();
         final tool = PreGenerateLessonTool(
-          lessonAgentService: fakeService,
+          lessonAgentService: service,
           usageMeter: meter,
         );
         await tool.execute({
@@ -404,9 +430,16 @@ void main() {
           'topicTitle': 'Algebra Basics',
         });
 
+        // The PrepTool passed taskType: 'lesson_prep' so the fake recorded
+        // actual tokens under 'lesson_prep' — not 'background' (fromFeature).
+        expect(service.lastTaskType, equals(PrepCategory.lessonPrep.taskTypeKey));
         final byType = meter.getTotalTokensPerTaskType();
         final key = PrepCategory.lessonPrep.taskTypeKey;
         expect(byType[key], greaterThan(0));
+        // No double-counting: 'background' must be empty for this call.
+        expect(byType['background'], isNull);
+        final budget = PrepBudgetService(meter: meter);
+        expect(budget.totalPrepTokens(), equals(byType[key]));
       });
     });
 
@@ -420,6 +453,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           llmCalled = true;
           return _buildTestLesson(
@@ -461,6 +495,7 @@ void main() {
           required String topicTitle,
           String localeName = 'en',
           String feature = 'lesson_agent',
+          String? taskType,
         }) async {
           return _buildTestLesson(
             subjectId: subjectId,

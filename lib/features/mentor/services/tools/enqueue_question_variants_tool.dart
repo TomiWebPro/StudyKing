@@ -146,19 +146,6 @@ class EnqueueQuestionVariantsTool extends PrepTool {
 
       final variants = variantResult.data ?? [];
 
-      // Record estimated usage under the correct taskType so
-      // PrepBudgetService can track spend per category.
-      _usageMeter?.recordUsage(
-        id: taskId.isNotEmpty
-            ? taskId
-            : 'question_variants_${DateTime.now().millisecondsSinceEpoch}',
-        feature: 'question_variants',
-        modelId: 'variant_generation',
-        inputTokens: estimatedInputTokens,
-        outputTokens: estimatedOutputTokens,
-        taskType: prepCategory.taskTypeKey,
-      );
-
       return {
         'success': variantResult.isSuccess,
         'variantCount': variants.length,
@@ -176,6 +163,10 @@ class EnqueueQuestionVariantsTool extends PrepTool {
     Question source,
     int count,
   ) {
-    return _variantService.generateVariants(source, count: count);
+    return _variantService.generateVariants(
+      source,
+      count: count,
+      taskType: prepCategory.taskTypeKey,
+    );
   }
 }
